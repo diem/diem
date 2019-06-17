@@ -1,0 +1,30 @@
+modules:
+module A {
+    struct T{f: u64}
+
+    public new(f: u64): V#Self.T {
+        return T{f: move(f)};
+    }
+
+    public t(this: &V#Self.T) {
+      let f: &u64;
+      let y: u64;
+      f = &copy(this).f;
+      y = *move(f);
+      assert(copy(y) == 2, 42);
+      release(move(this));
+      return;
+    }
+}
+
+script:
+import Transaction.A;
+main() {
+    let x: V#A.T;
+    let x_ref: &V#A.T;
+
+    x = A.new(2);
+    x_ref = &x;
+    A.t(move(x_ref));
+    return;
+}

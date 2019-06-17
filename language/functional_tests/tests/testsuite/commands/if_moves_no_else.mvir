@@ -1,0 +1,13 @@
+main() {
+    let x: u64;
+    let y: u64;
+    x = 0;
+    if (true) {
+        y = move(x);
+    }
+    assert(copy(x) == 0, 42);
+    return;
+}
+
+// check: VerificationError
+// check: CopyLocUnavailableError

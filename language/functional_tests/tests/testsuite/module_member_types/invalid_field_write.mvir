@@ -1,0 +1,26 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefTypeMismatchError(5) }
+
+modules:
+module Test {
+    struct T{fr: bool}
+
+    public new(): V#Self.T {
+        return T{fr: false};
+    }
+
+    public no(this: &mut V#Self.T) {
+        let x: &mut bool;
+        x = &mut move(this).fr;
+        *move(x) = 0;
+        return;
+    }
+}
+
+script:
+import Transaction.Test;
+main() {
+    let t: V#Test.T;
+    t = Test.new();
+    Test.no(&mut t);
+    return;
+}

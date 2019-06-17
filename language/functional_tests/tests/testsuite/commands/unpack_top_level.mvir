@@ -1,0 +1,22 @@
+modules:
+module Test {
+    struct T { }
+
+    public new_t(): V#Self.T {
+        return T { };
+    }
+
+}
+script:
+import Transaction.Test;
+
+main() {
+    let t: V#Test.T;
+
+    t = Test.new_t();
+    T { } = move(t);
+
+    return;
+}
+
+// check: no struct definition referencing in scripts

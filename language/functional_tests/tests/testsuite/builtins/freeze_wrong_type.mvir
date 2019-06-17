@@ -1,0 +1,13 @@
+main() {
+    let x: u64;
+    let x_ref: &mut u64;
+    let imm_ref: &bool;
+
+    x = 5;
+    x_ref = &mut x;
+    imm_ref = freeze(move(x_ref));
+    release(move(imm_ref));
+    return;
+}
+
+// check: VerificationError { kind: FunctionDefinition, idx: 0, err: StLocTypeMismatchError(6) }

@@ -1,0 +1,11 @@
+main() {
+    if (true) {
+        y = 5;
+    } else {
+        y = 0;
+    }
+    assert(copy(y) == 5, 42);
+    return;
+}
+
+// check: variable y undefined

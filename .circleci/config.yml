@@ -1,0 +1,39 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: xlarge
+    steps:
+      - checkout
+      - run:
+          name: Version Information
+          command: rustc --version; cargo --version; rustup --version
+      - run:
+          name: Install Dependencies
+          command: |
+            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
+            sudo apt-get update
+            sudo apt-get install -y protobuf-compiler/stretch-backports cmake golang curl
+            sudo apt-get clean
+            sudo rm -r /var/lib/apt/lists/*
+            rustup component add clippy rustfmt
+      - run:
+          name: Setup Env
+          command: |
+            echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
+            echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
+      - run:
+          name: Linting
+          command: |
+            ./scripts/clippy.sh
+            cargo fmt -- --check
+      - run:
+          name: Build All Targets
+          command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
+      - run:
+          name: Run All Unit Tests
+          command: cargo test --all --exclude testsuite
+      - run:
+          name: Run All End to End Tests
+          command: RUST_TEST_THREADS=2 cargo test --package testsuite

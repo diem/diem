@@ -1,0 +1,111 @@
+modules:
+module VTest {
+    struct T{fint: u64, fv: bool}
+
+    public new(x: u64, y: bool): V#Self.T {
+        return T{fint: move(x), fv: move(y)};
+    }
+
+    public t1(this: &mut V#Self.T) {
+        let x: &mut u64;
+        x = &mut move(this).fint;
+        *move(x) = 0;
+        return;
+    }
+
+    public t2(this: &mut V#Self.T, i: u64) {
+        let x: &mut u64;
+        x = &mut move(this).fint;
+        *move(x) = move(i);
+        return;
+    }
+
+    public t3(this: &mut V#Self.T) {
+        let x: &mut bool;
+        x = &mut move(this).fv;
+        *move(x) = *copy(x);
+        return;
+    }
+
+    public t4(this: &mut V#Self.T, i: bool) {
+        let x: &mut bool;
+        x = &mut move(this).fv;
+        *move(x) = move(i);
+        return;
+    }
+}
+module RTest {
+    resource T{fint: u64, fr: bool}
+
+    public new(x: u64, y: bool): R#Self.T {
+        return T{fint: move(x), fr: move(y)};
+    }
+
+    public t1(this: &mut R#Self.T) {
+        let x: &mut u64;
+        x = &mut move(this).fint;
+        *move(x) = 0;
+        return;
+    }
+
+    public t2(this: &mut R#Self.T, i: u64) {
+        let x: &mut u64;
+        x = &mut move(this).fint;
+        *move(x) = move(i);
+        return;
+    }
+
+    public t3(this: &mut R#Self.T) {
+        let x: &mut bool;
+        let z: bool;
+        x = &mut move(this).fr;
+        z = true;
+        *move(x) = move(z);
+        return;
+    }
+
+    public t4(this: &mut R#Self.T, i: bool) {
+        let x: &mut bool;
+        x = &mut move(this).fr;
+        *move(x) = move(i);
+        return;
+    }
+
+    public destroy_t(t: R#Self.T) {
+        let fint: u64;
+        let fr: bool;
+        T{ fint, fr } = move(t);
+        return;
+    }
+}
+
+script:
+import Transaction.RTest;
+import Transaction.VTest;
+main() {
+    let vt: V#VTest.T;
+    let vref: &mut V#VTest.T;
+    let rt: R#RTest.T;
+    let rref: &mut R#RTest.T;
+
+    vt = VTest.new(0, false);
+    vref = &mut vt;
+    rt = RTest.new(0, false);
+    rref = &mut rt;
+
+    VTest.t1(copy(vref));
+    RTest.t1(copy(rref));
+
+    VTest.t2(copy(vref), 0);
+    RTest.t2(copy(rref), 0);
+
+    VTest.t3(copy(vref));
+    RTest.t3(copy(rref));
+
+    VTest.t4(move(vref), false);
+    RTest.t4(move(rref), false);
+
+    RTest.destroy_t(move(rt));
+
+    return;
+}

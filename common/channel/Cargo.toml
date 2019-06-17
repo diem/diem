@@ -1,0 +1,15 @@
+[package]
+name = "channel"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+futures = { version = "=0.3.0-alpha.16", package = "futures-preview" }
+lazy_static = "1.3.0"
+metrics = { path = "../metrics" }
+
+[dev-dependencies]
+rusty-fork = "0.2.1"

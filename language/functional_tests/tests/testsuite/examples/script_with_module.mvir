@@ -1,0 +1,11 @@
+modules:
+module M {
+    foo() {
+        return;
+    }
+}
+
+script:
+main() {
+    return;
+}

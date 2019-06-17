@@ -1,0 +1,170 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "access_path.proto";
+import "events.proto";
+import "proof.proto";
+import "transaction_info.proto";
+import "google/protobuf/wrappers.proto";
+
+// A generic structure that describes a transaction that a client submits
+message RawTransaction {
+    // Sender's account address
+    bytes sender_account = 1;
+    // Sequence number of this transaction corresponding to sender's account.
+    uint64 sequence_number = 2;
+    oneof payload {
+        // The transaction script to execute.
+        Program program = 3;
+        // A write set, used for genesis blocks and other magic transactions.
+        // This bypasses the rules for regular transactions so will typically be
+        // rejected. Only under special circumstances will it be accepted.
+        WriteSet write_set = 4;
+    }
+    // Maximal total gas specified by wallet to spend for this transaction.
+    uint64 max_gas_amount = 5;
+    // The price to be paid for each unit of gas.
+    uint64 gas_unit_price = 6;
+    // Expiration time for this transaction.  If storage is queried and
+    // the time returned is greater than or equal to this time and this
+    // transaction has not been included, you can be certain that it will
+    // never be included.
+    // If set to 0, there will be no expiration time
+    uint64 expiration_time = 7;
+}
+
+// The code for the transaction to execute
+message Program {
+    bytes code = 1;
+    repeated TransactionArgument arguments = 2;
+    repeated bytes modules = 3;
+}
+
+// An argument to the transaction if the transaction takes arguments
+message TransactionArgument {
+    enum ArgType {
+        U64 = 0;
+        ADDRESS = 1;
+        STRING = 2;
+        BYTEARRAY = 3;
+    }
+    ArgType type = 1;
+    bytes data = 2;
+}
+
+// A generic structure that represents signed RawTransaction
+message SignedTransaction {
+    // The serialized Protobuf bytes for RawTransaction, for which the signature
+    // was signed. Protobuf doesn't guarantee the serialized bytes is canonical
+    // across different language implementations, but for our use cases for
+    // transaction it is not necessary because the client is the only one to
+    // produce this bytes, which is then persisted in storage.
+    bytes raw_txn_bytes = 1;
+    // public key that corresponds to RawTransaction::sender_account
+    bytes sender_public_key = 2;
+    // signature for the hash
+    bytes sender_signature = 3;
+}
+
+message SignedTransactionWithProof {
+    // The version of the returned signed transaction.
+    uint64 version = 1;
+
+    // The transaction itself.
+    SignedTransaction signed_transaction = 2;
+
+    // The proof authenticating the signed transaction.
+    SignedTransactionProof proof = 3;
+
+    // The events yielded by executing the transaction, if requested.
+    EventsList events = 4;
+}
+
+// A generic structure that represents a block of transactions originated from a
+// particular validator instance.
+message SignedTransactionsBlock {
+    // Set of Signed Transactions
+    repeated SignedTransaction transactions = 1;
+    // Public key of the validator that created this block
+    bytes validator_public_key = 2;
+    // Signature of the validator that created this block
+    bytes validator_signature = 3;
+}
+
+// Set of WriteOps to save to storage.
+message WriteSet {
+    // Set of WriteOp for storage update.
+    repeated WriteOp write_set = 1;
+}
+
+// Write Operation on underlying storage.
+message WriteOp {
+    // AccessPath of the write set.
+    AccessPath access_path = 1;
+    // The value of the write op. Empty if `type` is Delete.
+    bytes value = 2;
+    // WriteOp type.
+    WriteOpType type = 3;
+}
+
+// Type of write operation
+enum WriteOpType {
+    // The WriteOp is to create/update the field from storage.
+    Write = 0;
+    // The WriteOp is to delete the field from storage.
+    Delete = 1;
+}
+
+// Account state as a whole.
+// After execution, updates to accounts are passed in this form to storage for
+// persistence.
+message AccountState {
+    // Account address
+    bytes address = 1;
+    // Account state blob
+    bytes blob = 2;
+}
+
+// Transaction struct to commit to storage
+message TransactionToCommit {
+    // The signed transaction which was executed
+    SignedTransaction signed_txn = 1;
+    // State db updates
+    repeated AccountState account_states = 2;
+    // Events yielded by the transaction.
+    repeated Event events = 3;
+    // The amount of gas used.
+    uint64 gas_used = 4;
+}
+
+// A list of consecutive transactions with proof. This is mainly used for state
+// synchronization when a validator would request a list of transactions from a
+// peer, verify the proof, execute the transactions and persist them. Note that
+// the transactions are supposed to belong to the same epoch E, otherwise
+// verification will fail.
+message TransactionListWithProof {
+    // The list of transactions.
+    repeated SignedTransaction transactions = 1;
+
+    // The list of corresponding TransactionInfo objects.
+    repeated TransactionInfo infos = 2;
+
+    // The list of corresponding Event objects (only present if fetch_events was set to true in req)
+    EventsForVersions events_for_versions = 3;
+
+    // If the list is not empty, the version of the first transaction.
+    google.protobuf.UInt64Value first_transaction_version = 4;
+
+    // The proofs of the first and last transaction in this chunk. When this is
+    // used for state synchronization, the validator who requests the transactions
+    // will provide a version in the request and the proofs will be relative to
+    // the given version. When this is returned in GetTransactionsResponse, the
+    // proofs will be relative to the ledger info returned in
+    // UpdateToLatestLedgerResponse.
+    AccumulatorProof proof_of_first_transaction = 5;
+    AccumulatorProof proof_of_last_transaction = 6;
+}

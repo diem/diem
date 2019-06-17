@@ -1,0 +1,37 @@
+modules:
+module Test {
+    struct X { }
+    struct T { i: u64, x: V#Self.X, b: bool, y: u64 }
+
+    public new_t(): V#Self.T {
+        let x: V#Self.X;
+        x = X { };
+        return T { i: 0, x: move(x), b: false, y: 0 };
+    }
+
+    public destroy_t(t: V#Self.T): u64 * V#Self.X * bool {
+        let i: u64;
+        let x: V#Self.X;
+        let flag: bool;
+        T { i, x, b: flag } = move(t);
+        return move(i), move(x), move(flag);
+    }
+
+}
+script:
+import Transaction.Test;
+
+main() {
+    let x: V#Test.X;
+    let i: u64;
+    let t: V#Test.T;
+    let b: bool;
+
+    t = Test.new_t();
+    i, x, b = Test.destroy_t(move(t));
+
+    return;
+}
+
+// check: VerificationError
+// check: PositiveStackSizeAtBlockEnd

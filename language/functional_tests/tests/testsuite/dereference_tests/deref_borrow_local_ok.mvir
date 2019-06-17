@@ -1,0 +1,6 @@
+main() {
+    let x: u64;
+    x = 5;
+    assert(*&mut x == 5, 42);
+    return;
+}

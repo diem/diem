@@ -1,0 +1,9 @@
+main() {
+    let x: u64;
+    let y: u64;
+    y = copy(x);
+    return;
+}
+
+// check: VerificationError
+// check: CopyLocUnavailableError

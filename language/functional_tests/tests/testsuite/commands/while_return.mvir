@@ -1,0 +1,7 @@
+main() {
+    while (true) {
+        return;
+        assert(false, 42);
+    }
+    return;
+}

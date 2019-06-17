@@ -1,0 +1,37 @@
+modules:
+
+module A {
+
+    struct T{v: u64}
+
+    struct K{f: V#Self.T} 
+
+    public new_T(v: u64) : V#Self.T {
+        return T{v: move(v)};
+    }
+
+    public new_K(f: V#Self.T) : V#Self.K {
+        return K{f: move(f)};
+    }
+
+    public value(this: &V#Self.K) : u64 {
+        let k: &u64;
+        k = &(&move(this).f).v;
+        return *move(k);
+    } 
+}
+
+script:
+
+import Transaction.A;
+
+main() {
+    let x: V#A.T;
+    let y: V#A.K;
+    let z: u64;
+    x = A.new_T(2);
+    y = A.new_K(move(x));
+    z = A.value(&y);
+    assert(move(z) == 2, 42);
+    return;
+}

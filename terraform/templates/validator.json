@@ -1,0 +1,39 @@
+[
+    {
+        "name": "validator",
+        "image": "${image}${image_version}",
+        "cpu": ${cpu},
+        "memory": ${mem},
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 30307, "hostPort": 30307},
+            {"containerPort": 30303, "hostPort": 30303},
+            {"containerPort": 14297, "hostPort": 14297}
+        ],
+        "mountPoints": [
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+        ],
+        "environment": [
+            {"name": "PEER_ID", "value": "${peer_id}"},
+            {"name": "SELF_IP", "value": "${self_ip}"},
+            {"name": "SEED_PEERS", "value": ${seed_peers}},
+            {"name": "TRUSTED_PEERS", "value": ${trusted_peers}},
+            {"name": "GENESIS_BLOB", "value": ${genesis_blob}},
+            {"name": "RUST_LOG", "value": "${log_level}"}
+        ],
+        "ulimits": [
+            {"name": "nofile", "softLimit": 131072, "hardLimit": 131072}
+        ],
+        "secrets": [
+            {"name": "PEER_KEYPAIRS", "valueFrom": "${secret}"}
+        ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${log_group}",
+                "awslogs-region": "${log_region}",
+                "awslogs-stream-prefix": "${log_prefix}"
+            }
+        }
+    }
+]

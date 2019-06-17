@@ -1,0 +1,21 @@
+main() {
+  assert((1 == 1) == true, 99);
+  assert((1 == 2) == false, 99);
+
+  assert((1 != 2) == true, 99);
+  assert((1 != 1) == false, 99);
+
+  assert((2 > 1) == true, 99);
+  assert((1 > 1) == false, 99);
+
+  assert((1 >= 1) == true, 99);
+  assert((0 >= 1) == false, 99);
+
+  assert((1 < 2) == true, 99);
+  assert((2 < 1) == false, 99);
+
+  assert((1 <= 1) == true, 99);
+  assert((2 <= 1) == false, 99);
+
+  return;
+}

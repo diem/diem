@@ -1,0 +1,29 @@
+[
+    {
+        "name": "faucet",
+        "image": "${faucet_image_repo}${faucet_image_tag_str}",
+        "cpu": 2048,
+        "memory": 3883,
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 8000, "hostPort": 8000}
+        ],
+        "environment": [
+            {"name": "AC_PORT", "value": "30307"},
+            {"name": "AC_HOST", "value": "${ac_hosts}"},
+            {"name": "TRUSTED_PEERS", "value": ${trusted_peers}},
+            {"name": "LOG_LEVEL", "value": "${log_level}"}
+        ],
+        "secrets": [
+            {"name": "MINT_KEY", "valueFrom": "${secret}"}
+        ],
+	"logConfiguration": {
+	    "logDriver": "awslogs",
+	    "options": {
+		"awslogs-group": "${log_group}",
+		"awslogs-region": "${log_region}",
+		"awslogs-stream-prefix": "${log_prefix}"
+	    }
+	}
+    }
+]

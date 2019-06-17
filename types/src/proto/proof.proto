@@ -1,0 +1,72 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "transaction_info.proto";
+
+message AccumulatorProof {
+  // The bitmap indicating which siblings are default. 1 means non-default and
+  // 0 means default. The LSB corresponds to the sibling at the bottom of the
+  // accumulator. The leftmost 1-bit corresponds to the sibling at the level
+  // just below root level in the accumulator, since this one is always
+  // non-default.
+  uint64 bitmap = 1;
+
+  // The non-default siblings. The ones near the root are at the beginning of
+  // the list.
+  repeated bytes non_default_siblings = 2;
+}
+
+message SparseMerkleProof {
+  // This proof can be used to authenticate whether a given leaf exists in the
+  // tree or not. In Rust:
+  //   - If this is `Some(HashValue, HashValue)`
+  //     - If the first `HashValue` equals requested key, this is an inclusion
+  //       proof and the second `HashValue` equals the hash of the
+  //       corresponding account blob.
+  //     - Otherwise this is a non-inclusion proof. The first `HashValue` is
+  //       the only key that exists in the subtree and the second `HashValue`
+  //       equals the hash of the corresponding account blob.
+  //   - If this is `None`, this is also a non-inclusion proof which indicates
+  //     the subtree is empty.
+  //
+  // In protobuf, this leaf field should either be
+  //   - empty, which corresponds to None in the Rust structure.
+  //   - exactly 64 bytes, which corresponds to Some<(HashValue, HashValue)>
+  //     in the Rust structure.
+  bytes leaf = 1;
+
+  // The bitmap indicating which siblings are default. 1 means non-default and
+  // 0 means default. The MSB of the first byte corresponds to the sibling at
+  // the top of the Sparse Merkle Tree. The rightmost 1-bit of the last byte
+  // corresponds to the sibling at the bottom, since this one is always
+  // non-default.
+  bytes bitmap = 2;
+
+  // The non-default siblings. The ones near the root are at the beginning of
+  // the list.
+  repeated bytes non_default_siblings = 3;
+}
+
+// The complete proof used to authenticate a signed transaction.
+message SignedTransactionProof {
+  AccumulatorProof ledger_info_to_transaction_info_proof = 1;
+  TransactionInfo transaction_info = 2;
+}
+
+// The complete proof used to authenticate an account state.
+message AccountStateProof {
+  AccumulatorProof ledger_info_to_transaction_info_proof = 1;
+  TransactionInfo transaction_info = 2;
+  SparseMerkleProof transaction_info_to_account_proof = 3;
+}
+
+// The complete proof used to authenticate an event.
+message EventProof {
+  AccumulatorProof ledger_info_to_transaction_info_proof = 1;
+  TransactionInfo transaction_info = 2;
+  AccumulatorProof transaction_info_to_event_proof = 3;
+}

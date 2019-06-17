@@ -1,0 +1,34 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 2, err: MoveLocUnavailableError(9) }
+modules:
+module Token {
+    resource T{value: u64}
+    public new(m: u64): R#Self.T {
+        return T{value: copy(m)};
+    }
+    public destroy(t: R#Self.T) {
+        let value: u64;
+        T {value} = move(t);
+        return;
+    }
+
+    public bump_value(this: &R#Self.T) {
+        let val: &u64;
+        let x: u64;
+        val = &move(this).value;
+        x = *move(val) + 1;
+        *move(val) = copy(x);
+        return;
+    }
+}
+
+script:
+import Transaction.Token;
+main() {
+    let t: R#Token.T;
+    let tr: &R#Token.T;
+    t = Token.new(42);
+    tr = &t;
+    Token.bump_value(move(tr));
+    Token.destroy(move(t));
+    return;
+}

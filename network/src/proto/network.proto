@@ -1,0 +1,45 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package network;
+
+// A `PeerInfo` represents the network address(es) of a Peer at some epoch.
+message PeerInfo {
+  // Addresses this peer can be reached at.
+  // An address is a byte array in the
+  // [multiaddr](https://multiformats.io/multiaddr/) format.
+  repeated bytes addrs = 1;
+  // Monotonically increasing incarnation number. This is usually a timestamp.
+  uint64 epoch = 2;
+}
+
+// A `Note` represents a signed PeerInfo. The signature should be of the peer
+// whose info is being sent.
+message Note {
+  // Id of the peer.
+  bytes peer_id = 1;
+  // Serialized PeerInfo.
+  bytes peer_info = 2;
+  // Each peer signs its serialized PeerInfo and includes both the PeerInfo and
+  // the sign in a note it sends to another peer.
+  bytes signature = 3;
+}
+
+// Discovery message exchanged as part of the discovery protocol.
+// The discovery message sent by a peer consists of notes for all the peers the
+// sending peer knows about.
+message DiscoveryMsg { repeated Note notes = 1; }
+
+// Identity message exchanged as part of the Identity protocol.
+message IdentityMsg {
+  bytes peer_id = 1;
+  repeated bytes supported_protocols = 2;
+}
+
+// Ping message sent as liveness probe.
+message Ping {}
+
+// Pong message sent as reponse to liveness probe.
+message Pong {}

@@ -1,0 +1,67 @@
+modules:
+module M {
+    resource A{x: u64}
+    struct B{y: u64}
+
+    public a(x: u64): R#Self.A {
+        return A{x: move(x)};
+    }
+
+    public b(y: u64): V#Self.B {
+        return B{y: move(y)};
+    }
+
+    public set_a_with_b(a: &mut R#Self.A, b: &V#Self.B) {
+        let x_ref: &mut u64;
+        let y_ref: &u64;
+        x_ref = &mut copy(a).x;
+        y_ref = &copy(b).y;
+        *move(x_ref) = *move(y_ref);
+        release(move(a));
+        release(move(b));
+        return;
+    }
+
+    public set_b_with_a(b: &mut V#Self.B, a: &R#Self.A) {
+        let x_ref: &u64;
+        let y_ref: &mut u64;
+        y_ref = &mut copy(b).y;
+        x_ref = &copy(a).x;
+        *move(y_ref) = *move(x_ref);
+        release(move(a));
+        release(move(b));
+        return;
+    }
+
+    public destroy_a(a: R#Self.A) {
+        let x: u64;
+        A{ x } = move(a);
+        return;
+    }
+}
+
+script:
+import Transaction.M;
+main() {
+    let a: R#M.A;
+    let a_ref: &R#M.A;
+    let a_mut_ref: &mut R#M.A;
+    let b: V#M.B;
+    let b_ref: &V#M.B;
+    let b_mut_ref: &mut V#M.B;
+
+    a = M.a(0);
+    b = M.b(1);
+
+    a_mut_ref = &mut a;
+    b_ref = &b;
+    M.set_a_with_b(move(a_mut_ref), move(b_ref));
+
+    a_ref = &a;
+    b_mut_ref = &mut b;
+    M.set_b_with_a(move(b_mut_ref), move(a_ref));
+
+    M.destroy_a(move(a));
+
+    return;
+}

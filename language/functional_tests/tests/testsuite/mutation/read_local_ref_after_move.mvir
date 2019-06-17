@@ -1,0 +1,12 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 0, err: MoveLocExistsBorrowError(4) }
+
+main() {
+    let v: u64;
+    let ref_v: &mut u64;
+    let dead: u64;
+    v = 5;
+    ref_v = &mut v;
+    dead = move(v);
+    assert(*move(ref_v) == 5, 42);
+    return;
+}

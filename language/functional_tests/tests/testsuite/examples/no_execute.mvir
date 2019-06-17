@@ -1,0 +1,6 @@
+//! no-execute
+
+main() {
+    assert(false, 42);
+    return;
+}

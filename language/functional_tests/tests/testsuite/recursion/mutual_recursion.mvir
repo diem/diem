@@ -1,0 +1,47 @@
+modules:
+module Math {
+
+  public even(n: u64): bool {
+    let is_pred_odd: bool;
+    if (copy(n) == 0) {
+      return true;
+    }
+
+    is_pred_odd = Self.odd(move(n) - 1);
+    return move(is_pred_odd);
+  }
+
+  public odd(n: u64): bool {
+    let is_pred_even: bool;
+    if (copy(n) == 0) {
+      return false;
+    }
+
+    is_pred_even = Self.even(move(n) - 1);
+    return move(is_pred_even);
+  }
+}
+
+script:
+import Transaction.Math;
+main() {
+    let zero_even: bool;
+    let zero_odd: bool;
+    let ten_even: bool;
+    let ten_odd: bool;
+
+    zero_even = Math.even(0);
+    assert(move(zero_even), 50);
+
+    zero_odd = Math.odd(0);
+    assert(!move(zero_odd), 51);
+
+    ten_even = Math.even(10);
+    assert(move(ten_even), 52);
+
+    ten_odd = Math.odd(10);
+    assert(!move(ten_odd), 53);
+
+    return;
+}
+

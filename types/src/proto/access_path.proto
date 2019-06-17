@@ -1,0 +1,11 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+message AccessPath {
+  bytes address = 1;
+  bytes path = 2;
+}

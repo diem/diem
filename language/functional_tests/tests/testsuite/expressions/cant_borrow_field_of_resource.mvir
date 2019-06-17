@@ -1,0 +1,52 @@
+// check: no field type referencing in scripts
+// TODO is it possible to get this to compile to let the bytecode verifier complain?
+
+modules:
+module Token {
+    resource T {v: u64}
+
+    public new(v: u64): R#Self.T {
+        return T{v: move(v)};
+    }
+
+    public value(this: &R#Self.T): u64 {
+        let vref: &u64;
+        vref = &copy(this).v;
+        release(move(this));
+        return *move(vref);
+    }
+
+    public exists(addr: address): bool {
+        let yes: bool;
+        yes = exists<T>(move(addr));
+        return move(yes);
+    }
+
+    public get(addr: address): &mut R#Self.T {
+        let t_ref: &mut R#Self.T;
+        t_ref = borrow_global<T>(move(addr));
+        return move(t_ref);
+    }
+
+    public publish(t: R#Self.T) {
+        move_to_sender<T>(move(t));
+        return;
+    }
+
+}
+script:
+import Transaction.Token;
+main() {
+    let addr: address;
+    let t: R#Token.T;
+    let tref: &mut R#Token.T;
+    let balance_ref: &u64;
+
+    addr = get_txn_sender();
+    t = Token.new(1);
+    Token.publish(move(t));
+    tref = Token.get(move(addr));
+    balance_ref = &move(tref).v;
+    release(move(balance_ref));
+    return;
+}

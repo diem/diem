@@ -1,0 +1,34 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefExistsBorrowError(8) }
+
+modules:
+module Tester {
+    struct T{v: u64}
+
+    public new(v: u64): V#Self.T  {
+        return T{v: move(v)};
+    }
+
+    public replace(t: &mut V#Self.T) {
+        let t_v: &mut u64;
+        let new_t: V#Self.T;
+
+        t_v = &mut copy(t).v;
+        new_t = Self.new(1);
+        *move(t) = move(new_t);
+
+        assert(*move(t_v) == 1, 42);
+        return;
+    }
+
+}
+
+script:
+import Transaction.Tester;
+main() {
+    let t: V#Tester.T;
+    let ref_t: &mut V#Tester.T;
+    t = Tester.new(0);
+    ref_t = &mut t;
+    Tester.replace(move(ref_t));
+    return;
+}

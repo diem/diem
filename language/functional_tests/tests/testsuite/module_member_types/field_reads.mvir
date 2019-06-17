@@ -1,0 +1,97 @@
+modules:
+module VTest {
+    struct T{fint: u64, fv: bool}
+
+    public new(x: u64, y: bool): V#Self.T {
+        return T{fint: move(x), fv: move(y)};
+    }
+
+    public t1(this: &V#Self.T): u64 {
+        let x: &u64;
+        x = &copy(this).fint;
+        release(move(this));
+        return *move(x);
+    }
+
+    public t2(this: &V#Self.T): u64 {
+        let x: &u64;
+        x = &copy(this).fint;
+        release(move(this));
+        return *move(x);
+    }
+
+    public t3(this: &V#Self.T): bool {
+        let x: &bool;
+        x = &copy(this).fv;
+        release(move(this));
+        return *move(x);
+    }
+}
+module RTest {
+    resource T{fint: u64, fv: bool}
+
+    public new(x: u64, y: bool): R#Self.T {
+        return T{fint: move(x), fv: move(y)};
+    }
+
+    public t1(this: &R#Self.T): u64 {
+        let x: &u64;
+        x = &copy(this).fint;
+        release(move(this));
+        return *move(x);
+    }
+
+    public t2(this: &R#Self.T): u64 {
+        let x: &u64;
+        x = &copy(this).fint;
+        release(move(this));
+        return *move(x);
+    }
+
+    public t3(this: &R#Self.T): bool {
+        let x: &bool;
+        x = &copy(this).fv;
+        release(move(this));
+        return *move(x);
+    }
+
+    public destroy_t(t: R#Self.T) {
+        let fint: u64;
+        let fv: bool;
+        T{ fint, fv } = move(t);
+        return;
+    }
+}
+script:
+import Transaction.RTest;
+import Transaction.VTest;
+main() {
+    let vt: V#VTest.T;
+    let vref: &V#VTest.T;
+    let rt: R#RTest.T;
+    let rref: &R#RTest.T;
+    let r1: u64;
+    let r2: u64;
+    let r3: u64;
+    let r4: u64;
+    let r5: bool;
+    let r6: bool;
+
+    vt = VTest.new(0, false);
+    vref = &vt;
+    rt = RTest.new(0, false);
+    rref = &rt;
+
+    r1 = VTest.t1(copy(vref));
+    r2 = RTest.t1(copy(rref));
+
+    r3 = VTest.t2(copy(vref));
+    r4 = RTest.t2(copy(rref));
+
+    r5 = VTest.t3(move(vref));
+    r6 = RTest.t3(move(rref));
+
+    RTest.destroy_t(move(rt));
+
+    return;
+}

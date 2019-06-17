@@ -1,0 +1,7 @@
+main() {
+  assert(2 | 2 == 2, 99);
+  assert(2 & 1 == 0, 100);
+  assert(2 ^ 1 == 3, 101);
+
+  return;
+}

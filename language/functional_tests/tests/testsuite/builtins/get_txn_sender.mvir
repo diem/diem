@@ -1,0 +1,11 @@
+main() {
+    let sender: address;
+    let addr: address;
+
+    sender = get_txn_sender();
+    addr = 0x0;
+    assert(copy(sender) != copy(addr), 42);
+    // TODO: do we really need to test this?
+
+    return;
+}

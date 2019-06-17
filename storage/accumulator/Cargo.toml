@@ -1,0 +1,17 @@
+[package]
+name = "accumulator"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+proptest = "0.9.1"
+
+crypto = { path = "../../crypto/legacy_crypto" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+types = { path = "../../types" }
+
+[dev-dependencies]
+rand = "0.6.5"

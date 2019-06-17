@@ -1,0 +1,18 @@
+[package]
+name = "noise"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+futures = { version = "=0.3.0-alpha.16", package = "futures-preview" }
+snow = { version = "0.5.2", features=["ring-accelerated"]}
+
+crypto = { path = "../../crypto/legacy_crypto" }
+netcore = { path = "../netcore" }
+logger = { path = "../../common/logger" }
+
+[dev-dependencies]
+memsocket = { path = "../memsocket" }

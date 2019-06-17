@@ -1,0 +1,8 @@
+main() {
+    let x: u64;
+    let x_ref: &u64;
+    x = 5;
+    x_ref = &x;
+    assert(*move(x_ref) == 5, 42);
+    return;
+}

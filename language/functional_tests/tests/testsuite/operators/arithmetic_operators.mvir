@@ -1,0 +1,9 @@
+main() {
+  assert(1 + 2 == 3, 99);
+  assert(3 - 2 == 1, 100);
+  assert(2 * 3 == 6, 101);
+  assert(5 % 2 == 1, 102);
+  assert(6 / 2 == 3, 103);
+
+  return;
+}

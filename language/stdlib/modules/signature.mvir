@@ -1,0 +1,3 @@
+module Signature {
+    native public ed25519_verify(signature: bytearray, public_key: bytearray, message: bytearray): bool;
+}

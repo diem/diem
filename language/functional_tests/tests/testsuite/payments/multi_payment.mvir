@@ -1,0 +1,42 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let addr1: address;
+    let addr2: address;
+    let addr3: address;
+    let struct1_original_balance: u64;
+    let struct2_original_balance: u64;
+    let struct3_original_balance: u64;
+    let five_coins1: R#LibraCoin.T;
+    let five_coins2: R#LibraCoin.T;
+    let struct1_new_balance: u64;
+    let struct2_new_balance: u64;
+    let struct3_new_balance: u64;
+
+    addr1 = get_txn_sender();
+    addr2 = 0x42;
+    addr3 = 0x43;
+
+    struct1_original_balance = LibraAccount.balance(copy(addr1));
+    struct2_original_balance = LibraAccount.balance(copy(addr2));
+    struct3_original_balance = LibraAccount.balance(copy(addr3));
+
+    five_coins1 = LibraAccount.withdraw_from_sender(5);
+    five_coins2 = LibraAccount.withdraw_from_sender(5);
+    LibraAccount.deposit(copy(addr2), move(five_coins1));
+    LibraAccount.deposit(copy(addr3), move(five_coins2));
+
+    struct1_new_balance = LibraAccount.balance(copy(addr1));
+    struct2_new_balance = LibraAccount.balance(copy(addr2));
+    struct3_new_balance = LibraAccount.balance(copy(addr3));
+
+    assert(copy(struct1_new_balance) == copy(struct1_original_balance) - 10, 42);
+    assert(copy(struct2_new_balance) == copy(struct2_original_balance) + 5, 42);
+    assert(copy(struct3_new_balance) == copy(struct3_original_balance) + 5, 42);
+
+    return;
+}
+
+// check: Execution(MissingData)
+// TODO: current testing setup does not support this scenario

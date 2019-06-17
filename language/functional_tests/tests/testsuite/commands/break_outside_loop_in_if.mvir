@@ -1,0 +1,8 @@
+main() {
+    if (true) {
+        break;
+    }
+    return;
+}
+
+// check: break outside loop

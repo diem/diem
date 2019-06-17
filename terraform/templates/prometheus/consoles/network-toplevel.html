@@ -1,0 +1,38 @@
+{{ template "head" . }}
+
+<h1>Network Top Level Metrics</h1>
+{{ template "prom_right_table_head" }}
+<tr>
+  <th>Validators</th>
+  <th>{{ template "prom_query_drilldown" (args "sum(up{job='validators'})") }} / {{ template "prom_query_drilldown" (args "count(up{job='validators'})") }}</th>
+</tr>
+{{ template "prom_right_table_tail" }}
+
+{{ template "prom_content_head" . }}
+
+<h2>Validators</h2>
+{{ template "validators_table" }}
+
+<h2>Network connectivity</h2>
+<table style="width: 90%;" cellpadding="10px">
+  <tr>
+    {{ template "graph_in_table" (args "connectedPeers" "Connected Peers" "network_gauge{op='connected_peers'}" "num peers") }}
+
+    {{ template "graph_in_table" (args "outboundMsgQueue" "Pending Outbound Messages" "network_gauge{op='pending_direct_send_outbound_messages'" "num messages") }}
+
+    {{ template "graph_in_table" (args "outboundRpcQueue" "Pending Outbound RPCs" "network_gauge{op='pending_rpc_requests'" "num RPCs") }}
+  </tr>
+</table>
+
+<h2>Intra-node channels</h2>
+<table style="width: 90%;" cellpadding="10px">
+  <tr>
+    {{ template "graph_in_table" (args "network2mempool" "Network to Mempool" "network_gauge{op='pending_network_mempool_events}" "num pending events") }}
+
+    {{ template "graph_in_table" (args "network2consensus" "Network to Consensus" "network_gauge{op='pending_network_consensus_events'}" "num pending events") }}
+  </tr>
+</table>
+
+{{ template "prom_content_tail" . }}
+
+{{ template "tail" }}

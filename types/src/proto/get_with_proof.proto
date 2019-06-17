@@ -1,0 +1,310 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// This file contains proto definitions for performing queries and getting back
+// results with proofs.  This is the interface for a client to query data from
+// the system. Every query result must include proof so that a client can be
+// certain that the data returned is valid.  A client must verify this proof to
+// ensure that a node isn't lying to them.
+
+// How to verify the response as a client:
+// (Note that every response comes in the form of GetWithProofResponse which
+// wraps the inner response elements that correspond to the specific request
+// types.  Below we will assume a single request/response type.  The
+// verification can be extended as needed for multiple types. Also note that we
+// will use the following notation: resp = GetWithProofResponse and req =
+// GetWithProofRequest). Also note that the following will be considered
+// equivalent for brevity: req.requested_items.get_account_state_request ==
+// req.get_account_state_request And, resp.values.get_account_state_response ==
+// resp.get_account_state_response
+//
+// GetAccountStateResponse:
+// - let state_req = req.requested_items.get_account_state_request;
+// - let state_resp = resp.values.get_account_state_response;
+// - Verify that:
+//      - state_req.access_path == state_resp.access_path
+//          - This ensures that the server is responding with the correct access
+//          path
+// - let state_data_hash = Hash(state_resp.value);
+// - let state_proof = resp.values.proof.state_proof_value.sparse_merkle_proof;
+// - Validate state_proof using state_data_hash as the leaf
+//      - When verifying the state tree, use:
+//          state_root_hash = resp.values.transaction_info.state_root_hash
+// - Validate accumulator using resp.values.transaction_info as the leaf
+//      - When verifying the accumulator, use:
+//          root_hash =
+//          resp.ledger_info_with_sigs.ledger_info.ledger_info.txn_root_hash;
+// - Validate that the transaction root hash submitted in
+// req.known_value.node_value.txn_root_hash
+//      exists in the proof for accumulator and that the proof is valid with
+//      this hash
+// - Validate ledger info
+//      - let ledger_info_hash =
+//      Hash(resp.ledger_info_with_sigs.ledger_info.ledger_info);
+//      - Verify signatures from resp.ledger_info_with_sigs.signatures are
+//      signing
+//          ledger_info_hash and that there are >2/3 nodes signing this
+//          correctly
+//      - Validate that the timestamp is relatively recent in
+//          resp.ledger_info_with_sigs.ledger_info.timestamp
+//
+//
+// GetAccountTransactionBySequenceNumberResponse:
+// - Note that other than type completed_transaction, there will be no proof
+// returned
+//      since the transaction has not yet been committed.  To ensure that a
+//      validator is telling the truth about it not being committed yet, a
+//      client should query for their account state and verify that their
+//      current sequence number is less than what they are searching for with
+//      GetAccountTransactionBySequenceNumberResponse
+// - let txn =
+//      resp.get_account_transaction_by_sequence_number_response.transaction.committed_transaction;
+// - let txn_hash = Hash(txn);
+// - Verify that resp.proof.transaction_info.signed_transaction_hash == txn_hash
+// - Validate accumulator using resp.proof.transaction_info as the leaf
+//      - When verifying the accumulator, use:
+//          root_hash =
+//          resp.ledger_info_with_sigs.ledger_info.ledger_info.txn_root_hash;
+// - Validate that the transaction root hash submitted in
+// req.known_value.node_value.txn_root_hash
+//      exists in the proof for accumulator and that the proof is valid with
+//      this hash
+// - Validate ledger info
+//      - let ledger_info_hash =
+//      Hash(resp.ledger_info_with_sigs.ledger_info.ledger_info);
+//      - Verify signatures from resp.ledger_info_with_sigs.signatures are
+//      signing
+//          ledger_info_hash and that there are >2/3 nodes signing this
+//          correctly
+//      - Validate that the timestamp is relatively recent in
+//          resp.ledger_info_with_sigs.ledger_info.timestamp
+//
+//
+// GetTransactionsResponse:
+// - for txn in resp.get_transactions_response.transactions:
+//      - let txn = txn.committed_transaction;
+//      - let txn_hash = Hash(txn);
+//      - Verify that txn.proof.transaction_info.signed_transaction_hash ==
+//      txn_hash
+//      - Validate accumulator using txn.proof.transaction_info as the leaf
+//      - When verifying the accumulator, use:
+//          root_hash =
+//          resp.ledger_info_with_sigs.ledger_info.ledger_info.txn_root_hash;
+//      - Verify that transactions are sequential and none are missing
+// - Validate ledger info
+//      - let ledger_info_hash =
+//      Hash(resp.ledger_info_with_sigs.ledger_info.ledger_info);
+//      - Verify signatures from resp.ledger_info_with_sigs.signatures are
+//      signing
+//          ledger_info_hash and that there are >2/3 nodes signing this
+//          correctly
+//      - Validate that the timestamp is relatively recent in
+//          resp.ledger_info_with_sigs.ledger_info.timestamp
+// - If the number of transactions returned is less than limit for an ascending
+// query
+//      or if the requested offset > current version for a descending query,
+//      the client should verify that the timestamp in ledger info is relatively
+//      recent to determine if it is likely that all transactions available were
+//      returned
+syntax = "proto3";
+
+package types;
+
+import "access_path.proto";
+import "account_state_blob.proto";
+import "events.proto";
+import "ledger_info.proto";
+import "transaction.proto";
+import "validator_change.proto";
+
+// -----------------------------------------------------------------------------
+// ---------------- Update to latest ledger request
+// -----------------------------------------------------------------------------
+
+// This API is used to update the client to the latest ledger version and
+// optionally also request 1..n other pieces of data.  This allows for batch
+// queries.  All queries return proofs that a client should check to validate
+// the data.
+//
+// Note that if a client only wishes to update to the latest LedgerInfo and
+// receive the proof that this latest ledger extends the client_known_version
+// ledger the client had, they can simply set the requested_items to an empty
+// list.
+message UpdateToLatestLedgerRequest {
+    // This is the version the client already trusts. Usually the client should
+    // set this to the version it obtained the last time it synced with the
+    // chain. If this is the first time ever the client sends a request, it must
+    // use the waypoint hard-coded in its software.
+    uint64 client_known_version = 1;
+
+    // The items for which we are requesting data in this API call.
+    repeated RequestItem requested_items = 2;
+}
+
+message RequestItem {
+    oneof requested_items {
+        GetAccountStateRequest get_account_state_request = 1;
+        GetAccountTransactionBySequenceNumberRequest
+        get_account_transaction_by_sequence_number_request = 2;
+        GetEventsByEventAccessPathRequest get_events_by_event_access_path_request =
+        3;
+        GetTransactionsRequest get_transactions_request = 4;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- Update to latest ledger response
+// -----------------------------------------------------------------------------
+
+// Response from getting latest ledger
+message UpdateToLatestLedgerResponse {
+    // Responses to the queries posed by the requests. The proofs generated will
+    // be relative to the version of the latest ledger provided below.
+    repeated ResponseItem response_items = 1;
+
+    // The latest ledger info this node has. It will come with at least 2f+1
+    // validator signatures as well as a proof that shows the latest ledger
+    // extends the old ledger the client had.
+    LedgerInfoWithSignatures ledger_info_with_sigs = 2;
+
+    // Validator change events from what the client last knew.  This is used to
+    // inform the client of validator changes from the client's last known version
+    // until the current version
+    repeated ValidatorChangeEventWithProof validator_change_events = 3;
+}
+
+// Individual response items to the queries posed by the requests
+message ResponseItem {
+    oneof response_items {
+        GetAccountStateResponse get_account_state_response = 3;
+        GetAccountTransactionBySequenceNumberResponse
+            get_account_transaction_by_sequence_number_response = 4;
+        GetEventsByEventAccessPathResponse get_events_by_event_access_path_response = 5;
+        GetTransactionsResponse get_transactions_response = 6;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- Get account state (balance, sequence number, etc.)
+// -----------------------------------------------------------------------------
+
+// Gets latest state for an account.
+message GetAccountStateRequest {
+    // Account for which we are fetching the state.
+    bytes address = 1;
+}
+
+// State information returned by a get account state query.
+message GetAccountStateResponse {
+    // Blob value representing the account state together with proof the client
+    // can utilize to verify it.
+    AccountStateWithProof account_state_with_proof = 1;
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- Get single transaction by account + sequence number
+// -----------------------------------------------------------------------------
+// Get transactions that altered an account - this includes both sent and
+// received. A user of this should check that the data returned matches what
+// they expect.  As an example, a potential attack vector would be something
+// like the following: Alice is buying an apple from Bob. Alice's phone signs a
+// transaction X with sequence number N that pays coins to Bob. Alice transmits
+// this signature to Bob's payment terminal which then submits the transaction
+// and checks its status to see if Alice can be given the apple. However, as Bob
+// is doing this Alice constructs a second transaction X' also with sequence
+// number N. Alice gets that transaction inserted in the blockchain. If Bob
+// isn't thoughtful about how he uses this API he may assume that if he asks for
+// the N'th transaction on Alice's account that when the API returns that this
+// means the transaction has gone through. The point here is that one should be
+// careful in reading too much into "transaction X is on the chain" and focus on
+// the logs, which tell you what the transaction did.
+//
+// If a client submitted a transaction, they should also verify that the hash of
+// the returned transaction matches what they submitted.  As an example, if a
+// client has two wallets that share the same account, they may both submit a
+// transaction at the same sequence number and only one will be committed.  A
+// client should never assume that if they receive the response that this
+// transaction was included that it means that this is definitely the
+// transaction that was submitted.  They should check that the hash matches what
+// they sent
+message GetAccountTransactionBySequenceNumberRequest {
+    // Account for which to query transactions
+    bytes account = 1;
+
+    uint64 sequence_number = 2;
+
+    // Set to true to fetch events for the transaction at this version
+    bool fetch_events = 3;
+}
+
+// Transaction information for transactions requested by
+// GetAccountTransactionsRequest
+message GetAccountTransactionBySequenceNumberResponse {
+  // When the transaction requested is committed, return the committed
+  // transaction with proof.
+  SignedTransactionWithProof signed_transaction_with_proof = 2;
+  // When the transaction requested is not committed, we give a proof that
+  // shows the current sequence number is smaller than what would have been if
+  // the transaction was committed.
+  AccountStateWithProof proof_of_current_sequence_number = 3;
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- Get events by event access path
+// -----------------------------------------------------------------------------
+
+// Get events that exist on an event access path.  In the current world,
+// a user may specify events that were received, events that were sent, or any
+// event that modifies their account
+message GetEventsByEventAccessPathRequest {
+    AccessPath access_path = 1;
+
+    // The sequence number of the event to start with for this query. Use a
+    // sequence number of MAX_INT to represent the latest.
+    uint64 start_event_seq_num = 2;
+
+    // If ascending is true this query will return up to `limit` events that were
+    // emitted after `start_event_seq_num`. Otherwise it will return up to `limit`
+    // events before the offset. Both cases are inclusive.
+    bool ascending = 3;
+
+    // Limit number of results
+    uint64 limit = 4;
+}
+
+message GetEventsByEventAccessPathResponse {
+    // Returns an event and proof of each of the events in the request. The first
+    // element of proofs will be the closest to `start_event_seq_num`.
+    repeated EventWithProof events_with_proof = 1;
+
+    // If the number of events returned is less than `limit` for an ascending
+    // query or if start_event_seq_num > the latest seq_num for a descending
+    // query,  returns the state of the account containing the given access path
+    // in the latest state. This allows the client to verify that there are in
+    // fact no extra events.
+    //
+    // The LedgerInfoWithSignatures which is on the main
+    // UpdateToLatestLedgerResponse can be used to validate this.
+    AccountStateWithProof proof_of_latest_event = 2;
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- Get transactions
+// -----------------------------------------------------------------------------
+
+// Get up to limit transactions starting from start_version.
+message GetTransactionsRequest {
+    // The version of the transaction to start with for this query.  Use a version
+    // of MAX_INT to represent the latest.
+    uint64 start_version = 1;
+
+    // Limit number of results
+    uint64 limit = 2;
+
+    // Set to true to fetch events for the transaction at each version
+    bool fetch_events = 3;
+}
+
+message GetTransactionsResponse {
+    TransactionListWithProof txn_list_with_proof = 1;
+}

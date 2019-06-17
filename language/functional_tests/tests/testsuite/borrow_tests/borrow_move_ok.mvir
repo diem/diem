@@ -1,0 +1,31 @@
+modules:
+
+module M {
+    struct T {v: u64}
+
+    public new(v: u64): V#Self.T {
+        return T{v: move(v)};
+    }
+
+    public value(this: &V#Self.T) : u64 {
+        let f: &u64;
+        //borrow of move
+        f = &move(this).v;
+        return *move(f);
+    }
+}
+
+script:
+
+import Transaction.M;
+
+main() {
+    let x: V#M.T;
+    let x_ref:  &V#M.T;
+    let y: u64;
+    x = M.new(5);
+    x_ref = &x;
+    y = M.value(move(x_ref));
+    assert(move(y) == 5, 42);
+    return;
+}

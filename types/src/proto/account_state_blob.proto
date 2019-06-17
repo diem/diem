@@ -1,0 +1,16 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package types;
+
+import "proof.proto";
+
+message AccountStateBlob { bytes blob = 1; }
+
+message AccountStateWithProof {
+  uint64 version = 1;
+  AccountStateBlob blob = 2;
+  AccountStateProof proof = 3;
+}

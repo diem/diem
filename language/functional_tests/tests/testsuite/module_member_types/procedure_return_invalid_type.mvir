@@ -1,0 +1,16 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetTypeMismatchError(1) }
+
+modules:
+module Test {
+    public no(): u64 {
+        return false;
+    }
+}
+
+script:
+import Transaction.Test;
+main() {
+    let x: u64;
+    x = Test.no();
+    return;
+}

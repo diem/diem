@@ -1,0 +1,3 @@
+main() {
+  return; // This is a comment
+}

@@ -1,0 +1,54 @@
+modules:
+module Token {
+    resource T {v: u64}
+
+    public new(v: u64): R#Self.T {
+        return T{v: move(v)};
+    }
+
+    public value(this: &R#Self.T): u64 {
+        let vref: &u64;
+        vref = &copy(this).v;
+        release(move(this));
+        return *move(vref);
+    }
+
+    public has(addr: address): bool {
+        let yes: bool;
+        yes = exists<T>(move(addr));
+        return move(yes);
+    }
+
+    public get(addr: address): &mut R#Self.T {
+        let t_ref: &mut R#Self.T;
+        t_ref = borrow_global<T>(move(addr));
+        return move(t_ref);
+    }
+
+    public publish(t: R#Self.T) {
+        move_to_sender<T>(move(t));
+        return;
+    }
+}
+
+script:
+import Transaction.Token;
+main() {
+    let z: R#Token.T;
+    let addr1: address;
+    let struct1: &mut R#Token.T;
+    let imms1: &R#Token.T;
+    let struct1_original_balance: u64;
+
+    z = Token.new(0);
+    Token.publish(move(z));
+
+    addr1 = get_txn_sender();
+    struct1 = Token.get(move(addr1));
+    imms1 = freeze(move(struct1));
+
+    struct1_original_balance = Token.value(move(imms1));
+    assert(copy(struct1_original_balance) == 0, 42);
+
+    return;
+}

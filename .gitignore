@@ -1,0 +1,33 @@
+# Rust specific ignores
+/target
+**/*.rs.bk
+# Cargo.lock is needed for deterministic testing and repeatable builds.
+#
+# Having it in the repo slows down development cycle.
+#
+# More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
+Cargo.lock
+
+# Ignore generated files in proto folders
+**/proto/*.rs
+!**/proto/mod.rs
+!**/proto/converter.rs
+**/proto/*/*.rs
+!**/proto/*/mod.rs
+!**/proto/*/converter.rs
+
+# IDE
+.idea
+.idea/*
+*.iml
+.vscode
+
+# Ignore wallet mnemonic files used for deterministic key derivation
+*.mnemonic
+
+# Generated Parser File by LALRPOP
+language/compiler/src/parser/syntax.rs
+language/move_ir/
+
+# GDB related
+**/.gdb_history

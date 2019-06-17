@@ -1,0 +1,10 @@
+main() {
+    if (false) {
+    }
+    else {
+        break;
+    }
+    return;
+}
+
+// check: break outside loop

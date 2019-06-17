@@ -1,0 +1,30 @@
+// check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetUnsafeToDestroyError(5) }
+modules:
+module A {
+    import 0x0.LibraCoin;
+
+    resource T{g: R#LibraCoin.T}
+
+    public new(g: R#LibraCoin.T): R#Self.T {
+        return T{g: move(g)};
+    }
+
+    public destroy(a: R#Self.T) {
+        let c: R#LibraCoin.T;
+        T{g: c} = move(a);
+        LibraCoin.destroy_zero(move(c));
+        return;
+    }
+}
+
+script:
+import Transaction.A;
+import 0x0.LibraCoin;
+main() {
+    let zero_resource: R#LibraCoin.T;
+    let s: R#A.T;
+    zero_resource = LibraCoin.zero();
+    s = A.new(move(zero_resource));
+
+    return;
+}

@@ -1,0 +1,15 @@
+import 0x0.Hash;
+
+main() {
+    let input: bytearray;
+    let output: bytearray;
+    let expected_output: bytearray;
+
+    input = b"616263";
+    output = Hash.sha2_256(copy(input));
+    expected_output = b"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+    assert(move(output) == move(expected_output), 42);
+
+    return;
+}

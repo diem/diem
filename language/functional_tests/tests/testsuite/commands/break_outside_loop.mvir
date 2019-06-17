@@ -1,0 +1,6 @@
+main() {
+    break;
+    return;
+}
+
+// check: break outside loop

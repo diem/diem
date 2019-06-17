@@ -1,0 +1,21 @@
+[package]
+name = "testsuite"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dev-dependencies]
+lazy_static = "1.2.0"
+num-traits = "0.2"
+rust_decimal = "1.0.1"
+
+# In order to limit the potential waiting time for binaries to be built while
+# running tests all binaries which are being tested under this testsuite
+# should have their crates listed as dev-dependencies.
+cli = { path = "../client", package="client"}
+generate_keypair = { path = "../config/generate_keypair" }
+libra_swarm = { path = "../libra_swarm" }
+logger = { path = "../common/logger" }
+tempfile = "3.0.6"

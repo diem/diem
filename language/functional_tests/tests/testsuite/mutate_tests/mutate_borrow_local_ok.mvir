@@ -1,0 +1,7 @@
+main() {
+    let v: u64;
+    v = 5;
+    *&mut v = 0;
+    assert(copy(v) == 0, 42);
+    return;
+}
