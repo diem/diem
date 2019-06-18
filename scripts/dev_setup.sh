@@ -25,6 +25,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PACKAGE_MANAGER="yum"
 	elif which apt-get &>/dev/null; then
 		PACKAGE_MANAGER="apt-get"
+		sudo apt-get update
 	else
 		echo "Unable to find supported package manager (yum or apt-get). Abort"
 		exit 1
