@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{checks::BoundsChecker, errors::*, file_format::*, file_format_common::*};
+use crate::{errors::*, file_format::*, file_format_common::*};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     collections::HashSet,
@@ -28,24 +28,17 @@ impl CompiledScriptMut {
 }
 
 impl CompiledModule {
-    /// Deserialize a &[u8] slice into a module (`CompiledModule`)
-    pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<CompiledModule> {
-        let compiled_module = Self::deserialize_no_check_bounds(binary)?;
-        compiled_module.check_bounds()
+    /// Deserialize a &[u8] slice into a `CompiledModule` instance.
+    pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
+        let deserialized = CompiledModuleMut::deserialize_no_check_bounds(binary)?;
+        deserialized.freeze().map_err(|_| BinaryError::Malformed)
     }
+}
 
+impl CompiledModuleMut {
     // exposed as a public function to enable testing the deserializer
-    pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<CompiledModule> {
+    pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<Self> {
         deserialize_compiled_module(binary)
-    }
-
-    /// Checks that all indexes are in bound in this `CompiledModule`.
-    pub fn check_bounds(self) -> BinaryLoaderResult<CompiledModule> {
-        if BoundsChecker::new(&self).verify().is_empty() {
-            Ok(self)
-        } else {
-            Err(BinaryError::Malformed)
-        }
     }
 }
 
@@ -81,7 +74,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
 }
 
 /// Module internal function that manages deserialization of modules.
-fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModule> {
+fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModuleMut> {
     let binary_len = binary.len() as u64;
     let mut cursor = Cursor::new(binary);
     let table_count = check_binary(&mut cursor)?;
@@ -245,7 +238,7 @@ impl CommonTables for CompiledScriptMut {
     }
 }
 
-impl CommonTables for CompiledModule {
+impl CommonTables for CompiledModuleMut {
     fn get_module_handles(&mut self) -> &mut Vec<ModuleHandle> {
         &mut self.module_handles
     }
@@ -291,9 +284,9 @@ fn build_compiled_script(binary: &[u8], tables: &[Table]) -> BinaryLoaderResult<
     Ok(script)
 }
 
-/// Builds and returns a `CompiledModule`.
-fn build_compiled_module(binary: &[u8], tables: &[Table]) -> BinaryLoaderResult<CompiledModule> {
-    let mut module = CompiledModule::default();
+/// Builds and returns a `CompiledModuleMut`.
+fn build_compiled_module(binary: &[u8], tables: &[Table]) -> BinaryLoaderResult<CompiledModuleMut> {
+    let mut module = CompiledModuleMut::default();
     build_common_tables(binary, tables, &mut module)?;
     build_module_tables(binary, tables, &mut module)?;
     Ok(module)
@@ -343,11 +336,11 @@ fn build_common_tables(
     Ok(())
 }
 
-/// Builds tables related to a `CompiledModule`.
+/// Builds tables related to a `CompiledModuleMut`.
 fn build_module_tables(
     binary: &[u8],
     tables: &[Table],
-    module: &mut CompiledModule,
+    module: &mut CompiledModuleMut,
 ) -> BinaryLoaderResult<()> {
     for table in tables {
         match table.kind {

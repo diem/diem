@@ -10,9 +10,9 @@ use std::collections::BTreeMap;
 use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
-        AddressPoolIndex, CompiledModule, FieldDefinitionIndex, FunctionHandleIndex,
-        FunctionSignatureIndex, LocalsSignatureIndex, ModuleHandleIndex, StringPoolIndex,
-        StructHandleIndex, TableIndex, TypeSignatureIndex,
+        AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
+        FunctionHandleIndex, FunctionSignatureIndex, LocalsSignatureIndex, ModuleHandleIndex,
+        StringPoolIndex, StructHandleIndex, TableIndex, TypeSignatureIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -162,8 +162,8 @@ impl AsRef<PropIndex> for OutOfBoundsMutation {
     }
 }
 
-pub struct ApplyOutOfBoundsContext<'a> {
-    module: &'a mut CompiledModule,
+pub struct ApplyOutOfBoundsContext {
+    module: CompiledModuleMut,
     // This is an Option because it gets moved out in apply before apply_one is called. Rust
     // doesn't let you call another con-consuming method after a partial move out.
     mutations: Option<Vec<OutOfBoundsMutation>>,
@@ -174,14 +174,14 @@ pub struct ApplyOutOfBoundsContext<'a> {
     locals_sig_structs: Vec<(LocalsSignatureIndex, usize)>,
 }
 
-impl<'a> ApplyOutOfBoundsContext<'a> {
-    pub fn new(module: &'a mut CompiledModule, mutations: Vec<OutOfBoundsMutation>) -> Self {
-        let type_sig_structs: Vec<_> = Self::type_sig_structs(module).collect();
-        let function_sig_structs: Vec<_> = Self::function_sig_structs(module).collect();
-        let locals_sig_structs: Vec<_> = Self::locals_sig_structs(module).collect();
+impl ApplyOutOfBoundsContext {
+    pub fn new(module: CompiledModule, mutations: Vec<OutOfBoundsMutation>) -> Self {
+        let type_sig_structs: Vec<_> = Self::type_sig_structs(&module).collect();
+        let function_sig_structs: Vec<_> = Self::function_sig_structs(&module).collect();
+        let locals_sig_structs: Vec<_> = Self::locals_sig_structs(&module).collect();
 
         Self {
-            module,
+            module: module.into_inner(),
             mutations: Some(mutations),
             type_sig_structs,
             function_sig_structs,
@@ -189,7 +189,7 @@ impl<'a> ApplyOutOfBoundsContext<'a> {
         }
     }
 
-    pub fn apply(mut self) -> Vec<VerificationError> {
+    pub fn apply(mut self) -> (CompiledModuleMut, Vec<VerificationError>) {
         // This is a map from (source kind, dest kind) to the actual mutations -- this is done to
         // figure out how many mutations to do for a particular pair, which is required for
         // pick_slice_idxs below.
@@ -212,7 +212,7 @@ impl<'a> ApplyOutOfBoundsContext<'a> {
             // to get the lifetimes right :)
             results.extend(self.apply_one(src_kind, dst_kind, mutations));
         }
-        results
+        (self.module, results)
     }
 
     fn apply_one(

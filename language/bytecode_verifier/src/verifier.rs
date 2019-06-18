@@ -11,7 +11,6 @@ use std::collections::BTreeMap;
 use types::language_storage::CodeKey;
 use vm::{
     access::{BaseAccess, ScriptAccess},
-    checks::BoundsChecker,
     errors::{VMStaticViolation, VerificationError},
     file_format::{CompiledModule, CompiledScript},
     resolver::Resolver,
@@ -19,15 +18,14 @@ use vm::{
     IndexKind,
 };
 
-/// Verification of a module is performed through a sequnence of checks.
-/// There is a partial order on the checs. For example, bounds checking must precede all other
-/// checks and duplication check must precede the structural recursion check. In general, later
-/// checks are more expensive.
+/// Verification of a module is performed through a sequence of checks.
+///
+/// There is a partial order on the checks. For example, the duplication check must precede the
+/// structural recursion check. In general, later checks are more expensive.
 pub fn verify_module(module: CompiledModule) -> (CompiledModule, Vec<VerificationError>) {
-    let mut errors = BoundsChecker::new(&module).verify();
-    if errors.is_empty() {
-        errors.append(&mut DuplicationChecker::new(&module).verify());
-    }
+    // All CompiledModule instances are statically guaranteed to be bounds checked, so there's no
+    // need for more checking.
+    let mut errors = DuplicationChecker::new(&module).verify();
     if errors.is_empty() {
         errors.append(&mut SignatureChecker::new(&module).verify());
         errors.append(&mut ResourceTransitiveChecker::new(&module).verify());

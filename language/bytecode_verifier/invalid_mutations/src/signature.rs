@@ -9,7 +9,7 @@ use proptest_helpers::{pick_slice_idxs, RepeatVec};
 use std::collections::BTreeMap;
 use vm::{
     errors::{VMStaticViolation, VerificationError},
-    file_format::{CompiledModule, SignatureToken},
+    file_format::{CompiledModuleMut, SignatureToken},
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
@@ -38,12 +38,12 @@ impl AsRef<PropIndex> for DoubleRefMutation {
 
 /// Context for applying a list of `DoubleRefMutation` instances.
 pub struct ApplySignatureDoubleRefContext<'a> {
-    module: &'a mut CompiledModule,
+    module: &'a mut CompiledModuleMut,
     mutations: Vec<DoubleRefMutation>,
 }
 
 impl<'a> ApplySignatureDoubleRefContext<'a> {
-    pub fn new(module: &'a mut CompiledModule, mutations: Vec<DoubleRefMutation>) -> Self {
+    pub fn new(module: &'a mut CompiledModuleMut, mutations: Vec<DoubleRefMutation>) -> Self {
         Self { module, mutations }
     }
 
@@ -134,12 +134,12 @@ impl AsRef<PropIndex> for FieldRefMutation {
 
 /// Context for applying a list of `FieldRefMutation` instances.
 pub struct ApplySignatureFieldRefContext<'a> {
-    module: &'a mut CompiledModule,
+    module: &'a mut CompiledModuleMut,
     mutations: Vec<FieldRefMutation>,
 }
 
 impl<'a> ApplySignatureFieldRefContext<'a> {
-    pub fn new(module: &'a mut CompiledModule, mutations: Vec<FieldRefMutation>) -> Self {
+    pub fn new(module: &'a mut CompiledModuleMut, mutations: Vec<FieldRefMutation>) -> Self {
         Self { module, mutations }
     }
 

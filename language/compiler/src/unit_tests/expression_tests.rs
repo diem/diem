@@ -183,8 +183,8 @@ module Test {
     }
 }",
     );
-    let compiled_script = compile_module_string(&code).unwrap();
-    assert!(compiled_script.struct_handles.len() == 1);
+    let compiled_module = compile_module_string(&code).unwrap();
+    assert!(compiled_module.struct_handles().len() == 1);
 }
 
 #[test]

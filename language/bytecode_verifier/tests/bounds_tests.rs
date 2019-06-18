@@ -10,15 +10,15 @@ use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     checks::BoundsChecker,
     errors::{VMStaticViolation, VerificationError},
+    file_format::{CompiledModule, CompiledModuleMut},
     proptest_types::CompiledModuleStrategyGen,
-    CompiledModule, IndexKind,
+    IndexKind,
 };
 
 proptest! {
     #[test]
-    fn valid_bounds(module in CompiledModule::valid_strategy(20)) {
-        let bounds_checker = BoundsChecker::new(&module);
-        prop_assert_eq!(bounds_checker.verify(), vec![]);
+    fn valid_bounds(_module in CompiledModule::valid_strategy(20)) {
+        // valid_strategy will panic if there are any bounds check issues.
     }
 }
 
@@ -30,9 +30,8 @@ proptest! {
 fn valid_bounds_no_members() {
     let mut gen = CompiledModuleStrategyGen::new(20);
     gen.member_count(0);
-    proptest!(|(module in gen.generate())| {
-        let bounds_checker = BoundsChecker::new(&module);
-        prop_assert_eq!(bounds_checker.verify(), vec![])
+    proptest!(|(_module in gen.generate())| {
+        // gen.generate() will panic if there are any bounds check issues.
     });
 }
 
@@ -42,9 +41,8 @@ proptest! {
         module in CompiledModule::valid_strategy(20),
         oob_mutations in vec(OutOfBoundsMutation::strategy(), 0..40),
     ) {
-        let mut module = module;
-        let mut expected_violations = {
-            let oob_context = ApplyOutOfBoundsContext::new(&mut module, oob_mutations);
+        let (module, mut expected_violations) = {
+            let oob_context = ApplyOutOfBoundsContext::new(module, oob_mutations);
             oob_context.apply()
         };
         expected_violations.sort();
@@ -60,7 +58,7 @@ proptest! {
         module in CompiledModule::valid_strategy(20),
         mutations in vec(CodeUnitBoundsMutation::strategy(), 0..40),
     ) {
-        let mut module = module;
+        let mut module = module.into_inner();
         let mut expected_violations = {
             let context = ApplyCodeUnitBoundsContext::new(&mut module, mutations);
             context.apply()
@@ -81,7 +79,7 @@ proptest! {
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
-        let mut module = CompiledModule::default();
+        let mut module = CompiledModuleMut::default();
         module.string_pool = string_pool;
         module.address_pool = address_pool;
         module.byte_array_pool = byte_array_pool;
@@ -108,8 +106,7 @@ proptest! {
 
     /// Make sure that garbage inputs don't crash the bounds checker.
     #[test]
-    fn garbage_inputs(module in any_with::<CompiledModule>(16)) {
-        let bounds_checker = BoundsChecker::new(&module);
-        bounds_checker.verify();
+    fn garbage_inputs(module in any_with::<CompiledModuleMut>(16)) {
+        let _ = module.freeze();
     }
 }

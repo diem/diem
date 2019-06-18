@@ -13,7 +13,7 @@ use vm::file_format::*;
 use vm_cache_map::Arena;
 
 fn test_module(name: String) -> CompiledModule {
-    CompiledModule {
+    CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             name: StringPoolIndex::new(0),
             address: AddressPoolIndex::new(0),
@@ -70,6 +70,8 @@ fn test_module(name: String) -> CompiledModule {
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
+    .freeze()
+    .expect("test module should satisfy bounds checker")
 }
 
 fn test_script() -> CompiledScript {

@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     file_format::{
-        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledScript, CompiledScriptMut,
-        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
+        CompiledScriptMut, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
+        FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
+        ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
     },
     transaction_metadata::TransactionMetadata,
 };
@@ -567,7 +567,7 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         })
         .collect();
     let (local_sigs, function_sigs): (Vec<_>, Vec<_>) = sigs.into_iter().unzip();
-    CompiledModule {
+    CompiledModuleMut {
         function_defs,
         field_defs: vec![],
         struct_defs: vec![],
@@ -585,6 +585,8 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
+    .freeze()
+    .expect("test module should satisfy the bounds checker")
 }
 
 #[test]

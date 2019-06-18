@@ -4,10 +4,10 @@
 //! Utilities for property-based testing.
 
 use crate::file_format::{
-    AddressPoolIndex, CompiledModule, FieldDefinition, FieldDefinitionIndex, FunctionHandle,
-    FunctionSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
-    StringPoolIndex, StructDefinition, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-    TypeSignatureIndex,
+    AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
+    FunctionHandle, FunctionSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex,
+    SignatureToken, StringPoolIndex, StructDefinition, StructHandle, StructHandleIndex, TableIndex,
+    TypeSignature, TypeSignatureIndex,
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -307,7 +307,7 @@ impl CompiledModuleStrategyGen {
                     assert_eq!(function_handles_len, function_handles.len());
 
                     // Put it all together.
-                    CompiledModule {
+                    CompiledModuleMut {
                         module_handles,
                         struct_handles,
                         function_handles,
@@ -324,6 +324,8 @@ impl CompiledModuleStrategyGen {
                         byte_array_pool,
                         address_pool,
                     }
+                    .freeze()
+                    .expect("valid modules should satisfy the bounds checker")
                 },
             )
     }

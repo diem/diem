@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModule,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
         FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StringPoolIndex,
         StructDefinitionIndex, TableIndex,
     },
@@ -43,7 +43,7 @@ impl AsRef<PropIndex> for CodeUnitBoundsMutation {
 }
 
 pub struct ApplyCodeUnitBoundsContext<'a> {
-    module: &'a mut CompiledModule,
+    module: &'a mut CompiledModuleMut,
     // This is so apply_one can be called after mutations has been iterated on.
     mutations: Option<Vec<CodeUnitBoundsMutation>>,
 }
@@ -82,7 +82,7 @@ macro_rules! locals_bytecode {
 }
 
 impl<'a> ApplyCodeUnitBoundsContext<'a> {
-    pub fn new(module: &'a mut CompiledModule, mutations: Vec<CodeUnitBoundsMutation>) -> Self {
+    pub fn new(module: &'a mut CompiledModuleMut, mutations: Vec<CodeUnitBoundsMutation>) -> Self {
         Self {
             module,
             mutations: Some(mutations),

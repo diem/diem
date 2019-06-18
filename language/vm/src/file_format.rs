@@ -1084,7 +1084,7 @@ impl CompiledScript {
     /// If a `CompiledScript` has been bounds checked, the corresponding `CompiledModule` can be
     /// assumed to pass the bounds checker as well.
     pub fn into_module(self) -> CompiledModule {
-        self.0.into_module()
+        CompiledModule(self.0.into_module())
     }
 }
 
@@ -1093,18 +1093,13 @@ impl CompiledScriptMut {
     /// consistency. This includes bounds checks but no others.
     pub fn freeze(self) -> Result<CompiledScript, Vec<VerificationError>> {
         let fake_module = self.into_module();
-        let errors = BoundsChecker::new(&fake_module).verify();
-        if errors.is_empty() {
-            Ok(fake_module.into_script())
-        } else {
-            Err(errors)
-        }
+        Ok(fake_module.freeze()?.into_script())
     }
 
     /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
     /// of both.
-    pub fn into_module(self) -> CompiledModule {
-        CompiledModule {
+    pub fn into_module(self) -> CompiledModuleMut {
+        CompiledModuleMut {
             module_handles: self.module_handles,
             struct_handles: self.struct_handles,
             function_handles: self.function_handles,
@@ -1130,8 +1125,13 @@ impl CompiledScriptMut {
 /// It is a unit of code that can be used by transactions or other modules.
 ///
 /// A module is published as a single entry and it is retrieved as a single blob.
-#[derive(Clone, Default, Eq, PartialEq, Debug)]
-pub struct CompiledModule {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledModule(CompiledModuleMut);
+
+/// A mutable version of `CompiledModule`. Converting to a `CompiledModule` requires this to pass
+/// the bounds checker.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CompiledModuleMut {
     /// Handles to external modules and self at position 0.
     pub module_handles: Vec<ModuleHandle>,
     /// Handles to external and internal types.
@@ -1166,7 +1166,7 @@ pub struct CompiledModule {
 
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
-impl Arbitrary for CompiledModule {
+impl Arbitrary for CompiledModuleMut {
     type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled module.
     type Parameters = usize;
@@ -1201,7 +1201,7 @@ impl Arbitrary for CompiledModule {
                     (string_pool, byte_array_pool, address_pool),
                     (struct_defs, field_defs, function_defs),
                 )| {
-                    CompiledModule {
+                    CompiledModuleMut {
                         module_handles,
                         struct_handles,
                         function_handles,
@@ -1221,37 +1221,7 @@ impl Arbitrary for CompiledModule {
     }
 }
 
-impl CompiledModule {
-    /// By convention, the index of the module being implemented is 0.
-    pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
-
-    fn self_handle(&self) -> &ModuleHandle {
-        &self.module_handles[Self::IMPLEMENTED_MODULE_INDEX as usize]
-    }
-
-    /// Returns the name of the module.
-    pub fn name(&self) -> &str {
-        self.string_at(self.self_handle().name)
-    }
-
-    /// Returns the address of the module.
-    pub fn address(&self) -> &AccountAddress {
-        self.address_at(self.self_handle().address)
-    }
-
-    /// Returns the code key of `module_handle`
-    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
-        CodeKey::new(
-            *self.address_at(module_handle.address),
-            self.string_at(module_handle.name).to_string(),
-        )
-    }
-
-    /// Returns the code key of `self`
-    pub fn self_code_key(&self) -> CodeKey {
-        self.code_key_for_handle(self.self_handle())
-    }
-
+impl CompiledModuleMut {
     /// Returns the count of a specific `IndexKind`
     pub fn kind_count(&self, kind: IndexKind) -> usize {
         match kind {
@@ -1274,25 +1244,83 @@ impl CompiledModule {
         }
     }
 
+    /// Converts this instance into `CompiledModule` after verifying it for basic internal
+    /// consistency. This includes bounds checks but no others.
+    pub fn freeze(self) -> Result<CompiledModule, Vec<VerificationError>> {
+        let errors = BoundsChecker::new(&self).verify();
+        if errors.is_empty() {
+            Ok(CompiledModule(self))
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+impl CompiledModule {
+    /// By convention, the index of the module being implemented is 0.
+    pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
+
+    fn self_handle(&self) -> &ModuleHandle {
+        &self.module_handle_at(ModuleHandleIndex::new(Self::IMPLEMENTED_MODULE_INDEX))
+    }
+
+    /// Returns a reference to the inner `CompiledModuleMut`.
+    pub fn as_inner(&self) -> &CompiledModuleMut {
+        &self.0
+    }
+
+    /// Converts this instance into the inner `CompiledModuleMut`. Converting back to a
+    /// `CompiledModule` would require it to be verified again.
+    pub fn into_inner(self) -> CompiledModuleMut {
+        self.0
+    }
+
+    /// Returns the name of the module.
+    pub fn name(&self) -> &str {
+        self.string_at(self.self_handle().name)
+    }
+
+    /// Returns the address of the module.
+    pub fn address(&self) -> &AccountAddress {
+        self.address_at(self.self_handle().address)
+    }
+
+    /// Returns the number of items of a specific `IndexKind`.
+    pub fn kind_count(&self, kind: IndexKind) -> usize {
+        self.as_inner().kind_count(kind)
+    }
+
+    /// Returns the code key of `module_handle`
+    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
+        CodeKey::new(
+            *self.address_at(module_handle.address),
+            self.string_at(module_handle.name).to_string(),
+        )
+    }
+
+    /// Returns the code key of `self`
+    pub fn self_code_key(&self) -> CodeKey {
+        self.code_key_for_handle(self.self_handle())
+    }
+
     /// This function should only be called on an instance of CompiledModule obtained by invoking
     /// into_module on some instance of CompiledScript. This function is the inverse of
     /// into_module, i.e., script.into_module().into_script() == script.
-    pub fn into_script(mut self) -> CompiledScript {
-        let main = self.function_defs.remove(0);
-        // XXX this assumes that CompiledModule instances have already been bounds checked. Encode
-        // this assumption in the type system.
+    pub fn into_script(self) -> CompiledScript {
+        let mut inner = self.into_inner();
+        let main = inner.function_defs.remove(0);
         CompiledScript(CompiledScriptMut {
-            module_handles: self.module_handles,
-            struct_handles: self.struct_handles,
-            function_handles: self.function_handles,
+            module_handles: inner.module_handles,
+            struct_handles: inner.struct_handles,
+            function_handles: inner.function_handles,
 
-            type_signatures: self.type_signatures,
-            function_signatures: self.function_signatures,
-            locals_signatures: self.locals_signatures,
+            type_signatures: inner.type_signatures,
+            function_signatures: inner.function_signatures,
+            locals_signatures: inner.locals_signatures,
 
-            string_pool: self.string_pool,
-            byte_array_pool: self.byte_array_pool,
-            address_pool: self.address_pool,
+            string_pool: inner.string_pool,
+            byte_array_pool: inner.byte_array_pool,
+            address_pool: inner.address_pool,
 
             main,
         })

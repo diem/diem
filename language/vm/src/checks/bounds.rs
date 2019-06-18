@@ -4,7 +4,7 @@
 use crate::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
-        Bytecode, CompiledModule, FieldDefinition, FunctionDefinition, FunctionHandle,
+        Bytecode, CompiledModuleMut, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionSignature, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
         StructHandle, TypeSignature,
     },
@@ -13,11 +13,11 @@ use crate::{
 };
 
 pub struct BoundsChecker<'a> {
-    module: &'a CompiledModule,
+    module: &'a CompiledModuleMut,
 }
 
 impl<'a> BoundsChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
+    pub fn new(module: &'a CompiledModuleMut) -> Self {
         Self { module }
     }
 
@@ -108,7 +108,7 @@ impl<'a> BoundsChecker<'a> {
     fn verify_impl(
         kind: IndexKind,
         iter: impl Iterator<Item = impl BoundsCheck>,
-        module: &CompiledModule,
+        module: &CompiledModuleMut,
     ) -> Vec<VerificationError> {
         iter.enumerate()
             .map(move |(idx, elem)| {
@@ -122,7 +122,7 @@ impl<'a> BoundsChecker<'a> {
 }
 
 pub trait BoundsCheck {
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation>;
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation>;
 }
 
 #[inline]
@@ -141,7 +141,7 @@ where
 
 impl BoundsCheck for &ModuleHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.address_pool, self.address),
             check_bounds_impl(&module.string_pool, self.name),
@@ -154,7 +154,7 @@ impl BoundsCheck for &ModuleHandle {
 
 impl BoundsCheck for &StructHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
             check_bounds_impl(&module.string_pool, self.name),
@@ -167,7 +167,7 @@ impl BoundsCheck for &StructHandle {
 
 impl BoundsCheck for &FunctionHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
             check_bounds_impl(&module.string_pool, self.name),
@@ -181,7 +181,7 @@ impl BoundsCheck for &FunctionHandle {
 
 impl BoundsCheck for &StructDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_handle),
             module.check_field_range(self.field_count, self.fields),
@@ -194,7 +194,7 @@ impl BoundsCheck for &StructDefinition {
 
 impl BoundsCheck for &FieldDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_),
             check_bounds_impl(&module.string_pool, self.name),
@@ -208,7 +208,7 @@ impl BoundsCheck for &FieldDefinition {
 
 impl BoundsCheck for &FunctionDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.function_handles, self.function),
             if self.is_native() {
@@ -225,14 +225,14 @@ impl BoundsCheck for &FunctionDefinition {
 
 impl BoundsCheck for &TypeSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         self.0.check_bounds(module).into_iter().collect()
     }
 }
 
 impl BoundsCheck for &FunctionSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         self.return_types
             .iter()
             .filter_map(|token| token.check_bounds(module))
@@ -247,7 +247,7 @@ impl BoundsCheck for &FunctionSignature {
 
 impl BoundsCheck for &LocalsSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         self.0
             .iter()
             .filter_map(|token| token.check_bounds(module))
@@ -257,7 +257,7 @@ impl BoundsCheck for &LocalsSignature {
 
 impl SignatureToken {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModule) -> Option<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Option<VMStaticViolation> {
         match self.struct_index() {
             Some(sh_idx) => check_bounds_impl(&module.struct_handles, sh_idx),
             None => None,
@@ -268,7 +268,7 @@ impl SignatureToken {
 impl FunctionDefinition {
     // This is implemented separately because it depends on the locals signature index being
     // checked.
-    fn check_code_unit_bounds(&self, module: &CompiledModule) -> Vec<VMStaticViolation> {
+    fn check_code_unit_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         if self.is_native() {
             return vec![];
         }

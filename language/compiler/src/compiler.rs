@@ -21,15 +21,16 @@ use std::{
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
+    access::{BaseAccess, ModuleAccess},
     errors::VerificationError,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledProgram,
-        CompiledScriptMut, FieldDefinition, FieldDefinitionIndex, FunctionDefinition,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex, StructDefinition,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-        TypeSignatureIndex, SELF_MODULE_NAME,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule,
+        CompiledModuleMut, CompiledProgram, CompiledScriptMut, FieldDefinition,
+        FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
+        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, LocalsSignature,
+        LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
+        StringPoolIndex, StructDefinition, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex, TypeSignature, TypeSignatureIndex, SELF_MODULE_NAME,
     },
     printers::TableAccess,
 };
@@ -357,16 +358,9 @@ impl<'a> CompilationScope<'a> {
 
         let module = &self.modules[*module_index as usize];
 
-        let fh_idx = match module.function_defs.get(fd_idx.0 as usize) {
-            None => bail!(
-                "No function definition index {} in function definition table",
-                fd_idx
-            ),
-            Some(function_def) => function_def.function,
-        };
-
-        let fh = module.get_function_at(fh_idx)?;
-        module.get_function_signature_at(fh.signature)
+        let fh_idx = module.function_def_at(*fd_idx).function;
+        let fh = module.function_handle_at(fh_idx);
+        Ok(module.function_signature_at(fh.signature))
     }
 }
 
@@ -379,11 +373,11 @@ struct ModuleScope<'a> {
     field_definitions: HashMap<StructHandleIndex, FieldMap>,
     function_definitions: HashMap<String, FunctionDefinitionIndex>,
     // the module being compiled
-    pub module: CompiledModule,
+    pub module: CompiledModuleMut,
 }
 
 impl<'a> ModuleScope<'a> {
-    fn new(module: CompiledModule, modules: &[CompiledModule]) -> ModuleScope {
+    fn new(module: CompiledModuleMut, modules: &[CompiledModule]) -> ModuleScope {
         ModuleScope {
             compilation_scope: CompilationScope::new(modules),
             struct_definitions: HashMap::new(),
@@ -963,7 +957,7 @@ pub fn compile_module(
     module: &ModuleDefinition,
     modules: &[CompiledModule],
 ) -> Result<CompiledModule> {
-    let compiled_module = CompiledModule::default();
+    let compiled_module = CompiledModuleMut::default();
     let scope = ModuleScope::new(compiled_module, modules);
     let mut compiler = Compiler::new(scope);
     let addr_idx = compiler.make_address(&address)?;
@@ -999,8 +993,11 @@ pub fn compile_module(
             FunctionBody::Native => (),
         }
     }
-
-    Ok(compiler.scope.module)
+    compiler
+        .scope
+        .module
+        .freeze()
+        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
 }
 
 /// Compile a module and invoke the bytecode verifier on it
@@ -1117,11 +1114,11 @@ impl<S: Scope + Sized> Compiler<S> {
             SignatureToken::Struct(sh_idx) => {
                 let (defining_module_name, name, is_resource) = {
                     let module = self.scope.get_imported_module(module_name)?;
-                    let struct_handle = module.get_struct_at(sh_idx)?;
-                    let defining_module_handle = module.get_module_at(struct_handle.module)?;
+                    let struct_handle = module.struct_handle_at(sh_idx);
+                    let defining_module_handle = module.module_handle_at(struct_handle.module);
                     (
-                        module.get_string_at(defining_module_handle.name)?,
-                        module.get_string_at(struct_handle.name)?.clone(),
+                        module.string_at(defining_module_handle.name),
+                        module.string_at(struct_handle.name).to_string(),
                         struct_handle.is_resource,
                     )
                 };
@@ -2193,16 +2190,18 @@ impl<S: Scope + Sized> Compiler<S> {
                     let target_module = self.scope.get_imported_module(module.name_ref())?;
 
                     let mut idx = 0;
-                    while idx < target_module.function_defs.len() {
-                        let fh_idx = target_module.function_defs[idx].function;
-                        let fh = target_module.get_function_at(fh_idx)?;
-                        let func_name = target_module.get_string_at(fh.name)?;
+                    while idx < target_module.function_defs().len() {
+                        let fh_idx = target_module
+                            .function_def_at(FunctionDefinitionIndex::new(idx as TableIndex))
+                            .function;
+                        let fh = target_module.function_handle_at(fh_idx);
+                        let func_name = target_module.string_at(fh.name);
                         if func_name == name.name_ref() {
                             break;
                         }
                         idx += 1;
                     }
-                    if idx == target_module.function_defs.len() {
+                    if idx == target_module.function_defs().len() {
                         bail!(
                             "Cannot find function `{}' in module `{}'",
                             name.name_ref(),

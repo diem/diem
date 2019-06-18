@@ -3,7 +3,7 @@
 
 use crate::{fuzz_targets::new_value, FuzzTargetImpl};
 use proptest::{prelude::*, test_runner::TestRunner};
-use vm::file_format::CompiledModule;
+use vm::file_format::{CompiledModule, CompiledModuleMut};
 
 #[derive(Clone, Debug, Default)]
 pub struct CompiledModuleTarget;
@@ -18,7 +18,7 @@ impl FuzzTargetImpl for CompiledModuleTarget {
     }
 
     fn generate(&self, runner: &mut TestRunner) -> Vec<u8> {
-        let value = new_value(runner, any_with::<CompiledModule>(16));
+        let value = new_value(runner, any_with::<CompiledModuleMut>(16));
         let mut out = vec![];
         value
             .serialize(&mut out)
@@ -27,7 +27,8 @@ impl FuzzTargetImpl for CompiledModuleTarget {
     }
 
     fn fuzz(&self, data: &[u8]) {
-        // Errors are OK -- the fuzzer cares about panics and OOMs.
+        // Errors are OK -- the fuzzer cares about panics and OOMs. Note that
+        // `CompiledModule::deserialize` also runs the bounds checker, which is desirable here.
         let _ = CompiledModule::deserialize(data);
     }
 }
