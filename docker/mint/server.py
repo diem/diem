@@ -60,7 +60,7 @@ def send_transaction():
         return 'Bad amount', 400
 
     if amount > MAX_MINT:
-        return 'Exceeded max mint amount of {}'.format(MAX_MINT), 400
+        return 'Exceeded max mint amount of {}'.format(MAX_MINT / (10 ** 6)), 400
 
     application.client.sendline("a m {} {}".format(address, amount / (10 ** 6)))
     application.client.expect("Mint request submitted", timeout=2)
