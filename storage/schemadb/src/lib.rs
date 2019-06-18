@@ -166,6 +166,10 @@ impl DB {
     pub fn open<P: AsRef<Path>>(path: P, mut cf_opts_map: ColumnFamilyOptionsMap) -> Result<Self> {
         let mut db_opts = DBOptions::new();
 
+        // For now we set the max total WAL size to be 1G. This config can be useful when column
+        // families are updated at non-uniform frequencies.
+        db_opts.set_max_total_wal_size(1 << 30);
+
         // If db exists, just open it with all cfs.
         if db_exists(path.as_ref()) {
             return DB::open_cf(db_opts, &path, cf_opts_map.into_iter().collect());
@@ -173,10 +177,6 @@ impl DB {
 
         // If db doesn't exist, create a db first with all column families.
         db_opts.create_if_missing(true);
-
-        // For now we set the max total WAL size to be 1G. This config can be useful when column
-        // families are updated at non-uniform frequencies.
-        db_opts.set_max_total_wal_size(1 << 30);
 
         let mut db = DB::open_cf(
             db_opts,
