@@ -26,7 +26,10 @@
 //! to the serializer (`serializer.rs`) generates a binary of the form described. Vectors in
 //! those structs translate to tables and table specifications.
 
-use crate::{access::BaseAccess, internals::ModuleIndex, IndexKind, SignatureTokenKind};
+use crate::{
+    access::BaseAccess, checks::BoundsChecker, errors::VerificationError, internals::ModuleIndex,
+    IndexKind, SignatureTokenKind,
+};
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
@@ -994,7 +997,7 @@ impl ::std::fmt::Debug for Bytecode {
 
 /// A `CompiledProgram` defines the structure of a transaction to execute.
 /// It has two parts: modules to be published and a transaction script.
-#[derive(Clone, Default, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct CompiledProgram {
     /// The modules to be published
     pub modules: Vec<CompiledModule>,
@@ -1009,14 +1012,21 @@ impl CompiledProgram {
     }
 }
 
-/// A `CompiledScript` contains the main function to execute and its dependencies.
+// Note that this doesn't derive either `Arbitrary` or `Default` while `CompiledScriptMut` does.
+// That's because a CompiledScript is guaranteed to be valid while a CompiledScriptMut isn't.
+/// Contains the main function to execute and its dependencies.
 ///
 /// A CompiledScript does not have definition tables because it can only have a `main(args)`.
 /// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
 /// tables (external code references) and it has a `main` definition.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledScript(CompiledScriptMut);
+
+/// A mutable version of `CompiledScript`. Converting to a `CompiledScript` requires this to pass
+/// the bounds checker.
 #[derive(Arbitrary, Clone, Default, Eq, PartialEq, Debug)]
 #[proptest(params = "usize")]
-pub struct CompiledScript {
+pub struct CompiledScriptMut {
     /// Handles to all modules referenced.
     #[proptest(strategy = "vec(any::<ModuleHandle>(), 0..=params)")]
     pub module_handles: Vec<ModuleHandle>,
@@ -1057,8 +1067,42 @@ impl CompiledScript {
     /// Returns the index of `main` in case a script is converted to a module.
     pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
 
-    /// Converts a `CompiledScript` to a `CompiledModule` for code that wants a uniform view of
+    /// Returns a reference to the inner `CompiledScriptMut`.
+    pub fn as_inner(&self) -> &CompiledScriptMut {
+        &self.0
+    }
+
+    /// Converts this instance into the inner `CompiledScriptMut`. Converting back to a
+    /// `CompiledScript` would require it to be verified again.
+    pub fn into_inner(self) -> CompiledScriptMut {
+        self.0
+    }
+
+    /// Converts a `CompiledScript` into a `CompiledModule` for code that wants a uniform view of
     /// both.
+    ///
+    /// If a `CompiledScript` has been bounds checked, the corresponding `CompiledModule` can be
+    /// assumed to pass the bounds checker as well.
+    pub fn into_module(self) -> CompiledModule {
+        self.0.into_module()
+    }
+}
+
+impl CompiledScriptMut {
+    /// Converts this instance into `CompiledScript` after verifying it for basic internal
+    /// consistency. This includes bounds checks but no others.
+    pub fn freeze(self) -> Result<CompiledScript, Vec<VerificationError>> {
+        let fake_module = self.into_module();
+        let errors = BoundsChecker::new(&fake_module).verify();
+        if errors.is_empty() {
+            Ok(fake_module.into_script())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
+    /// of both.
     pub fn into_module(self) -> CompiledModule {
         CompiledModule {
             module_handles: self.module_handles,
@@ -1235,7 +1279,9 @@ impl CompiledModule {
     /// into_module, i.e., script.into_module().into_script() == script.
     pub fn into_script(mut self) -> CompiledScript {
         let main = self.function_defs.remove(0);
-        CompiledScript {
+        // XXX this assumes that CompiledModule instances have already been bounds checked. Encode
+        // this assumption in the type system.
+        CompiledScript(CompiledScriptMut {
             module_handles: self.module_handles,
             struct_handles: self.struct_handles,
             function_handles: self.function_handles,
@@ -1249,6 +1295,6 @@ impl CompiledModule {
             address_pool: self.address_pool,
 
             main,
-        }
+        })
     }
 }

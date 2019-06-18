@@ -1,11 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::parser::ast::{
-    BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Fields, Function, FunctionBody,
-    FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Kind,
-    Loop, ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
-    StructDefinition as MoveStruct, Tag, Type, UnaryOp, Var, Var_, While,
+use crate::{
+    errors::*,
+    parser::ast::{
+        BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Fields, Function, FunctionBody,
+        FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Kind,
+        Loop, ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
+        StructDefinition as MoveStruct, Tag, Type, UnaryOp, Var, Var_, While,
+    },
 };
 use bytecode_verifier::verifier::{verify_module, verify_module_dependencies};
 use failure::*;
@@ -21,7 +24,7 @@ use vm::{
     errors::VerificationError,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledProgram,
-        CompiledScript, FieldDefinition, FieldDefinitionIndex, FunctionDefinition,
+        CompiledScriptMut, FieldDefinition, FieldDefinitionIndex, FunctionDefinition,
         FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle,
         ModuleHandleIndex, SignatureToken, StringPoolIndex, StructDefinition,
@@ -404,11 +407,11 @@ impl<'a> ModuleScope<'a> {
 struct ScriptScope<'a> {
     // parent scope, the global module scope
     compilation_scope: CompilationScope<'a>,
-    pub script: CompiledScript,
+    pub script: CompiledScriptMut,
 }
 
 impl<'a> ScriptScope<'a> {
-    fn new(script: CompiledScript, modules: &[CompiledModule]) -> ScriptScope {
+    fn new(script: CompiledScriptMut, modules: &[CompiledModule]) -> ScriptScope {
         ScriptScope {
             compilation_scope: CompilationScope::new(modules),
             script,
@@ -1036,7 +1039,7 @@ pub fn compile_program(
 
     // Compile transaction script
     let func_def: FunctionDefinition;
-    let compiled_script = CompiledScript::default();
+    let compiled_script = CompiledScriptMut::default();
     let scope = ScriptScope::new(compiled_script, &deps);
     let mut compiler = Compiler::new(scope);
     let addr_idx = compiler.make_address(&address)?;
@@ -1059,6 +1062,10 @@ pub fn compile_program(
 
     let mut script = compiler.scope.script;
     script.main = func_def;
+    let script = match script.freeze() {
+        Ok(script) => script,
+        Err(errs) => bail_err!(InternalCompilerError::BoundsCheckErrors(errs)),
+    };
 
     Ok(CompiledProgram::new(
         deps[n_external_deps..].to_vec(),

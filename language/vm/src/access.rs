@@ -87,76 +87,145 @@ macro_rules! impl_base_access {
     ($ty:ty) => {
         impl BaseAccess for $ty {
             fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
-                &self.module_handles[idx.into_index()]
+                &self.as_inner().module_handles[idx.into_index()]
             }
 
             fn struct_handle_at(&self, idx: StructHandleIndex) -> &StructHandle {
-                &self.struct_handles[idx.into_index()]
+                &self.as_inner().struct_handles[idx.into_index()]
             }
 
             fn function_handle_at(&self, idx: FunctionHandleIndex) -> &FunctionHandle {
-                &self.function_handles[idx.into_index()]
+                &self.as_inner().function_handles[idx.into_index()]
             }
 
             fn type_signature_at(&self, idx: TypeSignatureIndex) -> &TypeSignature {
-                &self.type_signatures[idx.into_index()]
+                &self.as_inner().type_signatures[idx.into_index()]
             }
 
             fn function_signature_at(&self, idx: FunctionSignatureIndex) -> &FunctionSignature {
-                &self.function_signatures[idx.into_index()]
+                &self.as_inner().function_signatures[idx.into_index()]
             }
 
             fn locals_signature_at(&self, idx: LocalsSignatureIndex) -> &LocalsSignature {
-                &self.locals_signatures[idx.into_index()]
+                &self.as_inner().locals_signatures[idx.into_index()]
             }
 
             fn string_at(&self, idx: StringPoolIndex) -> &str {
-                self.string_pool[idx.into_index()].as_str()
+                self.as_inner().string_pool[idx.into_index()].as_str()
             }
 
             fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
-                &self.byte_array_pool[idx.into_index()]
+                &self.as_inner().byte_array_pool[idx.into_index()]
             }
 
             fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
-                &self.address_pool[idx.into_index()]
+                &self.as_inner().address_pool[idx.into_index()]
             }
 
             fn module_handles(&self) -> slice::Iter<ModuleHandle> {
-                self.module_handles[..].iter()
+                self.as_inner().module_handles[..].iter()
             }
             fn struct_handles(&self) -> slice::Iter<StructHandle> {
-                self.struct_handles[..].iter()
+                self.as_inner().struct_handles[..].iter()
             }
             fn function_handles(&self) -> slice::Iter<FunctionHandle> {
-                self.function_handles[..].iter()
+                self.as_inner().function_handles[..].iter()
             }
 
             fn type_signatures(&self) -> slice::Iter<TypeSignature> {
-                self.type_signatures[..].iter()
+                self.as_inner().type_signatures[..].iter()
             }
             fn function_signatures(&self) -> slice::Iter<FunctionSignature> {
-                self.function_signatures[..].iter()
+                self.as_inner().function_signatures[..].iter()
             }
             fn locals_signatures(&self) -> slice::Iter<LocalsSignature> {
-                self.locals_signatures[..].iter()
+                self.as_inner().locals_signatures[..].iter()
             }
 
             fn byte_array_pool(&self) -> slice::Iter<ByteArray> {
-                self.byte_array_pool[..].iter()
+                self.as_inner().byte_array_pool[..].iter()
             }
             fn address_pool(&self) -> slice::Iter<AccountAddress> {
-                self.address_pool[..].iter()
+                self.as_inner().address_pool[..].iter()
             }
             fn string_pool(&self) -> slice::Iter<String> {
-                self.string_pool[..].iter()
+                self.as_inner().string_pool[..].iter()
             }
         }
     };
 }
 
-impl_base_access!(CompiledModule);
+// impl_base_access!(CompiledModule);
 impl_base_access!(CompiledScript);
+
+// XXX this is temporary while CompiledModule gets moved to dual mutable/immutable versions.
+impl BaseAccess for CompiledModule {
+    fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
+        &self.module_handles[idx.into_index()]
+    }
+
+    fn struct_handle_at(&self, idx: StructHandleIndex) -> &StructHandle {
+        &self.struct_handles[idx.into_index()]
+    }
+
+    fn function_handle_at(&self, idx: FunctionHandleIndex) -> &FunctionHandle {
+        &self.function_handles[idx.into_index()]
+    }
+
+    fn type_signature_at(&self, idx: TypeSignatureIndex) -> &TypeSignature {
+        &self.type_signatures[idx.into_index()]
+    }
+
+    fn function_signature_at(&self, idx: FunctionSignatureIndex) -> &FunctionSignature {
+        &self.function_signatures[idx.into_index()]
+    }
+
+    fn locals_signature_at(&self, idx: LocalsSignatureIndex) -> &LocalsSignature {
+        &self.locals_signatures[idx.into_index()]
+    }
+
+    fn string_at(&self, idx: StringPoolIndex) -> &str {
+        self.string_pool[idx.into_index()].as_str()
+    }
+
+    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
+        &self.byte_array_pool[idx.into_index()]
+    }
+
+    fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
+        &self.address_pool[idx.into_index()]
+    }
+
+    fn module_handles(&self) -> slice::Iter<ModuleHandle> {
+        self.module_handles[..].iter()
+    }
+    fn struct_handles(&self) -> slice::Iter<StructHandle> {
+        self.struct_handles[..].iter()
+    }
+    fn function_handles(&self) -> slice::Iter<FunctionHandle> {
+        self.function_handles[..].iter()
+    }
+
+    fn type_signatures(&self) -> slice::Iter<TypeSignature> {
+        self.type_signatures[..].iter()
+    }
+    fn function_signatures(&self) -> slice::Iter<FunctionSignature> {
+        self.function_signatures[..].iter()
+    }
+    fn locals_signatures(&self) -> slice::Iter<LocalsSignature> {
+        self.locals_signatures[..].iter()
+    }
+
+    fn byte_array_pool(&self) -> slice::Iter<ByteArray> {
+        self.byte_array_pool[..].iter()
+    }
+    fn address_pool(&self) -> slice::Iter<AccountAddress> {
+        self.address_pool[..].iter()
+    }
+    fn string_pool(&self) -> slice::Iter<String> {
+        self.string_pool[..].iter()
+    }
+}
 
 impl ModuleAccess for CompiledModule {
     fn self_code_key(&self) -> CodeKey {
@@ -205,7 +274,7 @@ impl ModuleAccess for CompiledModule {
 
 impl ScriptAccess for CompiledScript {
     fn main(&self) -> &FunctionDefinition {
-        &self.main
+        &self.as_inner().main
     }
 }
 

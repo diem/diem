@@ -5,6 +5,7 @@ use super::*;
 use crate::parser::{parse_module, parse_program};
 use bytecode_verifier::verifier::{verify_module, verify_script};
 use vm::{
+    access::{BaseAccess, ScriptAccess},
     errors::VerificationError,
     file_format::{CompiledModule, CompiledScript},
 };
@@ -13,6 +14,7 @@ use vm::{
 macro_rules! instr_count {
     ($compiled: expr, $instr: pat) => {
         $compiled
+            .as_inner()
             .main
             .code
             .code
@@ -147,9 +149,7 @@ pub fn compile_module_string_and_assert_error(
 #[allow(dead_code)]
 pub fn count_locals(script: &CompiledScript) -> usize {
     script
-        .locals_signatures
-        .get(script.main.code.locals.0 as usize)
-        .unwrap()
+        .locals_signature_at(script.main().code.locals)
         .0
         .len()
 }

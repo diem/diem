@@ -10,6 +10,7 @@ use crate::{
 use std::collections::BTreeMap;
 use types::language_storage::CodeKey;
 use vm::{
+    access::{BaseAccess, ScriptAccess},
     checks::BoundsChecker,
     errors::{VMStaticViolation, VerificationError},
     file_format::{CompiledModule, CompiledScript},
@@ -66,8 +67,8 @@ pub fn verify_script(script: CompiledScript) -> (CompiledScript, Vec<Verificatio
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStaticViolation> {
-    let function_handle = &script.function_handles[script.main.function.0 as usize];
-    let function_signature = &script.function_signatures[function_handle.signature.0 as usize];
+    let function_handle = &script.function_handle_at(script.main().function);
+    let function_signature = &script.function_signature_at(function_handle.signature);
     if !function_signature.return_types.is_empty() {
         return vec![VMStaticViolation::InvalidMainFunctionSignature];
     }

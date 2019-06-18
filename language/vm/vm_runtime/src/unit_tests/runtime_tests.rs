@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     file_format::{
-        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledScript, FunctionDefinition,
-        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
-        LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StringPoolIndex,
+        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledScript, CompiledScriptMut,
+        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
+        FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
+        ModuleHandleIndex, SignatureToken, StringPoolIndex,
     },
     transaction_metadata::TransactionMetadata,
 };
@@ -39,7 +39,7 @@ impl RemoteCache for FakeDataCache {
 }
 
 fn fake_script() -> CompiledScript {
-    CompiledScript {
+    CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
@@ -69,6 +69,8 @@ fn fake_script() -> CompiledScript {
         byte_array_pool: vec![ByteArray::new(vec![0u8; 32])],
         address_pool: vec![AccountAddress::default()],
     }
+    .freeze()
+    .expect("test script should satisfy bounds checker")
 }
 
 fn test_simple_instruction_impl<'alloc, 'txn>(

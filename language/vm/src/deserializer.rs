@@ -12,25 +12,18 @@ use std::{
 use types::{account_address::ADDRESS_LENGTH, byte_array::ByteArray};
 
 impl CompiledScript {
-    /// Deserializes a &[u8] slice into a transaction script (`CompiledScript`)
-    pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<CompiledScript> {
-        let compiled_script = Self::deserialize_no_check_bounds(binary)?;
-        compiled_script.check_bounds()
+    /// Deserializes a &[u8] slice into a `CompiledScript` instance.
+    pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
+        let deserialized = CompiledScriptMut::deserialize_no_check_bounds(binary)?;
+        deserialized.freeze().map_err(|_| BinaryError::Malformed)
     }
+}
 
+impl CompiledScriptMut {
     // exposed as a public function to enable testing the deserializer
-    pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<CompiledScript> {
+    #[doc(hidden)]
+    pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<Self> {
         deserialize_compiled_script(binary)
-    }
-
-    /// Checks that all indexes are in bound in this `CompiledScript`.
-    pub fn check_bounds(self) -> BinaryLoaderResult<CompiledScript> {
-        let fake_module = self.into_module();
-        if BoundsChecker::new(&fake_module).verify().is_empty() {
-            Ok(fake_module.into_script())
-        } else {
-            Err(BinaryError::Malformed)
-        }
     }
 }
 
@@ -76,7 +69,7 @@ impl Table {
 }
 
 /// Module internal function that manages deserialization of transactions.
-fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScript> {
+fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScriptMut> {
     let binary_len = binary.len() as u64;
     let mut cursor = Cursor::new(binary);
     let table_count = check_binary(&mut cursor)?;
@@ -214,7 +207,7 @@ trait CommonTables {
     fn get_address_pool(&mut self) -> &mut AddressPool;
 }
 
-impl CommonTables for CompiledScript {
+impl CommonTables for CompiledScriptMut {
     fn get_module_handles(&mut self) -> &mut Vec<ModuleHandle> {
         &mut self.module_handles
     }
@@ -290,9 +283,9 @@ impl CommonTables for CompiledModule {
     }
 }
 
-/// Builds and returns a `CompiledScript`.
-fn build_compiled_script(binary: &[u8], tables: &[Table]) -> BinaryLoaderResult<CompiledScript> {
-    let mut script = CompiledScript::default();
+/// Builds and returns a `CompiledScriptMut`.
+fn build_compiled_script(binary: &[u8], tables: &[Table]) -> BinaryLoaderResult<CompiledScriptMut> {
+    let mut script = CompiledScriptMut::default();
     build_common_tables(binary, tables, &mut script)?;
     build_script_tables(binary, tables, &mut script)?;
     Ok(script)
@@ -384,11 +377,11 @@ fn build_module_tables(
     Ok(())
 }
 
-/// Builds tables related to a `CompiledScript`.
+/// Builds tables related to a `CompiledScriptMut`.
 fn build_script_tables(
     binary: &[u8],
     tables: &[Table],
-    script: &mut CompiledScript,
+    script: &mut CompiledScriptMut,
 ) -> BinaryLoaderResult<()> {
     for table in tables {
         match table.kind {
