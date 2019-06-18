@@ -109,7 +109,7 @@ if which protoc &>/dev/null; then
   echo "Protobuf is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install protobuf
+		sudo yum install protobuf-compiler
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
 		sudo apt-get install protobuf-compiler
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
