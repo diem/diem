@@ -82,6 +82,17 @@ pub static ref BLOCK_RETRIEVAL_DURATION_MS: Histogram = OP_COUNTERS.histogram("b
 pub static ref STATE_SYNC_DURATION_MS: Histogram = OP_COUNTERS.histogram("state_sync_duration_ms");
 
 //////////////////////
+// RECONFIGURATION COUNTERS
+//////////////////////
+/// Current epoch num
+pub static ref EPOCH_NUM: IntGauge = OP_COUNTERS.gauge("epoch_num");
+/// The number of validators in the current epoch
+pub static ref CURRENT_EPOCH_NUM_VALIDATORS: IntGauge = OP_COUNTERS.gauge("current_epoch_num_validators");
+/// Quorum size in the current epoch
+pub static ref CURRENT_EPOCH_QUORUM_SIZE: IntGauge = OP_COUNTERS.gauge("current_epoch_quorum_size");
+
+
+//////////////////////
 // BLOCK STORE COUNTERS
 //////////////////////
 /// Counter for the number of blocks in the block tree (including the root).
