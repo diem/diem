@@ -215,7 +215,10 @@ impl LibraSwarm {
     ) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let logs_dir_path = &dir.path().join("logs");
-        println!("Logs directory: {:?}", logs_dir_path);
+        println!(
+            "Base directory containing logs and configs: {:?}",
+            dir.path()
+        );
         std::fs::create_dir(&logs_dir_path).unwrap();
         let base = utils::workspace_root().join("config/data/configs/node.config.toml");
         let mut config_builder = SwarmConfigBuilder::new();

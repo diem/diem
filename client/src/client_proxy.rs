@@ -1,18 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{commands::*, grpc_client::GRPCClient, AccountData};
+use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use chrono::Utc;
 use config::trusted_peers::TrustedPeersConfig;
 use crypto::{
     hash::CryptoHash,
-    signing::{sign_message, KeyPair, PrivateKey},
+    signing::{sign_message, KeyPair},
 };
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
+use logger::prelude::*;
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
@@ -34,7 +35,10 @@ use tokio::{self, runtime::Runtime};
 use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    account_config::{account_received_event_path, account_sent_event_path, association_address},
+    account_config::{
+        account_received_event_path, account_sent_event_path, association_address,
+        get_account_resource_or_default,
+    },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction, Version},
@@ -120,15 +124,11 @@ impl ClientProxy {
         } else {
             let faucet_account_keypair: KeyPair =
                 ClientProxy::load_faucet_account_file(faucet_account_file);
-            let faucet_address = association_address();
-
-            let faucet_seq_number = client.get_sequence_number(faucet_address);
-
-            let mut faucet_account_data = Self::create_account(
-                faucet_account_keypair.private_key().clone(),
-                faucet_seq_number.unwrap_or(0),
-            );
-            faucet_account_data.address = faucet_address;
+            let faucet_account_data = Self::get_account_data_from_address(
+                &client,
+                association_address(),
+                Some(KeyPair::new(faucet_account_keypair.private_key().clone())),
+            )?;
             // Load the keypair from file
             Some(faucet_account_data)
         };
@@ -164,15 +164,7 @@ impl ClientProxy {
         );
         let (address, _) = self.wallet.new_address()?;
 
-        // Sync with validator for account sequence number in case it is already created on chain.
-        // This assumes we have a very low probability of mnemonic word conflict.
-        let sequence_number = self.client.get_sequence_number(address).unwrap_or(0);
-
-        let account_data = AccountData {
-            address,
-            key_pair: None,
-            sequence_number,
-        };
+        let account_data = Self::get_account_data_from_address(&self.client, address, None)?;
 
         Ok(self.insert_account_data(account_data))
     }
@@ -184,19 +176,21 @@ impl ClientProxy {
         } else {
             for (ref index, ref account) in self.accounts.iter().enumerate() {
                 println!(
-                    "User account index: {}, address: {}, sequence number: {}",
+                    "User account index: {}, address: {}, sequence number: {}, status: {:?}",
                     index,
                     hex::encode(&account.address),
                     account.sequence_number,
+                    account.status,
                 );
             }
         }
 
         if let Some(faucet_account) = &self.faucet_account {
             println!(
-                "Faucet account address: {}, sequence_number: {}",
+                "Faucet account address: {}, sequence_number: {}, status: {:?}",
                 hex::encode(&faucet_account.address),
                 faucet_account.sequence_number,
+                faucet_account.status,
             );
         }
     }
@@ -593,12 +587,11 @@ impl ClientProxy {
         let wallet_addresses = wallet.get_addresses()?;
         let mut account_data = Vec::new();
         for address in wallet_addresses {
-            let sequence_number = self.client.get_sequence_number(address)?;
-            account_data.push(AccountData {
+            account_data.push(Self::get_account_data_from_address(
+                &self.client,
                 address,
-                key_pair: None,
-                sequence_number,
-            });
+                None,
+            )?);
         }
         self.set_wallet(wallet);
         // Clear current cached AccountData as we always swap the entire wallet completely.
@@ -625,6 +618,35 @@ impl ClientProxy {
     pub fn test_validator_connection(&self) -> Result<()> {
         self.client.get_with_proof_sync(vec![])?;
         Ok(())
+    }
+
+    /// Get account using specific address.
+    /// Sync with validator for account sequence number in case it is already created on chain.
+    /// This assumes we have a very low probability of mnemonic word conflict.
+    fn get_account_data_from_address(
+        client: &GRPCClient,
+        address: AccountAddress,
+        key_pair: Option<KeyPair>,
+    ) -> Result<AccountData> {
+        let (sequence_number, status) = match client.get_account_blob(address) {
+            Ok(resp) => match resp.0 {
+                Some(account_state_blob) => (
+                    get_account_resource_or_default(&Some(account_state_blob))?.sequence_number(),
+                    AccountStatus::Persisted,
+                ),
+                None => (0, AccountStatus::Local),
+            },
+            Err(e) => {
+                error!("Failed to get account state from validator, error: {:?}", e);
+                (0, AccountStatus::Unknown)
+            }
+        };
+        Ok(AccountData {
+            address,
+            key_pair,
+            sequence_number,
+            status,
+        })
     }
 
     fn get_libra_wallet(mnemonic_file: Option<String>) -> Result<WalletLibrary> {
@@ -819,17 +841,6 @@ impl ClientProxy {
             .get_mut(account_ref_id)
             .ok_or_else(|| format_err!("Unable to find account by ref id: {}", account_ref_id))?;
         Ok(account_data)
-    }
-
-    /// Populate a AccountData struct using private key and sequence number.
-    fn create_account(private_key: PrivateKey, sequence_number: u64) -> AccountData {
-        let keypair = KeyPair::new(private_key);
-        let address: AccountAddress = keypair.public_key().into();
-        AccountData {
-            address,
-            key_pair: Some(keypair),
-            sequence_number,
-        }
     }
 }
 

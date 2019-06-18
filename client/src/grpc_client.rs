@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_write_recover() {
-        let num = 100;
+        let num = 15;
         let (client, accounts) = generate_accounts_from_wallet(num);
         assert_eq!(accounts.len(), num);
 
