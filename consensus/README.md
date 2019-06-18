@@ -53,7 +53,7 @@ All consensus messages are signed by their creators and verified by their receiv
 
     consensus
     ├── src
-    │   └── chained_bft                # Implementation of the LibraBFT protoocol
+    │   └── chained_bft                # Implementation of the LibraBFT protocol
     │       ├── block_storage          # In-memory storage of blocks and related data structures
     │       ├── consensus_types        # Consensus data types (i.e. quorum certificates)
     │       ├── consensusdb            # Database interaction to persist consensus data for safety and liveness
