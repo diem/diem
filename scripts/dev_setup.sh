@@ -105,29 +105,19 @@ else
 	fi
 fi
 
-echo "Installing Protobuf......"
-if which protoc &>/dev/null; then
-  echo "Protobuf is already installed"
-else
-	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install protobuf
-	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install protobuf-compiler
-	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-		brew install protobuf
-	fi
+echo "Installing Protobuf compiler (protoc) to /usr/local/bin/"
+
+PROTOC_VERSION=3.8.0
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+	PROTOC_ZIP=protoc-$PROTOC_VERSION-osx-x86_64.zip
+elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+	PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
 fi
 
-if [[ -f /etc/debian_version ]]; then
-	PROTOC_VERSION=`protoc --version | cut -d" " -f2`
-	REQUIRED_PROTOC_VERSION="3.6.0"
-	PROTOC_VERSION_CHECK=`dpkg --compare-versions $REQUIRED_PROTOC_VERSION "gt" $PROTOC_VERSION`
-
-	if [ $? -eq "0" ]; then
-		echo "protoc version is too old. Update protoc to 3.6.0 or above. Abort"
-		exit 1
-	fi
-fi
+wget -nv -N -P /tmp https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
+sudo unzip -o /tmp/$PROTOC_ZIP -d /usr/local "bin/protoc"
+sudo unzip -o /tmp/$PROTOC_ZIP -d /usr/local "include/*"
 
 cat <<EOF
 
