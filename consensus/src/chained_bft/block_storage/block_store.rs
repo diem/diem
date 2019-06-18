@@ -16,12 +16,8 @@ use crate::{
 use crypto::HashValue;
 use logger::prelude::*;
 
-use crate::{
-    chained_bft::{
-        block_storage::block_inserter::BlockInserterGuard, persistent_storage::RecoveryData,
-    },
-    state_replication::StateComputeResult,
-};
+use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::StateComputeResult};
+use crypto::hash::CryptoHash;
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
@@ -60,7 +56,6 @@ pub enum NeedFetchResult {
 ///             | -------------> D3
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
-    block_inserter: BlockInserterGuard<T>,
     validator_signer: ValidatorSigner,
     state_computer: Arc<StateComputer<Payload = T>>,
     enforce_increasing_timestamps: bool,
@@ -89,15 +84,8 @@ impl<T: Payload> BlockStore<T> {
             )
             .await,
         ));
-        let block_inserter = BlockInserterGuard::new(
-            Arc::clone(&inner),
-            Arc::clone(&state_computer),
-            enforce_increasing_timestamps,
-            Arc::clone(&storage),
-        );
         BlockStore {
             inner,
-            block_inserter,
             validator_signer,
             state_computer,
             enforce_increasing_timestamps,
@@ -177,7 +165,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Execute and insert a block if it passes all validation tests.
-    /// Returns the Arc to the block kept in the block store.
+    /// Returns the Arc to the block kept in the block store after persisting it to storage
     ///
     /// This function assumes that the ancestors are present (returns MissingParent otherwise).
     ///
@@ -188,7 +176,42 @@ impl<T: Payload> BlockStore<T> {
         &self,
         block: Block<T>,
     ) -> Result<Arc<Block<T>>, InsertError> {
-        self.block_inserter.execute_and_insert_block(block).await
+        if let Some(existing_block) = self.inner.read().unwrap().get_block(block.id()) {
+            return Ok(existing_block);
+        }
+        let (parent_id, parent_exec_version) = match self.verify_and_get_parent_info(&block) {
+            Ok(t) => t,
+            Err(e) => {
+                security_log(SecurityEvent::InvalidBlock)
+                    .error(&e)
+                    .data(&block)
+                    .log();
+                return Err(e);
+            }
+        };
+        let compute_res = self
+            .state_computer
+            .compute(parent_id, block.id(), block.get_payload())
+            .await
+            .map_err(|e| {
+                error!("Execution failure for block {}: {:?}", block, e);
+                InsertError::StateComputerError
+            })?;
+
+        let version = parent_exec_version + compute_res.num_successful_txns;
+
+        let state = ExecutedState {
+            state_id: compute_res.new_state_id,
+            version,
+        };
+        self.storage
+            .save_tree(vec![block.clone()], vec![])
+            .map_err(|_| InsertError::StorageFailure)?;
+        self.inner
+            .write()
+            .unwrap()
+            .insert_block(block, state, compute_res)
+            .map_err(|e| e.into())
     }
 
     /// Check if we're far away from this ledger info and need to sync.
@@ -344,6 +367,46 @@ impl<T: Payload> BlockStore<T> {
             0,
             0,
         )
+    }
+
+    fn verify_and_get_parent_info(
+        &self,
+        block: &Block<T>,
+    ) -> Result<(HashValue, u64), InsertError> {
+        if block.round() <= self.inner.read().unwrap().root().round() {
+            return Err(InsertError::OldBlock);
+        }
+
+        let block_hash = block.hash();
+        if block.id() != block_hash {
+            return Err(InsertError::InvalidBlockHash);
+        }
+
+        if block.quorum_cert().certified_block_id() != block.parent_id() {
+            return Err(InsertError::ParentNotCertified);
+        }
+
+        let parent = match self.inner.read().unwrap().get_block(block.parent_id()) {
+            None => {
+                return Err(InsertError::MissingParentBlock(block.parent_id()));
+            }
+            Some(parent) => parent,
+        };
+        if parent.height() + 1 != block.height() {
+            return Err(InsertError::InvalidBlockHeight);
+        }
+        if parent.round() >= block.round() {
+            return Err(InsertError::InvalidBlockRound);
+        }
+        if self.enforce_increasing_timestamps && parent.timestamp_usecs() >= block.timestamp_usecs()
+        {
+            return Err(InsertError::NonIncreasingTimestamp);
+        }
+        let parent_id = parent.id();
+        match self.inner.read().unwrap().get_state_for_block(parent_id) {
+            Some(ExecutedState { version, .. }) => Ok((parent.id(), version)),
+            None => Err(InsertError::ParentVersionNotFound),
+        }
     }
 }
 
