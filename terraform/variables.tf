@@ -33,7 +33,6 @@ variable "api_sources_ipv4" {
 variable "image_repo" {
   type        = string
   description = "Docker image repository to use for validator"
-  default     = "libra/validator"
 }
 
 variable "image_tag" {
@@ -54,7 +53,6 @@ variable "validator_type" {
 
 variable "faucet_image_repo" {
   description = "Docker image repository to use for faucet server"
-  default     = "libra/faucet"
 }
 
 variable "faucet_log_level" {
