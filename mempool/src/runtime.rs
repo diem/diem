@@ -28,7 +28,7 @@ pub struct MempoolRuntime {
 
 impl MempoolRuntime {
     /// setup Mempool runtime
-    pub fn boostrap(
+    pub fn bootstrap(
         config: &NodeConfig,
         network_sender: MempoolNetworkSender,
         network_events: MempoolNetworkEvents,

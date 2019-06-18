@@ -243,7 +243,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, L
 
     instant = Instant::now();
     let mempool =
-        MempoolRuntime::boostrap(&node_config, mempool_network_sender, mempool_network_events);
+        MempoolRuntime::bootstrap(&node_config, mempool_network_sender, mempool_network_events);
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
