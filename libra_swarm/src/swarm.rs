@@ -185,7 +185,7 @@ impl LibraNode {
                 HealthStatus::Healthy
             }
             Err(e) => {
-                debug!("Rpc check error: {:?}", e);
+                debug!("Error querying metrics for node '{}'", self.peer_id);
                 HealthStatus::RpcFailure(e)
             }
         }
