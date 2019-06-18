@@ -78,7 +78,7 @@ Each major component of the system needs to have a `README.md` file. Major compo
 This file should contain:
  
  * The *conceptual* *documentation* of the component.
- * A link to external API documentation for the component.
+ * A link to the external API documentation for the component.
  * A link to the master license of the project.
  * A link to the master contributing guide for the project. 
 
@@ -158,9 +158,9 @@ Concurrent types such as [`CHashMap`](https://docs.rs/crate/chashmap), [`AtomicU
 
 *When to use channels vs concurrent types?*
 
-Below are high level suggestions for the distinction based on experience.
+Below are high-level suggestions for the distinction based on experience.
 
-* Channels are for ownership transfer, decoupling of types, and coarse grained messages.  They fit well for transferring ownership of data, distributing units of work, and communicating async results.  Furthermore, they help break circular dependencies (e.g. `struct Foo` contains an `Arc<Bar>` and `struct Bar` contains an `Arc<Foo>` that leads to complex initialization).
+* Channels are for ownership transfer, decoupling of types, and coarse-grained messages.  They fit well for transferring ownership of data, distributing units of work, and communicating async results.  Furthermore, they help break circular dependencies (e.g. `struct Foo` contains an `Arc<Bar>` and `struct Bar` contains an `Arc<Foo>` that leads to complex initialization).
 
 * Concurrent types (e.g. such as [`CHashMap`](https://docs.rs/crate/chashmap) or structs that have interior mutability building on [`Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html), [`RwLock`](https://doc.rust-lang.org/std/sync/struct.RwLock.html), etc.) are better suited for caches and states.
 
@@ -182,7 +182,7 @@ Generics allow dynamic behavior (similar to [`trait`](https://doc.rust-lang.org/
 
 ### Getters/setters
 
-Excluding test code, set field visibility to private as much as possible. Private fields allow constructors to enforce internal invariants. Implement getters for data that consumers may need, but avoid setters unless mutable state is necessary.
+Excluding test code, set field visibility to private as much as possible. Private fields allow constructors to enforce internal invariants. Implement getters for data that consumers may need, but avoid setters unless a mutable state is necessary.
 
 Public fields are most appropriate for [`struct`](https://doc.rust-lang.org/book/ch05-00-structs.html) types in the C spirit: compound, passive data structures without internal invariants.  Naming suggestions follow the guidance [here](https://rust-lang-nursery.github.io/api-guidelines/naming.html#getter-names-follow-rust-convention-c-getter) as shown below.
 
@@ -223,7 +223,7 @@ We currently use [slog](https://docs.rs/slog/) for logging.
 
 * [error!](https://docs.rs/slog/2.4.1/slog/macro.error.html) - Error-level messages have the highest urgency in [slog](https://docs.rs/slog/).  An unexpected error has occurred (e.g. exceeded the maximum number of retries to complete an RPC or inability to store data to local storage).
 * [warn!](https://docs.rs/slog/2.4.1/slog/macro.warn.html) - Warn-level messages help notify admins about automatically handled issues (e.g. retrying a failed network connection or receiving the same message multiple times, etc.).
-* [info!](https://docs.rs/slog/2.4.1/slog/macro.info.html) - Info-level messages are well suited for "one time" events (such as logging state on one-time startup and shutdown) or periodic events that are not frequently occurring - e.g. changing the validator set every day.  
+* [info!](https://docs.rs/slog/2.4.1/slog/macro.info.html) - Info-level messages are well suited for "one-time" events (such as logging state on one-time startup and shutdown) or periodic events that are not frequently occurring - e.g. changing the validator set every day.  
 * [debug!](https://docs.rs/slog/2.4.1/slog/macro.debug.html) - Debug-level messages are frequently occurring (i.e. potentially > 1 message per second) and are not typically expected to be enabled in production.
 * [trace!](https://docs.rs/slog/2.4.1/slog/macro.trace.html) - Trace-level logging is typically only used for function entry/exit. 
 
@@ -231,7 +231,7 @@ We currently use [slog](https://docs.rs/slog/) for logging.
 
 *Unit tests*
 
-Ideally, all code will be unit tested.  Unit test files should exist in the same directory as `mod.rs` and their file names should end in `_test.rs`.  A module to be tested should have the test modules annotated with `#[cfg(test)]`.  For example, if in a crate there is a db module, the expected directory structure is as follows:
+Ideally, all codes will be unit tested.  Unit test files should exist in the same directory as `mod.rs` and their file names should end in `_test.rs`.  A module to be tested should have the test modules annotated with `#[cfg(test)]`.  For example, if in a crate there is a db module, the expected directory structure is as follows:
 
 ```
 src/db                        -> directory of db module
@@ -255,7 +255,7 @@ A tutorial for `proptest` can be found in the [`proptest` book](https://altsysrq
 
 References:
 
-* [What is Property Based Testing?](https://hypothesis.works/articles/what-is-property-based-testing/) (includes a comparison with fuzzing)
+* [What is Property-Based Testing?](https://hypothesis.works/articles/what-is-property-based-testing/) (includes a comparison with fuzzing)
 * [An introduction to property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing/)
 * [Choosing properties for property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing-2/)
 
