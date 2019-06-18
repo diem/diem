@@ -142,8 +142,8 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
         // first we deserialize raw bytes, which may or may not work
         let key_res = deserialize::<BLS12381PrivateKey>(bytes);
         // Note that the underlying implementation of SerdeSecret checks for validation during
-        // deserialisation. Also, we don't need to check for validity of the derived PublicKey, as a
-        // correct SerdeSecret (checked during desrialisation that is in field) will always produce
+        // deserialization. Also, we don't need to check for validity of the derived PublicKey, as a
+        // correct SerdeSecret (checked during deserialization that is in field) will always produce
         // a valid PublicKey.
         key_res.or(Err(CryptoMaterialError::DeserializationError))
     }
