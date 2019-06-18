@@ -25,6 +25,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PACKAGE_MANAGER="yum"
 	elif which apt-get &>/dev/null; then
 		PACKAGE_MANAGER="apt-get"
+	elif which pacman &>/dev/null; then
+		PACKAGE_MANAGER="pacman"
 	else
 		echo "Unable to find supported package manager (yum or apt-get). Abort"
 		exit 1
@@ -88,6 +90,8 @@ else
 		sudo apt-get install cmake
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
+	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+		sudo pacman -S cmake
 	fi
 fi
 
@@ -101,6 +105,8 @@ else
 		sudo apt-get install golang
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install go
+	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+		sudo pacman -S go
 	fi
 fi
 
