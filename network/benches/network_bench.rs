@@ -132,7 +132,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     let msg = compose_proposal(*msg_len);
 
     let (mut tx, mut rx) = mpsc::channel(0);
-    // The listener side keeps receiving messages and send signal back to the bencher to finishh
+    // The listener side keeps receiving messages and send signal back to the bencher to finish
     // the iteration once NUM_MSGS messages are received.
     let f_listener = async move {
         let mut counter = 0u32;

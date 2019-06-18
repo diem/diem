@@ -119,7 +119,7 @@ fn test_validate_invalid_signature() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
@@ -336,7 +336,7 @@ fn test_validate_invalid_auth_key() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
