@@ -25,6 +25,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PACKAGE_MANAGER="yum"
 	elif which apt-get &>/dev/null; then
 		PACKAGE_MANAGER="apt-get"
+		sudo apt-get update
 	else
 		echo "Unable to find supported package manager (yum or apt-get). Abort"
 		exit 1
@@ -83,9 +84,9 @@ if which cmake &>/dev/null; then
   echo "CMake is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install cmake
+		sudo yum install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install cmake
+		sudo apt-get install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
 	fi
@@ -96,9 +97,9 @@ if which go &>/dev/null; then
   echo "Go is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install golang
+		sudo yum install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install golang
+		sudo apt-get install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install go
 	fi
@@ -109,9 +110,9 @@ if which protoc &>/dev/null; then
   echo "Protobuf is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install protobuf
+		sudo yum install protobuf -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install protobuf-compiler
+		sudo apt-get install protobuf-compiler -y
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install protobuf
 	fi
