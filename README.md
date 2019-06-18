@@ -16,7 +16,7 @@ Libra Core implements a decentralized, programmable database which provides a fi
 
 ## Contributing
 
-Read our [Contrbuting guide](https://developers.libra.org/docs/community/contributing). Find out what’s coming on our [blog](https://developers.libra.org/blog/2019/06/18/The-Path-Forward).
+Read our [Contrbuting guide](https://developers.libra.org/docs/community/contributing). Find out what’s coming on our [blog](https://developers.libra.org/blog/2019/06/18/the-path-forward).
 
 ## Getting Started
 
