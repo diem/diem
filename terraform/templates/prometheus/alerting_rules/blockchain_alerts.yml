@@ -1,14 +1,8 @@
 groups:
 - name: "blockchain alerts"
   rules:
-  - alert: High Txn Rate
-    expr: avg(rate(consensus{op='committed_txns_count'}[1m])) > 50
-    for: 1m
-    labels:
-      severity: warning
-
-  - alert: Low Consensus-Round Rate
-    expr: avg(rate(consensus_gauge{op='current_round',job='validators'}[1m])) < 0.2
-    for: 1m
+  - alert: Low Block Commit Rate
+    expr: avg(rate(consensus_gauge{op='last_committed_round',role='validator'}[1m])) < 0.2
+    for: 20m
     labels:
       severity: warning
