@@ -170,26 +170,17 @@ pub fn write_u32_as_uleb128(binary: &mut Vec<u8>, value: u32) {
 
 /// Write a `u16` in Little Endian format.
 pub fn write_u16(binary: &mut Vec<u8>, value: u16) {
-    let bytes: [u8; 2] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+    binary.extend(&value.to_le_bytes());
 }
 
 /// Write a `u32` in Little Endian format.
 pub fn write_u32(binary: &mut Vec<u8>, value: u32) {
-    let bytes: [u8; 4] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+    binary.extend(&value.to_le_bytes());
 }
 
 /// Write a `u64` in Little Endian format.
 pub fn write_u64(binary: &mut Vec<u8>, value: u64) {
-    let bytes: [u8; 8] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+    binary.extend(&value.to_le_bytes());
 }
 
 /// Reads a `u16` in ULEB128 format from a `binary`.
