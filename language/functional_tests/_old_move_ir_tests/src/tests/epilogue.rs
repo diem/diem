@@ -553,7 +553,7 @@ main() {{
 // TODO don't increment sequence number after:
 // bad signature
 // bad auth key
-// cant pay gas deposit
+// can't pay gas deposit
 
 // TODO: do increment sequence number after:
 // parse error

@@ -776,7 +776,7 @@ where
         to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMRuntimeResult<TransactionOutput> {
-        // This should only be used for bookeeping. The gas is already deducted from the sender's
+        // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
         let gas: u64 = (self.txn_data.max_gas_amount - self.gas_meter.remaining_gas())
             * self.txn_data.gas_unit_price;

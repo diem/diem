@@ -8,7 +8,7 @@ use std::{convert, error::Error, fmt, io};
 /// We define our own Result type in order to not have to import the libra/common/failture_ext
 pub type Result<T> = ::std::result::Result<T, WalletError>;
 
-/// Libra Wallet Error is a convenience enum for generating arbitarary WalletErrors. Curently, only
+/// Libra Wallet Error is a convenience enum for generating arbitarary WalletErrors. Currently, only
 /// the LibraWalletGeneric error is being used, but there are plans to add more specific errors as
 /// LibraWallet matures
 pub enum WalletError {

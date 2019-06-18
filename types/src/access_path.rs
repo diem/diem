@@ -126,7 +126,7 @@ impl fmt::Display for Access {
 #[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
 pub struct Accesses(Vec<Access>);
 
-/// SEPARATOR is used as a delimeter between fields. It should not be a legal part of any identifier
+/// SEPARATOR is used as a delimiter between fields. It should not be a legal part of any identifier
 /// in the language
 const SEPARATOR: char = '/';
 

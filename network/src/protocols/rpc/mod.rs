@@ -91,7 +91,7 @@ mod test;
 #[derive(Debug)]
 pub struct InboundRpcRequest {
     /// Rpc method identifier, e.g., `/libra/consensus/rpc/0.1.0`. This is used
-    /// to dispath the request to the corresponding client handler.
+    /// to dispatch the request to the corresponding client handler.
     pub protocol: ProtocolId,
     /// The serialized request data received from the sender.
     pub data: Bytes,

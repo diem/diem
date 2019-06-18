@@ -159,7 +159,7 @@ impl KeyFactory {
     }
 }
 
-/// Seed is the ouput of a one-way function, which accepts a Mnemonic as input
+/// Seed is the output of a one-way function, which accepts a Mnemonic as input
 pub struct Seed([u8; 32]);
 
 impl Seed {

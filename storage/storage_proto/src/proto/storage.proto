@@ -68,7 +68,7 @@ message GetTransactionsRequest {
     // The size of the transaction batch.
     uint64 batch_size = 2;
     // All the proofs returned in the response should be relative to this
-    // given verison.
+    // given version.
     uint64 ledger_version = 3;
     // Used to return the events associated with each transaction
     bool fetch_events = 4;

@@ -354,7 +354,7 @@ pub trait CryptoHasher: Default {
     }
 }
 
-/// Our preferred hashing schema, outputing [`HashValue`]s.
+/// Our preferred hashing schema, outputting [`HashValue`]s.
 /// * Hashing is parameterized by a `domain` to prevent domain
 /// ambiguity attacks.
 /// * The existence of serialization/deserialization function rules

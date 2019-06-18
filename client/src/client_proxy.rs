@@ -212,7 +212,7 @@ impl ClientProxy {
         ret
     }
 
-    /// Get balance from validator for the account sepcified.
+    /// Get balance from validator for the account specified.
     pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<f64> {
         ensure!(
             space_delim_strings.len() == 2,

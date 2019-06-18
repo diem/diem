@@ -315,7 +315,7 @@ impl LibraSwarm {
                 }
             }
 
-            // Check if all the nodes have been successfully lauched
+            // Check if all the nodes have been successfully launched
             if done.iter().all(|status| *status) {
                 return true;
             }

@@ -118,7 +118,7 @@ impl<T> FusedStream for Receiver<T> {
 }
 
 /// `Receiver` implements `Stream` in the same way as `mpsc::Stream`, but it decrements the
-/// associated `IntGauge` when it gets polled sucessfully.
+/// associated `IntGauge` when it gets polled successfully.
 impl<T> Stream for Receiver<T> {
     type Item = T;
 

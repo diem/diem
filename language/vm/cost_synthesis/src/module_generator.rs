@@ -355,7 +355,7 @@ impl ModuleBuilder {
 ///
 /// The `ModuleBuilder` is already designed to build module universes but the size of this universe
 /// is unspecified and un-iterable. This is a simple wrapper around the builder that allows
-/// the implemenation of the `Iterator` trait over it.
+/// the implementation of the `Iterator` trait over it.
 pub struct ModuleGenerator {
     module_builder: ModuleBuilder,
     iters: u64,

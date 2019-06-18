@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! A module to generate, store and load known users accounts.
-//! The concept of known users can be helpful for testing to provide reproducable results.
+//! The concept of known users can be helpful for testing to provide reproducible results.
 
 use crate::*;
 use failure::prelude::*;

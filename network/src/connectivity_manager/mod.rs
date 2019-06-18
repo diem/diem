@@ -127,9 +127,9 @@ where
         for p in stale_connections.into_iter() {
             info!("Should no longer be connected to peer: {}", p.short_str());
             match self.peer_mgr_reqs_tx.disconnect_peer(p).await {
-                // If we disconnect succesfully, or if the connection has already broken, we eagerly
-                // remove the peer from list of connected peers, without waiting for the LostPeer
-                // notification from PeerManager.
+                // If we disconnect successfully, or if the connection has already broken, we
+                // eagerly remove the peer from list of connected peers, without
+                // waiting for the LostPeer notification from PeerManager.
                 Ok(_) | Err(PeerManagerError::NotConnected(_)) => {
                     self.connected.remove(&p);
                 }

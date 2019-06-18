@@ -247,7 +247,7 @@ mod test {
             read_u16frame(&mut b, &mut buf).await?;
             assert_eq!(buf.as_ref(), protocol_unsupported);
 
-            // Just drop b to signle that the upgrade failed
+            // Just drop b to signal that the upgrade failed
             drop(b);
 
             // Force return type of the async block

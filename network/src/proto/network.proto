@@ -41,5 +41,5 @@ message IdentityMsg {
 // Ping message sent as liveness probe.
 message Ping {}
 
-// Pong message sent as reponse to liveness probe.
+// Pong message sent as response to liveness probe.
 message Pong {}

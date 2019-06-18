@@ -928,7 +928,7 @@ impl<'a> Scope for ScriptScope<'a> {
 
 struct Compiler<S: Scope + Sized> {
     // identity maps
-    // Map a handle to its positon in its table
+    // Map a handle to its position in its table
     // TODO: those could be expressed as references and it would make for better code.
     // For now this is easier to do and those are intended to be "primitive" values so we'll get
     // back to this...
@@ -1476,7 +1476,7 @@ impl<S: Scope + Sized> Compiler<S> {
     }
 
     //
-    // Signatue building methods
+    // Signature building methods
     //
 
     fn build_type_signature(&mut self, type_: &Type) -> Result<TypeSignature> {

@@ -9,7 +9,7 @@
 //! 1. Every message runs in its own ephemeral substream. The substream is directional in the way
 //!    that only the dialer sends a message to the listener, but no messages or acknowledgements
 //!    sending back on the other direction. So the message delivery is best effort and not
-//!    guranteed. Because the substreams are independent, there is no gurantee on the ordering
+//!    guaranteed. Because the substreams are independent, there is no guarantee on the ordering
 //!    of the message delivery either.
 //! 2. An DirectSend call negotiates which protocol to speak using [`protocol-select`].  This
 //!    allows simple versioning of message delivery and negotiation of which message types are

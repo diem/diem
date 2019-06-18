@@ -135,7 +135,7 @@ impl LibraDB {
         let latest_version = self.get_latest_version()?;
         ensure!(
             ledger_version <= latest_version,
-            "The ledger version {} is greather than the latest version currently in ledger: {}",
+            "The ledger version {} is greater than the latest version currently in ledger: {}",
             ledger_version,
             latest_version
         );
