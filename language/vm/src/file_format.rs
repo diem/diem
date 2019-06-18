@@ -1054,6 +1054,9 @@ pub struct CompiledScript {
 }
 
 impl CompiledScript {
+    /// Returns the index of `main` in case a script is converted to a module.
+    pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
+
     /// Converts a `CompiledScript` to a `CompiledModule` for code that wants a uniform view of
     /// both.
     pub fn into_module(self) -> CompiledModule {

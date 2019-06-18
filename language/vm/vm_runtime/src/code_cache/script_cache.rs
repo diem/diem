@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Cache for commonly executed scripts
 
-use crate::{
-    code_cache::module_cache::create_fake_module,
-    loaded_data::{
-        function::{FunctionRef, FunctionReference},
-        loaded_module::LoadedModule,
-    },
+use crate::loaded_data::{
+    function::{FunctionRef, FunctionReference},
+    loaded_module::LoadedModule,
 };
 use logger::prelude::*;
 use tiny_keccak::Keccak;
@@ -46,13 +43,13 @@ impl<'alloc> ScriptCache<'alloc> {
             Ok(Ok(f))
         } else {
             trace!("[VM] Script cache miss");
-            let (fake_module, idx) = create_fake_module(script);
+            let fake_module = script.into_module();
             let loaded_module = LoadedModule::new(fake_module)?;
             self.map
                 .or_insert_with_try_transform(
                     hash,
                     move || loaded_module,
-                    |module_ref| FunctionRef::new(module_ref, idx),
+                    |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
                 )
                 .map(Ok)
         }

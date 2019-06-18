@@ -3,10 +3,7 @@
 
 use super::*;
 use crate::{
-    code_cache::{
-        module_adapter::FakeFetcher,
-        module_cache::{create_fake_module, ModuleCache},
-    },
+    code_cache::{module_adapter::FakeFetcher, module_cache::ModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
 };
 use ::compiler::{compiler, parser::parse_program};
@@ -178,9 +175,9 @@ fn test_loader_cross_modules() {
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module).unwrap();
 
-    let (owned_entry_module, entry_idx) = create_fake_module(script);
+    let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
     let func1 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
@@ -209,9 +206,9 @@ fn test_loader_cross_modules() {
 fn test_cache_with_storage() {
     let allocator = Arena::new();
 
-    let (owned_entry_module, entry_idx) = create_fake_module(test_script());
+    let owned_entry_module = test_script().into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 
     let vm_cache = VMModuleCache::new(&allocator);
@@ -375,9 +372,9 @@ fn test_multi_level_cache_write_back() {
         address_pool: vec![AccountAddress::default()],
     };
 
-    let (owned_entry_module, entry_idx) = create_fake_module(script);
+    let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 
     {

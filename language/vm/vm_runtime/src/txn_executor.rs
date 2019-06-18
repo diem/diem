@@ -3,7 +3,7 @@
 //! Processor for a single transaction.
 
 use crate::{
-    code_cache::module_cache::{create_fake_module, ModuleCache, VMModuleCache},
+    code_cache::module_cache::{ModuleCache, VMModuleCache},
     data_cache::{RemoteCache, TransactionDataCache},
     execution_stack::ExecutionStack,
     gas_meter::GasMeter,
@@ -818,9 +818,9 @@ pub fn execute_function(
 ) -> VMResult<()> {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
-    let (main_module, entry_idx) = create_fake_module(caller_script);
+    let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module)?;
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx)?;
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX)?;
     for m in modules {
         module_cache.cache_module(m)?;
     }
