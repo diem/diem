@@ -31,3 +31,6 @@ language/move_ir/
 
 # GDB related
 **/.gdb_history
+
+# OSX specific
+.DS_Store
