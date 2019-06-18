@@ -279,7 +279,7 @@ impl ClientProxy {
 
             match self.client.get_sequence_number(account) {
                 Ok(chain_seq_number) => {
-                    if chain_seq_number == sequence_number {
+                    if chain_seq_number >= sequence_number {
                         println!(
                             "\nTransaction completed, found sequence number {}",
                             chain_seq_number
