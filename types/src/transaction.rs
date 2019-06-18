@@ -260,7 +260,7 @@ impl fmt::Debug for SignedTransaction {
 }
 
 impl SignedTransaction {
-    pub fn new_for_test(
+    pub fn craft_signed_transaction_for_client(
         raw_txn: RawTransaction,
         public_key: PublicKey,
         signature: Signature,

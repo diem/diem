@@ -75,7 +75,7 @@ pub fn get_unverified_test_signed_transaction(
     let hash = RawTransactionBytes(&bytes).hash();
     let signature = sign_message(hash, &private_key).unwrap();
 
-    SignedTransaction::new_for_test(
+    SignedTransaction::craft_signed_transaction_for_client(
         RawTransaction::from_proto(raw_txn).unwrap(),
         public_key,
         signature,

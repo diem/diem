@@ -91,7 +91,7 @@ pub struct ClientProxy {
     /// Account used for mint operations.
     pub faucet_account: Option<AccountData>,
     /// Wallet library managing user accounts.
-    pub wallet: WalletLibrary,
+    wallet: WalletLibrary,
 }
 
 impl ClientProxy {
@@ -790,7 +790,7 @@ impl ClientProxy {
 
     fn create_submit_transaction_req(
         program: Program,
-        sender_account: &mut AccountData,
+        sender_account: &AccountData,
         wallet: &WalletLibrary,
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
@@ -810,7 +810,11 @@ impl ClientProxy {
                 let hash = RawTransactionBytes(&bytes).hash();
                 let signature = sign_message(hash, &key_pair.private_key())?;
 
-                SignedTransaction::new_for_test(raw_txn, key_pair.public_key(), signature)
+                SignedTransaction::craft_signed_transaction_for_client(
+                    raw_txn,
+                    key_pair.public_key(),
+                    signature,
+                )
             }
             None => wallet.sign_txn(&sender_account.address, raw_txn)?,
         };
@@ -862,8 +866,41 @@ fn format_parse_data_error<T: std::fmt::Debug>(
 
 #[cfg(test)]
 mod tests {
-    use crate::client_proxy::ClientProxy;
+    use crate::client_proxy::{AddressAndIndex, ClientProxy};
+    use config::trusted_peers::TrustedPeersConfigHelpers;
+    use libra_wallet::io_utils;
     use proptest::prelude::*;
+    use tempfile::NamedTempFile;
+
+    fn generate_accounts_from_wallet(count: usize) -> (ClientProxy, Vec<AddressAndIndex>) {
+        let mut accounts = Vec::new();
+        accounts.reserve(count);
+        let file = NamedTempFile::new().unwrap();
+        let mnemonic_path = file.into_temp_path().to_str().unwrap().to_string();
+        let trust_peer_file = NamedTempFile::new().unwrap();
+        let (_, trust_peer_config) = TrustedPeersConfigHelpers::get_test_config(1, None);
+        let trust_peer_path = trust_peer_file.into_temp_path();
+        trust_peer_config.save_config(&trust_peer_path);
+
+        let val_set_file = trust_peer_path.to_str().unwrap().to_string();
+
+        // We don't need to specify host/port since the client won't be used to connect, only to
+        // generate random accounts
+        let mut client_proxy = ClientProxy::new(
+            "", /* host */
+            "", /* port */
+            &val_set_file,
+            &"",
+            None,
+            Some(mnemonic_path),
+        )
+        .unwrap();
+        for _ in 0..count {
+            accounts.push(client_proxy.create_next_account(&["c"]).unwrap());
+        }
+
+        (client_proxy, accounts)
+    }
 
     #[test]
     fn test_micro_libra_conversion() {
@@ -879,6 +916,28 @@ mod tests {
         assert!(ClientProxy::convert_to_micro_libras("18446744073709.551615").is_ok());
         assert!(ClientProxy::convert_to_micro_libras("184467440737095.51615").is_err());
         assert!(ClientProxy::convert_to_micro_libras("18446744073709.551616").is_err());
+    }
+
+    #[test]
+    fn test_generate() {
+        let num = 1;
+        let (_, accounts) = generate_accounts_from_wallet(num);
+        assert_eq!(accounts.len(), num);
+    }
+
+    #[test]
+    fn test_write_recover() {
+        let num = 15;
+        let (client, accounts) = generate_accounts_from_wallet(num);
+        assert_eq!(accounts.len(), num);
+
+        let file = NamedTempFile::new().unwrap();
+        let path = file.into_temp_path();
+        io_utils::write_recovery(&client.wallet, &path).expect("failed to write to file");
+
+        let wallet = io_utils::recover(&path).expect("failed to load from file");
+
+        assert_eq!(client.wallet.mnemonic(), wallet.mnemonic());
     }
 
     proptest! {
