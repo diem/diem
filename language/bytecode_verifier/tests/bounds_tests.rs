@@ -8,7 +8,7 @@ use invalid_mutations::bounds::{
 use proptest::{collection::vec, prelude::*};
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
-    checks::BoundsChecker,
+    check_bounds::BoundsChecker,
     errors::{VMStaticViolation, VerificationError},
     file_format::{CompiledModule, CompiledModuleMut},
     proptest_types::CompiledModuleStrategyGen,
