@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 7,
   "links": [],
   "panels": [
     {
@@ -25,7 +24,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 0
@@ -110,7 +109,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 0
@@ -195,7 +194,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
         "y": 0
@@ -280,10 +279,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "id": 3,
       "legend": {
@@ -365,10 +364,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 7
+        "y": 8
       },
       "id": 5,
       "legend": {
@@ -450,10 +449,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 7
+        "y": 8
       },
       "id": 7,
       "legend": {
@@ -535,10 +534,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "id": 10,
       "legend": {
@@ -620,10 +619,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 16
       },
       "id": 11,
       "legend": {
@@ -705,10 +704,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 16
       },
       "id": 12,
       "legend": {
@@ -790,10 +789,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 21
+        "y": 24
       },
       "id": 13,
       "legend": {
@@ -875,10 +874,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 21
+        "y": 24
       },
       "id": 14,
       "legend": {
@@ -961,7 +960,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -992,5 +991,5 @@
   "timezone": "",
   "title": "HAproxy",
   "uid": "KtKqxTnZz",
-  "version": 5
+  "version": 1
 }

@@ -24,7 +24,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 0
@@ -109,7 +109,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 0
@@ -194,7 +194,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
         "y": 0
@@ -279,10 +279,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "id": 6,
       "legend": {
@@ -364,10 +364,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 7
+        "y": 8
       },
       "id": 7,
       "legend": {
@@ -449,10 +449,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 7
+        "y": 8
       },
       "id": 9,
       "legend": {
@@ -534,10 +534,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "id": 16,
       "legend": {
@@ -619,10 +619,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 16
       },
       "id": 17,
       "legend": {
@@ -704,10 +704,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 16
       },
       "id": 18,
       "legend": {
@@ -789,10 +789,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 21
+        "y": 24
       },
       "id": 11,
       "legend": {
@@ -874,10 +874,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 21
+        "y": 24
       },
       "id": 10,
       "legend": {
@@ -959,10 +959,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 21
+        "y": 24
       },
       "id": 12,
       "legend": {
@@ -1044,10 +1044,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 28
+        "y": 32
       },
       "id": 19,
       "legend": {
@@ -1129,10 +1129,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 28
+        "y": 32
       },
       "id": 20,
       "legend": {
@@ -1214,10 +1214,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 32
       },
       "id": 21,
       "legend": {
@@ -1299,10 +1299,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 40
       },
       "id": 22,
       "legend": {
@@ -1384,10 +1384,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 35
+        "y": 40
       },
       "id": 23,
       "legend": {
@@ -1469,10 +1469,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 35
+        "y": 40
       },
       "id": 24,
       "legend": {
@@ -1554,10 +1554,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 42
+        "y": 48
       },
       "id": 13,
       "legend": {
@@ -1639,10 +1639,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 42
+        "y": 48
       },
       "id": 14,
       "legend": {
@@ -1672,7 +1672,7 @@
           "expr": "node_filesystem_avail_bytes{role='haproxy',mountpoint=\"/\"} / node_filesystem_size_bytes{role='haproxy',mountpoint=\"/\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{address}}",
           "refId": "A"
         }
       ],
@@ -1724,10 +1724,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 42
+        "y": 48
       },
       "id": 15,
       "legend": {
@@ -1757,7 +1757,7 @@
           "expr": "node_filesystem_avail_bytes{role='faucet',mountpoint=\"/\"} / node_filesystem_size_bytes{role='faucet',mountpoint=\"/\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{address}}",
           "refId": "A"
         }
       ],
@@ -1810,7 +1810,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1841,5 +1841,5 @@
   "timezone": "",
   "title": "System",
   "uid": "sxgzy27Zz",
-  "version": 2
+  "version": 1
 }
