@@ -120,6 +120,13 @@ if which protoc &>/dev/null; then
   echo "Protobuf is already installed"
 else
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
+		if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
+			sudo yum install unzip -y
+		elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+			sudo apt-get install unzip -y
+		elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+			sudo pacman -Sy unzip --noconfirm
+		fi
 		PROTOC_VERSION=3.8.0
 		PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
 		curl -OL https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
