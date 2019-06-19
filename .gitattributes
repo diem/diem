@@ -10,3 +10,6 @@
 *.toml text
 *.txt text
 *.yml text
+
+# Get some basic syntax highlighting
+*.mvir linguist-language=JavaScript
