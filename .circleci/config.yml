@@ -1,39 +1,233 @@
 version: 2
-jobs:
-  build:
+
+defaults: &defaults
+    working_directory: /tmp/repo
     docker:
-      - image: circleci/rust:stretch
+        - image: circleci/rust:stretch
     resource_class: xlarge
+    environment:
+        TAG: "0.1.${CIRCLE_BUILD_NUM}"
+        IMAGE_NAME: "myapp"
+
+print_version: &print_version
+    <<: *defaults
     steps:
-      - checkout
-      - run:
-          name: Version Information
-          command: rustc --version; cargo --version; rustup --version
-      - run:
-          name: Install Dependencies
-          command: |
-            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
-            sudo apt-get update
-            sudo apt-get install -y protobuf-compiler/stretch-backports cmake golang curl
-            sudo apt-get clean
-            sudo rm -r /var/lib/apt/lists/*
-            rustup component add clippy rustfmt
-      - run:
-          name: Setup Env
-          command: |
-            echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
-            echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
-      - run:
-          name: Linting
-          command: |
-            ./scripts/clippy.sh
-            cargo fmt -- --check
-      - run:
-          name: Build All Targets
-          command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
-      - run:
-          name: Run All Unit Tests
-          command: cargo test --all --exclude testsuite
-      - run:
-          name: Run All End to End Tests
-          command: RUST_TEST_THREADS=2 cargo test --package testsuite
+        - run:
+            name: Print toolchain versions
+            command: |
+                rustc --version
+                cargo --version
+                rustup --version
+
+checkout: &checkout
+    <<: *defaults
+    steps:
+        - checkout
+        - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
+
+build: &build
+    <<: *defaults
+    steps:
+        - attach_workspace:
+            at: /tmp
+        - restore_cache:
+            keys:
+                - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+                - v1-dependencies-rust-
+
+        - run: cargo build
+
+        - save_cache:
+            paths:
+                - target
+            key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+
+        - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
+
+build_release: &build_release
+    <<: *defaults
+    steps:
+        - attach_workspace:
+            at: /tmp
+        - restore_cache:
+            keys:
+                - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+                - v1-dependencies-rust-
+
+        - run: cargo build --release
+
+        - save_cache:
+            paths:
+                - target
+            key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+
+        - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
+
+jobs:
+    checkout:
+        <<: *checkout
+
+    print_version:
+        <<: *print_version
+
+    build:
+        <<: *build
+
+    build_release:
+        <<: *build_release
+
+    fmt:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: rustup component add rustfmt
+            - run: cargo fmt
+
+    clippy:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: rustup component add clippy
+            - run: cargo clippy -D warnings $(source "./scripts/clippy.args")
+
+    check:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo check
+
+    test_unit:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo test --exclude testsuite
+
+    test_unit_release:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo test --exclude testsuite --release
+
+    test_e2e:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: RUST_TEST_THREADS=2 cargo test --package testsuite
+
+    test_e2e_release:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: RUST_TEST_THREADS=2 cargo test --package testsuite --release
+
+    bench:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo bench
+
+    bench_master:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: git checkout master
+            - run: cargo bench
+            - persist_to_workspace:
+                root: /tmp
+                paths:
+                    - repo
+
+    deploy:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: echo todo
+
+workflows:
+    version: 2
+    build:
+        jobs:
+            - checkout
+
+            - print_version
+
+            - build:
+                requires:
+                    - checkout
+
+            - build_release:
+                requires:
+                    - checkout
+                    - build
+
+            - fmt:
+                requires:
+                    - checkout
+
+            - check:
+                requires:
+                    - checkout
+
+            - clippy:
+                requires:
+                    - checkout
+
+            - test_unit:
+                requires:
+                    - build
+
+            - test_e2e:
+                requires:
+                    - build
+
+            - bench_master:
+                requires:
+                    - build_release
+
+            - bench:
+                requires:
+                    - bench_master
+                    - build_release
+
+            - test_unit_release:
+                requires:
+                    - build_release
+
+            - test_e2e_release:
+                requires:
+                    - build_release
+
+            - deploy:
+                requires:
+                    - build
+                    - build_release
+                    - fmt
+                    - check
+                    - clippy
+                    - test_unit
+                    - test_unit_release
+                    - test_e2e
+                    - test_e2e_release
+                    - bench
+                filters:
+                    branches:
+                        only: master
