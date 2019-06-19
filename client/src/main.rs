@@ -65,7 +65,7 @@ fn main() -> std::io::Result<()> {
     )
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, &format!("{}", e)[..]))?;
 
-    // Test connection to validator
+    /// Test connection to validator
     let test_ret = client_proxy.test_validator_connection();
 
     if let Err(e) = test_ret {
