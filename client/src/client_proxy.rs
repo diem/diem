@@ -152,11 +152,7 @@ impl ClientProxy {
     }
 
     /// Returns the account index that should be used by user to reference this account
-    pub fn create_next_account(&mut self, space_delim_strings: &[&str]) -> Result<AddressAndIndex> {
-        ensure!(
-            space_delim_strings.len() == 1,
-            "Invalid number of arguments to account creation"
-        );
+    pub fn create_next_account(&mut self) -> Result<AddressAndIndex> {
         let (address, _) = self.wallet.new_address()?;
 
         let account_data = Self::get_account_data_from_address(&self.client, address, None)?;
@@ -265,7 +261,7 @@ impl ClientProxy {
 
     /// Waits for the next transaction for a specific address and prints it
     pub fn wait_for_transaction(&mut self, account: AccountAddress, sequence_number: u64) {
-        let mut max_iterations = 50;
+        let mut max_iterations = 5000;
         print!("[waiting ");
         loop {
             stdout().flush().unwrap();
@@ -275,23 +271,25 @@ impl ClientProxy {
                 Ok(chain_seq_number) => {
                     if chain_seq_number >= sequence_number {
                         println!(
-                            "\nTransaction completed, found sequence number {}",
+                            "Transaction completed, found sequence number {}]",
                             chain_seq_number
                         );
                         break;
                     }
-                    print!("*");
+                    if max_iterations % 100 == 0 {
+                        print!("*");
+                    }
                 }
                 Err(e) => {
                     if max_iterations == 0 {
                         panic!("wait_for_transaction timeout: {}", e);
-                    } else {
+                    } else if max_iterations % 100 == 0 {
                         print!(".");
                     }
                 }
             }
 
-            thread::sleep(time::Duration::from_millis(1000));
+            thread::sleep(time::Duration::from_millis(10));
         }
     }
 
@@ -310,24 +308,26 @@ impl ClientProxy {
         let sender_sequence;
         let resp;
         {
-            let sender = self
+            let sender = self.accounts.get(sender_account_ref_id).ok_or_else(|| {
+                format_err!("Unable to find sender account: {}", sender_account_ref_id)
+            })?;
+
+            let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+            let req = self.create_submit_transaction_req(
+                program,
+                sender,
+                gas_unit_price, /* gas_unit_price */
+                max_gas_amount, /* max_gas_amount */
+            )?;
+            let sender_mut = self
                 .accounts
                 .get_mut(sender_account_ref_id)
                 .ok_or_else(|| {
                     format_err!("Unable to find sender account: {}", sender_account_ref_id)
                 })?;
-
-            let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
-            let req = Self::create_submit_transaction_req(
-                program,
-                sender,
-                &self.wallet,
-                gas_unit_price, /* gas_unit_price */
-                max_gas_amount, /* max_gas_amount */
-            )?;
-            resp = self.client.submit_transaction(sender, &req);
-            sender_address = sender.address;
-            sender_sequence = sender.sequence_number;
+            resp = self.client.submit_transaction(sender_mut, &req);
+            sender_address = sender_mut.address;
+            sender_sequence = sender_mut.sequence_number;
         }
 
         if is_blocking {
@@ -732,17 +732,15 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
-        let mut sender = self.faucet_account.as_mut().unwrap();
+        let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
         let program = vm_genesis::encode_mint_program(&receiver, num_coins);
-        let req = Self::create_submit_transaction_req(
-            program,
-            sender,
-            &self.wallet,
-            None, /* gas_unit_price */
+        let req = self.create_submit_transaction_req(
+            program, sender, None, /* gas_unit_price */
             None, /* max_gas_amount */
         )?;
-        let resp = self.client.submit_transaction(&mut sender, &req);
+        let mut sender_mut = self.faucet_account.as_mut().unwrap();
+        let resp = self.client.submit_transaction(&mut sender_mut, &req);
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
@@ -809,10 +807,11 @@ impl ClientProxy {
         value.to_u64().ok_or_else(|| format_err!("invalid value"))
     }
 
-    fn create_submit_transaction_req(
+    /// Craft a transaction request.
+    pub fn create_submit_transaction_req(
+        &self,
         program: Program,
         sender_account: &AccountData,
-        wallet: &WalletLibrary,
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<SubmitTransactionRequest> {
@@ -837,7 +836,7 @@ impl ClientProxy {
                     signature,
                 )
             }
-            None => wallet.sign_txn(&sender_account.address, raw_txn)?,
+            None => self.wallet.sign_txn(&sender_account.address, raw_txn)?,
         };
 
         let mut req = SubmitTransactionRequest::new();
@@ -917,7 +916,7 @@ mod tests {
         )
         .unwrap();
         for _ in 0..count {
-            accounts.push(client_proxy.create_next_account(&["c"]).unwrap());
+            accounts.push(client_proxy.create_next_account().unwrap());
         }
 
         (client_proxy, accounts)

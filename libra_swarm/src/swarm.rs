@@ -404,6 +404,15 @@ impl LibraSwarm {
         self.nodes.keys().cloned().collect()
     }
 
+    /// Vector with the debug ports of all the validators in the swarm.
+    pub fn get_validators_debug_ports(&self) -> Vec<u16> {
+        self.config
+            .get_configs()
+            .iter()
+            .map(|(_, c)| c.debug_interface.admission_control_node_debug_port)
+            .collect()
+    }
+
     pub fn kill_node(&mut self, port: u16) {
         self.nodes.remove(&port);
     }

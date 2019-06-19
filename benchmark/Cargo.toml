@@ -1,0 +1,25 @@
+[package]
+name = "benchmark"
+version = "0.1.0"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+publish = false
+edition = "2018"
+
+[dependencies]
+futures = "0.1.23"
+itertools = "0.8.0"
+protobuf = "2.6"
+grpcio = "0.4"
+
+admission_control_proto = { path = "../admission_control/admission_control_proto" }
+client = { path = "../client" }
+config = { path = "../config" }
+debug_interface = { path = "../common/debug_interface" }
+failure = { package = "failure_ext", path = "../common/failure_ext" }
+generate_keypair = { path = "../config/generate_keypair" }
+libra_swarm = { path = "../libra_swarm" }
+libradb = { path = "../storage/libradb" }
+logger = { path = "../common/logger" }
+proto_conv = { path = "../common/proto_conv" }
+types = { path = "../types" }
+vm_genesis = { path = "../language/vm/vm_genesis" }
