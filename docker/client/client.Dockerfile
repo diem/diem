@@ -20,8 +20,8 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY --from=builder /libra/target/release/client /opt/libra/bin/libra_client
 COPY --from=builder /libra/scripts/cli/trusted_peers.config.toml /opt/libra/etc/trusted_peers.config.toml
 
-ENTRYPOINT exec /opt/libra/bin/libra_client
-CMD --host ac.testnet.libra.org --port 8000 -s /opt/libra/etc/trusted_peers.config.toml
+ENTRYPOINT ["/opt/libra/bin/libra_client"]
+CMD ["--host", "ac.testnet.libra.org", "--port", "8000", "-s", "/opt/libra/etc/trusted_peers.config.toml"]
 
 ARG BUILD_DATE
 ARG GIT_REV
