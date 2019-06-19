@@ -53,9 +53,12 @@ message ExecuteBlockResponse {
   // block is committed.
   repeated types.VMStatus status = 2;
 
+  // The corresponding ledger version when this block is committed.
+  uint64 version = 3;
+
   // If set, this field designates that if this block is committed, then the
   // next epoch will start immediately with the included set of validators.
-  types.ValidatorSet validators = 3;
+  types.ValidatorSet validators = 4;
 }
 
 message CommitBlockRequest {
