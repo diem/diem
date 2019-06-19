@@ -1,6 +1,6 @@
 locals {
   faucet_image_repo = var.faucet_image_repo
-  faucet_image_tag = var.faucet_image_tag
+  faucet_image_tag  = var.faucet_image_tag
 }
 
 resource "aws_secretsmanager_secret" "faucet" {
@@ -36,13 +36,13 @@ data "template_file" "ecs_faucet_definition" {
   vars = {
     faucet_image_repo    = local.faucet_image_repo
     faucet_image_tag_str = substr(var.image_tag, 0, 6) == "sha256" ? "@${local.faucet_image_tag}" : ":${local.faucet_image_tag}"
-    ac_hosts      = join(",", aws_instance.validator.*.private_ip)
-    trusted_peers = jsonencode(file("${var.validator_set}/trusted_peers.config.toml"))
-    secret        = aws_secretsmanager_secret.faucet.arn
-    log_level     = var.faucet_log_level
-    log_group     = aws_cloudwatch_log_group.testnet.name
-    log_region    = var.region
-    log_prefix    = "faucet"
+    ac_hosts             = join(",", aws_instance.validator.*.private_ip)
+    trusted_peers        = jsonencode(file("${var.validator_set}/trusted_peers.config.toml"))
+    secret               = aws_secretsmanager_secret.faucet.arn
+    log_level            = var.faucet_log_level
+    log_group            = aws_cloudwatch_log_group.testnet.name
+    log_region           = var.region
+    log_prefix           = "faucet"
   }
 }
 

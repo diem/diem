@@ -2,10 +2,10 @@ data "template_file" "prometheus_yml" {
   template = file("templates/prometheus.yml")
 
   vars = {
-    workspace       = terraform.workspace
-    validator_nodes = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
-    validator_svcs  = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
-    other_nodes     = join(",", ["${aws_instance.prometheus.private_ip}:prometheus", "${aws_instance.faucet.private_ip}:faucet"])
+    workspace             = terraform.workspace
+    validator_nodes       = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
+    validator_svcs        = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
+    other_nodes           = join(",", ["${aws_instance.prometheus.private_ip}:prometheus", "${aws_instance.faucet.private_ip}:faucet"])
     monitoring_private_ip = aws_instance.prometheus.private_ip
   }
 }
@@ -18,12 +18,12 @@ data "template_file" "datasources_yml" {
   }
 }
 
-	
+
 data "template_file" "alertmanager_yml" {
   template = file("templates/alertmanager.yml")
 
   vars = {
-    workspace = terraform.workspace
+    workspace     = terraform.workspace
     pagerduty_key = var.prometheus_pagerduty_key
   }
 }
@@ -145,9 +145,9 @@ data "template_file" "ecs_prometheus_definition" {
   template = file("templates/prometheus.json")
 
   vars = {
-    prometheus_image = "prom/prometheus:v2.9.2"
+    prometheus_image   = "prom/prometheus:v2.9.2"
     alertmanager_image = "prom/alertmanager:v0.17.0"
-    grafana_image    = "grafana/grafana:latest"
+    grafana_image      = "grafana/grafana:latest"
   }
 }
 
@@ -175,12 +175,12 @@ resource "aws_ecs_task_definition" "prometheus" {
     name      = "prometheus-console-libs"
     host_path = "/tmp/prometheus/console_libs"
   }
-	
+
   volume {
     name      = "prometheus-alerting-rules"
     host_path = "/tmp/prometheus/alerting_rules"
   }
-	
+
   volume {
     name      = "alertmanager-data"
     host_path = "/data/alertmanager"
@@ -190,7 +190,7 @@ resource "aws_ecs_task_definition" "prometheus" {
     name      = "alertmanager-config"
     host_path = "/tmp/alertmanager.yml"
   }
-  
+
   volume {
     name      = "grafana-data"
     host_path = "/data/grafana"

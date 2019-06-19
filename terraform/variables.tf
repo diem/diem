@@ -87,5 +87,5 @@ variable "append_workspace_dns" {
 
 variable "prometheus_pagerduty_key" {
   default     = ""
-  description = "Key for Prometheus-PagerDuty integration" 
+  description = "Key for Prometheus-PagerDuty integration"
 }
