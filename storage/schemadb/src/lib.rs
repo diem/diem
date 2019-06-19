@@ -278,7 +278,6 @@ impl DB {
     }
 
     /// Returns the approximate size of each non-empty column family in bytes.
-    /// NOTE: this currently does not work with custom comparators (may panic).
     pub fn get_approximate_sizes_cf(&self) -> Result<BTreeMap<String, u64>> {
         let mut cf_sizes = BTreeMap::new();
 
