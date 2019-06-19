@@ -126,7 +126,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     ///
     /// Do nothing
     pub async fn process_new_round_event(&self, new_round_event: NewRoundEvent) {
-        debug!("Processing {:?}", new_round_event);
+        debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
         match new_round_event.reason {
