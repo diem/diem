@@ -121,12 +121,14 @@ fi
 if [[ -f /etc/debian_version ]]; then
 	PROTOC_VERSION=`protoc --version | cut -d" " -f2`
 	REQUIRED_PROTOC_VERSION="3.6.0"
+	set +e
 	PROTOC_VERSION_CHECK=`dpkg --compare-versions $REQUIRED_PROTOC_VERSION "gt" $PROTOC_VERSION`
 
 	if [ $? -eq "0" ]; then
 		echo "protoc version is too old. Update protoc to 3.6.0 or above. Abort"
 		exit 1
 	fi
+	set -e
 fi
 
 cat <<EOF
