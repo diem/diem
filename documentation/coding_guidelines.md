@@ -42,7 +42,7 @@ Any public fields, functions, and methods should be documented with [Rustdoc](ht
 
 Example below:
 
-```
+```rust
 /// Represents (x, y) of a 2-dimensional grid
 ///
 /// A line is defined by 2 instances.
@@ -84,7 +84,7 @@ This file should contain:
 
 A template for readmes:
 
-```
+```markdown
 # Component Name
 
 [Summary line: Start with one sentence about this component.]
@@ -147,7 +147,7 @@ If `x` is reference counted, prefer [`Arc::clone(x)`](https://doc.rust-lang.org/
 
 Also, if you are passing around [`Arc<T>`](https://doc.rust-lang.org/std/sync/struct.Arc.html) types, consider using a newtype wrapper:
 
-```
+```rust
 #[derive(Clone, Debug)]
 pub struct Foo(Arc<FooInner>);
 ```
@@ -186,7 +186,7 @@ Excluding test code, set field visibility to private as much as possible. Privat
 
 Public fields are most appropriate for [`struct`](https://doc.rust-lang.org/book/ch05-00-structs.html) types in the C spirit: compound, passive data structures without internal invariants.  Naming suggestions follow the guidance [here](https://rust-lang-nursery.github.io/api-guidelines/naming.html#getter-names-follow-rust-convention-c-getter) as shown below.
 
-```
+```rust
 struct Foo {
     size: usize,
     key_to_value: HashMap<u32, u32>
