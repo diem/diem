@@ -639,7 +639,21 @@ impl LibraDB {
     /// Write the whole schema batch including all data necessary to mutate the ledge
     /// state of some transaction by leveraging rocksdb atomicity support.
     fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)
+        self.db.write_schemas(batch)?;
+
+        match self.db.get_approximate_sizes_cf() {
+            Ok(cf_sizes) => {
+                for (cf_name, size) in cf_sizes {
+                    OP_COUNTER.set(&format!("cf_size_bytes_{}", cf_name), size as usize);
+                }
+            }
+            Err(err) => warn!(
+                "Failed to get approximate size of column families: {}.",
+                err
+            ),
+        }
+
+        Ok(())
     }
 
     fn get_account_seq_num_by_version(
