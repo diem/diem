@@ -37,3 +37,7 @@ jobs:
       - run:
           name: Run All End to End Tests
           command: RUST_TEST_THREADS=2 cargo test --package testsuite
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -f docker/validator/validator.Dockerfile . --tag libra_e2e --build-arg GIT_REV="$(git rev-parse HEAD)" --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
