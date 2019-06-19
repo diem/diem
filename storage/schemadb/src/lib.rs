@@ -17,9 +17,14 @@ pub mod schema;
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use failure::prelude::*;
 use rocksdb::{
-    rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
+    rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Range, Writable, WriteOptions,
 };
-use std::{collections::HashMap, iter::Iterator, marker::PhantomData, path::Path};
+use std::{
+    collections::{BTreeMap, HashMap},
+    iter::Iterator,
+    marker::PhantomData,
+    path::Path,
+};
 
 /// Type alias to `rocksdb::ColumnFamilyOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ColumnFamilyOptions = rocksdb::ColumnFamilyOptions;
@@ -263,13 +268,73 @@ impl DB {
             .map_err(convert_rocksdb_err)
     }
 
-    fn get_cf_handle(&self, cf_name: ColumnFamilyName) -> Result<&CFHandle> {
+    fn get_cf_handle(&self, cf_name: &str) -> Result<&CFHandle> {
         self.inner.cf_handle(cf_name).ok_or_else(|| {
             format_err!(
                 "DB::cf_handle not found for column family name: {}",
                 cf_name
             )
         })
+    }
+
+    /// Returns the approximate size of each non-empty column family in bytes.
+    /// NOTE: this currently does not work with custom comparators (may panic).
+    pub fn get_approximate_sizes_cf(&self) -> Result<BTreeMap<String, u64>> {
+        let mut cf_sizes = BTreeMap::new();
+
+        for cf_name in self.inner.cf_names().into_iter().map(ToString::to_string) {
+            let cf_handle = self.get_cf_handle(&cf_name)?;
+            let first_key = match self.get_first_key(cf_handle) {
+                Some(key) => key,
+                None => {
+                    cf_sizes.insert(cf_name, 0);
+                    continue;
+                }
+            };
+            let last_key = self
+                .get_last_key(cf_handle)
+                .ok_or_else(|| format_err!("Found first key but not last key."))?;
+            let range = Range::new(&first_key, &last_key);
+            let size = self
+                .inner
+                .get_approximate_sizes_cf(cf_handle, &[range])
+                .pop()
+                .ok_or_else(|| {
+                    format_err!(
+                        "Unable to get approximate size of {} column family.",
+                        cf_name,
+                    )
+                })?;
+            cf_sizes.insert(cf_name, size);
+        }
+
+        Ok(cf_sizes)
+    }
+
+    /// Returns the first key in given column family, if it exists.
+    fn get_first_key(&self, cf_handle: &CFHandle) -> Option<Vec<u8>> {
+        let mut iter = self.inner.iter_cf(cf_handle);
+        iter.seek(rocksdb::SeekKey::Start);
+        iter.kv().map(|(key, _value)| key)
+    }
+
+    /// Returns the last key in given column family, if it exists.
+    fn get_last_key(&self, cf_handle: &CFHandle) -> Option<Vec<u8>> {
+        let mut iter = self.inner.iter_cf(cf_handle);
+        iter.seek(rocksdb::SeekKey::End);
+        iter.kv().map(|(key, _value)| key)
+    }
+
+    /// Flushes all memtable data. If `sync` is true, the flush will wait until it's done. This is
+    /// only used for testing `get_approximate_sizes_cf` in unit tests.
+    pub fn flush_all(&self, sync: bool) -> Result<()> {
+        for cf_name in self.inner.cf_names() {
+            let cf_handle = self.get_cf_handle(cf_name)?;
+            self.inner
+                .flush_cf(cf_handle, sync)
+                .map_err(convert_rocksdb_err)?;
+        }
+        Ok(())
     }
 }
 

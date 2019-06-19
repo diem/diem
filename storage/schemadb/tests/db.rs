@@ -270,3 +270,26 @@ fn test_reopen() {
         );
     }
 }
+
+#[test]
+fn test_report_size() {
+    let db = TestDB::new();
+
+    for i in 0..1000 {
+        let mut db_batch = SchemaBatch::new();
+        db_batch
+            .put::<TestSchema1>(&TestField(i), &TestField(i))
+            .unwrap();
+        db_batch
+            .put::<TestSchema2>(&TestField(i), &TestField(i))
+            .unwrap();
+        db.write_schemas(db_batch).unwrap();
+    }
+
+    db.flush_all(/* sync = */ true).unwrap();
+
+    let cf_sizes = db.get_approximate_sizes_cf().unwrap();
+    assert!(*cf_sizes.get("TestCF1").unwrap() > 0);
+    assert!(*cf_sizes.get("TestCF2").unwrap() > 0);
+    assert_eq!(*cf_sizes.get("default").unwrap(), 0);
+}
