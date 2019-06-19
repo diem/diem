@@ -59,11 +59,12 @@ lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
 }
 
-const MAX_LIMIT: u64 = 1024;
+const MAX_LIMIT: u64 = 1000;
+const MAX_REQUEST_ITEMS: u64 = 100;
 
-fn error_if_limit_too_large(limit: u64) -> Result<()> {
-    if limit > MAX_LIMIT {
-        Err(LibraDbError::TooManyRequested(limit, MAX_LIMIT).into())
+fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
+    if num_requested > max_allowed {
+        Err(LibraDbError::TooManyRequested(num_requested, max_allowed).into())
     } else {
         Ok(())
     }
@@ -175,7 +176,7 @@ impl LibraDB {
         limit: u64,
         ledger_version: Version,
     ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
-        error_if_limit_too_large(limit)?;
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
 
         let get_latest = !ascending && start_seq_num == u64::max_value();
         let cursor = if get_latest {
@@ -451,6 +452,8 @@ impl LibraDB {
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
     )> {
+        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
+
         // Get the latest ledger info and signatures
         let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
         let ledger_version = ledger_info_with_sigs.ledger_info().version();
@@ -587,7 +590,7 @@ impl LibraDB {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
-        error_if_limit_too_large(limit)?;
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
 
         if start_version > ledger_version || limit == 0 {
             return Ok(TransactionListWithProof::new_empty());
