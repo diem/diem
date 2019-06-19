@@ -17,7 +17,7 @@ pub mod schema;
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use failure::prelude::*;
 use rocksdb::{
-    rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Range, Writable, WriteOptions,
+    rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
 use std::{
     collections::{BTreeMap, HashMap},
@@ -283,21 +283,9 @@ impl DB {
 
         for cf_name in self.inner.cf_names().into_iter().map(ToString::to_string) {
             let cf_handle = self.get_cf_handle(&cf_name)?;
-            let first_key = match self.get_first_key(cf_handle) {
-                Some(key) => key,
-                None => {
-                    cf_sizes.insert(cf_name, 0);
-                    continue;
-                }
-            };
-            let last_key = self
-                .get_last_key(cf_handle)
-                .ok_or_else(|| format_err!("Found first key but not last key."))?;
-            let range = Range::new(&first_key, &last_key);
             let size = self
                 .inner
-                .get_approximate_sizes_cf(cf_handle, &[range])
-                .pop()
+                .get_property_int_cf(cf_handle, "rocksdb.estimate-live-data-size")
                 .ok_or_else(|| {
                     format_err!(
                         "Unable to get approximate size of {} column family.",
@@ -308,20 +296,6 @@ impl DB {
         }
 
         Ok(cf_sizes)
-    }
-
-    /// Returns the first key in given column family, if it exists.
-    fn get_first_key(&self, cf_handle: &CFHandle) -> Option<Vec<u8>> {
-        let mut iter = self.inner.iter_cf(cf_handle);
-        iter.seek(rocksdb::SeekKey::Start);
-        iter.kv().map(|(key, _value)| key)
-    }
-
-    /// Returns the last key in given column family, if it exists.
-    fn get_last_key(&self, cf_handle: &CFHandle) -> Option<Vec<u8>> {
-        let mut iter = self.inner.iter_cf(cf_handle);
-        iter.seek(rocksdb::SeekKey::End);
-        iter.kv().map(|(key, _value)| key)
     }
 
     /// Flushes all memtable data. If `sync` is true, the flush will wait until it's done. This is
