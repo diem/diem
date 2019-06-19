@@ -39,7 +39,7 @@ pub fn blocking_cmd(cmd: &str) -> bool {
     cmd.ends_with('b')
 }
 
-/// Chech whether a command is debugging command.
+/// Check whether a command is debugging command.
 pub fn debug_format_cmd(cmd: &str) -> bool {
     cmd.ends_with('?')
 }
@@ -131,7 +131,7 @@ pub trait Command {
     fn get_params_help(&self) -> &'static str {
         ""
     }
-    /// string that describes whet command does.
+    /// string that describes what the command does.
     fn get_description(&self) -> &'static str;
     /// code to execute.
     fn execute(&self, client: &mut ClientProxy, params: &[&str]);

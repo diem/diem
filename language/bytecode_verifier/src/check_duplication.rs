@@ -14,7 +14,7 @@ use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
-        StructHandleIndex,
+        StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -138,9 +138,14 @@ impl<'a> DuplicationChecker<'a> {
                 break;
             }
             let next_start_field_index = start_field_index + struct_def.field_count as usize;
-            if !(start_field_index..next_start_field_index)
-                .all(|i| struct_def.struct_handle == self.module.field_defs[i].struct_)
-            {
+            let all_fields_match = (start_field_index..next_start_field_index).all(|i| {
+                struct_def.struct_handle
+                    == self
+                        .module
+                        .field_def_at(FieldDefinitionIndex::new(i as TableIndex))
+                        .struct_
+            });
+            if !all_fields_match {
                 idx_opt = Some(idx);
                 break;
             }
@@ -152,7 +157,7 @@ impl<'a> DuplicationChecker<'a> {
                 idx,
                 err: VMStaticViolation::InconsistentFields,
             });
-        } else if start_field_index != self.module.field_defs.len() {
+        } else if start_field_index != self.module.field_defs().len() {
             errors.push(VerificationError {
                 kind: IndexKind::FieldDefinition,
                 idx: start_field_index,
@@ -188,7 +193,7 @@ impl<'a> DuplicationChecker<'a> {
         // implemented.
         let implemented_struct_handles: HashSet<StructHandleIndex> =
             self.module.struct_defs().map(|x| x.struct_handle).collect();
-        if let Some(idx) = (0..self.module.struct_handles.len()).position(|x| {
+        if let Some(idx) = (0..self.module.struct_handles().len()).position(|x| {
             let y = StructHandleIndex::new(x as u16);
             self.module.struct_handle_at(y).module
                 == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
@@ -204,7 +209,7 @@ impl<'a> DuplicationChecker<'a> {
         // implemented.
         let implemented_function_handles: HashSet<FunctionHandleIndex> =
             self.module.function_defs().map(|x| x.function).collect();
-        if let Some(idx) = (0..self.module.function_handles.len()).position(|x| {
+        if let Some(idx) = (0..self.module.function_handles().len()).position(|x| {
             let y = FunctionHandleIndex::new(x as u16);
             self.module.function_handle_at(y).module
                 == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)

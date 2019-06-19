@@ -16,7 +16,7 @@ use proto_conv::{FromProto, IntoProto};
 fn test_signed_transaction_from_proto_invalid_signature() {
     let keypair = generate_keypair();
     assert!(SignedTransaction::from_proto(
-        SignedTransaction::new_for_test(
+        SignedTransaction::craft_signed_transaction_for_client(
             RawTransaction::new(
                 AccountAddress::random(),
                 0,

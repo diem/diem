@@ -233,7 +233,7 @@ impl SwarmConfigBuilder {
         // generate all things needed for generation
         if !self.output_dir.is_dir() {
             if !self.output_dir.exists() {
-                // generate if doesnt exist
+                // generate if doesn't exist
                 std::fs::create_dir(&self.output_dir).expect("Failed to create output dir");
             }
             assert!(

@@ -31,6 +31,20 @@ pub struct AccountData {
     pub key_pair: Option<KeyPair>,
     /// Latest sequence number maintained by client, it can be different from validator.
     pub sequence_number: u64,
+    /// Whether the account is initialized on chain, cached local only, or status unknown.
+    pub status: AccountStatus,
+}
+
+/// Enum used to represent account status.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum AccountStatus {
+    /// Account exists only in loacal cache, it is not persisted on chain.
+    Local,
+    /// Account is persisted on chain.
+    Persisted,
+    /// Not able to check account status, probably because client is not able to talk to the
+    /// validator.
+    Unknown,
 }
 
 impl AccountData {

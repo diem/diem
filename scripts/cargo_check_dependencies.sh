@@ -7,7 +7,7 @@
 # and sees if this Cargo.toml file can operate without some of its
 # dependencies using repeated `cargo check --all-targets` attempts.
 #
-# In order to run this in a directoy containing multiple Cargo.toml files,
+# In order to run this in a directory containing multiple Cargo.toml files,
 # we could suggest:
 # find ./ -name Cargo.toml -execdir /path/to/$(basename $0) \;
 

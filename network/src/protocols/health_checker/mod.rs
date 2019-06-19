@@ -76,7 +76,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + Debug + 'static,
 {
-    /// Create new intance of the [`HealthChecker`] actor.
+    /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,

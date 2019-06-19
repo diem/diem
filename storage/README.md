@@ -23,7 +23,7 @@ The storage module is designed to serve two primary purposes:
 The Libra Blockchain can be viewed as a Merkle tree consisting of the following
 components:
 
-![data](assets/data.png)
+![data](https://developers.libra.org/docs/assets/data.png)
 
 ### Ledger History
 

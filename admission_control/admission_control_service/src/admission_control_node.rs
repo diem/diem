@@ -73,7 +73,7 @@ impl AdmissionControlNode {
         mp_client: Arc<M>,
         storage_client: Option<Arc<StorageReadServiceClient>>,
     ) -> Result<()> {
-        // create storage client if doesnt exist
+        // create storage client if doesn't exist
         let storage_client: Arc<dyn StorageRead> = match storage_client {
             Some(c) => c,
             None => Arc::new(StorageReadServiceClient::new(

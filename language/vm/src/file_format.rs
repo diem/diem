@@ -26,7 +26,10 @@
 //! to the serializer (`serializer.rs`) generates a binary of the form described. Vectors in
 //! those structs translate to tables and table specifications.
 
-use crate::{access::BaseAccess, internals::ModuleIndex, IndexKind, SignatureTokenKind};
+use crate::{
+    access::BaseAccess, checks::BoundsChecker, errors::VerificationError, internals::ModuleIndex,
+    IndexKind, SignatureTokenKind,
+};
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
@@ -994,7 +997,7 @@ impl ::std::fmt::Debug for Bytecode {
 
 /// A `CompiledProgram` defines the structure of a transaction to execute.
 /// It has two parts: modules to be published and a transaction script.
-#[derive(Clone, Default, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct CompiledProgram {
     /// The modules to be published
     pub modules: Vec<CompiledModule>,
@@ -1009,14 +1012,21 @@ impl CompiledProgram {
     }
 }
 
-/// A `CompiledScript` contains the main function to execute and its dependencies.
+// Note that this doesn't derive either `Arbitrary` or `Default` while `CompiledScriptMut` does.
+// That's because a CompiledScript is guaranteed to be valid while a CompiledScriptMut isn't.
+/// Contains the main function to execute and its dependencies.
 ///
 /// A CompiledScript does not have definition tables because it can only have a `main(args)`.
 /// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
 /// tables (external code references) and it has a `main` definition.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledScript(CompiledScriptMut);
+
+/// A mutable version of `CompiledScript`. Converting to a `CompiledScript` requires this to pass
+/// the bounds checker.
 #[derive(Arbitrary, Clone, Default, Eq, PartialEq, Debug)]
 #[proptest(params = "usize")]
-pub struct CompiledScript {
+pub struct CompiledScriptMut {
     /// Handles to all modules referenced.
     #[proptest(strategy = "vec(any::<ModuleHandle>(), 0..=params)")]
     pub module_handles: Vec<ModuleHandle>,
@@ -1054,10 +1064,42 @@ pub struct CompiledScript {
 }
 
 impl CompiledScript {
-    /// Converts a `CompiledScript` to a `CompiledModule` for code that wants a uniform view of
+    /// Returns the index of `main` in case a script is converted to a module.
+    pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
+
+    /// Returns a reference to the inner `CompiledScriptMut`.
+    pub fn as_inner(&self) -> &CompiledScriptMut {
+        &self.0
+    }
+
+    /// Converts this instance into the inner `CompiledScriptMut`. Converting back to a
+    /// `CompiledScript` would require it to be verified again.
+    pub fn into_inner(self) -> CompiledScriptMut {
+        self.0
+    }
+
+    /// Converts a `CompiledScript` into a `CompiledModule` for code that wants a uniform view of
     /// both.
+    ///
+    /// If a `CompiledScript` has been bounds checked, the corresponding `CompiledModule` can be
+    /// assumed to pass the bounds checker as well.
     pub fn into_module(self) -> CompiledModule {
-        CompiledModule {
+        CompiledModule(self.0.into_module())
+    }
+}
+
+impl CompiledScriptMut {
+    /// Converts this instance into `CompiledScript` after verifying it for basic internal
+    /// consistency. This includes bounds checks but no others.
+    pub fn freeze(self) -> Result<CompiledScript, Vec<VerificationError>> {
+        let fake_module = self.into_module();
+        Ok(fake_module.freeze()?.into_script())
+    }
+
+    /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
+    /// of both.
+    pub fn into_module(self) -> CompiledModuleMut {
+        CompiledModuleMut {
             module_handles: self.module_handles,
             struct_handles: self.struct_handles,
             function_handles: self.function_handles,
@@ -1083,8 +1125,13 @@ impl CompiledScript {
 /// It is a unit of code that can be used by transactions or other modules.
 ///
 /// A module is published as a single entry and it is retrieved as a single blob.
-#[derive(Clone, Default, Eq, PartialEq, Debug)]
-pub struct CompiledModule {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledModule(CompiledModuleMut);
+
+/// A mutable version of `CompiledModule`. Converting to a `CompiledModule` requires this to pass
+/// the bounds checker.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CompiledModuleMut {
     /// Handles to external modules and self at position 0.
     pub module_handles: Vec<ModuleHandle>,
     /// Handles to external and internal types.
@@ -1119,7 +1166,7 @@ pub struct CompiledModule {
 
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
-impl Arbitrary for CompiledModule {
+impl Arbitrary for CompiledModuleMut {
     type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled module.
     type Parameters = usize;
@@ -1154,7 +1201,7 @@ impl Arbitrary for CompiledModule {
                     (string_pool, byte_array_pool, address_pool),
                     (struct_defs, field_defs, function_defs),
                 )| {
-                    CompiledModule {
+                    CompiledModuleMut {
                         module_handles,
                         struct_handles,
                         function_handles,
@@ -1174,37 +1221,7 @@ impl Arbitrary for CompiledModule {
     }
 }
 
-impl CompiledModule {
-    /// By convention, the index of the module being implemented is 0.
-    pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
-
-    fn self_handle(&self) -> &ModuleHandle {
-        &self.module_handles[Self::IMPLEMENTED_MODULE_INDEX as usize]
-    }
-
-    /// Returns the name of the module.
-    pub fn name(&self) -> &str {
-        self.string_at(self.self_handle().name)
-    }
-
-    /// Returns the address of the module.
-    pub fn address(&self) -> &AccountAddress {
-        self.address_at(self.self_handle().address)
-    }
-
-    /// Returns the code key of `module_handle`
-    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
-        CodeKey::new(
-            *self.address_at(module_handle.address),
-            self.string_at(module_handle.name).to_string(),
-        )
-    }
-
-    /// Returns the code key of `self`
-    pub fn self_code_key(&self) -> CodeKey {
-        self.code_key_for_handle(self.self_handle())
-    }
-
+impl CompiledModuleMut {
     /// Returns the count of a specific `IndexKind`
     pub fn kind_count(&self, kind: IndexKind) -> usize {
         match kind {
@@ -1227,25 +1244,85 @@ impl CompiledModule {
         }
     }
 
+    /// Converts this instance into `CompiledModule` after verifying it for basic internal
+    /// consistency. This includes bounds checks but no others.
+    pub fn freeze(self) -> Result<CompiledModule, Vec<VerificationError>> {
+        let errors = BoundsChecker::new(&self).verify();
+        if errors.is_empty() {
+            Ok(CompiledModule(self))
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+impl CompiledModule {
+    /// By convention, the index of the module being implemented is 0.
+    pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
+
+    fn self_handle(&self) -> &ModuleHandle {
+        &self.module_handle_at(ModuleHandleIndex::new(Self::IMPLEMENTED_MODULE_INDEX))
+    }
+
+    /// Returns a reference to the inner `CompiledModuleMut`.
+    pub fn as_inner(&self) -> &CompiledModuleMut {
+        &self.0
+    }
+
+    /// Converts this instance into the inner `CompiledModuleMut`. Converting back to a
+    /// `CompiledModule` would require it to be verified again.
+    pub fn into_inner(self) -> CompiledModuleMut {
+        self.0
+    }
+
+    /// Returns the name of the module.
+    pub fn name(&self) -> &str {
+        self.string_at(self.self_handle().name)
+    }
+
+    /// Returns the address of the module.
+    pub fn address(&self) -> &AccountAddress {
+        self.address_at(self.self_handle().address)
+    }
+
+    /// Returns the number of items of a specific `IndexKind`.
+    pub fn kind_count(&self, kind: IndexKind) -> usize {
+        self.as_inner().kind_count(kind)
+    }
+
+    /// Returns the code key of `module_handle`
+    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
+        CodeKey::new(
+            *self.address_at(module_handle.address),
+            self.string_at(module_handle.name).to_string(),
+        )
+    }
+
+    /// Returns the code key of `self`
+    pub fn self_code_key(&self) -> CodeKey {
+        self.code_key_for_handle(self.self_handle())
+    }
+
     /// This function should only be called on an instance of CompiledModule obtained by invoking
     /// into_module on some instance of CompiledScript. This function is the inverse of
     /// into_module, i.e., script.into_module().into_script() == script.
-    pub fn into_script(mut self) -> CompiledScript {
-        let main = self.function_defs.remove(0);
-        CompiledScript {
-            module_handles: self.module_handles,
-            struct_handles: self.struct_handles,
-            function_handles: self.function_handles,
+    pub fn into_script(self) -> CompiledScript {
+        let mut inner = self.into_inner();
+        let main = inner.function_defs.remove(0);
+        CompiledScript(CompiledScriptMut {
+            module_handles: inner.module_handles,
+            struct_handles: inner.struct_handles,
+            function_handles: inner.function_handles,
 
-            type_signatures: self.type_signatures,
-            function_signatures: self.function_signatures,
-            locals_signatures: self.locals_signatures,
+            type_signatures: inner.type_signatures,
+            function_signatures: inner.function_signatures,
+            locals_signatures: inner.locals_signatures,
 
-            string_pool: self.string_pool,
-            byte_array_pool: self.byte_array_pool,
-            address_pool: self.address_pool,
+            string_pool: inner.string_pool,
+            byte_array_pool: inner.byte_array_pool,
+            address_pool: inner.address_pool,
 
             main,
-        }
+        })
     }
 }

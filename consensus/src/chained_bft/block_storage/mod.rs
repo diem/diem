@@ -8,7 +8,6 @@ use crate::chained_bft::{
 use crypto::HashValue;
 use std::sync::Arc;
 
-mod block_inserter;
 mod block_store;
 mod block_tree;
 

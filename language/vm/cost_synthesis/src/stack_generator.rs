@@ -17,11 +17,10 @@ use vm::{
     assert_ok,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
-        FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, ModuleHandle,
-        SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
+        FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, MemberCount,
+        ModuleHandle, SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
         StructHandleIndex, TableIndex,
     },
-    internals::ModuleIndex,
 };
 use vm_runtime::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
@@ -209,8 +208,9 @@ where
             let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
             (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
         } else {
-            let string =
-                self.root_module.module.string_pool[self.string_pool_index as usize].clone();
+            let string = self.root_module.module.as_inner().string_pool
+                [self.string_pool_index as usize]
+                .clone();
             self.string_pool_index = self
                 .string_pool_index
                 .checked_sub(1)
@@ -223,7 +223,8 @@ where
         if !self.points_to_module_data() || is_padding {
             AccountAddress::random()
         } else {
-            let address = self.root_module.module.address_pool[self.address_pool_index as usize];
+            let address =
+                self.root_module.module.as_inner().address_pool[self.address_pool_index as usize];
             self.address_pool_index = self
                 .address_pool_index
                 .checked_sub(1)
@@ -237,23 +238,23 @@ where
     }
 
     fn next_string_idx(&mut self) -> StringPoolIndex {
-        let len = self.root_module.module.string_pool.len();
+        let len = self.root_module.module.string_pool().len();
         StringPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_address_idx(&mut self) -> AddressPoolIndex {
-        let len = self.root_module.module.address_pool.len();
+        let len = self.root_module.module.address_pool().len();
         AddressPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_bytearray_idx(&mut self) -> ByteArrayPoolIndex {
-        let len = self.root_module.module.byte_array_pool.len();
+        let len = self.root_module.module.byte_array_pool().len();
         ByteArrayPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_function_handle_idx(&mut self) -> FunctionHandleIndex {
         let table_idx =
-            self.next_bounded_index(self.root_module.module.function_handles.len() as TableIndex);
+            self.next_bounded_index(self.root_module.module.function_handles().len() as TableIndex);
         FunctionHandleIndex::new(table_idx)
     }
 
@@ -469,10 +470,12 @@ where
                     .module
                     .struct_def_at(self.resolve_struct_handle(struct_handle_idx).2);
                 let num_fields = struct_definition.field_count as usize;
-                let index = struct_definition.fields.into_index();
-                let fields = &self.root_module.module.field_defs[index..index + num_fields];
+                let index = struct_definition.fields;
+                let fields = self
+                    .root_module
+                    .module
+                    .field_def_range(num_fields as MemberCount, index);
                 let mutvals = fields
-                    .iter()
                     .map(|field| {
                         self.resolve_to_value(
                             self.root_module
@@ -543,15 +546,17 @@ where
                 )
             }
             Pack(_struct_def_idx) => {
-                let struct_def_bound = self.root_module.module.struct_defs.len() as TableIndex;
+                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_definition = self.root_module.module.struct_def_at(random_struct_idx);
                 let num_fields = struct_definition.field_count as usize;
-                let index = struct_definition.fields.into_index();
-                let fields = &self.root_module.module.field_defs[index..index + num_fields];
+                let index = struct_definition.fields;
+                let fields = self
+                    .root_module
+                    .module
+                    .field_def_range(num_fields as MemberCount, index);
                 let stack: Stack = fields
-                    .iter()
                     .map(|field| {
                         let ty = self
                             .root_module
@@ -572,7 +577,7 @@ where
                 )
             }
             Unpack(_struct_def_idx) => {
-                let struct_def_bound = self.root_module.module.struct_defs.len() as TableIndex;
+                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_handle_idx = self
@@ -593,7 +598,7 @@ where
             }
             BorrowField(_) => {
                 // First grab a random struct
-                let struct_def_bound = self.root_module.module.struct_defs.len() as TableIndex;
+                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_definition = self.root_module.module.struct_def_at(random_struct_idx);

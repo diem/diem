@@ -18,6 +18,8 @@ pub mod resources;
 pub mod signature;
 pub mod stack_usage_verifier;
 pub mod struct_defs;
+#[cfg(test)]
+mod unit_tests;
 pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;

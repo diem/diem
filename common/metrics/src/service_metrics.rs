@@ -8,7 +8,7 @@ metrics about a gRPC server.
 For each method, the counters that are captured are:
 - num_req: number of requests
 - num_error: number of errors (can be used to calculate error rate)
-- duration: duration (in units determined by the exporter) the rquest too, bucketed
+- duration: duration (in units determined by the exporter) the request too, bucketed
 
 Example use:
 call `req` when when entering service method, and call `resp` on

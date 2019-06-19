@@ -52,7 +52,7 @@ pub struct ExtensionNode {
     child: HashValue,
 }
 
-/// Represents an account. It has two fields: `key` is the hash of the acccont adress and
+/// Represents an account. It has two fields: `key` is the hash of the acccont address and
 /// `value_hash` is the hash of account state blob.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LeafNode {
@@ -305,7 +305,7 @@ impl BranchNode {
                 .unwrap_or_else(|| {
                     panic!(
                         "Corrupted branch node: child_bitmap indicates \
-                         the existense of a non-exist child at index {}",
+                         the existence of a non-exist child at index {}",
                         only_child_index
                     )
                 })
@@ -379,7 +379,7 @@ impl BranchNode {
                             .unwrap_or_else(|| {
                                 panic!(
                                     "Corrupted branch node: child_bitmap indicates \
-                                     the existense of a non-exist child at index {}",
+                                     the existence of a non-exist child at index {}",
                                     only_child_index
                                 )
                             })

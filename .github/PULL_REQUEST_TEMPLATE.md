@@ -8,7 +8,7 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 (Write your motivation for proposed changes here.)
 
-### Have you read the [Contributing Guidelines on pull requests](https://github.com/libra/libra/master/CONTRIBUTING.md#pull-requests)?
+### Have you read the [Contributing Guidelines on pull requests](../CONTRIBUTING.md#pull-requests)?
 
 (Write your answer here.)
 

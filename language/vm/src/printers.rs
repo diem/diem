@@ -82,7 +82,7 @@ pub trait TableAccess {
     fn get_locals_signature_at(&self, idx: LocalsSignatureIndex) -> Result<&LocalsSignature>;
 }
 
-impl TableAccess for CompiledScript {
+impl TableAccess for CompiledScriptMut {
     fn get_field_def_at(&self, _idx: FieldDefinitionIndex) -> Result<&FieldDefinition> {
         bail!("no field definitions in scripts");
     }
@@ -144,7 +144,7 @@ impl TableAccess for CompiledScript {
     }
 }
 
-impl TableAccess for CompiledModule {
+impl TableAccess for CompiledModuleMut {
     fn get_field_def_at(&self, idx: FieldDefinitionIndex) -> Result<&FieldDefinition> {
         match self.field_defs.get(idx.0 as usize) {
             None => bail!("bad field definition index {}", idx),
@@ -221,65 +221,66 @@ impl fmt::Display for CompiledProgram {
 
 impl fmt::Display for CompiledScript {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner = self.as_inner();
         write!(f, "CompiledScript: {{\nMain:\n\t")?;
-        display_function_definition(&self.main, self, f)?;
-        display_code(&self.main.code, self, "\n\t\t", f)?;
+        display_function_definition(&inner.main, inner, f)?;
+        display_code(&inner.main.code, inner, "\n\t\t", f)?;
         write!(f, "\nStruct Handles: [")?;
-        for struct_handle in &self.struct_handles {
+        for struct_handle in &inner.struct_handles {
             write!(f, "\n\t")?;
-            display_struct_handle(struct_handle, self, f)?;
+            display_struct_handle(struct_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Module Handles: [")?;
-        for module_handle in &self.module_handles {
+        for module_handle in &inner.module_handles {
             write!(f, "\n\t")?;
-            display_module_handle(module_handle, self, f)?;
+            display_module_handle(module_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Function Handles: [")?;
-        for function_handle in &self.function_handles {
+        for function_handle in &inner.function_handles {
             write!(f, "\n\t")?;
-            display_function_handle(function_handle, self, f)?;
+            display_function_handle(function_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Type Signatures: [")?;
-        for signature in &self.type_signatures {
+        for signature in &inner.type_signatures {
             write!(f, "\n\t")?;
-            display_type_signature(signature, self, f)?;
+            display_type_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Function Signatures: [")?;
-        for signature in &self.function_signatures {
+        for signature in &inner.function_signatures {
             write!(f, "\n\t")?;
-            display_function_signature(signature, self, f)?;
+            display_function_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Locals Signatures: [")?;
-        for signature in &self.locals_signatures {
+        for signature in &inner.locals_signatures {
             write!(f, "\n\t")?;
-            display_locals_signature(signature, self, f)?;
+            display_locals_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &self.string_pool {
+        for string in &inner.string_pool {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
         write!(f, "ByteArrays: [")?;
-        for byte_array in &self.byte_array_pool {
+        for byte_array in &inner.byte_array_pool {
             write!(f, "\n\t")?;
             display_byte_array(byte_array, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Addresses: [")?;
-        for address in &self.address_pool {
+        for address in &inner.address_pool {
             write!(f, "\n\t")?;
             display_address(address, f)?;
             write!(f, ",")?;
@@ -291,97 +292,98 @@ impl fmt::Display for CompiledScript {
 
 impl fmt::Display for CompiledModule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner = self.as_inner();
         writeln!(f, "CompiledModule: {{")?;
         write!(f, "Module Handles: [")?;
-        for module_handle in &self.module_handles {
+        for module_handle in &inner.module_handles {
             write!(f, "\n\t")?;
-            display_module_handle(module_handle, self, f)?;
+            display_module_handle(module_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Struct Handles: [")?;
-        for struct_handle in &self.struct_handles {
+        for struct_handle in &inner.struct_handles {
             write!(f, "\n\t")?;
-            display_struct_handle(struct_handle, self, f)?;
+            display_struct_handle(struct_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Function Handles: [")?;
-        for function_handle in &self.function_handles {
+        for function_handle in &inner.function_handles {
             write!(f, "\n\t")?;
-            display_function_handle(function_handle, self, f)?;
+            display_function_handle(function_handle, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Struct Definitions: [")?;
-        for struct_def in &self.struct_defs {
+        for struct_def in &inner.struct_defs {
             write!(f, "\n\t{{")?;
-            display_struct_definition(struct_def, self, f)?;
+            display_struct_definition(struct_def, inner, f)?;
             let f_start_idx = struct_def.fields;
             let f_end_idx = f_start_idx.0 as u16 + struct_def.field_count;
             for idx in f_start_idx.0 as u16..f_end_idx {
-                let field_def = match self.field_defs.get(idx as usize) {
+                let field_def = match inner.field_defs.get(idx as usize) {
                     None => panic!("bad field definition index {}", idx),
                     Some(f) => f,
                 };
                 write!(f, "\n\t\t")?;
-                display_field_definition(field_def, self, f)?;
+                display_field_definition(field_def, inner, f)?;
             }
             write!(f, "}},")?;
         }
         writeln!(f, "]")?;
         write!(f, "Field Definitions: [")?;
-        for field_def in &self.field_defs {
+        for field_def in &inner.field_defs {
             write!(f, "\n\t")?;
-            display_field_definition(field_def, self, f)?;
+            display_field_definition(field_def, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Function Definitions: [")?;
-        for function_def in &self.function_defs {
+        for function_def in &inner.function_defs {
             write!(f, "\n\t")?;
-            display_function_definition(function_def, self, f)?;
+            display_function_definition(function_def, inner, f)?;
             if function_def.flags & CodeUnit::NATIVE == 0 {
-                display_code(&function_def.code, self, "\n\t\t", f)?;
+                display_code(&function_def.code, inner, "\n\t\t", f)?;
             }
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Type Signatures: [")?;
-        for signature in &self.type_signatures {
+        for signature in &inner.type_signatures {
             write!(f, "\n\t")?;
-            display_type_signature(signature, self, f)?;
+            display_type_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Function Signatures: [")?;
-        for signature in &self.function_signatures {
+        for signature in &inner.function_signatures {
             write!(f, "\n\t")?;
-            display_function_signature(signature, self, f)?;
+            display_function_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Locals Signatures: [")?;
-        for signature in &self.locals_signatures {
+        for signature in &inner.locals_signatures {
             write!(f, "\n\t")?;
-            display_locals_signature(signature, self, f)?;
+            display_locals_signature(signature, inner, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &self.string_pool {
+        for string in &inner.string_pool {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
         write!(f, "ByteArrays: [")?;
-        for byte_array in &self.byte_array_pool {
+        for byte_array in &inner.byte_array_pool {
             write!(f, "\n\t")?;
             display_byte_array(byte_array, f)?;
             write!(f, ",")?;
         }
         writeln!(f, "]")?;
         write!(f, "Addresses: [")?;
-        for address in &self.address_pool {
+        for address in &inner.address_pool {
             write!(f, "\n\t")?;
             display_address(address, f)?;
             write!(f, ",")?;

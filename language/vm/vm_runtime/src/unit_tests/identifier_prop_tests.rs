@@ -4,7 +4,10 @@
 use crate::identifier::resource_storage_key;
 use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use proptest::prelude::*;
-use vm::file_format::{CompiledModule, StructDefinitionIndex, TableIndex};
+use vm::{
+    access::ModuleAccess,
+    file_format::{CompiledModule, StructDefinitionIndex, TableIndex},
+};
 
 proptest! {
     #[test]
@@ -16,7 +19,7 @@ proptest! {
         };
         prop_assert_eq!(code_key, deserialized_code_key);
 
-        for i in 0..module.struct_defs.len() {
+        for i in 0..module.struct_defs().len() {
             let struct_key = resource_storage_key(&module, StructDefinitionIndex::new(i as TableIndex));
             let deserialized_struct_key = {
                 let serialized_key = SimpleSerializer::<Vec<u8>>::serialize(&struct_key).unwrap();

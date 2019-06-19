@@ -14,13 +14,14 @@ use types::{account_address::AccountAddress, byte_array::ByteArray, language_sto
 use vm::{
     access::*,
     file_format::{
-        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, FieldDefinition,
+        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, FieldDefinition,
         FieldDefinitionIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
         FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
         MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
         StructDefinition, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
     },
+    internals::ModuleIndex,
 };
 
 /// A wrapper around a `CompiledModule` containing information needed for generation.
@@ -36,7 +37,7 @@ pub struct ModuleBuilder {
     gen: StdRng,
 
     /// The current module being built.
-    module: CompiledModule,
+    module: CompiledModuleMut,
 
     /// The minimum size of the tables in the generated module.
     table_size: TableIndex,
@@ -248,20 +249,20 @@ impl ModuleBuilder {
         // We have half/half inter- and intra-module calls.
         let number_of_cross_calls = self.table_size;
         for _ in 0..number_of_cross_calls {
-            let non_self_module_handle_idx = self.gen.gen_range(1, module_table_size) as TableIndex;
-            let callee_module_handle = self
-                .module
-                .module_handle_at(ModuleHandleIndex::new(non_self_module_handle_idx));
-            let address = *self.module.address_at(callee_module_handle.address);
-            let name = self.module.string_at(callee_module_handle.name);
+            let non_self_module_handle_idx = self.gen.gen_range(1, module_table_size);
+            let callee_module_handle = &self.module.module_handles[non_self_module_handle_idx];
+            let address = self.module.address_pool[callee_module_handle.address.into_index()];
+            let name = &self.module.string_pool[callee_module_handle.name.into_index()];
             let code_key = CodeKey::new(address, name.to_string());
             let callee_module = self
                 .known_modules
                 .get(&code_key)
                 .expect("[Module Lookup] Unable to get module from known_modules.");
 
-            let callee_function_handle_idx =
-                self.gen.gen_range(0, callee_module.function_handles.len()) as TableIndex;
+            let callee_function_handle_idx = self
+                .gen
+                .gen_range(0, callee_module.function_handles().len())
+                as TableIndex;
             let callee_function_handle = callee_module
                 .function_handle_at(FunctionHandleIndex::new(callee_function_handle_idx));
             let callee_type_sig = callee_module
@@ -273,7 +274,7 @@ impl ModuleBuilder {
             let callee_name_idx = self.module.string_pool.len() as TableIndex;
             let callee_type_sig_idx = self.module.function_signatures.len() as TableIndex;
             let func_handle = FunctionHandle {
-                module: ModuleHandleIndex::new(non_self_module_handle_idx),
+                module: ModuleHandleIndex::new(non_self_module_handle_idx as TableIndex),
                 name: StringPoolIndex::new(callee_name_idx),
                 signature: FunctionSignatureIndex::new(callee_type_sig_idx),
             };
@@ -333,16 +334,17 @@ impl ModuleBuilder {
         self.with_random_functions();
         self.with_structs();
         let module = std::mem::replace(&mut self.module, Self::default_module_with_types());
+        let module = module.freeze().expect("should satisfy bounds checker");
         self.known_modules
             .insert(module.self_code_key(), module.clone());
         module
     }
 
-    // This method generates a default (empty) `CompiledModule` but with base types. This way we
+    // This method generates a default (empty) `CompiledModuleMut` but with base types. This way we
     // can point to them when generating structs/functions etc.
-    fn default_module_with_types() -> CompiledModule {
+    fn default_module_with_types() -> CompiledModuleMut {
         use SignatureToken::*;
-        let mut module = CompiledModule::default();
+        let mut module = CompiledModuleMut::default();
         module.type_signatures = vec![Bool, U64, String, ByteArray, Address]
             .into_iter()
             .map(TypeSignature)
@@ -355,7 +357,7 @@ impl ModuleBuilder {
 ///
 /// The `ModuleBuilder` is already designed to build module universes but the size of this universe
 /// is unspecified and un-iterable. This is a simple wrapper around the builder that allows
-/// the implemenation of the `Iterator` trait over it.
+/// the implementation of the `Iterator` trait over it.
 pub struct ModuleGenerator {
     module_builder: ModuleBuilder,
     iters: u64,

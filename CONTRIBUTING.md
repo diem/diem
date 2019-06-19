@@ -24,7 +24,7 @@ cargo test
 
 #### Code Style, Hints, and Testing
 
-Refer to our [Coding Guidelines](https://developers.libra.org/docs/coding-guidelines) for detailed guidance about how to contribute to the project.
+Refer to our [Coding Guidelines](https://developers.libra.org/docs/community/coding-guidelines) for detailed guidance about how to contribute to the project.
 
 #### Documentation
 

@@ -3,7 +3,7 @@
 //! Processor for a single transaction.
 
 use crate::{
-    code_cache::module_cache::{create_fake_module, ModuleCache, VMModuleCache},
+    code_cache::module_cache::{ModuleCache, VMModuleCache},
     data_cache::{RemoteCache, TransactionDataCache},
     execution_stack::ExecutionStack,
     gas_meter::GasMeter,
@@ -776,7 +776,7 @@ where
         to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMRuntimeResult<TransactionOutput> {
-        // This should only be used for bookeeping. The gas is already deducted from the sender's
+        // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
         let gas: u64 = (self.txn_data.max_gas_amount - self.gas_meter.remaining_gas())
             * self.txn_data.gas_unit_price;
@@ -818,9 +818,9 @@ pub fn execute_function(
 ) -> VMResult<()> {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
-    let (main_module, entry_idx) = create_fake_module(caller_script);
+    let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module)?;
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx)?;
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX)?;
     for m in modules {
         module_cache.cache_module(m)?;
     }

@@ -18,8 +18,8 @@ use vm::{
     access::{BaseAccess, ModuleAccess},
     errors::*,
     file_format::{
-        CompiledModule, CompiledScript, FunctionDefinitionIndex, FunctionHandleIndex,
-        SignatureToken, StructDefinitionIndex, StructHandleIndex,
+        CompiledModule, FunctionHandleIndex, SignatureToken, StructDefinitionIndex,
+        StructHandleIndex,
     },
     views::{FunctionHandleView, StructHandleView},
 };
@@ -118,28 +118,6 @@ where
 /// allocator so that it will guarantee to outlive the lifetime of the transaction.
 pub struct VMModuleCache<'alloc> {
     map: CacheRefMap<'alloc, CodeKey, LoadedModule>,
-}
-
-/// Convert a CompiledScript into a CompiledModule.
-pub fn create_fake_module(script: CompiledScript) -> (CompiledModule, FunctionDefinitionIndex) {
-    (
-        CompiledModule {
-            module_handles: script.module_handles,
-            struct_handles: script.struct_handles,
-            function_handles: script.function_handles,
-
-            struct_defs: vec![],
-            field_defs: vec![],
-            function_defs: vec![script.main],
-            type_signatures: script.type_signatures,
-            function_signatures: script.function_signatures,
-            locals_signatures: script.locals_signatures,
-            string_pool: script.string_pool,
-            byte_array_pool: script.byte_array_pool,
-            address_pool: script.address_pool,
-        },
-        FunctionDefinitionIndex::new(0),
-    )
 }
 
 impl<'alloc> VMModuleCache<'alloc> {

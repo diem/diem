@@ -66,7 +66,7 @@ where
         write_u16frame(&mut stream, PROTOCOL_INTERACTIVE).await?;
         stream.flush().await?;
 
-        // We make upto 10 attempts to negotiate a protocol.
+        // We make up to 10 attempts to negotiate a protocol.
         for _ in 0..10 {
             // Read in the Protocol they want to speak and attempt to match
             // it against our supported protocols

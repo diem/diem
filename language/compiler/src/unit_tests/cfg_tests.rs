@@ -5,6 +5,7 @@ mod testutils;
 use super::*;
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use testutils::compile_script_string;
+use vm::access::ScriptAccess;
 
 #[test]
 fn cfg_compile_script_ret() {
@@ -17,7 +18,7 @@ fn cfg_compile_script_ret() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     cfg.display();
     assert!(cfg.blocks.len() == 1);
     assert!(cfg.num_blocks() == 1);
@@ -41,7 +42,7 @@ fn cfg_compile_script_let() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 1);
@@ -66,7 +67,7 @@ fn cfg_compile_if() {
 
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 3);
@@ -94,7 +95,7 @@ fn cfg_compile_if_else() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 4);
@@ -120,7 +121,7 @@ fn cfg_compile_if_else_with_else_return() {
 
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 4);
@@ -149,7 +150,7 @@ fn cfg_compile_nested_if() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 6);
@@ -174,7 +175,7 @@ fn cfg_compile_if_else_with_if_return() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 3);
@@ -200,7 +201,7 @@ fn cfg_compile_if_else_with_two_returns() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main.code.code).unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
     assert!(cfg.blocks.len() == 4);

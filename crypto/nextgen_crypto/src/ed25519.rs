@@ -309,7 +309,7 @@ impl Signature for Ed25519Signature {
         self.verify_arbitrary_msg(message.as_ref(), public_key)
     }
 
-    /// Checks that `self` is valid for an arbitary &[u8] `message` using `public_key`.
+    /// Checks that `self` is valid for an arbitrary &[u8] `message` using `public_key`.
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
     fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Ed25519PublicKey) -> Result<()> {

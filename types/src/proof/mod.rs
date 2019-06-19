@@ -152,7 +152,7 @@ pub(crate) fn verify_transaction_list(
         );
     }
 
-    // 1. Emtpy list;
+    // 1. Empty list;
     if num_txns == 0 {
         ensure!(
             first_proof.is_none(),

@@ -158,7 +158,7 @@ impl secret_service_grpc::SecretService for SecretServiceServer {
         provide_grpc_response(Ok(response), ctx, sink);
     }
 
-    /// Returns a signature on a given hash-value with a correponding signing key answering a
+    /// Returns a signature on a given hash-value with a corresponding signing key answering a
     /// SignRequest with a SignResponse.
     fn sign(
         &mut self,

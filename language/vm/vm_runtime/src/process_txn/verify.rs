@@ -14,7 +14,7 @@ use types::{
     vm_error::{VMStatus, VMVerificationError, VMVerificationStatus},
 };
 use vm::{
-    access::BaseAccess,
+    access::{BaseAccess, ScriptAccess},
     errors::{VMStaticViolation, VerificationError, VerificationStatus},
     file_format::{CompiledModule, CompiledScript, SignatureToken},
     IndexKind,
@@ -195,7 +195,7 @@ pub fn static_verify_program(
 
 /// Verify if the transaction arguments match the type signature of the main function.
 fn verify_actuals(script: &CompiledScript, args: &[TransactionArgument]) -> bool {
-    let fh = script.function_handle_at(script.main.function);
+    let fh = script.function_handle_at(script.main().function);
     let sig = script.function_signature_at(fh.signature);
     if sig.arg_types.len() != args.len() {
         return false;

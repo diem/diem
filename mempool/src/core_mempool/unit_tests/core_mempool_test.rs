@@ -303,7 +303,7 @@ fn test_gc_ready_transaction() {
     add_txn(&mut pool, TestTransaction::new(1, 2, 1)).unwrap();
     add_txn(&mut pool, TestTransaction::new(1, 3, 1)).unwrap();
 
-    // chack that all txns are ready
+    // check that all txns are ready
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 4);
 

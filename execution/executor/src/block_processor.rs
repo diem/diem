@@ -312,7 +312,7 @@ where
             .skip(num_txns_to_skip as usize)
             .unzip();
 
-        // Construct a StateView and pass the transations to VM.
+        // Construct a StateView and pass the transactions to VM.
         let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
@@ -597,7 +597,7 @@ where
             .get_block_mut(id)
             .expect("Block to execute should exist.");
 
-        // Construct a StateView and pass the transations to VM.
+        // Construct a StateView and pass the transactions to VM.
         let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),

@@ -3,10 +3,7 @@
 
 use super::*;
 use crate::{
-    code_cache::{
-        module_adapter::FakeFetcher,
-        module_cache::{create_fake_module, ModuleCache},
-    },
+    code_cache::{module_adapter::FakeFetcher, module_cache::ModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
 };
 use ::compiler::{compiler, parser::parse_program};
@@ -16,7 +13,7 @@ use vm::file_format::*;
 use vm_cache_map::Arena;
 
 fn test_module(name: String) -> CompiledModule {
-    CompiledModule {
+    CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             name: StringPoolIndex::new(0),
             address: AddressPoolIndex::new(0),
@@ -73,10 +70,12 @@ fn test_module(name: String) -> CompiledModule {
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
+    .freeze()
+    .expect("test module should satisfy bounds checker")
 }
 
 fn test_script() -> CompiledScript {
-    CompiledScript {
+    CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
@@ -130,7 +129,10 @@ fn test_script() -> CompiledScript {
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
+    .freeze()
+    .expect("test script should satisfy bounds checker")
 }
+
 #[test]
 fn test_loader_one_module() {
     // This test tests the linking of function within a single module: We have a module that defines
@@ -178,9 +180,9 @@ fn test_loader_cross_modules() {
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module).unwrap();
 
-    let (owned_entry_module, entry_idx) = create_fake_module(script);
+    let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
     let func1 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
@@ -209,9 +211,9 @@ fn test_loader_cross_modules() {
 fn test_cache_with_storage() {
     let allocator = Arena::new();
 
-    let (owned_entry_module, entry_idx) = create_fake_module(test_script());
+    let owned_entry_module = test_script().into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 
     let vm_cache = VMModuleCache::new(&allocator);
@@ -310,7 +312,7 @@ fn test_multi_level_cache_write_back() {
     vm_cache.cache_module(module).unwrap();
 
     // Create a new script that refers to both published and unpublished modules.
-    let script = CompiledScript {
+    let script = CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
@@ -373,11 +375,13 @@ fn test_multi_level_cache_write_back() {
         ],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
-    };
+    }
+    .freeze()
+    .expect("test script should satisfy bounds checker");
 
-    let (owned_entry_module, entry_idx) = create_fake_module(script);
+    let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, entry_idx).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 
     {

@@ -16,6 +16,16 @@ impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        self.as_inner().serialize(binary)
+    }
+}
+
+impl CompiledScriptMut {
+    /// Serializes this into a binary format.
+    ///
+    /// This is intended mainly for test code. Production code will typically use
+    /// [`CompiledScript::serialize`].
+    pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut ser = ScriptSerializer::new(1, 0);
         let mut temp: Vec<u8> = Vec::new();
         ser.serialize(&mut temp, self)?;
@@ -28,6 +38,16 @@ impl CompiledScript {
 impl CompiledModule {
     /// Serializes a `CompiledModule` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
+    pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        self.as_inner().serialize(binary)
+    }
+}
+
+impl CompiledModuleMut {
+    /// Serializes this into a binary format.
+    ///
+    /// This is intended mainly for test code. Production code will typically use
+    /// [`CompiledModule::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut ser = ModuleSerializer::new(1, 0);
         let mut temp: Vec<u8> = Vec::new();
@@ -119,7 +139,7 @@ trait CommonTables {
     fn get_locals_signatures(&self) -> &[LocalsSignature];
 }
 
-impl CommonTables for CompiledScript {
+impl CommonTables for CompiledScriptMut {
     fn get_module_handles(&self) -> &[ModuleHandle] {
         &self.module_handles
     }
@@ -157,7 +177,7 @@ impl CommonTables for CompiledScript {
     }
 }
 
-impl CommonTables for CompiledModule {
+impl CommonTables for CompiledModuleMut {
     fn get_module_handles(&self) -> &[ModuleHandle] {
         &self.module_handles
     }
@@ -804,7 +824,7 @@ impl ModuleSerializer {
         }
     }
 
-    fn serialize(&mut self, binary: &mut Vec<u8>, module: &CompiledModule) -> Result<()> {
+    fn serialize(&mut self, binary: &mut Vec<u8>, module: &CompiledModuleMut) -> Result<()> {
         self.common.serialize_common(binary, module)?;
         self.serialize_struct_definitions(binary, &module.struct_defs)?;
         self.serialize_field_definitions(binary, &module.field_defs)?;
@@ -894,7 +914,7 @@ impl ScriptSerializer {
         }
     }
 
-    fn serialize(&mut self, binary: &mut Vec<u8>, script: &CompiledScript) -> Result<()> {
+    fn serialize(&mut self, binary: &mut Vec<u8>, script: &CompiledScriptMut) -> Result<()> {
         self.common.serialize_common(binary, script)?;
         self.serialize_main(binary, &script.main)
     }
@@ -910,7 +930,7 @@ impl ScriptSerializer {
         Ok(())
     }
 
-    /// Serializes `CompiledScript` main.
+    /// Serializes the main function.
     fn serialize_main(&mut self, binary: &mut Vec<u8>, main: &FunctionDefinition) -> Result<()> {
         self.common.table_count += 1;
         self.main.0 = check_index_in_binary(binary.len())?;

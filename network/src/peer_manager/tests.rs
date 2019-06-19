@@ -38,7 +38,7 @@ use types::PeerId;
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 
 // Builds a concrete typed transport (instead of using impl Trait) for testing PeerManager.
-// Specificly this transport is compatible with the `build_test_connection` test helper making
+// Specifically this transport is compatible with the `build_test_connection` test helper making
 // it easy to build connections without going through the whole transport pipeline.
 fn build_test_transport(
     own_peer_id: PeerId,
@@ -204,14 +204,14 @@ fn peer_open_substream_simultaneous() {
         let _ = timeout_a.await.unwrap().unwrap();
         let _ = timeout_b.await.unwrap().unwrap();
 
-        // Check that we recieved the new inbound substream for both peers
+        // Check that we received the new inbound substream for both peers
         assert_new_substream_event(peer_handle_a.peer_id, &mut internal_event_rx_a).await;
         assert_new_substream_event(peer_handle_b.peer_id, &mut internal_event_rx_b).await;
 
         // Shut one peers and the other should shutdown due to ConnectionLost
         peer_handle_a.disconnect().await;
 
-        // Check that we recieved both shutdown events
+        // Check that we received both shutdown events
         assert_peer_disconnected_event(
             peer_handle_a.peer_id,
             DisconnectReason::Requested,
@@ -711,7 +711,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
             .await;
 
         // Create a PeerDisconnect event with the opposite origin of the one stored in
-        // PeerManager to ensure that handling the event wont cause the PeerHandle to be
+        // PeerManager to ensure that handling the event won't cause the PeerHandle to be
         // removed from PeerManager
         let event = InternalEvent::PeerDisconnected(
             ids[0],

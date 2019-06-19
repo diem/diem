@@ -503,7 +503,7 @@ proptest! {
             block_on(executor.commit_block(ledger_info)).unwrap().unwrap();
         }
 
-        // Now we construt a new executor and run one more block.
+        // Now we construct a new executor and run one more block.
         let root_hash = {
             let executor = create_executor(&config);
             let response_b = block_on(executor.execute_block(

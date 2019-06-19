@@ -135,7 +135,7 @@ fn test_execution_with_storage() {
     let mut block2 = vec![];
     let block2_id = gen_block_id(2);
 
-    // Create 14 txns transfering 1k from account1 to account3 each.
+    // Create 14 txns transferring 1k from account1 to account3 each.
     for i in 2..=15 {
         block2.push(get_test_signed_transaction(
             account1,
@@ -554,7 +554,7 @@ fn verify_committed_txn_status(
     expected_txn: &SignedTransaction,
 ) -> Result<()> {
     let signed_txn = &signed_txn_with_proof
-        .ok_or_else(|| format_err!("Transaction is not commited."))?
+        .ok_or_else(|| format_err!("Transaction is not committed."))?
         .signed_transaction;
 
     ensure!(

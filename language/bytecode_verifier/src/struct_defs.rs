@@ -61,7 +61,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         let mut handle_to_def = BTreeMap::new();
         // the mapping from struct definitions to struct handles is already checked to be 1-1 by
         // DuplicationChecker
-        for (idx, struct_def) in module.struct_defs.iter().enumerate() {
+        for (idx, struct_def) in module.struct_defs().enumerate() {
             let sh_idx = struct_def.struct_handle;
             handle_to_def.insert(sh_idx, StructDefinitionIndex::new(idx as TableIndex));
         }
@@ -75,7 +75,7 @@ impl<'a> StructDefGraphBuilder<'a> {
     pub fn build(self) -> Graph<StructDefinitionIndex, (), Directed, u32> {
         let mut graph = Graph::new();
 
-        let struct_def_count = self.module.struct_defs.len();
+        let struct_def_count = self.module.struct_defs().len();
 
         let nodes: Vec<_> = (0..struct_def_count)
             .map(|idx| graph.add_node(StructDefinitionIndex::new(idx as TableIndex)))

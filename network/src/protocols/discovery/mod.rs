@@ -10,7 +10,7 @@
 //! the network to a randomly chosen peer. Other peers are also expected to be running the same
 //! protocol. Therefore, in expectation, every peer expects to hear from 1 other peer in each
 //! round. On hearing from the remote peer, the local discovery module tries to reconcile its state
-//! to reflect any changes. In addition to updating its state, it also passes on new infromation to
+//! to reflect any changes. In addition to updating its state, it also passes on new information to
 //! the [`ConnectivityManager`] module.
 //!
 //! For the initial bootstrap of a node, it sends the discovery message to a randomly chosen seed
@@ -259,7 +259,7 @@ where
                     }
                     _ => {
                         debug!(
-                            "Received redundant lost peer notfication for {}",
+                            "Received redundant lost peer notification for {}",
                             peer_id.short_str()
                         );
                     }

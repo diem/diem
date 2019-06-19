@@ -109,7 +109,7 @@ fn test_consensus_callbacks() {
     let mut response = client.get_block(&GetBlockRequest::new()).unwrap();
     assert_eq!(response.get_block().get_transactions().len(), 1);
 
-    // remove: transaction is commited
+    // remove: transaction is committed
     let mut transaction = CommittedTransaction::new();
     let signed_txn = SignedTransaction::from_proto(add_req.get_signed_txn().clone()).unwrap();
     let sender = signed_txn.sender().as_ref().to_vec();

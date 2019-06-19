@@ -71,7 +71,7 @@ pub fn protoc_descriptor_set(
     let protoc = Protoc::from_env_path();
     protoc
         .check()
-        .expect("failed to find `protoc`, `protoc` must be availabe in `PATH`");
+        .expect("failed to find `protoc`, `protoc` must be available in `PATH`");
 
     let descriptor_set = Temp::new_file()?;
 

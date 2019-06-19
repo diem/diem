@@ -290,7 +290,7 @@ where
     }
 }
 
-/// An error retured by `add_block`. The error contains the block being added so the caller does
+/// An error returned by `add_block`. The error contains the block being added so the caller does
 /// not lose it.
 #[derive(Debug, Eq, PartialEq)]
 pub enum AddBlockError<B: Block> {

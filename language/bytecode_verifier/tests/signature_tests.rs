@@ -7,12 +7,11 @@ use invalid_mutations::signature::{
     FieldRefMutation,
 };
 use proptest::{collection::vec, prelude::*};
-use vm::{checks::BoundsChecker, errors::VMStaticViolation, file_format::CompiledModule};
+use vm::{errors::VMStaticViolation, file_format::CompiledModule};
 
 proptest! {
     #[test]
     fn valid_signatures(module in CompiledModule::valid_strategy(20)) {
-        prop_assert!(BoundsChecker::new(&module).verify().is_empty());
         let signature_checker = SignatureChecker::new(&module);
         prop_assert_eq!(signature_checker.verify(), vec![]);
     }
@@ -22,14 +21,14 @@ proptest! {
         module in CompiledModule::valid_strategy(20),
         mutations in vec(DoubleRefMutation::strategy(), 0..40),
     ) {
-        let mut module = module;
+        let mut module = module.into_inner();
         let mut expected_violations = {
             let context = ApplySignatureDoubleRefContext::new(&mut module, mutations);
             context.apply()
         };
         expected_violations.sort();
+        let module = module.freeze().expect("should satisfy bounds checker");
 
-        prop_assert!(BoundsChecker::new(&module).verify().is_empty());
         let signature_checker = SignatureChecker::new(&module);
 
         let actual_violations = signature_checker.verify();
@@ -52,14 +51,14 @@ proptest! {
         module in CompiledModule::valid_strategy(20),
         mutations in vec(FieldRefMutation::strategy(), 0..40),
     ) {
-        let mut module = module;
+        let mut module = module.into_inner();
         let mut expected_violations = {
             let context = ApplySignatureFieldRefContext::new(&mut module, mutations);
             context.apply()
         };
         expected_violations.sort();
+        let module = module.freeze().expect("should satisfy bounds checker");
 
-        prop_assert!(BoundsChecker::new(&module).verify().is_empty());
         let signature_checker = SignatureChecker::new(&module);
 
         let mut actual_violations = signature_checker.verify();
