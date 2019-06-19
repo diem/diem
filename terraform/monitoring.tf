@@ -23,7 +23,7 @@ data "template_file" "alertmanager_yml" {
   template = file("templates/alertmanager.yml")
 
   vars = {
-    tf_workspace = terraform.workspace
+    workspace = terraform.workspace
     pagerduty_key = var.prometheus_pagerduty_key
   }
 }
