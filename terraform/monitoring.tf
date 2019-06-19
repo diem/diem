@@ -50,7 +50,8 @@ resource "aws_instance" "prometheus" {
       "sudo mkdir -p /data/prometheus && sudo chown 65534 /data/prometheus",
       "sudo mkdir -p /data/alertmanager && sudo chown 65534 /data/alertmanager",
       "sudo mkdir -p /data/grafana && sudo chown 472 /data/grafana",
-      "mkdir -p /tmp/grafana/provisioning/{datasources,dashboards,notifiers}"
+      "mkdir -p /tmp/grafana/provisioning/{datasources,dashboards,notifiers}",
+      "mkdir -p /tmp/grafana/dashboards",
     ]
 
     connection {
@@ -130,7 +131,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     source      = "templates/dashboards"
-    destination = "/tmp/grafana"
+    destination = "/tmp/grafana/dashboards/libra"
 
     connection {
       host        = aws_instance.prometheus.public_ip
