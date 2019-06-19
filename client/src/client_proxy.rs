@@ -235,7 +235,7 @@ impl ClientProxy {
         let sequence_number = self.client.get_sequence_number(account_address)?;
 
         let reset_sequence_number = if space_delim_strings.len() == 3 {
-            space_delim_strings[2].parse::<bool>().map_err(|error| {
+            space_delim_strings[2].to_lowercase().parse::<bool>().map_err(|error| {
                 format_parse_data_error(
                     "reset_sequence_number",
                     InputType::Bool,
@@ -442,7 +442,7 @@ impl ClientProxy {
             )
         })?;
 
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+            let fetch_events = space_delim_strings[3].to_lowercase().parse::<bool>().map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -480,7 +480,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+        let fetch_events = space_delim_strings[3].to_lowercase().parse::<bool>().map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -529,7 +529,7 @@ impl ClientProxy {
             "Invalid number of arguments to get events by access path"
         );
         let account = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let path = match space_delim_strings[2] {
+        let path = match space_delim_strings[2].to_lowercase().as_ref() {
             "sent" => account_sent_event_path(),
             "received" => account_received_event_path(),
             _ => bail!(
@@ -546,7 +546,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let ascending = space_delim_strings[4].parse::<bool>().map_err(|error| {
+        let ascending = space_delim_strings[4].to_lowercase().parse::<bool>().map_err(|error| {
             format_parse_data_error("ascending", InputType::Bool, space_delim_strings[4], error)
         })?;
         let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
