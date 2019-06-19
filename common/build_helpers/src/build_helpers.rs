@@ -55,24 +55,17 @@ fn compile(path: &Path, additional_includes: &[PathBuf], generate_client_code: b
 
     let mut includes = additional_includes.to_owned();
     includes.push(parent.to_path_buf());
-
     ::protoc_grpcio::compile_grpc_protos(&[path], includes.as_slice(), parent)
         .unwrap_or_else(|_| panic!("Failed to compile protobuf input: {:?}", path));
 
     if generate_client_code {
-        let file_string = path
-            .file_name()
-            .expect("unable to get filename")
-            .to_str()
-            .unwrap();
         let includes_strings = includes
             .iter()
             .map(|x| x.to_str().unwrap())
             .collect::<Vec<&str>>();
-
         // generate client code
         grpcio_client::client_stub_gen(
-            &[file_string],
+            &[path],
             includes_strings.as_slice(),
             &parent.to_str().unwrap(),
         )

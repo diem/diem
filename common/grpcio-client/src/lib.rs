@@ -57,14 +57,24 @@ mod util;
 /// `from` argument includes
 ///
 /// ## Example use:
-///   client_stub_gen(&["src/proto/myservice.proto"], vec![], "src/proto");
+///   client_stub_gen(&[Path::new("src/proto/myservice.proto")], vec![], "src/proto");
 pub fn client_stub_gen<P: AsRef<Path>>(
-    from: &[&str],
+    from: &[&Path],
     includes: &[&str],
     to: P,
 ) -> CompileResult<()> {
-    let descriptor_set = util::protoc_descriptor_set(from, includes)?;
-    util::write_out_generated_files(codegen::gen(descriptor_set.get_file(), from), &to)
+    let path_strings = from
+        .iter()
+        .map(|x| x.to_str().unwrap())
+        .collect::<Vec<&str>>();
+        
+    let file_strings = from
+        .iter()
+        .map(|x| x.file_name().expect("unable to get filename").to_str().unwrap())
+        .collect::<Vec<&str>>();
+
+    let descriptor_set = util::protoc_descriptor_set(&path_strings, includes)?;
+    util::write_out_generated_files(codegen::gen(descriptor_set.get_file(), &file_strings), &to)
         .expect("failed to write generated grpc definitions");
 
     Ok(())
