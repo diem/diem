@@ -55,7 +55,7 @@ now with Ctrl-C.
 
 EOF
 
-printf "Proceed with installing necessary dependencies? (y) > "
+printf "Proceed with installing necessary dependencies? (y/N) > "
 read -e input
 if [[ "$input" != "y"* ]]; then
 	echo "Exiting..."
