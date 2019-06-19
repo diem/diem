@@ -25,7 +25,6 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PACKAGE_MANAGER="yum"
 	elif which apt-get &>/dev/null; then
 		PACKAGE_MANAGER="apt-get"
-		sudo apt-get update
 	else
 		echo "Unable to find supported package manager (yum or apt-get). Abort"
 		exit 1
@@ -55,7 +54,7 @@ now with Ctrl-C.
 
 EOF
 
-printf "Proceed with installing necessary dependencies? (y) > "
+printf "Proceed with installing necessary dependencies? (y/N) > "
 read -e input
 if [[ "$input" != "y"* ]]; then
 	echo "Exiting..."
@@ -79,14 +78,19 @@ rustup update
 rustup component add rustfmt
 rustup component add clippy
 
+if [[ $"$PACKAGE_MANAGER" == "apt-get" ]]; then
+	echo "Updating apt-get......"
+	sudo apt-get update
+fi
+
 echo "Installing CMake......"
 if which cmake &>/dev/null; then
   echo "CMake is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install cmake
+		sudo yum install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install cmake
+		sudo apt-get install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
 	fi
@@ -97,9 +101,9 @@ if which go &>/dev/null; then
   echo "Go is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install golang
+		sudo yum install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install golang
+		sudo apt-get install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install go
 	fi
@@ -109,23 +113,16 @@ echo "Installing Protobuf......"
 if which protoc &>/dev/null; then
   echo "Protobuf is already installed"
 else
-	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install protobuf
-	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install protobuf-compiler
-	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
+	if [[ "$OSTYPE" == "linux-gnu" ]]; then
+		PROTOC_VERSION=3.8.0
+		PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
+		curl -OL https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
+		sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+		sudo unzip -o $PROTOC_ZIP -d /usr/local include/*
+		rm -f $PROTOC_ZIP
+		echo "protoc is installed to /usr/local/bin/"
+	else
 		brew install protobuf
-	fi
-fi
-
-if [[ -f /etc/debian_version ]]; then
-	PROTOC_VERSION=`protoc --version | cut -d" " -f2`
-	REQUIRED_PROTOC_VERSION="3.6.0"
-	PROTOC_VERSION_CHECK=`dpkg --compare-versions $REQUIRED_PROTOC_VERSION "gt" $PROTOC_VERSION`
-
-	if [ $? -eq "0" ]; then
-		echo "protoc version is too old. Update protoc to 3.6.0 or above. Abort"
-		exit 1
 	fi
 fi
 
