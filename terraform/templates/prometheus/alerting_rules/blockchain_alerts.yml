@@ -1,8 +1,0 @@
-groups:
-- name: "blockchain alerts"
-  rules:
-  - alert: Low Block Commit Rate
-    expr: avg(rate(consensus_gauge{op='last_committed_round',role='validator'}[1m])) < 0.2
-    for: 20m
-    labels:
-      severity: warning

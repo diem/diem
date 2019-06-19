@@ -1,9 +1,0 @@
-main() {
-    let x: u64;
-    let y: u64;
-
-    x = 5;
-    y = copy(x);
-    assert(copy(y) == 5, 42);
-    return;
-}

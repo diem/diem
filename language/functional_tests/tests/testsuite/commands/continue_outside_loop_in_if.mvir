@@ -1,8 +1,0 @@
-main() {
-    if (true) {
-        continue;
-    }
-    return;
-}
-
-// check: continue outside loop

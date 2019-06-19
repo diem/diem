@@ -1,9 +1,0 @@
-main() {
-    let ret_if_val: bool;
-    ret_if_val = true;
-    if (move(ret_if_val)) {
-        return;
-    } else {
-        return;
-    }
-}

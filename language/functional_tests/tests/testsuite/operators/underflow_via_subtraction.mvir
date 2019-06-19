@@ -1,8 +1,0 @@
-main() {
-    let x: u64;
-    x = 0 - 1;
-    return;
-}
-
-// check: ArithmeticError
-// TODO: check for underflow once vm errors are improved

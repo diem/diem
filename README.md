@@ -1,63 +1,77 @@
-<a href="https://developers.libra.org">
-	<img width="200" src="./.assets/libra.png" alt="Libra Logo" />
-</a>
+Bitcoin Core integration/staging tree
+=====================================
 
-<hr/>
+[![Build Status](https://travis-ci.org/bitcoin/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoin/bitcoin)
 
-[![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
-[![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE.md)
+https://bitcoincore.org
 
-Libra Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
+What is Bitcoin?
+----------------
 
-## Note to Developers
-* Libra Core is a prototype.
-* The APIs are constantly evolving and designed to demonstrate types of functionality. Expect substantial changes before the release.
-* We’ve launched a testnet that is a live demonstration of an early prototype of the Libra Blockchain software.
+Bitcoin is an experimental digital currency that enables instant payments to
+anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
+with no central authority: managing transactions and issuing money are carried
+out collectively by the network. Bitcoin Core is the name of open source
+software which enables the use of this currency.
 
-## Contributing
+For more information, as well as an immediately useable, binary version of
+the Bitcoin Core software, see https://bitcoincore.org/en/download/, or read the
+[original whitepaper](https://bitcoincore.org/bitcoin.pdf).
 
-Read our [Contributing guide](https://developers.libra.org/docs/community/contributing). Find out what’s coming on our [blog](https://developers.libra.org/blog/2019/06/18/the-path-forward).
+License
+-------
 
-## Getting Started
+Bitcoin Core is released under the terms of the MIT license. See [COPYING](COPYING) for more
+information or see https://opensource.org/licenses/MIT.
 
-### Learn About Libra
-* [Welcome](https://developers.libra.org/docs/welcome-to-libra)
-* [Libra Protocol: Key Concepts](https://developers.libra.org/docs/libra-protocol)
-* [Life of a Transaction](https://developers.libra.org/docs/life-of-a-transaction)
+Development Process
+-------------------
 
-### Try Libra Core
-* [My First Transaction](https://developers.libra.org/docs/my-first-transaction)
-* [Getting Started With Move](https://developers.libra.org/docs/move-overview)
+The `master` branch is regularly built and tested, but is not guaranteed to be
+completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
+regularly to indicate new official, stable release versions of Bitcoin Core.
 
-### Technical Papers
-* [The Libra Blockchain](https://developers.libra.org/docs/the-libra-blockchain-paper)
-* [Move: A Language With Programmable Resources](https://developers.libra.org/docs/move-paper)
-* [State Machine Replication in the Libra Blockchain](https://developers.libra.org/docs/state-machine-replication-paper)
+The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md)
+and useful hints for developers can be found in [doc/developer-notes.md](doc/developer-notes.md).
 
-### Blog
-* [Libra: The Path Forward](https://developers.libra.org/blog/2019/06/18/the-path-forward/)
+Testing
+-------
 
-### Libra Codebase
+Testing and code review is the bottleneck for development; we get more pull
+requests than we can review and test on short notice. Please be patient and help out by testing
+other people's pull requests, and remember this is a security-critical project where any mistake might cost people
+lots of money.
 
-* [Libra Core Overview](https://developers.libra.org/docs/libra-core-overview)
-* [Admission Control](https://developers.libra.org/docs/crates/admission-control)
-* [Bytecode Verifier](https://developers.libra.org/docs/crates/bytecode-verifier)
-* [Consensus](https://developers.libra.org/docs/crates/consensus)
-* [Crypto](https://developers.libra.org/docs/crates/crypto)
-* [Execution](https://developers.libra.org/docs/crates/execution)
-* [Mempool](https://developers.libra.org/docs/crates/mempool)
-* [Move IR Compiler](https://developers.libra.org/docs/crates/ir-to-bytecode)
-* [Move Language](https://developers.libra.org/docs/crates/move-language)
-* [Network](https://developers.libra.org/docs/crates/network)
-* [Storage](https://developers.libra.org/docs/crates/storage)
-* [Virtual Machine](https://developers.libra.org/docs/crates/vm)
+### Automated Testing
 
+Developers are strongly encouraged to write [unit tests](src/test/README.md) for new code, and to
+submit new unit tests for old code. Unit tests can be compiled and run
+(assuming they weren't disabled in configure) with: `make check`. Further details on running
+and extending unit tests can be found in [/src/test/README.md](/src/test/README.md).
 
-## Community
+There are also [regression and integration tests](/test), written
+in Python, that are run automatically on the build server.
+These tests can be run (if the [test dependencies](/test) are installed) with: `test/functional/test_runner.py`
 
-* Join us on the [Libra Discourse](https://community.libra.org).
-* Get the latest updates to our project by signing up for our [newsletter](https://developers.libra.org/newsletter_form).
+The Travis CI system makes sure that every pull request is built for Windows, Linux, and macOS, and that unit/sanity tests are run automatically.
 
-## License
+### Manual Quality Assurance (QA) Testing
 
-Libra Core is licensed as [Apache 2.0](https://github.com/libra/libra/blob/master/LICENSE).
+Changes should be tested by somebody other than the developer who wrote the
+code. This is especially important for large or high-risk changes. It is useful
+to add a test plan to the pull request description if testing the changes is
+not straightforward.
+
+Translations
+------------
+
+Changes to translations as well as new translations can be submitted to
+[Bitcoin Core's Transifex page](https://www.transifex.com/bitcoin/bitcoin/).
+
+Translations are periodically pulled from Transifex and merged into the git repository. See the
+[translation process](doc/translation_process.md) for details on how this works.
+
+**Important**: We do not accept translation changes as GitHub pull requests because the next
+pull from Transifex would automatically overwrite them again.
+
+Translators should also subscribe to the [mailing list](https://groups.google.com/forum/#!forum/bitcoin-translators).
