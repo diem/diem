@@ -6,11 +6,9 @@ syntax = "proto3";
 package admission_control;
 
 import "get_with_proof.proto";
-import "transaction.proto";
-import "proof.proto";
-import "ledger_info.proto";
-import "vm_errors.proto";
 import "mempool_status.proto";
+import "transaction.proto";
+import "vm_errors.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Submit transaction
