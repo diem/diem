@@ -117,10 +117,8 @@ fi
 
 echo "Installing Protobuf......"
 if which protoc &>/dev/null; then
-  echo "Protobuf is already installed"
+  	echo "Protobuf is already installed"
 else
-
-
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PROTOC_VERSION=3.8.0
 		PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
