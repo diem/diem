@@ -173,7 +173,11 @@ impl Uniform for Ed25519PrivateKey {
 
 impl PartialEq<Self> for Ed25519PrivateKey {
     fn eq(&self, other: &Self) -> bool {
-        self.to_bytes() == other.to_bytes()
+        self.to_bytes()
+            .into_iter()
+            .zip(other.to_bytes().into_iter())
+            .fold(0, |acc, pair| acc + (pair.0 ^ pair.1))
+            == 0
     }
 }
 

@@ -239,7 +239,13 @@ impl PartialEq for PrivateKey {
     fn eq(&self, other: &PrivateKey) -> bool {
         let encoded_privkey: Vec<u8> = serialize(&self.value).unwrap();
         let other_encoded_privkey: Vec<u8> = serialize(&other.value).unwrap();
-        encoded_privkey == other_encoded_privkey
+
+        // we can guarentee that encoded_privkey and other_encoded_privkey are the same length
+        encoded_privkey
+            .into_iter()
+            .zip(other_encoded_privkey)
+            .fold(0, |acc, pair| acc + (pair.0 ^ pair.1))
+            == 0
     }
 }
 

@@ -129,7 +129,15 @@ impl Uniform for BLS12381PrivateKey {
 
 impl std::cmp::PartialEq<Self> for BLS12381PrivateKey {
     fn eq(&self, other: &Self) -> bool {
-        serialize(self).unwrap() == serialize(other).unwrap()
+        let encoded_privkey: Vec<u8> = serialize(self).unwrap();
+        let other_encoded_privkey: Vec<u8> = serialize(other).unwrap();
+
+        // we can guarentee that encoded_privkey and other_encoded_privkey are the same length
+        encoded_privkey
+            .into_iter()
+            .zip(other_encoded_privkey)
+            .fold(0, |acc, pair| acc + (pair.0 ^ pair.1))
+            == 0
     }
 }
 
