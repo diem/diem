@@ -88,8 +88,8 @@ pub fn print_subcommand_help(parent_command: &str, commands: &[Box<dyn Command>]
         println!(
             "{} {}\n\t{}",
             cmd.get_aliases().join(" | "),
+            cmd.get_description(),
             cmd.get_params_help(),
-            cmd.get_description()
         );
     }
     println!("\n");

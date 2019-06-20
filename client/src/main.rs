@@ -126,8 +126,7 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
         println!(
             "{} {}\n\t{}",
             cmd.get_aliases().join(" | "),
-            cmd.get_params_help(),
-            cmd.get_description()
+            cmd.get_description(),
         );
     }
 
