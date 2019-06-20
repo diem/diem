@@ -37,6 +37,8 @@ jobs:
       - run:
           name: Run All End to End Tests
           command: RUST_TEST_THREADS=2 cargo test --package testsuite
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Build Docker Image
           command: |
