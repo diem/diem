@@ -344,7 +344,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         debug!(
             "Received a new round msg for round {} from {}",
             new_round_msg.pacemaker_timeout().round(),
-            new_round_msg.author()
+            new_round_msg.author().short_str()
         );
         let deadline = self.pacemaker.current_round_deadline();
         let current_highest_quorum_cert_round = self
