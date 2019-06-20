@@ -27,6 +27,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PACKAGE_MANAGER="apt-get"
 	elif which pacman &>/dev/null; then
 		PACKAGE_MANAGER="pacman"
+	elif which emerge &>/dev/null; then
+		PACKAGE_MANAGER="portage"
 	else
 		echo "Unable to find supported package manager (yum or apt-get). Abort"
 		exit 1
@@ -87,7 +89,7 @@ fi
 
 echo "Installing CMake......"
 if which cmake &>/dev/null; then
-  echo "CMake is already installed"
+	echo "CMake is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
 		sudo yum install cmake -y
@@ -95,6 +97,8 @@ else
 		sudo apt-get install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
 		sudo pacman -Sy cmake --noconfirm
+	elif [[ "$PACKAGE_MANAGER" == "portage" ]]; then
+		sudo emerge dev-util/cmake
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
 	fi
@@ -102,7 +106,7 @@ fi
 
 echo "Installing Go......"
 if which go &>/dev/null; then
-  echo "Go is already installed"
+	echo "Go is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
 		sudo yum install golang -y
@@ -110,6 +114,8 @@ else
 		sudo apt-get install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
 		sudo pacman -Sy go --noconfirm
+	elif [[ "$PACKAGE_MANAGER" == "portage" ]]; then
+		sudo emerge dev-lang/go
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install go
 	fi
