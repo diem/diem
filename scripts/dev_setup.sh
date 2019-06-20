@@ -87,7 +87,7 @@ fi
 
 echo "Installing CMake......"
 if which cmake &>/dev/null; then
-  echo "CMake is already installed"
+	echo "CMake is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
 		sudo yum install cmake -y
@@ -117,7 +117,7 @@ fi
 
 echo "Installing Protobuf......"
 if which protoc &>/dev/null; then
-  	echo "Protobuf is already installed"
+	echo "Protobuf is already installed"
 else
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		PROTOC_VERSION=3.8.0
