@@ -49,7 +49,7 @@ impl FromProto for AdmissionControlStatus {
 /// Rust structure for SubmitTransactionResponse protobuf definition.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SubmitTransactionResponse {
-    /// AC status returned to client if any, it includes can be either error or accepted status.
+    /// AC status returned to client if any, it can be either an accepted, blacklisted, or rejected status.
     pub ac_status: Option<AdmissionControlStatus>,
     /// Mempool error status if any.
     pub mempool_error: Option<MempoolAddTransactionStatus>,
