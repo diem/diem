@@ -111,7 +111,6 @@ impl<'txn> TransactionDataCache<'txn> {
                     self.data_map.insert(ap.clone(), new_root);
                 }
                 None => {
-                    warn!("[VM] Missing data in storage for {:?}", ap);
                     return Ok(Err(VMRuntimeError {
                         loc: Location::new(),
                         err: VMErrorKind::MissingData,
@@ -124,7 +123,20 @@ impl<'txn> TransactionDataCache<'txn> {
 
     /// BorrowGlobal opcode cache implementation
     pub fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
-        let root_ref = try_runtime!(self.load_data(ap, def));
+        let root_ref = match self.load_data(ap, def) {
+            Ok(Ok(gref)) => gref,
+            Ok(Err(e)) => {
+                warn!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
+                return Ok(Err(e));
+            }
+            Err(e) => {
+                error!(
+                    "[VM] (BorrowGlobal) Internal error reading data for {}: {:?}",
+                    ap, e
+                );
+                return Err(e);
+            }
+        };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             // shallow_ref increment ref count
@@ -157,7 +169,20 @@ impl<'txn> TransactionDataCache<'txn> {
 
     /// MoveFrom opcode cache implementation
     pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Local> {
-        let root_ref = try_runtime!(self.load_data(ap, def));
+        let root_ref = match self.load_data(ap, def) {
+            Ok(Ok(gref)) => gref,
+            Ok(Err(e)) => {
+                warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
+                return Ok(Err(e));
+            }
+            Err(e) => {
+                error!(
+                    "[VM] (MoveFrom) Internal error reading data for {}: {:?}",
+                    ap, e
+                );
+                return Err(e);
+            }
+        };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             Ok(Ok(Local::Value(root_ref.move_from())))
@@ -191,6 +216,7 @@ impl<'txn> TransactionDataCache<'txn> {
             self.data_map.insert(ap.clone(), new_root);
             Ok(Ok(()))
         } else {
+            warn!("[VM] Cannot write over existing resource {}", ap);
             Ok(Err(VMRuntimeError {
                 loc: Location::new(),
                 err: VMErrorKind::CannotWriteExistingResource,

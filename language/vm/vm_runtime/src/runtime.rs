@@ -66,7 +66,7 @@ impl<'alloc> VMRuntime<'alloc> {
         txn: SignedTransaction,
         data_view: &dyn StateView,
     ) -> Option<VMStatus> {
-        trace!("[VM] Verify transaction: {:?}", txn);
+        debug!("[VM] Verify transaction: {:?}", txn);
         // Treat a transaction as a single block.
         let module_cache =
             BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));

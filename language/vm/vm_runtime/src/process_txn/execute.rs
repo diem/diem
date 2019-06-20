@@ -60,14 +60,15 @@ where
             // Add the script to the cache.
             // XXX The cache should probably become a loader and do verification internally.
             let (code, args, module_bytes) = program.into_inner();
+            debug!("[VM] Script to execute: {:?}", script);
             let func_ref = match script_cache.cache_script(script, &code) {
                 Ok(Ok(func)) => func,
                 Ok(Err(err)) => {
-                    error!("[VM] Error loading script: {:?}", err);
+                    warn!("[VM] Error caching script: {:?}", err);
                     return txn_executor.failed_transaction_cleanup(Ok(Err(err)));
                 }
                 Err(err) => {
-                    crit!("[VM] VM error loading script: {:?}", err);
+                    error!("[VM] VM internal error caching script: {:?}", err);
                     return ExecutedTransaction::discard_error_output(&err);
                 }
             };
@@ -92,13 +93,17 @@ where
                         // typesafe).
                         // We are currently developing a versioning scheme for safe updates
                         // of modules and resources.
+                        warn!("[VM] VM error duplicate module {:?}", code_key);
                         return txn_executor.failed_transaction_cleanup(Ok(Err(VMRuntimeError {
                             loc: Location::default(),
                             err: VMErrorKind::DuplicateModuleName,
                         })));
                     }
                     Err(err) => {
-                        crit!("[VM] VM error loading module: {:?}", err);
+                        error!(
+                            "[VM] VM internal error verifying module {:?}: {:?}",
+                            code_key, err
+                        );
                         return ExecutedTransaction::discard_error_output(&err);
                     }
                 }
@@ -106,7 +111,7 @@ where
                 match txn_executor.module_cache().cache_module(module) {
                     Ok(()) => (),
                     Err(err) => {
-                        error!("[VM] error while caching module: {:?}", err);
+                        error!("[VM] VM internal error while caching module: {:?}", err);
                         return ExecutedTransaction::discard_error_output(&err);
                     }
                 };
@@ -120,11 +125,11 @@ where
             match txn_executor.execute_function_impl(func_ref) {
                 Ok(Ok(_)) => txn_executor.transaction_cleanup(publish_modules),
                 Ok(Err(err)) => {
-                    error!("[VM] User error running script: {:?}", err);
+                    warn!("[VM] User error running script: {:?}", err);
                     txn_executor.failed_transaction_cleanup(Ok(Err(err)))
                 }
                 Err(err) => {
-                    crit!("[VM] VM error running script: {:?}", err);
+                    error!("[VM] VM error running script: {:?}", err);
                     ExecutedTransaction::discard_error_output(&err)
                 }
             }
