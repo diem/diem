@@ -161,6 +161,10 @@ impl RawTransaction {
             self.expiration_time,
         )
     }
+    /// Return the sender of this transaction.
+    pub fn sender(&self) -> AccountAddress {
+        self.sender
+    }
 }
 
 pub struct RawTransactionBytes<'a>(pub &'a [u8]);

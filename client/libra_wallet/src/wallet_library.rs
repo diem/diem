@@ -150,12 +150,8 @@ impl WalletLibrary {
     /// Simple public function that allows to sign a Libra RawTransaction with the PrivateKey
     /// associated to a particular AccountAddress. If the PrivateKey associated to an
     /// AccountAddress is not contained in the addr_map, then this function will return an Error
-    pub fn sign_txn(
-        &self,
-        addr: &AccountAddress,
-        txn: RawTransaction,
-    ) -> Result<SignedTransaction> {
-        if let Some(child) = self.addr_map.get(addr) {
+    pub fn sign_txn(&self, txn: RawTransaction) -> Result<SignedTransaction> {
+        if let Some(child) = self.addr_map.get(&txn.sender()) {
             let raw_bytes = txn.into_proto().write_to_bytes()?;
             let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
 

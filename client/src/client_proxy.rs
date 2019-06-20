@@ -836,7 +836,7 @@ impl ClientProxy {
                     signature,
                 )
             }
-            None => self.wallet.sign_txn(&sender_account.address, raw_txn)?,
+            None => self.wallet.sign_txn(raw_txn)?,
         };
 
         let mut req = SubmitTransactionRequest::new();
