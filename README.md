@@ -29,6 +29,18 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 * [My First Transaction](https://developers.libra.org/docs/my-first-transaction)
 * [Getting Started With Move](https://developers.libra.org/docs/move-overview)
 
+### Try Libra Core On Docker
+```bash
+ $ git clone https://github.com/libra/libra
+ 
+ $ cd libra
+ 
+ $ docker build -t local-libra-image -f docker/local/Dockerfile .
+ 
+ $ docker run -it --rm --name my-libra-app local-libra-image
+```
+
+
 ### Technical Papers
 * [The Libra Blockchain](https://developers.libra.org/docs/the-libra-blockchain-paper)
 * [Move: A Language With Programmable Resources](https://developers.libra.org/docs/move-paper)
