@@ -33,10 +33,10 @@ jobs:
           command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
       - run:
           name: Run All Unit Tests
-          command: cargo test --all --exclude testsuite
+          command: RUST_BACKTRACE=1 cargo test --all --exclude testsuite
       - run:
           name: Run All End to End Tests
-          command: RUST_TEST_THREADS=2 cargo test --package testsuite
+          command: RUST_BACKTRACE=1 RUST_TEST_THREADS=2 cargo test --package testsuite
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
