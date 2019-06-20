@@ -420,7 +420,7 @@ impl FromProto for RequestItem {
                 fetch_events,
             }
         } else {
-            unreachable!("Unknown RequestItem type.")
+            bail!("Unknown RequestItem type.")
         })
     }
 }
@@ -608,7 +608,7 @@ impl FromProto for ResponseItem {
                 txn_list_with_proof,
             }
         } else {
-            unreachable!("Unknown ResponseItem type.")
+            bail!("Unknown ResponseItem type.")
         })
     }
 }
