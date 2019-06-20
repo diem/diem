@@ -28,7 +28,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	elif which pacman &>/dev/null; then
 		PACKAGE_MANAGER="pacman"
 	else
-		echo "Unable to find supported package manager (yum or apt-get). Abort"
+		echo "Unable to find supported package manager (yum, apt-get, or pacman). Abort"
 		exit 1
 	fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -87,14 +87,14 @@ fi
 
 echo "Installing CMake......"
 if which cmake &>/dev/null; then
-  echo "CMake is already installed"
+	echo "CMake is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
 		sudo yum install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
 		sudo apt-get install cmake -y
 	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
-		sudo pacman -Sy cmake --noconfirm
+		sudo pacman -Syu cmake --noconfirm
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
 	fi
@@ -102,14 +102,14 @@ fi
 
 echo "Installing Go......"
 if which go &>/dev/null; then
-  echo "Go is already installed"
+	echo "Go is already installed"
 else
 	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
 		sudo yum install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
 		sudo apt-get install golang -y
 	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
-		sudo pacman -Sy go --noconfirm
+		sudo pacman -Syu go --noconfirm
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install go
 	fi
@@ -120,6 +120,16 @@ if which protoc &>/dev/null; then
   echo "Protobuf is already installed"
 else
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
+		if ! which unzip &>/dev/null; then
+			echo "Installing unzip......"
+			if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
+				sudo yum install unzip -y
+			elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+				sudo apt-get install unzip -y
+			elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+				sudo pacman -Syu unzip --noconfirm
+			fi
+		fi
 		PROTOC_VERSION=3.8.0
 		PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
 		curl -OL https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
