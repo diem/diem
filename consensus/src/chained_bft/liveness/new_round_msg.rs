@@ -304,7 +304,7 @@ pub enum PacemakerTimeoutCertificateVerificationError {
 
 impl fmt::Display for PacemakerTimeoutCertificate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TimeoutCertificate<round: {}, timeouts:[", self.round)?;
+        write!(f, "TimeoutCertificate[round: {}, timeouts:[", self.round)?;
         for (idx, timeout) in self.timeouts.iter().enumerate() {
             write!(f, "<{}>", timeout.round())?;
             if idx != self.timeouts.len() - 1 {

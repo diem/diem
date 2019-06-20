@@ -42,11 +42,7 @@ impl Display for QuorumCert {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "QC: [\n\
-             \tCertified block id: {},\n\
-             \tround: {:02},\n\
-             \tledger info: {}\n\
-             ]",
+            "QuorumCert: [block id: {}, round: {:02}, {}]",
             self.certified_block_id, self.certified_block_round, self.signed_ledger_info
         )
     }

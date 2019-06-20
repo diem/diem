@@ -398,3 +398,20 @@ fn test_get_first_seq_num_and_limit() {
     assert_eq!(get_first_seq_num_and_limit(false, 2, 3).unwrap(), (0, 3));
     assert_eq!(get_first_seq_num_and_limit(false, 2, 4).unwrap(), (0, 3));
 }
+
+#[test]
+fn test_too_many_requested() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let db = LibraDB::new(&tmp_dir);
+
+    assert!(db.get_transactions(0, 1025 /* limit */, 0, true).is_err());
+    assert!(db
+        .get_events_by_event_access_path(
+            &AccessPath::new_for_sent_event(AccountAddress::random()),
+            0,
+            true,
+            1025, /* limit */
+            0
+        )
+        .is_err());
+}

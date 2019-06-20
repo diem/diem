@@ -11,7 +11,7 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 
 [dependencies.rocksdb]
 git = "https://github.com/pingcap/rust-rocksdb.git"
-rev = "4f8c6b3a48c7acb0c81f9bb91e7d8493b1c5a73e"
+rev = "8d6cda70f22da2cd15ed7351fcffa9add3444595"
 
 [dev-dependencies]
 byteorder = "1.3.1"

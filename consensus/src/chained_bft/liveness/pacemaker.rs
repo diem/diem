@@ -10,6 +10,7 @@ use crate::{
 };
 use futures::Future;
 use std::{
+    fmt,
     pin::Pin,
     time::{Duration, Instant},
 };
@@ -39,6 +40,15 @@ pub enum NewRoundReason {
     Timeout { cert: PacemakerTimeoutCertificate },
 }
 
+impl fmt::Display for NewRoundReason {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NewRoundReason::QCReady => write!(f, "QCReady"),
+            NewRoundReason::Timeout { cert } => write!(f, "{}", cert),
+        }
+    }
+}
+
 /// NewRoundEvents produced by Pacemaker are guaranteed to be monotonically increasing.
 /// NewRoundEvents are consumed by the rest of the system: they can cause sending new proposals
 /// or voting for some proposals that wouldn't have been voted otherwise.
@@ -48,6 +58,16 @@ pub struct NewRoundEvent {
     pub round: Round,
     pub reason: NewRoundReason,
     pub timeout: Duration,
+}
+
+impl fmt::Display for NewRoundEvent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "NewRoundEvent: [round: {}, reason: {}, timeout: {:?}]",
+            self.round, self.reason, self.timeout
+        )
+    }
 }
 
 /// Pacemaker is responsible for generating the new round events, which are driving the actions

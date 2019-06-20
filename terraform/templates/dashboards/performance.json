@@ -37,7 +37,7 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 1
@@ -122,7 +122,7 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 1
@@ -207,7 +207,7 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
         "y": 1
@@ -291,7 +291,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 12,
       "panels": [],
@@ -305,10 +305,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 9
+        "y": 10
       },
       "id": 5,
       "legend": {
@@ -390,10 +390,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 9
+        "y": 10
       },
       "id": 15,
       "legend": {
@@ -475,10 +475,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 9
+        "y": 10
       },
       "id": 7,
       "legend": {
@@ -559,7 +559,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 18
       },
       "id": 14,
       "panels": [],
@@ -573,10 +573,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 19
       },
       "id": 8,
       "legend": {
@@ -657,7 +657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 27
       },
       "id": 18,
       "panels": [],
@@ -671,10 +671,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 28
       },
       "id": 6,
       "legend": {
@@ -756,10 +756,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 25
+        "y": 28
       },
       "id": 16,
       "legend": {
@@ -842,7 +842,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {

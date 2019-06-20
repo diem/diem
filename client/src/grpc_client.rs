@@ -163,7 +163,7 @@ impl GRPCClient {
         false
     }
     /// Sync version of get_with_proof
-    pub fn get_with_proof_sync(
+    pub(crate) fn get_with_proof_sync(
         &self,
         requested_items: Vec<RequestItem>,
     ) -> Result<UpdateToLatestLedgerResponse> {
@@ -178,63 +178,13 @@ impl GRPCClient {
         Ok(resp?)
     }
 
-    fn get_balances_async(
-        &self,
-        addresses: &[AccountAddress],
-    ) -> Result<impl Future<Item = Vec<u64>, Error = failure::Error>> {
-        let requests = addresses
-            .iter()
-            .map(|addr| RequestItem::GetAccountState { address: *addr })
-            .collect::<Vec<_>>();
-
-        let num_addrs = addresses.len();
-        let get_with_proof_resp = self.get_with_proof_async(requests)?;
-        Ok(get_with_proof_resp.then(move |get_with_proof_resp| {
-            let rust_resp = get_with_proof_resp?;
-            if rust_resp.response_items.len() != num_addrs {
-                bail!("Server returned wrong number of responses");
-            }
-
-            let mut balances = vec![];
-            for value_with_proof in rust_resp.response_items {
-                debug!("get_balance response is: {:?}", value_with_proof);
-                match value_with_proof {
-                    ResponseItem::GetAccountState {
-                        account_state_with_proof,
-                    } => {
-                        let balance =
-                            get_account_resource_or_default(&account_state_with_proof.blob)?
-                                .balance();
-                        balances.push(balance);
-                    }
-                    _ => bail!(
-                        "Incorrect type of response returned: {:?}",
-                        value_with_proof
-                    ),
-                }
-            }
-            Ok(balances)
-        }))
-    }
-
-    pub(crate) fn get_balance(&self, address: AccountAddress) -> Result<u64> {
-        let mut ret = self.get_balances_async(&[address])?.wait();
-        let mut try_cnt = 0_u64;
-        while Self::need_to_retry(&mut try_cnt, &ret) {
-            ret = self.get_balances_async(&[address])?.wait();
-        }
-
-        ret?.pop()
-            .ok_or_else(|| format_err!("Account is not available!"))
-    }
-
     /// Get the latest account sequence number for the account specified.
     pub fn get_sequence_number(&self, address: AccountAddress) -> Result<u64> {
         Ok(get_account_resource_or_default(&self.get_account_blob(address)?.0)?.sequence_number())
     }
 
     /// Get the latest account state blob from validator.
-    pub fn get_account_blob(
+    pub(crate) fn get_account_blob(
         &self,
         address: AccountAddress,
     ) -> Result<(Option<AccountStateBlob>, Version)> {

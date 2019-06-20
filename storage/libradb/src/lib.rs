@@ -24,8 +24,8 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
-    event_store::EventStore, ledger_store::LedgerStore, schema::*, state_store::StateStore,
-    transaction_store::TransactionStore,
+    errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
+    state_store::StateStore, transaction_store::TransactionStore,
 };
 use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -57,6 +57,16 @@ use types::{
 
 lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
+}
+
+const MAX_LIMIT: u64 = 1024;
+
+fn error_if_limit_too_large(limit: u64) -> Result<()> {
+    if limit > MAX_LIMIT {
+        Err(LibraDbError::TooManyRequested(limit, MAX_LIMIT).into())
+    } else {
+        Ok(())
+    }
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -165,6 +175,8 @@ impl LibraDB {
         limit: u64,
         ledger_version: Version,
     ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
+        error_if_limit_too_large(limit)?;
+
         let get_latest = !ascending && start_seq_num == u64::max_value();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
@@ -575,6 +587,8 @@ impl LibraDB {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
+        error_if_limit_too_large(limit)?;
+
         if start_version > ledger_version || limit == 0 {
             return Ok(TransactionListWithProof::new_empty());
         }
@@ -625,7 +639,21 @@ impl LibraDB {
     /// Write the whole schema batch including all data necessary to mutate the ledge
     /// state of some transaction by leveraging rocksdb atomicity support.
     fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)
+        self.db.write_schemas(batch)?;
+
+        match self.db.get_approximate_sizes_cf() {
+            Ok(cf_sizes) => {
+                for (cf_name, size) in cf_sizes {
+                    OP_COUNTER.set(&format!("cf_size_bytes_{}", cf_name), size as usize);
+                }
+            }
+            Err(err) => warn!(
+                "Failed to get approximate size of column families: {}.",
+                err
+            ),
+        }
+
+        Ok(())
     }
 
     fn get_account_seq_num_by_version(

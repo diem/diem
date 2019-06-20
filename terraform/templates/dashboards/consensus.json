@@ -37,7 +37,7 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 1
@@ -132,7 +132,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 1
@@ -218,7 +218,7 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
         "y": 1
@@ -304,10 +304,10 @@
       "description": "Duration between block generation time until the moment it is first received by a voter / gathers full QC",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 29,
       "legend": {
@@ -396,7 +396,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 17
       },
       "id": 18,
       "panels": [],
@@ -410,10 +410,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 16
+        "y": 18
       },
       "id": 14,
       "legend": {
@@ -495,10 +495,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 16
+        "y": 18
       },
       "id": 16,
       "legend": {
@@ -580,10 +580,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 16
+        "y": 18
       },
       "id": 26,
       "legend": {
@@ -665,10 +665,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 26
       },
       "id": 27,
       "legend": {
@@ -750,10 +750,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 23
+        "y": 26
       },
       "id": 28,
       "legend": {
@@ -834,7 +834,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 34
       },
       "id": 4,
       "panels": [],
@@ -848,10 +848,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 31
+        "y": 35
       },
       "id": 21,
       "legend": {
@@ -933,10 +933,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 31
+        "y": 35
       },
       "id": 22,
       "legend": {
@@ -1018,10 +1018,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 31
+        "y": 35
       },
       "id": 23,
       "legend": {
@@ -1103,10 +1103,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 38
+        "y": 43
       },
       "id": 24,
       "legend": {
@@ -1188,10 +1188,10 @@
       "dashes": false,
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 38
+        "y": 43
       },
       "id": 25,
       "legend": {
@@ -1272,7 +1272,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 51
       },
       "id": 31,
       "panels": [],
@@ -1287,10 +1287,10 @@
       "description": "Count of the proposals that passed the timestamp rules and did not have to wait",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 46
+        "y": 52
       },
       "id": 32,
       "legend": {
@@ -1373,10 +1373,10 @@
       "description": "Count of the proposals where passing the timestamp rules required waiting",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 46
+        "y": 52
       },
       "id": 33,
       "legend": {
@@ -1459,10 +1459,10 @@
       "description": "Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 46
+        "y": 52
       },
       "id": 34,
       "legend": {
@@ -1545,10 +1545,10 @@
       "description": "Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 53
+        "y": 60
       },
       "id": 35,
       "legend": {
@@ -1631,10 +1631,10 @@
       "description": "Average time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 53
+        "y": 60
       },
       "id": 36,
       "legend": {
@@ -1717,10 +1717,10 @@
       "description": "Average time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 53
+        "y": 60
       },
       "id": 37,
       "legend": {
@@ -1803,10 +1803,10 @@
       "description": "Count of the votes that passed the timestamp rules and did not have to wait",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "id": 38,
       "legend": {
@@ -1889,10 +1889,10 @@
       "description": "Count of the votes where passing the timestamp rules required waiting",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 60
+        "y": 68
       },
       "id": 39,
       "legend": {
@@ -1975,10 +1975,10 @@
       "description": "Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 60
+        "y": 68
       },
       "id": 40,
       "legend": {
@@ -2061,10 +2061,10 @@
       "description": "Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 67
+        "y": 76
       },
       "id": 41,
       "legend": {
@@ -2147,10 +2147,10 @@
       "description": "Average time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.  A success only means that a replica has an opportunity to vote.  It may not vote if it doesn't pass the voting rules.",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 67
+        "y": 76
       },
       "id": 42,
       "legend": {
@@ -2233,10 +2233,10 @@
       "description": "Average time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules",
       "fill": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
-        "y": 67
+        "y": 76
       },
       "id": 43,
       "legend": {
@@ -2312,7 +2312,6 @@
       }
     }
   ],
-  "refresh": false,
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
@@ -2320,7 +2319,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -2351,5 +2350,5 @@
   "timezone": "browser",
   "title": "Consensus",
   "uid": "lDnunt7Zk",
-  "version": 2
+  "version": 1
 }
