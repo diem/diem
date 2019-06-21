@@ -124,13 +124,13 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
     println!("usage: <command> <args>\n\nUse the following commands:\n");
     for cmd in commands {
         println!(
-            "{} {}\n\t{}",
+            "{} \t {}",
             cmd.get_aliases().join(" | "),
-            cmd.get_description(),
+            cmd.get_description()
         );
     }
 
-    println!("help | h \n\tPrints this help");
-    println!("quit | q! \n\tExit this client");
+    println!("help | h \tPrints this help");
+    println!("quit | q! \tExit this client");
     println!("\n");
 }
