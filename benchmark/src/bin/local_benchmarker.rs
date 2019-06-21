@@ -22,6 +22,7 @@ fn main() {
         validator_port.to_string().as_str(),
         &path,
         &mint_key_file_path,
+        false,
         None,
         None,
     )

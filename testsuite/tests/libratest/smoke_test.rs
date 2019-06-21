@@ -26,6 +26,7 @@ fn setup_swarm_and_client_proxy(
         port.to_string().as_str(),
         &swarm.get_trusted_peers_config_path(),
         &faucet_key_file_path,
+        false,
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
@@ -220,6 +221,7 @@ fn test_basic_state_synchronization() {
         ac_port.to_string().as_str(),
         &swarm.get_trusted_peers_config_path(),
         "",
+        false,
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
