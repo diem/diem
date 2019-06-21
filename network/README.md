@@ -23,7 +23,7 @@ The network component uses:
 * [Noise](https://noiseprotocol.org/noise.html) for authentication and full
  end-to-end encryption.
 * [Yamux](https://github.com/hashicorp/yamux/blob/master/spec.md) for
-multiplexing substreams over a single connection; and
+multiplexing substreams over a single connection.
 * Push-style [gossip](https://en.wikipedia.org/wiki/Gossip_protocol) for peer
 discovery.
 
