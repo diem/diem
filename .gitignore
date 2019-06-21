@@ -11,10 +11,8 @@ Cargo.lock
 # Ignore generated files in proto folders
 **/proto/*.rs
 !**/proto/mod.rs
-!**/proto/converter.rs
 **/proto/*/*.rs
 !**/proto/*/mod.rs
-!**/proto/*/converter.rs
 
 # IDE
 .idea
