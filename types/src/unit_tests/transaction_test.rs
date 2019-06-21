@@ -13,9 +13,9 @@ use proptest::prelude::*;
 use proto_conv::{FromProto, IntoProto};
 
 #[test]
-fn test_signed_transaction_from_proto_invalid_signature() {
+fn test_invalid_signature() {
     let keypair = generate_keypair();
-    assert!(SignedTransaction::from_proto(
+    let txn = SignedTransaction::from_proto(
         SignedTransaction::craft_signed_transaction_for_client(
             RawTransaction::new(
                 AccountAddress::random(),
@@ -30,13 +30,15 @@ fn test_signed_transaction_from_proto_invalid_signature() {
         )
         .into_proto(),
     )
-    .is_err());
+    .expect("initial conversion from_proto should succeed");
+    txn.check_signature()
+        .expect_err("signature checking should fail");
 }
 
 proptest! {
     #[test]
     fn test_sig(raw_txn in any::<RawTransaction>(), (sk1, pk1) in keypair_strategy()) {
         let signed_txn = raw_txn.sign(&sk1, pk1).unwrap();
-        assert!(signed_txn.verify_signature().is_ok());
+        assert!(signed_txn.check_signature().is_ok());
     }
 }

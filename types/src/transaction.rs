@@ -37,6 +37,7 @@ mod program;
 
 pub use program::{Program, TransactionArgument, SCRIPT_HASH_LENGTH};
 use protobuf::well_known_types::UInt64Value;
+use std::ops::Deref;
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 
@@ -248,6 +249,36 @@ pub struct SignedTransaction {
     raw_txn_bytes: Vec<u8>,
 }
 
+/// A transaction for which the signature has been verified. Created by
+/// `SignedTransaction::check_signature`.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct SignatureCheckedTransaction(SignedTransaction);
+
+impl SignatureCheckedTransaction {
+    /// Returns a reference to the `SignedTransaction` within.
+    pub fn as_inner(&self) -> &SignedTransaction {
+        &self.0
+    }
+
+    /// Returns the `SignedTransaction` within.
+    pub fn into_inner(self) -> SignedTransaction {
+        self.0
+    }
+
+    /// Returns the `RawTransaction` within.
+    pub fn into_raw_transaction(self) -> RawTransaction {
+        self.0.into_raw_transaction()
+    }
+}
+
+impl Deref for SignatureCheckedTransaction {
+    type Target = SignedTransaction;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl fmt::Debug for SignedTransaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -318,11 +349,12 @@ impl SignedTransaction {
         self.raw_txn_bytes.len()
     }
 
-    /// Verifies the signature of given transaction. Returns `Ok()` if the signature is valid.
-    pub fn verify_signature(&self) -> Result<()> {
+    /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
+    /// the signature is valid.
+    pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
         let hash = RawTransactionBytes(&self.raw_txn_bytes).hash();
         signing::verify_message(hash, &self.signature, &self.public_key)?;
-        Ok(())
+        Ok(SignatureCheckedTransaction(self))
     }
 
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
@@ -375,16 +407,9 @@ impl FromProto for SignedTransaction {
             raw_txn_bytes: txn.raw_txn_bytes,
         };
 
-        // Please do not remove this check. It may appear redundant, as it is also performed by VM,
-        // but its goal is to ensure that:
-        // - transactions parsed from a GRPC request are validated before being processed by other
-        // portions of code;
-        // - Moxie Marlinspike's Cryptographic Doom Principle is mitigated;
-        // - resources are committed only for valid data.
-        match t.verify_signature() {
-            Ok(_) => Ok(t),
-            Err(e) => Err(e),
-        }
+        // Signature checking is encoded in `SignatureCheckedTransaction`.
+
+        Ok(t)
     }
 }
 

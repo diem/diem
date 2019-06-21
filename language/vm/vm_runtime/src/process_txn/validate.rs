@@ -10,7 +10,8 @@ use logger::prelude::*;
 use tiny_keccak::Keccak;
 use types::{
     transaction::{
-        SignedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
+        SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES,
+        SCRIPT_HASH_LENGTH,
     },
     vm_error::{VMStatus, VMValidationStatus},
 };
@@ -39,7 +40,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    txn: SignedTransaction,
+    txn: SignatureCheckedTransaction,
     txn_state: Option<ValidatedTransactionState<'alloc, 'txn, P>>,
 }
 
@@ -77,10 +78,13 @@ where
             allocator,
             ..
         } = process_txn;
-        if txn.verify_signature().is_err() {
-            warn!("[VM] Invalid signature");
-            return Err(VMStatus::Validation(VMValidationStatus::InvalidSignature));
-        }
+        let txn = match txn.check_signature() {
+            Ok(txn) => txn,
+            Err(_) => {
+                error!("[VM] Invalid signature");
+                return Err(VMStatus::Validation(VMValidationStatus::InvalidSignature));
+            }
+        };
 
         let txn_state = match txn.payload() {
             TransactionPayload::Program(program) => {
@@ -258,14 +262,14 @@ where
         VerifiedTransaction::new(self)
     }
 
-    /// Returns a reference to the `SignedTransaction` within.
-    pub fn as_inner(&self) -> &SignedTransaction {
+    /// Returns a reference to the `SignatureCheckedTransaction` within.
+    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
         &self.txn
     }
 
-    /// Consumes `self` and returns the `SignedTransaction` within.
+    /// Consumes `self` and returns the `SignatureCheckedTransaction` within.
     #[allow(dead_code)]
-    pub fn into_inner(self) -> SignedTransaction {
+    pub fn into_inner(self) -> SignatureCheckedTransaction {
         self.txn
     }
 
