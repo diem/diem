@@ -52,7 +52,7 @@ ARGS:
 
 To compile a `*.mvir` file:
 
-> cargo build -—bin compiler
+> cargo build --bin compiler
 
 * This will build the compiler+verifier binary.
 * The binary can be found at `libra/target/debug/compiler`.
