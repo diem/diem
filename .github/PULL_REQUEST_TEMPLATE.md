@@ -14,7 +14,7 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 ## Test Plan
 
-(Share your test plan here. If you changed code, please provide us with clear instrutions for verifying that your changes work.)
+(Share your test plan here. If you changed code, please provide us with clear instructions for verifying that your changes work.)
 
 ## Related PRs
 
