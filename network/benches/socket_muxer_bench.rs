@@ -81,7 +81,7 @@ fn build_memsocket_muxer_transport() -> impl Transport<Output = impl StreamMulti
     MemoryTransport::default().and_then(Yamux::upgrade_connection)
 }
 
-/// Buikd a MemorySocket + Noise + Muxer transport
+/// Build a MemorySocket + Noise + Muxer transport
 fn build_memsocket_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     MemoryTransport::default()
         .and_then(move |socket, origin| {
