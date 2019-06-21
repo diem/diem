@@ -27,6 +27,9 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 
 ### Libra Core Requeriments
 * [Rust/Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+* [CMake](https://github.com/Kitware/CMake)
+* [Go Lang](https://golang.org/doc/install) 
+* [Protobuf](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md)
 * [TCP/IP Port 8000 open](https://github.com/libra/libra/blob/master/scripts/cli/start_cli_testnet.sh#L14)
 
 ### Try Libra Core
