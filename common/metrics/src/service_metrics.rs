@@ -88,7 +88,7 @@ impl ServiceMetrics {
     pub fn resp(&self, ctx: &RpcContext, success: bool) {
         // The reason for counting everything here, instead of doing the
         // if outside of the increment is that we could also compare
-        // number of responses to number of requsets
+        // number of responses to number of requests
         if let Some(name) = path_from_ctx(ctx) {
             self.num_error
                 .with_label_values(&[name.as_str()])
