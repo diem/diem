@@ -25,6 +25,10 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 * [Libra Protocol: Key Concepts](https://developers.libra.org/docs/libra-protocol)
 * [Life of a Transaction](https://developers.libra.org/docs/life-of-a-transaction)
 
+### Libra Core Requeriments
+* [Rust/Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+* [TCP/IP Port 8000 open](https://github.com/libra/libra/blob/master/scripts/cli/start_cli_testnet.sh#L14)
+
 ### Try Libra Core
 * [My First Transaction](https://developers.libra.org/docs/my-first-transaction)
 * [Getting Started With Move](https://developers.libra.org/docs/move-overview)
