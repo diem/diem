@@ -42,7 +42,7 @@ fn setup_swarm_and_client_proxy(
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "10"], true)
         .unwrap();
@@ -50,7 +50,7 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
         Decimal::from_f64(10.0),
         Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
     );
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "3"], true)
@@ -63,7 +63,7 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
         Decimal::from_f64(4.0),
         Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
     );
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy
         .mint_coins(&["mintb", "2", "15"], true)
         .unwrap();
@@ -88,11 +88,11 @@ fn smoke_test_multi_node() {
 #[test]
 fn test_concurrent_transfers_single_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "100"], true)
         .unwrap();
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
     for _ in 0..20 {
         client_proxy
             .transfer_coins(&["t", "0", "1", "1"], false)
@@ -115,9 +115,9 @@ fn test_concurrent_transfers_single_node() {
 fn test_basic_fault_tolerance() {
     // A configuration with 4 validators should tolerate single node failure.
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
-    let validator_ports = swarm.get_validators_public_ports();
+    let validators = swarm.get_validators_ids();
     // kill the first validator
-    swarm.kill_node(*validator_ports.get(0).unwrap());
+    swarm.kill_node(validators.get(0).unwrap());
 
     // run the script for the smoke test by submitting requests to the second validator
     test_smoke_script(client_proxy);
@@ -126,8 +126,8 @@ fn test_basic_fault_tolerance() {
 #[test]
 fn test_basic_restartability() {
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
-    client_proxy.create_next_account(&["c"]).unwrap();
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
@@ -140,10 +140,10 @@ fn test_basic_restartability() {
         Decimal::from_f64(10.0),
         Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
     );
-    let port = swarm.get_validators_public_ports()[0];
+    let peer_to_restart = swarm.get_validators_ids()[0].clone();
     // restart node
-    swarm.kill_node(port);
-    assert!(swarm.add_node(port, false));
+    swarm.kill_node(&peer_to_restart);
+    assert!(swarm.add_node(peer_to_restart, false).is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
@@ -174,8 +174,8 @@ fn test_basic_state_synchronization() {
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
-    client_proxy.create_next_account(&["c"]).unwrap();
-    client_proxy.create_next_account(&["c"]).unwrap();
+    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account().unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
@@ -188,9 +188,9 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(10.0),
         Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
     );
-    let node_to_restart = *swarm.get_validators_public_ports().get(0).unwrap();
+    let node_to_restart = swarm.get_validators_ids().get(0).unwrap().clone();
 
-    swarm.kill_node(node_to_restart);
+    swarm.kill_node(&node_to_restart);
     // All these are executed while one node is down
     assert_eq!(
         Decimal::from_f64(90.0),
@@ -207,16 +207,17 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(swarm.add_node(node_to_restart, false));
+    assert!(swarm.add_node(node_to_restart.clone(), false).is_ok());
 
     // Wait for all the nodes to catch up
     swarm.wait_for_all_nodes_to_catchup();
 
     // Connect to the newly recovered node and verify its state
     let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
-        node_to_restart.to_string().as_str(),
+        ac_port.to_string().as_str(),
         &swarm.get_trusted_peers_config_path(),
         "",
         /* faucet server */ None,

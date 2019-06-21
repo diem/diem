@@ -629,14 +629,17 @@ where
             previous_transaction_accumulator,
         ) {
             Ok(output) => {
-                let root_hash = output.clone_transaction_accumulator().root_hash();
+                let accumulator = output.clone_transaction_accumulator();
+                let root_hash = accumulator.root_hash();
+                let version = accumulator.num_elements() - 1;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to
                 // consensus.
                 // TODO: The VM will support a special transaction to set the validators for the
                 // next epoch that is part of a block execution.
-                let execute_block_response = ExecuteBlockResponse::new(root_hash, status, None);
+                let execute_block_response =
+                    ExecuteBlockResponse::new(root_hash, status, version, None);
                 block_to_execute.set_execute_block_response(execute_block_response);
             }
             Err(err) => {

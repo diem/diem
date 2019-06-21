@@ -78,7 +78,7 @@ where
             ..
         } = process_txn;
         if txn.verify_signature().is_err() {
-            error!("[VM] Verify signature error");
+            warn!("[VM] Invalid signature");
             return Err(VMStatus::Validation(VMValidationStatus::InvalidSignature));
         }
 
@@ -91,6 +91,11 @@ where
                         MAX_TRANSACTION_SIZE_IN_BYTES,
                         txn.raw_txn_bytes_len()
                     );
+                    warn!(
+                        "[VM] Transaction size too big {} (max {})",
+                        txn.raw_txn_bytes_len(),
+                        MAX_TRANSACTION_SIZE_IN_BYTES
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::ExceededMaxTransactionSize(error_str),
                     ));
@@ -102,6 +107,11 @@ where
                 if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS {
                     let error_str = format!(
                         "max gas units: {}, gas units submitted: {}",
+                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
+                        txn.max_gas_amount()
+                    );
+                    warn!(
+                        "[VM] Gas unit error; max {}, submitted {}",
                         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
                         txn.max_gas_amount()
                     );
@@ -121,6 +131,11 @@ where
                         min_txn_fee,
                         txn.max_gas_amount()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        min_txn_fee,
+                        txn.max_gas_amount()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(error_str),
                     ));
@@ -137,6 +152,11 @@ where
                         gas_schedule::MIN_PRICE_PER_GAS_UNIT,
                         txn.gas_unit_price()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        gas_schedule::MIN_PRICE_PER_GAS_UNIT,
+                        txn.gas_unit_price()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::GasUnitPriceBelowMinBound(error_str),
                     ));
@@ -149,6 +169,11 @@ where
                         gas_schedule::MAX_PRICE_PER_GAS_UNIT,
                         txn.gas_unit_price()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+                        txn.gas_unit_price()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::GasUnitPriceAboveMaxBound(error_str),
                     ));
@@ -156,14 +181,14 @@ where
 
                 // Verify against whitelist if we are locked. Otherwise allow.
                 if !is_allowed_script(&publishing_option, &program.code()) {
-                    error!("[VM] Custom scripts not allowed: {:?}", &program.code());
+                    warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
                     return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
                 }
 
                 if !publishing_option.is_open() {
                     // Not allowing module publishing for now.
                     if !program.modules().is_empty() {
-                        error!("[VM] Custom modules not allowed");
+                        warn!("[VM] Custom modules not allowed");
                         return Err(VMStatus::Validation(VMValidationStatus::UnknownModule));
                     }
                 }
@@ -196,7 +221,7 @@ where
                         }
                     }
                     Err(ref err) => {
-                        error!("[VM] VM error in prologue: {:?}", err);
+                        error!("[VM] VM internal error in prologue: {:?}", err);
                         return Err(err.into());
                     }
                 };
@@ -208,7 +233,7 @@ where
                 // transaction.
                 // XXX figure out a story for hard forks.
                 if mode != ValidationMode::Genesis {
-                    error!("[VM] Attempt to process genesis after initialization");
+                    warn!("[VM] Attempt to process genesis after initialization");
                     return Err(VMStatus::Validation(VMValidationStatus::RejectedWriteSet));
                 }
 

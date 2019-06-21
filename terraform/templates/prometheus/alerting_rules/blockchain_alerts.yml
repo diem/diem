@@ -6,3 +6,19 @@ groups:
     for: 20m
     labels:
       severity: warning
+  - alert: HighCpuUsage
+    expr: (1 - avg by(peer_id)(irate(node_cpu_seconds_total{role='validator',mode='idle'}[5m]))) * 100 > 90
+    for: 5m
+    labels:
+      severity: high
+      category: resources
+    annotations:
+      summary: "Node {{ $labels.peer_id }} is hot: CPU util of {{ $value }}"
+  - alert: HighDiskUsage
+    expr: 100 - node_filesystem_avail_bytes{role='validator',mountpoint='/'} / node_filesystem_size_bytes{role='validator'} * 100 > 90
+    for: 5m
+    labels:
+      severity: high
+      category: resources
+    annotations:
+      summary: "Node {{ $labels.peer_id }} is running out of disk: {{ $value }} disk util"

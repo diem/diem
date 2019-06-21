@@ -7,7 +7,7 @@
 use std::fmt;
 
 pub mod access;
-pub mod checks;
+pub mod check_bounds;
 #[macro_use]
 pub mod errors;
 pub mod deserializer;

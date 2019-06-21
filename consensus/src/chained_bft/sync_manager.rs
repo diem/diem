@@ -298,7 +298,9 @@ impl BlockRetriever {
                 Err(e) => {
                     warn!(
                         "Failed to fetch block {} from {}: {:?}, trying another peer",
-                        block_id, peer, e
+                        block_id,
+                        peer.short_str(),
+                        e
                     );
                     continue;
                 }
@@ -307,7 +309,9 @@ impl BlockRetriever {
             if response.status != BlockRetrievalStatus::SUCCEEDED {
                 warn!(
                     "Failed to fetch block {} from {}: {:?}, trying another peer",
-                    block_id, peer, response.status
+                    block_id,
+                    peer.short_str(),
+                    response.status
                 );
                 continue;
             }

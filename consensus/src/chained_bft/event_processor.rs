@@ -126,7 +126,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     ///
     /// Do nothing
     pub async fn process_new_round_event(&self, new_round_event: NewRoundEvent) {
-        debug!("Processing {:?}", new_round_event);
+        debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
         match new_round_event.reason {
@@ -344,7 +344,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         debug!(
             "Received a new round msg for round {} from {}",
             new_round_msg.pacemaker_timeout().round(),
-            new_round_msg.author()
+            new_round_msg.author().short_str()
         );
         let deadline = self.pacemaker.current_round_deadline();
         let current_highest_quorum_cert_round = self

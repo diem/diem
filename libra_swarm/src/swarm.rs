@@ -27,6 +27,7 @@ const LIBRA_NODE_BIN: &str = "libra_node";
 pub struct LibraNode {
     node: Child,
     debug_client: NodeDebugClient,
+    ac_port: u16,
     peer_id: String,
     log: PathBuf,
     output_tee_guard: Option<OutputTeeGuard>,
@@ -112,10 +113,19 @@ impl LibraNode {
         Ok(Self {
             node,
             debug_client,
+            ac_port: config.admission_control.admission_control_service_port,
             peer_id,
             log,
             output_tee_guard,
         })
+    }
+
+    pub fn peer_id(&self) -> String {
+        self.peer_id.clone()
+    }
+
+    pub fn ac_port(&self) -> u16 {
+        self.ac_port
     }
 
     pub fn get_log_contents(&self) -> Result<String> {
@@ -185,7 +195,7 @@ impl LibraNode {
                 HealthStatus::Healthy
             }
             Err(e) => {
-                debug!("Rpc check error: {:?}", e);
+                debug!("Error querying metrics for node '{}'", self.peer_id);
                 HealthStatus::RpcFailure(e)
             }
         }
@@ -201,9 +211,23 @@ pub enum HealthStatus {
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
     dir: Option<TempDir>,
-    nodes: HashMap<u16, LibraNode>,
+    // Maps the peer id of a node to the LibraNode struct
+    nodes: HashMap<String, LibraNode>,
     config: SwarmConfig,
     tee_logs: bool,
+}
+
+#[derive(Debug, Fail)]
+pub enum SwarmLaunchFailure {
+    /// Timeout while waiting for nodes to start
+    #[fail(display = "Node launch check timeout")]
+    LaunchTimeout,
+    /// Node return status indicates a crash
+    #[fail(display = "Node crash")]
+    NodeCrash,
+    /// Timeout while waiting for the nodes to report that they're all interconnected
+    #[fail(display = "Node connectivity check timeout")]
+    ConnectivityTimeout,
 }
 
 impl LibraSwarm {
@@ -213,6 +237,30 @@ impl LibraSwarm {
         faucet_account_keypair: KeyPair,
         tee_logs: bool,
     ) -> Self {
+        let num_launch_attempts = 5;
+        for i in 0..num_launch_attempts {
+            info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
+            match Self::launch_swarm_attempt(
+                num_nodes,
+                disable_logging,
+                faucet_account_keypair.clone(),
+                tee_logs,
+            ) {
+                Ok(swarm) => {
+                    return swarm;
+                }
+                Err(e) => error!("Error launching swarm: {}", e),
+            }
+        }
+        panic!("Max out {} attempts to launch swarm", num_launch_attempts);
+    }
+
+    fn launch_swarm_attempt(
+        num_nodes: usize,
+        disable_logging: bool,
+        faucet_account_keypair: KeyPair,
+        tee_logs: bool,
+    ) -> std::result::Result<Self, SwarmLaunchFailure> {
         let dir = tempfile::tempdir().unwrap();
         let logs_dir_path = &dir.path().join("logs");
         println!(
@@ -247,28 +295,21 @@ impl LibraSwarm {
                 tee_logs,
             )
             .unwrap();
-            swarm.nodes.insert(
-                node_config.admission_control.admission_control_service_port,
-                node,
-            );
+            swarm.nodes.insert(node.peer_id(), node);
         }
 
-        if !swarm.wait_for_startup() {
-            panic!("Error launching swarm");
-        }
-        if !swarm.wait_for_connectivity() {
-            // Verify connectivity
-            panic!("Some nodes not connected to each other");
-        }
+        swarm.wait_for_startup()?;
+        swarm.wait_for_connectivity()?;
+
         info!("Successfully launched Swarm");
 
-        swarm
+        Ok(swarm)
     }
 
-    fn wait_for_connectivity(&self) -> bool {
+    fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
-            return true;
+            return Ok(());
         }
 
         let num_attempts = 60;
@@ -281,16 +322,16 @@ impl LibraSwarm {
                 .values()
                 .all(|node| node.check_connectivity(self.nodes.len() as i64 - 1))
             {
-                return true;
+                return Ok(());
             }
 
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
 
-        false
+        Err(SwarmLaunchFailure::ConnectivityTimeout)
     }
 
-    fn wait_for_startup(&mut self) -> bool {
+    fn wait_for_startup(&mut self) -> std::result::Result<(), SwarmLaunchFailure> {
         let num_attempts = 120;
         let mut done = vec![false; self.nodes.len()];
 
@@ -305,25 +346,26 @@ impl LibraSwarm {
                     HealthStatus::Healthy => *done = true,
                     HealthStatus::RpcFailure(_) => continue,
                     HealthStatus::Crashed(status) => {
-                        panic!(
+                        error!(
                             "Libra node '{}' has crashed with status '{}'. Log output: '''{}'''",
                             node.peer_id,
                             status,
                             node.get_log_contents().unwrap()
                         );
+                        return Err(SwarmLaunchFailure::NodeCrash);
                     }
                 }
             }
 
             // Check if all the nodes have been successfully launched
             if done.iter().all(|status| *status) {
-                return true;
+                return Ok(());
             }
 
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
 
-        false
+        Err(SwarmLaunchFailure::LaunchTimeout)
     }
 
     /// This function first checks the last committed round of all the nodes, picks the max
@@ -399,38 +441,74 @@ impl LibraSwarm {
         false
     }
 
-    /// Vector with the public ports of all the validators in the swarm.
+    /// Vector with the public AC ports of the validators.
     pub fn get_validators_public_ports(&self) -> Vec<u16> {
+        self.nodes.values().map(|node| node.ac_port()).collect()
+    }
+
+    /// Vector with the peer ids of the validators in the swarm.
+    pub fn get_validators_ids(&self) -> Vec<String> {
         self.nodes.keys().cloned().collect()
     }
 
-    pub fn kill_node(&mut self, port: u16) {
-        self.nodes.remove(&port);
+    /// Vector with the debug ports of all the validators in the swarm.
+    pub fn get_validators_debug_ports(&self) -> Vec<u16> {
+        self.config
+            .get_configs()
+            .iter()
+            .map(|(_, c)| c.debug_interface.admission_control_node_debug_port)
+            .collect()
     }
 
-    pub fn add_node(&mut self, port: u16, disable_logging: bool) -> bool {
-        let logs_dir_path = self.dir.as_ref().map(|x| x.path().join("logs")).unwrap();
+    pub fn get_validator(&self, peer_id: &str) -> Option<&LibraNode> {
+        self.nodes.get(peer_id)
+    }
 
+    pub fn kill_node(&mut self, peer_id: &str) {
+        self.nodes.remove(peer_id);
+    }
+
+    pub fn add_node(
+        &mut self,
+        peer_id: String,
+        disable_logging: bool,
+    ) -> std::result::Result<(), SwarmLaunchFailure> {
+        // First take the configs out to not keep immutable borrow on self when calling
+        // `launch_node`.
+        let mut configs = vec![];
         for (path, config) in self.config.get_configs() {
-            if config.admission_control.admission_control_service_port == port {
-                let mut node = LibraNode::launch(
-                    &config,
-                    &path,
-                    &logs_dir_path,
-                    disable_logging,
-                    self.tee_logs,
-                )
-                .unwrap();
-                for _ in 0..60 {
-                    if let HealthStatus::Healthy = node.health_check() {
-                        self.nodes.insert(port, node);
-                        return self.wait_for_connectivity();
-                    }
-                    ::std::thread::sleep(::std::time::Duration::from_millis(1000));
-                }
+            configs.push((path.clone(), config.clone()));
+        }
+        for (path, config) in configs {
+            if config.base.peer_id == peer_id {
+                return self.launch_node(peer_id, &path, &config, disable_logging);
             }
         }
-        false
+        panic!(
+            "PeerId {} not found in any of the admission control service ports.",
+            peer_id
+        );
+    }
+
+    fn launch_node(
+        &mut self,
+        peer_id: String,
+        path: &PathBuf,
+        config: &NodeConfig,
+        disable_logging: bool,
+    ) -> std::result::Result<(), SwarmLaunchFailure> {
+        let logs_dir_path = self.dir.as_ref().map(|x| x.path().join("logs")).unwrap();
+        let mut node =
+            LibraNode::launch(config, path, &logs_dir_path, disable_logging, self.tee_logs)
+                .unwrap();
+        for _ in 0..60 {
+            if let HealthStatus::Healthy = node.health_check() {
+                self.nodes.insert(peer_id, node);
+                return self.wait_for_connectivity();
+            }
+            ::std::thread::sleep(::std::time::Duration::from_millis(1000));
+        }
+        Err(SwarmLaunchFailure::LaunchTimeout)
     }
 
     pub fn get_trusted_peers_config_path(&self) -> String {

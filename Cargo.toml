@@ -3,6 +3,7 @@
 members = [
     "admission_control/admission_control_service",
     "admission_control/admission_control_proto",
+    "benchmark",
     "client",
     "client/libra_wallet",
     "common/canonical_serialization",
