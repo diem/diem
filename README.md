@@ -56,6 +56,7 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 ## Community
 
 * Join us on the [Libra Discourse](https://community.libra.org).
+* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/libra).
 * Get the latest updates to our project by signing up for our [newsletter](https://developers.libra.org/newsletter_form).
 
 ## License
