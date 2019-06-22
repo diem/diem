@@ -38,7 +38,8 @@ fn test_invalid_signature() {
 proptest! {
     #[test]
     fn test_sig(raw_txn in any::<RawTransaction>(), (sk1, pk1) in keypair_strategy()) {
-        let signed_txn = raw_txn.sign(&sk1, pk1).unwrap();
+        let txn = raw_txn.sign(&sk1, pk1).unwrap();
+        let signed_txn = txn.into_inner();
         assert!(signed_txn.check_signature().is_ok());
     }
 }

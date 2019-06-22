@@ -107,21 +107,23 @@ impl RawTransaction {
     }
 
     /// Signs the given `RawTransaction`. Note that this consumes the `RawTransaction` and turns it
-    /// into a `SignedTransaction`.
+    /// into a `SignatureCheckedTransaction`.
+    ///
+    /// For a transaction that has just been signed, its signature is expected to be valid.
     pub fn sign(
         self,
         private_key: &PrivateKey,
         public_key: PublicKey,
-    ) -> Result<SignedTransaction> {
+    ) -> Result<SignatureCheckedTransaction> {
         let raw_txn_bytes = self.clone().into_proto_bytes()?;
         let hash = RawTransactionBytes(&raw_txn_bytes).hash();
         let signature = signing::sign_message(hash, private_key)?;
-        Ok(SignedTransaction {
+        Ok(SignatureCheckedTransaction(SignedTransaction {
             raw_txn: self,
             public_key,
             signature,
             raw_txn_bytes,
-        })
+        }))
     }
 
     pub fn into_payload(self) -> TransactionPayload {
@@ -228,7 +230,14 @@ pub enum TransactionPayload {
     WriteSet(WriteSet),
 }
 
-/// SignedTransaction is what a client submits to a validator node
+/// A transaction that has been signed.
+///
+/// A `SignedTransaction` is a single transaction that can be atomically executed. Clients submit
+/// these to validator nodes, and the validator and executor submits these to the VM.
+///
+/// **IMPORTANT:** The signature of a `SignedTransaction` is not guaranteed to be verified. For a
+/// transaction whose signature is statically guaranteed to be verified, see
+/// [`SignatureCheckedTransaction`].
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SignedTransaction {
     /// The raw transaction
@@ -250,7 +259,7 @@ pub struct SignedTransaction {
 }
 
 /// A transaction for which the signature has been verified. Created by
-/// `SignedTransaction::check_signature`.
+/// [`SignedTransaction::check_signature`] and [`RawTransaction::sign`].
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct SignatureCheckedTransaction(SignedTransaction);
 
@@ -422,6 +431,14 @@ impl IntoProto for SignedTransaction {
         transaction.set_sender_public_key(self.public_key.to_slice().to_vec());
         transaction.set_sender_signature(self.signature.to_compact().to_vec());
         transaction
+    }
+}
+
+impl IntoProto for SignatureCheckedTransaction {
+    type ProtoType = crate::proto::transaction::SignedTransaction;
+
+    fn into_proto(self) -> Self::ProtoType {
+        self.0.into_proto()
     }
 }
 

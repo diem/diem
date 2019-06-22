@@ -128,7 +128,8 @@ fn run_transaction(data: &AccountData, program: &CompiledProgram) -> Result<Tran
         1,
         Duration::from_secs(u64::max_value()),
     )
-    .sign(&account.privkey, account.pubkey)?;
+    .sign(&account.privkey, account.pubkey)?
+    .into_inner();
 
     let mut outputs = exec.execute_block(vec![transaction]);
     if outputs.len() == 1 {

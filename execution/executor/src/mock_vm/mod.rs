@@ -271,6 +271,7 @@ fn encode_transaction(sender: AccountAddress, program: Program) -> SignedTransac
     raw_transaction
         .sign(&privkey, pubkey)
         .expect("Failed to sign raw transaction.")
+        .into_inner()
 }
 
 fn decode_transaction(txn: &SignedTransaction) -> Transaction {

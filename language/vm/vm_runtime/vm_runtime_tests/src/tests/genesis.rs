@@ -27,7 +27,8 @@ fn invalid_genesis_write_set() {
         keypair.private_key().clone(),
         keypair.public_key(),
         Some(write_set),
-    );
+    )
+    .into_inner();
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()),
         executor.execute_transaction(signed_txn).status(),
