@@ -85,12 +85,12 @@ pub fn print_subcommand_help(parent_command: &str, commands: &[Box<dyn Command>]
         parent_command
     );
     for cmd in commands {
-            println!(
-                "{} {} | {}",
-                cmd.get_aliases().join(" | "),
-                cmd.get_description(),
-                cmd.get_params_help()
-            );
+        println!(
+            "{} {} | {}",
+            cmd.get_aliases().join(" | "),
+            cmd.get_description(),
+            cmd.get_params_help()
+        );
     }
     println!("\n");
 }
