@@ -184,7 +184,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                         .function_defs_table
                         .get(callee_name)
                         .ok_or(VMInvariantViolation::LinkerError)?;
-                    Ok(Some(FunctionRef::new(callee_module, *callee_func_id)?))
+                    Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
                 } else {
                     Ok(None)
                 }

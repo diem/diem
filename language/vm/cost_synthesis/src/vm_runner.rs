@@ -53,8 +53,7 @@ macro_rules! with_loaded_vm {
         for m in modules {
             $module_cache.cache_module(m);
         }
-        let entry_func = FunctionRef::new(&$mod, entry_idx)
-            .expect("[Entry Function] Unable to build function reference for entry function.");
+        let entry_func = FunctionRef::new(&$mod, entry_idx);
         let mut $vm =
             TransactionExecutor::new(&$module_cache, &data_cache, TransactionMetadata::default());
         $vm.execution_stack.push_frame(entry_func);

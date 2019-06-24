@@ -756,7 +756,7 @@ where
             .function_defs_table
             .get(function_name)
             .ok_or(VMInvariantViolation::LinkerError)?;
-        let func = FunctionRef::new(loaded_module, *func_idx)?;
+        let func = FunctionRef::new(loaded_module, *func_idx);
 
         for arg in args.into_iter() {
             self.execution_stack.push(arg);
@@ -821,7 +821,7 @@ pub fn execute_function(
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX)?;
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     for m in modules {
         module_cache.cache_module(m);
     }

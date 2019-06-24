@@ -30,14 +30,12 @@ pub(crate) fn frame_transitions<'alloc, 'txn, P>(
 {
     let module = module_info.0;
     if should_push_frame(instr) {
-        let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0))
-            .expect("[Frame Transition] Unable to build dummy function reference.");
+        let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0));
         stk.push_frame(empty_frame)
     }
 
     if let Some(function_idx) = module_info.1 {
-        let frame = FunctionRef::new(module, function_idx)
-            .expect("[Frame Transition] Unable to build specified function reference.");
+        let frame = FunctionRef::new(module, function_idx);
         stk.push_frame(frame);
     }
 }

@@ -157,7 +157,7 @@ fn test_simple_instruction_transition() {
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
     let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let data_cache = FakeDataCache::new();
     let mut vm =
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
@@ -347,7 +347,7 @@ fn test_arith_instructions() {
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
     let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let data_cache = FakeDataCache::new();
 
     let mut vm =
@@ -689,7 +689,7 @@ fn test_transaction_info() {
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
     let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
 
     let txn_info = {
         let (_, public_key) = crypto::signing::generate_genesis_keypair();
