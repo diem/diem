@@ -12,9 +12,9 @@ For Linux ( like-Debian: apt-get; RPM-based: yum; Like-ArchLinux: pacman )
  - cmake
  - go
  - protobuf
- - rust
- -- rustfmt
- -- clippy
+ - rust 0.0.83 =>
+ -- rustfmt[fmt](https://doc.rust-lang.org/std/fmt/index.html) 
+ -- clippy[rust-clippy](https://rust-lang.github.io/rust-clippy/)
 
 ## Our Development Process
 
