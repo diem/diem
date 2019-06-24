@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use std::marker::PhantomData;
-use types::language_storage::CodeKey;
+use types::language_storage::ModuleId;
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -58,14 +58,14 @@ pub trait ModuleCache<'alloc> {
         gas_meter: &GasMeter,
     ) -> VMResult<Option<StructDef>>;
 
-    /// Resolve a CodeKey into a LoadedModule if the module has been cached already. Return value
+    /// Resolve a ModuleId into a LoadedModule if the module has been cached already. Return value
     /// can be one of the three following cases:
     /// 1. `Ok(Some(LoadedModule))` if such module exists.
     /// 2. `Ok(None)` if such module doesn't exists.
     /// 3. `Err` if the module we are referring to has some internal consistency error
     fn get_loaded_module(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation>;
 
     fn cache_module(&self, module: CompiledModule);
@@ -99,7 +99,7 @@ where
 
     fn get_loaded_module(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
         (*self).get_loaded_module(id)
     }
@@ -117,7 +117,7 @@ where
 /// identifier to a reference to loaded module, where the actual module is owned by the Arena
 /// allocator so that it will guarantee to outlive the lifetime of the transaction.
 pub struct VMModuleCache<'alloc> {
-    map: CacheRefMap<'alloc, CodeKey, LoadedModule>,
+    map: CacheRefMap<'alloc, ModuleId, LoadedModule>,
 }
 
 impl<'alloc> VMModuleCache<'alloc> {
@@ -131,12 +131,12 @@ impl<'alloc> VMModuleCache<'alloc> {
         }
     }
 
-    /// Resolve a CodeKey into a LoadedModule. If there is a cache miss, try to fetch the module
+    /// Resolve a ModuleId into a LoadedModule. If there is a cache miss, try to fetch the module
     /// from the `fetcher` and insert it into the cache if found. If nothing is found, it will
     /// return Ok(None).
     pub fn get_loaded_module_with_fetcher<F: ModuleFetcher>(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
         fetcher: &F,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
@@ -156,7 +156,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: CompiledModule,
         allocator: &'alloc Arena<LoadedModule>,
     ) -> Result<Self, VMInvariantViolation> {
-        let module_id = module.self_code_key();
+        let module_id = module.self_id();
         let map = CacheRefMap::new(allocator);
         let loaded_module = LoadedModule::new(module);
         map.or_insert(module_id, loaded_module);
@@ -176,8 +176,7 @@ impl<'alloc> VMModuleCache<'alloc> {
     {
         let function_handle = caller_module.function_handle_at(idx);
         let callee_name = caller_module.string_at(function_handle.name);
-        let callee_module_id =
-            FunctionHandleView::new(caller_module, function_handle).module_code_key();
+        let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
         self.get_loaded_module_with_fetcher(&callee_module_id, fetcher)
             .and_then(|callee_module_opt| {
                 if let Some(callee_module) = callee_module_opt {
@@ -202,7 +201,7 @@ impl<'alloc> VMModuleCache<'alloc> {
     ) -> VMResult<Option<StructDef>> {
         let struct_handle = module.struct_handle_at(idx);
         let struct_name = module.string_at(struct_handle.name);
-        let struct_def_module_id = StructHandleView::new(module, struct_handle).module_code_key();
+        let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         let defined_module = self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher)?;
         if let Some(m) = defined_module {
             let struct_def_idx = m
@@ -308,7 +307,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
 
     fn get_loaded_module(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
@@ -317,15 +316,15 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
     }
 
     fn cache_module(&self, module: CompiledModule) {
-        let module_id = module.self_code_key();
-        // TODO: Check CodeKey duplication in statedb
+        let module_id = module.self_id();
+        // TODO: Check ModuleId duplication in statedb
         let loaded_module = LoadedModule::new(module);
         self.map.or_insert(module_id, loaded_module);
     }
 
     fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
         for m in v.into_iter() {
-            let module_id = m.self_code_key();
+            let module_id = m.self_id();
             self.map.or_insert(module_id, m);
         }
     }
@@ -380,7 +379,7 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
 
     fn get_loaded_module(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
         self.vm_cache
             .get_loaded_module_with_fetcher(id, &self.storage)
@@ -456,7 +455,7 @@ where
 
     fn get_loaded_module(
         &self,
-        id: &CodeKey,
+        id: &ModuleId,
     ) -> Result<Option<&'txn LoadedModule>, VMInvariantViolation> {
         if let Some(m) = self.local_cache.get_loaded_module(id)? {
             Ok(Some(m))

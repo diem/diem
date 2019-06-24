@@ -10,7 +10,7 @@
 use crate::common::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 use vm::{
     access::*,
     file_format::{
@@ -43,8 +43,8 @@ pub struct ModuleBuilder {
     table_size: TableIndex,
 
     /// Other modules that we know, and that we can generate calls type references into. Indexed by
-    /// their address and name (i.e. the module's `CodeKey`).
-    known_modules: HashMap<CodeKey, CompiledModule>,
+    /// their address and name (i.e. the module's `ModuleId`).
+    known_modules: HashMap<ModuleId, CompiledModule>,
 }
 
 impl ModuleBuilder {
@@ -253,10 +253,10 @@ impl ModuleBuilder {
             let callee_module_handle = &self.module.module_handles[non_self_module_handle_idx];
             let address = self.module.address_pool[callee_module_handle.address.into_index()];
             let name = &self.module.string_pool[callee_module_handle.name.into_index()];
-            let code_key = CodeKey::new(address, name.to_string());
+            let module_id = ModuleId::new(address, name.to_string());
             let callee_module = self
                 .known_modules
-                .get(&code_key)
+                .get(&module_id)
                 .expect("[Module Lookup] Unable to get module from known_modules.");
 
             let callee_function_handle_idx = self
@@ -335,8 +335,7 @@ impl ModuleBuilder {
         self.with_structs();
         let module = std::mem::replace(&mut self.module, Self::default_module_with_types());
         let module = module.freeze().expect("should satisfy bounds checker");
-        self.known_modules
-            .insert(module.self_code_key(), module.clone());
+        self.known_modules.insert(module.self_id(), module.clone());
         module
     }
 

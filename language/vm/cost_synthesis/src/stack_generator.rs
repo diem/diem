@@ -11,7 +11,7 @@ use crate::{
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 use vm::{
     access::*,
     assert_ok,
@@ -111,11 +111,11 @@ where
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
     /// generating an inhabitant for a struct SignatureToken. This is lazily populated.
-    struct_handle_table: HashMap<CodeKey, HashMap<String, StructDefinitionIndex>>,
+    struct_handle_table: HashMap<ModuleId, HashMap<String, StructDefinitionIndex>>,
 
     /// A reverse lookup table for each code module that allows us to resolve function handles to
     /// function definitions. Also lazily populated.
-    function_handle_table: HashMap<CodeKey, HashMap<String, FunctionDefinitionIndex>>,
+    function_handle_table: HashMap<ModuleId, HashMap<String, FunctionDefinitionIndex>>,
 }
 
 impl<'alloc, 'txn> RandomStackGenerator<'alloc, 'txn>
@@ -148,10 +148,10 @@ where
         }
     }
 
-    fn to_code_key(&self, module_handle: &ModuleHandle) -> CodeKey {
+    fn to_module_id(&self, module_handle: &ModuleHandle) -> ModuleId {
         let address = *self.root_module.address_at(module_handle.address);
         let name = self.root_module.string_at(module_handle.name);
-        CodeKey::new(address, name.to_string())
+        ModuleId::new(address, name.to_string())
     }
 
     // Determines if the instruction gets its type/instruction info from the stack type
@@ -347,33 +347,36 @@ where
         let struct_handle = self.root_module.struct_handle_at(struct_handle_index);
         let struct_name = self.root_module.string_at(struct_handle.name);
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
-        let code_key = self.to_code_key(module_handle);
+        let module_id = self.to_module_id(module_handle);
         let module = self
             .module_cache
-            .get_loaded_module(&code_key)
+            .get_loaded_module(&module_id)
             .expect("[Module Lookup] Error while looking up module")
             .expect("[Module Lookup] Unable to find module");
-        let struct_def_idx = if self.struct_handle_table.contains_key(&code_key) {
+        let struct_def_idx = if self.struct_handle_table.contains_key(&module_id) {
             self.struct_handle_table
-                .get(&code_key)
+                .get(&module_id)
                 .expect("[Struct Definition Lookup] Unable to get struct handles for module")
                 .get(struct_name)
         } else {
-            let entry = self.struct_handle_table.entry(code_key).or_insert_with(|| {
-                module
-                    .struct_defs()
-                    .iter()
-                    .enumerate()
-                    .map(|(struct_def_index, struct_def)| {
-                        let handle = module.struct_handle_at(struct_def.struct_handle);
-                        let name = module.string_at(handle.name).to_string();
-                        (
-                            name,
-                            StructDefinitionIndex::new(struct_def_index as TableIndex),
-                        )
-                    })
-                    .collect()
-            });
+            let entry = self
+                .struct_handle_table
+                .entry(module_id)
+                .or_insert_with(|| {
+                    module
+                        .struct_defs()
+                        .iter()
+                        .enumerate()
+                        .map(|(struct_def_index, struct_def)| {
+                            let handle = module.struct_handle_at(struct_def.struct_handle);
+                            let name = module.string_at(handle.name).to_string();
+                            (
+                                name,
+                                StructDefinitionIndex::new(struct_def_index as TableIndex),
+                            )
+                        })
+                        .collect()
+                });
             entry.get(struct_name)
         }
         .expect("[Struct Definition Lookup] Unable to get struct definition for struct handle");
@@ -393,16 +396,16 @@ where
         let function_handle = self.root_module.function_handle_at(function_handle_index);
         let function_name = self.root_module.string_at(function_handle.name);
         let module_handle = self.root_module.module_handle_at(function_handle.module);
-        let code_key = self.to_code_key(module_handle);
+        let module_id = self.to_module_id(module_handle);
         let module = self
             .module_cache
-            .get_loaded_module(&code_key)
+            .get_loaded_module(&module_id)
             .expect("[Module Lookup] Error while looking up module")
             .expect("[Module Lookup] Unable to find module");
-        let function_def_idx = if self.function_handle_table.contains_key(&code_key) {
+        let function_def_idx = if self.function_handle_table.contains_key(&module_id) {
             *self
                 .function_handle_table
-                .get(&code_key)
+                .get(&module_id)
                 .expect("[Function Definition Lookup] Unable to get function handles for module")
                 .get(function_name)
                 .expect(
@@ -411,7 +414,7 @@ where
         } else {
             let entry = self
                 .function_handle_table
-                .entry(code_key)
+                .entry(module_id)
                 .or_insert_with(|| {
                     module
                         .function_defs()

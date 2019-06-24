@@ -32,7 +32,7 @@ use crate::{
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -1277,16 +1277,16 @@ impl CompiledModule {
     }
 
     /// Returns the code key of `module_handle`
-    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
-        CodeKey::new(
+    pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
+        ModuleId::new(
             *self.address_at(module_handle.address),
             self.string_at(module_handle.name).to_string(),
         )
     }
 
     /// Returns the code key of `self`
-    pub fn self_code_key(&self) -> CodeKey {
-        self.code_key_for_handle(self.self_handle())
+    pub fn self_id(&self) -> ModuleId {
+        self.module_id_for_handle(self.self_handle())
     }
 
     /// This function should only be called on an instance of CompiledModule obtained by invoking

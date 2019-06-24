@@ -8,7 +8,7 @@ use crate::{
     struct_defs::RecursiveStructDefChecker,
 };
 use std::collections::BTreeMap;
-use types::language_storage::CodeKey;
+use types::language_storage::ModuleId;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{VMStaticViolation, VerificationError},
@@ -182,12 +182,12 @@ pub fn verify_module_dependencies(
     module: CompiledModule,
     dependencies: &[CompiledModule],
 ) -> (CompiledModule, Vec<VerificationError>) {
-    let module_code_key = module.self_code_key();
+    let module_id = module.self_id();
     let mut dependency_map = BTreeMap::new();
     for dependency in dependencies {
-        let dependency_code_key = dependency.self_code_key();
-        if module_code_key != dependency_code_key {
-            dependency_map.insert(dependency_code_key, dependency);
+        let dependency_id = dependency.self_id();
+        if module_id != dependency_id {
+            dependency_map.insert(dependency_id, dependency);
         }
     }
     let mut errors = vec![];
@@ -221,11 +221,11 @@ pub fn verify_script_dependencies(
 
 fn verify_all_dependencies_provided(
     module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<CodeKey, &CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> Vec<VerificationError> {
     let mut errors = vec![];
     for (idx, module_handle_view) in module_view.module_handles().enumerate() {
-        let module_id = module_handle_view.module_code_key();
+        let module_id = module_handle_view.module_id();
         if idx != CompiledModule::IMPLEMENTED_MODULE_INDEX as usize
             && !dependency_map.contains_key(&module_id)
         {
@@ -241,11 +241,11 @@ fn verify_all_dependencies_provided(
 
 fn verify_struct_kind(
     module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<CodeKey, &CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> Vec<VerificationError> {
     let mut errors = vec![];
     for (idx, struct_handle_view) in module_view.struct_handles().enumerate() {
-        let owner_module_id = struct_handle_view.module_code_key();
+        let owner_module_id = struct_handle_view.module_id();
         if !dependency_map.contains_key(&owner_module_id) {
             continue;
         }
@@ -273,12 +273,12 @@ fn verify_struct_kind(
 
 fn verify_function_visibility_and_type(
     module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<CodeKey, &CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> Vec<VerificationError> {
     let resolver = Resolver::new(module_view.as_inner());
     let mut errors = vec![];
     for (idx, function_handle_view) in module_view.function_handles().enumerate() {
-        let owner_module_id = function_handle_view.module_code_key();
+        let owner_module_id = function_handle_view.module_id();
         if !dependency_map.contains_key(&owner_module_id) {
             continue;
         }

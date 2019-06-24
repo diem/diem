@@ -76,14 +76,14 @@ where
             // Add modules to the cache and prepare for publishing.
             let mut publish_modules = vec![];
             for (module, raw_bytes) in modules.into_iter().zip(module_bytes) {
-                let code_key = module.self_code_key();
+                let module_id = module.self_id();
 
                 // Make sure that there is not already a module with this name published
                 // under the transaction sender's account.
                 // Note: although this reads from the "module cache", `get_loaded_module`
                 // will read through the cache to fetch the module from the global storage
                 // if it is not already cached.
-                match txn_executor.module_cache().get_loaded_module(&code_key) {
+                match txn_executor.module_cache().get_loaded_module(&module_id) {
                     Ok(None) => (), // No module with this name exists. safe to publish one
                     Ok(Some(_)) => {
                         // A module with this name already exists. It is not safe to publish
@@ -93,7 +93,7 @@ where
                         // typesafe).
                         // We are currently developing a versioning scheme for safe updates
                         // of modules and resources.
-                        warn!("[VM] VM error duplicate module {:?}", code_key);
+                        warn!("[VM] VM error duplicate module {:?}", module_id);
                         return txn_executor.failed_transaction_cleanup(Ok(Err(VMRuntimeError {
                             loc: Location::default(),
                             err: VMErrorKind::DuplicateModuleName,
@@ -102,14 +102,14 @@ where
                     Err(err) => {
                         error!(
                             "[VM] VM internal error verifying module {:?}: {:?}",
-                            code_key, err
+                            module_id, err
                         );
                         return ExecutedTransaction::discard_error_output(&err);
                     }
                 }
 
                 txn_executor.module_cache().cache_module(module);
-                publish_modules.push((code_key, raw_bytes));
+                publish_modules.push((module_id, raw_bytes));
             }
 
             // Set up main.

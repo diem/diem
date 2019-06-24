@@ -139,7 +139,7 @@ fn test_loader_one_module() {
     // two functions, each with different name and signature. This test will make sure that we
     // link the function handle with the right function definition within the same module.
     let module = test_module("module".to_string());
-    let mod_id = module.self_code_key();
+    let mod_id = module.self_id();
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
@@ -467,8 +467,8 @@ fn test_same_module_struct_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key = CodeKey::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache.get_loaded_module(&code_key).unwrap().unwrap();
+        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
         let gas = GasMeter::new(100_000_000);
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
@@ -515,8 +515,11 @@ fn test_multi_module_struct_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key_2 = CodeKey::new(AccountAddress::default(), "M2".to_string());
-        let module2_ref = block_cache.get_loaded_module(&code_key_2).unwrap().unwrap();
+        let module_id_2 = ModuleId::new(AccountAddress::default(), "M2".to_string());
+        let module2_ref = block_cache
+            .get_loaded_module(&module_id_2)
+            .unwrap()
+            .unwrap();
 
         let gas = GasMeter::new(100_000_000);
         let struct_t = block_cache
@@ -554,8 +557,8 @@ fn test_field_offset_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key = CodeKey::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache.get_loaded_module(&code_key).unwrap().unwrap();
+        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
 
         let f_idx = module_ref.field_defs_table.get("f").unwrap();
         assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);

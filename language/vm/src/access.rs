@@ -16,7 +16,7 @@ use crate::{
     internals::ModuleIndex,
     IndexKind,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Represents accessors for a compiled module.
 ///
@@ -139,12 +139,12 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_defs
     }
 
-    fn code_key_for_handle(&self, module_handle_idx: &ModuleHandle) -> CodeKey {
-        self.as_module().code_key_for_handle(module_handle_idx)
+    fn module_id_for_handle(&self, module_handle_idx: &ModuleHandle) -> ModuleId {
+        self.as_module().module_id_for_handle(module_handle_idx)
     }
 
-    fn self_code_key(&self) -> CodeKey {
-        self.as_module().self_code_key()
+    fn self_id(&self) -> ModuleId {
+        self.as_module().self_id()
     }
 
     fn field_def_range(

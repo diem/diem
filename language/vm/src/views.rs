@@ -23,7 +23,7 @@ use crate::{
     SignatureTokenKind,
 };
 
-use types::language_storage::CodeKey;
+use types::language_storage::ModuleId;
 
 use std::collections::BTreeMap;
 
@@ -163,8 +163,8 @@ impl<'a, T: ModuleAccess> ModuleHandleView<'a, T> {
         }
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle)
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle)
     }
 }
 
@@ -197,8 +197,8 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         self.module.string_at(self.struct_handle.name)
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle())
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle())
     }
 }
 
@@ -230,8 +230,8 @@ impl<'a, T: ModuleAccess> FunctionHandleView<'a, T> {
         FunctionSignatureView::new(self.module, function_signature)
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle())
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle())
     }
 }
 

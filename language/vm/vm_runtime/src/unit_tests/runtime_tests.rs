@@ -630,7 +630,7 @@ fn test_call() {
         ),
     ]);
 
-    let mod_id = module.self_code_key();
+    let mod_id = module.self_id();
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new_from_module(module, &allocator).unwrap();
     let fake_func = {

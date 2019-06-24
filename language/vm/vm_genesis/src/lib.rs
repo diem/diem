@@ -22,7 +22,7 @@ use types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     transaction::{
         Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
@@ -346,7 +346,7 @@ pub fn encode_genesis_transaction_with_validator(
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
-            let validator_set_key = CodeKey::new(
+            let validator_set_key = ModuleId::new(
                 account_config::core_code_address(),
                 "ValidatorSet".to_string(),
             );
@@ -427,7 +427,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .map(|m| {
                     let mut module_vec = vec![];
                     m.serialize(&mut module_vec).unwrap();
-                    (m.self_code_key(), module_vec)
+                    (m.self_id(), module_vec)
                 })
                 .collect();
 

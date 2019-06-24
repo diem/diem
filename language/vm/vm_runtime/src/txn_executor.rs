@@ -21,7 +21,7 @@ use types::{
     account_config,
     byte_array::ByteArray,
     contract_event::ContractEvent,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     transaction::{TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
     write_set::WriteSet,
@@ -40,12 +40,12 @@ mod runtime_tests;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
-    /// The CodeKey for where Account module is being stored.
-    pub static ref ACCOUNT_MODULE: CodeKey =
-        { CodeKey::new(account_config::core_code_address(), "LibraAccount".to_string()) };
-    /// The CodeKey for where LibraCoin module is being stored.
-    pub static ref COIN_MODULE: CodeKey =
-        { CodeKey::new(account_config::core_code_address(), "LibraCoin".to_string()) };
+    /// The ModuleId for where Account module is being stored.
+    pub static ref ACCOUNT_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "LibraAccount".to_string()) };
+    /// The ModuleId for where LibraCoin module is being stored.
+    pub static ref COIN_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "LibraCoin".to_string()) };
 }
 
 const PROLOGUE_NAME: &str = "prologue";
@@ -691,7 +691,7 @@ where
     /// Generate the TransactionOutput for a successful transaction
     pub(crate) fn transaction_cleanup(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
     ) -> TransactionOutput {
         // First run the epilogue
         match self.run_epilogue() {
@@ -743,7 +743,7 @@ where
     /// occurs.
     pub fn execute_function(
         &mut self,
-        module: &CodeKey,
+        module: &ModuleId,
         function_name: &str,
         args: Vec<Local>,
     ) -> VMResult<()> {
@@ -774,7 +774,7 @@ where
     /// the TransactionProcessor and turn them into a writeset.
     pub fn make_write_set(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMRuntimeResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's

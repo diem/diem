@@ -41,7 +41,7 @@ macro_rules! with_loaded_vm {
             .last()
             .expect("[VM Setup] Unable to get root module");
         let allocator = Arena::new();
-        let module_id = root_module.self_code_key();
+        let module_id = root_module.self_id();
         let $module_cache = VMModuleCache::new(&allocator);
         let entry_idx = FunctionDefinitionIndex::new(0);
         let data_cache = FakeDataCache::new();
