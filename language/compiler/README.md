@@ -36,9 +36,9 @@ USAGE:
 
 FLAGS:
     -h, --help         Prints help information
+    -m, --module       Treat input file as a module (default is to treat file as a program)
         --no-stdlib    Do not automatically compile stdlib dependencies
         --no-verify    Do not automatically run the bytecode verifier
-    -s, --script       Treat input file as a script (default is to treat file as a module)
     -V, --version      Prints version information
 
 OPTIONS:
@@ -58,11 +58,11 @@ To compile a `*.mvir` file:
 * The binary can be found at `libra/target/debug/compiler`.
 * Alternatively, the binary can be run directly with `cargo run -p compiler`.
 
-To compile and verify a `*.mvir` module file:
+To compile and verify a `*.mvir` transaction script file:
 > `compiler a.mvir`
 
-To compile and verify a `*.mvir` transaction script file:
-> `compiler -s *.mvir`
+To compile and verify a `*.mvir` module file:
+> `compiler -m *.mvir`
 
 ## Folder Structure
 
