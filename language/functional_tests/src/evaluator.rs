@@ -126,8 +126,7 @@ fn run_transaction(config: &Config, program: &CompiledProgram) -> Result<Transac
         *data.address(),
         data.sequence_number(),
         program,
-        1_000_000,
-        // Right now, max gas cost is an arbitratry large number.
+        data.balance(),
         // TODO: allow the user to specify this in the config.
         1,
         Duration::from_secs(u64::max_value()),

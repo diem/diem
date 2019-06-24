@@ -8,12 +8,14 @@ use crate::errors::*;
 use std::collections::{btree_map, BTreeMap};
 use vm_runtime_tests::account::AccountData;
 
+const DEFAULT_BALANCE: u64 = 1_000_000;
+
 /// A raw config entry extracted from the input. Used to build the config.
 #[derive(Debug, Clone)]
 pub enum ConfigEntry {
     NoVerify,
     NoExecute,
-    Account(String, u64, Option<u64>),
+    Account(String, Option<u64>, Option<u64>),
 }
 
 impl ConfigEntry {
@@ -39,20 +41,24 @@ impl ConfigEntry {
                 .split(|c: char| c == ',' || c.is_whitespace())
                 .filter(|s| !s.is_empty())
                 .collect();
-            if v.len() < 2 || v.len() > 3 {
+            if v.is_empty() || v.len() > 3 {
                 return Err(ErrorKind::Other(
-                    "config 'account' takes either 2 or 3 parameters".to_string(),
+                    "config 'account' takes 1 to 3 parameters".to_string(),
                 )
                 .into());
             }
+            let balance = match v.get(1) {
+                Some(s) => Some(s.parse::<u64>()?),
+                None => None,
+            };
+            let seq_num = match v.get(2) {
+                Some(s) => Some(s.parse::<u64>()?),
+                None => None,
+            };
             return Ok(Some(ConfigEntry::Account(
-                v[0].to_ascii_lowercase(),
-                v[1].parse::<u64>()?,
-                if v.len() > 2 {
-                    Some(v[2].parse::<u64>()?)
-                } else {
-                    None
-                },
+                v[0].to_string(),
+                balance,
+                seq_num,
             )));
         }
         Err(ErrorKind::Other(format!("invalid config option '{:?}'", s2)).into())
@@ -100,8 +106,11 @@ impl Config {
                     }
                 },
                 ConfigEntry::Account(name, balance, seq_number) => {
-                    let account_data = AccountData::new(*balance, seq_number.unwrap_or(0));
-                    let entry = accounts.entry(name.to_string());
+                    let account_data = AccountData::new(
+                        balance.unwrap_or(DEFAULT_BALANCE),
+                        seq_number.unwrap_or(0),
+                    );
+                    let entry = accounts.entry(name.to_ascii_lowercase());
                     match entry {
                         btree_map::Entry::Vacant(entry) => {
                             entry.insert(account_data);
@@ -118,7 +127,7 @@ impl Config {
             }
         }
         if let btree_map::Entry::Vacant(entry) = accounts.entry("alice".to_string()) {
-            entry.insert(AccountData::new(1_000_000, 0));
+            entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
         }
         Ok(Config {
             no_verify: no_verify.unwrap_or(false),
