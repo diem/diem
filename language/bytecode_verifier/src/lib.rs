@@ -30,5 +30,5 @@ pub use stack_usage_verifier::StackUsageVerifier;
 pub use struct_defs::RecursiveStructDefChecker;
 pub use verifier::{
     verify_main_signature, verify_module, verify_module_dependencies, verify_script,
-    verify_script_dependencies,
+    verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
