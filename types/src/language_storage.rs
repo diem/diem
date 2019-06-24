@@ -85,9 +85,9 @@ impl ModuleId {
     }
 }
 
-impl<'a> Into<AccessPath> for &'a ModuleId {
-    fn into(self) -> AccessPath {
-        AccessPath::code_access_path(self)
+impl<'a> From<&'a ModuleId> for AccessPath {
+    fn from(module_id: &'a ModuleId) -> Self {
+        AccessPath::code_access_path(module_id)
     }
 }
 
