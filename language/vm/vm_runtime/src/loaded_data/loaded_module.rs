@@ -56,7 +56,7 @@ impl PartialEq for LoadedModuleCache {
 impl Eq for LoadedModuleCache {}
 
 impl LoadedModule {
-    pub fn new(module: CompiledModule) -> Result<Self, VMInvariantViolation> {
+    pub fn new(module: CompiledModule) -> Self {
         let mut struct_defs_table = HashMap::new();
         let mut field_defs_table = HashMap::new();
         let mut function_defs_table = HashMap::new();
@@ -94,7 +94,7 @@ impl LoadedModule {
             function_defs_table.insert(name, fd_idx);
             function_defs.push(FunctionDef::new(&module, fd_idx));
         }
-        Ok(LoadedModule {
+        LoadedModule {
             module,
             struct_defs_table,
             field_defs_table,
@@ -102,7 +102,7 @@ impl LoadedModule {
             function_defs,
             field_offsets,
             cache,
-        })
+        }
     }
 
     pub fn field_count_at(&self, idx: StructDefinitionIndex) -> MemberCount {

@@ -181,7 +181,7 @@ fn test_loader_cross_modules() {
     loaded_program.cache_module(module).unwrap();
 
     let owned_entry_module = script.into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
     let func1 = loaded_program
@@ -212,7 +212,7 @@ fn test_cache_with_storage() {
     let allocator = Arena::new();
 
     let owned_entry_module = test_script().into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 
@@ -380,7 +380,7 @@ fn test_multi_level_cache_write_back() {
     .expect("test script should satisfy bounds checker");
 
     let owned_entry_module = script.into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let entry_module = entry_func.module();
 

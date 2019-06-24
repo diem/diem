@@ -148,7 +148,6 @@ impl<'alloc> VMModuleCache<'alloc> {
         Ok(fetcher
             .get_module(id)
             .map(LoadedModule::new)
-            .transpose()?
             .map(|m| self.map.or_insert(id.clone(), m)))
     }
 
@@ -159,7 +158,7 @@ impl<'alloc> VMModuleCache<'alloc> {
     ) -> Result<Self, VMInvariantViolation> {
         let module_id = module.self_code_key();
         let map = CacheRefMap::new(allocator);
-        let loaded_module = LoadedModule::new(module)?;
+        let loaded_module = LoadedModule::new(module);
         map.or_insert(module_id, loaded_module);
         Ok(VMModuleCache { map })
     }
@@ -320,7 +319,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
     fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation> {
         let module_id = module.self_code_key();
         // TODO: Check CodeKey duplication in statedb
-        let loaded_module = LoadedModule::new(module)?;
+        let loaded_module = LoadedModule::new(module);
         self.map.or_insert(module_id, loaded_module);
         Ok(())
     }

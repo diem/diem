@@ -44,7 +44,7 @@ impl<'alloc> ScriptCache<'alloc> {
         } else {
             trace!("[VM] Script cache miss");
             let fake_module = script.into_module();
-            let loaded_module = LoadedModule::new(fake_module)?;
+            let loaded_module = LoadedModule::new(fake_module);
             self.map
                 .or_insert_with_try_transform(
                     hash,

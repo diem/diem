@@ -156,7 +156,7 @@ fn test_simple_instruction_transition() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let data_cache = FakeDataCache::new();
     let mut vm =
@@ -346,7 +346,7 @@ fn test_arith_instructions() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
     let data_cache = FakeDataCache::new();
 
@@ -688,7 +688,7 @@ fn test_transaction_info() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
 
     let txn_info = {
