@@ -26,7 +26,7 @@ its way to push these semantic checks into the bytecode, and compile
 semantically invalid code in the Move IR to equivalent---semantically
 invalid---bytecode programs. The semantics of the compiled bytecode is
 then verified by the [bytecode verifier](https://github.com/libra/libra/blob/master/language/bytecode_verifier/README.md). The compiler command line
-automatically calls the bytecode verifer at the end of compilation.
+automatically calls the bytecode verifier at the end of compilation.
 
 ## Command-line options
 

@@ -22,8 +22,8 @@ use std::{collections::BTreeMap, convert::TryInto};
 /// address: Address,
 /// // Struct types defined by this account
 /// code: HashMap<Name, Code>,
-/// // Resurces owned by this account
-/// resoruces: HashMap<ObjectName, StructInstance>,
+/// // Resources owned by this account
+/// resources: HashMap<ObjectName, StructInstance>,
 /// }
 
 // LibraCoin

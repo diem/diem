@@ -284,7 +284,7 @@ where
     let subscribers = smp.subscribers.clone();
     let max_inbound_syncs = smp.config.shared_mempool_max_concurrent_inbound_syncs;
 
-    // Handle the NewPeer/LostPeer events immediatedly, since they are not async
+    // Handle the NewPeer/LostPeer events immediately, since they are not async
     // and we don't want to buffer them or let them get reordered. The inbound
     // direct-send messages are placed in a bounded FuturesUnordered queue and
     // allowed to execute concurrently. The .buffer_unordered() also correctly

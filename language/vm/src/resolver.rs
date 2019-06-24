@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements a resolver for importing a SignatureToken defined in one module into
-//! another. This functionaliy is used in verify_module_dependencies and verify_script_dependencies.
+//! another. This functionality is used in verify_module_dependencies and verify_script_dependencies.
 use crate::{
     access::ModuleAccess,
     errors::VMStaticViolation,

@@ -285,7 +285,7 @@ impl ModuleBuilder {
         }
     }
 
-    // Add the modules identitied by their code keys to the module handles of the underlying
+    // Add the modules identified by their code keys to the module handles of the underlying
     // CompiledModule.
     fn with_callee_modules(&mut self) {
         // Add the SELF module

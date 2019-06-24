@@ -29,7 +29,7 @@ const FREE_LUNCH: u64 = 1_000_000;
 /// Benchmarker aims to automate the process of
 ///     1) generating and minting coins to a group of accounts
 ///     2) generating customized transfer transactions (TXNs) offline,
-///     3) submiting TXNs to admission control as fast as possible,
+///     3) submitting TXNs to admission control as fast as possible,
 ///     4) waiting for all TXNs committed or timed out,
 /// Current usages for Benchmarker include measuring TXN throughput and submit malformed TXNs.
 /// How to run a benchmarker (TODO(yjq): will be abstracted away by a driver program):
@@ -154,7 +154,7 @@ impl Benchmarker {
             .timeout(std::time::Duration::from_millis(1000))
     }
 
-    /// Submit transction async with pre-generated request.
+    /// Submit transaction async with pre-generated request.
     /// Note here we return proto version of the response to caller site
     /// in order to reduce the overhead of submission.
     fn submit_transaction_async_with_req(
@@ -219,7 +219,7 @@ impl Benchmarker {
         let curr_committed_txns = self.get_committed_txns_counter();
 
         info!("#Failed async txn = {}", txn_reqs.len() - txn_resps.len());
-        // TODO(yjq): Group response by error type and report staticstics.
+        // TODO(yjq): Group response by error type and report statistics.
         if verbose {
             txn_resps.iter().for_each(|resp| {
                 info!("Tx response: {:?}", resp);

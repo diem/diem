@@ -164,7 +164,7 @@ impl FromProto for SparseMerkleProof {
             Some((key, value_hash))
         } else {
             bail!(
-                "Mailformed proof. Leaf has {} bytes. Expect 0 or {} bytes.",
+                "Malformed proof. Leaf has {} bytes. Expect 0 or {} bytes.",
                 proto_leaf.len(),
                 HashValue::LENGTH * 2
             );

@@ -41,7 +41,7 @@
 //! 4. Drops the substream.
 //!
 //! Note: negotiated substreams are currently framed with the
-//! [muiltiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
+//! [multiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
 //!
 //! [muxers]: ../../../netcore/multiplexing/index.html
 //! [substream negotiation]: ../../../netcore/negotiate/index.html
@@ -114,7 +114,7 @@ pub struct DirectSend<TSubstream> {
     executor: TaskExecutor,
     /// Channel to receive requests from other upstream actors.
     ds_requests_rx: channel::Receiver<DirectSendRequest>,
-    /// Channels to send notifictions to upstream actors.
+    /// Channels to send notifications to upstream actors.
     ds_notifs_tx: channel::Sender<DirectSendNotification>,
     /// Channel to receive notifications from PeerManager.
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,

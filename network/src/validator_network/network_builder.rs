@@ -45,7 +45,7 @@ pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
 pub const PING_INTERVAL_MS: u64 = 1000;
 pub const PING_TIMEOUT_MS: u64 = 10_000;
-pub const DISOVERY_MSG_TIMEOUT_MS: u64 = 10_000;
+pub const DISCOVERY_MSG_TIMEOUT_MS: u64 = 10_000;
 pub const CONNECTIVITY_CHECK_INTERNAL_MS: u64 = 5000;
 pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
 pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
@@ -115,7 +115,7 @@ impl NetworkBuilder {
             rpc_protocols: vec![],
             transport: TransportType::Memory,
             discovery_interval_ms: DISCOVERY_INTERVAL_MS,
-            discovery_msg_timeout_ms: DISOVERY_MSG_TIMEOUT_MS,
+            discovery_msg_timeout_ms: DISCOVERY_MSG_TIMEOUT_MS,
             ping_interval_ms: PING_INTERVAL_MS,
             ping_timeout_ms: PING_TIMEOUT_MS,
             ping_failures_tolerated: PING_FAILURES_TOLERATED,

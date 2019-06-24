@@ -6,7 +6,7 @@
 //! This module defines three types of patricia Merkle tree nodes: [`BranchNode`],
 //! [`ExtensionNode`] and [`LeafNode`] as building blocks of a 256-bit
 //! [`SparseMerkleTree`](crate::SparseMerkleTree). [`BranchNode`] represents a 4-level binary tree
-//! to optimize for IOPS: it compresses a tree with 31 nodes into one node with 16 chidren at the
+//! to optimize for IOPS: it compresses a tree with 31 nodes into one node with 16 children at the
 //! lowest level. [`ExtensionNode`] compresses a partial path without any fork into a single node by
 //! storing the partial path inside. [`LeafNode`] stores the full key and the value hash which is
 //! used as the key to query binary account blob data from the storage.
@@ -52,7 +52,7 @@ pub struct ExtensionNode {
     child: HashValue,
 }
 
-/// Represents an account. It has two fields: `key` is the hash of the acccont address and
+/// Represents an account. It has two fields: `key` is the hash of the account address and
 /// `value_hash` is the hash of account state blob.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LeafNode {
@@ -63,7 +63,7 @@ pub struct LeafNode {
 }
 
 /// The explicit tag is used as a prefix in the encoded format of nodes to distinguish different
-/// node discrinminants.
+/// node discriminants.
 trait Tag {
     const TAG: u8;
 }
@@ -87,7 +87,7 @@ impl Tag for LeafNode {
 /// the root hash of it as if a full binary Merkle tree with 16 leaves as below:
 ///
 /// ```text
-/// 
+///
 ///   4 ->              +------ root hash ------+
 ///                     |                       |
 ///   3 ->        +---- # ----+           +---- # ----+
@@ -101,11 +101,11 @@ impl Tag for LeafNode {
 /// height
 /// ```
 ///
-/// As illustrated above, at nibble height 0, `0..F` in hex denote 16 chidren hashes.  Each `#`
+/// As illustrated above, at nibble height 0, `0..F` in hex denote 16 children hashes.  Each `#`
 /// means the hash of its two direct children, which will be used to generate the hash of its
 /// parent with the hash of its sibling. Finally, we can get the hash of this branch node.
 ///
-/// However, if a branch node doesn't have all 16 chidren exist at height 0 but just a few of
+/// However, if a branch node doesn't have all 16 children exist at height 0 but just a few of
 /// them, we have a modified hashing rule on top of what is stated above:
 /// 1. From top to bottom, a node will be replaced by a leaf child if the subtree rooted at this
 /// node has only one child at height 0 and it is a leaf child.
@@ -115,7 +115,7 @@ impl Tag for LeafNode {
 /// graph will be like:
 ///
 /// ```text
-/// 
+///
 ///   4 ->              +------ root hash ------+
 ///                     |                       |
 ///   3 ->        +---- # ----+           +---- # ----+
@@ -147,7 +147,7 @@ impl CryptoHash for BranchNode {
 /// nibbles, compute the final hash as follows:
 ///
 /// ```text
-/// 
+///
 ///                   #(final hash)
 ///                  / \
 ///                 #   placeholder
@@ -324,7 +324,7 @@ impl BranchNode {
     /// details. When calling this function with n = 11 (node `b` in the following graph), the
     /// range at each level is illustrated as a pair of square brackets:
     ///
-    /// ```text                           
+    /// ```text
     ///     4      [f   e   d   c   b   a   9   8   7   6   5   4   3   2   1   0] -> root level
     ///            ---------------------------------------------------------------
     ///     3      [f   e   d   c   b   a   9   8] [7   6   5   4   3   2   1   0] width = 8

@@ -19,7 +19,7 @@
 //! structs in a single method call and in that process data integrity check can be done. These live
 //! right in the root module of this crate (this page).
 //!
-//! Ihis is provided as a separate crate so that crates that use the storage service via
+//! This is provided as a separate crate so that crates that use the storage service via
 //! [`storage_client`](../storage_client/index.html) don't need to depending on the entire
 //! [`storage_service`](../storage_client/index.html).
 

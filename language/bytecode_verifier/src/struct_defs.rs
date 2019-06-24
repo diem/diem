@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module provides a checker for verifing that struct definitions in a module are not
+//! This module provides a checker for verifying that struct definitions in a module are not
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
 use petgraph::{algo::toposort, Directed, Graph};

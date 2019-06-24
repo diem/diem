@@ -14,7 +14,7 @@ pub const BYTE_ARRAY_MAX_SIZE: usize = 64;
 /// The maximum size that a generated string can be.
 pub const MAX_STRING_SIZE: usize = 32;
 
-/// The maximumm number of locals that can be defined within a generated function definition.
+/// The maximum number of locals that can be defined within a generated function definition.
 pub const MAX_NUM_LOCALS: usize = 10;
 
 /// The maximum number of arguments to generated function definitions.

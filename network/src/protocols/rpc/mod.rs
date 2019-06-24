@@ -47,12 +47,12 @@
 //! 5. Handles the request by sending it up through the
 //!    [`NetworkProvider`](crate::interface::NetworkProvider)
 //!    actor to a higher layer rpc client like consensus or mempool, who then
-//!    sends the serialed rpc response back down to the rpc layer.
+//!    sends the serialised rpc response back down to the rpc layer.
 //! 6. Sends the serialized response message to the dialer.
 //! 7. Half-closes their output side to complete the substream close.
 //!
 //! Note: negotiated substreams are currently framed with the
-//! [muiltiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
+//! [multiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
 //!
 //! [muxers]: ../../../netcore/multiplexing/index.html
 //! [substream negotiation]: ../../../netcore/negotiate/index.html
@@ -156,7 +156,7 @@ pub struct Rpc<TSubstream> {
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel to send requests to [`PeerManager`](crate::peer_manager::PeerManager).
     peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-    /// Channels to send notifictions to upstream actors.
+    /// Channels to send notifications to upstream actors.
     rpc_handler_tx: channel::Sender<RpcNotification>,
     /// The timeout duration for inbound rpc calls.
     inbound_rpc_timeout: Duration,

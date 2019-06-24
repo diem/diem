@@ -46,7 +46,7 @@ pub enum BlockVerificationError {
 }
 
 /// Blocks are managed in a speculative tree, the committed blocks form a chain.
-/// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
+/// Each block must know the id of its parent and keep the QuorumCertificate to that parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Block<T> {
     /// This block's id as a hash value

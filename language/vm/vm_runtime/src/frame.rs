@@ -65,7 +65,7 @@ where
 
     pub fn store_local(&mut self, idx: LocalIndex, local: Local) -> VMResult<()> {
         // We don't need to check if the local matches the local signature
-        // definition as VM is oblivous to value types.
+        // definition as VM is oblivious to value types.
         if let Some(local_ref) = self.locals.get_mut(idx as usize) {
             // What should we do if local already has some other values?
             *local_ref = local;

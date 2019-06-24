@@ -61,7 +61,7 @@ pub struct HealthChecker<TTicker, TSubstream> {
     connected: HashMap<PeerId, (u64, u64)>,
     /// Random-number generator.
     rng: SmallRng,
-    /// Ping timmeout duration.
+    /// Ping timeout duration.
     ping_timeout: Duration,
     /// Number of successive ping failures we tolerate before declaring a node as unhealthy and
     /// disconnecting from it. In the future, this can be replaced with a more general failure
@@ -188,7 +188,7 @@ where
                         // ConnectivityManager or the remote peer to re-establish the connection.
                         *failures += 1;
                         if *failures > self.ping_failures_tolerated {
-                            info!("Disonnecting from peer: {}", peer_id.short_str());
+                            info!("Disconnecting from peer: {}", peer_id.short_str());
                             if let Err(err) = self.peer_mgr_reqs_tx.disconnect_peer(peer_id).await {
                                 warn!(
                                     "Failed to disconnect from peer: {} with error: {:?}",

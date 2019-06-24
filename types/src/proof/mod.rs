@@ -238,7 +238,7 @@ pub(crate) fn verify_transaction_list(
                 ensure!(hashes[num_nodes - 2] == *last_sibling,
                         "Invalid TransactionListWithProof: Last transaction proof doesn't match provided siblings");
             }
-            // We haven't reached the first common ancester of all transactions in the list.
+            // We haven't reached the first common ancestor of all transactions in the list.
             if first_index % 2 == 0 {
                 // if `first_index` is even, it is the left child of its parent so the sibling must
                 // be the next node.

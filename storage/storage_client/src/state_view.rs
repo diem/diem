@@ -31,7 +31,7 @@ pub struct VerifiedStateView<'a> {
     /// The most recent state root hash in persistent storage.
     latest_persistent_state_root: HashValue,
 
-    /// The in-momery version of sparse Merkle tree of which the states haven't been committed.
+    /// The in-memory version of sparse Merkle tree of which the states haven't been committed.
     speculative_state: &'a SparseMerkleTree,
 
     /// The cache of verified account states from `reader` and `speculative_state_view`,

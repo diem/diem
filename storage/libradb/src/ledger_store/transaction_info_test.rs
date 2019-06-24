@@ -63,7 +63,7 @@ proptest! {
         verify(&db, &batch1, 0, ledger_version2, root_hash2);
         verify(&db, &batch2, batch1.len() as u64, ledger_version2, root_hash2);
 
-        // retrieve batch1 and verify against root_hash after batch1 was interted
+        // retrieve batch1 and verify against root_hash after batch1 was inserted
         verify(&db, &batch1, 0, ledger_version1, root_hash1);
     }
 }

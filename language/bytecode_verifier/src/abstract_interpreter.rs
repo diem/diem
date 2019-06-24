@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the abstract interpretater for verifying type and memory safety on a
+//! This module defines the abstract interpreter for verifying type and memory safety on a
 //! function body.
 use crate::{
     abstract_state::{AbstractState, AbstractValue, JoinResult},

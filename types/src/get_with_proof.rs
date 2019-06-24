@@ -199,7 +199,7 @@ fn verify_response_item(
         ),
         // Request-response item types mismatch.
         _ => bail!(
-            "ResquestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
+            "RequestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
             mem::discriminant(req),
             mem::discriminant(res),
         ),

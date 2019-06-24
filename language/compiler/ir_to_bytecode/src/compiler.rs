@@ -134,9 +134,9 @@ struct FunctionFrame {
     local_types: LocalsSignature,
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
-    // - excessivley large stack sizes
+    // - excessively large stack sizes
     // The max stack depth of the file_format is set as u16
-    // Theoritically, we could use a BigInt here, but that is probably overkill for any testing
+    // Theoretically, we could use a BigInt here, but that is probably overkill for any testing
     max_stack_depth: i64,
     cur_stack_depth: i64,
     loops: Vec<LoopInfo>,

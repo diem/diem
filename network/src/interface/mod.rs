@@ -59,7 +59,7 @@ pub struct NetworkProvider<TSubstream> {
     upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
     /// Channel over which we receive notifications from PeerManager.
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-    /// Channel over which we send requets to RPC actor.
+    /// Channel over which we send requests to RPC actor.
     rpc_reqs_tx: channel::Sender<RpcRequest>,
     /// Channel over which we receive notifications from RPC actor.
     rpc_notifs_rx: channel::Receiver<RpcNotification>,

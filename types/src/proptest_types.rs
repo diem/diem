@@ -433,7 +433,7 @@ impl TransactionToCommit {
             any::<TransactionPayload>(),
         );
 
-        // acccount_states
+        // account_states
         let address_strategy = keypair_strategy
             .clone()
             .prop_map(|(_, public_key)| AccountAddress::from(public_key));

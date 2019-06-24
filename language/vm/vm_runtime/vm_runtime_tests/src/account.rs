@@ -334,7 +334,7 @@ impl AccountResource {
                     Value::ByteArray(bytes) => bytes
                         .as_bytes()
                         .try_into()
-                        .expect("Auth key must be parseable as an account address"),
+                        .expect("Auth key must be parsable as an account address"),
                     _ => panic!("auth key must be a ByteArray"),
                 }
             }

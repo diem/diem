@@ -396,7 +396,7 @@ impl TestBlock {
     }
 }
 
-// Executes a list of transactions by executing and immediately commtting one at a time. Returns
+// Executes a list of transactions by executing and immediately committing one at a time. Returns
 // the root hash after all transactions are committed.
 fn run_transactions_naive(transactions: Vec<SignedTransaction>) -> HashValue {
     let executor = TestExecutor::new();

@@ -455,7 +455,7 @@ fn no_op_requests() {
 
         // Trigger connectivity check again. We don't expect connectivity manager to do
         // anything - if it does, the task should panic. That may not fail the test (right
-        // now), but will be easily spotted by someone running the tests locallly.
+        // now), but will be easily spotted by someone running the tests locally.
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
     };

@@ -46,7 +46,7 @@ use std::fmt::Debug;
 ///
 /// // And finally define a schema type and associate it with key and value types, as well as the
 /// // column family name, by generating code that implements the `Schema` trait for the type.
-/// define_schema!(ExampleSchema, Key, Value, "exmaple_cf_name");
+/// define_schema!(ExampleSchema, Key, Value, "example_cf_name");
 ///
 /// // SeekKeyCodec is automatically implemented for KeyCodec,
 /// // so you can seek an iterator with the Key type:

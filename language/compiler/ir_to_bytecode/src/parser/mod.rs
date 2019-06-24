@@ -44,7 +44,7 @@ mod syntax;
 ///
 /// 𝛕-list ∈ [Type] ::=
 ///   | unit            // empty type list.
-///                     // in the actual syntax, it is represented by the abscense of a type
+///                     // in the actual syntax, it is represented by the absence of a type
 ///   | 𝛕_1 * ... * 𝛕_j // 'j' >= 1. list of multiple types. used for multiple return values
 /// ```
 ///
@@ -132,7 +132,7 @@ mod syntax;
 ///   | get_txn_gas_unit_price()  // type: 'unit -> u64'
 ///                               // gives the price specified per gas unit
 ///   | get_txn_max_gas_units()   // type: 'unit -> u64'
-///                               // gives the tranaction's maximum amount of usable gas units
+///                               // gives the transaction's maximum amount of usable gas units
 ///   | get_txn_public_key()      // type: 'unit -> bytearray'
 ///                               // gives the transaction's public key
 ///   | get_txn_sender()          // type: 'unit -> address'

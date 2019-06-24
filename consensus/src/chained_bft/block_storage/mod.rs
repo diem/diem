@@ -66,7 +66,7 @@ pub enum InsertError {
     #[fail(display = "InvalidBlockRound")]
     InvalidBlockRound,
     /// The block's timestamp is not greater than that of the parent.
-    #[fail(display = "InvalidTiemstamp")]
+    #[fail(display = "InvalidTimestamp")]
     NonIncreasingTimestamp,
     /// The block is not newer than the root of the tree.
     #[fail(display = "OldBlock")]

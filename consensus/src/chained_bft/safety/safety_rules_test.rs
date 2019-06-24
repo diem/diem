@@ -30,7 +30,7 @@ cached_key! {
     // map's state.
     LENGTH: SizedCache<String, (usize, Vec<HashValue>)> = SizedCache::with_size(50);
     Key = { format!("{}{:?}{:?}", calculate_hash(children_table), query, initial_contiguous_links ) };
-    // This returns the length of the maximal chain constructible from the
+    // This returns the length of the maximal chain constructable from the
     // (block_id, block_round) node, along with an example of such a chain
     // (they are not unique)
     fn max_chain_depth(children_table: &BTreeMap<HashValue, Vec<(HashValue, Round)>>, query: (HashValue, Round), initial_contiguous_links: i64) -> (usize, Vec<HashValue>) = {

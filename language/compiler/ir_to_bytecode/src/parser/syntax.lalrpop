@@ -480,7 +480,7 @@ ModuleIdent: ModuleIdent = {
 ImportAlias: ModuleName = {
     "as" <alias: ModuleName> => {
         if alias.name_ref() == ModuleName::SELF {
-            panic!("Invalid use of resesrved module alias '{}'", ModuleName::SELF);
+            panic!("Invalid use of reserved module alias '{}'", ModuleName::SELF);
         }
         alias
     }

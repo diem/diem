@@ -20,10 +20,10 @@ const JSON_FORMAT: &str = "application/json";
 pub struct JsonEncoder;
 
 impl Encoder for JsonEncoder {
-    fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
+    fn encode<W: Write>(&self, metric_families: &[MetricFamily], writer: &mut W) -> Result<()> {
         let mut export_me: HashMap<String, f64> = HashMap::new();
 
-        for mf in metric_familys {
+        for mf in metric_families {
             let name = mf.get_name();
             let metric_type = mf.get_field_type();
 

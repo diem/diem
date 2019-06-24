@@ -259,7 +259,7 @@ pub struct Var(String);
 /// The type of a variable with a location
 pub type Var_ = Spanned<Var>;
 
-/// Builtin "function"-like operators that often have a signature not expressable in the
+/// Builtin "function"-like operators that often have a signature not expressible in the
 /// type system and/or have access to some runtime/storage context
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum Builtin {

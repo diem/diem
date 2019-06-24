@@ -154,7 +154,7 @@ impl<'a> ApplySignatureFieldRefContext<'a> {
                 .or_insert_with(|| vec![])
                 .push(field_def_idx);
         }
-        // Convert into a Vec of pairs to allow pick_slice_idxs return vvalues to work.
+        // Convert into a Vec of pairs to allow pick_slice_idxs return values to work.
         let interesting_idxs: Vec<_> = interesting_idxs.into_iter().collect();
 
         let picked = pick_slice_idxs(interesting_idxs.len(), &self.mutations);

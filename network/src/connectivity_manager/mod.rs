@@ -7,7 +7,7 @@
 //! to system membership.
 //!
 //! In our current system design, the Consensus actor informs the ConnectivityManager of
-//! eligible nodes, and the Discovery actor infroms it about updates to addresses of eligible
+//! eligible nodes, and the Discovery actor informs it about updates to addresses of eligible
 //! nodes.
 use crate::{
     common::NetworkPublicKeys,
@@ -92,7 +92,7 @@ where
     /// Starts the [`ConnectivityManager`] actor.
     pub async fn start(mut self) {
         // The ConnectivityManager actor is interested in 3 kinds of events:
-        // 1. Ticks to trigger connecitvity check. These are implemented using a clock based
+        // 1. Ticks to trigger connectivity check. These are implemented using a clock based
         //    trigger in production.
         // 2. Incoming requests to connect or disconnect with a peer.
         // 3. Notifications from PeerManager when we establish a new connection or lose an existing
