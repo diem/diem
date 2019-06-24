@@ -6,7 +6,7 @@ use crate::loaded_data::{function::FunctionDef, struct_def::StructDef};
 use std::{collections::HashMap, sync::RwLock};
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VMInvariantViolation,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, FieldDefinitionIndex,
@@ -56,12 +56,16 @@ impl LoadedModule {
         let mut field_defs_table = HashMap::new();
         let mut function_defs_table = HashMap::new();
         let mut function_defs = vec![];
-        let struct_defs = module.struct_defs().map(|_| RwLock::new(None)).collect();
+        let struct_defs = module
+            .struct_defs()
+            .iter()
+            .map(|_| RwLock::new(None))
+            .collect();
         let cache = LoadedModuleCache { struct_defs };
 
-        let mut field_offsets: Vec<TableIndex> = module.field_defs().map(|_| 0).collect();
+        let mut field_offsets: Vec<TableIndex> = module.field_defs().iter().map(|_| 0).collect();
 
-        for (idx, struct_def) in module.struct_defs().enumerate() {
+        for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let name = module
                 .string_at(module.struct_handle_at(struct_def.struct_handle).name)
                 .to_string();
@@ -72,12 +76,12 @@ impl LoadedModule {
                 field_offsets[struct_def.fields.into_index() + i as usize] = i;
             }
         }
-        for (idx, field_def) in module.field_defs().enumerate() {
+        for (idx, field_def) in module.field_defs().iter().enumerate() {
             let name = module.string_at(field_def.name).to_string();
             let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
             field_defs_table.insert(name, fd_idx);
         }
-        for (idx, function_def) in module.function_defs().enumerate() {
+        for (idx, function_def) in module.function_defs().iter().enumerate() {
             let name = module
                 .string_at(module.function_handle_at(function_def.function).name)
                 .to_string();

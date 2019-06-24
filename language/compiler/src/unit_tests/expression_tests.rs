@@ -8,10 +8,7 @@ use testutils::{
     compile_module_string, compile_script_string, compile_script_string_and_assert_error,
     count_locals,
 };
-use vm::{
-    access::{BaseAccess, ScriptAccess},
-    file_format::Bytecode::*,
-};
+use vm::{access::ScriptAccess, file_format::Bytecode::*};
 
 #[test]
 fn compile_script_expr_addition() {
@@ -33,9 +30,9 @@ fn compile_script_expr_addition() {
     assert!(compiled_script.main().code.max_stack_size == 2);
     assert!(count_locals(&compiled_script) == 3);
     assert!(compiled_script.main().code.code.len() == 9);
-    assert!(compiled_script.struct_handles().len() == 0);
+    assert!(compiled_script.struct_handles().is_empty());
     assert!(compiled_script.function_handles().len() == 1);
-    assert!(compiled_script.type_signatures().len() == 0);
+    assert!(compiled_script.type_signatures().is_empty());
     assert!(compiled_script.function_signatures().len() == 1); // method sig
     assert!(compiled_script.locals_signatures().len() == 1); // local variables sig
     assert!(compiled_script.module_handles().len() == 1); // the <SELF> module
@@ -63,9 +60,9 @@ fn compile_script_expr_combined() {
     assert!(compiled_script.main().code.max_stack_size == 3);
     assert!(count_locals(&compiled_script) == 3);
     assert!(compiled_script.main().code.code.len() == 13);
-    assert!(compiled_script.struct_handles().len() == 0);
+    assert!(compiled_script.struct_handles().is_empty());
     assert!(compiled_script.function_handles().len() == 1);
-    assert!(compiled_script.type_signatures().len() == 0);
+    assert!(compiled_script.type_signatures().is_empty());
     assert!(compiled_script.function_signatures().len() == 1); // method sig
     assert!(compiled_script.locals_signatures().len() == 1); // local variables sig
     assert!(compiled_script.module_handles().len() == 1); // the <SELF> module
@@ -90,9 +87,9 @@ fn compile_script_borrow_local() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     assert!(count_locals(&compiled_script) == 2);
-    assert!(compiled_script.struct_handles().len() == 0);
+    assert!(compiled_script.struct_handles().is_empty());
     assert!(compiled_script.function_handles().len() == 1);
-    assert!(compiled_script.type_signatures().len() == 0);
+    assert!(compiled_script.type_signatures().is_empty());
     assert!(compiled_script.function_signatures().len() == 1); // method sig
     assert!(compiled_script.locals_signatures().len() == 1); // local variables sig
     assert!(compiled_script.module_handles().len() == 1); // the <SELF> module
@@ -117,9 +114,9 @@ fn compile_script_borrow_local_mutable() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     assert!(count_locals(&compiled_script) == 2);
-    assert!(compiled_script.struct_handles().len() == 0);
+    assert!(compiled_script.struct_handles().is_empty());
     assert!(compiled_script.function_handles().len() == 1);
-    assert!(compiled_script.type_signatures().len() == 0);
+    assert!(compiled_script.type_signatures().is_empty());
     assert!(compiled_script.function_signatures().len() == 1); // method sig
     assert!(compiled_script.locals_signatures().len() == 1); // local variables sig
     assert!(compiled_script.module_handles().len() == 1); // the <SELF> module
@@ -145,9 +142,9 @@ fn compile_script_borrow_reference() {
     let compiled_script_res = compile_script_string_and_assert_error(&code, None);
     let compiled_script = compiled_script_res.unwrap();
     assert!(count_locals(&compiled_script) == 3);
-    assert!(compiled_script.struct_handles().len() == 0);
+    assert!(compiled_script.struct_handles().is_empty());
     assert!(compiled_script.function_handles().len() == 1);
-    assert!(compiled_script.type_signatures().len() == 0);
+    assert!(compiled_script.type_signatures().is_empty());
     assert!(compiled_script.function_signatures().len() == 1); // method sig
     assert!(compiled_script.locals_signatures().len() == 1); // local variables sig
     assert!(compiled_script.module_handles().len() == 1); // the <SELF> module

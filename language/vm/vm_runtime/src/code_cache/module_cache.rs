@@ -15,7 +15,7 @@ use crate::{
 use std::marker::PhantomData;
 use types::language_storage::CodeKey;
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::*,
     file_format::{
         CompiledModule, FunctionHandleIndex, SignatureToken, StructDefinitionIndex,

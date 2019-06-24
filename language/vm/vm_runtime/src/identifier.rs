@@ -8,7 +8,7 @@ use types::{
     language_storage::{ResourceKey, StructTag},
 };
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     file_format::{CompiledModule, StructDefinitionIndex},
 };
 

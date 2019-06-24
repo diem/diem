@@ -14,7 +14,7 @@ use types::{
     vm_error::{VMStatus, VMVerificationError, VMVerificationStatus},
 };
 use vm::{
-    access::{BaseAccess, ScriptAccess},
+    access::ScriptAccess,
     errors::{VMStaticViolation, VerificationError, VerificationStatus},
     file_format::{CompiledModule, CompiledScript, SignatureToken},
     IndexKind,

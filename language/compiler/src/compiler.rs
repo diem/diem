@@ -21,7 +21,7 @@ use std::{
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VerificationError,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule,

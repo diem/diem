@@ -4,7 +4,7 @@
 
 use crate::loaded_data::loaded_module::LoadedModule;
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::*,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex},
     internals::ModuleIndex,

@@ -13,7 +13,7 @@ use crate::{
     control_flow_graph::{BasicBlock, VMControlFlowGraph},
 };
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{Bytecode, CompiledModule, FunctionDefinition},
     views::FunctionDefinitionView,

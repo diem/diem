@@ -370,6 +370,7 @@ where
                 module
                     .module
                     .struct_defs()
+                    .iter()
                     .enumerate()
                     .map(|(struct_def_index, struct_def)| {
                         let handle = module.module.struct_handle_at(struct_def.struct_handle);
@@ -429,6 +430,7 @@ where
                     module
                         .module
                         .function_defs()
+                        .iter()
                         .enumerate()
                         .map(|(function_def_index, function_def)| {
                             let handle = module.module.function_handle_at(function_def.function);
@@ -476,6 +478,7 @@ where
                     .module
                     .field_def_range(num_fields as MemberCount, index);
                 let mutvals = fields
+                    .iter()
                     .map(|field| {
                         self.resolve_to_value(
                             self.root_module
@@ -557,6 +560,7 @@ where
                     .module
                     .field_def_range(num_fields as MemberCount, index);
                 let stack: Stack = fields
+                    .iter()
                     .map(|field| {
                         let ty = self
                             .root_module

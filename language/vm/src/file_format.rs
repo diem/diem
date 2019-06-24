@@ -27,7 +27,7 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::BaseAccess, check_bounds::BoundsChecker, errors::VerificationError,
+    access::ModuleAccess, check_bounds::BoundsChecker, errors::VerificationError,
     internals::ModuleIndex, IndexKind, SignatureTokenKind,
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};

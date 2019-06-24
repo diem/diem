@@ -10,7 +10,7 @@ use crate::{
 use std::collections::BTreeMap;
 use types::language_storage::CodeKey;
 use vm::{
-    access::{BaseAccess, ScriptAccess},
+    access::ScriptAccess,
     errors::{VMStaticViolation, VerificationError},
     file_format::{CompiledModule, CompiledScript},
     resolver::Resolver,

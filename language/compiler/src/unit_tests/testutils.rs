@@ -5,7 +5,7 @@ use super::*;
 use crate::parser::{parse_module, parse_program};
 use bytecode_verifier::verifier::{verify_module, verify_script};
 use vm::{
-    access::{BaseAccess, ScriptAccess},
+    access::ScriptAccess,
     errors::VerificationError,
     file_format::{CompiledModule, CompiledScript},
 };
