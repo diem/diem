@@ -3,12 +3,8 @@
 
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use chrono::Utc;
 use config::trusted_peers::TrustedPeersConfig;
-use crypto::{
-    hash::CryptoHash,
-    signing::{sign_message, KeyPair},
-};
+use crypto::signing::KeyPair;
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
@@ -19,7 +15,6 @@ use num_traits::{
     identities::Zero,
 };
 use proto_conv::IntoProto;
-use protobuf::Message;
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -41,7 +36,8 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction, Version},
+    transaction::{Program, SignedTransaction, Version},
+    transaction_helpers::{create_signed_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
 
@@ -829,30 +825,20 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<SubmitTransactionRequest> {
-        let raw_txn = RawTransaction::new(
+        let signer: Box<&TransactionSigner> = match &sender_account.key_pair {
+            Some(key_pair) => Box::new(key_pair),
+            None => Box::new(&self.wallet),
+        };
+        let signed_txn = create_signed_txn(
+            *signer,
+            program,
             sender_account.address,
             sender_account.sequence_number,
-            program,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            std::time::Duration::new((Utc::now().timestamp() + TX_EXPIRATION) as u64, 0),
-        );
-
-        let signed_txn = match &sender_account.key_pair {
-            Some(key_pair) => {
-                let bytes = raw_txn.clone().into_proto().write_to_bytes()?;
-                let hash = RawTransactionBytes(&bytes).hash();
-                let signature = sign_message(hash, &key_pair.private_key())?;
-
-                SignedTransaction::craft_signed_transaction_for_client(
-                    raw_txn,
-                    key_pair.public_key(),
-                    signature,
-                )
-            }
-            None => self.wallet.sign_txn(raw_txn)?,
-        };
-
+            TX_EXPIRATION,
+        )
+        .unwrap();
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         Ok(req)

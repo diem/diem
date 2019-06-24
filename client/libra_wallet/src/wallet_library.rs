@@ -26,6 +26,7 @@ use types::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, RawTransactionBytes, SignedTransaction},
+    transaction_helpers::TransactionSigner,
 };
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
@@ -170,5 +171,12 @@ impl WalletLibrary {
                 "Well, that address is nowhere to be found... This is awkward".to_string(),
             ))
         }
+    }
+}
+
+/// WalletLibrary naturally support TransactionSigner trait.
+impl TransactionSigner for WalletLibrary {
+    fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
+        Ok(self.sign_txn(raw_txn)?)
     }
 }
