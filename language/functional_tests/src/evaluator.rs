@@ -50,19 +50,20 @@ pub enum Status {
     Failure,
 }
 
+/// An entry in the `EvaluationResult`.
+#[derive(Debug)]
+pub enum EvaluationOutput {
+    Stage(Stage),
+    Output(String),
+    Error(String),
+}
+
 /// A log consisting of outputs from all stages and the final status.
 /// This is checked against the directives.
 #[derive(Debug)]
 pub struct EvaluationResult {
-    pub stages: Vec<(Stage, String)>,
+    pub outputs: Vec<EvaluationOutput>,
     pub status: Status,
-}
-
-impl EvaluationResult {
-    /// Appends another entry to the evaluation result.
-    pub fn append(&mut self, stage: Stage, output: String) {
-        self.stages.push((stage, output));
-    }
 }
 
 fn check_verification_errors(errors: Vec<VerificationError>) -> Result<()> {
@@ -149,11 +150,12 @@ fn run_transaction(config: &Config, program: &CompiledProgram) -> Result<Transac
 
 /// Tries to unwrap the given result. Upon failure, log the error and aborts.
 macro_rules! unwrap_or_log {
-    ($res: expr, $log: expr, $stage: expr) => {{
+    ($res: expr, $log: expr) => {{
         match $res {
             Ok(r) => r,
             Err(e) => {
-                $log.append($stage, format!("{:?}", e));
+                $log.outputs
+                    .push(EvaluationOutput::Error(format!("{:?}", e)));
                 return Ok($log);
             }
         }
@@ -163,7 +165,7 @@ macro_rules! unwrap_or_log {
 /// Feeds the input through the pipeline and produces an EvaluationResult.
 pub fn eval(config: &Config, text: &str) -> Result<EvaluationResult> {
     let mut res = EvaluationResult {
-        stages: vec![],
+        outputs: vec![],
         status: Status::Failure,
     };
 
@@ -171,32 +173,27 @@ pub fn eval(config: &Config, text: &str) -> Result<EvaluationResult> {
     let account_data = config.accounts.get("alice").unwrap();
     let addr = account_data.address();
 
-    let parsed_program = unwrap_or_log!(parse_program(&text), res, Stage::Parser);
-    res.append(Stage::Parser, format!("{:?}", parsed_program));
+    res.outputs.push(EvaluationOutput::Stage(Stage::Parser));
+    let parsed_program = unwrap_or_log!(parse_program(&text), res);
+    res.outputs
+        .push(EvaluationOutput::Output(format!("{:?}", parsed_program)));
 
-    let compiled_program = unwrap_or_log!(
-        compile_program(addr, &parsed_program, &deps),
-        res,
-        Stage::Compiler
-    );
-    res.append(Stage::Compiler, format!("{:?}", compiled_program));
+    res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
+    let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &deps), res);
+    res.outputs
+        .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
 
     if !config.no_verify {
-        unwrap_or_log!(
-            do_verify_program(&compiled_program, &deps),
-            res,
-            Stage::Verifier
-        );
-        res.append(Stage::Verifier, "".to_string());
+        res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
+        unwrap_or_log!(do_verify_program(&compiled_program, &deps), res);
+        res.outputs.push(EvaluationOutput::Output("".to_string()));
     }
 
     if !config.no_execute {
-        let txn_output = unwrap_or_log!(
-            run_transaction(config, &compiled_program),
-            res,
-            Stage::Runtime
-        );
-        res.append(Stage::Runtime, format!("{:?}", txn_output));
+        res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
+        let txn_output = unwrap_or_log!(run_transaction(config, &compiled_program), res);
+        res.outputs
+            .push(EvaluationOutput::Output(format!("{:?}", txn_output)));
     }
 
     res.status = Status::Success;

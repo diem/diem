@@ -3,7 +3,7 @@
 
 use crate::{
     errors::*,
-    evaluator::{EvaluationResult, Stage, Status},
+    evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
 };
 use filecheck;
 use std::slice::SliceConcatExt;
@@ -54,6 +54,7 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
     let mut checks: Vec<String> = vec![];
     let mut outputs: Vec<String> = vec![];
     let mut did_run_checks = false;
+    let mut last_stage = None;
 
     let mut i = 0;
 
@@ -63,44 +64,58 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
                 checks.push(check.clone());
             }
             Directive::Stage(barrier) => loop {
-                if i >= res.stages.len() {
+                if i >= res.outputs.len() {
                     return Err(ErrorKind::Other(format!(
                         "no stage '{:?}' in the output",
                         barrier
                     ))
                     .into());
                 }
-                let (stage, output) = &res.stages[i];
-                if stage < barrier {
-                    outputs.push(output.to_string());
-                    i += 1;
-                } else if stage == barrier {
-                    did_run_checks |= run_filecheck(&outputs.join("\n"), &checks.join("\n"))?;
-                    checks.clear();
-                    outputs.clear();
-                    outputs.push(output.to_string());
-                    i += 1;
-                    break;
-                } else {
-                    return Err(ErrorKind::Other(format!(
-                        "no stage '{:?}' in the output",
-                        barrier
-                    ))
-                    .into());
+                match &res.outputs[i] {
+                    EvaluationOutput::Stage(stage) => {
+                        last_stage = Some(stage.clone());
+                        if stage < barrier {
+                            i += 1;
+                            continue;
+                        } else if stage > barrier {
+                            return Err(ErrorKind::Other(format!(
+                                "no stage '{:?}' in the output",
+                                barrier
+                            ))
+                            .into());
+                        } else {
+                            did_run_checks |=
+                                run_filecheck(&outputs.join("\n"), &checks.join("\n"))?;
+                            checks.clear();
+                            outputs.clear();
+                            break;
+                        }
+                    }
+                    EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+                        outputs.push(s.to_string());
+                        i += 1;
+                    }
                 }
             },
         }
     }
 
-    for (_, output) in res.stages[i..].iter() {
-        outputs.push(output.clone());
+    for output in &res.outputs[i..] {
+        match output {
+            EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+                outputs.push(s.to_string());
+            }
+            EvaluationOutput::Stage(stage) => {
+                last_stage = Some(stage.clone());
+            }
+        }
     }
     did_run_checks |= run_filecheck(&outputs.join("\n"), &checks.join("\n"))?;
 
     if res.status == Status::Failure && !did_run_checks {
         return Err(ErrorKind::Other(format!(
             "program failed at stage '{:?}', no directives found, assuming failure",
-            res.stages.last().unwrap().0
+            last_stage.unwrap(),
         ))
         .into());
     }

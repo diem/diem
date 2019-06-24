@@ -3,7 +3,7 @@
 
 use crate::{
     checker::{check, run_filecheck, Directive},
-    evaluator::{EvaluationResult, Stage, Status},
+    evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
 };
 
 #[test]
@@ -41,17 +41,6 @@ fn filecheck() {
     ").unwrap_err();
 }
 
-macro_rules! eval_result {
-    ($status: expr, $($stage: expr, $output: expr),* $(,)*) => {
-        {
-            EvaluationResult {
-                stages: vec![$(($stage, $output.to_string())),*],
-                status: $status,
-            }
-        }
-    };
-}
-
 fn make_directives(s: &str) -> Vec<Directive> {
     s.lines()
         .filter_map(|s| {
@@ -66,13 +55,18 @@ fn make_directives(s: &str) -> Vec<Directive> {
 #[rustfmt::skip]
 #[test]
 fn check_basic() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Compiler, "foo",
-        Stage::Verifier, "baz",
-        Stage::Runtime, "bar"
-    );
-
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Stage(Stage::Compiler),
+            EvaluationOutput::Output("foo".to_string()),
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+            EvaluationOutput::Stage(Stage::Runtime),
+            EvaluationOutput::Output("bar".to_string()),
+        ],
+        status: Status::Success,
+    };
+    
     check(&res, &make_directives(r"
         // check: foo
         // stage: runtime
@@ -104,11 +98,15 @@ fn check_basic() {
 #[rustfmt::skip]
 #[test]
 fn check_match_twice() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Compiler, "foo",
-        Stage::Verifier, "bar",
-    );
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Stage(Stage::Compiler),
+            EvaluationOutput::Output("foo".to_string()),
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+        ],
+        status: Status::Success,
+    };
 
     check(&res, &make_directives(r"
         // check: foo
@@ -126,10 +124,13 @@ fn check_match_twice() {
 #[rustfmt::skip]
 #[test]
 fn check_no_stage() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Verifier, "",
-    );
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+        ],
+        status: Status::Success,
+    };
 
     check(&res, &make_directives(r"
         // stage: verifier
