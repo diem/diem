@@ -149,7 +149,6 @@ fn run_transaction(
         AccountResource::read_sequence_number(&account_resource),
         program,
         AccountResource::read_balance(&account_resource),
-        // TODO: allow the user to specify this in the config.
         1,
         Duration::from_secs(u64::max_value()),
     )
