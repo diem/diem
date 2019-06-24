@@ -26,7 +26,7 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 * [Life of a Transaction](https://developers.libra.org/docs/life-of-a-transaction)
 
 ### Libra Core Requeriments
-* [Rust Stable](https://doc.rust-lang.org/cargo/getting-started/installation.html) #Rust minimal v0.0.83 #Rust Stable v1.32(2019) 
+* [Rust Stable](https://doc.rust-lang.org/cargo/getting-started/installation.html) #Rust minimal v1.0 #Rust Stable v1.32(2019) 
 * [CMake](https://github.com/Kitware/CMake)
 * [Go Lang](https://golang.org/doc/install) 
 * [Protobuf](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md)
