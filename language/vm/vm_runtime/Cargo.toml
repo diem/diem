@@ -27,6 +27,7 @@ config = { path = "../../../config"}
 logger = { path = "../../../common/logger" }
 
 [dev-dependencies]
+assert_matches = "1.3.0"
 compiler = { path = "../../compiler"}
 
 [dependencies.prometheus]

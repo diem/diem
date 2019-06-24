@@ -84,15 +84,17 @@ where
                 // will read through the cache to fetch the module from the global storage
                 // if it is not already cached.
                 match txn_executor.module_cache().get_loaded_module(&module_id) {
-                    Ok(None) => (), // No module with this name exists. safe to publish one
-                    Ok(Some(_)) => {
-                        // A module with this name already exists. It is not safe to publish
-                        // another one; it would clobber the old module. This would break
-                        // code that links against the module and make published resources
-                        // from the old module inaccessible (or worse, accessible and not
+                    Ok(Ok(None)) => (), // No module with this name exists. safe to publish one
+                    Ok(Ok(Some(_))) | Ok(Err(_)) => {
+                        // A module with this name already exists (the error case is when the module
+                        // couldn't be verified, but it still exists so we should fail similarly).
+                        // It is not safe to publish another one; it would clobber the old module.
+                        // This would break code that links against the module and make published
+                        // resources from the old module inaccessible (or worse, accessible and not
                         // typesafe).
-                        // We are currently developing a versioning scheme for safe updates
-                        // of modules and resources.
+                        //
+                        // We are currently developing a versioning scheme for safe updates of
+                        // modules and resources.
                         warn!("[VM] VM error duplicate module {:?}", module_id);
                         return txn_executor.failed_transaction_cleanup(Ok(Err(VMRuntimeError {
                             loc: Location::default(),
@@ -101,7 +103,7 @@ where
                     }
                     Err(err) => {
                         error!(
-                            "[VM] VM internal error verifying module {:?}: {:?}",
+                            "[VM] VM internal error while checking for duplicate module {:?}: {:?}",
                             module_id, err
                         );
                         return ExecutedTransaction::discard_error_output(&err);

@@ -187,10 +187,10 @@ impl GasMeter {
             }
             Bytecode::Call(call_idx) => {
                 let self_module = &stk.top_frame()?.module();
-                let function_ref = stk
+                let function_ref = try_runtime!(stk
                     .module_cache
-                    .resolve_function_ref(self_module, *call_idx)?
-                    .ok_or(VMInvariantViolation::LinkerError)?;
+                    .resolve_function_ref(self_module, *call_idx))
+                .ok_or(VMInvariantViolation::LinkerError)?;
                 if function_ref.is_native() {
                     0 // This will be costed at the call site/by the native function
                 } else {

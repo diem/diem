@@ -634,9 +634,14 @@ fn test_call() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new_from_module(module, &allocator).unwrap();
     let fake_func = {
-        let fake_mod_entry = module_cache.get_loaded_module(&mod_id).unwrap().unwrap();
+        let fake_mod_entry = module_cache
+            .get_loaded_module(&mod_id)
+            .unwrap()
+            .unwrap()
+            .unwrap();
         module_cache
             .resolve_function_ref(fake_mod_entry, FunctionHandleIndex::new(0))
+            .unwrap()
             .unwrap()
             .unwrap()
     };

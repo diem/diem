@@ -12,6 +12,7 @@ use crate::{
         types::Type,
     },
 };
+use bytecode_verifier::VerifiedModule;
 use std::marker::PhantomData;
 use types::language_storage::ModuleId;
 use vm::{
@@ -32,25 +33,30 @@ mod module_cache_tests;
 /// Trait that describe a cache for modules. The idea is that this trait will in charge of
 /// loading resolving all dependencies of needed module from the storage.
 pub trait ModuleCache<'alloc> {
-    /// Given a function handle index, resolve that handle into an internal representation of
-    /// move function. Return value can be one of the three following cases:
-    /// 1. `Ok(Some(FunctionRef))` if such function exists.
-    /// 2. `Ok(None)` if such function doesn't exists.
-    /// 3. `Err` if the module we are referring to has some internal consistency error
+    /// Given a function handle index, resolves that handle into an internal representation of
+    /// move function.
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(Ok(Some(FunctionRef)))` if such function exists.
+    /// * `Ok(Ok(None))` if such function doesn't exists.
+    /// * `Ok(Err(...))` or `Err(...)` for a verification issue in a resolved dependency.
+    /// * `Err(...)` for a VM invariant violation.
     fn resolve_function_ref(
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> Result<Option<FunctionRef<'alloc>>, VMInvariantViolation>;
+    ) -> VMResult<Option<FunctionRef<'alloc>>>;
 
     /// Resolve a StructDefinitionIndex into a StructDef. This process will be recursive so we may
-    /// charge gas on each recursive step. Return value can be one of the following cases:
-    /// 1. `Ok(Some(StructDef))` if such struct exists.
-    /// 2. `Ok(None)` if such function doesn't exists.
-    /// 4. `Err(VMInvariantViolation)` if the module we are referring to has some internal
-    ///     consistency error
-    /// 5. `Err(LinkerError)` if some fields contains an unknown struct.
-    /// 6. `Err(OutOfGas)` if the recursive resolution is costing too much gas
+    /// charge gas on each recursive step.
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(Ok(Some(StructDef)))` if such struct exists.
+    /// * `Ok(Ok(None))` if such function doesn't exists.
+    /// * `Ok(Err(...))` for a verification or other issue in a resolved dependency, or out of gas.
+    /// * `Err(...)` for a VM invariant violation.
     fn resolve_struct_def(
         &self,
         module: &LoadedModule,
@@ -58,15 +64,15 @@ pub trait ModuleCache<'alloc> {
         gas_meter: &GasMeter,
     ) -> VMResult<Option<StructDef>>;
 
-    /// Resolve a ModuleId into a LoadedModule if the module has been cached already. Return value
-    /// can be one of the three following cases:
-    /// 1. `Ok(Some(LoadedModule))` if such module exists.
-    /// 2. `Ok(None)` if such module doesn't exists.
-    /// 3. `Err` if the module we are referring to has some internal consistency error
-    fn get_loaded_module(
-        &self,
-        id: &ModuleId,
-    ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation>;
+    /// Resolve a ModuleId into a LoadedModule if the module has been cached already.
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(Ok(Some(LoadedModule)))` if such module exists.
+    /// * `Ok(Ok(None))` if such module doesn't exists.
+    /// * `Ok(Err(...))` for a verification issue in the module.
+    /// * `Err(...)` for a VM invariant violation.
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>>;
 
     fn cache_module(&self, module: CompiledModule);
 
@@ -84,7 +90,7 @@ where
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> Result<Option<FunctionRef<'alloc>>, VMInvariantViolation> {
+    ) -> VMResult<Option<FunctionRef<'alloc>>> {
         (*self).resolve_function_ref(caller_module, idx)
     }
 
@@ -97,10 +103,7 @@ where
         (*self).resolve_struct_def(module, idx, gas_meter)
     }
 
-    fn get_loaded_module(
-        &self,
-        id: &ModuleId,
-    ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
         (*self).get_loaded_module(id)
     }
 
@@ -138,17 +141,36 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         id: &ModuleId,
         fetcher: &F,
-    ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
+    ) -> VMRuntimeResult<Option<&'alloc LoadedModule>> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
         // module id, we should get rid of that ok_or case here.
         if let Some(m) = self.map.get(id) {
             return Ok(Some(&*m));
         }
-        Ok(fetcher
-            .get_module(id)
-            .map(LoadedModule::new)
-            .map(|m| self.map.or_insert(id.clone(), m)))
+        let module = match fetcher.get_module(id) {
+            Some(module) => module,
+            None => return Ok(None),
+        };
+
+        // Verify the module before using it.
+        let module = match VerifiedModule::new(module) {
+            Ok(module) => module.into_inner(),
+            Err((_, errors)) => {
+                return Err(VMRuntimeError {
+                    loc: Location::new(),
+                    err: VMErrorKind::Verification(
+                        errors
+                            .into_iter()
+                            .map(|error| VerificationStatus::Dependency(id.clone(), error))
+                            .collect(),
+                    ),
+                })
+            }
+        };
+
+        let loaded_module = LoadedModule::new(module);
+        Ok(Some(self.map.or_insert(id.clone(), loaded_module)))
     }
 
     #[cfg(test)]
@@ -170,25 +192,25 @@ impl<'alloc> VMModuleCache<'alloc> {
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
         fetcher: &F,
-    ) -> Result<Option<FunctionRef<'alloc>>, VMInvariantViolation>
+    ) -> VMResult<Option<FunctionRef<'alloc>>>
     where
         F: ModuleFetcher,
     {
         let function_handle = caller_module.function_handle_at(idx);
         let callee_name = caller_module.string_at(function_handle.name);
         let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
-        self.get_loaded_module_with_fetcher(&callee_module_id, fetcher)
-            .and_then(|callee_module_opt| {
-                if let Some(callee_module) = callee_module_opt {
-                    let callee_func_id = callee_module
-                        .function_defs_table
-                        .get(callee_name)
-                        .ok_or(VMInvariantViolation::LinkerError)?;
-                    Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
-                } else {
-                    Ok(None)
-                }
-            })
+
+        match self.get_loaded_module_with_fetcher(&callee_module_id, fetcher) {
+            Ok(Some(callee_module)) => {
+                let callee_func_id = callee_module
+                    .function_defs_table
+                    .get(callee_name)
+                    .ok_or(VMInvariantViolation::LinkerError)?;
+                Ok(Ok(Some(FunctionRef::new(callee_module, *callee_func_id))))
+            }
+            Ok(None) => Ok(Ok(None)),
+            Err(errors) => Ok(Err(errors)),
+        }
     }
 
     /// Resolve a StructHandle into a StructDef recursively in either the cache or the `fetcher`.
@@ -202,15 +224,16 @@ impl<'alloc> VMModuleCache<'alloc> {
         let struct_handle = module.struct_handle_at(idx);
         let struct_name = module.string_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
-        let defined_module = self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher)?;
-        if let Some(m) = defined_module {
-            let struct_def_idx = m
-                .struct_defs_table
-                .get(struct_name)
-                .ok_or(VMInvariantViolation::LinkerError)?;
-            self.resolve_struct_def_with_fetcher(m, *struct_def_idx, gas_meter, fetcher)
-        } else {
-            Ok(Ok(None))
+        match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
+            Ok(Some(module)) => {
+                let struct_def_idx = module
+                    .struct_defs_table
+                    .get(struct_name)
+                    .ok_or(VMInvariantViolation::LinkerError)?;
+                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
+            }
+            Ok(None) => Ok(Ok(None)),
+            Err(errors) => Ok(Err(errors)),
         }
     }
 
@@ -292,7 +315,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> Result<Option<FunctionRef<'alloc>>, VMInvariantViolation> {
+    ) -> VMResult<Option<FunctionRef<'alloc>>> {
         self.resolve_function_ref_with_fetcher(caller_module, idx, &NullFetcher())
     }
 
@@ -305,14 +328,11 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         self.resolve_struct_def_with_fetcher(module, idx, gas_meter, &NullFetcher())
     }
 
-    fn get_loaded_module(
-        &self,
-        id: &ModuleId,
-    ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
         // module id, we should get rid of that ok_or case here.
-        Ok(self.map.get(id))
+        Ok(Ok(self.map.get(id)))
     }
 
     fn cache_module(&self, module: CompiledModule) {
@@ -362,7 +382,7 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> Result<Option<FunctionRef<'alloc>>, VMInvariantViolation> {
+    ) -> VMResult<Option<FunctionRef<'alloc>>> {
         self.vm_cache
             .resolve_function_ref_with_fetcher(caller_module, idx, &self.storage)
     }
@@ -377,12 +397,10 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
             .resolve_struct_def_with_fetcher(module, idx, gas_meter, &self.storage)
     }
 
-    fn get_loaded_module(
-        &self,
-        id: &ModuleId,
-    ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation> {
-        self.vm_cache
-            .get_loaded_module_with_fetcher(id, &self.storage)
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
+        Ok(self
+            .vm_cache
+            .get_loaded_module_with_fetcher(id, &self.storage))
     }
 
     fn cache_module(&self, module: CompiledModule) {
@@ -432,9 +450,9 @@ where
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> Result<Option<FunctionRef<'txn>>, VMInvariantViolation> {
-        if let Some(f) = self.local_cache.resolve_function_ref(caller_module, idx)? {
-            Ok(Some(f))
+    ) -> VMResult<Option<FunctionRef<'txn>>> {
+        if let Some(f) = try_runtime!(self.local_cache.resolve_function_ref(caller_module, idx)) {
+            Ok(Ok(Some(f)))
         } else {
             self.block_cache.resolve_function_ref(caller_module, idx)
         }
@@ -453,12 +471,9 @@ where
         }
     }
 
-    fn get_loaded_module(
-        &self,
-        id: &ModuleId,
-    ) -> Result<Option<&'txn LoadedModule>, VMInvariantViolation> {
-        if let Some(m) = self.local_cache.get_loaded_module(id)? {
-            Ok(Some(m))
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'txn LoadedModule>> {
+        if let Some(m) = try_runtime!(self.local_cache.get_loaded_module(id)) {
+            Ok(Ok(Some(m)))
         } else {
             self.block_cache.get_loaded_module(id)
         }

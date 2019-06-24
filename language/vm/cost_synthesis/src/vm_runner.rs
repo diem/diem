@@ -48,7 +48,8 @@ macro_rules! with_loaded_vm {
         $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Cache] Internal error encountered when fetching module.")
+            .expect("[Module Lookup] Invariant violation while looking up module")
+            .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Cache] Unable to find module in module cache.");
         for m in modules {
             $module_cache.cache_module(m);

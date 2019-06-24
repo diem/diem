@@ -6,6 +6,7 @@ use crate::{
     ExecuteChunkRequest, ExecuteChunkResponse,
 };
 use proptest::prelude::*;
+use proptest_helpers::with_stack_size;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
@@ -14,11 +15,6 @@ proptest! {
     #[test]
     fn test_execute_block_request_roundtrip(execute_block_request in any::<ExecuteBlockRequest>()) {
         assert_protobuf_encode_decode(&execute_block_request);
-    }
-
-    #[test]
-    fn test_execute_block_response_roundtrip(execute_block_response in any::<ExecuteBlockResponse>()) {
-        assert_protobuf_encode_decode(&execute_block_response);
     }
 
     #[test]
@@ -42,4 +38,14 @@ proptest! {
     fn test_execute_chunk_response_roundtrip(execute_chunk_response in any::<ExecuteChunkResponse>()) {
         assert_protobuf_encode_decode(&execute_chunk_response);
     }
+}
+
+#[test]
+fn test_execute_block_response_roundtrip() {
+    with_stack_size(4 * 1024 * 1024, || {
+        proptest!(|(execute_block_response in any::<ExecuteBlockResponse>())| {
+            assert_protobuf_encode_decode(&execute_block_response);
+        })
+    })
+    .unwrap();
 }

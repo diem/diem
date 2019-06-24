@@ -240,11 +240,11 @@ where
                 }
                 Bytecode::Call(idx) => {
                     let self_module = &self.execution_stack.top_frame()?.module();
-                    let callee_function_ref = self
+                    let callee_function_ref = try_runtime!(self
                         .execution_stack
                         .module_cache
-                        .resolve_function_ref(self_module, idx)?
-                        .ok_or(VMInvariantViolation::LinkerError)?;
+                        .resolve_function_ref(self_module, idx))
+                    .ok_or(VMInvariantViolation::LinkerError)?;
 
                     if callee_function_ref.is_native() {
                         let module_name: &str = callee_function_ref.module().name();
@@ -609,11 +609,11 @@ where
     /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub fn create_account(&mut self, addr: AccountAddress) -> VMResult<()> {
-        let account_module = self
+        let account_module = try_runtime!(self
             .execution_stack
             .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?
-            .ok_or(VMInvariantViolation::LinkerError)?;
+            .get_loaded_module(&ACCOUNT_MODULE))
+        .ok_or(VMInvariantViolation::LinkerError)?;
 
         // Address will be used as the initial authentication key.
         try_runtime!(self.execute_function(
@@ -747,11 +747,11 @@ where
         function_name: &str,
         args: Vec<Local>,
     ) -> VMResult<()> {
-        let loaded_module = self
-            .execution_stack
-            .module_cache
-            .get_loaded_module(module)?
-            .ok_or(VMInvariantViolation::LinkerError)?;
+        let loaded_module =
+            match try_runtime!(self.execution_stack.module_cache.get_loaded_module(module)) {
+                Some(module) => module,
+                None => return Err(VMInvariantViolation::LinkerError),
+            };
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
