@@ -31,7 +31,7 @@ fn test_create_nibble_path_success() {
 #[test]
 #[should_panic(expected = "Last nibble must be 0.")]
 fn test_create_nibble_path_failure() {
-    let bytes: Vec<u8> = vec![0x12, 0x34, 0x56];
+    let bytes = vec![0x12, 0x34, 0x56];
     let _nibble_path = NibblePath::new_odd(bytes);
 }
 
@@ -43,7 +43,7 @@ fn test_empty_nibble_path() {
 
 #[test]
 fn test_get_nibble() {
-    let bytes: Vec<u8> = vec![0x12, 0x34];
+    let bytes = vec![0x12, 0x34];
     let nibble_path = NibblePath::new(bytes);
     assert_eq!(nibble_path.get_nibble(0), 0x01);
     assert_eq!(nibble_path.get_nibble(1), 0x02);
@@ -53,7 +53,7 @@ fn test_get_nibble() {
 
 #[test]
 fn test_nibble_iterator() {
-    let bytes: Vec<u8> = vec![0x12, 0x30];
+    let bytes = vec![0x12, 0x30];
     let nibble_path = NibblePath::new_odd(bytes);
     let mut iter = nibble_path.nibbles();
     assert_eq!(iter.next().unwrap(), 0x01);
@@ -64,7 +64,7 @@ fn test_nibble_iterator() {
 
 #[test]
 fn test_get_bit() {
-    let bytes: Vec<u8> = vec![0x01, 0x02];
+    let bytes = vec![0x01, 0x02];
     let nibble_path = NibblePath::new(bytes);
     assert_eq!(nibble_path.get_bit(0), false);
     assert_eq!(nibble_path.get_bit(1), false);
@@ -76,7 +76,7 @@ fn test_get_bit() {
 
 #[test]
 fn test_bit_iter() {
-    let bytes: Vec<u8> = vec![0xc3, 0xa0];
+    let bytes = vec![0xc3, 0xa0];
     let nibble_path = NibblePath::new_odd(bytes.clone());
     let mut iter = nibble_path.bits();
     // c: 0b1100
@@ -100,7 +100,7 @@ fn test_bit_iter() {
 
 #[test]
 fn test_visited_nibble_iter() {
-    let bytes: Vec<u8> = vec![0x12, 0x34, 0x56];
+    let bytes = vec![0x12, 0x34, 0x56];
     let nibble_path = NibblePath::new(bytes.clone());
     let mut iter = nibble_path.nibbles();
     assert_eq!(iter.next().unwrap(), 0x01);
@@ -227,5 +227,4 @@ proptest! {
         let bit_iter = nibble_iter.bits();
         prop_assert_eq!(remaining_bit_iter.collect::<Vec<bool>>(), bit_iter.collect::<Vec<_>>());
     }
-
 }
