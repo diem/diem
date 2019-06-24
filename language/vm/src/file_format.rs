@@ -1260,10 +1260,6 @@ impl CompiledModule {
     /// By convention, the index of the module being implemented is 0.
     pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
 
-    fn self_handle(&self) -> &ModuleHandle {
-        &self.module_handle_at(ModuleHandleIndex::new(Self::IMPLEMENTED_MODULE_INDEX))
-    }
-
     /// Returns a reference to the inner `CompiledModuleMut`.
     pub fn as_inner(&self) -> &CompiledModuleMut {
         &self.0
@@ -1273,16 +1269,6 @@ impl CompiledModule {
     /// `CompiledModule` would require it to be verified again.
     pub fn into_inner(self) -> CompiledModuleMut {
         self.0
-    }
-
-    /// Returns the name of the module.
-    pub fn name(&self) -> &str {
-        self.string_at(self.self_handle().name)
-    }
-
-    /// Returns the address of the module.
-    pub fn address(&self) -> &AccountAddress {
-        self.address_at(self.self_handle().address)
     }
 
     /// Returns the number of items of a specific `IndexKind`.

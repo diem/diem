@@ -80,7 +80,7 @@ where
 {
     /// The number of iterations that this instruction will be run for. Used to implement the
     /// `Iterator` trait.
-    iters: u64,
+    iters: u16,
 
     /// The source of pseudo-randomness.
     gen: StdRng,
@@ -102,12 +102,12 @@ where
     max_stack_size: u64,
 
     /// Cursor into the string pool. Used for the generation of random strings.
-    string_pool_index: u64,
+    string_pool_index: TableIndex,
 
     /// Cursor into the address pool. Used for the generation of random addresses.  We use this
     /// since we need the addresses to be unique for e.g. CreateAccount, and we don't want a
     /// mutable reference into the underlying `root_module`.
-    address_pool_index: u64,
+    address_pool_index: TableIndex,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
     /// generating an inhabitant for a struct SignatureToken. This is lazily populated.
@@ -131,7 +131,7 @@ where
         module_cache: &'txn ModuleCache<'alloc>,
         op: &Bytecode,
         max_stack_size: u64,
-        iters: u64,
+        iters: u16,
     ) -> Self {
         let seed: [u8; 32] = [0; 32];
         Self {
@@ -149,8 +149,8 @@ where
     }
 
     fn to_code_key(&self, module_handle: &ModuleHandle) -> CodeKey {
-        let address = *self.root_module.module.address_at(module_handle.address);
-        let name = self.root_module.module.string_at(module_handle.name);
+        let address = *self.root_module.address_at(module_handle.address);
+        let name = self.root_module.string_at(module_handle.name);
         CodeKey::new(address, name.to_string())
     }
 
@@ -208,14 +208,14 @@ where
             let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
             (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
         } else {
-            let string = self.root_module.module.as_inner().string_pool
-                [self.string_pool_index as usize]
-                .clone();
+            let string = self
+                .root_module
+                .string_at(StringPoolIndex::new(self.string_pool_index));
             self.string_pool_index = self
                 .string_pool_index
                 .checked_sub(1)
                 .expect("Exhausted strings in string pool");
-            string
+            string.to_string()
         }
     }
 
@@ -223,13 +223,14 @@ where
         if !self.points_to_module_data() || is_padding {
             AccountAddress::random()
         } else {
-            let address =
-                self.root_module.module.as_inner().address_pool[self.address_pool_index as usize];
+            let address = self
+                .root_module
+                .address_at(AddressPoolIndex::new(self.address_pool_index));
             self.address_pool_index = self
                 .address_pool_index
                 .checked_sub(1)
                 .expect("Exhausted account addresses in address pool");
-            address
+            *address
         }
     }
 
@@ -238,23 +239,23 @@ where
     }
 
     fn next_string_idx(&mut self) -> StringPoolIndex {
-        let len = self.root_module.module.string_pool().len();
+        let len = self.root_module.string_pool().len();
         StringPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_address_idx(&mut self) -> AddressPoolIndex {
-        let len = self.root_module.module.address_pool().len();
+        let len = self.root_module.address_pool().len();
         AddressPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_bytearray_idx(&mut self) -> ByteArrayPoolIndex {
-        let len = self.root_module.module.byte_array_pool().len();
+        let len = self.root_module.byte_array_pool().len();
         ByteArrayPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
     }
 
     fn next_function_handle_idx(&mut self) -> FunctionHandleIndex {
         let table_idx =
-            self.next_bounded_index(self.root_module.module.function_handles().len() as TableIndex);
+            self.next_bounded_index(self.root_module.function_handles().len() as TableIndex);
         FunctionHandleIndex::new(table_idx)
     }
 
@@ -283,7 +284,6 @@ where
         let (module, function_definition, function_def_idx) =
             self.resolve_function_handle(function_handle_idx);
         let type_sig = &module
-            .module
             .locals_signature_at(function_definition.code.locals)
             .0;
         // Pick a random local within that function in which we'll store the local
@@ -311,7 +311,6 @@ where
         let function_idx = FunctionDefinitionIndex::new(DEFAULT_FUNCTION_IDX);
         let frame_len = self
             .root_module
-            .module
             .function_def_at(function_idx)
             .code
             .code
@@ -345,15 +344,9 @@ where
         &'txn StructDefinition,
         StructDefinitionIndex,
     ) {
-        let struct_handle = self
-            .root_module
-            .module
-            .struct_handle_at(struct_handle_index);
+        let struct_handle = self.root_module.struct_handle_at(struct_handle_index);
         let struct_name = self.root_module.string_at(struct_handle.name);
-        let module_handle = self
-            .root_module
-            .module
-            .module_handle_at(struct_handle.module);
+        let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let code_key = self.to_code_key(module_handle);
         let module = self
             .module_cache
@@ -368,13 +361,12 @@ where
         } else {
             let entry = self.struct_handle_table.entry(code_key).or_insert_with(|| {
                 module
-                    .module
                     .struct_defs()
                     .iter()
                     .enumerate()
                     .map(|(struct_def_index, struct_def)| {
-                        let handle = module.module.struct_handle_at(struct_def.struct_handle);
-                        let name = module.module.string_at(handle.name).to_string();
+                        let handle = module.struct_handle_at(struct_def.struct_handle);
+                        let name = module.string_at(handle.name).to_string();
                         (
                             name,
                             StructDefinitionIndex::new(struct_def_index as TableIndex),
@@ -386,7 +378,7 @@ where
         }
         .expect("[Struct Definition Lookup] Unable to get struct definition for struct handle");
 
-        let struct_def = module.module.struct_def_at(*struct_def_idx);
+        let struct_def = module.struct_def_at(*struct_def_idx);
         (module, struct_def, *struct_def_idx)
     }
 
@@ -398,15 +390,9 @@ where
         &'txn FunctionDefinition,
         FunctionDefinitionIndex,
     ) {
-        let function_handle = self
-            .root_module
-            .module
-            .function_handle_at(function_handle_index);
+        let function_handle = self.root_module.function_handle_at(function_handle_index);
         let function_name = self.root_module.string_at(function_handle.name);
-        let module_handle = self
-            .root_module
-            .module
-            .module_handle_at(function_handle.module);
+        let module_handle = self.root_module.module_handle_at(function_handle.module);
         let code_key = self.to_code_key(module_handle);
         let module = self
             .module_cache
@@ -428,13 +414,12 @@ where
                 .entry(code_key)
                 .or_insert_with(|| {
                     module
-                        .module
                         .function_defs()
                         .iter()
                         .enumerate()
                         .map(|(function_def_index, function_def)| {
-                            let handle = module.module.function_handle_at(function_def.function);
-                            let name = module.module.string_at(handle.name).to_string();
+                            let handle = module.function_handle_at(function_def.function);
+                            let name = module.string_at(handle.name).to_string();
                             (
                                 name,
                                 FunctionDefinitionIndex::new(function_def_index as TableIndex),
@@ -445,7 +430,7 @@ where
             *entry.get(function_name).expect("FOO")
         };
 
-        let function_def = module.module.function_def_at(function_def_idx);
+        let function_def = module.function_def_at(function_def_idx);
         (module, function_def, function_def_idx)
     }
 
@@ -466,23 +451,21 @@ where
             }
             SignatureToken::ByteArray => Local::bytearray(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx) => {
-                assert!(self.root_module.module.struct_defs().len() > 1);
+                assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
-                    .module
                     .struct_def_at(self.resolve_struct_handle(struct_handle_idx).2);
                 let num_fields = struct_definition.field_count as usize;
                 let index = struct_definition.fields;
                 let fields = self
                     .root_module
-                    .module
                     .field_def_range(num_fields as MemberCount, index);
                 let mutvals = fields
                     .iter()
                     .map(|field| {
                         self.resolve_to_value(
                             self.root_module
-                                .module
+
                                 .type_signature_at(field.signature)
                                 .0
                                 .clone(),
@@ -524,13 +507,9 @@ where
             Call(_) => {
                 let function_handle_idx = self.next_function_handle_idx();
                 let function_idx = self.resolve_function_handle(function_handle_idx).2;
-                let function_handle = self
-                    .root_module
-                    .module
-                    .function_handle_at(function_handle_idx);
+                let function_handle = self.root_module.function_handle_at(function_handle_idx);
                 let function_sig = self
                     .root_module
-                    .module
                     .function_signature_at(function_handle.signature);
                 let stack = function_sig.arg_types.clone().into_iter().fold(
                     Vec::new(),
@@ -549,22 +528,20 @@ where
                 )
             }
             Pack(_struct_def_idx) => {
-                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
+                let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
-                let struct_definition = self.root_module.module.struct_def_at(random_struct_idx);
+                let struct_definition = self.root_module.struct_def_at(random_struct_idx);
                 let num_fields = struct_definition.field_count as usize;
                 let index = struct_definition.fields;
                 let fields = self
                     .root_module
-                    .module
                     .field_def_range(num_fields as MemberCount, index);
                 let stack: Stack = fields
                     .iter()
                     .map(|field| {
                         let ty = self
                             .root_module
-                            .module
                             .type_signature_at(field.signature)
                             .0
                             .clone();
@@ -581,12 +558,11 @@ where
                 )
             }
             Unpack(_struct_def_idx) => {
-                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
+                let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_handle_idx = self
                     .root_module
-                    .module
                     .struct_def_at(random_struct_idx)
                     .struct_handle;
                 let struct_stack =
@@ -602,10 +578,10 @@ where
             }
             BorrowField(_) => {
                 // First grab a random struct
-                let struct_def_bound = self.root_module.module.struct_defs().len() as TableIndex;
+                let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
-                let struct_definition = self.root_module.module.struct_def_at(random_struct_idx);
+                let struct_definition = self.root_module.struct_def_at(random_struct_idx);
                 let num_fields = struct_definition.field_count;
                 // Grab a random field within that struct to borrow
                 let field_index = self.gen.gen_range(0, num_fields);

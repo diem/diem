@@ -25,6 +25,23 @@ pub trait ModuleAccess: Sync {
     /// Returns the `CompiledModule` that will be used for accesses.
     fn as_module(&self) -> &CompiledModule;
 
+    /// Returns the `ModuleHandle` for `self`.
+    fn self_handle(&self) -> &ModuleHandle {
+        self.module_handle_at(ModuleHandleIndex::new(
+            CompiledModule::IMPLEMENTED_MODULE_INDEX,
+        ))
+    }
+
+    /// Returns the name of the module.
+    fn name(&self) -> &str {
+        self.string_at(self.self_handle().name)
+    }
+
+    /// Returns the address of the module.
+    fn address(&self) -> &AccountAddress {
+        self.address_at(self.self_handle().address)
+    }
+
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         &self.as_module().as_inner().module_handles[idx.into_index()]
     }

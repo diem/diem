@@ -4,13 +4,12 @@
 
 use crate::loaded_data::{function::FunctionDef, struct_def::StructDef};
 use std::{collections::HashMap, sync::RwLock};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     access::ModuleAccess,
     errors::VMInvariantViolation,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, FieldDefinitionIndex,
-        FunctionDefinitionIndex, MemberCount, StringPoolIndex, StructDefinitionIndex, TableIndex,
+        CompiledModule, FieldDefinitionIndex, FunctionDefinitionIndex, MemberCount,
+        StructDefinitionIndex, TableIndex,
     },
     internals::ModuleIndex,
 };
@@ -19,7 +18,7 @@ use vm::{
 /// reverse mapping that allows querying definition of struct/function by name.
 #[derive(Debug, Eq, PartialEq)]
 pub struct LoadedModule {
-    pub module: CompiledModule,
+    module: CompiledModule,
     #[allow(dead_code)]
     pub struct_defs_table: HashMap<String, StructDefinitionIndex>,
     #[allow(dead_code)]
@@ -32,6 +31,12 @@ pub struct LoadedModule {
     pub field_offsets: Vec<TableIndex>,
 
     cache: LoadedModuleCache,
+}
+
+impl ModuleAccess for LoadedModule {
+    fn as_module(&self) -> &CompiledModule {
+        &self.module
+    }
 }
 
 #[derive(Debug)]
@@ -100,20 +105,8 @@ impl LoadedModule {
         })
     }
 
-    pub fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
-        self.module.address_at(idx)
-    }
-
-    pub fn string_at(&self, idx: StringPoolIndex) -> &str {
-        self.module.string_at(idx)
-    }
-
-    pub fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> ByteArray {
-        self.module.byte_array_at(idx).clone()
-    }
-
     pub fn field_count_at(&self, idx: StructDefinitionIndex) -> MemberCount {
-        self.module.struct_def_at(idx).field_count
+        self.struct_def_at(idx).field_count
     }
 
     /// Return a cached copy of the struct def at this index, if available.

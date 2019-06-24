@@ -29,7 +29,7 @@ use vm_runtime::{
 };
 
 const MAX_STACK_SIZE: u64 = 100;
-const NUM_ITERS: u64 = 1000;
+const NUM_ITERS: u16 = 1000;
 
 fn stack_instructions() {
     use Bytecode::*;

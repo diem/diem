@@ -54,7 +54,7 @@ const CREATE_ACCOUNT_NAME: &str = "make";
 const ACCOUNT_STRUCT_NAME: &str = "T";
 
 fn make_access_path(
-    module: &CompiledModule,
+    module: &impl ModuleAccess,
     idx: StructDefinitionIndex,
     address: AccountAddress,
 ) -> AccessPath {
@@ -211,7 +211,8 @@ where
                 Bytecode::LdByteArray(idx) => {
                     let top_frame = self.execution_stack.top_frame()?;
                     let byte_array = top_frame.module().byte_array_at(idx);
-                    self.execution_stack.push(Local::bytearray(byte_array));
+                    self.execution_stack
+                        .push(Local::bytearray(byte_array.clone()));
                 }
                 Bytecode::LdTrue => {
                     self.execution_stack.push(Local::bool(true));
@@ -246,7 +247,7 @@ where
                         .ok_or(VMInvariantViolation::LinkerError)?;
 
                     if callee_function_ref.is_native() {
-                        let module_name: &str = callee_function_ref.module().module.name();
+                        let module_name: &str = callee_function_ref.module().name();
                         let function_name: &str = callee_function_ref.name();
                         let native_return = dispatch_native_call(
                             &mut self.execution_stack,
@@ -320,7 +321,7 @@ where
                 }
                 Bytecode::Pack(sd_idx) => {
                     let self_module = self.execution_stack.top_frame()?.module();
-                    let struct_def = self_module.module.struct_def_at(sd_idx);
+                    let struct_def = self_module.struct_def_at(sd_idx);
                     let args = self
                         .execution_stack
                         .popn(struct_def.field_count)?
@@ -458,8 +459,8 @@ where
                 }
                 Bytecode::BorrowGlobal(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -479,8 +480,8 @@ where
                 }
                 Bytecode::Exists(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -499,8 +500,8 @@ where
                 }
                 Bytecode::MoveFrom(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -519,8 +520,8 @@ where
                     }
                 }
                 Bytecode::MoveToSender(idx) => {
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, self.txn_data.sender());
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, self.txn_data.sender());
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -637,7 +638,7 @@ where
         .ok_or(VMInvariantViolation::LinkerError)?;
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
-        let account_path = make_access_path(&account_module.module, *account_struct_id, addr);
+        let account_path = make_access_path(account_module, *account_struct_id, addr);
         self.data_view
             .move_resource_to(&account_path, account_struct_def, account_resource)
     }

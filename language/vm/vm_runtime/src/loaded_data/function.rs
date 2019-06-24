@@ -55,11 +55,8 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
         idx: FunctionDefinitionIndex,
     ) -> Result<Self, VMInvariantViolation> {
         let def = &module.function_defs[idx.into_index()];
-        let fn_definition = &module.module.function_def_at(idx);
-        let name_idx = module
-            .module
-            .function_handle_at(fn_definition.function)
-            .name;
+        let fn_definition = &module.function_def_at(idx);
+        let name_idx = module.function_handle_at(fn_definition.function).name;
         Ok(FunctionRef {
             module,
             def,

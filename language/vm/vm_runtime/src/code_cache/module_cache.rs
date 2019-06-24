@@ -175,10 +175,10 @@ impl<'alloc> VMModuleCache<'alloc> {
     where
         F: ModuleFetcher,
     {
-        let function_handle = caller_module.module.function_handle_at(idx);
+        let function_handle = caller_module.function_handle_at(idx);
         let callee_name = caller_module.string_at(function_handle.name);
         let callee_module_id =
-            FunctionHandleView::new(&caller_module.module, function_handle).module_code_key();
+            FunctionHandleView::new(caller_module, function_handle).module_code_key();
         self.get_loaded_module_with_fetcher(&callee_module_id, fetcher)
             .and_then(|callee_module_opt| {
                 if let Some(callee_module) = callee_module_opt {
@@ -201,10 +201,9 @@ impl<'alloc> VMModuleCache<'alloc> {
         gas_meter: &GasMeter,
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
-        let struct_handle = module.module.struct_handle_at(idx);
-        let struct_name = module.module.string_at(struct_handle.name);
-        let struct_def_module_id =
-            StructHandleView::new(&module.module, struct_handle).module_code_key();
+        let struct_handle = module.struct_handle_at(idx);
+        let struct_name = module.string_at(struct_handle.name);
+        let struct_def_module_id = StructHandleView::new(module, struct_handle).module_code_key();
         let defined_module = self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher)?;
         if let Some(m) = defined_module {
             let struct_def_idx = m
@@ -265,15 +264,12 @@ impl<'alloc> VMModuleCache<'alloc> {
             return Ok(Ok(Some(def)));
         }
         let def = {
-            let struct_def = module.module.struct_def_at(idx);
+            let struct_def = module.struct_def_at(idx);
             let mut field_types = vec![];
-            for field in module
-                .module
-                .field_def_range(struct_def.field_count, struct_def.fields)
-            {
+            for field in module.field_def_range(struct_def.field_count, struct_def.fields) {
                 let ty = try_runtime!(self.resolve_signature_token_with_fetcher(
                     module,
-                    &module.module.type_signature_at(field.signature).0,
+                    &module.type_signature_at(field.signature).0,
                     gas_meter,
                     fetcher
                 ));
@@ -331,7 +327,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
 
     fn reclaim_cached_module(&self, v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation> {
         for m in v.into_iter() {
-            let module_id = m.module.self_code_key();
+            let module_id = m.self_code_key();
             self.map.or_insert(module_id, m);
         }
         Ok(())

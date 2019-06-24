@@ -204,7 +204,7 @@ impl GasMeter {
                 Self::gas_of(static_cost_instr(instr, size))
             }
             Bytecode::Pack(struct_idx) => {
-                let struct_def = &stk.top_frame()?.module().module.struct_def_at(*struct_idx);
+                let struct_def = &stk.top_frame()?.module().struct_def_at(*struct_idx);
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
                 // the struct.
