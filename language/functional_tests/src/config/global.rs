@@ -110,7 +110,6 @@ impl Config {
         if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
             entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
         }
-        println!("{:?}", accounts);
         Ok(Config { accounts })
     }
 }
