@@ -434,11 +434,9 @@ fn test_multi_level_cache_write_back() {
     assert_eq!(func2_ref.code_definition(), vec![Bytecode::Ret].as_slice());
 }
 
-// TODO: What this function does is way beyond its name suggests.
-//       Fix it and code depending on it.
-fn parse_modules(s: String) -> Vec<CompiledModule> {
+fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
     let address = AccountAddress::default();
-    let parsed_program = parse_program(&s).unwrap();
+    let parsed_program = parse_program(s.as_ref()).unwrap();
 
     let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
     compiled_program.modules
@@ -449,8 +447,7 @@ fn test_same_module_struct_resolution() {
     let allocator = Arena::new();
     let vm_cache = VMModuleCache::new(&allocator);
 
-    let code = String::from(
-        "
+    let code = "
         modules:
         module M1 {
             struct X {}
@@ -460,10 +457,9 @@ fn test_same_module_struct_resolution() {
         main() {
             return;
         }
-        ",
-    );
+        ";
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
@@ -511,7 +507,7 @@ fn test_multi_module_struct_resolution() {
         hex::encode(AccountAddress::default())
     );
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(&code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
@@ -539,8 +535,7 @@ fn test_field_offset_resolution() {
     let allocator = Arena::new();
     let vm_cache = VMModuleCache::new(&allocator);
 
-    let code = String::from(
-        "
+    let code = "
         modules:
         module M1 {
             struct X { f: u64, g: bool}
@@ -550,10 +545,9 @@ fn test_field_offset_resolution() {
         main() {
             return;
         }
-        ",
-    );
+        ";
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
