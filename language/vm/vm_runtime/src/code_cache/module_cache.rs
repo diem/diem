@@ -68,11 +68,11 @@ pub trait ModuleCache<'alloc> {
         id: &CodeKey,
     ) -> Result<Option<&'alloc LoadedModule>, VMInvariantViolation>;
 
-    fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation>;
+    fn cache_module(&self, module: CompiledModule);
 
     /// Recache the list of previously resolved modules. Think of the cache as a generational
     /// cache and we need to move modules across generations.
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation>;
+    fn reclaim_cached_module(&self, v: Vec<LoadedModule>);
 }
 
 /// `ModuleCache` is also implemented for references.
@@ -104,11 +104,11 @@ where
         (*self).get_loaded_module(id)
     }
 
-    fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation> {
+    fn cache_module(&self, module: CompiledModule) {
         (*self).cache_module(module)
     }
 
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation> {
+    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
         (*self).reclaim_cached_module(v)
     }
 }
@@ -316,20 +316,18 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         Ok(self.map.get(id))
     }
 
-    fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation> {
+    fn cache_module(&self, module: CompiledModule) {
         let module_id = module.self_code_key();
         // TODO: Check CodeKey duplication in statedb
         let loaded_module = LoadedModule::new(module);
         self.map.or_insert(module_id, loaded_module);
-        Ok(())
     }
 
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation> {
+    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
         for m in v.into_iter() {
             let module_id = m.self_code_key();
             self.map.or_insert(module_id, m);
         }
-        Ok(())
     }
 }
 
@@ -388,11 +386,11 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
             .get_loaded_module_with_fetcher(id, &self.storage)
     }
 
-    fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation> {
+    fn cache_module(&self, module: CompiledModule) {
         self.vm_cache.cache_module(module)
     }
 
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation> {
+    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
         self.vm_cache.reclaim_cached_module(v)
     }
 }
@@ -467,11 +465,11 @@ where
         }
     }
 
-    fn cache_module(&self, module: CompiledModule) -> Result<(), VMInvariantViolation> {
+    fn cache_module(&self, module: CompiledModule) {
         self.local_cache.cache_module(module)
     }
 
-    fn reclaim_cached_module(&self, _v: Vec<LoadedModule>) -> Result<(), VMInvariantViolation> {
-        Err(VMInvariantViolation::LinkerError)
+    fn reclaim_cached_module(&self, _v: Vec<LoadedModule>) {
+        panic!("reclaim_cached_module should never be called on TransactionModuleCache");
     }
 }

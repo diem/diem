@@ -108,13 +108,7 @@ where
                     }
                 }
 
-                match txn_executor.module_cache().cache_module(module) {
-                    Ok(()) => (),
-                    Err(err) => {
-                        error!("[VM] VM internal error while caching module: {:?}", err);
-                        return ExecutedTransaction::discard_error_output(&err);
-                    }
-                };
+                txn_executor.module_cache().cache_module(module);
                 publish_modules.push((code_key, raw_bytes));
             }
 

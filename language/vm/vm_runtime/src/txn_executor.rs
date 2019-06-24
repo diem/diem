@@ -823,7 +823,7 @@ pub fn execute_function(
     let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX)?;
     for m in modules {
-        module_cache.cache_module(m)?;
+        module_cache.cache_module(m);
     }
     let mut vm = TransactionExecutor {
         execution_stack: ExecutionStack::new(&module_cache),

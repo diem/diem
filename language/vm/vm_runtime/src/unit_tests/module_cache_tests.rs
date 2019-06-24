@@ -143,7 +143,7 @@ fn test_loader_one_module() {
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
-    loaded_program.cache_module(module).unwrap();
+    loaded_program.cache_module(module);
     let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap().unwrap();
 
     // Get the function reference of the first two function handles.
@@ -178,7 +178,7 @@ fn test_loader_cross_modules() {
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
-    loaded_program.cache_module(module).unwrap();
+    loaded_program.cache_module(module);
 
     let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module);
@@ -309,7 +309,7 @@ fn test_multi_level_cache_write_back() {
 
     // Put an existing module in the cache.
     let module = test_module("existing_module".to_string());
-    vm_cache.cache_module(module).unwrap();
+    vm_cache.cache_module(module);
 
     // Create a new script that refers to both published and unpublished modules.
     let script = CompiledScriptMut {
@@ -400,9 +400,7 @@ fn test_multi_level_cache_write_back() {
                 .unwrap();
             assert_eq!(func1_vm_ref, func1_txn_ref);
 
-            txn_cache
-                .cache_module(test_module("module".to_string()))
-                .unwrap();
+            txn_cache.cache_module(test_module("module".to_string()));
 
             // We should not read the new module in the vm cache, but we should read it from the txn
             // cache.
@@ -423,9 +421,7 @@ fn test_multi_level_cache_write_back() {
         }
 
         // Drop the transactional arena
-        vm_cache
-            .reclaim_cached_module(txn_allocator.into_vec())
-            .unwrap();
+        vm_cache.reclaim_cached_module(txn_allocator.into_vec());
     }
 
     // After reclaiming we should see it from the

@@ -45,17 +45,13 @@ macro_rules! with_loaded_vm {
         let $module_cache = VMModuleCache::new(&allocator);
         let entry_idx = FunctionDefinitionIndex::new(0);
         let data_cache = FakeDataCache::new();
-        $module_cache
-            .cache_module(root_module.clone())
-            .expect("[Module Cache] Unable to cache root module.");
+        $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
             .expect("[Module Cache] Internal error encountered when fetching module.")
             .expect("[Module Cache] Unable to find module in module cache.");
         for m in modules {
-            $module_cache
-                .cache_module(m)
-                .expect("[Module Cache] Unable to cache module.");
+            $module_cache.cache_module(m);
         }
         let entry_func = FunctionRef::new(&$mod, entry_idx)
             .expect("[Entry Function] Unable to build function reference for entry function.");
