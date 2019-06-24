@@ -208,14 +208,17 @@ impl ClientProxy {
     }
 
     /// Get balance from validator for the account specified.
-    pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<f64> {
+    pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<String> {
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for getting balance"
         );
         let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        self.get_account_resource_and_update(address)
-            .map(|res| res.balance() as f64 / 1_000_000.)
+        self.get_account_resource_and_update(address).map(|res| {
+            let whole_num = res.balance() / 1_000_000;
+            let remainder = res.balance() % 1_000_000;
+            format!("{}.{:0>6}", whole_num.to_string(), remainder.to_string())
+        })
     }
 
     /// Get the latest sequence number from validator for the account specified.
