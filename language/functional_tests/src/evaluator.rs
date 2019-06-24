@@ -16,7 +16,7 @@ use vm::{
     errors::VerificationError,
     file_format::{CompiledModule, CompiledProgram, CompiledScript},
 };
-use vm_runtime_tests::{account::AccountData, executor::FakeExecutor};
+use vm_runtime_tests::executor::FakeExecutor;
 
 /// Indicates one step in the pipeline the given move module/program goes through.
 //  Ord is derived as we need to be able to determine if one stage is before another.
@@ -111,9 +111,12 @@ fn create_transaction_program(program: &CompiledProgram) -> Result<Program> {
 }
 
 /// Runs a single transaction using the fake executor.
-fn run_transaction(data: &AccountData, program: &CompiledProgram) -> Result<TransactionOutput> {
+fn run_transaction(config: &Config, program: &CompiledProgram) -> Result<TransactionOutput> {
     let mut exec = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
-    exec.add_account_data(data);
+    for data in config.accounts.values() {
+        exec.add_account_data(&data);
+    }
+    let data = config.accounts.get("alice").unwrap();
     let account = data.account();
 
     let program = create_transaction_program(program)?;
@@ -165,7 +168,7 @@ pub fn eval(config: &Config, text: &str) -> Result<EvaluationResult> {
     };
 
     let deps = build_stdlib();
-    let account_data = AccountData::new(1_000_000, 0);
+    let account_data = config.accounts.get("alice").unwrap();
     let addr = account_data.address();
 
     let parsed_program = unwrap_or_log!(parse_program(&text), res, Stage::Parser);
@@ -189,7 +192,7 @@ pub fn eval(config: &Config, text: &str) -> Result<EvaluationResult> {
 
     if !config.no_execute {
         let txn_output = unwrap_or_log!(
-            run_transaction(&account_data, &compiled_program),
+            run_transaction(config, &compiled_program),
             res,
             Stage::Runtime
         );

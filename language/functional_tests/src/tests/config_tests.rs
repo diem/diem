@@ -53,3 +53,40 @@ fn build_config() {
         //! no-verify
     ").unwrap_err();
 }
+
+#[test]
+fn accounts_default() {
+    let config = parse_and_build_config("").unwrap();
+    assert!(config.accounts.len() == 1);
+    assert!(config.accounts.contains_key("alice"));
+
+    let config = parse_and_build_config("//! account: alice, 1000, 42").unwrap();
+    let data = config.accounts.get("alice").unwrap();
+    assert!(data.balance() == 1000);
+    assert!(data.sequence_number() == 42);
+}
+
+#[test]
+fn accounts_alice_bob() {
+    let config = parse_and_build_config("//! account: Bob, 500").unwrap();
+    assert!(config.accounts.len() == 2);
+    assert!(config.accounts.contains_key("alice"));
+    assert!(config.accounts.get("bob").unwrap().balance() == 500);
+}
+
+#[test]
+fn accounts_ill_formed() {
+    ConfigEntry::try_parse("//! account:").unwrap_err();
+    ConfigEntry::try_parse("//! account: alice alice").unwrap_err();
+    ConfigEntry::try_parse("//! account: bob 123 000x").unwrap_err();
+    ConfigEntry::try_parse("//! account: eve").unwrap_err();
+}
+
+#[rustfmt::skip]
+#[test]
+fn accounts_duplicated() {
+    parse_and_build_config(r"
+        //! account: bob, 1000
+        //! account: bob, 1000
+    ").unwrap_err();
+}

@@ -5,12 +5,15 @@
 // A config entry starts with "//!", differentiating it from a directive.
 
 use crate::errors::*;
+use std::collections::{btree_map, BTreeMap};
+use vm_runtime_tests::account::AccountData;
 
 /// A raw config entry extracted from the input. Used to build the config.
 #[derive(Debug, Clone)]
 pub enum ConfigEntry {
     NoVerify,
     NoExecute,
+    Account(String, u64, Option<u64>),
 }
 
 impl ConfigEntry {
@@ -31,6 +34,27 @@ impl ConfigEntry {
             }
             _ => {}
         }
+        if s2.starts_with("account:") {
+            let v: Vec<_> = s2[8..]
+                .split(|c: char| c == ',' || c.is_whitespace())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if v.len() < 2 || v.len() > 3 {
+                return Err(ErrorKind::Other(
+                    "config 'account' takes either 2 or 3 parameters".to_string(),
+                )
+                .into());
+            }
+            return Ok(Some(ConfigEntry::Account(
+                v[0].to_ascii_lowercase(),
+                v[1].parse::<u64>()?,
+                if v.len() > 2 {
+                    Some(v[2].parse::<u64>()?)
+                } else {
+                    None
+                },
+            )));
+        }
         Err(ErrorKind::Other(format!("invalid config option '{:?}'", s2)).into())
     }
 }
@@ -42,14 +66,17 @@ pub struct Config {
     pub no_verify: bool,
     /// If set to true, the compiled program will not get executed
     pub no_execute: bool,
+    /// A map from account names to account data
+    pub accounts: BTreeMap<String, AccountData>,
 }
 
 impl Config {
     /// Builds a config from a collection of entries. Also sets the default values for entries that
     /// are missing.
     pub fn build(entries: &[ConfigEntry]) -> Result<Self> {
-        let mut no_verify: Option<bool> = None;
-        let mut no_execute: Option<bool> = None;
+        let mut no_verify = None;
+        let mut no_execute = None;
+        let mut accounts: BTreeMap<String, _> = BTreeMap::new();
         for entry in entries {
             match entry {
                 ConfigEntry::NoVerify => match no_verify {
@@ -72,11 +99,31 @@ impl Config {
                         );
                     }
                 },
+                ConfigEntry::Account(name, balance, seq_number) => {
+                    let account_data = AccountData::new(*balance, seq_number.unwrap_or(0));
+                    let entry = accounts.entry(name.to_string());
+                    match entry {
+                        btree_map::Entry::Vacant(entry) => {
+                            entry.insert(account_data);
+                        }
+                        btree_map::Entry::Occupied(_) => {
+                            return Err(ErrorKind::Other(format!(
+                                "already has account '{}'",
+                                name
+                            ))
+                            .into());
+                        }
+                    }
+                }
             }
+        }
+        if let btree_map::Entry::Vacant(entry) = accounts.entry("alice".to_string()) {
+            entry.insert(AccountData::new(1_000_000, 0));
         }
         Ok(Config {
             no_verify: no_verify.unwrap_or(false),
             no_execute: no_execute.unwrap_or(false),
+            accounts,
         })
     }
 }
