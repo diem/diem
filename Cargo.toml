@@ -31,6 +31,7 @@ members = [
     "language/bytecode_verifier",
     "language/bytecode_verifier/invalid_mutations",
     "language/functional_tests",
+    "language/transaction_builder",
     "language/compiler",
     "language/stdlib/natives",
     "language/vm",

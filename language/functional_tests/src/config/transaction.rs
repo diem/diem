@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::global::Config as GlobalConfig, errors::*};
-use hex;
-use std::{convert::TryFrom, str::FromStr};
-use types::{
-    account_address::AccountAddress, byte_array::ByteArray, transaction::TransactionArgument,
-};
+use std::str::FromStr;
+use transaction_builder::transaction_argument::parse_as_transaction_argument;
+use types::transaction::TransactionArgument;
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]
@@ -15,70 +13,16 @@ pub enum Argument {
     SelfContained(TransactionArgument),
 }
 
-impl Argument {
-    /// Parses the string as address of some account defined in the global config.
-    pub fn parse_as_address_of(s: &str) -> Result<Self> {
-        if s.starts_with("{{") && s.ends_with("}}") {
-            return Ok(Argument::AddressOf(s[2..s.len() - 2].to_string()));
-        }
-        Err(ErrorKind::Other("not address of".to_string()).into())
-    }
-
-    /// Parses the string as address.
-    pub fn parse_as_address(s: &str) -> Result<Self> {
-        if !s.starts_with("0x") && !s.starts_with("0X") {
-            return Err(ErrorKind::Other("not address".to_string()).into());
-        }
-        let mut addr = hex::decode(&s[2..])?;
-        if addr.len() > 32 {
-            return Err(ErrorKind::Other("address must be less than 32 bytes".to_string()).into());
-        }
-        if addr.len() < 32 {
-            addr = [0 as u8]
-                .repeat(32 - addr.len())
-                .into_iter()
-                .chain(addr.into_iter())
-                .collect();
-        }
-        Ok(Argument::SelfContained(TransactionArgument::Address(
-            AccountAddress::try_from(addr)?,
-        )))
-    }
-
-    /// Parses the string as bytearray.
-    pub fn parse_as_byte_array(s: &str) -> Result<Self> {
-        if s.starts_with("b\"") && s.ends_with('"') && s.len() >= 3 {
-            Ok(Argument::SelfContained(TransactionArgument::ByteArray(
-                ByteArray::new(hex::decode(&s[2..s.len() - 1])?),
-            )))
-        } else {
-            Err(ErrorKind::Other("not byte array".to_string()).into())
-        }
-    }
-
-    /// Parses the string as u64.
-    pub fn parse_as_u64(s: &str) -> Result<Self> {
-        let x = s.parse::<u64>()?;
-        Ok(Argument::SelfContained(TransactionArgument::U64(x)))
-    }
-}
-
-macro_rules! return_if_ok {
-    ($e: expr) => {{
-        if let Ok(res) = $e {
-            return Ok(res);
-        }
-    }};
-}
-
 impl FromStr for Argument {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        return_if_ok!(Argument::parse_as_address_of(s));
-        return_if_ok!(Argument::parse_as_address(s));
-        return_if_ok!(Argument::parse_as_byte_array(s));
-        return_if_ok!(Argument::parse_as_u64(s));
+        if let Ok(arg) = parse_as_transaction_argument(s) {
+            return Ok(Argument::SelfContained(arg));
+        }
+        if s.starts_with("{{") && s.ends_with("}}") {
+            return Ok(Argument::AddressOf(s[2..s.len() - 2].to_string()));
+        }
         Err(ErrorKind::Other(format!("failed to parse '{}' as argument", s)).into())
     }
 }

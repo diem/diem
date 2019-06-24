@@ -13,9 +13,9 @@ vm = { path = "../vm" }
 bytecode_verifier = { path = "../bytecode_verifier" }
 vm_runtime_tests = { path = "../vm/vm_runtime/vm_runtime_tests" }
 config = { path = "../../config" }
+transaction_builder = { path = "../transaction_builder" }
 termcolor = "1.0.4"
 filecheck = "0.4.0"
 datatest = "0.3.1"
-hex = "0.3.2"
 lazy_static = "1.3.0"
 regex = "1.1.6"

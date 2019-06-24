@@ -11,10 +11,9 @@ use bytecode_verifier::{
 use compiler::{compiler::compile_program, parser::parse_program, util::build_stdlib};
 use config::config::VMPublishingOption;
 use std::time::Duration;
+use transaction_builder::transaction::make_transaction_program;
 use types::{
-    transaction::{
-        Program, RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
-    },
+    transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
 };
 use vm::{
@@ -133,27 +132,6 @@ fn do_verify_program(program: &CompiledProgram, deps: &[CompiledModule]) -> Resu
     do_verify_script(&program.script, &deps)
 }
 
-fn create_transaction_program(
-    program: &CompiledProgram,
-    args: &[TransactionArgument],
-) -> Result<Program> {
-    let mut script_blob = vec![];
-    program.script.serialize(&mut script_blob)?;
-
-    let module_blobs = program
-        .modules
-        .iter()
-        .map(|m| {
-            let mut module_blob = vec![];
-            m.serialize(&mut module_blob)?;
-            Ok(module_blob)
-        })
-        .collect::<Result<Vec<_>>>()?;
-
-    // Currently we do not support transaction arguments in functional tests.
-    Ok(Program::new(script_blob, module_blobs, args.to_vec()))
-}
-
 /// Runs a single transaction using the fake executor.
 fn run_transaction(
     exec: &mut FakeExecutor,
@@ -163,7 +141,7 @@ fn run_transaction(
 ) -> Result<TransactionOutput> {
     let account = data.account();
 
-    let program = create_transaction_program(program, args)?;
+    let program = make_transaction_program(program, args)?;
     let account_resource = exec.read_account_resource(&account).unwrap();
 
     let transaction = RawTransaction::new(
