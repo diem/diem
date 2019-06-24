@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::Config, errors::*};
+use crate::{
+    config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
+    errors::*,
+};
 use bytecode_verifier::{
     verify_module, verify_module_dependencies, verify_script, verify_script_dependencies,
 };
@@ -9,14 +12,27 @@ use compiler::{compiler::compile_program, parser::parse_program, util::build_std
 use config::config::VMPublishingOption;
 use std::time::Duration;
 use types::{
-    transaction::{Program, RawTransaction, TransactionOutput, TransactionStatus},
+    transaction::{
+        Program, RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
+    },
     vm_error::{ExecutionStatus, VMStatus},
 };
 use vm::{
     errors::VerificationError,
     file_format::{CompiledModule, CompiledProgram, CompiledScript},
 };
-use vm_runtime_tests::executor::FakeExecutor;
+use vm_runtime_tests::{
+    account::{AccountData, AccountResource},
+    executor::FakeExecutor,
+};
+
+/// A transaction to be evaluated by the testing infra.
+/// Contains code and a transaction config.
+#[derive(Debug)]
+pub struct Transaction {
+    pub config: TransactionConfig,
+    pub program: String,
+}
 
 /// Indicates one step in the pipeline the given move module/program goes through.
 //  Ord is derived as we need to be able to determine if one stage is before another.
@@ -53,6 +69,7 @@ pub enum Status {
 /// An entry in the `EvaluationResult`.
 #[derive(Debug)]
 pub enum EvaluationOutput {
+    Transaction,
     Stage(Stage),
     Output(String),
     Error(String),
@@ -64,6 +81,29 @@ pub enum EvaluationOutput {
 pub struct EvaluationResult {
     pub outputs: Vec<EvaluationOutput>,
     pub status: Status,
+}
+
+impl EvaluationResult {
+    pub fn get_transaction_count(&self) -> usize {
+        self.outputs
+            .iter()
+            .filter(|output| match output {
+                EvaluationOutput::Transaction => true,
+                _ => false,
+            })
+            .count()
+    }
+
+    pub fn get_last_stage(&self) -> Option<Stage> {
+        let mut stage = None;
+        for output in self.outputs.iter().rev() {
+            if let EvaluationOutput::Stage(s) = output {
+                stage = Some(s.clone());
+                break;
+            }
+        }
+        stage
+    }
 }
 
 fn check_verification_errors(errors: Vec<VerificationError>) -> Result<()> {
@@ -93,7 +133,10 @@ fn do_verify_program(program: &CompiledProgram, deps: &[CompiledModule]) -> Resu
     do_verify_script(&program.script, &deps)
 }
 
-fn create_transaction_program(program: &CompiledProgram) -> Result<Program> {
+fn create_transaction_program(
+    program: &CompiledProgram,
+    args: &[TransactionArgument],
+) -> Result<Program> {
     let mut script_blob = vec![];
     program.script.serialize(&mut script_blob)?;
 
@@ -108,25 +151,26 @@ fn create_transaction_program(program: &CompiledProgram) -> Result<Program> {
         .collect::<Result<Vec<_>>>()?;
 
     // Currently we do not support transaction arguments in functional tests.
-    Ok(Program::new(script_blob, module_blobs, vec![]))
+    Ok(Program::new(script_blob, module_blobs, args.to_vec()))
 }
 
 /// Runs a single transaction using the fake executor.
-fn run_transaction(config: &Config, program: &CompiledProgram) -> Result<TransactionOutput> {
-    let mut exec = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
-    for data in config.accounts.values() {
-        exec.add_account_data(&data);
-    }
-    let data = config.accounts.get("alice").unwrap();
+fn run_transaction(
+    exec: &mut FakeExecutor,
+    data: &AccountData,
+    program: &CompiledProgram,
+    args: &[TransactionArgument],
+) -> Result<TransactionOutput> {
     let account = data.account();
 
-    let program = create_transaction_program(program)?;
+    let program = create_transaction_program(program, args)?;
+    let account_resource = exec.read_account_resource(&account).unwrap();
 
     let transaction = RawTransaction::new(
         *data.address(),
-        data.sequence_number(),
+        AccountResource::read_sequence_number(&account_resource),
         program,
-        data.balance(),
+        AccountResource::read_balance(&account_resource),
         // TODO: allow the user to specify this in the config.
         1,
         Duration::from_secs(u64::max_value()),
@@ -161,38 +205,65 @@ macro_rules! unwrap_or_log {
     }};
 }
 
-/// Feeds the input through the pipeline and produces an EvaluationResult.
-pub fn eval(config: &Config, text: &str) -> Result<EvaluationResult> {
+/// Feeds all given transactions through the pipeline and produces an EvaluationResult.
+pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<EvaluationResult> {
+    // set up empty evaluation result
     let mut res = EvaluationResult {
         outputs: vec![],
         status: Status::Failure,
     };
 
-    let deps = build_stdlib();
-    let account_data = config.accounts.get("alice").unwrap();
-    let addr = account_data.address();
-
-    res.outputs.push(EvaluationOutput::Stage(Stage::Parser));
-    let parsed_program = unwrap_or_log!(parse_program(&text), res);
-    res.outputs
-        .push(EvaluationOutput::Output(format!("{:?}", parsed_program)));
-
-    res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
-    let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &deps), res);
-    res.outputs
-        .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
-
-    if !config.no_verify {
-        res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
-        unwrap_or_log!(do_verify_program(&compiled_program, &deps), res);
-        res.outputs.push(EvaluationOutput::Output("".to_string()));
+    // set up a fake executor with the genesis block and create the accounts
+    let mut exec = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    for data in config.accounts.values() {
+        exec.add_account_data(&data);
     }
 
-    if !config.no_execute {
-        res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
-        let txn_output = unwrap_or_log!(run_transaction(config, &compiled_program), res);
+    // set up standard library
+    // needed to compile transaction programs
+    let stdlib = build_stdlib();
+
+    for transaction in transactions {
+        // get the account data of the sender
+        let data = config.accounts.get(&transaction.config.sender).unwrap();
+        let addr = data.address();
+
+        // start processing a new transaction
+        // insert a barrier in the output
+        res.outputs.push(EvaluationOutput::Transaction);
+
+        // stage 1: parse the program
+        res.outputs.push(EvaluationOutput::Stage(Stage::Parser));
+        let parsed_program = unwrap_or_log!(parse_program(&transaction.program), res);
         res.outputs
-            .push(EvaluationOutput::Output(format!("{:?}", txn_output)));
+            .push(EvaluationOutput::Output(format!("{:?}", parsed_program)));
+
+        // stage 2: compile the program
+        res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
+        let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &stdlib), res);
+        res.outputs
+            .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
+
+        // stage 3: verify the program
+        if !transaction.config.no_verify {
+            res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
+            unwrap_or_log!(do_verify_program(&compiled_program, &stdlib), res);
+            res.outputs.push(EvaluationOutput::Output("".to_string()));
+        }
+
+        // stage 4: execute the program
+        if !transaction.config.no_execute {
+            res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
+            let txn_output = unwrap_or_log!(
+                run_transaction(&mut exec, data, &compiled_program, &transaction.config.args),
+                res
+            );
+            res.outputs
+                .push(EvaluationOutput::Output(format!("{:?}", txn_output)));
+
+            // apply the writeset
+            exec.apply_write_set(txn_output.write_set());
+        }
     }
 
     res.status = Status::Success;
