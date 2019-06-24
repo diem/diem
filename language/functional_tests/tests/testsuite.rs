@@ -19,10 +19,10 @@ use functional_tests::{
     evaluator::{eval, Transaction},
 };
 use regex::{Captures, Regex};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use vm_runtime_tests::account::AccountData;
 
-fn substitute_addresses(accounts: &HashMap<String, AccountData>, text: &str) -> Result<String> {
+fn substitute_addresses(accounts: &BTreeMap<String, AccountData>, text: &str) -> Result<String> {
     lazy_static! {
         static ref PAT: Regex = Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap();
     }

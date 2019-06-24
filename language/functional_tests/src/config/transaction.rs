@@ -61,7 +61,7 @@ impl FromStr for Entry {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
-            return Ok(Entry::Sender(s.to_string()));
+            return Ok(Entry::Sender(s.to_ascii_lowercase()));
         }
         if s.starts_with("args:") {
             let res: Result<Vec<_>> = s[5..]
@@ -186,7 +186,7 @@ impl Config {
         Ok(Config {
             no_verify: no_verify.unwrap_or(false),
             no_execute: no_execute.unwrap_or(false),
-            sender: sender.unwrap_or_else(|| "alice".to_string()),
+            sender: sender.unwrap_or_else(|| "default".to_string()),
             args: args.unwrap_or_else(|| vec![]),
         })
     }

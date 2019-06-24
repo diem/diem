@@ -6,17 +6,30 @@
 
 use crate::errors::*;
 use std::{
-    collections::{hash_map, HashMap},
+    collections::{btree_map, BTreeMap},
     str::FromStr,
 };
 use vm_runtime_tests::account::AccountData;
 
+// unit: microlibra
 const DEFAULT_BALANCE: u64 = 1_000_000;
+
+/// Struct that specifies the initial setup of an account.
+#[derive(Debug)]
+pub struct AccountDefinition {
+    /// Name of the account. The name is case insensitive.
+    pub name: String,
+    /// The initial balance of the account.
+    pub balance: Option<u64>,
+    /// The initial sequence number  of the account.
+    pub sequence_number: Option<u64>,
+}
 
 /// A raw entry extracted from the input. Used to build the global config table.
 #[derive(Debug)]
 pub enum Entry {
-    Account(String, Option<u64>, Option<u64>),
+    /// Defines an account that can be used in tests.
+    AccountDefinition(AccountDefinition),
 }
 
 impl FromStr for Entry {
@@ -45,11 +58,15 @@ impl FromStr for Entry {
                 Some(s) => Some(s.parse::<u64>()?),
                 None => None,
             };
-            let seq_num = match v.get(2) {
+            let sequence_number = match v.get(2) {
                 Some(s) => Some(s.parse::<u64>()?),
                 None => None,
             };
-            return Ok(Entry::Account(v[0].to_string(), balance, seq_num));
+            return Ok(Entry::AccountDefinition(AccountDefinition {
+                name: v[0].to_string(),
+                balance,
+                sequence_number,
+            }));
         }
         Err(ErrorKind::Other(format!("failed to parse '{}' as global config entry", s)).into())
     }
@@ -59,29 +76,29 @@ impl FromStr for Entry {
 #[derive(Debug)]
 pub struct Config {
     /// A map from account names to account data
-    pub accounts: HashMap<String, AccountData>,
+    pub accounts: BTreeMap<String, AccountData>,
 }
 
 impl Config {
     pub fn build(entries: &[Entry]) -> Result<Self> {
-        let mut accounts = HashMap::new();
-
+        let mut accounts = BTreeMap::new();
         for entry in entries {
             match entry {
-                Entry::Account(name, balance, seq_number) => {
+                Entry::AccountDefinition(def) => {
                     let account_data = AccountData::new(
-                        balance.unwrap_or(DEFAULT_BALANCE),
-                        seq_number.unwrap_or(0),
+                        def.balance.unwrap_or(DEFAULT_BALANCE),
+                        def.sequence_number.unwrap_or(0),
                     );
-                    let entry = accounts.entry(name.to_ascii_lowercase());
+                    let name = def.name.to_ascii_lowercase();
+                    let entry = accounts.entry(name);
                     match entry {
-                        hash_map::Entry::Vacant(entry) => {
+                        btree_map::Entry::Vacant(entry) => {
                             entry.insert(account_data);
                         }
-                        hash_map::Entry::Occupied(_) => {
+                        btree_map::Entry::Occupied(_) => {
                             return Err(ErrorKind::Other(format!(
                                 "already has account '{}'",
-                                name
+                                def.name,
                             ))
                             .into());
                         }
@@ -90,10 +107,10 @@ impl Config {
             }
         }
 
-        if let hash_map::Entry::Vacant(entry) = accounts.entry("alice".to_string()) {
+        if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
             entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
         }
-
+        println!("{:?}", accounts);
         Ok(Config { accounts })
     }
 }

@@ -13,6 +13,9 @@ fn parse_account() {
         "//! account: alice",
         "//!account: bob",
         "//! account: bob, 100",
+        "//!account:alice,",
+        // TODO: The following should parse. Fix it.
+        // "//!   account :alice,1, 2",
         "//! account: bob, 0, 0",
     ] {
         s.parse::<Entry>().unwrap();
@@ -36,7 +39,8 @@ fn build_global_config_1() {
         //! account: bob, 2000, 10
     ").unwrap();
 
-    assert!(config.accounts.len() == 2);
+    assert!(config.accounts.len() == 3);
+    assert!(config.accounts.contains_key("default"));
     assert!(config.accounts.contains_key("alice"));
     let bob = config.accounts.get("bob").unwrap();
     assert!(bob.balance() == 2000);
@@ -48,7 +52,7 @@ fn build_global_config_2() {
     let config = parse_and_build_config("").unwrap();
 
     assert!(config.accounts.len() == 1);
-    assert!(config.accounts.contains_key("alice"));
+    assert!(config.accounts.contains_key("default"));
 }
 
 #[rustfmt::skip]
@@ -58,4 +62,16 @@ fn build_global_config_3() {
         //! account: bob
         //! account: BOB
     ").unwrap_err();
+}
+
+#[rustfmt::skip]
+#[test]
+fn build_global_config_4() {
+    let config = parse_and_build_config(r"
+        //! account: default, 50,
+    ").unwrap();
+
+    assert!(config.accounts.len() == 1);
+    let default = config.accounts.get("default").unwrap();
+    assert!(default.balance() == 50);
 }

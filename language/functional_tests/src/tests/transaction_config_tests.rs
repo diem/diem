@@ -79,7 +79,7 @@ fn build_transaction_config_1() {
     parse_and_build_config(&global, r"
         //! no-verify
         //! no-execute
-        //! sender: alice
+        //! sender: default
         //! args: 1, 2, 3
     ").unwrap();
 }
