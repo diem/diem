@@ -307,6 +307,6 @@ impl GasMeter {
     /// This is used internally for converting from a `GasCost` which is a triple of numbers
     /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
     fn gas_of(gas_cost: GasCost) -> GasUnits {
-        gas_cost.instruction_gas + gas_cost.memory_gas + gas_cost.stack_gas
+        gas_cost.instruction_gas + gas_cost.memory_gas
     }
 }

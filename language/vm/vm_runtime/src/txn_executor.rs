@@ -827,7 +827,7 @@ pub fn execute_function(
     }
     let mut vm = TransactionExecutor {
         execution_stack: ExecutionStack::new(&module_cache),
-        gas_meter: GasMeter::new(1_000),
+        gas_meter: GasMeter::new(10_000),
         txn_data: TransactionMetadata::default(),
         event_data: Vec::new(),
         data_view: TransactionDataCache::new(data_cache),

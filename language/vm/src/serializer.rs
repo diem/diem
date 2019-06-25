@@ -432,6 +432,122 @@ fn serialize_code_unit(binary: &mut Vec<u8>, code: &CodeUnit) -> Result<()> {
     serialize_code(binary, &code.code)
 }
 
+/// Serializes a single `Bytecode` instruction.
+pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) {
+    match opcode {
+        Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
+        Bytecode::Pop => binary.push(Opcodes::POP as u8),
+        Bytecode::Ret => binary.push(Opcodes::RET as u8),
+        Bytecode::BrTrue(code_offset) => {
+            binary.push(Opcodes::BR_TRUE as u8);
+            write_u16(binary, *code_offset);
+        }
+        Bytecode::BrFalse(code_offset) => {
+            binary.push(Opcodes::BR_FALSE as u8);
+            write_u16(binary, *code_offset);
+        }
+        Bytecode::Branch(code_offset) => {
+            binary.push(Opcodes::BRANCH as u8);
+            write_u16(binary, *code_offset);
+        }
+        Bytecode::LdConst(value) => {
+            binary.push(Opcodes::LD_CONST as u8);
+            write_u64(binary, *value);
+        }
+        Bytecode::LdAddr(address_idx) => {
+            binary.push(Opcodes::LD_ADDR as u8);
+            write_u16_as_uleb128(binary, address_idx.0);
+        }
+        Bytecode::LdByteArray(byte_array_idx) => {
+            binary.push(Opcodes::LD_BYTEARRAY as u8);
+            write_u16_as_uleb128(binary, byte_array_idx.0);
+        }
+        Bytecode::LdStr(string_idx) => {
+            binary.push(Opcodes::LD_STR as u8);
+            write_u16_as_uleb128(binary, string_idx.0);
+        }
+        Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
+        Bytecode::LdFalse => binary.push(Opcodes::LD_FALSE as u8),
+        Bytecode::CopyLoc(local_idx) => {
+            binary.push(Opcodes::COPY_LOC as u8);
+            binary.push(*local_idx);
+        }
+        Bytecode::MoveLoc(local_idx) => {
+            binary.push(Opcodes::MOVE_LOC as u8);
+            binary.push(*local_idx);
+        }
+        Bytecode::StLoc(local_idx) => {
+            binary.push(Opcodes::ST_LOC as u8);
+            binary.push(*local_idx);
+        }
+        Bytecode::BorrowLoc(local_idx) => {
+            binary.push(Opcodes::LD_REF_LOC as u8);
+            binary.push(*local_idx);
+        }
+        Bytecode::BorrowField(field_idx) => {
+            binary.push(Opcodes::LD_REF_FIELD as u8);
+            write_u16_as_uleb128(binary, field_idx.0);
+        }
+        Bytecode::Call(method_idx) => {
+            binary.push(Opcodes::CALL as u8);
+            write_u16_as_uleb128(binary, method_idx.0);
+        }
+        Bytecode::Pack(class_idx) => {
+            binary.push(Opcodes::PACK as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::Unpack(class_idx) => {
+            binary.push(Opcodes::UNPACK as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
+        Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
+        Bytecode::Add => binary.push(Opcodes::ADD as u8),
+        Bytecode::Sub => binary.push(Opcodes::SUB as u8),
+        Bytecode::Mul => binary.push(Opcodes::MUL as u8),
+        Bytecode::Mod => binary.push(Opcodes::MOD as u8),
+        Bytecode::Div => binary.push(Opcodes::DIV as u8),
+        Bytecode::BitOr => binary.push(Opcodes::BIT_OR as u8),
+        Bytecode::BitAnd => binary.push(Opcodes::BIT_AND as u8),
+        Bytecode::Xor => binary.push(Opcodes::XOR as u8),
+        Bytecode::Or => binary.push(Opcodes::OR as u8),
+        Bytecode::And => binary.push(Opcodes::AND as u8),
+        Bytecode::Not => binary.push(Opcodes::NOT as u8),
+        Bytecode::Eq => binary.push(Opcodes::EQ as u8),
+        Bytecode::Neq => binary.push(Opcodes::NEQ as u8),
+        Bytecode::Lt => binary.push(Opcodes::LT as u8),
+        Bytecode::Gt => binary.push(Opcodes::GT as u8),
+        Bytecode::Le => binary.push(Opcodes::LE as u8),
+        Bytecode::Ge => binary.push(Opcodes::GE as u8),
+        Bytecode::Assert => binary.push(Opcodes::ASSERT as u8),
+        Bytecode::GetTxnGasUnitPrice => binary.push(Opcodes::GET_TXN_GAS_UNIT_PRICE as u8),
+        Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
+        Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),
+        Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
+        Bytecode::Exists(class_idx) => {
+            binary.push(Opcodes::EXISTS as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::BorrowGlobal(class_idx) => {
+            binary.push(Opcodes::BORROW_REF as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
+        Bytecode::MoveFrom(class_idx) => {
+            binary.push(Opcodes::MOVE_FROM as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::MoveToSender(class_idx) => {
+            binary.push(Opcodes::MOVE_TO as u8);
+            write_u16_as_uleb128(binary, class_idx.0);
+        }
+        Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
+        Bytecode::EmitEvent => binary.push(Opcodes::EMIT_EVENT as u8),
+        Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
+        Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
+    }
+}
+
 /// Serializes a `Bytecode` stream. Serialization of the function body.
 fn serialize_code(binary: &mut Vec<u8>, code: &[Bytecode]) -> Result<()> {
     let code_size = code.len();
@@ -444,118 +560,7 @@ fn serialize_code(binary: &mut Vec<u8>, code: &[Bytecode]) -> Result<()> {
     }
     write_u16(binary, code_size as u16);
     for opcode in code {
-        match opcode {
-            Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
-            Bytecode::Pop => binary.push(Opcodes::POP as u8),
-            Bytecode::Ret => binary.push(Opcodes::RET as u8),
-            Bytecode::BrTrue(code_offset) => {
-                binary.push(Opcodes::BR_TRUE as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::BrFalse(code_offset) => {
-                binary.push(Opcodes::BR_FALSE as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::Branch(code_offset) => {
-                binary.push(Opcodes::BRANCH as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::LdConst(value) => {
-                binary.push(Opcodes::LD_CONST as u8);
-                write_u64(binary, *value);
-            }
-            Bytecode::LdAddr(address_idx) => {
-                binary.push(Opcodes::LD_ADDR as u8);
-                write_u16_as_uleb128(binary, address_idx.0);
-            }
-            Bytecode::LdByteArray(byte_array_idx) => {
-                binary.push(Opcodes::LD_BYTEARRAY as u8);
-                write_u16_as_uleb128(binary, byte_array_idx.0);
-            }
-            Bytecode::LdStr(string_idx) => {
-                binary.push(Opcodes::LD_STR as u8);
-                write_u16_as_uleb128(binary, string_idx.0);
-            }
-            Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
-            Bytecode::LdFalse => binary.push(Opcodes::LD_FALSE as u8),
-            Bytecode::CopyLoc(local_idx) => {
-                binary.push(Opcodes::COPY_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::MoveLoc(local_idx) => {
-                binary.push(Opcodes::MOVE_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::StLoc(local_idx) => {
-                binary.push(Opcodes::ST_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::BorrowLoc(local_idx) => {
-                binary.push(Opcodes::LD_REF_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::BorrowField(field_idx) => {
-                binary.push(Opcodes::LD_REF_FIELD as u8);
-                write_u16_as_uleb128(binary, field_idx.0);
-            }
-            Bytecode::Call(method_idx) => {
-                binary.push(Opcodes::CALL as u8);
-                write_u16_as_uleb128(binary, method_idx.0);
-            }
-            Bytecode::Pack(class_idx) => {
-                binary.push(Opcodes::PACK as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::Unpack(class_idx) => {
-                binary.push(Opcodes::UNPACK as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
-            Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
-            Bytecode::Add => binary.push(Opcodes::ADD as u8),
-            Bytecode::Sub => binary.push(Opcodes::SUB as u8),
-            Bytecode::Mul => binary.push(Opcodes::MUL as u8),
-            Bytecode::Mod => binary.push(Opcodes::MOD as u8),
-            Bytecode::Div => binary.push(Opcodes::DIV as u8),
-            Bytecode::BitOr => binary.push(Opcodes::BIT_OR as u8),
-            Bytecode::BitAnd => binary.push(Opcodes::BIT_AND as u8),
-            Bytecode::Xor => binary.push(Opcodes::XOR as u8),
-            Bytecode::Or => binary.push(Opcodes::OR as u8),
-            Bytecode::And => binary.push(Opcodes::AND as u8),
-            Bytecode::Not => binary.push(Opcodes::NOT as u8),
-            Bytecode::Eq => binary.push(Opcodes::EQ as u8),
-            Bytecode::Neq => binary.push(Opcodes::NEQ as u8),
-            Bytecode::Lt => binary.push(Opcodes::LT as u8),
-            Bytecode::Gt => binary.push(Opcodes::GT as u8),
-            Bytecode::Le => binary.push(Opcodes::LE as u8),
-            Bytecode::Ge => binary.push(Opcodes::GE as u8),
-            Bytecode::Assert => binary.push(Opcodes::ASSERT as u8),
-            Bytecode::GetTxnGasUnitPrice => binary.push(Opcodes::GET_TXN_GAS_UNIT_PRICE as u8),
-            Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
-            Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),
-            Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
-            Bytecode::Exists(class_idx) => {
-                binary.push(Opcodes::EXISTS as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::BorrowGlobal(class_idx) => {
-                binary.push(Opcodes::BORROW_REF as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
-            Bytecode::MoveFrom(class_idx) => {
-                binary.push(Opcodes::MOVE_FROM as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::MoveToSender(class_idx) => {
-                binary.push(Opcodes::MOVE_TO as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
-            Bytecode::EmitEvent => binary.push(Opcodes::EMIT_EVENT as u8),
-            Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
-            Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
-        }
+        serialize_instruction(binary, opcode)
     }
     Ok(())
 }
