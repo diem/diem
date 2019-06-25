@@ -165,6 +165,7 @@ impl InProcessTestClient {
                     .expect("Unable to get canonical path of faucet key file")
                     .to_str()
                     .unwrap(),
+                false,
                 /* faucet server */ None,
                 Some(mnemonic_file_path.to_string()),
             )

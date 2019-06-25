@@ -24,7 +24,8 @@ use types::{
     byte_array::ByteArray,
     language_storage::CodeKey,
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionArgument, SCRIPT_HASH_LENGTH,
+        Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
+        SCRIPT_HASH_LENGTH,
     },
     validator_public_keys::ValidatorPublicKeys,
 };
@@ -55,7 +56,7 @@ lazy_static! {
     };
 }
 
-pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignedTransaction> {
+pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureCheckedTransaction> {
     let (private_key, public_key) = &*GENESIS_KEYPAIR;
     raw_txn.sign(private_key, *public_key)
 }
@@ -129,7 +130,7 @@ impl Accounts {
         self.accounts[account].pubkey
     }
 
-    pub fn create_signed_txn_with_args(
+    pub fn create_txn_with_args(
         &self,
         program: Vec<u8>,
         args: Vec<TransactionArgument>,
@@ -138,7 +139,7 @@ impl Accounts {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-    ) -> SignedTransaction {
+    ) -> SignatureCheckedTransaction {
         RawTransaction::new(
             sender,
             sequence_number,
@@ -318,7 +319,7 @@ impl StateView for FakeStateView {
 pub fn encode_genesis_transaction(
     private_key: &PrivateKey,
     public_key: PublicKey,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     encode_genesis_transaction_with_validator(private_key, public_key, vec![])
 }
 
@@ -326,7 +327,7 @@ pub fn encode_genesis_transaction_with_validator(
     private_key: &PrivateKey,
     public_key: PublicKey,
     validator_set: Vec<ValidatorPublicKeys>,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     assert!(validator_set.len() <= VALIDATOR_SIZE_LIMIT);
     const INIT_BALANCE: u64 = 1_000_000_000;
 

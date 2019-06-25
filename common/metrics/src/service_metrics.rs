@@ -12,7 +12,7 @@ For each method, the counters that are captured are:
 
 Example use:
 call `req` when when entering service method, and call `resp` on
-exit, with a boolean flag to specifcy whether the request was
+exit, with a boolean flag to specify whether the request was
 a success or a failure, to bump the counter for failures.
 The call to `req` will provide a timer that handle time logging, as long
 as it's in scope.
@@ -88,7 +88,7 @@ impl ServiceMetrics {
     pub fn resp(&self, ctx: &RpcContext, success: bool) {
         // The reason for counting everything here, instead of doing the
         // if outside of the increment is that we could also compare
-        // number of responses to number of requsets
+        // number of responses to number of requests
         if let Some(name) = path_from_ctx(ctx) {
             self.num_error
                 .with_label_values(&[name.as_str()])

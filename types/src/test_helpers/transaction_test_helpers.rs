@@ -7,7 +7,10 @@ use crate::{
         RawTransaction as ProtoRawTransaction, SignedTransaction as ProtoSignedTransaction,
         SignedTransactionsBlock,
     },
-    transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction},
+    transaction::{
+        Program, RawTransaction, RawTransactionBytes, SignatureCheckedTransaction,
+        SignedTransaction,
+    },
     transaction_helpers::get_signed_transactions_digest,
     write_set::WriteSet,
 };
@@ -51,9 +54,8 @@ pub fn get_test_signed_transaction(
     signed_txn
 }
 
-// from_proto does checking on the transaction's signature -- which we want to be able to turn off
-// if we want to make sure that the VM is testing this.
-pub fn get_unverified_test_signed_transaction(
+// Test helper for creating transactions for which the signature hasn't been checked.
+pub fn get_test_unchecked_transaction(
     sender: AccountAddress,
     sequence_number: u64,
     private_key: PrivateKey,
@@ -108,7 +110,7 @@ pub fn get_test_signed_txn(
     )
 }
 
-pub fn get_unverified_test_signed_txn(
+pub fn get_test_unchecked_txn(
     sender: AccountAddress,
     sequence_number: u64,
     private_key: PrivateKey,
@@ -120,7 +122,7 @@ pub fn get_unverified_test_signed_txn(
         .unwrap()
         .as_secs()
         + 10; // 10 seconds from now.
-    get_unverified_test_signed_transaction(
+    get_test_unchecked_transaction(
         sender,
         sequence_number,
         private_key,
@@ -142,7 +144,7 @@ pub fn get_write_set_txn(
     private_key: PrivateKey,
     public_key: PublicKey,
     write_set: Option<WriteSet>,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     let write_set = write_set.unwrap_or_default();
     RawTransaction::new_write_set(sender, sequence_number, write_set)
         .sign(&private_key, public_key)

@@ -35,7 +35,10 @@ fn gen_mock_genesis() -> (
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),
     );
-    let signed_txn = raw_txn.sign(&privkey, pubkey).expect("Signing failed.");
+    let signed_txn = raw_txn
+        .sign(&privkey, pubkey)
+        .expect("Signing failed.")
+        .into_inner();
     let signed_txn_hash = signed_txn.hash();
 
     let some_blob = AccountStateBlob::from(vec![1u8]);

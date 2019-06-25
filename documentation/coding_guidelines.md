@@ -9,7 +9,7 @@ This document describes the coding guidelines for the Libra Core Rust codebase.
 
 ## Code formatting
 
-All code formatting is enforced with [rustfmt](https://github.com/rust-lang/rustfmt) with a project specific configuration.  Below is an example command to adhere to the Libra Core project conventions.
+All code formatting is enforced with [rustfmt](https://github.com/rust-lang/rustfmt) with a project-specific configuration.  Below is an example command to adhere to the Libra Core project conventions.
 
 ```
 libra$ cargo fmt
@@ -77,7 +77,7 @@ Each major component of Libra Core needs to have a `README.md` file. Major compo
 This file should contain:
 
  * The *conceptual* *documentation* of the component.
- * A link to external API documentation for the component.
+ * A link to the external API documentation for the component.
  * A link to the master license of the project.
  * A link to the master contributing guide for the project.
 
@@ -147,7 +147,7 @@ We recommend that you use `//` and `///` comments rather than block comments `/*
 
 ### Cloning
 
-If `x` is reference counted, prefer [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) over `x.clone()`. [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) explicitly indicates that we are cloning `x`. This avoids confusion about whether we are performing an expensive clone of a `struct`, `enum`, other type, or just a cheap reference copy.
+If `x` is reference counted, prefer [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) over `x.clone()`. [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) explicitly indicates that we are cloning `x`. This avoids confusion about whether we are performing an expensive clone of a `struct`, `enum`, other types, or just a cheap reference copy.
 
 Also, if you are passing around [`Arc<T>`](https://doc.rust-lang.org/std/sync/struct.Arc.html) types, consider using a newtype wrapper:
 
@@ -162,9 +162,9 @@ Concurrent types such as [`CHashMap`](https://docs.rs/crate/chashmap), [`AtomicU
 
 *When to use channels vs concurrent types?*
 
-Listed below are high level suggestions based on experience:
+Listed below are high-level suggestions based on experience:
 
-* Channels are for ownership transfer, decoupling of types, and coarse grained messages.  They fit well for transferring ownership of data, distributing units of work, and communicating async results.  Furthermore, they help break circular dependencies (e.g. `struct Foo` contains an `Arc<Bar>` and `struct Bar` contains an `Arc<Foo>` that leads to complex initialization).
+* Channels are for ownership transfer, decoupling of types, and coarse-grained messages.  They fit well for transferring ownership of data, distributing units of work, and communicating async results.  Furthermore, they help break circular dependencies (e.g. `struct Foo` contains an `Arc<Bar>` and `struct Bar` contains an `Arc<Foo>` that leads to complex initialization).
 
 * Concurrent types (e.g. such as [`CHashMap`](https://docs.rs/crate/chashmap) or structs that have interior mutability building on [`Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html), [`RwLock`](https://doc.rust-lang.org/std/sync/struct.RwLock.html), etc.) are better suited for caches and states.
 

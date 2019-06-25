@@ -135,6 +135,7 @@ impl Repl {
         )
         .sign(&signer.privkey, signer.pubkey)
         .unwrap()
+        .into_inner()
     }
 
     pub fn eval_arg(&mut self, input: String) {

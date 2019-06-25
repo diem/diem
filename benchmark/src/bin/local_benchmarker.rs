@@ -22,11 +22,12 @@ fn main() {
         validator_port.to_string().as_str(),
         &path,
         &mint_key_file_path,
+        false,
         None,
         None,
     )
     .unwrap();
-    // Create a AdmissionControlClient instance.
+    // Create an AdmissionControlClient instance.
     let conn_addr = format!("localhost:{}", validator_port);
     let env = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
     let ch = ChannelBuilder::new(env).connect(&conn_addr);

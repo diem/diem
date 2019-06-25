@@ -31,6 +31,15 @@ impl TransactionValidation for MockVMValidator {
         &self,
         txn: SignedTransaction,
     ) -> Box<dyn Future<Item = Option<VMStatus>, Error = failure::Error> + Send> {
+        let txn = match txn.check_signature() {
+            Ok(txn) => txn,
+            Err(_) => {
+                return Box::new(ok(Some(VMStatus::Validation(
+                    VMValidationStatus::InvalidSignature,
+                ))))
+            }
+        };
+
         let sender = txn.sender();
         let account_dne_test_add = AccountAddress::try_from(&[0 as u8; ADDRESS_LENGTH]).unwrap();
         let invalid_sig_test_add = AccountAddress::try_from(&[1 as u8; ADDRESS_LENGTH]).unwrap();
