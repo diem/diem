@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::peer_manager::PeerManagerError;
-use failure::{Backtrace, Context, Fail};
+use failure::{err_msg, Backtrace, Context, Fail};
 use futures::channel::mpsc;
 use protobuf::error::ProtobufError;
 use std::{
@@ -40,6 +40,9 @@ pub enum NetworkErrorKind {
 
     #[fail(display = "Operation timed out")]
     TimedOut,
+
+    #[fail(display = "Unknown tokio::timer Error variant")]
+    UnknownTimerError,
 
     #[fail(display = "PeerManager error")]
     PeerManagerError,
@@ -139,7 +142,9 @@ impl From<timer::timeout::Error<NetworkError>> for NetworkError {
         } else if err.is_inner() {
             err.into_inner().unwrap()
         } else {
-            unreachable!("Unrecognized timer error: {}", err)
+            err_msg(err)
+                .context(NetworkErrorKind::UnknownTimerError)
+                .into()
         }
     }
 }
