@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{compiler::compile_module, parser::parse_module};
+use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -20,13 +20,12 @@ pub fn do_compile_module(
     compile_module(address, &parsed_module, dependencies).unwrap()
 }
 
-pub fn build_stdlib() -> Vec<CompiledModule> {
+pub fn build_stdlib(address: &AccountAddress) -> Vec<CompiledModule> {
     // TODO: Change source paths for stdlib when we have proper SDK packaging.
     let mut stdlib_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     stdlib_root.pop();
     stdlib_root.push("stdlib");
 
-    let address = AccountAddress::default();
     let mut stdlib_modules = Vec::<CompiledModule>::new();
     for e in [
         "modules/hash.mvir",
@@ -37,7 +36,7 @@ pub fn build_stdlib() -> Vec<CompiledModule> {
     ]
     .iter()
     {
-        let res = do_compile_module(&Path::join(&stdlib_root, e), &address, &stdlib_modules);
+        let res = do_compile_module(&Path::join(&stdlib_root, e), address, &stdlib_modules);
         stdlib_modules.push(res);
     }
     stdlib_modules

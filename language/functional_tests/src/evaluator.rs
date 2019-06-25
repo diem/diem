@@ -8,11 +8,13 @@ use crate::{
 use bytecode_verifier::{
     verify_module, verify_module_dependencies, verify_script, verify_script_dependencies,
 };
-use compiler::{compiler::compile_program, parser::parse_program, util::build_stdlib};
+use compiler::util::build_stdlib;
 use config::config::VMPublishingOption;
+use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use std::time::Duration;
 use transaction_builder::transaction::make_transaction_program;
 use types::{
+    account_address::AccountAddress,
     transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
 };
@@ -198,7 +200,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
     // set up standard library
     // needed to compile transaction programs
-    let stdlib = build_stdlib();
+    let stdlib = build_stdlib(&AccountAddress::default());
 
     for transaction in transactions {
         // get the account data of the sender

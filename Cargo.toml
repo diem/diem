@@ -33,6 +33,7 @@ members = [
     "language/functional_tests",
     "language/transaction_builder",
     "language/compiler",
+    "language/compiler/ir_to_bytecode",
     "language/tools/cost_synthesis",
     "language/stdlib/natives",
     "language/vm",

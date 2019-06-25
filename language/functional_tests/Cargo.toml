@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 compiler = { path = "../compiler" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 types = { path = "../../types" }
 vm = { path = "../vm" }
 bytecode_verifier = { path = "../bytecode_verifier" }

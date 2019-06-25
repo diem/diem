@@ -5,7 +5,7 @@
 //!
 //! This crate contains helpers for executing tests against the Libra VM.
 
-use ::compiler::{compiler, parser::parse_program};
+use compiler::Compiler;
 use data_store::FakeDataStore;
 use types::{
     access_path::AccessPath, account_address::AccountAddress, transaction::TransactionArgument,
@@ -31,10 +31,12 @@ mod proptest_types;
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
     let address = AccountAddress::default();
-
-    let parsed_program = parse_program(&program).unwrap();
-    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
-
+    let compiler = Compiler {
+        code: program,
+        address,
+        ..Compiler::default()
+    };
+    let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
     let (compiled_script, modules) =
         verify(&address, compiled_program.script, compiled_program.modules);
     execute(compiled_script, args, modules)

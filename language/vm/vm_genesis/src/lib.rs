@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ::compiler::{compiler, parser::ast};
 use config::config::{VMConfig, VMPublishingOption};
 use crypto::{signing, PrivateKey, PublicKey};
 use failure::prelude::*;
+use ir_to_bytecode::{compiler, parser::ast};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;

@@ -1,9 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::*;
-use crate::parser::{parse_module, parse_program};
+use crate::util::build_stdlib;
 use bytecode_verifier::verifier::{verify_module, verify_script};
+use failure::prelude::*;
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_program},
+    parser::{parse_module, parse_program},
+};
+use types::account_address::AccountAddress;
 use vm::{
     access::ScriptAccess,
     errors::VerificationError,
@@ -27,19 +32,10 @@ macro_rules! instr_count {
     };
 }
 
-fn stdlib_deps() -> Result<Vec<CompiledModule>> {
-    Ok(crate::util::build_stdlib())
-}
-
 fn compile_script_string_impl(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<(CompiledScript, Vec<VerificationError>)> {
-    let deps = if let Some(x) = deps_opt {
-        x
-    } else {
-        stdlib_deps().unwrap()
-    };
     let parsed_program = parse_program(code).unwrap();
     let compiled_program = compile_program(&AccountAddress::default(), &parsed_program, &deps)?;
 
@@ -53,16 +49,15 @@ fn compile_script_string_impl(
 
 pub fn compile_script_string_and_assert_no_error(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<CompiledScript> {
-    let (verified_script, verification_errors) = compile_script_string_impl(code, deps_opt)?;
+    let (verified_script, verification_errors) = compile_script_string_impl(code, deps)?;
     assert!(verification_errors.is_empty());
     Ok(verified_script)
 }
 
-#[allow(dead_code)]
 pub fn compile_script_string(code: &str) -> Result<CompiledScript> {
-    compile_script_string_and_assert_no_error(code, Some(vec![]))
+    compile_script_string_and_assert_no_error(code, vec![])
 }
 
 #[allow(dead_code)]
@@ -70,34 +65,24 @@ pub fn compile_script_string_with_deps(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledScript> {
-    compile_script_string_and_assert_no_error(code, Some(deps))
-}
-
-#[allow(dead_code)]
-pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
-    compile_script_string_and_assert_no_error(code, None)
+    compile_script_string_and_assert_no_error(code, deps)
 }
 
 #[allow(dead_code)]
 pub fn compile_script_string_and_assert_error(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<CompiledScript> {
-    let (verified_script, verification_errors) = compile_script_string_impl(code, deps_opt)?;
+    let (verified_script, verification_errors) = compile_script_string_impl(code, deps)?;
     assert!(!verification_errors.is_empty());
     Ok(verified_script)
 }
 
 fn compile_module_string_impl(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<(CompiledModule, Vec<VerificationError>)> {
     let address = &AccountAddress::default();
-    let deps = if let Some(x) = deps_opt {
-        x
-    } else {
-        stdlib_deps().unwrap()
-    };
     let module = parse_module(code).unwrap();
     let compiled_module = compile_module(&address, &module, &deps)?;
 
@@ -111,16 +96,15 @@ fn compile_module_string_impl(
 
 pub fn compile_module_string_and_assert_no_error(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<CompiledModule> {
-    let (verified_module, verification_errors) = compile_module_string_impl(code, deps_opt)?;
+    let (verified_module, verification_errors) = compile_module_string_impl(code, deps)?;
     assert!(verification_errors.is_empty());
     Ok(verified_module)
 }
 
-#[allow(dead_code)]
 pub fn compile_module_string(code: &str) -> Result<CompiledModule> {
-    compile_module_string_and_assert_no_error(code, Some(vec![]))
+    compile_module_string_and_assert_no_error(code, vec![])
 }
 
 #[allow(dead_code)]
@@ -128,28 +112,30 @@ pub fn compile_module_string_with_deps(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledModule> {
-    compile_module_string_and_assert_no_error(code, Some(deps))
-}
-
-#[allow(dead_code)]
-pub fn compile_module_string_with_stdlib(code: &str) -> Result<CompiledModule> {
-    compile_module_string_and_assert_no_error(code, None)
+    compile_module_string_and_assert_no_error(code, deps)
 }
 
 #[allow(dead_code)]
 pub fn compile_module_string_and_assert_error(
     code: &str,
-    deps_opt: Option<Vec<CompiledModule>>,
+    deps: Vec<CompiledModule>,
 ) -> Result<CompiledModule> {
-    let (verified_module, verification_errors) = compile_module_string_impl(code, deps_opt)?;
+    let (verified_module, verification_errors) = compile_module_string_impl(code, deps)?;
     assert!(!verification_errors.is_empty());
     Ok(verified_module)
 }
 
-#[allow(dead_code)]
 pub fn count_locals(script: &CompiledScript) -> usize {
     script
         .locals_signature_at(script.main().code.locals)
         .0
         .len()
+}
+
+pub fn compile_module_string_with_stdlib(code: &str) -> Result<CompiledModule> {
+    compile_module_string_and_assert_no_error(code, build_stdlib(&AccountAddress::default()))
+}
+
+pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
+    compile_script_string_and_assert_no_error(code, build_stdlib(&AccountAddress::default()))
 }

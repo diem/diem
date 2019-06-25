@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[macro_use]
-mod testutils;
-use super::*;
-use testutils::{
+use crate::unit_tests::testutils::{
     compile_module_string, compile_script_string, compile_script_string_and_assert_error,
     count_locals,
 };
-use vm::{access::ScriptAccess, file_format::Bytecode::*};
+use vm::{
+    access::{ModuleAccess, ScriptAccess},
+    file_format::Bytecode::*,
+};
 
 #[test]
 fn compile_script_expr_addition() {
@@ -139,7 +139,7 @@ fn compile_script_borrow_reference() {
         }
         ",
     );
-    let compiled_script_res = compile_script_string_and_assert_error(&code, None);
+    let compiled_script_res = compile_script_string_and_assert_error(&code, vec![]);
     let compiled_script = compiled_script_res.unwrap();
     assert!(count_locals(&compiled_script) == 3);
     assert!(compiled_script.struct_handles().is_empty());

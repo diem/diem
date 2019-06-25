@@ -35,28 +35,6 @@ use vm::{
     printers::TableAccess,
 };
 
-#[cfg(test)]
-#[path = "unit_tests/branch_tests.rs"]
-mod branch_tests;
-#[cfg(test)]
-#[path = "unit_tests/cfg_tests.rs"]
-mod cfg_tests;
-#[cfg(test)]
-#[path = "unit_tests/expression_tests.rs"]
-mod expression_tests;
-#[cfg(test)]
-#[path = "unit_tests/function_tests.rs"]
-mod function_tests;
-#[cfg(test)]
-#[path = "unit_tests/import_tests.rs"]
-mod import_tests;
-#[cfg(test)]
-#[path = "unit_tests/serializer_tests.rs"]
-mod serializer_tests;
-#[cfg(test)]
-#[path = "unit_tests/stdlib_scripts.rs"]
-mod stdlib_scripts;
-
 #[derive(Debug, Default)]
 struct LoopInfo {
     start_loc: usize,

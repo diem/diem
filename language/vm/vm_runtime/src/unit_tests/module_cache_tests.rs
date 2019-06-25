@@ -6,8 +6,8 @@ use crate::{
     code_cache::{module_adapter::FakeFetcher, module_cache::ModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
 };
-use ::compiler::{compiler, parser::parse_program};
 use assert_matches::assert_matches;
+use compiler::Compiler;
 use hex;
 use types::account_address::AccountAddress;
 use vm::file_format::*;
@@ -469,11 +469,15 @@ fn test_multi_level_cache_write_back() {
 }
 
 fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
-    let address = AccountAddress::default();
-    let parsed_program = parse_program(s.as_ref()).unwrap();
-
-    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
-    compiled_program.modules
+    let compiler = Compiler {
+        code: s.as_ref(),
+        skip_stdlib_deps: true,
+        ..Compiler::default()
+    };
+    compiler
+        .into_compiled_program()
+        .expect("Failed to compile program")
+        .modules
 }
 
 #[test]

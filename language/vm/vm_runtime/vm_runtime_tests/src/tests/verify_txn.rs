@@ -5,10 +5,11 @@ use crate::{
     account::AccountData,
     assert_prologue_disparity, assert_prologue_parity,
     common_transactions::*,
-    compile::{compile_program_with_address, compile_script, Compiler},
+    compile::{compile_program_with_address, compile_script},
     executor::FakeExecutor,
 };
 use assert_matches::assert_matches;
+use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::signing::KeyPair;
 use std::collections::HashSet;
@@ -581,7 +582,10 @@ fn test_dependency_fails_verification() {
         code: bad_module_code,
         ..Compiler::default()
     };
-    let mut modules = compiler.into_compiled_program().modules;
+    let mut modules = compiler
+        .into_compiled_program()
+        .expect("Failed to compile")
+        .modules;
     let module = modules.swap_remove(0);
     executor.add_module(&module.self_id(), &module);
 
@@ -605,7 +609,7 @@ fn test_dependency_fails_verification() {
         extra_deps: vec![module],
         ..Compiler::default()
     };
-    let program = compiler.into_program(vec![]);
+    let program = compiler.into_program(vec![]).expect("Failed to compile");
     let txn = sender
         .account()
         .create_signed_txn_impl(*sender.address(), program, 10, 10_000, 1);
