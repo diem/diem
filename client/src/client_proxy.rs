@@ -229,7 +229,7 @@ impl ClientProxy {
             .sequence_number();
 
         let reset_sequence_number = if space_delim_strings.len() == 3 {
-            space_delim_strings[2].parse::<bool>().map_err(|error| {
+            parse_bool(space_delim_strings[2]).map_err(|error| {
                 format_parse_data_error(
                     "reset_sequence_number",
                     InputType::Bool,
@@ -440,7 +440,7 @@ impl ClientProxy {
             )
         })?;
 
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+        let fetch_events = parse_bool(space_delim_strings[3]).map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -478,7 +478,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+        let fetch_events = parse_bool(space_delim_strings[3]).map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -544,7 +544,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let ascending = space_delim_strings[4].parse::<bool>().map_err(|error| {
+        let ascending = parse_bool(space_delim_strings[4]).map_err(|error| {
             format_parse_data_error("ascending", InputType::Bool, space_delim_strings[4], error)
         })?;
         let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
@@ -884,9 +884,13 @@ fn format_parse_data_error<T: std::fmt::Debug>(
     )
 }
 
+fn parse_bool(para: &str) -> Result<bool> {
+    Ok(para.to_lowercase().parse::<bool>()?)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::client_proxy::{AddressAndIndex, ClientProxy};
+    use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use config::trusted_peers::TrustedPeersConfigHelpers;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
@@ -921,6 +925,24 @@ mod tests {
         }
 
         (client_proxy, accounts)
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        assert!(parse_bool("true").unwrap());
+        assert!(parse_bool("True").unwrap());
+        assert!(parse_bool("TRue").unwrap());
+        assert!(parse_bool("TRUE").unwrap());
+        assert!(!parse_bool("false").unwrap());
+        assert!(!parse_bool("False").unwrap());
+        assert!(!parse_bool("FaLSe").unwrap());
+        assert!(!parse_bool("FALSE").unwrap());
+        assert!(parse_bool("1").is_err());
+        assert!(parse_bool("0").is_err());
+        assert!(parse_bool("2").is_err());
+        assert!(parse_bool("1adf").is_err());
+        assert!(parse_bool("ad13").is_err());
+        assert!(parse_bool("ad1f").is_err());
     }
 
     #[test]
