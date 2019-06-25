@@ -67,7 +67,7 @@ struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload, Author>,
-    new_rounds_receiver: mpsc::Receiver<NewRoundEvent>,
+    new_rounds_receiver: channel::Receiver<NewRoundEvent>,
     proposal_winners_receiver: mpsc::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
@@ -95,23 +95,32 @@ impl NodeSetup {
         )))
     }
 
-    fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Arc<Pacemaker> {
+    fn create_pacemaker(
+        executor: TaskExecutor,
+        time_service: Arc<dyn TimeService>,
+    ) -> (Arc<Pacemaker>, channel::Receiver<NewRoundEvent>) {
         let base_timeout = Duration::new(5, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;
+        let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
-        Arc::new(LocalPacemaker::new(
-            MockStorage::<TestPayload>::start_for_testing()
-                .0
-                .persistent_liveness_storage(),
-            time_interval,
-            0,
-            highest_certified_round,
-            time_service,
-            pacemaker_timeout_sender,
-            1,
-            HighestTimeoutCertificates::new(None, None),
-        ))
+        (
+            Arc::new(LocalPacemaker::new(
+                executor,
+                MockStorage::<TestPayload>::start_for_testing()
+                    .0
+                    .persistent_liveness_storage(),
+                time_interval,
+                0,
+                highest_certified_round,
+                time_service,
+                new_round_events_sender,
+                pacemaker_timeout_sender,
+                1,
+                HighestTimeoutCertificates::new(None, None),
+            )),
+            new_round_events_receiver,
+        )
     }
 
     fn create_proposer_election(
@@ -191,9 +200,8 @@ impl NodeSetup {
             consensus_state,
         )));
 
-        let mut pacemaker = Self::create_pacemaker(time_service.clone());
-        let (pm_events_sender, new_rounds_receiver) =
-            start_event_processing_loop(&mut pacemaker, executor.clone());
+        let (pacemaker, new_rounds_receiver) =
+            Self::create_pacemaker(executor.clone(), time_service.clone());
         let mut proposer_election = Self::create_proposer_election(proposer_author);
         let (proposal_candidates_sender, proposal_winners_receiver) =
             start_event_processing_loop(&mut proposer_election, executor.clone());
@@ -203,7 +211,6 @@ impl NodeSetup {
             Arc::clone(&block_store),
             Arc::clone(&pacemaker),
             Arc::clone(&proposer_election),
-            pm_events_sender,
             proposal_candidates_sender,
             proposal_generator,
             safety_rules,
@@ -744,7 +751,7 @@ fn process_chunk_retrieval() {
         highest_ledger_info: genesis_qc.clone(),
     };
     node.pacemaker
-        .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+        .process_certificates(proposal_info.proposal.round() - 1, None);
 
     block_on(async move {
         node.event_processor
@@ -796,7 +803,7 @@ fn process_block_retrieval() {
         highest_ledger_info: genesis_qc.clone(),
     };
     node.pacemaker
-        .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+        .process_certificates(proposal_info.proposal.round() - 1, None);
 
     block_on(async move {
         node.event_processor
@@ -895,7 +902,7 @@ fn basic_restart_test() {
             proposals_mut.push(proposal_id);
             node_mut
                 .pacemaker
-                .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+                .process_certificates(proposal_info.proposal.round() - 1, None);
             node_mut
                 .event_processor
                 .process_winning_proposal(proposal_info)

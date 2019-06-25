@@ -192,4 +192,7 @@ pub static ref PENDING_NEW_ROUND_MESSAGES: IntGauge = OP_COUNTERS.gauge("pending
 
 /// Count of the pending outbound pacemaker timeouts
 pub static ref PENDING_PACEMAKER_TIMEOUTS: IntGauge = OP_COUNTERS.gauge("pending_pacemaker_timeouts");
+
+/// Count of the pending new round events.
+pub static ref PENDING_NEW_ROUND_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_new_round_events");
 }
