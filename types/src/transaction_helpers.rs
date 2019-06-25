@@ -36,16 +36,16 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
     program: Program,
     sender_address: AccountAddress,
     sender_sequence_number: u64,
-    gas_unit_price: u64,
     max_gas_amount: u64,
+    gas_unit_price: u64,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
     let raw_txn = RawTransaction::new(
         sender_address,
         sender_sequence_number,
         program,
-        gas_unit_price,
         max_gas_amount,
+        gas_unit_price,
         std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
     );
     signer.sign_txn(raw_txn)

@@ -320,8 +320,8 @@ impl ClientProxy {
             let req = self.create_submit_transaction_req(
                 program,
                 sender,
-                gas_unit_price, /* gas_unit_price */
                 max_gas_amount, /* max_gas_amount */
+                gas_unit_price, /* gas_unit_price */
             )?;
             let sender_mut = self
                 .accounts
@@ -746,8 +746,8 @@ impl ClientProxy {
         let sender_address = sender.address;
         let program = vm_genesis::encode_mint_program(&receiver, num_coins);
         let req = self.create_submit_transaction_req(
-            program, sender, None, /* gas_unit_price */
-            None, /* max_gas_amount */
+            program, sender, None, /* max_gas_amount */
+            None, /* gas_unit_price */
         )?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(&mut sender_mut, &req);
@@ -822,8 +822,8 @@ impl ClientProxy {
         &self,
         program: Program,
         sender_account: &AccountData,
-        gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
+        gas_unit_price: Option<u64>,
     ) -> Result<SubmitTransactionRequest> {
         let signer: Box<&TransactionSigner> = match &sender_account.key_pair {
             Some(key_pair) => Box::new(key_pair),
