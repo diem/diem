@@ -157,6 +157,7 @@ fn test_submit_txn_inner_vm() {
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::Execution(ExecutionStatus::Executed));
+
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = generate_keypair();
     req.set_signed_txn(get_test_signed_txn(
@@ -166,13 +167,10 @@ fn test_submit_txn_inner_vm() {
         test_key.1,
         None,
     ));
-    let response = SubmitTransactionResponse::from_proto(
-        ac_service.submit_transaction_inner(req.clone()).unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.ac_status.unwrap(),
-        AdmissionControlStatus::Rejected,
+    let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
+    assert_status(
+        response,
+        VMStatus::Validation(VMValidationStatus::InvalidSignature),
     );
 }
 

@@ -33,7 +33,7 @@ fn verify_signature() {
     // Generate a new key pair to try and sign things with.
     let other_keypair = KeyPair::new(::crypto::signing::generate_keypair().0);
     let program = encode_transfer_program(sender.address(), 100);
-    let signed_txn = transaction_test_helpers::get_unverified_test_signed_txn(
+    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
         other_keypair.private_key().clone(),
@@ -59,7 +59,8 @@ fn verify_rejected_write_set() {
         sender.account().privkey.clone(),
         sender.account().pubkey,
         None,
-    );
+    )
+    .into_inner();
 
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()),

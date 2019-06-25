@@ -82,6 +82,7 @@ impl TestTransaction {
         raw_txn
             .sign(&privkey, pubkey)
             .expect("Failed to sign raw transaction.")
+            .into_inner()
     }
 
     pub(crate) fn get_address(address: usize) -> AccountAddress {

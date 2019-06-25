@@ -27,7 +27,7 @@ const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 const FREE_LUNCH: u64 = 1_000_000;
 
 /// Benchmarker aims to automate the process of
-///     1) generating and minting coints to a group of accounts
+///     1) generating and minting coins to a group of accounts
 ///     2) generating customized transfer transactions (TXNs) offline,
 ///     3) submiting TXNs to admission control as fast as possible,
 ///     4) waiting for all TXNs committed or timed out,

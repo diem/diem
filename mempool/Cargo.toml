@@ -24,11 +24,11 @@ failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
-network = {path = "../network"}
+network = { path = "../network" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
-vm_validator = {path = "../vm_validator"}
+vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 rand = "0.6.5"

@@ -37,6 +37,7 @@ fn encode_mint_transaction(seqnum: u64, sender_keypair: &KeyPair) -> SignedTrans
     raw_txn
         .sign(&sender_keypair.private_key(), sender_keypair.public_key())
         .expect("Signing should work.")
+        .into_inner()
 }
 
 #[test]

@@ -39,7 +39,7 @@ impl FromIterator<u8> for NibblePath {
             if count % 2 == 0 {
                 bytes.push(nibble << 4);
             } else {
-                *bytes.last_mut().expect("Cannot be None") |= nibble & 0x0f;
+                *bytes.last_mut().expect("Cannot be None") |= nibble;
             }
             count += 1;
         }
@@ -105,7 +105,7 @@ impl NibblePath {
 
     /// Get the underlying bytes storing nibbles.
     pub fn bytes(&self) -> &[u8] {
-        &self.bytes[..]
+        &self.bytes
     }
 }
 

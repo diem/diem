@@ -13,7 +13,7 @@ Nextgen contains the following implementations:
 
 * traits.rs introduces new abstractions for the crypto API.
 * Ed25519 performs signatures using the new API design based on [ed25519-dalek](https://docs.rs/ed25519-dalek/1.0.0-pre.1/ed25519_dalek/) library with additional security checks (e.g. for malleability).
-* BLS12381 performs signatures using the new API design based on [threshold_crypto](https://github.com/poanetwork/threshold_crypto) library. BLS signatures currently undergo a [standartization process](https://tools.ietf.org/html/draft-boneh-bls-signature-00).
+* BLS12381 performs signatures using the new API design based on [threshold_crypto](https://github.com/poanetwork/threshold_crypto) library. BLS signatures currently undergo a [standardization process](https://tools.ietf.org/html/draft-boneh-bls-signature-00).
 * ECVRF implements a verifiable random function (VRF) according to [draft-irtf-cfrg-vrf-04](https://tools.ietf.org/html/draft-irtf-cfrg-vrf-04) over curve25519.
 * SLIP-0010 implements universal hierarchical key derivation for Ed25519 according to [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md).
 

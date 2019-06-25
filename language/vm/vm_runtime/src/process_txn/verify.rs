@@ -10,7 +10,7 @@ use bytecode_verifier::{verify_module, verify_script};
 use logger::prelude::*;
 use types::{
     account_address::AccountAddress,
-    transaction::{Program, SignedTransaction, TransactionArgument, TransactionPayload},
+    transaction::{Program, SignatureCheckedTransaction, TransactionArgument, TransactionPayload},
     vm_error::{VMStatus, VMVerificationError, VMVerificationStatus},
 };
 use vm::{
@@ -27,7 +27,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    txn: SignedTransaction,
+    txn: SignatureCheckedTransaction,
     #[allow(dead_code)]
     txn_state: Option<VerifiedTransactionState<'alloc, 'txn, P>>,
 }
@@ -121,14 +121,14 @@ where
         self.txn_state.take()
     }
 
-    /// Returns a reference to the `SignedTransaction` within.
+    /// Returns a reference to the `SignatureCheckedTransaction` within.
     #[allow(dead_code)]
-    pub fn as_inner(&self) -> &SignedTransaction {
+    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
         &self.txn
     }
 
-    /// Consumes `self` and returns the `SignedTransaction` within.
-    pub fn into_inner(self) -> SignedTransaction {
+    /// Consumes `self` and returns the `SignatureCheckedTransaction` within.
+    pub fn into_inner(self) -> SignatureCheckedTransaction {
         self.txn
     }
 }

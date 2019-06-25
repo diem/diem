@@ -89,6 +89,8 @@ pub struct ClientProxy {
     pub faucet_account: Option<AccountData>,
     /// Wallet library managing user accounts.
     wallet: WalletLibrary,
+    /// Whether to sync with validator on account creation.
+    sync_on_wallet_recovery: bool,
 }
 
 impl ClientProxy {
@@ -98,6 +100,7 @@ impl ClientProxy {
         ac_port: &str,
         validator_set_file: &str,
         faucet_account_file: &str,
+        sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
@@ -124,6 +127,7 @@ impl ClientProxy {
             let faucet_account_data = Self::get_account_data_from_address(
                 &client,
                 association_address(),
+                true,
                 Some(KeyPair::new(faucet_account_keypair.private_key().clone())),
             )?;
             // Load the keypair from file
@@ -148,6 +152,7 @@ impl ClientProxy {
             faucet_server,
             faucet_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
+            sync_on_wallet_recovery,
         })
     }
 
@@ -155,7 +160,7 @@ impl ClientProxy {
     pub fn create_next_account(&mut self) -> Result<AddressAndIndex> {
         let (address, _) = self.wallet.new_address()?;
 
-        let account_data = Self::get_account_data_from_address(&self.client, address, None)?;
+        let account_data = Self::get_account_data_from_address(&self.client, address, true, None)?;
 
         Ok(self.insert_account_data(account_data))
     }
@@ -203,14 +208,17 @@ impl ClientProxy {
     }
 
     /// Get balance from validator for the account specified.
-    pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<f64> {
+    pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<String> {
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for getting balance"
         );
         let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        self.get_account_resource_and_update(address)
-            .map(|res| res.balance() as f64 / 1_000_000.)
+        self.get_account_resource_and_update(address).map(|res| {
+            let whole_num = res.balance() / 1_000_000;
+            let remainder = res.balance() % 1_000_000;
+            format!("{}.{:0>6}", whole_num.to_string(), remainder.to_string())
+        })
     }
 
     /// Get the latest sequence number from validator for the account specified.
@@ -584,6 +592,7 @@ impl ClientProxy {
             account_data.push(Self::get_account_data_from_address(
                 &self.client,
                 address,
+                self.sync_on_wallet_recovery,
                 None,
             )?);
         }
@@ -647,20 +656,25 @@ impl ClientProxy {
     fn get_account_data_from_address(
         client: &GRPCClient,
         address: AccountAddress,
+        sync_with_validator: bool,
         key_pair: Option<KeyPair>,
     ) -> Result<AccountData> {
-        let (sequence_number, status) = match client.get_account_blob(address) {
-            Ok(resp) => match resp.0 {
-                Some(account_state_blob) => (
-                    get_account_resource_or_default(&Some(account_state_blob))?.sequence_number(),
-                    AccountStatus::Persisted,
-                ),
-                None => (0, AccountStatus::Local),
+        let (sequence_number, status) = match sync_with_validator {
+            true => match client.get_account_blob(address) {
+                Ok(resp) => match resp.0 {
+                    Some(account_state_blob) => (
+                        get_account_resource_or_default(&Some(account_state_blob))?
+                            .sequence_number(),
+                        AccountStatus::Persisted,
+                    ),
+                    None => (0, AccountStatus::Local),
+                },
+                Err(e) => {
+                    error!("Failed to get account state from validator, error: {:?}", e);
+                    (0, AccountStatus::Unknown)
+                }
             },
-            Err(e) => {
-                error!("Failed to get account state from validator, error: {:?}", e);
-                (0, AccountStatus::Unknown)
-            }
+            false => (0, AccountStatus::Local),
         };
         Ok(AccountData {
             address,
@@ -911,6 +925,7 @@ mod tests {
             "", /* port */
             &val_set_file,
             &"",
+            false,
             None,
             Some(mnemonic_path),
         )
@@ -947,7 +962,7 @@ mod tests {
 
     #[test]
     fn test_write_recover() {
-        let num = 15;
+        let num = 100;
         let (client, accounts) = generate_accounts_from_wallet(num);
         assert_eq!(accounts.len(), num);
 
