@@ -13,8 +13,9 @@ use cost_synthesis::{
     stack_generator::RandomStackGenerator,
     with_loaded_vm,
 };
+use csv;
 use move_ir_natives::hash;
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap, convert::TryFrom, path::Path, time::Instant, u64};
 use vm::{
     errors::VMErrorKind,
     file_format::{
@@ -33,7 +34,20 @@ use vm_runtime::{
 use vm_runtime_tests::data_store::FakeDataStore;
 
 const MAX_STACK_SIZE: u64 = 100;
-const NUM_ITERS: u16 = 1000;
+const NUM_ITERS: u16 = 10000;
+
+fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
+    let mut writer = csv::Writer::from_path(path).unwrap();
+    let keys: Vec<_> = data.keys().collect();
+    let datavars: Vec<_> = data.values().collect();
+    writer.write_record(&keys).unwrap();
+    for i in 0..datavars[0].len() {
+        let row: Vec<_> = datavars.iter().map(|v| v[i]).collect();
+        writer.serialize(&row).unwrap();
+    }
+
+    writer.flush().unwrap();
+}
 
 // The only instruction that we don't implement here is `EmitEvent`. This is on purpose -- the emit
 // event instruction will be changing soon, so it's not worth implementing at the moment until we
@@ -98,7 +112,7 @@ fn stack_instructions() {
     let mod_gen: ModuleGenerator = ModuleGenerator::new(NUM_ITERS as u16, 3);
     let mut account = Account::new();
     with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
-    let costs: HashMap<Bytecode, u128> = stack_opcodes
+    let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
         .map(|instruction| {
             println!("Running: {:?}", instruction);
@@ -110,7 +124,7 @@ fn stack_instructions() {
                 MAX_STACK_SIZE,
                 NUM_ITERS,
             );
-            let instr_cost: u128 = stack_gen
+            let instr_costs: Vec<u64> = stack_gen
                 .map(|stack_state| {
                     let instr = RandomStackGenerator::stack_transition(
                         &mut vm.execution_stack,
@@ -140,25 +154,20 @@ fn stack_instructions() {
                             },
                         }
                     }
-                    time
+                    u64::try_from(time).unwrap()
                 })
-                .sum();
-            let average_time = instr_cost / u128::from(NUM_ITERS);
-            (instruction, average_time)
+                .collect();
+            (format!("{:?}", instruction), instr_costs)
         })
         .collect();
 
-    println!("---------------------------------------------------------------------------");
-    for (instr, cost) in costs {
-        println!("{:?}: {}", instr, cost);
-    }
-    println!("---------------------------------------------------------------------------");
+    output_to_csv(Path::new("data/bytecode_instruction_costs.csv"), costs);
 }
 
 macro_rules! bench_native {
     ($name:expr, $function:path, $table:ident) => {
         let mut stack_access = StackAccessorMocker::new();
-        let time_byte_mapping = (1..512)
+        let per_byte_costs: Vec<u64> = (1..512)
             .map(|i| {
                 stack_access.set_hash_length(i);
                 let time = (0..NUM_ITERS).fold(0, |acc, _| {
@@ -167,29 +176,37 @@ macro_rules! bench_native {
                     let _ = $function(&mut stack_access).unwrap();
                     acc + before.elapsed().as_nanos()
                 });
-                let time = time / u128::from(NUM_ITERS);
-                (time, i as u64)
+                // Time per byte averaged over the number of iterations that we performed.
+                u64::try_from(time).unwrap() / (u64::from(NUM_ITERS) * (i as u64))
             })
-            .collect::<HashMap<_, _>>();
-        let time_per_byte = time_byte_mapping
-            .into_iter()
-            .fold(0, |acc, (time, bytes)| acc + (time / u128::from(bytes)))
-            / 512;
-        $table.insert($name, time_per_byte);
+            .collect();
+        $table.insert($name, per_byte_costs);
     };
 }
 
 fn natives() {
     let mut cost_table = HashMap::new();
-    bench_native!("keccak_256", hash::native_keccak_256, cost_table);
-    bench_native!("ripemd_160", hash::native_ripemd_160, cost_table);
-    bench_native!("native_sha2_256", hash::native_sha2_256, cost_table);
-    bench_native!("native_sha3_256", hash::native_sha3_256, cost_table);
-    println!("------------------------ NATIVES ------------------------------------------");
-    for (instr, cost) in cost_table {
-        println!("{:?}: {}", instr, cost);
-    }
-    println!("---------------------------------------------------------------------------");
+    bench_native!(
+        "keccak_256".to_string(),
+        hash::native_keccak_256,
+        cost_table
+    );
+    bench_native!(
+        "ripemd_160".to_string(),
+        hash::native_ripemd_160,
+        cost_table
+    );
+    bench_native!(
+        "native_sha2_256".to_string(),
+        hash::native_sha2_256,
+        cost_table
+    );
+    bench_native!(
+        "native_sha3_256".to_string(),
+        hash::native_sha3_256,
+        cost_table
+    );
+    output_to_csv(Path::new("data/native_function_costs.csv"), cost_table);
 }
 
 pub fn main() {
