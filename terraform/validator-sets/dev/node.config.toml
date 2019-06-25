@@ -9,7 +9,7 @@ node_sync_channel_buffer_size = 10
 node_async_log_chan_size = 256
 
 [metrics]
-dir = "metrics"
+dir = ""
 collection_interval_ms = 1000
 push_server_addr = ""
 
