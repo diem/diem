@@ -834,3 +834,16 @@ pub fn execute_function(
     };
     vm.execute_function_impl(entry_func)
 }
+
+#[cfg(feature = "instruction_synthesis")]
+impl<'alloc, 'txn, P> TransactionExecutor<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    /// Clear all the writes local to this transaction.
+    pub fn clear_writes(&mut self) {
+        self.data_view.clear();
+        self.event_data.clear();
+    }
+}

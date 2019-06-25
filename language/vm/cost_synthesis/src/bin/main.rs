@@ -7,8 +7,11 @@
 //! * Global-memory dependent instructions; and
 //! * Native operations.
 use cost_synthesis::{
-    module_generator::ModuleGenerator, natives::StackAccessorMocker,
-    stack_generator::RandomStackGenerator, vm_runner::FakeDataCache, with_loaded_vm,
+    global_state::{account::Account, inhabitor::RandomInhabitor},
+    module_generator::ModuleGenerator,
+    natives::StackAccessorMocker,
+    stack_generator::RandomStackGenerator,
+    with_loaded_vm,
 };
 use move_ir_natives::hash;
 use std::{collections::HashMap, time::Instant};
@@ -27,10 +30,14 @@ use vm_runtime::{
     loaded_data::function::{FunctionRef, FunctionReference},
     txn_executor::TransactionExecutor,
 };
+use vm_runtime_tests::data_store::FakeDataStore;
 
 const MAX_STACK_SIZE: u64 = 100;
 const NUM_ITERS: u16 = 1000;
 
+// The only instruction that we don't implement here is `EmitEvent`. This is on purpose -- the emit
+// event instruction will be changing soon, so it's not worth implementing at the moment until we
+// have decided the semantics of the instruction.
 fn stack_instructions() {
     use Bytecode::*;
     let stack_opcodes: Vec<Bytecode> = vec![
@@ -38,6 +45,10 @@ fn stack_instructions() {
         WriteRef,
         ReleaseRef,
         FreezeRef,
+        MoveToSender(StructDefinitionIndex::new(0)),
+        Exists(StructDefinitionIndex::new(0)),
+        BorrowGlobal(StructDefinitionIndex::new(0)),
+        MoveFrom(StructDefinitionIndex::new(0)),
         BorrowField(FieldDefinitionIndex::new(0)),
         CopyLoc(0),
         MoveLoc(0),
@@ -60,6 +71,7 @@ fn stack_instructions() {
         And,
         Eq,
         Neq,
+        Not,
         Lt,
         Gt,
         Le,
@@ -84,12 +96,14 @@ fn stack_instructions() {
     ];
 
     let mod_gen: ModuleGenerator = ModuleGenerator::new(NUM_ITERS as u16, 3);
-    with_loaded_vm! (mod_gen => vm, loaded_module, module_cache);
+    let mut account = Account::new();
+    with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
     let costs: HashMap<Bytecode, u128> = stack_opcodes
         .into_iter()
         .map(|instruction| {
             println!("Running: {:?}", instruction);
             let stack_gen = RandomStackGenerator::new(
+                &account.addr,
                 &loaded_module,
                 &module_cache,
                 &instruction,
@@ -102,6 +116,10 @@ fn stack_instructions() {
                         &mut vm.execution_stack,
                         stack_state,
                     );
+                    // Clear the VM's data cache -- otherwise we'll windup grabbing the data from
+                    // the cache on subsequent iterations and across future instructions that
+                    // effect global memory.
+                    vm.clear_writes();
                     let before = Instant::now();
                     let ignore = vm.execute_block(&[instr], 0);
                     let time = before.elapsed().as_nanos();
@@ -175,13 +193,6 @@ fn natives() {
 }
 
 pub fn main() {
-    natives();
     stack_instructions();
+    natives();
 }
-
-// Instructions left to implement:
-//     BorrowGlobal(StructDefinitionIndex),
-//     Exists(StructDefinitionIndex),
-//     MoveFrom(StructDefinitionIndex),
-//     MoveToSender(StructDefinitionIndex),
-//     EmitEvent, <- Not yet/until it's implemented

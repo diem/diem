@@ -78,6 +78,9 @@ pub struct RandomStackGenerator<'alloc, 'txn>
 where
     'alloc: 'txn,
 {
+    /// The account address that all resources will be published under
+    account_address: &'txn AccountAddress,
+
     /// The number of iterations that this instruction will be run for. Used to implement the
     /// `Iterator` trait.
     iters: u16,
@@ -111,6 +114,8 @@ where
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
     /// generating an inhabitant for a struct SignatureToken. This is lazily populated.
+    /// NB: The `StructDefinitionIndex`s in this table are w.r.t. the module that is given by the
+    /// `ModuleId` and _not_ the `root_module`.
     struct_handle_table: HashMap<ModuleId, HashMap<String, StructDefinitionIndex>>,
 
     /// A reverse lookup table for each code module that allows us to resolve function handles to
@@ -127,6 +132,7 @@ where
     /// It initializes each of the internal resolution tables for structs and function handles to
     /// be empty.
     pub fn new(
+        account_address: &'txn AccountAddress,
         root_module: &'txn LoadedModule,
         module_cache: &'txn ModuleCache<'alloc>,
         op: &Bytecode,
@@ -137,6 +143,7 @@ where
         Self {
             gen: StdRng::from_seed(seed),
             op: op.clone(),
+            account_address,
             max_stack_size,
             root_module,
             module_cache,
@@ -159,7 +166,8 @@ where
     fn is_module_specific_op(&self) -> bool {
         use Bytecode::*;
         match self.op {
-            Unpack(_) | Pack(_) | Call(_) => true,
+            MoveToSender(_) | MoveFrom(_) | BorrowGlobal(_) | Exists(_) | Unpack(_) | Pack(_)
+            | Call(_) => true,
             CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) | BorrowField(_) => true,
             _ => false,
         }
@@ -177,7 +185,13 @@ where
 
     fn next_int(&mut self, stk: &[Local]) -> u64 {
         if self.op == Bytecode::Sub && !stk.is_empty() {
-            let peek: Option<u64> = stk.last().expect("[Next Integer] The impossible happened: the value stack became empty while still full.").clone().value().expect("[Next Integer] Invalid integer stack value encountered when peeking at the generated stack.").into();
+            let peek: Option<u64> = stk
+                .last()
+                .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
+                .clone()
+                .value()
+                .expect("[Next Integer] Invalid integer stack value encountered when peeking at the generated stack.")
+                .into();
             self.gen.gen_range(
                 0,
                 peek.expect("[Next Integer] Unable to cast peeked stack value to an integer."),
@@ -189,7 +203,7 @@ where
 
     fn next_bool(&mut self) -> bool {
         // Flip a coin
-        self.gen.gen_bool(1.0 / 2.0)
+        self.gen.gen_bool(0.5)
     }
 
     fn next_bytearray(&mut self) -> ByteArray {
@@ -221,7 +235,7 @@ where
 
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
         if !self.points_to_module_data() || is_padding {
-            AccountAddress::random()
+            AccountAddress::new(self.gen.gen())
         } else {
             let address = self
                 .root_module
@@ -257,6 +271,32 @@ where
         let table_idx =
             self.next_bounded_index(self.root_module.function_handles().len() as TableIndex);
         FunctionHandleIndex::new(table_idx)
+    }
+
+    fn next_resource(&mut self) -> StructDefinitionIndex {
+        let resources: Vec<_> = self
+            .root_module
+            .struct_defs()
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, struct_def)| {
+                let is_resource = self
+                    .root_module
+                    .struct_handle_at(struct_def.struct_handle)
+                    .is_resource;
+                if is_resource {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if resources.is_empty() {
+            panic!("Every module must have at least one resource, but the root module doesn't have a resource type defined.");
+        }
+        let rand_resource_idx = self.gen.gen_range(0, resources.len());
+        let struct_def_idx = resources[rand_resource_idx];
+        StructDefinitionIndex::new(struct_def_idx as TableIndex)
     }
 
     fn next_stack_value(&mut self, stk: &[Local], is_padding: bool) -> Local {
@@ -432,7 +472,7 @@ where
                         })
                         .collect()
                 });
-            *entry.get(function_name).expect("FOO")
+            *entry.get(function_name).unwrap()
         };
 
         let function_def = module.function_def_at(function_def_idx);
@@ -509,6 +549,66 @@ where
     fn generate_from_module_info(&mut self) -> StackState<'txn> {
         use Bytecode::*;
         match self.op {
+            MoveToSender(_) => {
+                let struct_handle_idx = self.next_resource();
+                // We can just pick a random address -- this is incorrect by the bytecode semantics
+                // (since we're moving to an account that doesn't exist), but since we don't need
+                // correctness beyond this instruction it's OK.
+                let addr = Local::address(self.next_addr(true));
+                let size = addr.size();
+                let stack = vec![addr];
+                StackState::new(
+                    (self.root_module, None),
+                    self.random_pad(stack),
+                    MoveToSender(struct_handle_idx),
+                    size,
+                    HashMap::new(),
+                )
+            }
+            MoveFrom(_) => {
+                let struct_handle_idx = self.next_resource();
+                let addr = Local::address(*self.account_address);
+                let size = addr.size();
+                let stack = vec![addr];
+                StackState::new(
+                    (self.root_module, None),
+                    self.random_pad(stack),
+                    MoveFrom(struct_handle_idx),
+                    size,
+                    HashMap::new(),
+                )
+            }
+            BorrowGlobal(_) => {
+                let struct_handle_idx = self.next_resource();
+                let addr = Local::address(*self.account_address);
+                let size = addr.size();
+                let stack = vec![addr];
+                StackState::new(
+                    (self.root_module, None),
+                    self.random_pad(stack),
+                    BorrowGlobal(struct_handle_idx),
+                    size,
+                    HashMap::new(),
+                )
+            }
+            Exists(_) => {
+                let next_struct_handle_idx = self.next_resource();
+                // Flip a coin to determine if the resource should exist or not.
+                let addr = if self.next_bool() {
+                    Local::address(*self.account_address)
+                } else {
+                    Local::address(self.next_addr(true))
+                };
+                let size = addr.size();
+                let stack = vec![addr];
+                StackState::new(
+                    (self.root_module, None),
+                    self.random_pad(stack),
+                    Exists(next_struct_handle_idx),
+                    size,
+                    HashMap::new(),
+                )
+            }
             Call(_) => {
                 let function_handle_idx = self.next_function_handle_idx();
                 let function_idx = self.resolve_function_handle(function_handle_idx).2;
