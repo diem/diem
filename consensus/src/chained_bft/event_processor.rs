@@ -435,7 +435,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             counters::CREATION_TO_RECEIVAL_MS.observe(time_to_receival.as_millis() as f64);
         }
         let block = match self
-            .block_store
+            .sync_manager
             .execute_and_insert_block(proposal.proposal)
             .await
         {
