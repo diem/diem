@@ -1,0 +1,7 @@
+// (u64, u64) args to main(u64, address) is an error
+
+//! args: 42, 0x1
+
+main(x: u64, y: address) {
+    return;
+}
