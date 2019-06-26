@@ -1,20 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Author, Payload, Round},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::new_round_msg::PacemakerTimeoutCertificate,
-    },
-    stream_utils::EventBasedActor,
+use crate::chained_bft::{
+    common::{Author, Payload, Round},
+    consensus_types::{block::Block, quorum_cert::QuorumCert},
+    liveness::new_round_msg::PacemakerTimeoutCertificate,
 };
 use failure::Result;
+use futures::Future;
 use network::proto::Proposal as ProtoProposal;
 use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Serialize};
-use std::fmt;
+use std::{fmt, pin::Pin};
 use types::validator_verifier::ValidatorVerifier;
 
 /// ProposerInfo is a general trait that can include various proposer characteristics
@@ -81,9 +79,7 @@ where
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
 /// We are open to a possibility for having multiple proposers per round, the ultimate choice
 /// of a proposal is exposed by the election protocol via the stream of proposals.
-pub trait ProposerElection<T, P>:
-    EventBasedActor<InputEvent = ProposalInfo<T, P>, OutputEvent = ProposalInfo<T, P>>
-{
+pub trait ProposerElection<T, P> {
     /// If a given author is a valid candidate for being a proposer, generate the info,
     /// otherwise return None.
     /// Note that this function is synchronous.
@@ -92,6 +88,14 @@ pub trait ProposerElection<T, P>:
     /// Return all the possible valid proposers for a given round (this information can be
     /// used by e.g., voters for choosing the destinations for sending their votes to).
     fn get_valid_proposers(&self, round: Round) -> Vec<P>;
+
+    /// Notify proposer election about a new proposal. The function doesn't return any information:
+    /// proposer election is going to notify the client about the chosen proposal via a dedicated
+    /// channel (to be passed in constructor).
+    fn process_proposal(
+        &self,
+        proposal: ProposalInfo<T, P>,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
 impl<T: Payload, P: ProposerInfo> IntoProto for ProposalInfo<T, P> {

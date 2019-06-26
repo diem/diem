@@ -195,4 +195,7 @@ pub static ref PENDING_PACEMAKER_TIMEOUTS: IntGauge = OP_COUNTERS.gauge("pending
 
 /// Count of the pending new round events.
 pub static ref PENDING_NEW_ROUND_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_new_round_events");
+
+/// Count of the pending winning proposals.
+pub static ref PENDING_WINNING_PROPOSALS: IntGauge = OP_COUNTERS.gauge("pending_winning_proposals");
 }

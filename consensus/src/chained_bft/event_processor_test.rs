@@ -32,7 +32,6 @@ use crate::{
         },
     },
     state_replication::ExecutedState,
-    stream_utils::start_event_processing_loop,
     time_service::{ClockTimeService, TimeService},
 };
 use channel;
@@ -68,7 +67,7 @@ struct NodeSetup {
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload, Author>,
     new_rounds_receiver: channel::Receiver<NewRoundEvent>,
-    proposal_winners_receiver: mpsc::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
+    winning_proposals_receiver: channel::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
@@ -125,8 +124,19 @@ impl NodeSetup {
 
     fn create_proposer_election(
         author: Author,
-    ) -> Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync> {
-        Arc::new(RotatingProposer::new(vec![author], 1))
+    ) -> (
+        Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync>,
+        channel::Receiver<ProposalInfo<TestPayload, Author>>,
+    ) {
+        let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
+        (
+            Arc::new(RotatingProposer::new(
+                vec![author],
+                1,
+                winning_proposals_sender,
+            )),
+            winning_proposals_receiver,
+        )
     }
 
     fn create_nodes(
@@ -202,16 +212,15 @@ impl NodeSetup {
 
         let (pacemaker, new_rounds_receiver) =
             Self::create_pacemaker(executor.clone(), time_service.clone());
-        let mut proposer_election = Self::create_proposer_election(proposer_author);
-        let (proposal_candidates_sender, proposal_winners_receiver) =
-            start_event_processing_loop(&mut proposer_election, executor.clone());
+
+        let (proposer_election, winning_proposals_receiver) =
+            Self::create_proposer_election(proposer_author);
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),
             Arc::clone(&pacemaker),
             Arc::clone(&proposer_election),
-            proposal_candidates_sender,
             proposal_generator,
             safety_rules,
             Arc::new(MockStateComputer::new(commit_cb_sender)),
@@ -226,7 +235,7 @@ impl NodeSetup {
             block_store,
             event_processor,
             new_rounds_receiver,
-            proposal_winners_receiver,
+            winning_proposals_receiver,
             storage,
             signer,
             proposer_author,
@@ -496,7 +505,7 @@ fn process_round_mismatch_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");
@@ -629,7 +638,7 @@ fn process_proposer_mismatch_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");
@@ -687,7 +696,7 @@ fn process_timeout_certificate_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");

@@ -29,7 +29,6 @@ use crate::{
     },
 };
 use crypto::HashValue;
-use futures::{channel::mpsc, SinkExt};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use std::{
@@ -58,7 +57,6 @@ pub struct EventProcessor<T, P> {
     block_store: Arc<BlockStore<T>>,
     pacemaker: Arc<dyn Pacemaker>,
     proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
-    proposal_candidates_sender: mpsc::Sender<ProposalInfo<T, P>>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Arc<RwLock<SafetyRules<T>>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -76,7 +74,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         block_store: Arc<BlockStore<T>>,
         pacemaker: Arc<dyn Pacemaker>,
         proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
-        proposal_candidates_sender: mpsc::Sender<ProposalInfo<T, P>>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Arc<RwLock<SafetyRules<T>>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -97,7 +94,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             block_store,
             pacemaker,
             proposer_election,
-            proposal_candidates_sender,
             proposal_generator,
             safety_rules,
             state_computer,
@@ -273,10 +269,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
     async fn finish_proposal_processing(&self, proposal: ProposalInfo<T, P>) {
-        let mut sender = self.proposal_candidates_sender.clone();
-        if sender.send(proposal).await.is_err() {
-            error!("Error sending the received proposal to proposal election.");
-        }
+        self.proposer_election.process_proposal(proposal).await;
     }
 
     /// Fetches and completes processing proposal in dedicated task

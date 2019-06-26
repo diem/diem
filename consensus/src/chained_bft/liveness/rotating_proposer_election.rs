@@ -1,14 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Payload, Round},
-        liveness::proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
-    },
-    stream_utils::EventBasedActor,
+use crate::chained_bft::{
+    common::{Payload, Round},
+    liveness::proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
 };
-use futures::{channel::mpsc, Future, FutureExt, SinkExt};
+use channel;
+use futures::{Future, FutureExt, SinkExt};
 use logger::prelude::*;
 use std::pin::Pin;
 
@@ -22,16 +20,20 @@ pub struct RotatingProposer<T, P> {
     // in a row
     contiguous_rounds: u32,
     // Output stream to send the chosen proposals
-    winning_proposals: Option<mpsc::Sender<ProposalInfo<T, P>>>,
+    winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
 }
 
 impl<T, P: ProposerInfo> RotatingProposer<T, P> {
     /// With only one proposer in the vector, it behaves the same as a fixed proposer strategy.
-    pub fn new(proposers: Vec<P>, contiguous_rounds: u32) -> Self {
+    pub fn new(
+        proposers: Vec<P>,
+        contiguous_rounds: u32,
+        winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
+    ) -> Self {
         Self {
             proposers,
             contiguous_rounds,
-            winning_proposals: None,
+            winning_proposals_sender,
         }
     }
 
@@ -53,28 +55,21 @@ impl<T: Payload, P: ProposerInfo> ProposerElection<T, P> for RotatingProposer<T,
     fn get_valid_proposers(&self, round: Round) -> Vec<P> {
         vec![self.get_proposer(round)]
     }
-}
 
-impl<T: Payload, P: ProposerInfo> EventBasedActor for RotatingProposer<T, P> {
-    type InputEvent = ProposalInfo<T, P>;
-    type OutputEvent = ProposalInfo<T, P>;
-
-    fn init(
-        &mut self,
-        _: mpsc::Sender<Self::InputEvent>,
-        output_stream_sender: mpsc::Sender<Self::OutputEvent>,
-    ) {
-        self.winning_proposals = Some(output_stream_sender);
-    }
-
-    fn process_event(&self, event: Self::InputEvent) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        let proposer = self.get_proposer(event.proposal.round());
-        let mut sender = self.winning_proposals.as_ref().unwrap().clone();
+    fn process_proposal(
+        &self,
+        proposal: ProposalInfo<T, P>,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        // This is a simple rotating proposer, the proposal is processed in the context of the
+        // caller task, no synchronization required because there is no mutable state.
+        let round_author = self.get_proposer(proposal.proposal.round()).get_author();
+        if round_author != proposal.proposer_info.get_author() {
+            return async {}.boxed();
+        }
+        let mut sender = self.winning_proposals_sender.clone();
         async move {
-            if proposer.get_author() == event.proposer_info.get_author() {
-                if let Err(e) = sender.send(event).await {
-                    debug!("Error in sending the winning proposal: {:?}", e);
-                }
+            if let Err(e) = sender.send(proposal).await {
+                debug!("Error in sending the winning proposal: {:?}", e);
             }
         }
             .boxed()

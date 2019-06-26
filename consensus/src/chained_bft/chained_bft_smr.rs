@@ -24,13 +24,11 @@ use crate::{
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     state_synchronizer::SyncStatus,
-    stream_utils::start_event_processing_loop,
     time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use failure::prelude::*;
 use futures::{
-    channel::mpsc,
     compat::Future01CompatExt,
     executor::block_on,
     future::{FutureExt, TryFutureExt},
@@ -154,11 +152,15 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     /// Create a proposer election handler based on proposers
-    fn create_proposer_election(&self) -> Arc<dyn ProposerElection<T, P> + Send + Sync> {
+    fn create_proposer_election(
+        &self,
+        winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
+    ) -> Arc<dyn ProposerElection<T, P> + Send + Sync> {
         assert!(!self.proposers.is_empty());
         Arc::new(RotatingProposer::new(
             self.proposers.clone(),
             self.config.contiguous_rounds,
+            winning_proposals_sender,
         ))
     }
 
@@ -228,7 +230,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     async fn process_winning_proposals(
-        mut receiver: mpsc::Receiver<ProposalInfo<T, P>>,
+        mut receiver: channel::Receiver<ProposalInfo<T, P>>,
         event_processor: ConcurrentEventProcessor<T, P>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
@@ -303,7 +305,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         event_processor: ConcurrentEventProcessor<T, P>,
         executor: TaskExecutor,
         new_round_events_receiver: channel::Receiver<NewRoundEvent>,
-        proposal_winners_receiver: mpsc::Receiver<ProposalInfo<T, P>>,
+        winning_proposals_receiver: channel::Receiver<ProposalInfo<T, P>>,
         network_receivers: NetworkReceivers<T, P>,
         pacemaker_timeout_sender_rx: channel::Receiver<Round>,
     ) {
@@ -326,7 +328,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         );
 
         executor.spawn(
-            Self::process_winning_proposals(proposal_winners_receiver, event_processor.clone())
+            Self::process_winning_proposals(winning_proposals_receiver, event_processor.clone())
                 .boxed()
                 .unit_error()
                 .compat(),
@@ -475,15 +477,14 @@ impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P
             external_timeout_sender,
         );
 
-        let mut proposer_election = self.create_proposer_election();
-        let (proposal_candidates_sender, proposal_winners_receiver) =
-            start_event_processing_loop(&mut proposer_election, executor.clone());
+        let (winning_proposals_sender, winning_proposals_receiver) =
+            channel::new(1_024, &counters::PENDING_WINNING_PROPOSALS);
+        let proposer_election = self.create_proposer_election(winning_proposals_sender);
         let event_processor = Arc::new(futures_locks::RwLock::new(EventProcessor::new(
             self.author,
             Arc::clone(&block_store),
             Arc::clone(&pacemaker),
             Arc::clone(&proposer_election),
-            proposal_candidates_sender,
             proposal_generator,
             safety_rules,
             state_computer,
@@ -498,7 +499,7 @@ impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P
             event_processor,
             executor.clone(),
             new_round_events_receiver,
-            proposal_winners_receiver,
+            winning_proposals_receiver,
             network_receivers,
             external_timeout_receiver,
         );
