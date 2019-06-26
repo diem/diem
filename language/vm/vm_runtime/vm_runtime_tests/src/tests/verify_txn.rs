@@ -9,6 +9,7 @@ use crate::{
     executor::FakeExecutor,
 };
 use assert_matches::assert_matches;
+use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::signing::KeyPair;
@@ -606,7 +607,10 @@ fn test_dependency_fails_verification() {
     let compiler = Compiler {
         code,
         address: *sender.address(),
-        extra_deps: vec![module],
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
+            module,
+        )],
         ..Compiler::default()
     };
     let program = compiler.into_program(vec![]).expect("Failed to compile");

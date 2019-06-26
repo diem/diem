@@ -5,6 +5,7 @@
 //!
 //! This crate contains helpers for executing tests against the Libra VM.
 
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use data_store::FakeDataStore;
 use types::{
@@ -37,15 +38,15 @@ pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMR
         ..Compiler::default()
     };
     let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
-    let (compiled_script, modules) =
+    let (verified_script, modules) =
         verify(&address, compiled_program.script, compiled_program.modules);
-    execute(compiled_script, args, modules)
+    execute(verified_script, args, modules)
 }
 
 pub fn execute(
-    script: CompiledScript,
+    script: VerifiedScript,
     args: Vec<TransactionArgument>,
-    modules: Vec<CompiledModule>,
+    modules: Vec<VerifiedModule>,
 ) -> VMResult<()> {
     // set up the DB
     let mut data_view = FakeDataStore::default();
@@ -60,10 +61,10 @@ fn verify(
     sender_address: &AccountAddress,
     compiled_script: CompiledScript,
     modules: Vec<CompiledModule>,
-) -> (CompiledScript, Vec<CompiledModule>) {
-    let (verified_script, verified_modules, statuses) =
-        static_verify_program(sender_address, compiled_script, modules);
-    assert_eq!(statuses, vec![]);
+) -> (VerifiedScript, Vec<VerifiedModule>) {
+    let (verified_script, verified_modules) =
+        static_verify_program(sender_address, compiled_script, modules)
+            .expect("verification failure");
     (verified_script, verified_modules)
 }
 

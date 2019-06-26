@@ -6,7 +6,7 @@ use crate::{
     process_txn::{execute::ExecutedTransaction, validate::ValidatedTransaction},
     txn_executor::TransactionExecutor,
 };
-use bytecode_verifier::{verify_module, verify_script};
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use logger::prelude::*;
 use types::{
     account_address::AccountAddress,
@@ -72,7 +72,7 @@ where
     fn verify_program(
         sender_address: &AccountAddress,
         program: &Program,
-    ) -> Result<(CompiledScript, Vec<CompiledModule>), VMStatus> {
+    ) -> Result<(VerifiedScript, Vec<VerifiedModule>), VMStatus> {
         // Ensure modules and scripts deserialize correctly.
         let script = match CompiledScript::deserialize(&program.code()) {
             Ok(script) => script,
@@ -102,13 +102,10 @@ where
         };
 
         // Run the script and module through the bytecode verifier.
-        let (script, modules, statuses) = static_verify_program(sender_address, script, modules);
-        if !statuses.is_empty() {
+        static_verify_program(sender_address, script, modules).map_err(|statuses| {
             warn!("[VM] bytecode verifier returned errors");
-            return Err(statuses.iter().collect());
-        }
-
-        Ok((script, modules))
+            statuses.iter().collect()
+        })
     }
 
     /// Executes this transaction.
@@ -142,8 +139,8 @@ where
 {
     pub(super) txn_executor:
         TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
-    pub(super) script: CompiledScript,
-    pub(super) modules: Vec<CompiledModule>,
+    pub(super) script: VerifiedScript,
+    pub(super) modules: Vec<VerifiedModule>,
 }
 
 /// Run static checks on a program directly. Provided as an alternative API for tests.
@@ -151,21 +148,27 @@ pub fn static_verify_program(
     sender_address: &AccountAddress,
     script: CompiledScript,
     modules: Vec<CompiledModule>,
-) -> (CompiledScript, Vec<CompiledModule>, Vec<VerificationStatus>) {
+) -> Result<(VerifiedScript, Vec<VerifiedModule>), Vec<VerificationStatus>> {
+    // It is possible to write this function without the expects, but that makes it very ugly.
     let mut statuses: Vec<Box<dyn Iterator<Item = VerificationStatus>>> = vec![];
-    let (script, errors) = verify_script(script);
-    statuses.push(Box::new(errors.into_iter().map(VerificationStatus::Script)));
+    let script = match VerifiedScript::new(script) {
+        Ok(script) => Some(script),
+        Err((_, errors)) => {
+            statuses.push(Box::new(errors.into_iter().map(VerificationStatus::Script)));
+            None
+        }
+    };
+
+    let modules_len = modules.len();
 
     let mut modules_out = vec![];
     for (module_idx, module) in modules.into_iter().enumerate() {
-        let (module, errors) = verify_module(module);
-
         // Make sure the module's self address matches the transaction sender. The self address is
         // where the module will actually be published. If we did not check this, the sender could
         // publish a module under anyone's account.
         //
         // For scripts this isn't a problem because they don't get published to accounts.
-        let address_mismatch = if module.address() != sender_address {
+        let self_error = if module.address() != sender_address {
             Some(VerificationError {
                 kind: IndexKind::AddressPool,
                 idx: CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
@@ -175,21 +178,34 @@ pub fn static_verify_program(
             None
         };
 
-        statuses.push(Box::new(
-            errors
-                .into_iter()
-                .chain(address_mismatch)
-                .map(move |err| VerificationStatus::Module(module_idx as u16, err)),
-        ));
+        let (module, mut errors) = match VerifiedModule::new(module) {
+            Ok(module) => (Some(module), vec![]),
+            Err((_, errors)) => (None, errors),
+        };
 
-        modules_out.push(module);
+        if let Some(error) = self_error {
+            errors.push(error);
+        }
+
+        if errors.is_empty() {
+            modules_out.push(module.expect("empty errors => module should verify"));
+        } else {
+            statuses.push(Box::new(errors.into_iter().map(move |error| {
+                VerificationStatus::Module(module_idx as u16, error)
+            })));
+        }
     }
 
-    // TODO: Cross-module verification. This will need some way of exposing module
-    // dependencies to the bytecode verifier.
-
-    let statuses = statuses.into_iter().flatten().collect();
-    (script, modules_out, statuses)
+    let statuses: Vec<_> = statuses.into_iter().flatten().collect();
+    if statuses.is_empty() {
+        assert_eq!(modules_out.len(), modules_len);
+        Ok((
+            script.expect("Ok case => script should verify"),
+            modules_out,
+        ))
+    } else {
+        Err(statuses)
+    }
 }
 
 /// Verify if the transaction arguments match the type signature of the main function.

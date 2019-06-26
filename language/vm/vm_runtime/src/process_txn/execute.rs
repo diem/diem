@@ -8,7 +8,10 @@ use types::{
     vm_error::{ExecutionStatus, VMStatus},
     write_set::WriteSet,
 };
-use vm::errors::{Location, VMErrorKind, VMRuntimeError};
+use vm::{
+    access::ModuleAccess,
+    errors::{Location, VMErrorKind, VMRuntimeError},
+};
 
 /// Represents a transaction that has been executed.
 pub struct ExecutedTransaction {

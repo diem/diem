@@ -1,4 +1,5 @@
 use crate::global_state::inhabitor::RandomInhabitor;
+use bytecode_verifier::VerifiedModule;
 use crypto::{PrivateKey, PublicKey};
 use std::iter::Iterator;
 use types::{
@@ -6,7 +7,7 @@ use types::{
 };
 use vm::{
     access::*,
-    file_format::{CompiledModule, SignatureToken, StructDefinitionIndex, TableIndex},
+    file_format::{SignatureToken, StructDefinitionIndex, TableIndex},
 };
 use vm_runtime::{
     identifier::{create_access_path, resource_storage_key},
@@ -23,7 +24,7 @@ pub struct Account {
     /// The account public key
     pub pubkey: PublicKey,
     /// The set of modules that are published under that account.
-    pub modules: Vec<CompiledModule>,
+    pub modules: Vec<VerifiedModule>,
 }
 
 impl Account {

@@ -7,6 +7,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
+bytecode_verifier = { path = "../../../bytecode_verifier" }
 canonical_serialization = { path = "../../../../common/canonical_serialization" }
 crypto = { path = "../../../../crypto/legacy_crypto"}
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }

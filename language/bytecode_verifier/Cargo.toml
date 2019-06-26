@@ -10,6 +10,7 @@ edition = "2018"
 mirai-annotations = "0.0.1"
 petgraph = "0.4"
 
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
 vm = { path = "../vm" }
 types = { path = "../../types" }
 

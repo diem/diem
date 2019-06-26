@@ -7,14 +7,15 @@ use crate::{
     loaded_data::function::{FunctionRef, FunctionReference},
 };
 use assert_matches::assert_matches;
+use bytecode_verifier::VerifiedScript;
 use compiler::Compiler;
 use hex;
 use types::account_address::AccountAddress;
 use vm::file_format::*;
 use vm_cache_map::Arena;
 
-fn test_module(name: String) -> CompiledModule {
-    CompiledModuleMut {
+fn test_module(name: String) -> VerifiedModule {
+    let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             name: StringPoolIndex::new(0),
             address: AddressPoolIndex::new(0),
@@ -72,18 +73,19 @@ fn test_module(name: String) -> CompiledModule {
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test module should satisfy bounds checker")
+    .expect("test module should satisfy bounds checker");
+    VerifiedModule::new(compiled_module).expect("test module should satisfy bytecode verifier")
 }
 
-fn test_script() -> CompiledScript {
-    CompiledScriptMut {
+fn test_script() -> VerifiedScript {
+    let compiled_script = CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
-                code: vec![],
+                code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
@@ -98,6 +100,11 @@ fn test_script() -> CompiledScript {
         ],
         struct_handles: vec![],
         function_handles: vec![
+            FunctionHandle {
+                name: StringPoolIndex::new(4),
+                signature: FunctionSignatureIndex::new(0),
+                module: ModuleHandleIndex::new(0),
+            },
             FunctionHandle {
                 name: StringPoolIndex::new(2),
                 signature: FunctionSignatureIndex::new(0),
@@ -126,12 +133,14 @@ fn test_script() -> CompiledScript {
             "module".to_string(),
             "func1".to_string(),
             "func2".to_string(),
+            "main".to_string(),
         ],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test script should satisfy bounds checker")
+    .expect("test script should satisfy bounds checker");
+    VerifiedScript::new(compiled_script).expect("test script should satisfy bytecode verifier")
 }
 
 #[test]
@@ -195,12 +204,12 @@ fn test_loader_cross_modules() {
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
     let func1 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
         .unwrap()
         .unwrap();
     let func2 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
         .unwrap()
         .unwrap()
         .unwrap();
@@ -230,28 +239,29 @@ fn test_cache_with_storage() {
     let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
+    println!("MODULE: {}", entry_module.as_module());
 
     let vm_cache = VMModuleCache::new(&allocator);
 
     // Function is not defined locally.
     assert!(vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
         .unwrap()
         .is_none());
 
     {
-        let fetcher = FakeFetcher::new(vec![test_module("module".to_string())]);
+        let fetcher = FakeFetcher::new(vec![test_module("module".to_string()).into_inner()]);
         let mut block_cache = BlockModuleCache::new(&vm_cache, fetcher);
 
         // Make sure the block cache fetches the code from the view.
         let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
             .unwrap()
             .unwrap()
             .unwrap();
         let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
             .unwrap()
             .unwrap()
             .unwrap();
@@ -276,12 +286,12 @@ fn test_cache_with_storage() {
         block_cache.storage.clear();
 
         let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
             .unwrap()
             .unwrap()
             .unwrap();
         let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
             .unwrap()
             .unwrap()
             .unwrap();
@@ -306,12 +316,12 @@ fn test_cache_with_storage() {
     // Even if the block cache goes out of scope, we should still be able to read the fetched
     // definition
     let func1 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
         .unwrap()
         .unwrap();
     let func2 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
         .unwrap()
         .unwrap()
         .unwrap();
@@ -350,7 +360,7 @@ fn test_multi_level_cache_write_back() {
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
-                code: vec![],
+                code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
@@ -372,6 +382,12 @@ fn test_multi_level_cache_write_back() {
         ],
         struct_handles: vec![],
         function_handles: vec![
+            // main
+            FunctionHandle {
+                name: StringPoolIndex::new(5),
+                signature: FunctionSignatureIndex::new(0),
+                module: ModuleHandleIndex::new(0),
+            },
             // Func2 defined in the new module
             FunctionHandle {
                 name: StringPoolIndex::new(4),
@@ -403,12 +419,14 @@ fn test_multi_level_cache_write_back() {
             "existing_module".to_string(),
             "func1".to_string(),
             "func2".to_string(),
+            "main".to_string(),
         ],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
     .expect("test script should satisfy bounds checker");
+    let script = VerifiedScript::new(script).expect("test script should satisfy bytecode verifier");
 
     let owned_entry_module = script.into_module();
     let loaded_main = LoadedModule::new(owned_entry_module);
@@ -422,11 +440,11 @@ fn test_multi_level_cache_write_back() {
 
             // We should be able to read existing modules in both cache.
             let func1_vm_ref = vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
                 .unwrap()
                 .unwrap();
             let func1_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
                 .unwrap()
                 .unwrap();
             assert_eq!(func1_vm_ref, func1_txn_ref);
@@ -436,12 +454,12 @@ fn test_multi_level_cache_write_back() {
             // We should not read the new module in the vm cache, but we should read it from the txn
             // cache.
             assert!(vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
                 .unwrap()
                 .unwrap()
                 .is_none());
             let func2_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
                 .unwrap()
                 .unwrap()
                 .unwrap();
@@ -459,7 +477,7 @@ fn test_multi_level_cache_write_back() {
 
     // After reclaiming we should see it from the
     let func2_ref = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
         .unwrap()
         .unwrap();

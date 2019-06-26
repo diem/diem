@@ -8,6 +8,7 @@
 //! generated -- any function bodies that are generated are simply non-semantic sequences of
 //! instructions to check BrTrue, BrFalse, and Branch instructions.
 use crate::common::*;
+use bytecode_verifier::VerifiedModule;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
@@ -326,7 +327,7 @@ impl ModuleBuilder {
     /// This method builds and then materializes the underlying module skeleton. It then swaps in a
     /// new module skeleton, adds the generated module to the `known_modules`, and returns
     /// the generated module.
-    pub fn materialize(&mut self) -> CompiledModule {
+    pub fn materialize(&mut self) -> VerifiedModule {
         self.with_callee_modules();
         self.with_account_addresses();
         self.with_strings();
@@ -336,7 +337,9 @@ impl ModuleBuilder {
         let module = std::mem::replace(&mut self.module, Self::default_module_with_types());
         let module = module.freeze().expect("should satisfy bounds checker");
         self.known_modules.insert(module.self_id(), module.clone());
-        module
+        // We don't expect the module to pass the verifier at the moment. This is OK because it
+        // isn't part of the core code path, just something done to the side.
+        VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(module)
     }
 
     // This method generates a default (empty) `CompiledModuleMut` but with base types. This way we
@@ -374,7 +377,7 @@ impl ModuleGenerator {
 }
 
 impl Iterator for ModuleGenerator {
-    type Item = CompiledModule;
+    type Item = VerifiedModule;
     fn next(&mut self) -> Option<Self::Item> {
         if self.iters == 0 {
             None

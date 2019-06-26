@@ -14,6 +14,7 @@ use crate::{
     },
     value::{Local, MutVal, Reference, Value},
 };
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use move_ir_natives::dispatch::{dispatch_native_call, NativeReturnType};
 use types::{
     access_path::AccessPath,
@@ -29,7 +30,7 @@ use types::{
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, StructDefinitionIndex},
+    file_format::{Bytecode, CodeOffset, CompiledScript, StructDefinitionIndex},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -812,8 +813,8 @@ fn error_output(err: impl Into<VMStatus>) -> TransactionOutput {
 /// A helper function for executing a single script. Will be deprecated once we have a better
 /// testing framework for executing arbitrary script.
 pub fn execute_function(
-    caller_script: CompiledScript,
-    modules: Vec<CompiledModule>,
+    caller_script: VerifiedScript,
+    modules: Vec<VerifiedModule>,
     _args: Vec<TransactionArgument>,
     data_cache: &RemoteCache,
 ) -> VMResult<()> {

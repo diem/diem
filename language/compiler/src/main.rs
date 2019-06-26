@@ -1,17 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_verifier::verifier::{
-    verify_module, verify_module_dependencies, verify_script, verify_script_dependencies,
+use bytecode_verifier::{
+    verifier::{verify_module_dependencies, VerifiedProgram},
+    VerifiedModule,
 };
 use compiler::{util, Compiler};
 use std::{fs, io::Write, path::PathBuf};
 use structopt::StructOpt;
 use types::account_address::AccountAddress;
-use vm::{
-    errors::VerificationError,
-    file_format::{CompiledModule, CompiledScript},
-};
+use vm::{errors::VerificationError, file_format::CompiledModule};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -37,30 +35,24 @@ struct Args {
     pub source_path: PathBuf,
 }
 
-fn check_verification_results(verification_errors: &[VerificationError]) {
-    if !verification_errors.is_empty() {
-        println!("Verification failed. Errors below:");
-        for e in verification_errors {
-            println!("{:?}", e);
-        }
-        std::process::exit(1);
+fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
+    println!("Verification failed. Errors below:");
+    for e in verification_errors {
+        println!("{:?}", e);
     }
+    std::process::exit(1);
 }
 
-fn do_verify_module(module: &CompiledModule, dependencies: &[CompiledModule]) {
-    let (verified_module, verification_errors) = verify_module(module.clone());
-    check_verification_results(&verification_errors);
-    let (_verified_module, verification_errors) =
-        verify_module_dependencies(verified_module, dependencies);
-    check_verification_results(&verification_errors);
-}
-
-fn do_verify_script(script: &CompiledScript, dependencies: &[CompiledModule]) {
-    let (verified_script, verification_errors) = verify_script(script.clone());
-    check_verification_results(&verification_errors);
-    let (_verified_script, verification_errors) =
-        verify_script_dependencies(verified_script, dependencies);
-    check_verification_results(&verification_errors);
+fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
+    let verified_module = match VerifiedModule::new(module) {
+        Ok(module) => module,
+        Err((_, errors)) => print_errors_and_exit(&errors),
+    };
+    let (verified_module, errors) = verify_module_dependencies(verified_module, dependencies);
+    if !errors.is_empty() {
+        print_errors_and_exit(&errors);
+    }
+    verified_module
 }
 
 fn write_output(path: &str, buf: &[u8]) {
@@ -82,18 +74,17 @@ fn main() {
             skip_stdlib_deps: args.no_stdlib,
             ..Compiler::default()
         };
-        let (compiled_program, mut dependencies) = compiler
+        let (compiled_program, dependencies) = compiler
             .into_compiled_program_and_deps()
             .expect("Failed to compile program");
 
-        // TODO: Make this a do_verify_program helper function.
-        if !args.no_verify {
-            for m in &compiled_program.modules {
-                do_verify_module(m, &dependencies);
-                dependencies.push(m.clone());
-            }
-            do_verify_script(&compiled_program.script, &dependencies);
-        }
+        let compiled_program = if !args.no_verify {
+            let verified_program = VerifiedProgram::new(compiled_program, &dependencies)
+                .expect("Failed to verify program");
+            verified_program.into_inner()
+        } else {
+            compiled_program
+        };
 
         match args.output_path {
             Some(path) => {
@@ -116,9 +107,12 @@ fn main() {
             util::build_stdlib(&AccountAddress::default())
         };
         let compiled_module = util::do_compile_module(&args.source_path, &address, &dependencies);
-        if !args.no_verify {
-            do_verify_module(&compiled_module, &dependencies);
-        }
+        let compiled_module = if !args.no_verify {
+            let verified_module = do_verify_module(compiled_module, &dependencies);
+            verified_module.into_inner()
+        } else {
+            compiled_module
+        };
         match args.output_path {
             Some(path) => {
                 let mut out = vec![];

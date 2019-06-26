@@ -18,10 +18,7 @@ use types::language_storage::ModuleId;
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{
-        CompiledModule, FunctionHandleIndex, SignatureToken, StructDefinitionIndex,
-        StructHandleIndex,
-    },
+    file_format::{FunctionHandleIndex, SignatureToken, StructDefinitionIndex, StructHandleIndex},
     views::{FunctionHandleView, StructHandleView},
 };
 use vm_cache_map::{Arena, CacheRefMap};
@@ -74,7 +71,7 @@ pub trait ModuleCache<'alloc> {
     /// * `Err(...)` for a VM invariant violation.
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>>;
 
-    fn cache_module(&self, module: CompiledModule);
+    fn cache_module(&self, module: VerifiedModule);
 
     /// Recache the list of previously resolved modules. Think of the cache as a generational
     /// cache and we need to move modules across generations.
@@ -107,7 +104,7 @@ where
         (*self).get_loaded_module(id)
     }
 
-    fn cache_module(&self, module: CompiledModule) {
+    fn cache_module(&self, module: VerifiedModule) {
         (*self).cache_module(module)
     }
 
@@ -155,7 +152,7 @@ impl<'alloc> VMModuleCache<'alloc> {
 
         // Verify the module before using it.
         let module = match VerifiedModule::new(module) {
-            Ok(module) => module.into_inner(),
+            Ok(module) => module,
             Err((_, errors)) => {
                 return Err(VMRuntimeError {
                     loc: Location::new(),
@@ -175,7 +172,7 @@ impl<'alloc> VMModuleCache<'alloc> {
 
     #[cfg(test)]
     pub fn new_from_module(
-        module: CompiledModule,
+        module: VerifiedModule,
         allocator: &'alloc Arena<LoadedModule>,
     ) -> Result<Self, VMInvariantViolation> {
         let module_id = module.self_id();
@@ -335,7 +332,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         Ok(Ok(self.map.get(id)))
     }
 
-    fn cache_module(&self, module: CompiledModule) {
+    fn cache_module(&self, module: VerifiedModule) {
         let module_id = module.self_id();
         // TODO: Check ModuleId duplication in statedb
         let loaded_module = LoadedModule::new(module);
@@ -403,7 +400,7 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
             .get_loaded_module_with_fetcher(id, &self.storage))
     }
 
-    fn cache_module(&self, module: CompiledModule) {
+    fn cache_module(&self, module: VerifiedModule) {
         self.vm_cache.cache_module(module)
     }
 
@@ -479,7 +476,7 @@ where
         }
     }
 
-    fn cache_module(&self, module: CompiledModule) {
+    fn cache_module(&self, module: VerifiedModule) {
         self.local_cache.cache_module(module)
     }
 

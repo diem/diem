@@ -3,11 +3,11 @@
 //! Loaded representation for function definitions and handles.
 
 use crate::loaded_data::loaded_module::LoadedModule;
+use bytecode_verifier::VerifiedModule;
 use vm::{
     access::ModuleAccess,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex},
     internals::ModuleIndex,
-    CompiledModule,
 };
 
 /// Trait that defines the internal representation of a move function.
@@ -97,7 +97,7 @@ pub struct FunctionDef {
 }
 
 impl FunctionDef {
-    pub fn new(module: &CompiledModule, idx: FunctionDefinitionIndex) -> Self {
+    pub fn new(module: &VerifiedModule, idx: FunctionDefinitionIndex) -> Self {
         let definition = module.function_def_at(idx);
         let code = definition.code.code.clone();
         let handle = module.function_handle_at(definition.function);

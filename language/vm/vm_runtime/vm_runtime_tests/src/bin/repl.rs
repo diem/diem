@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use failure::Error;
 use getopts::{Options, ParsingStyle};
@@ -16,7 +17,6 @@ use types::{
     byte_array::ByteArray,
     transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
 };
-use vm::CompiledModule;
 use vm_genesis::STDLIB_MODULES;
 use vm_runtime::static_verify_program;
 use vm_runtime_tests::{
@@ -27,7 +27,7 @@ use vm_runtime_tests::{
 struct Repl {
     accounts: Vec<Account>,
     executor: FakeExecutor,
-    modules: Vec<CompiledModule>,
+    modules: Vec<VerifiedModule>,
     source_parser: Options,
     publish_parser: Options,
     get_account_parser: Options,
@@ -103,16 +103,18 @@ impl Repl {
         let compiler = Compiler {
             code: &program_str,
             address: sender_address,
+            // XXX extra_deps should probably be a Vec<VerifiedModule>?
             extra_deps: self.modules.clone(),
             ..Compiler::default()
         };
-        let compiled_program = compiler.into_compiled_program().unwrap();
-        let (verified_script, to_be_published_modules, statuses) = static_verify_program(
+        let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
+
+        let (verified_script, to_be_published_modules) = static_verify_program(
             &sender_address,
             compiled_program.script,
             compiled_program.modules,
-        );
-        assert_eq!(statuses, vec![]);
+        )
+        .expect("verification failed");
 
         self.modules.extend(to_be_published_modules.clone());
 

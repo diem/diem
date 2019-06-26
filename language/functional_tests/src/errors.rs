@@ -3,7 +3,7 @@
 
 use failure::Fail;
 use types::transaction::TransactionOutput;
-use vm::errors::VerificationError as VMVerificationError;
+use vm::errors::VerificationStatus;
 
 pub use failure::Error;
 
@@ -17,7 +17,7 @@ pub enum ErrorKind {
     #[fail(display = "the checker has failed to match the directives against the output")]
     CheckerFailure,
     #[fail(display = "verification error {:?}", _0)]
-    VerificationFailure(Vec<VMVerificationError>),
+    VerificationFailure(Vec<VerificationStatus>),
     #[fail(display = "other error: {}", _0)]
     #[allow(dead_code)]
     Other(String),

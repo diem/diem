@@ -8,7 +8,6 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-bytecode_verifier = { path = "../../bytecode_verifier" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 types = { path = "../../../types" }
 vm = { path = "../../vm" }

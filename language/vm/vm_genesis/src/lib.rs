@@ -1,10 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use config::config::{VMConfig, VMPublishingOption};
 use crypto::{signing, PrivateKey, PublicKey};
 use failure::prelude::*;
-use ir_to_bytecode::{compiler, parser::ast};
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_program},
+    parser::ast,
+};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
@@ -29,7 +33,7 @@ use types::{
     },
     validator_public_keys::ValidatorPublicKeys,
 };
-use vm::{file_format::CompiledModule, transaction_metadata::TransactionMetadata};
+use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::{
@@ -163,20 +167,24 @@ impl Accounts {
 
 lazy_static! {
     pub static ref STDLIB_ADDRESS: AccountAddress = { account_config::core_code_address() };
-    pub static ref STDLIB_MODULES: Vec<CompiledModule> = {
-        let mut modules: Vec<CompiledModule> = vec![];
+    pub static ref STDLIB_MODULES: Vec<VerifiedModule> = {
+        let mut modules: Vec<VerifiedModule> = vec![];
         let stdlib = vec![coin_module(), native_hash_module(), account_module(), signature_module(), validator_set_module()];
-        for m in stdlib.iter() {
-            let (compiled_module, verification_errors) =
-                compiler::compile_and_verify_module(&STDLIB_ADDRESS, m, &modules).unwrap();
+        for m in &stdlib {
+            let compiled_module = compile_module(&STDLIB_ADDRESS, m, &modules)
+                .expect("Failed to compile module");
+            let verified_module = VerifiedModule::new(compiled_module)
+                .expect("Failed to verify module");
 
+            let (verified_module, verification_errors) =
+                verify_module_dependencies(verified_module, &modules);
             // Fail if the module doesn't verify
             for e in &verification_errors {
                 println!("{:?}", e);
             }
             assert!(verification_errors.is_empty());
 
-            modules.push(compiled_module);
+            modules.push(verified_module);
         }
         modules
     };
@@ -194,8 +202,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compiler::compile_program(&AccountAddress::default(), body, &STDLIB_MODULES.clone())
-            .unwrap();
+        compile_program(&AccountAddress::default(), body, &STDLIB_MODULES.clone()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -340,7 +347,7 @@ pub fn encode_genesis_transaction_with_validator(
     let genesis_auth_key = ByteArray::new(AccountAddress::from(public_key).to_vec());
 
     let genesis_write_set = {
-        let fake_fetcher = FakeFetcher::new(modules.clone());
+        let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
         let data_cache = BlockDataCache::new(&state_view);
         let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
         {

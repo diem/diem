@@ -7,8 +7,8 @@ use crate::{
     access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{
-        AddressPoolIndex, CompiledModule, FunctionSignature, ModuleHandle, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructHandle, StructHandleIndex,
+        AddressPoolIndex, FunctionSignature, ModuleHandle, ModuleHandleIndex, SignatureToken,
+        StringPoolIndex, StructHandle, StructHandleIndex,
     },
 };
 use std::collections::BTreeMap;
@@ -24,7 +24,7 @@ pub struct Resolver {
 
 impl Resolver {
     /// create a new instance of Resolver for module
-    pub fn new(module: &CompiledModule) -> Self {
+    pub fn new(module: &impl ModuleAccess) -> Self {
         let mut address_map = BTreeMap::new();
         for (idx, address) in module.address_pool().iter().enumerate() {
             address_map.insert(address.clone(), AddressPoolIndex(idx as u16));
@@ -53,7 +53,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_signature_token(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         sig_token: &SignatureToken,
     ) -> Result<SignatureToken, VMStaticViolation> {
         match sig_token {
@@ -111,7 +111,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_function_signature(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         func_sig: &FunctionSignature,
     ) -> Result<FunctionSignature, VMStaticViolation> {
         let mut return_types = Vec::<SignatureToken>::new();

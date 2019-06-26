@@ -6,6 +6,7 @@ pub mod util;
 #[cfg(test)]
 mod unit_tests;
 
+use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use std::mem;
@@ -13,7 +14,7 @@ use types::{
     account_address::AccountAddress,
     transaction::{Program, TransactionArgument},
 };
-use vm::file_format::{CompiledModule, CompiledProgram};
+use vm::file_format::CompiledProgram;
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug, Default)]
@@ -27,7 +28,7 @@ pub struct Compiler<'a> {
     /// The address to use for stdlib.
     pub stdlib_address: AccountAddress,
     /// Extra dependencies to compile with.
-    pub extra_deps: Vec<CompiledModule>,
+    pub extra_deps: Vec<VerifiedModule>,
 
     // The typical way this should be used is with functional record update syntax:
     //
@@ -50,7 +51,7 @@ impl<'a> Compiler<'a> {
     /// Compiles into a `CompiledProgram` and also returns the dependencies.
     pub fn into_compiled_program_and_deps(
         mut self,
-    ) -> Result<(CompiledProgram, Vec<CompiledModule>)> {
+    ) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
         self.compile_impl()
     }
 
@@ -78,14 +79,14 @@ impl<'a> Compiler<'a> {
         Ok(Program::new(serialized_script, serialized_modules, args))
     }
 
-    fn compile_impl(&mut self) -> Result<(CompiledProgram, Vec<CompiledModule>)> {
+    fn compile_impl(&mut self) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(self.code)?;
         let deps = self.deps();
         let compiled_program = compile_program(&self.address, &parsed_program, &deps)?;
         Ok((compiled_program, deps))
     }
 
-    fn deps(&mut self) -> Vec<CompiledModule> {
+    fn deps(&mut self) -> Vec<VerifiedModule> {
         let extra_deps = mem::replace(&mut self.extra_deps, vec![]);
         if self.skip_stdlib_deps {
             extra_deps
