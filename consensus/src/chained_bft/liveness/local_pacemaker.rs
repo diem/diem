@@ -361,14 +361,16 @@ impl LocalPacemaker {
             highest_timeout_certificates,
         )));
 
-        // To jump start the execution return the new round event for the current round.
-        let jumpstart_task = inner
-            .write()
-            .unwrap()
-            .create_new_round_task(NewRoundReason::QCReady);
         let inner_ref = Arc::clone(&inner);
         let timeout_processing_loop = async move {
-            jumpstart_task.await;
+            // To jump start the execution return the new round event for the current round.
+            inner_ref
+                .write()
+                .unwrap()
+                .create_new_round_task(NewRoundReason::QCReady)
+                .await;
+
+            // Start the loop of processing local timeouts
             while let Some(round) = local_timeouts_receiver.next().await {
                 Self::process_local_timeout(Arc::clone(&inner_ref), round).await;
             }

@@ -80,7 +80,7 @@ impl SMRNode {
 
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
-            pacemaker_initial_timeout: Duration::from_secs(1),
+            pacemaker_initial_timeout: Duration::from_secs(3),
             contiguous_rounds: 2,
             max_block_size: 50,
         };
