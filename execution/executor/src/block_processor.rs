@@ -323,7 +323,7 @@ where
             let time = std::time::Instant::now();
             let out = V::execute_block(transactions.clone(), &self.vm_config, &state_view);
             OP_COUNTERS.observe(
-                "vm_execute_block_time_us",
+                "vm_execute_chunk_time_us",
                 time.elapsed().as_micros() as f64,
             );
             out
@@ -604,11 +604,19 @@ where
             db_root_hash,
             &previous_state_tree,
         );
-        let vm_outputs = V::execute_block(
-            block_to_execute.transactions().to_vec(),
-            &self.vm_config,
-            &state_view,
-        );
+        let vm_outputs = {
+            let time = std::time::Instant::now();
+            let out = V::execute_block(
+                block_to_execute.transactions().to_vec(),
+                &self.vm_config,
+                &state_view,
+            );
+            OP_COUNTERS.observe(
+                "vm_execute_block_time_us",
+                time.elapsed().as_micros() as f64,
+            );
+            out
+        };
 
         let status: Vec<_> = vm_outputs
             .iter()
