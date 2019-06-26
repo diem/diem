@@ -200,7 +200,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
     // set up standard library
     // needed to compile transaction programs
-    let stdlib = build_stdlib(&AccountAddress::default());
+    let mut deps = build_stdlib(&AccountAddress::default());
 
     for transaction in transactions {
         // get the account data of the sender
@@ -219,15 +219,22 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
         // stage 2: compile the program
         res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
-        let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &stdlib), res);
+        let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &deps), res);
         res.outputs
             .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
 
         // stage 3: verify the program
         if !transaction.config.no_verify {
             res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
-            unwrap_or_log!(do_verify_program(&compiled_program, &stdlib), res);
+            unwrap_or_log!(do_verify_program(&compiled_program, &deps), res);
             res.outputs.push(EvaluationOutput::Output("".to_string()));
+        }
+
+        // add all modules to be published to the vec of dependencies
+        // TODO: currently the compiler only checks the module name when looking up a module
+        //       it should check that both the name and address match
+        for m in &compiled_program.modules {
+            deps.push(m.clone());
         }
 
         // stage 4: execute the program
