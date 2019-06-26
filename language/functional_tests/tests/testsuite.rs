@@ -22,22 +22,22 @@ use regex::{Captures, Regex};
 use std::collections::BTreeMap;
 use vm_runtime_tests::account::AccountData;
 
-fn substitute_addresses(accounts: &BTreeMap<String, AccountData>, text: &str) -> Result<String> {
+fn substitute_addresses(accounts: &BTreeMap<String, AccountData>, text: &str) -> String {
     lazy_static! {
         static ref PAT: Regex = Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap();
     }
-    Ok(PAT
-        .replace_all(text, |caps: &Captures| {
-            let name = &caps[1];
-            match accounts.get(name) {
-                Some(data) => format!("0x{}", data.address()),
-                None => panic!(
-                    "account '{}' does not exist, cannot substitute address",
-                    name
-                ),
-            }
-        })
-        .to_string())
+    PAT.replace_all(text, |caps: &Captures| {
+        let name = &caps[1];
+        match accounts.get(name) {
+            Some(data) => format!("0x{}", data.address()),
+            // TODO: find a way to return an error instead of panicking
+            None => panic!(
+                "account '{}' does not exist, cannot substitute address",
+                name
+            ),
+        }
+    })
+    .to_string()
 }
 
 fn parse_input(s: &str) -> Result<(GlobalConfig, Vec<Directive>, Vec<Transaction>)> {
@@ -78,7 +78,7 @@ fn parse_input(s: &str) -> Result<(GlobalConfig, Vec<Directive>, Vec<Transaction
             let config = TransactionConfig::build(&global_config, &config)?;
             Ok(Transaction {
                 config,
-                program: substitute_addresses(&global_config.accounts, &text.join("\n"))?,
+                program: substitute_addresses(&global_config.accounts, &text.join("\n")),
             })
         })
         .collect::<Result<Vec<_>>>()?;
