@@ -4,6 +4,7 @@
 mod checker_tests;
 mod global_config_tests;
 mod transaction_config_tests;
+mod utils_tests;
 
 use crate::errors::*;
 use std::str::FromStr;

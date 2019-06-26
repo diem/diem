@@ -82,10 +82,11 @@ impl FromStr for Entry {
 
 /// Checks whether a line denotes the start of a new transaction.
 pub fn is_new_transaction(s: &str) -> bool {
+    let s = s.trim();
     if !s.starts_with("//!") {
         return false;
     }
-    s[3..].trim_start().trim_end() == "new-transaction"
+    s[3..].trim_start() == "new-transaction"
 }
 
 impl Entry {
