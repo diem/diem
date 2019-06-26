@@ -1,0 +1,20 @@
+modules:
+module Currency {
+}
+
+script:
+main() {
+    return;
+}
+
+//! new-transaction
+modules:
+module Currency {
+}
+
+script:
+main() {
+    return;
+}
+
+// check: DuplicateModuleName
