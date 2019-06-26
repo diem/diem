@@ -24,16 +24,22 @@ impl FromStr for Directive {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s1 = s.trim_start();
-        if !s1.starts_with("//") {
+        let s = s.trim_start().trim_end();
+        if !s.starts_with("//") {
             return Err(ErrorKind::Other("directives must start with //".to_string()).into());
         }
-        let s2 = s1[2..].trim_start();
-        if s2.starts_with("stage: ") {
-            let s3 = s2[7..].trim_start().trim_end();
-            return Ok(Directive::Stage(Stage::parse(s3)?));
+        let s = s[2..].trim_start();
+        if s.starts_with("stage:") {
+            let s = s[6..].trim_start().trim_end();
+            if s.is_empty() {
+                return Err(ErrorKind::Other("stage cannot be empty".to_string()).into());
+            }
+            return Ok(Directive::Stage(Stage::parse(s)?));
         }
-        // TODO: implement transaction directive
+        if s == "transaction" {
+            // TODO: implement transaction directive
+            unimplemented!();
+        }
         Ok(Directive::Check(s.to_string()))
     }
 }
@@ -99,6 +105,7 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
                     }
                 }
             },
+            // TODO: implement transaction directive
             Directive::Transaction => unimplemented!(),
         }
     }
