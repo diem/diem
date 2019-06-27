@@ -276,7 +276,7 @@ impl ClientProxy {
                     if chain_seq_number >= sequence_number {
                         println!(
                             "Transaction completed, found sequence number {}]",
-                            sequence_number
+                            chain_seq_number
                         );
                         break;
                     }
