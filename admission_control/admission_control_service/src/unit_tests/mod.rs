@@ -26,6 +26,11 @@ impl LocalMockMempool {
         }
     }
 }
+pub const ADDRESS_MOCKMEMPOOL_INSUFFICIENT_BALANCE: u8 = 100;
+pub const ADDRESS_MOCMEMPOOL_INVALID_SEQUENCE: u8 = 101;
+pub const ADDRESS_MOCKMEMPOOL_SYS_ERROR: u8 = 102;
+pub const ADDRESS_MOCKMEMPOOL_ACCEPTED: u8 = 103;
+pub const ADDRESS_MOCKMEMPOOL_FULL: u8 = 104;
 
 impl MempoolClientTrait for LocalMockMempool {
     fn add_transaction_with_validation(
@@ -33,11 +38,11 @@ impl MempoolClientTrait for LocalMockMempool {
         req: &AddTransactionWithValidationRequest,
     ) -> ::grpcio::Result<AddTransactionWithValidationResponse> {
         let mut resp = AddTransactionWithValidationResponse::new();
-        let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
-        let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
-        let sys_error_add = [102_u8; ADDRESS_LENGTH];
-        let accepted_add = [103_u8; ADDRESS_LENGTH];
-        let mempool_full = [104_u8; ADDRESS_LENGTH];
+        let insufficient_balance_add = [ADDRESS_MOCKMEMPOOL_INSUFFICIENT_BALANCE; ADDRESS_LENGTH];
+        let invalid_seq_add = [ADDRESS_MOCMEMPOOL_INVALID_SEQUENCE; ADDRESS_LENGTH];
+        let sys_error_add = [ADDRESS_MOCKMEMPOOL_SYS_ERROR; ADDRESS_LENGTH];
+        let accepted_add = [ADDRESS_MOCKMEMPOOL_ACCEPTED; ADDRESS_LENGTH];
+        let mempool_full = [ADDRESS_MOCKMEMPOOL_FULL; ADDRESS_LENGTH];
         let signed_txn = SignedTransaction::from_proto(req.get_signed_txn().clone()).unwrap();
         let sender = signed_txn.sender();
         if sender.as_ref() == insufficient_balance_add {

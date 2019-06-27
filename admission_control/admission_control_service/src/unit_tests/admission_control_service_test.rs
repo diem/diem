@@ -6,7 +6,11 @@ use crate::{
         AdmissionControlService, SubmitTransactionRequest,
         SubmitTransactionResponse as ProtoSubmitTransactionResponse,
     },
-    unit_tests::LocalMockMempool,
+    unit_tests::{
+        LocalMockMempool, ADDRESS_MOCKMEMPOOL_ACCEPTED, ADDRESS_MOCKMEMPOOL_FULL,
+        ADDRESS_MOCKMEMPOOL_INSUFFICIENT_BALANCE, ADDRESS_MOCKMEMPOOL_SYS_ERROR,
+        ADDRESS_MOCMEMPOOL_INVALID_SEQUENCE,
+    },
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use crypto::{
@@ -24,7 +28,12 @@ use types::{
     transaction::RawTransactionBytes,
     vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
 };
-use vm_validator::mocks::mock_vm_validator::MockVMValidator;
+use vm_validator::mocks::mock_vm_validator::{
+    MockVMValidator, ADDRESS_MOCKVALIDATION_DOESNOTEXIST, ADDRESS_MOCKVALIDATION_EXPIRATION_TIME,
+    ADDRESS_MOCKVALIDATION_INSUFFICIENT_BALANCE, ADDRESS_MOCKVALIDATION_INVALID_AUTH_KEY,
+    ADDRESS_MOCKVALIDATION_INVALID_SIGNATURE, ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_NEW,
+    ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_OLD,
+};
 
 fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
     AdmissionControlService::new(
@@ -53,7 +62,7 @@ fn test_submit_txn_inner_vm() {
     let ac_service = create_ac_service_for_ut();
     // create request
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
-    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([ADDRESS_MOCKVALIDATION_DOESNOTEXIST; ADDRESS_LENGTH]);
     let keypair = generate_keypair();
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -69,7 +78,7 @@ fn test_submit_txn_inner_vm() {
             "TEST".to_string(),
         )),
     );
-    let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([ADDRESS_MOCKVALIDATION_INVALID_SIGNATURE; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -82,7 +91,7 @@ fn test_submit_txn_inner_vm() {
         response,
         VMStatus::Validation(VMValidationStatus::InvalidSignature),
     );
-    let sender = AccountAddress::new([2; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([ADDRESS_MOCKVALIDATION_INSUFFICIENT_BALANCE; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -95,7 +104,8 @@ fn test_submit_txn_inner_vm() {
         response,
         VMStatus::Validation(VMValidationStatus::InsufficientBalanceForTransactionFee),
     );
-    let sender = AccountAddress::new([3; ADDRESS_LENGTH]);
+    let sender =
+        AccountAddress::new([ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_NEW; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -108,7 +118,8 @@ fn test_submit_txn_inner_vm() {
         response,
         VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew),
     );
-    let sender = AccountAddress::new([4; ADDRESS_LENGTH]);
+    let sender =
+        AccountAddress::new([ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_OLD; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -121,7 +132,7 @@ fn test_submit_txn_inner_vm() {
         response,
         VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld),
     );
-    let sender = AccountAddress::new([5; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([ADDRESS_MOCKVALIDATION_EXPIRATION_TIME; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -134,7 +145,7 @@ fn test_submit_txn_inner_vm() {
         response,
         VMStatus::Validation(VMValidationStatus::TransactionExpired),
     );
-    let sender = AccountAddress::new([6; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([ADDRESS_MOCKVALIDATION_INVALID_AUTH_KEY; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
@@ -211,7 +222,8 @@ fn test_submit_txn_inner_mempool() {
     let ac_service = create_ac_service_for_ut();
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
     let keypair = generate_keypair();
-    let insufficient_balance_add = AccountAddress::new([100; ADDRESS_LENGTH]);
+    let insufficient_balance_add =
+        AccountAddress::new([ADDRESS_MOCKMEMPOOL_INSUFFICIENT_BALANCE; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         insufficient_balance_add,
         0,
@@ -227,7 +239,8 @@ fn test_submit_txn_inner_mempool() {
         response.mempool_error.unwrap(),
         MempoolAddTransactionStatus::InsufficientBalance,
     );
-    let invalid_seq_add = AccountAddress::new([101; ADDRESS_LENGTH]);
+    let invalid_seq_add =
+        AccountAddress::new([ADDRESS_MOCMEMPOOL_INVALID_SEQUENCE; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         invalid_seq_add,
         0,
@@ -243,7 +256,7 @@ fn test_submit_txn_inner_mempool() {
         response.mempool_error.unwrap(),
         MempoolAddTransactionStatus::InvalidSeqNumber,
     );
-    let sys_error_add = AccountAddress::new([102; ADDRESS_LENGTH]);
+    let sys_error_add = AccountAddress::new([ADDRESS_MOCKMEMPOOL_SYS_ERROR; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sys_error_add,
         0,
@@ -259,7 +272,7 @@ fn test_submit_txn_inner_mempool() {
         response.mempool_error.unwrap(),
         MempoolAddTransactionStatus::InvalidUpdate,
     );
-    let accepted_add = AccountAddress::new([103; ADDRESS_LENGTH]);
+    let accepted_add = AccountAddress::new([ADDRESS_MOCKMEMPOOL_ACCEPTED; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         accepted_add,
         0,
@@ -274,5 +287,21 @@ fn test_submit_txn_inner_mempool() {
     assert_eq!(
         response.ac_status.unwrap(),
         AdmissionControlStatus::Accepted,
+    );
+    let full_add = AccountAddress::new([ADDRESS_MOCKMEMPOOL_FULL; ADDRESS_LENGTH]);
+    req.set_signed_txn(get_test_signed_txn(
+        full_add,
+        0,
+        keypair.0.clone(),
+        keypair.1,
+        None,
+    ));
+    let response = SubmitTransactionResponse::from_proto(
+        ac_service.submit_transaction_inner(req.clone()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        response.mempool_error.unwrap(),
+        MempoolAddTransactionStatus::MempoolIsFull,
     );
 }

@@ -11,7 +11,13 @@ use types::{
     vm_error::{VMStatus, VMValidationStatus},
 };
 use vm_runtime::VMVerifier;
-
+pub const ADDRESS_MOCKVALIDATION_DOESNOTEXIST: u8 = 0;
+pub const ADDRESS_MOCKVALIDATION_INVALID_SIGNATURE: u8 = 1;
+pub const ADDRESS_MOCKVALIDATION_INSUFFICIENT_BALANCE: u8 = 2;
+pub const ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_NEW: u8 = 3;
+pub const ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_OLD: u8 = 4;
+pub const ADDRESS_MOCKVALIDATION_EXPIRATION_TIME: u8 = 5;
+pub const ADDRESS_MOCKVALIDATION_INVALID_AUTH_KEY: u8 = 6;
 #[derive(Clone)]
 pub struct MockVMValidator;
 
@@ -41,18 +47,33 @@ impl TransactionValidation for MockVMValidator {
         };
 
         let sender = txn.sender();
-        let account_dne_test_add = AccountAddress::try_from(&[0 as u8; ADDRESS_LENGTH]).unwrap();
-        let invalid_sig_test_add = AccountAddress::try_from(&[1 as u8; ADDRESS_LENGTH]).unwrap();
-        let insufficient_balance_test_add =
-            AccountAddress::try_from(&[2 as u8; ADDRESS_LENGTH]).unwrap();
-        let seq_number_too_new_test_add =
-            AccountAddress::try_from(&[3 as u8; ADDRESS_LENGTH]).unwrap();
-        let seq_number_too_old_test_add =
-            AccountAddress::try_from(&[4 as u8; ADDRESS_LENGTH]).unwrap();
-        let txn_expiration_time_test_add =
-            AccountAddress::try_from(&[5 as u8; ADDRESS_LENGTH]).unwrap();
-        let invalid_auth_key_test_add =
-            AccountAddress::try_from(&[6 as u8; ADDRESS_LENGTH]).unwrap();
+        let account_dne_test_add =
+            AccountAddress::try_from(&[ADDRESS_MOCKVALIDATION_DOESNOTEXIST as u8; ADDRESS_LENGTH])
+                .unwrap();
+        let invalid_sig_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_INVALID_SIGNATURE as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
+        let insufficient_balance_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_INSUFFICIENT_BALANCE as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
+        let seq_number_too_new_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_NEW as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
+        let seq_number_too_old_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_SEQUENCE_NUMBER_TOO_OLD as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
+        let txn_expiration_time_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_EXPIRATION_TIME as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
+        let invalid_auth_key_test_add = AccountAddress::try_from(
+            &[ADDRESS_MOCKVALIDATION_INVALID_AUTH_KEY as u8; ADDRESS_LENGTH],
+        )
+        .unwrap();
         let ret = if sender == account_dne_test_add {
             Some(VMStatus::Validation(
                 VMValidationStatus::SendingAccountDoesNotExist("TEST".to_string()),
