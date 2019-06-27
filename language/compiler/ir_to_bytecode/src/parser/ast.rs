@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::{ByteIndex, Span};
-use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, VecDeque},
     fmt,
@@ -11,9 +10,8 @@ use std::{
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 
 /// Generic wrapper that keeps file locations for any ast-node
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct Spanned<T> {
-    #[serde(skip_serializing, skip_deserializing)]
     /// The file location
     pub span: Loc,
     /// The value being wrapped
@@ -26,7 +24,7 @@ pub type Loc = Span<ByteIndex>;
 //**************************************************************************************************
 // Program
 //**************************************************************************************************
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 /// A set of move modules and a Move transaction script
 
 pub struct Program {
@@ -40,7 +38,7 @@ pub struct Program {
 // Script
 //**************************************************************************************************
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 /// The move transaction script to be executed
 pub struct Script {
     /// The dependencies of `main`, i.e. of the transaction script
@@ -54,12 +52,12 @@ pub struct Script {
 //**************************************************************************************************
 
 /// Newtype for a name of a module
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ModuleName(String);
 
 /// Newtype of the address + the module name
 /// `addr.m`
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct QualifiedModuleIdent {
     /// Name for the module. Will be unique among modules published under the same address
     pub name: ModuleName,
@@ -68,7 +66,7 @@ pub struct QualifiedModuleIdent {
 }
 
 /// A Move module
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ModuleDefinition {
     /// name of the module
     pub name: ModuleName,
@@ -82,7 +80,7 @@ pub struct ModuleDefinition {
 
 /// Either a qualified module name like `addr.m` or `Transaction.m`, which refers to a module in
 /// the same transaction.
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum ModuleIdent {
     Transaction(ModuleName),
     Qualified(QualifiedModuleIdent),
@@ -93,7 +91,7 @@ pub enum ModuleIdent {
 //**************************************************************************************************
 
 /// A dependency/import declaration
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ImportDefinition {
     /// the dependency
     /// `addr.m` or `Transaction.m`
@@ -113,11 +111,11 @@ pub type Field = types::access_path::Field;
 pub type Fields<T> = BTreeMap<Field, T>;
 
 /// Newtype for the name of a struct
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct StructName(String);
 
 /// A Move struct
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StructDefinition {
     /// The struct will have kind resource if `resource_kind` is true
     /// and a value otherwise
@@ -133,11 +131,11 @@ pub struct StructDefinition {
 //**************************************************************************************************
 
 /// Newtype for the name of a function
-#[derive(Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Clone, Serialize)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
 pub struct FunctionName(String);
 
 /// The signature of a function
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     /// Possibly-empty list of (formal name, formal type) pairs. Names are unique.
     pub formals: Vec<(Var, Type)>,
@@ -146,7 +144,7 @@ pub struct FunctionSignature {
 }
 
 /// Public or internal modifier for a procedure
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum FunctionVisibility {
     /// The procedure can be invoked anywhere
     /// `public`
@@ -156,14 +154,14 @@ pub enum FunctionVisibility {
     Internal,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum FunctionAnnotation {
     Requires(String),
     Ensures(String),
 }
 
 /// The body of a Move function
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum FunctionBody {
     /// The body is declared
     /// `locals` are all of the declared locals
@@ -177,7 +175,7 @@ pub enum FunctionBody {
 }
 
 /// A Move function/procedure
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     /// The visibility (public or internal)
     pub visibility: FunctionVisibility,
@@ -194,7 +192,7 @@ pub struct Function {
 //**************************************************************************************************
 
 /// Used to annotate struct types as a resource or value
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
     /// `R`
     Resource,
@@ -204,7 +202,7 @@ pub enum Kind {
 
 /// Identifier for a struct definition. Tells us where to look in the storage layer to find the
 /// code associated with the interface
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct StructType {
     /// Module name and address in which the struct is contained
     pub module: ModuleName,
@@ -214,7 +212,7 @@ pub struct StructType {
 }
 
 /// Type "name" of the type
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Tag {
     /// `address`
     Address,
@@ -232,7 +230,7 @@ pub enum Tag {
 }
 
 /// The type of a single value
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     /// A non reference type
     /// `g` or `k#d.n`
@@ -254,14 +252,14 @@ pub enum Type {
 //**************************************************************************************************
 
 /// Newtype for a variable/local
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Var(String);
 /// The type of a variable with a location
 pub type Var_ = Spanned<Var>;
 
 /// Builtin "function"-like operators that often have a signature not expressable in the
 /// type system and/or have access to some runtime/storage context
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Builtin {
     /// Intentionally destroy a resource (i.e., the inverse of `new`).
     Release,
@@ -301,7 +299,7 @@ pub enum Builtin {
 }
 
 /// Enum for different function calls
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FunctionCall {
     /// functions defined in the host environment
     Builtin(Builtin),
@@ -315,7 +313,7 @@ pub enum FunctionCall {
 pub type FunctionCall_ = Spanned<FunctionCall>;
 
 /// Enum for Move commands
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
     /// `x_1, ..., x_j = call`
     Call {
@@ -342,7 +340,7 @@ pub enum Cmd {
 pub type Cmd_ = Spanned<Cmd>;
 
 /// Struct defining an if statement
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct IfElse {
     /// the if's condition
     pub cond: Exp_,
@@ -353,7 +351,7 @@ pub struct IfElse {
 }
 
 /// Struct defining a while statement
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct While {
     /// The condition for a while statement
     pub cond: Exp_,
@@ -362,13 +360,13 @@ pub struct While {
 }
 
 /// Struct defining a loop statement
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Loop {
     /// The body of the loop
     pub block: Block,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Statement {
     /// `c;`
@@ -385,7 +383,7 @@ pub enum Statement {
     EmptyStatement,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 /// `{ s }`
 pub struct Block {
     /// The statements that make up the block
@@ -398,7 +396,7 @@ pub struct Block {
 
 /// Bottom of the value hierarchy. These values can be trivially copyable and stored in statedb as a
 /// single entry.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CopyableVal {
     /// An address in the global storage
     Address(AccountAddress),
@@ -417,14 +415,14 @@ pub type CopyableVal_ = Spanned<CopyableVal>;
 pub type ExpFields = Fields<Exp_>;
 
 /// Enum for unary operators
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     /// Boolean negation
     Not,
 }
 
 /// Enum for binary operators
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
     // u64 ops
     /// `+`
@@ -466,7 +464,7 @@ pub enum BinOp {
 }
 
 /// Enum for all expressions
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Exp {
     /// `*e`
     Dereference(Box<Exp_>),
