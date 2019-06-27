@@ -396,9 +396,18 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 return None;
             }
         }
-        debug!(
-            "Sending new round message at round {} due to timeout and will not vote at this round",
-            round
+
+        let last_vote_round = self
+            .safety_rules
+            .read()
+            .unwrap()
+            .consensus_state()
+            .last_vote_round();
+        warn!(
+            "Round {} timed out and {}, expected round proposer was {:?}, broadcasting new round to all replicas",
+            round,
+            if last_vote_round == round { "already executed and voted at this round" } else { "will never vote at this round" },
+            self.proposer_election.get_valid_proposers(round),
         );
 
         Some(TimeoutMsg::new(
