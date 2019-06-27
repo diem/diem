@@ -44,14 +44,12 @@ impl<'alloc> ScriptCache<'alloc> {
         } else {
             trace!("[VM] Script cache miss");
             let fake_module = script.into_module();
-            let loaded_module = LoadedModule::new(fake_module)?;
-            self.map
-                .or_insert_with_try_transform(
-                    hash,
-                    move || loaded_module,
-                    |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
-                )
-                .map(Ok)
+            let loaded_module = LoadedModule::new(fake_module);
+            Ok(Ok(self.map.or_insert_with_transform(
+                hash,
+                move || loaded_module,
+                |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
+            )))
         }
     }
 }

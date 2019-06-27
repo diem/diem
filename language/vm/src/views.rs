@@ -23,7 +23,7 @@ use crate::{
     SignatureTokenKind,
 };
 
-use types::language_storage::CodeKey;
+use types::language_storage::ModuleId;
 
 use std::collections::BTreeMap;
 
@@ -61,6 +61,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .module_handles()
+            .iter()
             .map(move |module_handle| ModuleHandleView::new(module, module_handle))
     }
 
@@ -70,6 +71,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .struct_handles()
+            .iter()
             .map(move |struct_handle| StructHandleView::new(module, struct_handle))
     }
 
@@ -79,6 +81,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .function_handles()
+            .iter()
             .map(move |function_handle| FunctionHandleView::new(module, function_handle))
     }
 
@@ -86,6 +89,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .struct_defs()
+            .iter()
             .map(move |struct_def| StructDefinitionView::new(module, struct_def))
     }
 
@@ -93,6 +97,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .field_defs()
+            .iter()
             .map(move |field_def| FieldDefinitionView::new(module, field_def))
     }
 
@@ -102,6 +107,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .function_defs()
+            .iter()
             .map(move |function_def| FunctionDefinitionView::new(module, function_def))
     }
 
@@ -111,6 +117,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .type_signatures()
+            .iter()
             .map(move |type_signature| TypeSignatureView::new(module, type_signature))
     }
 
@@ -120,6 +127,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .function_signatures()
+            .iter()
             .map(move |function_signature| FunctionSignatureView::new(module, function_signature))
     }
 
@@ -129,6 +137,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         let module = self.module;
         module
             .locals_signatures()
+            .iter()
             .map(move |locals_signature| LocalsSignatureView::new(module, locals_signature))
     }
 
@@ -154,8 +163,8 @@ impl<'a, T: ModuleAccess> ModuleHandleView<'a, T> {
         }
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle)
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle)
     }
 }
 
@@ -188,8 +197,8 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         self.module.string_at(self.struct_handle.name)
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle())
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle())
     }
 }
 
@@ -221,8 +230,8 @@ impl<'a, T: ModuleAccess> FunctionHandleView<'a, T> {
         FunctionSignatureView::new(self.module, function_signature)
     }
 
-    pub fn module_code_key(&self) -> CodeKey {
-        self.module.code_key_for_handle(self.module_handle())
+    pub fn module_id(&self) -> ModuleId {
+        self.module.module_id_for_handle(self.module_handle())
     }
 }
 
@@ -251,6 +260,7 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         let module = self.module;
         module
             .field_def_range(self.struct_def.field_count, self.struct_def.fields)
+            .iter()
             .map(move |field_def| FieldDefinitionView::new(module, field_def))
     }
 

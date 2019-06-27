@@ -27,7 +27,7 @@ pub(crate) mod transfer_commands;
 pub struct AccountData {
     /// Address of the account.
     pub address: AccountAddress,
-    /// (private_key, public_key) pair if the account is not managed by wallet
+    /// (private_key, public_key) pair if the account is not managed by wallet.
     pub key_pair: Option<KeyPair>,
     /// Latest sequence number maintained by client, it can be different from validator.
     pub sequence_number: u64,

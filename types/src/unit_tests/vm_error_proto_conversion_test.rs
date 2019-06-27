@@ -7,6 +7,7 @@ use crate::vm_error::{
     VMVerificationStatus,
 };
 use proptest::prelude::*;
+use proptest_helpers::with_stack_size;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
@@ -49,9 +50,14 @@ proptest! {
     fn execution_status_roundtrip(execution_status in any::<ExecutionStatus>()) {
         assert_protobuf_encode_decode(&execution_status);
     }
+}
 
-    #[test]
-    fn test_vm_status(vm_status in any::<VMStatus>()) {
-        assert_protobuf_encode_decode(&vm_status);
-    }
+#[test]
+fn test_vm_status_roundtrip() {
+    with_stack_size(4 * 1024 * 1024, || {
+        proptest!(|(vm_status in any::<VMStatus>())| {
+            assert_protobuf_encode_decode(&vm_status);
+        })
+    })
+    .unwrap();
 }

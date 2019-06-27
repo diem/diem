@@ -10,6 +10,7 @@ edition = "2018"
 bech32 = "0.6.0"
 byteorder = "1.3.1"
 bytes = "0.4.12"
+chrono = "0.4.6"
 hex = "0.3.2"
 itertools = "0.8.0"
 lazy_static = "1.3.0"
@@ -25,6 +26,7 @@ tiny-keccak = "1.4.2"
 canonical_serialization = { path = "../common/canonical_serialization"}
 crypto = { path = "../crypto/legacy_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
+proptest_helpers = { path = "../common/proptest_helpers" }
 proto_conv = { path = "../common/proto_conv", features = ["derive"] }
 
 [build-dependencies]

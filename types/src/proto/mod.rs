@@ -5,6 +5,7 @@ pub mod access_path;
 pub mod account_state_blob;
 pub mod events;
 pub mod get_with_proof;
+pub mod language_storage;
 pub mod ledger_info;
 pub mod proof;
 pub mod transaction;

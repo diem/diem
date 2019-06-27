@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use compiler::{compiler::compile_program, parser::parse_program};
+use compiler::Compiler;
 use failure::Error;
 use getopts::{Options, ParsingStyle};
 use hex;
@@ -100,11 +100,13 @@ impl Repl {
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignedTransaction {
-        let parsed_program = parse_program(&program_str).unwrap();
-
-        let modules = self.modules.clone();
-        let compiled_program = compile_program(&sender_address, &parsed_program, &modules).unwrap();
-
+        let compiler = Compiler {
+            code: &program_str,
+            address: sender_address,
+            extra_deps: self.modules.clone(),
+            ..Compiler::default()
+        };
+        let compiled_program = compiler.into_compiled_program().unwrap();
         let (verified_script, to_be_published_modules, statuses) = static_verify_program(
             &sender_address,
             compiled_program.script,

@@ -107,9 +107,8 @@ module LibraAccount {
             Self.create_new_account(copy(payee), 0);
         }
 
-        // Load the `payee`'s account and deposit the minted `coin`
-        payee_account_ref = borrow_global<T>(move(payee));
-        LibraCoin.deposit(&mut move(payee_account_ref).balance, move(coin));
+        // Deposit the minted `coin`
+        Self.deposit(move(payee), move(coin));
         return;
     }
 

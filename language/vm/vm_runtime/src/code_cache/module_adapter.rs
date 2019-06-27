@@ -5,13 +5,13 @@
 use logger::prelude::*;
 use state_view::StateView;
 use std::collections::HashMap;
-use types::language_storage::CodeKey;
+use types::language_storage::ModuleId;
 use vm::file_format::CompiledModule;
 
 /// Trait that describes how the VM expects code data to be stored.
 pub trait ModuleFetcher {
-    /// `CodeKey` is the fully qualified name for the module we are trying to fetch.
-    fn get_module(&self, key: &CodeKey) -> Option<CompiledModule>;
+    /// `ModuleId` is the fully qualified name for the module we are trying to fetch.
+    fn get_module(&self, key: &ModuleId) -> Option<CompiledModule>;
 }
 
 /// A wrapper around State Store database for fetching code data stored on chain.
@@ -25,7 +25,7 @@ impl<'a> ModuleFetcherImpl<'a> {
 }
 
 impl<'a> ModuleFetcher for ModuleFetcherImpl<'a> {
-    fn get_module(&self, key: &CodeKey) -> Option<CompiledModule> {
+    fn get_module(&self, key: &ModuleId) -> Option<CompiledModule> {
         let access_path = key.into();
         match self.0.get(&access_path) {
             Ok(opt_module_blob) => match opt_module_blob {
@@ -56,20 +56,20 @@ impl<'a> ModuleFetcher for ModuleFetcherImpl<'a> {
 pub struct NullFetcher();
 
 impl ModuleFetcher for NullFetcher {
-    fn get_module(&self, _key: &CodeKey) -> Option<CompiledModule> {
+    fn get_module(&self, _key: &ModuleId) -> Option<CompiledModule> {
         None
     }
 }
 
 /// A wrapper for a state with a list of pre-compiled modules.
-pub struct FakeFetcher(HashMap<CodeKey, CompiledModule>);
+pub struct FakeFetcher(HashMap<ModuleId, CompiledModule>);
 
 impl FakeFetcher {
     /// Create a FakeFetcher instance with a vector of pre-compiled modules.
     pub fn new(modules: Vec<CompiledModule>) -> Self {
         let mut map = HashMap::new();
         for m in modules.into_iter() {
-            map.insert(m.self_code_key(), m);
+            map.insert(m.self_id(), m);
         }
         FakeFetcher(map)
     }
@@ -81,7 +81,7 @@ impl FakeFetcher {
 }
 
 impl ModuleFetcher for FakeFetcher {
-    fn get_module(&self, key: &CodeKey) -> Option<CompiledModule> {
+    fn get_module(&self, key: &ModuleId) -> Option<CompiledModule> {
         self.0.get(key).cloned()
     }
 }

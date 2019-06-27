@@ -11,7 +11,7 @@ use state_view::StateView;
 use std::{collections::btree_map::BTreeMap, mem::replace};
 use types::{
     access_path::AccessPath,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use vm::{errors::*, gas_schedule::AbstractMemorySize};
@@ -231,7 +231,7 @@ impl<'txn> TransactionDataCache<'txn> {
     /// at the end of the transactions (all ReleaseRef are properly called)
     pub fn make_write_set(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
     ) -> VMRuntimeResult<WriteSet> {
         let mut write_set = WriteSetMut::new(Vec::new());
         let data_map = replace(&mut self.data_map, BTreeMap::new());

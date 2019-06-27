@@ -121,20 +121,9 @@ where
     let output = executed_txn.into_output();
     match output.status() {
         TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)) => {
-            match module_cache.reclaim_cached_module(arena.into_vec()) {
-                Ok(_) => {
-                    counters::SUCCESSFUL_TRANSACTION.inc();
-                    output
-                }
-                Err(err) => {
-                    counters::FAILED_TRANSACTION.inc();
-                    ExecutedTransaction::discard_error_output(&err)
-                }
-            }
+            module_cache.reclaim_cached_module(arena.into_vec());
         }
-        _ => {
-            counters::FAILED_TRANSACTION.inc();
-            output
-        }
-    }
+        _ => counters::FAILED_TRANSACTION.inc(),
+    };
+    output
 }

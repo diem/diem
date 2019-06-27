@@ -7,6 +7,6 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-compiler = { path = "../compiler" }
+ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 types = { path = "../../types" }
 lazy_static = "1.3.0"

@@ -4,8 +4,7 @@
 
 use crate::loaded_data::loaded_module::LoadedModule;
 use vm::{
-    access::{BaseAccess, ModuleAccess},
-    errors::*,
+    access::ModuleAccess,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex},
     internals::ModuleIndex,
     CompiledModule,
@@ -14,10 +13,7 @@ use vm::{
 /// Trait that defines the internal representation of a move function.
 pub trait FunctionReference<'txn>: Sized + Clone {
     /// Create a new function reference to a module
-    fn new(
-        module: &'txn LoadedModule,
-        idx: FunctionDefinitionIndex,
-    ) -> Result<Self, VMInvariantViolation>;
+    fn new(module: &'txn LoadedModule, idx: FunctionDefinitionIndex) -> Self;
 
     /// Fetch the reference to the module where the function is defined.
     fn module(&self) -> &'txn LoadedModule;
@@ -50,21 +46,15 @@ pub struct FunctionRef<'txn> {
 }
 
 impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
-    fn new(
-        module: &'txn LoadedModule,
-        idx: FunctionDefinitionIndex,
-    ) -> Result<Self, VMInvariantViolation> {
+    fn new(module: &'txn LoadedModule, idx: FunctionDefinitionIndex) -> Self {
         let def = &module.function_defs[idx.into_index()];
-        let fn_definition = &module.module.function_def_at(idx);
-        let name_idx = module
-            .module
-            .function_handle_at(fn_definition.function)
-            .name;
-        Ok(FunctionRef {
+        let fn_definition = module.function_def_at(idx);
+        let name_idx = module.function_handle_at(fn_definition.function).name;
+        FunctionRef {
             module,
             def,
             name: module.string_at(name_idx),
-        })
+        }
     }
 
     fn module(&self) -> &'txn LoadedModule {

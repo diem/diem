@@ -11,7 +11,7 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{
         Bytecode, CompiledModule, FieldDefinitionIndex, FunctionDefinition, LocalIndex,

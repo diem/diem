@@ -137,8 +137,8 @@ impl Benchmarker {
                     .create_submit_transaction_req(
                         program,
                         sender,
-                        Some(GAS_UNIT_PRICE),
                         Some(MAX_GAS_AMOUNT),
+                        Some(GAS_UNIT_PRICE),
                     )
                     .unwrap();
                 sender.sequence_number += 1;

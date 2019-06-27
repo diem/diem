@@ -3,6 +3,7 @@
 
 #![allow(clippy::unit_arg)]
 
+use crate::language_storage::ModuleId;
 use failure::prelude::*;
 use proptest::{collection::vec, prelude::*};
 use proptest_derive::Arbitrary;
@@ -112,6 +113,8 @@ pub enum VMVerificationStatus {
     /// Verification error in a module -- the first element is the index of the module with the
     /// error.
     Module(u16, VMVerificationError),
+    /// Verification error in a dependent module.
+    Dependency(ModuleId, VMVerificationError),
 }
 
 #[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -743,6 +746,11 @@ impl IntoProto for VMVerificationStatus {
                 proto_status.set_module_idx(u32::from(module_idx));
                 error.into_proto()
             }
+            VMVerificationStatus::Dependency(dependency_id, error) => {
+                proto_status.set_status_kind(ProtoStatusKind::DEPENDENCY);
+                proto_status.set_dependency_id(dependency_id.into_proto());
+                error.into_proto()
+            }
         };
         proto_status.set_error_kind(kind);
         proto_status.set_message(message);
@@ -769,6 +777,10 @@ impl FromProto for VMVerificationStatus {
                     bail_err!(DecodingError::ModuleIndexTooBig(module_idx));
                 }
                 Ok(VMVerificationStatus::Module(module_idx as u16, err))
+            }
+            ProtoStatusKind::DEPENDENCY => {
+                let dependency_id = ModuleId::from_proto(proto_status.take_dependency_id())?;
+                Ok(VMVerificationStatus::Dependency(dependency_id, err))
             }
         }
     }

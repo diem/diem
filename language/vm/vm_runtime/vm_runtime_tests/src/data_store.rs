@@ -12,10 +12,11 @@ use state_view::StateView;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use types::{
     access_path::AccessPath,
+    language_storage::ModuleId,
     transaction::{SignedTransaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
-use vm::errors::*;
+use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
 
 lazy_static! {
@@ -88,6 +89,18 @@ impl FakeDataStore {
             }
             None => panic!("can't create Account data"),
         }
+    }
+
+    /// Adds a [`CompiledModule`] to this data store.
+    ///
+    /// Does not do any sort of verification on the module.
+    pub fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
+        let access_path = AccessPath::from(module_id);
+        let mut blob = vec![];
+        module
+            .serialize(&mut blob)
+            .expect("serializing this module should work");
+        self.set(access_path, blob);
     }
 }
 

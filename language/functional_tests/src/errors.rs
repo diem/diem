@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::{Error, Fail};
+use failure::Fail;
 use types::transaction::TransactionOutput;
 use vm::errors::VerificationError as VMVerificationError;
+
+pub use failure::Error;
 
 /// Defines all errors in this crate.
 #[derive(Clone, Debug, Fail)]

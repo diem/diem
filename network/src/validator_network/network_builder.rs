@@ -53,6 +53,7 @@ pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
 pub const PING_FAILURES_TOLERATED: u64 = 10;
 pub const MAX_CONCURRENT_NETWORK_REQS: u32 = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: u32 = 100;
+pub const MAX_CONNECTION_ATTEMPTS: u32 = 10;
 
 /// The type of the transport layer, i.e., running on memory or TCP stream,
 /// with or without Noise encryption
@@ -92,6 +93,7 @@ pub struct NetworkBuilder {
     max_concurrent_inbound_rpcs: u32,
     max_concurrent_network_reqs: u32,
     max_concurrent_network_notifs: u32,
+    max_connection_attempts: u32,
     signing_keys: Option<(PrivateKey, PublicKey)>,
     identity_keys: Option<(X25519PrivateKey, X25519PublicKey)>,
 }
@@ -121,6 +123,7 @@ impl NetworkBuilder {
             inbound_rpc_timeout_ms: INBOUND_RPC_TIMEOUT_MS,
             max_concurrent_outbound_rpcs: MAX_CONCURRENT_OUTBOUND_RPCS,
             max_concurrent_inbound_rpcs: MAX_CONCURRENT_INBOUND_RPCS,
+            max_connection_attempts: MAX_CONNECTION_ATTEMPTS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             signing_keys: None,
@@ -234,6 +237,13 @@ impl NetworkBuilder {
     /// The maximum number of concurrent inbound rpc requests we will service.
     pub fn max_concurrent_inbound_rpcs(&mut self, max_concurrent_inbound_rpcs: u32) -> &mut Self {
         self.max_concurrent_inbound_rpcs = max_concurrent_inbound_rpcs;
+        self
+    }
+
+    /// The maximum number of outbound connection attempts to a peer before giving up and waiting
+    /// for it to dial.
+    pub fn max_connection_attempts(&mut self, max_connection_attempts: u32) -> &mut Self {
+        self.max_connection_attempts = max_connection_attempts;
         self
     }
 
@@ -493,6 +503,7 @@ impl NetworkBuilder {
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
             pm_conn_mgr_notifs_rx,
             conn_mgr_reqs_rx,
+            self.max_connection_attempts,
         );
         self.executor
             .spawn(conn_mgr.start().boxed().unit_error().compat());

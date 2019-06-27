@@ -3,12 +3,8 @@
 
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use chrono::Utc;
 use config::trusted_peers::TrustedPeersConfig;
-use crypto::{
-    hash::CryptoHash,
-    signing::{sign_message, KeyPair},
-};
+use crypto::signing::KeyPair;
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
@@ -19,7 +15,6 @@ use num_traits::{
     identities::Zero,
 };
 use proto_conv::IntoProto;
-use protobuf::Message;
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -41,7 +36,8 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction, Version},
+    transaction::{Program, SignedTransaction, Version},
+    transaction_helpers::{create_signed_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
 
@@ -233,7 +229,7 @@ impl ClientProxy {
             .sequence_number();
 
         let reset_sequence_number = if space_delim_strings.len() == 3 {
-            space_delim_strings[2].parse::<bool>().map_err(|error| {
+            parse_bool(space_delim_strings[2]).map_err(|error| {
                 format_parse_data_error(
                     "reset_sequence_number",
                     InputType::Bool,
@@ -324,8 +320,8 @@ impl ClientProxy {
             let req = self.create_submit_transaction_req(
                 program,
                 sender,
-                gas_unit_price, /* gas_unit_price */
                 max_gas_amount, /* max_gas_amount */
+                gas_unit_price, /* gas_unit_price */
             )?;
             let sender_mut = self
                 .accounts
@@ -444,7 +440,7 @@ impl ClientProxy {
             )
         })?;
 
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+        let fetch_events = parse_bool(space_delim_strings[3]).map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -482,7 +478,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let fetch_events = space_delim_strings[3].parse::<bool>().map_err(|error| {
+        let fetch_events = parse_bool(space_delim_strings[3]).map_err(|error| {
             format_parse_data_error(
                 "fetch_events",
                 InputType::Bool,
@@ -548,7 +544,7 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let ascending = space_delim_strings[4].parse::<bool>().map_err(|error| {
+        let ascending = parse_bool(space_delim_strings[4]).map_err(|error| {
             format_parse_data_error("ascending", InputType::Bool, space_delim_strings[4], error)
         })?;
         let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
@@ -750,8 +746,8 @@ impl ClientProxy {
         let sender_address = sender.address;
         let program = vm_genesis::encode_mint_program(&receiver, num_coins);
         let req = self.create_submit_transaction_req(
-            program, sender, None, /* gas_unit_price */
-            None, /* max_gas_amount */
+            program, sender, None, /* max_gas_amount */
+            None, /* gas_unit_price */
         )?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(&mut sender_mut, &req);
@@ -826,33 +822,23 @@ impl ClientProxy {
         &self,
         program: Program,
         sender_account: &AccountData,
-        gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
+        gas_unit_price: Option<u64>,
     ) -> Result<SubmitTransactionRequest> {
-        let raw_txn = RawTransaction::new(
+        let signer: Box<&TransactionSigner> = match &sender_account.key_pair {
+            Some(key_pair) => Box::new(key_pair),
+            None => Box::new(&self.wallet),
+        };
+        let signed_txn = create_signed_txn(
+            *signer,
+            program,
             sender_account.address,
             sender_account.sequence_number,
-            program,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            std::time::Duration::new((Utc::now().timestamp() + TX_EXPIRATION) as u64, 0),
-        );
-
-        let signed_txn = match &sender_account.key_pair {
-            Some(key_pair) => {
-                let bytes = raw_txn.clone().into_proto().write_to_bytes()?;
-                let hash = RawTransactionBytes(&bytes).hash();
-                let signature = sign_message(hash, &key_pair.private_key())?;
-
-                SignedTransaction::craft_signed_transaction_for_client(
-                    raw_txn,
-                    key_pair.public_key(),
-                    signature,
-                )
-            }
-            None => self.wallet.sign_txn(raw_txn)?,
-        };
-
+            TX_EXPIRATION,
+        )
+        .unwrap();
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         Ok(req)
@@ -898,9 +884,13 @@ fn format_parse_data_error<T: std::fmt::Debug>(
     )
 }
 
+fn parse_bool(para: &str) -> Result<bool> {
+    Ok(para.to_lowercase().parse::<bool>()?)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::client_proxy::{AddressAndIndex, ClientProxy};
+    use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use config::trusted_peers::TrustedPeersConfigHelpers;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
@@ -935,6 +925,24 @@ mod tests {
         }
 
         (client_proxy, accounts)
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        assert!(parse_bool("true").unwrap());
+        assert!(parse_bool("True").unwrap());
+        assert!(parse_bool("TRue").unwrap());
+        assert!(parse_bool("TRUE").unwrap());
+        assert!(!parse_bool("false").unwrap());
+        assert!(!parse_bool("False").unwrap());
+        assert!(!parse_bool("FaLSe").unwrap());
+        assert!(!parse_bool("FALSE").unwrap());
+        assert!(parse_bool("1").is_err());
+        assert!(parse_bool("0").is_err());
+        assert!(parse_bool("2").is_err());
+        assert!(parse_bool("1adf").is_err());
+        assert!(parse_bool("ad13").is_err());
+        assert!(parse_bool("ad1f").is_err());
     }
 
     #[test]

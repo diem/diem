@@ -1,0 +1,5 @@
+// no arguments to main() is good
+
+main() {
+    return;
+}

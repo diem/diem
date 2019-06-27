@@ -21,7 +21,7 @@ use types::{
     account_config,
     byte_array::ByteArray,
     contract_event::ContractEvent,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     transaction::{TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
     write_set::WriteSet,
@@ -40,12 +40,12 @@ mod runtime_tests;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
-    /// The CodeKey for where Account module is being stored.
-    pub static ref ACCOUNT_MODULE: CodeKey =
-        { CodeKey::new(account_config::core_code_address(), "LibraAccount".to_string()) };
-    /// The CodeKey for where LibraCoin module is being stored.
-    pub static ref COIN_MODULE: CodeKey =
-        { CodeKey::new(account_config::core_code_address(), "LibraCoin".to_string()) };
+    /// The ModuleId for where Account module is being stored.
+    pub static ref ACCOUNT_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "LibraAccount".to_string()) };
+    /// The ModuleId for where LibraCoin module is being stored.
+    pub static ref COIN_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "LibraCoin".to_string()) };
 }
 
 const PROLOGUE_NAME: &str = "prologue";
@@ -54,7 +54,7 @@ const CREATE_ACCOUNT_NAME: &str = "make";
 const ACCOUNT_STRUCT_NAME: &str = "T";
 
 fn make_access_path(
-    module: &CompiledModule,
+    module: &impl ModuleAccess,
     idx: StructDefinitionIndex,
     address: AccountAddress,
 ) -> AccessPath {
@@ -211,7 +211,8 @@ where
                 Bytecode::LdByteArray(idx) => {
                     let top_frame = self.execution_stack.top_frame()?;
                     let byte_array = top_frame.module().byte_array_at(idx);
-                    self.execution_stack.push(Local::bytearray(byte_array));
+                    self.execution_stack
+                        .push(Local::bytearray(byte_array.clone()));
                 }
                 Bytecode::LdTrue => {
                     self.execution_stack.push(Local::bool(true));
@@ -239,14 +240,14 @@ where
                 }
                 Bytecode::Call(idx) => {
                     let self_module = &self.execution_stack.top_frame()?.module();
-                    let callee_function_ref = self
+                    let callee_function_ref = try_runtime!(self
                         .execution_stack
                         .module_cache
-                        .resolve_function_ref(self_module, idx)?
-                        .ok_or(VMInvariantViolation::LinkerError)?;
+                        .resolve_function_ref(self_module, idx))
+                    .ok_or(VMInvariantViolation::LinkerError)?;
 
                     if callee_function_ref.is_native() {
-                        let module_name: &str = callee_function_ref.module().module.name();
+                        let module_name: &str = callee_function_ref.module().name();
                         let function_name: &str = callee_function_ref.name();
                         let native_return = dispatch_native_call(
                             &mut self.execution_stack,
@@ -320,7 +321,7 @@ where
                 }
                 Bytecode::Pack(sd_idx) => {
                     let self_module = self.execution_stack.top_frame()?.module();
-                    let struct_def = self_module.module.struct_def_at(sd_idx);
+                    let struct_def = self_module.struct_def_at(sd_idx);
                     let args = self
                         .execution_stack
                         .popn(struct_def.field_count)?
@@ -458,8 +459,8 @@ where
                 }
                 Bytecode::BorrowGlobal(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -479,8 +480,8 @@ where
                 }
                 Bytecode::Exists(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -499,8 +500,8 @@ where
                 }
                 Bytecode::MoveFrom(idx) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, address);
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, address);
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -519,8 +520,8 @@ where
                     }
                 }
                 Bytecode::MoveToSender(idx) => {
-                    let curr_module = &self.execution_stack.top_frame()?.module();
-                    let ap = make_access_path(&curr_module.module, idx, self.txn_data.sender());
+                    let curr_module = self.execution_stack.top_frame()?.module();
+                    let ap = make_access_path(curr_module, idx, self.txn_data.sender());
                     if let Some(struct_def) = try_runtime!(self
                         .execution_stack
                         .module_cache
@@ -608,11 +609,11 @@ where
     /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub fn create_account(&mut self, addr: AccountAddress) -> VMResult<()> {
-        let account_module = self
+        let account_module = try_runtime!(self
             .execution_stack
             .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?
-            .ok_or(VMInvariantViolation::LinkerError)?;
+            .get_loaded_module(&ACCOUNT_MODULE))
+        .ok_or(VMInvariantViolation::LinkerError)?;
 
         // Address will be used as the initial authentication key.
         try_runtime!(self.execute_function(
@@ -637,7 +638,7 @@ where
         .ok_or(VMInvariantViolation::LinkerError)?;
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
-        let account_path = make_access_path(&account_module.module, *account_struct_id, addr);
+        let account_path = make_access_path(account_module, *account_struct_id, addr);
         self.data_view
             .move_resource_to(&account_path, account_struct_def, account_resource)
     }
@@ -690,7 +691,7 @@ where
     /// Generate the TransactionOutput for a successful transaction
     pub(crate) fn transaction_cleanup(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
     ) -> TransactionOutput {
         // First run the epilogue
         match self.run_epilogue() {
@@ -742,20 +743,20 @@ where
     /// occurs.
     pub fn execute_function(
         &mut self,
-        module: &CodeKey,
+        module: &ModuleId,
         function_name: &str,
         args: Vec<Local>,
     ) -> VMResult<()> {
-        let loaded_module = self
-            .execution_stack
-            .module_cache
-            .get_loaded_module(module)?
-            .ok_or(VMInvariantViolation::LinkerError)?;
+        let loaded_module =
+            match try_runtime!(self.execution_stack.module_cache.get_loaded_module(module)) {
+                Some(module) => module,
+                None => return Err(VMInvariantViolation::LinkerError),
+            };
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
             .ok_or(VMInvariantViolation::LinkerError)?;
-        let func = FunctionRef::new(loaded_module, *func_idx)?;
+        let func = FunctionRef::new(loaded_module, *func_idx);
 
         for arg in args.into_iter() {
             self.execution_stack.push(arg);
@@ -773,7 +774,7 @@ where
     /// the TransactionProcessor and turn them into a writeset.
     pub fn make_write_set(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
         result: VMResult<()>,
     ) -> VMRuntimeResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
@@ -819,17 +820,30 @@ pub fn execute_function(
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = caller_script.into_module();
-    let loaded_main = LoadedModule::new(main_module)?;
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX)?;
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     for m in modules {
-        module_cache.cache_module(m)?;
+        module_cache.cache_module(m);
     }
     let mut vm = TransactionExecutor {
         execution_stack: ExecutionStack::new(&module_cache),
-        gas_meter: GasMeter::new(1_000),
+        gas_meter: GasMeter::new(10_000),
         txn_data: TransactionMetadata::default(),
         event_data: Vec::new(),
         data_view: TransactionDataCache::new(data_cache),
     };
     vm.execute_function_impl(entry_func)
+}
+
+#[cfg(feature = "instruction_synthesis")]
+impl<'alloc, 'txn, P> TransactionExecutor<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    /// Clear all the writes local to this transaction.
+    pub fn clear_writes(&mut self) {
+        self.data_view.clear();
+        self.event_data.clear();
+    }
 }

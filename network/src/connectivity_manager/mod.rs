@@ -43,6 +43,10 @@ pub struct ConnectivityManager<TTicker, TSubstream> {
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
+    /// Number of attempts made to connect to peer. The counter is reset on successful connection.
+    connection_attempts: HashMap<PeerId, u32>,
+    /// Maximum number of connection attempts before giving up.
+    max_connection_attempts: u32,
     /// A local counter incremented on receiving an incoming message. Printing this in debugging
     /// allows for easy debugging.
     event_id: u32,
@@ -69,6 +73,7 @@ where
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         requests_rx: channel::Receiver<ConnectivityRequest>,
+        max_connection_attempts: u32,
     ) -> Self {
         Self {
             eligible,
@@ -78,6 +83,8 @@ where
             peer_mgr_reqs_tx,
             peer_mgr_notifs_rx,
             requests_rx,
+            connection_attempts: HashMap::new(),
+            max_connection_attempts,
             event_id: 0,
         }
     }
@@ -149,6 +156,10 @@ where
             .filter(|(peer_id, _)| {
                 self.eligible.read().unwrap().contains_key(peer_id)
                     && self.connected.get(peer_id).is_none()
+                    && self
+                        .connection_attempts
+                        .get(peer_id)
+                        .map_or(true, |v| *v < self.max_connection_attempts)
             })
             .collect();
         for (p, addrs) in pending_connections.into_iter() {
@@ -163,10 +174,12 @@ where
                 // peers, without waiting for the NewPeer notification from PeerManager.
                 Ok(_) => {
                     self.connected.insert(*p, addrs[0].clone());
+                    self.connection_attempts.remove(p);
                 }
                 Err(PeerManagerError::AlreadyConnected(a)) => {
                     // We ignore whether `a` is actually the address we dialed.
                     self.connected.insert(*p, a);
+                    self.connection_attempts.remove(p);
                 }
                 e => {
                     info!(
@@ -175,6 +188,7 @@ where
                         addrs[0].clone(),
                         e
                     );
+                    *self.connection_attempts.entry(*p).or_default() += 1;
                 }
             }
         }
@@ -195,6 +209,7 @@ where
         match notif {
             PeerManagerNotification::NewPeer(peer_id, addr) => {
                 self.connected.insert(peer_id, addr);
+                self.connection_attempts.remove(&peer_id);
             }
             PeerManagerNotification::LostPeer(peer_id, addr) => {
                 match self.connected.get(&peer_id) {

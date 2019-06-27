@@ -24,6 +24,7 @@ pub(super) const ACCOUNT_STATE_CF_NAME: ColumnFamilyName = "account_state";
 pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
 pub(super) const EVENT_BY_ACCESS_PATH_CF_NAME: ColumnFamilyName = "event_by_access_path";
 pub(super) const EVENT_CF_NAME: ColumnFamilyName = "event";
+pub(super) const SIGNATURE_CF_NAME: ColumnFamilyName = "signature";
 pub(super) const SIGNED_TRANSACTION_CF_NAME: ColumnFamilyName = "signed_transaction";
 pub(super) const STATE_MERKLE_NODE_CF_NAME: ColumnFamilyName = "state_merkle_node";
 pub(super) const TRANSACTION_ACCUMULATOR_CF_NAME: ColumnFamilyName = "transaction_accumulator";

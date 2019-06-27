@@ -4,11 +4,7 @@
 use bytecode_verifier::verifier::{
     verify_module, verify_module_dependencies, verify_script, verify_script_dependencies,
 };
-use compiler::{
-    compiler::compile_program,
-    parser::parse_program,
-    util::{build_stdlib, do_compile_module},
-};
+use compiler::{util, Compiler};
 use std::{fs, io::Write, path::PathBuf};
 use structopt::StructOpt;
 use types::account_address::AccountAddress;
@@ -78,17 +74,17 @@ fn main() {
     let args = Args::from_args();
 
     let address = AccountAddress::default();
-    let mut dependencies = if args.no_stdlib {
-        vec![]
-    } else {
-        build_stdlib()
-    };
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path).expect("Unable to read file");
-        let parsed_program = parse_program(&source).unwrap();
-
-        let compiled_program = compile_program(&address, &parsed_program, &dependencies).unwrap();
+        let compiler = Compiler {
+            code: &source,
+            skip_stdlib_deps: args.no_stdlib,
+            ..Compiler::default()
+        };
+        let (compiled_program, mut dependencies) = compiler
+            .into_compiled_program_and_deps()
+            .expect("Failed to compile program");
 
         // TODO: Make this a do_verify_program helper function.
         if !args.no_verify {
@@ -114,7 +110,12 @@ fn main() {
             }
         }
     } else {
-        let compiled_module = do_compile_module(&args.source_path, &address, &dependencies);
+        let dependencies = if args.no_stdlib {
+            vec![]
+        } else {
+            util::build_stdlib(&AccountAddress::default())
+        };
+        let compiled_module = util::do_compile_module(&args.source_path, &address, &dependencies);
         if !args.no_verify {
             do_verify_module(&compiled_module, &dependencies);
         }

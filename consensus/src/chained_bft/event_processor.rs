@@ -10,7 +10,7 @@ use crate::{
         consensus_types::block::Block,
         liveness::{
             new_round_msg::{NewRoundMsg, PacemakerTimeout},
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker, PacemakerEvent},
+            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
         },
@@ -29,7 +29,6 @@ use crate::{
     },
 };
 use crypto::HashValue;
-use futures::{channel::mpsc, SinkExt};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use std::{
@@ -58,8 +57,6 @@ pub struct EventProcessor<T, P> {
     block_store: Arc<BlockStore<T>>,
     pacemaker: Arc<dyn Pacemaker>,
     proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
-    pm_events_sender: mpsc::Sender<PacemakerEvent>,
-    proposal_candidates_sender: mpsc::Sender<ProposalInfo<T, P>>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Arc<RwLock<SafetyRules<T>>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -77,8 +74,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         block_store: Arc<BlockStore<T>>,
         pacemaker: Arc<dyn Pacemaker>,
         proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
-        pm_events_sender: mpsc::Sender<PacemakerEvent>,
-        proposal_candidates_sender: mpsc::Sender<ProposalInfo<T, P>>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Arc<RwLock<SafetyRules<T>>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -99,8 +94,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             block_store,
             pacemaker,
             proposer_election,
-            pm_events_sender,
-            proposal_candidates_sender,
             proposal_generator,
             safety_rules,
             state_computer,
@@ -197,7 +190,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         let qc = proposal.proposal.quorum_cert();
 
         self.pacemaker
-            .process_certificates_from_proposal(
+            .process_certificates(
                 qc.certified_block_round(),
                 proposal.timeout_certificate.as_ref(),
             )
@@ -276,10 +269,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
     async fn finish_proposal_processing(&self, proposal: ProposalInfo<T, P>) {
-        let mut sender = self.proposal_candidates_sender.clone();
-        if sender.send(proposal).await.is_err() {
-            error!("Error sending the received proposal to proposal election.");
-        }
+        self.proposer_election.process_proposal(proposal).await;
     }
 
     /// Fetches and completes processing proposal in dedicated task
@@ -346,7 +336,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             new_round_msg.pacemaker_timeout().round(),
             new_round_msg.author().short_str()
         );
-        let deadline = self.pacemaker.current_round_deadline();
         let current_highest_quorum_cert_round = self
             .block_store
             .highest_quorum_cert()
@@ -355,33 +344,37 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             .highest_quorum_certificate()
             .certified_block_round();
 
-        if current_highest_quorum_cert_round >= new_round_highest_quorum_cert_round {
-            return;
+        if current_highest_quorum_cert_round < new_round_highest_quorum_cert_round {
+            // The timeout message carries a QC higher than what this node has seen before:
+            // run state synchronization.
+            let deadline = self.pacemaker.current_round_deadline();
+            match self
+                .sync_manager
+                .sync_to(
+                    deadline,
+                    SyncInfo {
+                        highest_ledger_info: new_round_msg.highest_ledger_info().clone(),
+                        highest_quorum_cert: new_round_msg.highest_quorum_certificate().clone(),
+                        peer: new_round_msg.author(),
+                    },
+                )
+                .await
+                {
+                    Ok(()) => debug!(
+                        "Successfully added new highest quorum certificate at round {} from old round {}",
+                        new_round_highest_quorum_cert_round, current_highest_quorum_cert_round
+                    ),
+                    Err(e) => warn!(
+                        "Unable to insert new highest quorum certificate {} from old round {} due to {:?}",
+                        new_round_msg.highest_quorum_certificate(),
+                        current_highest_quorum_cert_round,
+                        e
+                    ),
+                }
         }
-
-        match self
-            .sync_manager
-            .sync_to(
-                deadline,
-                SyncInfo {
-                    highest_ledger_info: new_round_msg.highest_ledger_info().clone(),
-                    highest_quorum_cert: new_round_msg.highest_quorum_certificate().clone(),
-                    peer: new_round_msg.author(),
-                },
-            )
-            .await
-        {
-            Ok(()) => debug!(
-                "Successfully added new highest quorum certificate at round {} from old round {}",
-                new_round_highest_quorum_cert_round, current_highest_quorum_cert_round
-            ),
-            Err(e) => warn!(
-                "Unable to insert new highest quorum certificate {} from old round {} due to {:?}",
-                new_round_msg.highest_quorum_certificate(),
-                current_highest_quorum_cert_round,
-                e
-            ),
-        }
+        self.pacemaker
+            .process_remote_timeout(new_round_msg.pacemaker_timeout().clone())
+            .await;
     }
 
     /// The replica stops voting for this round and saves its consensus state.  Voting is halted
@@ -435,7 +428,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             counters::CREATION_TO_RECEIVAL_MS.observe(time_to_receival.as_millis() as f64);
         }
         let block = match self
-            .block_store
+            .sync_manager
             .execute_and_insert_block(proposal.proposal)
             .await
         {
@@ -632,16 +625,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                         return;
                     }
                 }
-                // Notify the Pacemaker.
-                let mut pm_events_sender = self.pm_events_sender.clone();
-                if let Err(e) = pm_events_sender
-                    .send(PacemakerEvent::QuorumCertified {
-                        round: vote.round(),
-                    })
-                    .await
-                {
-                    error!("Delivering pacemaker event failed: {:?}", e);
-                }
+                // Notify the Pacemaker about the new QC round.
+                self.pacemaker
+                    .process_certificates(vote.round(), None)
+                    .await;
             }
             // nothing interesting with votes arriving for the QC that has been formed
             _ => {

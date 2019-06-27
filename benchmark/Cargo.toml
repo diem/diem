@@ -18,7 +18,6 @@ debug_interface = { path = "../common/debug_interface" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_swarm = { path = "../libra_swarm" }
-libradb = { path = "../storage/libradb" }
 logger = { path = "../common/logger" }
 proto_conv = { path = "../common/proto_conv" }
 types = { path = "../types" }
