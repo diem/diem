@@ -101,7 +101,7 @@ impl Benchmarker {
         debug!("#Committed txns before mint = {}", init_committed_txns);
 
         for _i in 0..num_accounts {
-            let address_index = self.client_proxy.create_next_account().unwrap();
+            let address_index = self.client_proxy.create_next_account(false).unwrap();
             self.client_proxy
                 .mint_coins(
                     &[

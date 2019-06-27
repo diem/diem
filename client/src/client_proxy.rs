@@ -153,10 +153,11 @@ impl ClientProxy {
     }
 
     /// Returns the account index that should be used by user to reference this account
-    pub fn create_next_account(&mut self) -> Result<AddressAndIndex> {
+    pub fn create_next_account(&mut self, sync_with_validator: bool) -> Result<AddressAndIndex> {
         let (address, _) = self.wallet.new_address()?;
 
-        let account_data = Self::get_account_data_from_address(&self.client, address, true, None)?;
+        let account_data =
+            Self::get_account_data_from_address(&self.client, address, sync_with_validator, None)?;
 
         Ok(self.insert_account_data(account_data))
     }
@@ -921,7 +922,7 @@ mod tests {
         )
         .unwrap();
         for _ in 0..count {
-            accounts.push(client_proxy.create_next_account().unwrap());
+            accounts.push(client_proxy.create_next_account(false).unwrap());
         }
 
         (client_proxy, accounts)
