@@ -12,11 +12,265 @@
       }
     ]
   },
+  "description": "Usage statistics: account creation, txn submits and updates",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
+  "id": 17,
   "links": [],
   "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "avg(executor{op=\"num_accounts\"})",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Total Number of Accounts",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 7,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(num_req{method=\"admission_control.AdmissionControl.SubmitTransaction\"})",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "AC Total Submit Txn",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 5,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(num_req{method=\"admission_control.AdmissionControl.UpdateToLatestLedger\"})",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "AC Total Update Ledger",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -27,9 +281,9 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 0
+        "y": 2
       },
-      "id": 6,
+      "id": 2,
       "legend": {
         "avg": false,
         "current": false,
@@ -50,13 +304,12 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_write_time_seconds_total{role='validator'}[1m]) / irate(node_disk_writes_completed_total{role='validator'}[1m]) * 1000 # w_await_ms",
+          "expr": "irate(executor{op=\"num_accounts\"}[2m])",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
           "refId": "A"
@@ -66,7 +319,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Write await time (ms)",
+      "title": "Account Creation Rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -113,9 +366,9 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 0
+        "y": 2
       },
-      "id": 7,
+      "id": 4,
       "legend": {
         "avg": false,
         "current": false,
@@ -136,13 +389,12 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_read_time_seconds_total{role='validator'}[1m]) / irate(node_disk_reads_completed_total{role='validator'}[1m]) * 1000 # w_await_ms",
+          "expr": "irate(num_req{method=\"admission_control.AdmissionControl.SubmitTransaction\"}[1m])",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
           "refId": "A"
@@ -152,7 +404,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Read await time (ms)",
+      "title": "AC Txn Submit rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -199,7 +451,177 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 0
+        "y": 2
+      },
+      "id": 8,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {},
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(num_req{method=\"admission_control.AdmissionControl.UpdateToLatestLedger\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "AC Update Ledger rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "id": 12,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {},
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "haproxy_frontend_current_sessions{frontend=\"ac\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{address}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "AC active connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 10
       },
       "id": 10,
       "legend": {
@@ -226,11 +648,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_io_time_weighted_seconds_total{role='validator'}[1m]) # aqu-sz",
+          "expr": "irate(haproxy_frontend_requests_denied_total{frontend=\"ac\"}[1m])",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{address}}",
           "refId": "A"
         }
       ],
@@ -238,7 +659,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Queue Size",
+      "title": "AC denied connection rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -255,10 +676,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": null,
+          "label": "/s",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -282,12 +703,97 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "id": 18,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {},
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(duration_sum{method=\"admission_control.AdmissionControl.UpdateToLatestLedger\"}[1m])/irate(duration_count{method=\"admission_control.AdmissionControl.UpdateToLatestLedger\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "AC Update Ledger processing time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "dtdurations",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 17
       },
-      "id": 4,
+      "id": 14,
       "legend": {
         "avg": false,
         "current": false,
@@ -312,11 +818,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_writes_completed_total{role='validator'}[1m]) # w_iops",
+          "expr": "irate(haproxy_frontend_http_requests_total{frontend=\"faucet\"}[1m])",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{address}}",
           "refId": "A"
         }
       ],
@@ -324,7 +829,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Write IOPS",
+      "title": "Faucet request rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -341,10 +846,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": null,
+          "label": "/s",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -368,12 +873,12 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 8,
         "x": 8,
-        "y": 8
+        "y": 17
       },
-      "id": 5,
+      "id": 16,
       "legend": {
         "avg": false,
         "current": false,
@@ -398,11 +903,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_reads_completed_total{role='validator'}[1m]) # w_iops",
+          "expr": "irate(haproxy_frontend_requests_denied_total{frontend=\"faucet\"}[1m])",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{address}}",
           "refId": "A"
         }
       ],
@@ -410,7 +914,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Read IOPS",
+      "title": "Faucet denied request rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -427,10 +931,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": null,
+          "label": "/s",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -454,12 +958,12 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 8,
-        "x": 0,
-        "y": 16
+        "x": 16,
+        "y": 17
       },
-      "id": 2,
+      "id": 17,
       "legend": {
         "avg": false,
         "current": false,
@@ -484,11 +988,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(node_disk_written_bytes_total{role='validator'}[1m])/1024/1024",
+          "expr": "sum(irate(haproxy_backend_bytes_out_total[1m])) by (backend)",
           "format": "time_series",
-          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{backend}}",
           "refId": "A"
         }
       ],
@@ -496,7 +999,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Written MBs per second",
+      "title": "Total Bytes Out",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -512,11 +1015,11 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": null,
+          "format": "bytes",
+          "label": "",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -525,265 +1028,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 16
-      },
-      "id": 3,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(node_disk_read_bytes_total{role='validator'}[1m])/1024/1024",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Read MBs per second",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 24
-      },
-      "id": 8,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(node_disk_written_bytes_total{role='validator'}[1m]) / irate(node_disk_writes_completed_total{role='validator'}[1m]) / 1024 # w_size_KB",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Write Size (KB)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 24
-      },
-      "id": 9,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(node_disk_read_bytes_total{role='validator'}[1m]) / irate(node_disk_reads_completed_total{role='validator'}[1m]) / 1024 # r_size_KB",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Read Size (KB)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -792,6 +1037,7 @@
       }
     }
   ],
+  "refresh": false,
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
@@ -799,10 +1045,11 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
+    "hidden": false,
     "refresh_intervals": [
       "5s",
       "10s",
@@ -828,7 +1075,7 @@
     ]
   },
   "timezone": "",
-  "title": "System - IO",
-  "uid": "UAXogE7Zk",
+  "title": "Usage Stats",
+  "uid": "usage",
   "version": 1
 }

@@ -15,7 +15,7 @@
   "description": "Top level view for Validator nodes + Faucet server",
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": 13,
   "iteration": 1560824948631,
   "links": [
