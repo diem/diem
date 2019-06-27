@@ -9,10 +9,10 @@ use crate::{
         common::{Author, Payload, Round},
         consensus_types::block::Block,
         liveness::{
-            new_round_msg::{NewRoundMsg, PacemakerTimeout},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
+            timeout_msg::{PacemakerTimeout, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -325,22 +325,22 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         self.finish_proposal_processing(proposal).await;
     }
 
-    /// Upon receiving NewRoundMsg, ensure that any branches with higher quorum certificates are
+    /// Upon receiving TimeoutMsg, ensure that any branches with higher quorum certificates are
     /// populated to this replica prior to processing the pacemaker timeout.  This ensures that when
     /// a pacemaker timeout certificate is formed with 2f+1 timeouts, the next proposer will be
     /// able to chain a proposal block to a highest quorum certificate such that all honest replicas
     /// can vote for it.
-    pub async fn process_new_round_msg(&mut self, new_round_msg: NewRoundMsg) {
+    pub async fn process_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
         debug!(
             "Received a new round msg for round {} from {}",
-            new_round_msg.pacemaker_timeout().round(),
-            new_round_msg.author().short_str()
+            timeout_msg.pacemaker_timeout().round(),
+            timeout_msg.author().short_str()
         );
         let current_highest_quorum_cert_round = self
             .block_store
             .highest_quorum_cert()
             .certified_block_round();
-        let new_round_highest_quorum_cert_round = new_round_msg
+        let new_round_highest_quorum_cert_round = timeout_msg
             .highest_quorum_certificate()
             .certified_block_round();
 
@@ -353,9 +353,9 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 .sync_to(
                     deadline,
                     SyncInfo {
-                        highest_ledger_info: new_round_msg.highest_ledger_info().clone(),
-                        highest_quorum_cert: new_round_msg.highest_quorum_certificate().clone(),
-                        peer: new_round_msg.author(),
+                        highest_ledger_info: timeout_msg.highest_ledger_info().clone(),
+                        highest_quorum_cert: timeout_msg.highest_quorum_certificate().clone(),
+                        peer: timeout_msg.author(),
                     },
                 )
                 .await
@@ -366,14 +366,14 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                     ),
                     Err(e) => warn!(
                         "Unable to insert new highest quorum certificate {} from old round {} due to {:?}",
-                        new_round_msg.highest_quorum_certificate(),
+                        timeout_msg.highest_quorum_certificate(),
                         current_highest_quorum_cert_round,
                         e
                     ),
                 }
         }
         self.pacemaker
-            .process_remote_timeout(new_round_msg.pacemaker_timeout().clone())
+            .process_remote_timeout(timeout_msg.pacemaker_timeout().clone())
             .await;
     }
 
@@ -381,7 +381,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// to ensure that the next proposer can make a proposal that can be voted on by all replicas.
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
-    pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<NewRoundMsg> {
+    pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<TimeoutMsg> {
         // Stop voting at this round, persist the consensus state to support restarting from
         // a recent round (i.e. > the last vote round)  and then send the highest quorum
         // certificate known
@@ -401,7 +401,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             round
         );
 
-        Some(NewRoundMsg::new(
+        Some(TimeoutMsg::new(
             self.block_store.highest_quorum_cert().as_ref().clone(),
             self.block_store.highest_ledger_info().as_ref().clone(),
             PacemakerTimeout::new(round, self.block_store.signer()),

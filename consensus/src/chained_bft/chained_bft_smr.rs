@@ -8,12 +8,12 @@ use crate::{
         event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            new_round_msg::NewRoundMsg,
             pacemaker::{NewRoundEvent, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
+            timeout_msg::TimeoutMsg,
         },
         network::{
             BlockRetrievalRequest, ChunkRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers,
@@ -250,13 +250,13 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         }
     }
 
-    async fn process_new_round_msg(
-        mut receiver: channel::Receiver<NewRoundMsg>,
+    async fn process_timeout_msg(
+        mut receiver: channel::Receiver<TimeoutMsg>,
         event_processor: ConcurrentEventProcessor<T, P>,
     ) {
-        while let Some(new_round_msg) = receiver.next().await {
+        while let Some(timeout_msg) = receiver.next().await {
             let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_new_round_msg(new_round_msg).await;
+            guard.process_timeout_msg(timeout_msg).await;
         }
     }
 
@@ -271,7 +271,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
             let timeout_msg = guard.process_outgoing_pacemaker_timeout(round).await;
             match timeout_msg {
                 Some(timeout_msg) => {
-                    network.broadcast_new_round(timeout_msg).await;
+                    network.broadcast_timeout_msg(timeout_msg).await;
                 }
                 None => {
                     info!("Broadcast not sent as the processing of the timeout failed.  Will retry again on the next timeout.");
@@ -366,7 +366,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         );
 
         executor.spawn(
-            Self::process_new_round_msg(network_receivers.new_rounds, event_processor.clone())
+            Self::process_timeout_msg(network_receivers.timeout_msgs, event_processor.clone())
                 .boxed()
                 .unit_error()
                 .compat(),

@@ -10,9 +10,9 @@ use types::proto::{ledger_info, transaction};
 
 pub use self::{
     consensus::{
-        Block, BlockRetrievalStatus, ConsensusMsg, NewRound, PacemakerTimeout,
-        PacemakerTimeoutCertificate, Proposal, QuorumCert, RequestBlock, RequestChunk,
-        RespondBlock, RespondChunk, Vote,
+        Block, BlockRetrievalStatus, ConsensusMsg, PacemakerTimeout, PacemakerTimeoutCertificate,
+        Proposal, QuorumCert, RequestBlock, RequestChunk, RespondBlock, RespondChunk, TimeoutMsg,
+        Vote,
     },
     mempool::MempoolSyncMsg,
     network::{DiscoveryMsg, IdentityMsg, Note, PeerInfo, Ping, Pong},

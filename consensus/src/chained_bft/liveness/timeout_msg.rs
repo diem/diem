@@ -4,11 +4,11 @@
 use crate::chained_bft::{
     common::{Author, Round},
     consensus_types::quorum_cert::QuorumCert,
-    liveness::new_round_msg::PacemakerTimeoutCertificateVerificationError::*,
+    liveness::timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
-    hash::{CryptoHash, CryptoHasher, NewRoundMsgHasher, PacemakerTimeoutHasher},
+    hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue, Signature,
 };
 use network;
@@ -47,7 +47,7 @@ impl CryptoHash for PacemakerTimeoutSerializer {
     }
 }
 
-/// This message will be broadcast by a pacemaker as part of NewRoundMsg when its local
+/// This message will be broadcast by a pacemaker as part of TimeoutMsg when its local
 /// timeout for a round is reached.  Once f+1 PacemakerTimeout structs
 /// from unique authors is gathered it forms a TimeoutCertificate.  A TimeoutCertificate is
 /// a proof that will cause a replica to advance to the minimum round in the TimeoutCertificate.
@@ -59,13 +59,13 @@ pub struct PacemakerTimeout {
 }
 
 impl PacemakerTimeout {
-    /// Creates new PacemakerTimeoutMsg
+    /// Creates new PacemakerTimeout
     pub fn new(round: Round, validator_signer: &ValidatorSigner) -> Self {
         let author = validator_signer.author();
         let digest = PacemakerTimeoutSerializer { round, author }.hash();
         let signature = validator_signer
             .sign_message(digest)
-            .expect("Failed to sign PacemakerTimeoutMsg");
+            .expect("Failed to sign PacemakerTimeout");
         PacemakerTimeout {
             round,
             author,
@@ -129,14 +129,14 @@ impl FromProto for PacemakerTimeout {
     }
 }
 
-// Internal use only. Contains all the fields in NewRoundMsg that contributes to the computation of
+// Internal use only. Contains all the fields in TimeoutMsg that contributes to the computation of
 // its hash.
-struct NewRoundMsgSerializer {
+struct TimeoutMsgSerializer {
     highest_quorum_certificate_block_id: HashValue,
     pacemaker_timeout_digest: HashValue,
 }
 
-impl CanonicalSerialize for NewRoundMsgSerializer {
+impl CanonicalSerialize for TimeoutMsgSerializer {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> failure::Result<()> {
         serializer.encode_raw_bytes(self.highest_quorum_certificate_block_id.as_ref())?;
         serializer.encode_raw_bytes(self.pacemaker_timeout_digest.as_ref())?;
@@ -144,8 +144,8 @@ impl CanonicalSerialize for NewRoundMsgSerializer {
     }
 }
 
-impl CryptoHash for NewRoundMsgSerializer {
-    type Hasher = NewRoundMsgHasher;
+impl CryptoHash for TimeoutMsgSerializer {
+    type Hasher = TimeoutMsgHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
@@ -165,7 +165,7 @@ impl CryptoHash for NewRoundMsgSerializer {
 /// not wait until n-f such messages are received and can make a proposal justified
 /// by this quorum certificate.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct NewRoundMsg {
+pub struct TimeoutMsg {
     highest_quorum_certificate: QuorumCert,
     // Used for fast state synchronization.
     highest_ledger_info: QuorumCert,
@@ -174,14 +174,14 @@ pub struct NewRoundMsg {
     signature: Signature,
 }
 
-impl NewRoundMsg {
-    /// Creates new PacemakerTimeoutMsg
+impl TimeoutMsg {
+    /// Creates new TimeoutMsg
     pub fn new(
         highest_quorum_certificate: QuorumCert,
         highest_ledger_info: QuorumCert,
         pacemaker_timeout: PacemakerTimeout,
         validator_signer: &ValidatorSigner,
-    ) -> NewRoundMsg {
+    ) -> TimeoutMsg {
         let author = validator_signer.author();
         let digest = Self::new_round_digest(
             highest_quorum_certificate.certified_block_id(),
@@ -190,7 +190,7 @@ impl NewRoundMsg {
         let signature = validator_signer
             .sign_message(digest)
             .expect("Failed to sign PacemakerTimeoutMsg");
-        NewRoundMsg {
+        TimeoutMsg {
             highest_quorum_certificate,
             highest_ledger_info,
             pacemaker_timeout,
@@ -203,7 +203,7 @@ impl NewRoundMsg {
         highest_quorum_certificate_block_id: HashValue,
         pacemaker_timeout_digest: HashValue,
     ) -> HashValue {
-        NewRoundMsgSerializer {
+        TimeoutMsgSerializer {
             highest_quorum_certificate_block_id,
             pacemaker_timeout_digest,
         }
@@ -239,7 +239,7 @@ impl NewRoundMsg {
         self.pacemaker_timeout.verify(validator)
     }
 
-    /// Returns the author of the NewRoundMsg
+    /// Returns the author of the TimeoutMsg
     pub fn author(&self) -> Author {
         self.author
     }
@@ -251,8 +251,8 @@ impl NewRoundMsg {
     }
 }
 
-impl IntoProto for NewRoundMsg {
-    type ProtoType = network::proto::NewRound;
+impl IntoProto for TimeoutMsg {
+    type ProtoType = network::proto::TimeoutMsg;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -265,8 +265,8 @@ impl IntoProto for NewRoundMsg {
     }
 }
 
-impl FromProto for NewRoundMsg {
-    type ProtoType = network::proto::NewRound;
+impl FromProto for TimeoutMsg {
+    type ProtoType = network::proto::TimeoutMsg;
 
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let highest_quorum_certificate = QuorumCert::from_proto(object.take_highest_quorum_cert())?;
@@ -274,7 +274,7 @@ impl FromProto for NewRoundMsg {
         let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
         let author = Author::try_from(object.take_author())?;
         let signature = Signature::from_compact(object.get_signature())?;
-        Ok(NewRoundMsg {
+        Ok(TimeoutMsg {
             highest_quorum_certificate,
             highest_ledger_info,
             pacemaker_timeout,

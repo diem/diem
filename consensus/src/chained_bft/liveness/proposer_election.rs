@@ -4,7 +4,7 @@
 use crate::chained_bft::{
     common::{Author, Payload, Round},
     consensus_types::{block::Block, quorum_cert::QuorumCert},
-    liveness::new_round_msg::PacemakerTimeoutCertificate,
+    liveness::timeout_msg::PacemakerTimeoutCertificate,
 };
 use failure::Result;
 use futures::Future;

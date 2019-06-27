@@ -9,12 +9,12 @@ use crate::{
         event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            new_round_msg::{NewRoundMsg, PacemakerTimeout, PacemakerTimeoutCertificate},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -573,7 +573,7 @@ fn process_new_round_msg_test() {
     block_on(
         static_proposer
             .event_processor
-            .process_new_round_msg(NewRoundMsg::new(
+            .process_timeout_msg(TimeoutMsg::new(
                 block_0_quorum_cert,
                 QuorumCert::certificate_for_genesis(),
                 PacemakerTimeout::new(2, &non_proposer.signer),

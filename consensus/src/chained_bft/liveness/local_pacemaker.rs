@@ -5,9 +5,9 @@ use crate::{
     chained_bft::{
         common::Round,
         liveness::{
-            new_round_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         },
         persistent_storage::PersistentLivenessStorage,
     },

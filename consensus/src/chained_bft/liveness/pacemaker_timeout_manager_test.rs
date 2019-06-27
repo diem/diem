@@ -3,8 +3,8 @@
 
 use crate::chained_bft::{
     liveness::{
-        new_round_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
+        timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     },
     persistent_storage::PersistentStorage,
     test_utils::{MockStorage, TestPayload},
