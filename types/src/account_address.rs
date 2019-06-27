@@ -18,7 +18,7 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
+use std::{convert::TryFrom, fmt, str::FromStr};
 use tiny_keccak::Keccak;
 
 pub const ADDRESS_LENGTH: usize = 32;
@@ -203,6 +203,16 @@ impl TryFrom<Bech32> for AccountAddress {
         let base32_hash = encoded_input.data();
         let hash = Vec::from_base32(&base32_hash)?;
         AccountAddress::try_from(&hash[..])
+    }
+}
+
+impl FromStr for AccountAddress {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        assert!(!s.is_empty());
+        let bytes_out = ::hex::decode(s)?;
+        AccountAddress::try_from(bytes_out.as_slice())
     }
 }
 

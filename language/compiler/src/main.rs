@@ -6,9 +6,10 @@ use bytecode_verifier::{
     VerifiedModule,
 };
 use compiler::{util, Compiler};
+use serde_json;
 use std::{fs, io::Write, path::PathBuf};
 use structopt::StructOpt;
-use types::account_address::AccountAddress;
+use types::{account_address::AccountAddress, transaction::Program};
 use vm::{errors::VerificationError, file_format::CompiledModule};
 
 #[derive(Debug, StructOpt)]
@@ -88,13 +89,21 @@ fn main() {
 
         match args.output_path {
             Some(path) => {
-                // TODO: Only the script is serialized. Shall we also serialize the modules?
-                let mut out = vec![];
+                let mut script = vec![];
                 compiled_program
                     .script
-                    .serialize(&mut out)
+                    .serialize(&mut script)
                     .expect("Unable to serialize script");
-                write_output(&path, &out);
+                let mut modules = vec![];
+                for m in compiled_program.modules.iter() {
+                    let mut buf = vec![];
+                    m.serialize(&mut buf).expect("Unable to serialize module");
+                    modules.push(buf);
+                }
+                let program = Program::new(script, modules, vec![]);
+                let program_bytes =
+                    serde_json::to_vec(&program).expect("Unable to serialize program");
+                write_output(&path, &program_bytes);
             }
             None => {
                 println!("{}", compiled_program);

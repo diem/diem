@@ -14,3 +14,4 @@ types = { path = "../../types" }
 vm = { path = "../vm" }
 log = "0.4.6"
 structopt = "0.2.15"
+serde_json = "1.0.38"
