@@ -55,10 +55,11 @@ impl GRPCClient {
         })
     }
 
-    /// Submits a transaction and bumps the sequence number for the sender
+    /// Submits a transaction and bumps the sequence number for the sender, pass in `None` for
+    /// sender_account if sender's address is not managed by the client.
     pub fn submit_transaction(
         &self,
-        sender_account: &mut AccountData,
+        sender_account_opt: Option<&mut AccountData>,
         req: &SubmitTransactionRequest,
     ) -> Result<()> {
         let mut resp = self.submit_transaction_opt(req);
@@ -72,19 +73,23 @@ impl GRPCClient {
 
         if let Some(ac_status) = completed_resp.ac_status {
             if ac_status == AdmissionControlStatus::Accepted {
-                // Bump up sequence_number if transaction is accepted.
-                sender_account.sequence_number += 1;
+                if let Some(sender_account) = sender_account_opt {
+                    // Bump up sequence_number if transaction is accepted.
+                    sender_account.sequence_number += 1;
+                }
             } else {
                 bail!("Transaction failed with AC status: {:?}", ac_status,);
             }
         } else if let Some(vm_error) = completed_resp.vm_error {
             if vm_error == VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld) {
-                sender_account.sequence_number =
-                    self.get_sequence_number(sender_account.address)?;
-                bail!(
-                    "Transaction failed with vm status: {:?}, please retry your transaction.",
-                    vm_error
-                );
+                if let Some(sender_account) = sender_account_opt {
+                    sender_account.sequence_number =
+                        self.get_sequence_number(sender_account.address)?;
+                    bail!(
+                        "Transaction failed with vm status: {:?}, please retry your transaction.",
+                        vm_error
+                    );
+                }
             }
             bail!("Transaction failed with vm status: {:?}", vm_error);
         } else if let Some(mempool_error) = completed_resp.mempool_error {

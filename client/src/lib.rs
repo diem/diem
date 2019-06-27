@@ -19,6 +19,7 @@ pub mod commands;
 /// gRPC client wrapper to connect to validator.
 pub(crate) mod grpc_client;
 pub(crate) mod query_commands;
+pub(crate) mod submit_transaction_command;
 pub(crate) mod transfer_commands;
 
 /// Struct used to store data for each created account.  We track the sequence number
