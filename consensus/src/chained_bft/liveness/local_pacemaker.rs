@@ -121,7 +121,7 @@ struct LocalPacemakerInner {
     // it changes
     current_round: Round,
     // Approximate deadline when current round ends
-    current_round_deadline: Option<Instant>,
+    current_round_deadline: Instant,
     // Service for timer
     time_service: Arc<dyn TimeService>,
     // To send new round events.
@@ -172,7 +172,7 @@ impl LocalPacemakerInner {
             highest_committed_round,
             highest_qc_round,
             current_round,
-            current_round_deadline: None,
+            current_round_deadline: Instant::now(),
             time_service,
             new_round_events_sender,
             local_timeout_sender,
@@ -257,7 +257,7 @@ impl LocalPacemakerInner {
         let timeout = self
             .time_interval
             .get_round_duration(round_index_after_committed_round);
-        self.current_round_deadline = Some(Instant::now() + timeout);
+        self.current_round_deadline = Instant::now() + timeout;
         timeout
     }
 
@@ -392,11 +392,7 @@ impl LocalPacemaker {
 
 impl Pacemaker for LocalPacemaker {
     fn current_round_deadline(&self) -> Instant {
-        self.inner
-            .read()
-            .unwrap()
-            .current_round_deadline
-            .expect("Round deadline was not set")
+        self.inner.read().unwrap().current_round_deadline
     }
 
     fn current_round(&self) -> Round {
