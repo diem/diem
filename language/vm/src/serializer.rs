@@ -590,7 +590,18 @@ impl CommonSerializer {
         binary.push(self.minor_version);
         binary.push(self.table_count);
 
-        let start_offset = check_index_in_binary(binary.len())? + u32::from(self.table_count) * 9;
+        let start_offset;
+        if let Some(table_count_op) = self.table_count.checked_mul(9) {
+            if let Some(checked_start_offset) =
+                check_index_in_binary(binary.len())?.checked_add(u32::from(table_count_op))
+            {
+                start_offset = checked_start_offset;
+            } else {
+                bail!("binary too large, could not compute start offset")
+            }
+        } else {
+            bail!("binary too large, could not compute start offset");
+        }
 
         serialize_table(
             binary,
@@ -850,12 +861,16 @@ impl ModuleSerializer {
             self.field_defs.0 + start_offset,
             self.field_defs.1,
         );
-        serialize_table(
-            binary,
-            TableType::FUNCTION_DEFS,
-            self.function_defs.0 + start_offset,
-            self.function_defs.1,
-        );
+        if let Some(function_def_offset) = start_offset.checked_add(self.function_defs.0) {
+            serialize_table(
+                binary,
+                TableType::FUNCTION_DEFS,
+                function_def_offset,
+                self.function_defs.1,
+            );
+        } else {
+            bail!("overflow computing function definitions offset");
+        }
         Ok(())
     }
 

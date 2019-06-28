@@ -3,6 +3,13 @@
 
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
+#![feature(type_alias_enum_variants)]
+
+#[macro_use]
+extern crate mirai_annotations;
+
+#[cfg(feature = "mirai-contracts")]
+pub mod foreign_contracts;
 
 use std::fmt;
 

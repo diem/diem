@@ -15,6 +15,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use std::{collections::HashMap, u64};
+use types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
 
 /// The underlying carrier for the gas cost
 pub type GasUnits = u64;
@@ -26,6 +27,8 @@ pub type AbstractMemorySize = u64;
 /// serialization of the instruction but disregarding any instruction arguments.
 #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
 pub struct InstructionKey(pub u8);
+/// The maximum size representable by AbstractMemorySize
+pub const MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize = std::u64::MAX as AbstractMemorySize;
 
 /// The units of gas that should be charged per byte for every transaction.
 pub const INTRINSIC_GAS_PER_BYTE: GasUnits = 8;
@@ -200,12 +203,14 @@ pub fn static_cost_instr(instr: &Bytecode, size_provider: AbstractMemorySize) ->
 
 /// Computes the number of words rounded up
 pub fn words_in(size: AbstractMemorySize) -> AbstractMemorySize {
+    precondition!(size <= MAX_ABSTRACT_MEMORY_SIZE - (WORD_SIZE + 1));
     // round-up div truncate
     (size + (WORD_SIZE - 1)) / WORD_SIZE
 }
 
 /// Calculate the intrinsic gas for the transaction based upon its size in bytes/words.
 pub fn calculate_intrinsic_gas(transaction_size: u64) -> GasUnits {
+    precondition!(transaction_size <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
     let min_transaction_fee = MIN_TRANSACTION_GAS_UNITS;
 
     if transaction_size > LARGE_TRANSACTION_CUTOFF {
