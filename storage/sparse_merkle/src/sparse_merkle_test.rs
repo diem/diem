@@ -24,8 +24,9 @@ fn test_insert_to_empty_tree() {
     let value = AccountStateBlob::from(vec![1u8, 2u8, 3u8, 4u8]);
 
     let (new_root, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key, value.clone())],
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -43,8 +44,9 @@ fn test_insert_at_leaf_with_branch_created() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -57,8 +59,9 @@ fn test_insert_at_leaf_with_branch_created() {
     let value2 = AccountStateBlob::from(vec![3u8, 4u8]);
 
     let (root2, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key2, value2.clone())],
+            1,     /* version */
             root1, /* root hash being based on */
         )
         .unwrap();
@@ -91,8 +94,9 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -105,8 +109,9 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     let value2 = AccountStateBlob::from(vec![3u8, 4u8]);
 
     let (root2, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key2, value2.clone())],
+            1,     /* version */
             root1, /* root hash being based on */
         )
         .unwrap();
@@ -132,8 +137,9 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     // 3. Update leaf2 with new value
     let value2_update = AccountStateBlob::from(vec![5u8, 6u8]);
     let (root3, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key2, value2_update.clone())],
+            2,     /* version */
             root2, /* root hash being based on */
         )
         .unwrap();
@@ -159,8 +165,9 @@ fn setup_extension_case(db: &MockTreeStore, n: usize) -> (HashValue, HashValue) 
     let value2 = AccountStateBlob::from(vec![0xee, 0xee]);
 
     let (root, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone()), (key2, value2.clone())],
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -195,8 +202,9 @@ fn test_insert_at_extension_fork_at_begining() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -232,8 +240,9 @@ fn test_insert_at_extension_fork_in_the_middle() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -272,8 +281,9 @@ fn test_insert_at_extension_fork_at_end() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -308,8 +318,9 @@ fn test_insert_at_extension_fork_at_only_nibble() {
     let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
 
     let (root1, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![(key1, value1.clone())],
+            0,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -368,7 +379,7 @@ fn test_batch_insertion() {
     let value6 = AccountStateBlob::from(vec![6u8]);
 
     let (root, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![
                 (key1, value1.clone()),
                 (key2, value2.clone()),
@@ -378,6 +389,7 @@ fn test_batch_insertion() {
                 (key6, value6.clone()),
                 (key2, value2_update.clone()),
             ],
+            0,
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -418,12 +430,13 @@ fn test_non_existence() {
     let value3 = AccountStateBlob::from(vec![3u8]);
 
     let (root, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             vec![
                 (key1, value1.clone()),
                 (key2, value2.clone()),
                 (key3, value3.clone()),
             ],
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -460,7 +473,7 @@ fn test_non_existence() {
 }
 
 #[test]
-fn test_put_keyed_blob_sets() {
+fn test_put_blob_sets() {
     let mut keys = vec![];
     let mut values = vec![];;
     for _i in 0..100 {
@@ -481,7 +494,11 @@ fn test_put_keyed_blob_sets() {
                 keyed_blob_set.push(iter.next().unwrap());
             }
             let (new_root, batch) = tree
-                .put_keyed_blob_set(keyed_blob_set, root /* root hash being based on */)
+                .put_blob_set(
+                    keyed_blob_set,
+                    0,    /* version */
+                    root, /* root hash being based on */
+                )
                 .unwrap();
             root = new_root;
             db.write_tree_update_batch(batch.clone()).unwrap();
@@ -495,16 +512,19 @@ fn test_put_keyed_blob_sets() {
         let root = *SPARSE_MERKLE_PLACEHOLDER_HASH;
         let db = MockTreeStore::default();
         let tree = SparseMerkleTree::new(&db);
-        let mut keyed_blob_sets = vec![];
+        let mut blob_sets = vec![];
         for _ in 0..10 {
             let mut keyed_blob_set = vec![];
             for _ in 0..10 {
                 keyed_blob_set.push(iter.next().unwrap());
             }
-            keyed_blob_sets.push(keyed_blob_set);
+            blob_sets.push(keyed_blob_set);
         }
         let (root_hashes, batch) = tree
-            .put_keyed_blob_sets(keyed_blob_sets, root /* root hash being based on */)
+            .put_blob_sets(
+                blob_sets, 0,    /* version */
+                root, /* root hash being based on */
+            )
             .unwrap();
         assert_eq!(root_hashes, root_hashes_one_by_one);
         assert_eq!(batch, batch_one_by_one);
@@ -528,8 +548,9 @@ fn many_keys_get_proof_and_verify_tree_root(seed: &[u8], num_keys: usize) {
     }
 
     let (root, batch) = tree
-        .put_keyed_blob_set(
+        .put_blob_set(
             kvs.clone(),
+            0,                               /* version */
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
@@ -568,9 +589,9 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
         kvs.push((key, value.clone(), new_value.clone()));
     }
 
-    for kvs in kvs.iter().take(num_versions) {
+    for (idx, kvs) in kvs.iter().enumerate() {
         let (new_root, batch) = tree
-            .put_keyed_blob_set(vec![(kvs.0, kvs.1.clone())], prev_root)
+            .put_blob_set(vec![(kvs.0, kvs.1.clone())], idx as Version, prev_root)
             .unwrap();
         roots.push(new_root);
         prev_root = new_root;
@@ -578,9 +599,10 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
     }
 
     // Update value of all keys
-    for kvs in kvs.iter().take(num_versions) {
+    for (idx, kvs) in kvs.iter().enumerate() {
+        let version = (num_versions + idx) as Version;
         let (new_root, batch) = tree
-            .put_keyed_blob_set(vec![(kvs.0, kvs.2.clone())], prev_root)
+            .put_blob_set(vec![(kvs.0, kvs.2.clone())], version, prev_root)
             .unwrap();
         roots.push(new_root);
         prev_root = new_root;

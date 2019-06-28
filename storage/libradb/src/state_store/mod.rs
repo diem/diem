@@ -16,6 +16,7 @@ use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     proof::{verify_sparse_merkle_element, SparseMerkleProof},
+    transaction::Version,
 };
 
 pub(crate) struct StateStore {
@@ -47,10 +48,11 @@ impl StateStore {
     pub fn put_account_state_sets(
         &self,
         account_state_sets: Vec<HashMap<AccountAddress, AccountStateBlob>>,
+        first_version: Version,
         root_hash: HashValue,
         batch: &mut SchemaBatch,
     ) -> Result<Vec<HashValue>> {
-        let keyed_blob_sets = account_state_sets
+        let blob_sets = account_state_sets
             .into_iter()
             .map(|account_states| {
                 account_states
@@ -61,7 +63,7 @@ impl StateStore {
             .collect::<Vec<_>>();
 
         let (new_root_hash_vec, tree_update_batch) =
-            SparseMerkleTree::new(self).put_keyed_blob_sets(keyed_blob_sets, root_hash)?;
+            SparseMerkleTree::new(self).put_blob_sets(blob_sets, first_version, root_hash)?;
         let (node_batch, blob_batch) = tree_update_batch.into();
         node_batch
             .iter()

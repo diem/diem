@@ -14,12 +14,14 @@ use types::{
 fn put_account_state_set(
     store: &StateStore,
     account_state_set: Vec<(AccountAddress, AccountStateBlob)>,
+    first_version: Version,
     root_hash: HashValue,
     batch: &mut SchemaBatch,
 ) -> HashValue {
     store
         .put_account_state_sets(
             vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
+            first_version,
             root_hash,
             batch,
         )
@@ -79,7 +81,13 @@ fn test_state_store_reader_writer() {
 
     // Insert address1 with value 1 and verify new states.
     let mut batch1 = SchemaBatch::new();
-    root = put_account_state_set(&store, vec![(address1, value1.clone())], root, &mut batch1);
+    root = put_account_state_set(
+        &store,
+        vec![(address1, value1.clone())],
+        0, /* version */
+        root,
+        &mut batch1,
+    );
     db.commit(batch1).unwrap();
     {
         let (value, proof) = store
@@ -113,6 +121,7 @@ fn test_state_store_reader_writer() {
             (address2, value2.clone()),
             (address3, value3.clone()),
         ],
+        1, /* version */
         root,
         &mut batch2,
     );

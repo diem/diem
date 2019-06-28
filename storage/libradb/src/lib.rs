@@ -394,6 +394,7 @@ impl LibraDB {
             .collect::<Vec<_>>();
         let state_root_hashes = self.state_store.put_account_state_sets(
             account_state_sets,
+            first_version,
             cur_state_root_hash,
             &mut batch,
         )?;

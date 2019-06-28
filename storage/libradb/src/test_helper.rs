@@ -34,6 +34,7 @@ fn to_blocks_to_commit(
                 let txn_hash = txn_to_commit.signed_txn().hash();
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
+                    cur_ver,
                     cur_state_root_hash,
                     &mut batch,
                 )?[0];
