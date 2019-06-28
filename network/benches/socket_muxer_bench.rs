@@ -25,36 +25,31 @@
 //!
 //! Note: gnuplot must be installed to generate benchmark plots.
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
 use futures::{
-    channel::oneshot,
     compat::Sink01CompatExt,
     executor::block_on,
-    future::{Future, FutureExt, TryFutureExt},
+    future::{FutureExt, TryFutureExt},
     io::{AsyncRead, AsyncReadExt, AsyncWrite},
     sink::{Sink, SinkExt},
     stream::{self, Stream, StreamExt},
 };
-use memsocket::MemorySocket;
 use netcore::{
-    multiplexing::{yamux::Yamux, StreamMultiplexer},
-    transport::{
-        memory::MemoryTransport,
-        tcp::{TcpSocket, TcpTransport},
-        Transport, TransportExt,
-    },
+    multiplexing::StreamMultiplexer,
+    transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
 };
-use noise::{NoiseConfig, NoiseSocket};
 use parity_multiaddr::Multiaddr;
-use std::{fmt::Debug, sync::Arc, time::Duration};
-use tokio::{
-    codec::Framed,
-    runtime::{Runtime, TaskExecutor},
+use socket_bench_server::{
+    build_memsocket_muxer_transport, build_memsocket_noise_muxer_transport,
+    build_memsocket_noise_transport, build_tcp_muxer_transport, build_tcp_noise_muxer_transport,
+    build_tcp_noise_transport, start_muxer_server, start_stream_server, Args,
 };
+use std::{fmt::Debug, io, time::Duration};
+use tokio::{codec::Framed, runtime::Runtime};
 use unsigned_varint::codec::UviBytes;
 
 const KiB: usize = 1 << 10;
@@ -64,137 +59,12 @@ const MiB: usize = 1 << 20;
 // we measure all the message being sent.
 const SENDS_PER_ITER: usize = 100;
 
-/// Build a MemorySocket + Noise transport
-fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
-    MemoryTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
-    })
-}
-
-/// Build a MemorySocket + Muxer transport
-fn build_memsocket_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
-    MemoryTransport::default().and_then(Yamux::upgrade_connection)
-}
-
-/// Build a MemorySocket + Noise + Muxer transport
-fn build_memsocket_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
-    MemoryTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
-        })
-        .and_then(Yamux::upgrade_connection)
-}
-
-/// Build a Tcp + Noise transport
-fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
-    TcpTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
-    })
-}
-
-/// Build a Tcp + Muxer transport
-fn build_tcp_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
-    TcpTransport::default().and_then(Yamux::upgrade_connection)
-}
-
-/// Build a Tcp + Noise + Muxer transport
-fn build_tcp_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
-    TcpTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
-        })
-        .and_then(Yamux::upgrade_connection)
-}
-
-/// Spawn a Future on an executor, but send the output over oneshot channel.
-fn spawn_with_handle<F>(executor: &TaskExecutor, f: F) -> oneshot::Receiver<F::Output>
-where
-    F: Future + Send + 'static,
-    F::Output: Send,
-{
-    let (tx, rx) = oneshot::channel();
-    let f_send = async move {
-        let out = f.await;
-        let _ = tx.send(out);
-    };
-    executor.spawn(f_send.boxed().unit_error().compat());
-    rx
-}
-
-/// Server side handler for send throughput benchmark when the messages are sent
-/// over a simple stream (tcp or in-memory).
-async fn server_stream_handler<L, I, S, E>(mut server_listener: L) -> impl Stream
-where
-    L: Stream<Item = Result<(I, Multiaddr), E>> + Unpin,
-    I: Future<Output = Result<S, E>>,
-    S: AsyncRead + AsyncWrite + Unpin,
-    E: ::std::error::Error,
-{
-    // Wait for next inbound connection
-    let (f_stream, _) = server_listener.next().await.unwrap().unwrap();
-    let stream = f_stream.await.unwrap();
-    let mut stream = Framed::new(stream.compat(), UviBytes::<Bytes>::default()).sink_compat();
-
-    // Drain all messages from the client.
-    while let Some(_) = stream.next().await {}
-    stream.close().await.unwrap();
-
-    // Return stream so we drop after runtime shuts down to avoid race
-    stream
-}
-
-/// Server side handler for send throughput benchmark when the messages are sent
-/// over a muxer substream.
-async fn server_muxer_handler<L, I, M, E>(mut server_listener: L) -> (M, impl Stream)
-where
-    L: Stream<Item = Result<(I, Multiaddr), E>> + Unpin,
-    I: Future<Output = Result<M, E>>,
-    M: StreamMultiplexer,
-    E: ::std::error::Error,
-{
-    // Wait for next inbound connection
-    let (f_muxer, _) = server_listener.next().await.unwrap().unwrap();
-    let muxer = f_muxer.await.unwrap();
-
-    // Wait for inbound client substream
-    let mut muxer_inbounds = muxer.listen_for_inbound();
-    let substream = muxer_inbounds.next().await.unwrap().unwrap();
-    let mut stream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
-
-    // Drain all messages from the client.
-    while let Some(_) = stream.next().await {}
-    stream.close().await.unwrap();
-
-    // Return muxer and stream so we drop after runtime shuts down to avoid race
-    (muxer, stream)
-}
-
 /// The tight inner loop we're actually benchmarking. In this benchmark, we simply
 /// measure the throughput of sending many messages of size `msg_len` over
 /// `client_stream`.
 fn bench_client_send<S>(b: &mut Bencher, msg_len: usize, client_stream: &mut S)
 where
-    S: Sink<Bytes> + Unpin,
+    S: Sink<Bytes> + Stream<Item = Result<BytesMut, io::Error>> + Unpin,
     S::SinkError: Debug,
 {
     // Benchmark sending over the in-memory stream.
@@ -208,8 +78,11 @@ where
         block_on(client_stream.send_all(&mut data_stream)).unwrap();
     });
 
-    // Shutdown client stream.
+    // Client half-closes their side of the stream
     block_on(client_stream.close()).unwrap();
+
+    // Wait for server to half-close to complete the shutdown
+    assert!(block_on(client_stream.next()).is_none());
 }
 
 /// Setup and benchmark the client side for the simple stream case
@@ -274,197 +147,121 @@ where
 
 /// Benchmark the throughput of sending messages of size `msg_len` over an
 /// in-memory socket.
-fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize) {
+fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = MemoryTransport::default();
-    let server_transport = MemoryTransport::default();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/memory/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_stream_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let _client_stream =
         bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let _server_stream = block_on(f_server).unwrap();
 }
 
 /// Benchmark the throughput of sending messages of size `msg_len` over an
 /// in-memory socket with Noise encryption.
-fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize) {
+fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_memsocket_noise_transport();
-    let server_transport = build_memsocket_noise_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/memory/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_stream_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let _client_stream =
         bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let _server_stream = block_on(f_server).unwrap();
 }
 
 /// Benchmark the throughput of sending messages of size `msg_len` over a muxer
 /// over an in-memory socket.
-fn bench_memsocket_muxer_send(b: &mut Bencher, msg_len: &usize) {
+fn bench_memsocket_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_memsocket_muxer_transport();
-    let server_transport = build_memsocket_muxer_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/memory/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection and substream, then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_muxer_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let (_client_muxer, _client_stream) =
         bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let (_server_muxer, _server_stream) = block_on(f_server).unwrap();
 }
 
 /// Benchmark the throughput of sending messages of size`msg_len` over a muxer
 /// over an in-memory socket with noise encryption
-fn bench_memsocket_noise_muxer_send(b: &mut Bencher, msg_len: &usize) {
+fn bench_memsocket_noise_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_memsocket_noise_muxer_transport();
-    let server_transport = build_memsocket_noise_muxer_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/memory/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection and substream, then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_muxer_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let (_client_muxer, _client_stream) =
         bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let (_server_muxer, _server_stream) = block_on(f_server).unwrap();
 }
 
-/// Benchmark the throughput of sending messages of size `msg_len` over tcp
-/// loopback.
-fn bench_tcp_send(b: &mut Bencher, msg_len: &usize) {
+/// Benchmark the throughput of sending messages of size `msg_len` over tcp to
+/// server at multiaddr `server_addr`.
+fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = TcpTransport::default();
-    let server_transport = TcpTransport::default();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_stream_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let _client_stream =
         bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let _server_stream = block_on(f_server).unwrap();
 }
 
-/// Benchmark the throughput of sending messages of size `msg_len` over tcp
-/// loopback with Noise encryption.
-fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize) {
+/// Benchmark the throughput of sending messages of size `msg_len` over tcp with
+/// Noise encryption to server at multiaddr `server_addr`.
+fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_tcp_noise_transport();
-    let server_transport = build_tcp_noise_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_stream_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let _client_stream =
         bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let _server_stream = block_on(f_server).unwrap();
 }
 
 /// Benchmark the throughput of sending messages of size `msg_len` over a muxer
-/// over tcp loopback.
-fn bench_tcp_muxer_send(b: &mut Bencher, msg_len: &usize) {
+/// over tcp to server at multiaddr `server_addr`.
+fn bench_tcp_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_tcp_muxer_transport();
-    let server_transport = build_tcp_muxer_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection and substream, then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_muxer_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let (_client_muxer, _client_stream) =
         bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let (_server_muxer, _server_stream) = block_on(f_server).unwrap();
 }
 
-/// Benchmark the throughput of sending messages of size `msg_len` over a muxer over tcp lookback
-/// with noise encryption.
-fn bench_tcp_noise_muxer_send(b: &mut Bencher, msg_len: &usize) {
+/// Benchmark the throughput of sending messages of size `msg_len` over a muxer
+/// over tcp with Noise encryption to server at multiaddr `server_addr`.
+fn bench_tcp_noise_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
-    let executor = runtime.executor();
 
     let client_transport = build_tcp_noise_muxer_transport();
-    let server_transport = build_tcp_noise_muxer_transport();
-    let (server_listener, server_addr) = server_transport
-        .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-        .unwrap();
-
-    // Server waits for client connection and substream, then reads all messages.
-    let f_server = spawn_with_handle(&executor, server_muxer_handler(server_listener));
 
     // Benchmark sending some data to the server.
     let (_client_muxer, _client_stream) =
         bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
-
-    // Wait for server task to finish.
-    let (_server_muxer, _server_stream) = block_on(f_server).unwrap();
 }
 
-/// Measure sending messages of varying sizes over:
-/// 1. in-memory transport
-/// 2. in-memory transport + noise encryption
-/// 3. in-memory transport + yamux
-/// 4. in-memory transport + noise encryption + yamux
-/// 5. tcp transport
-/// 6. tcp transport + noise encryption
-/// 7. tcp transport + yamux
-/// 8. tcp transport + noise encryption + yamux
+/// Measure sending messages of varying sizes over varying transports, where
+///
+/// base transport := {in-memory, loopback tcp, remote tcp}
+/// encryption := {none, noise}
+/// multiplexer := {none, yamux}
+/// transports := base transport × encryption × multiplexer
+///
+/// listed explicitly,
+///
+///  1. in-memory transport
+///  2. in-memory transport + noise encryption
+///  3. in-memory transport + yamux
+///  4. in-memory transport + noise encryption + yamux
+///  5. loopback tcp transport
+///  6. loopback tcp transport + noise encryption
+///  7. loopback tcp transport + yamux
+///  8. loopback tcp transport + noise encryption + yamux
+///  9. remote tcp transport
+/// 10. remote tcp transport + noise encryption
+/// 11. remote tcp transport + yamux
+/// 12. remote tcp transport + noise encryption + yamux
 ///
 /// Important:
 /// 1. Measures single-threaded send since only one sending task is used, so any
@@ -472,34 +269,140 @@ fn bench_tcp_noise_muxer_send(b: &mut Bencher, msg_len: &usize) {
 /// 2. We use a `UviBytes` codec to frame the benchmark messages since this is
 ///    what we currently use in the codebase; however, this seems to add not
 ///    insignificant overhead and might change in the near future.
-/// 3. TCP benchmarks are only over loopback.
-/// 4. Socket buffer sizes and buffering strategies are not yet optimized.
+/// 3. Socket buffer sizes and buffering strategies are not yet optimized.
+/// 4. local_tcp benchmarks are only over loopback.
+/// 5. remote_tcp benchmarks connect to a `socket_bench_server` instance running
+///    running remotely.
+/// 6. The remote benchmarks connect to env-defined multiaddrs `$TCP_ADDR`,
+///    `$TCP_NOISE_ADDR`, `$TCP_MUXER_ADDR`, and `$TCP_NOISE_MUXER_ADDR` for
+///    benchmarks `remote_tcp`, `remote_tcp+noise`, `remote_tcp+muxer`, and
+///    `remote_tcp+noise+muxer` respectively.
 fn socket_muxer_bench(c: &mut Criterion) {
     ::logger::try_init_for_testing();
+
+    let rt = Runtime::new().unwrap();
+    let executor = rt.executor();
+
+    let args = Args::from_env();
+
+    let remote_tcp_addr = args.tcp_addr;
+    let remote_tcp_noise_addr = args.tcp_noise_addr;
+    let remote_tcp_muxer_addr = args.tcp_muxer_addr;
+    let remote_tcp_noise_muxer_addr = args.tcp_noise_muxer_addr;
 
     // Parameterize benchmarks over the message length.
     let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];
 
-    c.bench(
-        "socket_muxer_send_throughput",
-        ParameterizedBenchmark::new("memsocket", bench_memsocket_send, msg_lens)
-            .with_function("memsocket+noise", bench_memsocket_noise_send)
-            .with_function("memsocket+muxer", bench_memsocket_muxer_send)
-            .with_function("memsocket+noise+muxer", bench_memsocket_noise_muxer_send)
-            .with_function("tcp", bench_tcp_send)
-            .with_function("tcp+noise", bench_tcp_noise_send)
-            .with_function("tcp+muxer", bench_tcp_muxer_send)
-            .with_function("tcp+noise+muxer", bench_tcp_noise_muxer_send)
-            .warm_up_time(Duration::from_secs(2))
-            .measurement_time(Duration::from_secs(2))
-            .sample_size(10)
-            .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
-            .throughput(|msg_len| {
-                let msg_len = *msg_len as u32;
-                let num_msgs = SENDS_PER_ITER as u32;
-                Throughput::Bytes(msg_len * num_msgs)
-            }),
+    // start local bench servers
+
+    let memsocket_addr = start_stream_server(
+        &executor,
+        MemoryTransport::default(),
+        "/memory/0".parse().unwrap(),
     );
+    let memsocket_noise_addr = start_stream_server(
+        &executor,
+        build_memsocket_noise_transport(),
+        "/memory/0".parse().unwrap(),
+    );
+    let memsocket_muxer_addr = start_muxer_server(
+        &executor,
+        build_memsocket_muxer_transport(),
+        "/memory/0".parse().unwrap(),
+    );
+    let memsocket_noise_muxer_addr = start_muxer_server(
+        &executor,
+        build_memsocket_noise_muxer_transport(),
+        "/memory/0".parse().unwrap(),
+    );
+
+    let local_tcp_addr = start_stream_server(
+        &executor,
+        TcpTransport::default(),
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
+    let local_tcp_noise_addr = start_stream_server(
+        &executor,
+        build_tcp_noise_transport(),
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
+    let local_tcp_muxer_addr = start_muxer_server(
+        &executor,
+        build_tcp_muxer_transport(),
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
+    let local_tcp_noise_muxer_addr = start_muxer_server(
+        &executor,
+        build_tcp_noise_muxer_transport(),
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
+
+    // add the memsocket and tcp loopback socket benches
+
+    let mut bench = ParameterizedBenchmark::new(
+        "memsocket",
+        move |b, msg_len| bench_memsocket_send(b, msg_len, memsocket_addr.clone()),
+        msg_lens,
+    )
+    .with_function("memsocket+noise", move |b, msg_len| {
+        bench_memsocket_noise_send(b, msg_len, memsocket_noise_addr.clone())
+    })
+    .with_function("memsocket+muxer", move |b, msg_len| {
+        bench_memsocket_muxer_send(b, msg_len, memsocket_muxer_addr.clone())
+    })
+    .with_function("memsocket+noise+muxer", move |b, msg_len| {
+        bench_memsocket_noise_muxer_send(b, msg_len, memsocket_noise_muxer_addr.clone())
+    })
+    .with_function("local_tcp", move |b, msg_len| {
+        bench_tcp_send(b, msg_len, local_tcp_addr.clone())
+    })
+    .with_function("local_tcp+noise", move |b, msg_len| {
+        bench_tcp_noise_send(b, msg_len, local_tcp_noise_addr.clone())
+    })
+    .with_function("local_tcp+muxer", move |b, msg_len| {
+        bench_tcp_muxer_send(b, msg_len, local_tcp_muxer_addr.clone())
+    })
+    .with_function("local_tcp+noise+muxer", move |b, msg_len| {
+        bench_tcp_noise_muxer_send(b, msg_len, local_tcp_noise_muxer_addr.clone())
+    });
+
+    // optionally enable remote benches if the env variables are set
+
+    if let Some(remote_tcp_addr) = remote_tcp_addr {
+        bench = bench.with_function("remote_tcp", move |b, msg_len| {
+            bench_tcp_send(b, msg_len, remote_tcp_addr.clone())
+        });
+    }
+    if let Some(remote_tcp_noise_addr) = remote_tcp_noise_addr {
+        bench = bench.with_function("remote_tcp+noise", move |b, msg_len| {
+            bench_tcp_noise_send(b, msg_len, remote_tcp_noise_addr.clone())
+        });
+    }
+    if let Some(remote_tcp_muxer_addr) = remote_tcp_muxer_addr {
+        bench = bench.with_function("remote_tcp+muxer", move |b, msg_len| {
+            bench_tcp_muxer_send(b, msg_len, remote_tcp_muxer_addr.clone())
+        });
+    }
+    if let Some(remote_tcp_noise_muxer_addr) = remote_tcp_noise_muxer_addr {
+        bench = bench.with_function("remote_tcp+noise+muxer", move |b, msg_len| {
+            bench_tcp_noise_muxer_send(b, msg_len, remote_tcp_noise_muxer_addr.clone())
+        });
+    }
+
+    // set bench configuration
+
+    bench = bench
+        .warm_up_time(Duration::from_secs(2))
+        .measurement_time(Duration::from_secs(2))
+        .sample_size(10)
+        .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
+        .throughput(|msg_len| {
+            let msg_len = *msg_len as u32;
+            let num_msgs = SENDS_PER_ITER as u32;
+            Throughput::Bytes(msg_len * num_msgs)
+        });
+
+    c.bench("socket_muxer_send_throughput", bench);
 }
 
 criterion_group!(network_benches, socket_muxer_bench);

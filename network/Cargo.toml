@@ -28,6 +28,7 @@ memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
+socket_bench_server = { path = "socket_bench_server" }
 types = { path = "../types" }
 
 [dev-dependencies]
