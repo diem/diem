@@ -20,7 +20,7 @@ fn register_signals(term: Arc<AtomicBool>) {
         let thread = std::thread::current();
         unsafe {
             signal_hook::register(*signal, move || {
-                term_clone.store(true, Ordering::Relaxed);
+                term_clone.store(true, Ordering::Release);
                 thread.unpark();
             })
             .expect("failed to register signal handler");
@@ -38,7 +38,7 @@ fn main() {
     let term = Arc::new(AtomicBool::new(false));
     register_signals(Arc::clone(&term));
 
-    while !term.load(Ordering::Relaxed) {
+    while !term.load(Ordering::Acquire) {
         std::thread::park();
     }
 }
