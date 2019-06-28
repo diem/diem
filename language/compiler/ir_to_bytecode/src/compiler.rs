@@ -264,22 +264,27 @@ impl<'a> CompilationScope<'a> {
         }
     }
 
-    // TODO: Change `module_name` to be something like a ModuleIdent when we have better data
-    // structure for dependency modules input.
+    // TODO: Change the combination of `address` & `module_name` to something like a ModuleIdent
+    // when we have better data structure for dependency modules input.
     fn link_module(
         &mut self,
         import_name: &str,
+        addr: &AccountAddress,
         module_name: &str,
         mh_idx: ModuleHandleIndex,
     ) -> Result<()> {
         for idx in 0..self.modules.len() {
-            if self.modules[idx].name() == module_name {
+            if self.modules[idx].name() == module_name && self.modules[idx].address() == addr {
                 self.imported_modules
                     .insert(import_name.to_string(), (idx as u8, mh_idx));
                 return Ok(());
             }
         }
-        bail!("can't find module {} in dependency list", import_name);
+        bail!(
+            "can't find module 0x{}.{} in dependency list",
+            addr,
+            import_name
+        );
     }
 
     fn link_function(
@@ -326,7 +331,6 @@ impl<'a> CompilationScope<'a> {
             ),
             Some(func_map) => func_map,
         };
-
         let (module_index, fd_idx) = match func_map.get(name) {
             None => bail!("no function {} in module {}", name, mh_idx),
             Some(res) => res,
@@ -437,6 +441,7 @@ trait Scope {
     fn link_module(
         &mut self,
         import_name: &str,
+        addr: &AccountAddress,
         module_name: &str,
         mh_idx: ModuleHandleIndex,
     ) -> Result<()>;
@@ -608,11 +613,12 @@ impl<'a> Scope for ModuleScope<'a> {
     fn link_module(
         &mut self,
         import_name: &str,
+        addr: &AccountAddress,
         module_name: &str,
         mh_idx: ModuleHandleIndex,
     ) -> Result<()> {
         self.compilation_scope
-            .link_module(import_name, module_name, mh_idx)
+            .link_module(import_name, addr, module_name, mh_idx)
     }
 
     fn link_field(
@@ -825,11 +831,12 @@ impl<'a> Scope for ScriptScope<'a> {
     fn link_module(
         &mut self,
         import_name: &str,
+        addr: &AccountAddress,
         module_name: &str,
         mh_idx: ModuleHandleIndex,
     ) -> Result<()> {
         self.compilation_scope
-            .link_module(import_name, module_name, mh_idx)
+            .link_module(import_name, addr, module_name, mh_idx)
     }
 
     fn link_field(
@@ -1077,7 +1084,7 @@ impl<S: Scope + Sized> Compiler<S> {
         let name_idx = self.make_string(&name)?;
         let mh_idx = self.make_module_handle(addr_idx, name_idx)?;
         self.scope
-            .link_module(module_alias.name_ref(), name, mh_idx)
+            .link_module(module_alias.name_ref(), address, name, mh_idx)
     }
 
     fn import_signature_token(
@@ -1092,21 +1099,24 @@ impl<S: Scope + Sized> Compiler<S> {
             | SignatureToken::ByteArray
             | SignatureToken::Address => Ok(sig_token),
             SignatureToken::Struct(sh_idx) => {
-                let (defining_module_name, name, is_resource) = {
-                    let module = self.scope.get_imported_module(module_name)?;
-                    let struct_handle = module.struct_handle_at(sh_idx);
-                    let defining_module_handle = module.module_handle_at(struct_handle.module);
-                    (
-                        module.string_at(defining_module_handle.name),
-                        module.string_at(struct_handle.name).to_string(),
-                        struct_handle.is_resource,
-                    )
-                };
-                let mh_idx = self
-                    .scope
-                    .get_imported_module_handle(defining_module_name)?;
-                let name_idx = self.make_string(&name)?;
-                let local_sh_idx = self.make_struct_handle(mh_idx, name_idx, is_resource)?;
+                let module = self.scope.get_imported_module(module_name)?;
+                let struct_handle = module.struct_handle_at(sh_idx);
+                let defining_module_handle = module.module_handle_at(struct_handle.module);
+                let is_resource = struct_handle.is_resource;
+
+                let struct_name = module.string_at(struct_handle.name).to_string();
+                let defining_module_name =
+                    module.string_at(defining_module_handle.name).to_string();
+                let defining_module_addr = *module.address_at(defining_module_handle.address);
+
+                let name_idx = self.make_string(&struct_name)?;
+                let defining_module_name_idx = self.make_string(&defining_module_name)?;
+                let defining_module_addr_idx = self.make_address(&defining_module_addr)?;
+                let defining_module_handle_idx =
+                    self.make_module_handle(defining_module_addr_idx, defining_module_name_idx)?;
+
+                let local_sh_idx =
+                    self.make_struct_handle(defining_module_handle_idx, name_idx, is_resource)?;
                 Ok(SignatureToken::Struct(local_sh_idx))
             }
             SignatureToken::Reference(sub_sig_token) => Ok(SignatureToken::Reference(Box::new(
@@ -2168,7 +2178,6 @@ impl<S: Scope + Sized> Compiler<S> {
                     ModuleHandleIndex::new(0)
                 } else {
                     let target_module = self.scope.get_imported_module(module.name_ref())?;
-
                     let mut idx = 0;
                     while idx < target_module.function_defs().len() {
                         let fh_idx = target_module

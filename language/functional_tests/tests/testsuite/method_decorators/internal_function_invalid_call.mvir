@@ -34,7 +34,7 @@ module Test {
 }
 
 script:
-import 0x10.Test;
+import Transaction.Test;
 
 main() {
     let obj: V#Test.T;
