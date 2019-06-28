@@ -23,6 +23,14 @@
 //!
 //! `open network/target/criterion/report/index.html`
 //!
+//! # Remote benchmarks
+//!
+//! The `socket_muxer_bench` can also act as a client to the corresponding
+//! `socket_bench_server`. Simply pass in one or more of the following env vars
+//! which correspond to different remote benchmarks, e.g.,
+//!
+//! `TCP_ADDR=/ip4/12.34.56.78/tcp/1234 cargo bench -p network remote_tcp`
+//!
 //! Note: gnuplot must be installed to generate benchmark plots.
 
 use bytes::{Bytes, BytesMut};

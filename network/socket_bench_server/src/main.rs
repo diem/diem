@@ -4,6 +4,17 @@
 #![feature(async_await)]
 
 //! Standalone server for socket_muxer_bench
+//! ========================================
+//!
+//! You can run `socket_muxer_bench` across a real network by running this bench
+//! server remotely. For example,
+//!
+//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release --bin socket_bench_server`
+//!
+//! will run the socket bench server handling the remote_tcp benchmark. A
+//! corresponding client would exercise this benchmark using
+//!
+//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo bench -p network remote_tcp`
 
 use futures_01::future::Future as Future01;
 use logger::{prelude::*, set_default_global_logger};
