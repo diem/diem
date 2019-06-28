@@ -13,9 +13,12 @@ use crate::{
 };
 use config::config::VMPublishingOption;
 use logger::prelude::*;
+use rayon::prelude::*;
 use state_view::StateView;
 use types::{
-    transaction::{SignedTransaction, TransactionOutput, TransactionStatus},
+    transaction::{
+        SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
+    },
     vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
     write_set::WriteSet,
 };
@@ -57,15 +60,27 @@ pub fn execute_block<'alloc>(
     let module_cache = BlockModuleCache::new(code_cache, ModuleFetcherImpl::new(data_view));
     let mut data_cache = BlockDataCache::new(data_view);
     let mut result = vec![];
-    for txn in txn_block.into_iter() {
-        let output = transaction_flow(
-            txn,
-            &module_cache,
-            script_cache,
-            &data_cache,
-            mode,
-            publishing_option,
-        );
+
+    let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>> = txn_block
+        .into_par_iter()
+        .map(|txn| match txn.check_signature() {
+            Ok(t) => Ok(t),
+            Err(_) => Err(VMStatus::Validation(VMValidationStatus::InvalidSignature)),
+        })
+        .collect();
+
+    for transaction in signature_verified_block {
+        let output = match transaction {
+            Ok(t) => transaction_flow(
+                t,
+                &module_cache,
+                script_cache,
+                &data_cache,
+                mode,
+                publishing_option,
+            ),
+            Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
+        };
         data_cache.push_write_set(&output.write_set());
         result.push(output);
     }
@@ -87,7 +102,7 @@ pub fn execute_block<'alloc>(
 /// include those newly published modules. This function will also update the `script_cache` to
 /// cache this `txn`
 fn transaction_flow<'alloc, P>(
-    txn: SignedTransaction,
+    txn: SignatureCheckedTransaction,
     module_cache: P,
     script_cache: &ScriptCache<'alloc>,
     data_cache: &BlockDataCache<'_>,

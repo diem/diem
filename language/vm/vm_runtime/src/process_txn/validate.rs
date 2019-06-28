@@ -78,13 +78,6 @@ where
             allocator,
             ..
         } = process_txn;
-        let txn = match txn.check_signature() {
-            Ok(txn) => txn,
-            Err(_) => {
-                error!("[VM] Invalid signature");
-                return Err(VMStatus::Validation(VMValidationStatus::InvalidSignature));
-            }
-        };
 
         let txn_state = match txn.payload() {
             TransactionPayload::Program(program) => {

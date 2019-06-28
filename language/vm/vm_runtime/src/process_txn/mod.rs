@@ -4,7 +4,7 @@ use crate::{
 };
 use config::config::VMPublishingOption;
 use std::marker::PhantomData;
-use types::transaction::SignedTransaction;
+use types::transaction::SignatureCheckedTransaction;
 use vm_cache_map::Arena;
 
 pub mod execute;
@@ -21,7 +21,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    txn: SignedTransaction,
+    txn: SignatureCheckedTransaction,
     module_cache: P,
     data_cache: &'txn RemoteCache,
     allocator: &'txn Arena<LoadedModule>,
@@ -35,7 +35,7 @@ where
 {
     /// Creates a new instance of `ProcessTransaction`.
     pub fn new(
-        txn: SignedTransaction,
+        txn: SignatureCheckedTransaction,
         module_cache: P,
         data_cache: &'txn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,

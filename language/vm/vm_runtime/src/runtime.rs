@@ -18,7 +18,7 @@ use logger::prelude::*;
 use state_view::StateView;
 use types::{
     transaction::{SignedTransaction, TransactionOutput},
-    vm_error::VMStatus,
+    vm_error::{VMStatus, VMValidationStatus},
 };
 use vm_cache_map::Arena;
 
@@ -73,7 +73,13 @@ impl<'alloc> VMRuntime<'alloc> {
         let data_cache = BlockDataCache::new(data_view);
 
         let arena = Arena::new();
-        let process_txn = ProcessTransaction::new(txn, module_cache, &data_cache, &arena);
+        let signature_verified_txn = match txn.check_signature() {
+            Ok(t) => t,
+            Err(_) => return Some(VMStatus::Validation(VMValidationStatus::InvalidSignature)),
+        };
+
+        let process_txn =
+            ProcessTransaction::new(signature_verified_txn, module_cache, &data_cache, &arena);
         let mode = if data_view.is_genesis() {
             ValidationMode::Genesis
         } else {

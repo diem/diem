@@ -10,6 +10,7 @@ edition = "2018"
 rental = "0.5.3"
 tiny-keccak = "1.4.2"
 proptest = "0.9"
+rayon = "1.1"
 
 bytecode_verifier = { path = "../../bytecode_verifier" }
 canonical_serialization = { path = "../../../common/canonical_serialization" }
