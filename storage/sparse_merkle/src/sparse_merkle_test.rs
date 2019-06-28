@@ -30,6 +30,7 @@ fn test_insert_to_empty_tree() {
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
+    assert!(batch.retire_log_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
 
     assert_eq!(tree.get(key, new_root).unwrap().unwrap(), value);
@@ -50,6 +51,7 @@ fn test_insert_at_leaf_with_branch_created() {
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
+    assert!(batch.retire_log_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
     assert_eq!(tree.get(key1, root1).unwrap().unwrap(), value1);
 
@@ -65,6 +67,7 @@ fn test_insert_at_leaf_with_branch_created() {
             root1, /* root hash being based on */
         )
         .unwrap();
+    assert!(batch.retire_log_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
     assert_eq!(tree.get(key1, root1).unwrap().unwrap(), value1);
     assert!(tree.get(key2, root1).unwrap().is_none());
@@ -129,9 +132,15 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     branch.set_child(0, (leaf1.hash(), true /* is_leaf */));
     branch.set_child(1, (leaf2.hash(), true /* is_leaf */));
     let extension = ExtensionNode::new(NibblePath::new_odd(vec![0x00]), branch.hash());
-    assert_eq!(db.get_node(root1).unwrap(), leaf1.into());
-    assert_eq!(db.get_node(branch.child(1).unwrap()).unwrap(), leaf2.into());
-    assert_eq!(db.get_node(extension.child()).unwrap(), branch.into());
+    assert_eq!(db.get_node(root1).unwrap(), leaf1.clone().into());
+    assert_eq!(
+        db.get_node(branch.child(1).unwrap()).unwrap(),
+        leaf2.clone().into()
+    );
+    assert_eq!(
+        db.get_node(extension.child()).unwrap(),
+        branch.clone().into()
+    );
     assert_eq!(db.get_node(root2).unwrap(), extension.clone().into());
 
     // 3. Update leaf2 with new value
@@ -151,6 +160,16 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     // Get # of nodes.
     assert_eq!(db.num_nodes(), 7);
     assert_eq!(db.num_blobs(), 3);
+
+    // Purge retired nodes.
+    db.purge_retired_records(1).unwrap();
+    assert_eq!(db.num_nodes(), 7);
+    assert_eq!(db.num_blobs(), 3);
+    db.purge_retired_records(2).unwrap();
+    assert_eq!(db.num_nodes(), 4);
+    assert_eq!(db.num_blobs(), 3); // TODO: verify blob retirement after implemented.
+    assert_eq!(tree.get(key1, root3).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key2, root3).unwrap().unwrap(), value2_update);
 }
 
 fn setup_extension_case(db: &MockTreeStore, n: usize) -> (HashValue, HashValue) {
@@ -159,7 +178,7 @@ fn setup_extension_case(db: &MockTreeStore, n: usize) -> (HashValue, HashValue) 
     let key1 = HashValue::new([0xffu8; HashValue::LENGTH]);
     let value1 = AccountStateBlob::from(vec![0xff, 0xff]);
 
-    // Change the n-th nibble to 1 so it results in an extension node with num_nibbles == n;
+    // Change the n-th nibble to 0xE so it results in an extension node with num_nibbles == n;
     // if n == 0, no extension node will be created.
     let key2 = modify(&key1, n / 2, if n % 2 == 0 { 0xef } else { 0xfe });
     let value2 = AccountStateBlob::from(vec![0xee, 0xee]);
@@ -204,7 +223,7 @@ fn test_insert_at_extension_fork_at_begining() {
     let (root1, batch) = tree
         .put_blob_set(
             vec![(key1, value1.clone())],
-            0,    /* version */
+            1,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -228,6 +247,10 @@ fn test_insert_at_extension_fork_at_begining() {
     assert_eq!(db.get_node(root1).unwrap(), branch.into());
     assert_eq!(db.num_nodes(), 7);
     assert_eq!(db.num_blobs(), 3);
+
+    // Purge retired nodes. (The old extension should be gone.)
+    db.purge_retired_records(1).unwrap();
+    assert_eq!(db.num_nodes(), 6);
 }
 
 #[test]
@@ -242,7 +265,7 @@ fn test_insert_at_extension_fork_in_the_middle() {
     let (root1, batch) = tree
         .put_blob_set(
             vec![(key1, value1.clone())],
-            0,    /* version */
+            1,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -269,6 +292,10 @@ fn test_insert_at_extension_fork_in_the_middle() {
     assert_eq!(db.get_node(root1).unwrap(), extension_before_fork.into());
     assert_eq!(db.num_nodes(), 8);
     assert_eq!(db.num_blobs(), 3);
+
+    // Purge retired nodes. (The old extension should be gone.)
+    db.purge_retired_records(1).unwrap();
+    assert_eq!(db.num_nodes(), 7);
 }
 
 #[test]
@@ -283,7 +310,7 @@ fn test_insert_at_extension_fork_at_end() {
     let (root1, batch) = tree
         .put_blob_set(
             vec![(key1, value1.clone())],
-            0,    /* version */
+            1,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -306,6 +333,10 @@ fn test_insert_at_extension_fork_at_end() {
     assert_eq!(db.get_node(root1).unwrap(), extension_before_fork.into());
     assert_eq!(db.num_nodes(), 7);
     assert_eq!(db.num_blobs(), 3);
+
+    // Purge retired nodes. (The old extension should be gone.)
+    db.purge_retired_records(1).unwrap();
+    assert_eq!(db.num_nodes(), 6);
 }
 
 #[test]
@@ -320,7 +351,7 @@ fn test_insert_at_extension_fork_at_only_nibble() {
     let (root1, batch) = tree
         .put_blob_set(
             vec![(key1, value1.clone())],
-            0,    /* version */
+            1,    /* version */
             root, /* root hash being based on */
         )
         .unwrap();
@@ -336,12 +367,14 @@ fn test_insert_at_extension_fork_at_only_nibble() {
     assert_eq!(db.get_node(root1).unwrap(), branch.into());
     assert_eq!(db.num_nodes(), 6);
     assert_eq!(db.num_blobs(), 3);
+
+    // Purge retired nodes. (The old extension should be gone.)
+    db.purge_retired_records(1).unwrap();
+    assert_eq!(db.num_nodes(), 5);
 }
 
 #[test]
 fn test_batch_insertion() {
-    let db = MockTreeStore::default();
-    let tree = SparseMerkleTree::new(&db);
     // ```text
     //                              branch(root)
     //                            /        \
@@ -378,32 +411,81 @@ fn test_batch_insertion() {
     let key6 = modify(&key1, 3, 0x06);
     let value6 = AccountStateBlob::from(vec![6u8]);
 
-    let (root, batch) = tree
-        .put_blob_set(
-            vec![
-                (key1, value1.clone()),
-                (key2, value2.clone()),
-                (key3, value3.clone()),
-                (key4, value4.clone()),
-                (key5, value5.clone()),
-                (key6, value6.clone()),
-                (key2, value2_update.clone()),
-            ],
-            0,
-            *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
-        )
-        .unwrap();
-    db.write_tree_update_batch(batch).unwrap();
-    assert_eq!(tree.get(key1, root).unwrap().unwrap(), value1);
-    assert_eq!(tree.get(key2, root).unwrap().unwrap(), value2_update);
-    assert_eq!(tree.get(key3, root).unwrap().unwrap(), value3);
-    assert_eq!(tree.get(key4, root).unwrap().unwrap(), value4);
-    assert_eq!(tree.get(key5, root).unwrap().unwrap(), value5);
-    assert_eq!(tree.get(key6, root).unwrap().unwrap(), value6);
+    let batches = vec![
+        vec![(key1, value1.clone())],
+        vec![(key2, value2.clone())],
+        vec![(key3, value3.clone())],
+        vec![(key4, value4.clone())],
+        vec![(key5, value5.clone())],
+        vec![(key6, value6.clone())],
+        vec![(key2, value2_update.clone())],
+    ];
+    let one_batch = batches.iter().flatten().cloned().collect::<Vec<_>>();
 
-    // get # of nodes
-    assert_eq!(db.num_nodes(), 12);
-    assert_eq!(db.num_blobs(), 6);
+    let mut to_verify = one_batch.clone();
+    to_verify.remove(1);
+    let verify_fn = |tree: &SparseMerkleTree<MockTreeStore>, root: HashValue| {
+        to_verify
+            .iter()
+            .for_each(|(k, v)| assert_eq!(tree.get(*k, root).unwrap().unwrap(), *v))
+    };
+
+    // Insert as one batch.
+    {
+        let db = MockTreeStore::default();
+        let tree = SparseMerkleTree::new(&db);
+
+        let (root, batch) = tree
+            .put_blob_set(
+                one_batch,
+                0,                               /* version */
+                *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
+            )
+            .unwrap();
+        db.write_tree_update_batch(batch).unwrap();
+        verify_fn(&tree, root);
+
+        // get # of nodes
+        assert_eq!(db.num_nodes(), 12);
+        assert_eq!(db.num_blobs(), 6);
+        verify_fn(&tree, root);
+    }
+
+    // Insert in multiple batches.
+    {
+        let db = MockTreeStore::default();
+        let tree = SparseMerkleTree::new(&db);
+
+        let (roots, batch) = tree
+            .put_blob_sets(
+                batches,
+                0,                               /* first_version */
+                *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
+            )
+            .unwrap();
+        let root = *roots.last().unwrap();
+        db.write_tree_update_batch(batch).unwrap();
+        verify_fn(&tree, root);
+
+        // get # of nodes
+        assert_eq!(db.num_nodes(), 22);
+        assert_eq!(db.num_blobs(), 7);
+
+        // Purge retired nodes.
+        db.purge_retired_records(1).unwrap();
+        assert_eq!(db.num_nodes(), 22);
+        db.purge_retired_records(2).unwrap();
+        assert_eq!(db.num_nodes(), 21);
+        db.purge_retired_records(3).unwrap();
+        assert_eq!(db.num_nodes(), 19);
+        db.purge_retired_records(4).unwrap();
+        assert_eq!(db.num_nodes(), 17);
+        db.purge_retired_records(5).unwrap();
+        assert_eq!(db.num_nodes(), 14);
+        db.purge_retired_records(6).unwrap();
+        assert_eq!(db.num_nodes(), 12);
+        verify_fn(&tree, root);
+    }
 }
 
 #[test]
@@ -488,7 +570,7 @@ fn test_put_blob_sets() {
         let mut root = *SPARSE_MERKLE_PLACEHOLDER_HASH;
         let db = MockTreeStore::default();
         let tree = SparseMerkleTree::new(&db);
-        for _ in 0..10 {
+        for version in 0..10 {
             let mut keyed_blob_set = vec![];
             for _ in 0..10 {
                 keyed_blob_set.push(iter.next().unwrap());
@@ -496,7 +578,7 @@ fn test_put_blob_sets() {
             let (new_root, batch) = tree
                 .put_blob_set(
                     keyed_blob_set,
-                    0,    /* version */
+                    version as Version,
                     root, /* root hash being based on */
                 )
                 .unwrap();
@@ -505,6 +587,9 @@ fn test_put_blob_sets() {
             root_hashes_one_by_one.push(root);
             batch_one_by_one.node_batch.extend(batch.node_batch);
             batch_one_by_one.blob_batch.extend(batch.blob_batch);
+            batch_one_by_one
+                .retire_log_batch
+                .extend(batch.retire_log_batch);
         }
     }
     {

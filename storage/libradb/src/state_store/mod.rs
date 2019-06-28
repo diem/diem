@@ -64,7 +64,7 @@ impl StateStore {
 
         let (new_root_hash_vec, tree_update_batch) =
             SparseMerkleTree::new(self).put_blob_sets(blob_sets, first_version, root_hash)?;
-        let (node_batch, blob_batch) = tree_update_batch.into();
+        let (node_batch, blob_batch, _retire_log_batch) = tree_update_batch.into();
         node_batch
             .iter()
             .map(|(node_hash, node)| batch.put::<StateMerkleNodeSchema>(node_hash, node))

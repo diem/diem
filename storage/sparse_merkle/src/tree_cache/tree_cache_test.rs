@@ -14,6 +14,7 @@ fn test_get_node() {
     let cache = TreeCache::new(
         &db,
         *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root_node_hash */
+        0,                               /* next_version */
     );
 
     let address = HashValue::random();
@@ -30,6 +31,7 @@ fn test_root_node() {
     let mut cache = TreeCache::new(
         &db,
         *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root_node_hash */
+        0,                               /* next_version */
     );
 
     assert_eq!(cache.get_root_node().unwrap(), None);
@@ -50,6 +52,7 @@ fn test_duplicate_blob() {
     let mut cache = TreeCache::new(
         &db,
         *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root_node_hash */
+        0,                               /* next_version */
     );
 
     let blob = AccountStateBlob::from(vec![0u8]);

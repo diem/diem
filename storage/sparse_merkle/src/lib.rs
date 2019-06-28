@@ -17,6 +17,8 @@
 //! many sparse levels in the tree. Physically, the tree is structurally similar to the modified
 //! Pactricia Merkle tree of Ethereum, with some modifications. Please read the code for details.
 
+#![allow(clippy::unit_arg)]
+
 #[cfg(test)]
 mod mock_tree_store;
 mod nibble_path;
@@ -33,7 +35,9 @@ use crypto::{
 use failure::prelude::*;
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{BranchNode, ExtensionNode, LeafNode, Node};
-use std::collections::HashMap;
+use num_derive::{FromPrimitive, ToPrimitive};
+use proptest_derive::Arbitrary;
+use std::collections::{HashMap, HashSet};
 use tree_cache::TreeCache;
 use types::{
     account_state_blob::AccountStateBlob, proof::definition::SparseMerkleProof,
@@ -56,6 +60,33 @@ pub trait TreeReader {
 pub type NodeBatch = HashMap<HashValue, Node>;
 /// Blob batch that will be written into db atomically with other batches.
 pub type BlobBatch = HashMap<HashValue, AccountStateBlob>;
+/// RetireLog batch that will be written into db atomically with other batches.
+pub type RetireLogBatch = HashSet<RetireLog>;
+
+/// Indicates a record becomes outdated after `version_retired`.
+#[derive(Arbitrary, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct RetireLog {
+    /// The version after which a record becomes outdated.
+    pub version_retired: Version,
+    /// The version at which the outdated record was created.
+    pub version_created: Version,
+    /// Hash of the outdated record, which is the key in the data set storing the record.
+    pub hash: HashValue,
+    /// Indicates data set that the outdated record is stored in.
+    pub record_type: RetiredRecordType,
+}
+
+/// Types of data sets a retired record can come from.
+#[derive(
+    Arbitrary, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive,
+)]
+pub enum RetiredRecordType {
+    /// The Sparse Merkle nodes data set.
+    Node = 0,
+}
+
+// TODO: remove once version_created is for real part of the key.
+const DUMMY_VERSION_CREATED: Version = 0;
 
 /// This is a wrapper of [`NodeBatch`] and [`BlobBatch`] that represents the incremental
 /// updates of tree after applying a write set, which is a vector of account_address and
@@ -64,12 +95,13 @@ pub type BlobBatch = HashMap<HashValue, AccountStateBlob>;
 pub struct TreeUpdateBatch {
     node_batch: NodeBatch,
     blob_batch: BlobBatch,
+    retire_log_batch: RetireLogBatch,
 }
 
 /// Conversion between tuple type and `TreeUpdateBatch`.
-impl From<TreeUpdateBatch> for (NodeBatch, BlobBatch) {
+impl From<TreeUpdateBatch> for (NodeBatch, BlobBatch, RetireLogBatch) {
     fn from(batch: TreeUpdateBatch) -> Self {
-        (batch.node_batch, batch.blob_batch)
+        (batch.node_batch, batch.blob_batch, batch.retire_log_batch)
     }
 }
 
@@ -155,7 +187,7 @@ where
         first_version: Version,
         root_hash: HashValue,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, root_hash);
+        let mut tree_cache = TreeCache::new(self.reader, root_hash, first_version);
         for (idx, blob_set) in blob_sets.into_iter().enumerate() {
             assert!(
                 !blob_set.is_empty(),
@@ -271,8 +303,8 @@ where
         value_hash: HashValue,
         tree_cache: &mut TreeCache<R>,
     ) -> Result<(HashValue, bool)> {
-        // We are on a extension node but are trying to insert another node, so we may need
-        // to add a new path.
+        // We are on an extension node but are trying to insert another node, so we may need to add
+        // a new path.
 
         // Delete the current extension node from tree_cache if it exists; Otherwise it is a
         // noop.
