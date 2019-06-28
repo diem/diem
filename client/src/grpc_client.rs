@@ -137,7 +137,7 @@ impl GRPCClient {
         let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into_proto();
-        let arc_validator_verifier: Arc<ValidatorVerifier> = Arc::clone(&self.validator_verifier);
+        let validator_verifier = Arc::clone(&self.validator_verifier);
         let ret = self
             .client
             .update_to_latest_ledger_async_opt(&proto_req, Self::get_default_grpc_call_option())?
@@ -146,7 +146,7 @@ impl GRPCClient {
                 // the feature is available.
 
                 let resp = UpdateToLatestLedgerResponse::from_proto(get_with_proof_resp?)?;
-                resp.verify(arc_validator_verifier, &req)?;
+                resp.verify(validator_verifier, &req)?;
                 Ok(resp)
             });
         Ok(ret)
