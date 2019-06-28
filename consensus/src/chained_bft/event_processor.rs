@@ -187,34 +187,19 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         proposal: ProposalInfo<T, P>,
     ) -> ProcessProposalResult<T, P> {
         debug!("Receive proposal {}", proposal);
-        let qc = proposal.proposal.quorum_cert();
-
-        self.pacemaker
-            .process_certificates(
-                qc.certified_block_round(),
-                proposal.timeout_certificate.as_ref(),
-            )
-            .await;
-
-        if self.pacemaker.current_round() != proposal.proposal.round() {
-            if self.pacemaker.current_round() < proposal.proposal.round() {
-                warn!(
-                    "Received proposal {} is ignored as it is from a future round {} and does not match the pacemaker round {}",
-                    proposal,
-                    proposal.proposal.round(),
-                    self.pacemaker.current_round(),
-                );
-            } else {
-                warn!(
-                    "Received proposal {} is ignored as it is from a past round {} and does not match the pacemaker round {}",
-                    proposal,
-                    proposal.proposal.round(),
-                    self.pacemaker.current_round(),
-                );
-            }
+        // Pacemaker is going to be updated with all the proposal certificates later,
+        // but it's known that the pacemaker's round is not going to decrease so we can already
+        // filter out the proposals from old rounds.
+        let current_round = self.pacemaker.current_round();
+        if proposal.proposal.round() < self.pacemaker.current_round() {
+            warn!(
+                "Proposal {} is ignored because its round {} != current round {}",
+                proposal,
+                proposal.proposal.round(),
+                current_round
+            );
             return ProcessProposalResult::Done;
         }
-
         if self
             .proposer_election
             .is_valid_proposer(proposal.proposer_info, proposal.proposal.round())
@@ -241,7 +226,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             return ProcessProposalResult::Done;
         }
 
-        match self.block_store.need_fetch_for_quorum_cert(&qc) {
+        match self
+            .block_store
+            .need_fetch_for_quorum_cert(proposal.proposal.quorum_cert())
+        {
             NeedFetchResult::NeedFetch => {
                 return ProcessProposalResult::NeedFetch(deadline, proposal)
             }
@@ -250,7 +238,11 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 return ProcessProposalResult::Done;
             }
             NeedFetchResult::QCBlockExist => {
-                if let Err(e) = self.block_store.insert_single_quorum_cert(qc.clone()).await {
+                if let Err(e) = self
+                    .block_store
+                    .insert_single_quorum_cert(proposal.proposal.quorum_cert().clone())
+                    .await
+                {
                     warn!(
                         "Quorum certificate for proposal {} could not be inserted to the block store: {:?}",
                         proposal, e
@@ -268,7 +260,27 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// Finish proposal processing: note that multiple tasks can execute this function in parallel
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
+    /// This function is invoked when all the dependencies for the given proposal are ready.
     async fn finish_proposal_processing(&self, proposal: ProposalInfo<T, P>) {
+        let qc = proposal.proposal.quorum_cert();
+        self.pacemaker
+            .process_certificates(
+                qc.certified_block_round(),
+                proposal.timeout_certificate.as_ref(),
+            )
+            .await;
+
+        let current_round = self.pacemaker.current_round();
+        if self.pacemaker.current_round() != proposal.proposal.round() {
+            warn!(
+                "Proposal {} is ignored because its round {} != current round {}",
+                proposal,
+                proposal.proposal.round(),
+                current_round
+            );
+            return;
+        }
+
         self.proposer_election.process_proposal(proposal).await;
     }
 
