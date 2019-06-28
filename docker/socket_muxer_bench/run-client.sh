@@ -11,4 +11,5 @@ docker run \
     --env TCP_MUXER_ADDR="$TCP_MUXER_ADDR" \
     --env TCP_NOISE_MUXER_ADDR="$TCP_NOISE_MUXER_ADDR" \
     --env BENCH_PATTERN="$BENCH_PATTERN" \
+    --env MSG_LENS="$MSG_LENS" \
     "$IMAGE"

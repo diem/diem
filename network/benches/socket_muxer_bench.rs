@@ -31,6 +31,11 @@
 //!
 //! `TCP_ADDR=/ip4/12.34.56.78/tcp/1234 cargo bench -p network remote_tcp`
 //!
+//! The message lengths (in bytes) we benchmark can be changed using the
+//! `$MSG_LENS` environment variable.
+//!
+//! `MSG_LENS="[123, 456]" cargo bench -p network local_tcp`
+//!
 //! Note: gnuplot must be installed to generate benchmark plots.
 
 use bytes::{Bytes, BytesMut};
@@ -299,7 +304,8 @@ fn socket_muxer_bench(c: &mut Criterion) {
     let remote_tcp_noise_muxer_addr = args.tcp_noise_muxer_addr;
 
     // Parameterize benchmarks over the message length.
-    let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];
+    let default_msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];
+    let msg_lens = args.msg_lens.unwrap_or(default_msg_lens);
 
     // start local bench servers
 

@@ -32,10 +32,38 @@ pub struct Args {
     pub tcp_noise_addr: Option<Multiaddr>,
     pub tcp_muxer_addr: Option<Multiaddr>,
     pub tcp_noise_muxer_addr: Option<Multiaddr>,
+    pub msg_lens: Option<Vec<usize>>,
 }
 
 fn parse_addr(s: OsString) -> Multiaddr {
-    s.into_string().unwrap().try_into().unwrap()
+    s.into_string()
+        .expect("Error: Address should be valid Unicode")
+        .try_into()
+        .expect("Error: Address should be a multiaddr")
+}
+
+fn parse_msg_lens(s: OsString) -> Vec<usize> {
+    let s = s
+        .into_string()
+        .expect("Error: $MSG_LENS should be valid Unicode");
+
+    // check for surrounding array brackets
+    if &s[..1] != "[" || &s[s.len() - 1..] != "]" {
+        panic!(
+            "Error: Malformed $MSG_LENS: \"{}\": Should be formatted like an array \"[123, 456]\"",
+            s
+        );
+    }
+
+    // parse Vec<usize> from comma-delimited string
+    s[1..s.len() - 1]
+        .split(',')
+        .map(|ss| {
+            ss.trim()
+                .parse::<usize>()
+                .expect("Error: Malformed $MSG_LENS: Failed to parse usize")
+        })
+        .collect()
 }
 
 impl Args {
@@ -45,6 +73,7 @@ impl Args {
             tcp_noise_addr: env::var_os("TCP_NOISE_ADDR").map(parse_addr),
             tcp_muxer_addr: env::var_os("TCP_MUXER_ADDR").map(parse_addr),
             tcp_noise_muxer_addr: env::var_os("TCP_NOISE_MUXER_ADDR").map(parse_addr),
+            msg_lens: env::var_os("MSG_LENS").map(parse_msg_lens),
         }
     }
 }
