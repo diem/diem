@@ -17,6 +17,7 @@ protobuf = { version = "2.6", features = ["with-bytes"] }
 rand = "0.6.5"
 tokio = "0.1.16"
 tokio-timer = "0.2.10"
+tokio-retry = "0.2.0"
 unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
 channel = { path = "../common/channel" }
