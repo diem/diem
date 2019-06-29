@@ -21,11 +21,22 @@ pub fn do_compile_module<T: ModuleAccess>(
     compile_module(address, &parsed_module, dependencies).unwrap()
 }
 
+pub fn get_stdlib_root() -> PathBuf {
+    let mut stdlib_root: PathBuf;
+    if std::env::var("MOVE_STDLIB_ROOT").is_ok() {
+        stdlib_root = PathBuf::from(std::env::var("MOVE_STDLIB_ROOT").unwrap());
+    } else {
+        stdlib_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        stdlib_root.pop();
+        stdlib_root.push("stdlib");
+    }
+
+    return stdlib_root;
+}
+
 pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
     // TODO: Change source paths for stdlib when we have proper SDK packaging.
-    let mut stdlib_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    stdlib_root.pop();
-    stdlib_root.push("stdlib");
+    let stdlib_root = get_stdlib_root();
 
     let mut stdlib_modules = vec![];
     for e in [

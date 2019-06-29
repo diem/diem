@@ -34,6 +34,9 @@ struct Args {
     /// Path to the Move IR source to compile
     #[structopt(parse(from_os_str))]
     pub source_path: PathBuf,
+    /// Path to the Move stdlib root path
+    #[structopt(long = "stdlib-root")]
+    pub stdlib_root: Option<String>,
 }
 
 fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
@@ -67,6 +70,14 @@ fn main() {
     let args = Args::from_args();
 
     let address = AccountAddress::default();
+
+    match args.stdlib_root {
+        Some(path) => {
+            std::env::set_var("MOVE_STDLIB_ROOT", path);
+        }
+        None => {
+        }
+    }
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path).expect("Unable to read file");
