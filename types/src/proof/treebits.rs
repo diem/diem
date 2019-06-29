@@ -249,27 +249,11 @@ fn turn_off_right_most_n_bits(v: u64, n: u32) -> u64 {
 ///
 /// post_order_index(1) == 2
 /// post_order_index(4) == 3
-pub fn inorder_to_postorder(node: u64) -> u64 {
+pub fn post_order_index(node: u64) -> u64 {
     let children = children_of_node(node);
     let left_nodes = nodes_to_left_of(node);
 
     children + left_nodes
-}
-
-pub fn postorder_to_inorder(mut node: u64) -> u64 {
-    // The number of nodes in a full binary tree with height `n` is `2^n - 1`.
-    let mut full_binary_size = !0u64;
-    let mut bitmap = 0u64;
-    for i in (0..64).rev() {
-        if node >= full_binary_size {
-            node -= full_binary_size;
-            bitmap |= 1 << i;
-        }
-        full_binary_size >>= 1;
-    }
-    let level = node as u32;
-    let pos = bitmap >> level;
-    node_from_level_and_pos(level, pos)
 }
 
 /// Defines an order for the nodes optimized for writing to disk. In this order

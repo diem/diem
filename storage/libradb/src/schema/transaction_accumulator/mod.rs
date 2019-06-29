@@ -6,8 +6,8 @@
 //! A hash value is stored on each position.
 //! See `storage/accumulator/lib.rs` for details.
 //! ```text
-//! |<----------key--------->|<-value->|
-//! | position in post order |   hash  |
+//! |<---key--->|<-value->|
+//! | position  |  hash   |
 //! ```
 
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_ACCUMULATOR_CF_NAME};
@@ -30,12 +30,12 @@ define_schema!(
 
 impl KeyCodec<TransactionAccumulatorSchema> for Position {
     fn encode_key(&self) -> Result<Vec<u8>> {
-        Ok(self.to_postorder_index().to_be_bytes().to_vec())
+        Ok(self.to_inorder_index().to_be_bytes().to_vec())
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<u64>())?;
-        Ok(Position::from_postorder_index(
+        Ok(Position::from_inorder_index(
             (&data[..]).read_u64::<BigEndian>()?,
         ))
     }
