@@ -275,4 +275,20 @@ fn test_submit_txn_inner_mempool() {
         response.ac_status.unwrap(),
         AdmissionControlStatus::Accepted,
     );
+    let accepted_add = AccountAddress::new([104; ADDRESS_LENGTH]);
+    req.set_signed_txn(get_test_signed_txn(
+        accepted_add,
+        0,
+        keypair.0.clone(),
+        keypair.1,
+        None,
+    ));
+    let response = SubmitTransactionResponse::from_proto(
+        ac_service.submit_transaction_inner(req.clone()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        response.mempool_error.unwrap(),
+        MempoolAddTransactionStatus::MempoolIsFull,
+    );
 }
