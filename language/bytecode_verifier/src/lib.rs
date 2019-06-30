@@ -32,3 +32,5 @@ pub use verifier::{
     verify_main_signature, verify_module_dependencies, verify_script_dependencies, VerifiedModule,
     VerifiedScript,
 };
+
+pub mod absint;
