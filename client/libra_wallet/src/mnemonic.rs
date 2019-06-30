@@ -44,7 +44,7 @@ impl Mnemonic {
                 mnemonic.push(WORDS[idx]);
             } else {
                 return Err(WalletError::LibraWalletGeneric(
-                    "Mneminic contains an unknown word".to_string(),
+                    "Mnemonic contains an unknown word".to_string(),
                 ));
             }
         }
