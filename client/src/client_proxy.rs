@@ -117,8 +117,7 @@ impl ClientProxy {
         );
         // Total 3f + 1 validators, 2f + 1 correct signatures are required.
         // If < 4 validators, all validators have to agree.
-        let quorum_size = validators.len() * 2 / 3 + 1;
-        let validator_verifier = Arc::new(ValidatorVerifier::new(validators, quorum_size));
+        let validator_verifier = Arc::new(ValidatorVerifier::new(validators));
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
 
         let accounts = vec![];

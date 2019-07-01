@@ -155,8 +155,10 @@ impl SMRNode {
             );
             signers.push(random_validator_signer);
         }
-        let validator_verifier =
-            Arc::new(ValidatorVerifier::new(author_to_public_keys, quorum_size));
+        let validator_verifier = Arc::new(
+            ValidatorVerifier::new_with_quorum_size(author_to_public_keys, quorum_size)
+                .expect("Invalid quorum_size."),
+        );
         let peers: Arc<Vec<Author>> = Arc::new(
             signers
                 .clone()

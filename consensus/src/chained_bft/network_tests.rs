@@ -335,10 +335,7 @@ fn test_network_api() {
         peers.push(random_validator_signer.author());
         signers.push(random_validator_signer);
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -410,10 +407,7 @@ fn test_rpc() {
             .unwrap()
             .push(random_validator_signer.author());
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);

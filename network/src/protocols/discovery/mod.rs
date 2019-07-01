@@ -459,7 +459,7 @@ fn verify_signatures(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new(
+    let verifier = SignatureValidator::new_with_quorum_size(
         trusted_peers
             .read()
             .unwrap()
@@ -469,7 +469,8 @@ fn verify_signatures(
             })
             .collect(),
         1, /* quorum size */
-    );
+    )
+    .expect("Quorum size should be valid.");
     let signature = Signature::from_compact(signature)
         .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
     verifier.verify_signature(signer, get_hash(msg), &signature)?;
