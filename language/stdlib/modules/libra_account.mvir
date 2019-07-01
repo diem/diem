@@ -3,7 +3,7 @@ module LibraAccount {
     import 0x0.LibraCoin;
     import 0x00.Hash;
 
-    // Every Libra account has a LibraLibraAccount.T resource
+    // Every Libra account has a LibraAccount.T resource
     resource T {
         // The coins stored in this account
         balance: R#LibraCoin.T,
@@ -37,7 +37,7 @@ module LibraAccount {
         amount: u64,
     }
 
-    // Creates a new LibraLibraAccount.T
+    // Creates a new LibraAccount.T
     // Invoked by the `create_account` builtin
     make(auth_key: bytearray): R#Self.T {
         let zero_balance: R#LibraCoin.T;
@@ -178,7 +178,7 @@ module LibraAccount {
         return move(balance_value);
     }
 
-    // Return the current balance of the LibraCoin.T in LibraLibraAccount.T at `addr`
+    // Return the current balance of the LibraCoin.T in LibraAccount.T at `addr`
     public balance(addr: address): u64 {
         let payee_account: &mut R#Self.T;
         let imm_payee_account: &R#Self.T;
