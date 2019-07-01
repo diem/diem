@@ -7,7 +7,7 @@ use crate::{
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters,
+    counters::{report_block_count, report_execution_status},
     data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
@@ -32,6 +32,7 @@ pub fn execute_block<'alloc>(
     publishing_option: &VMPublishingOption,
 ) -> Vec<TransactionOutput> {
     trace!("[VM] Execute block, transaction count: {}", txn_block.len());
+    report_block_count(txn_block.len());
 
     let mode = if data_view.is_genesis() {
         // The genesis transaction must be in a block of its own.
@@ -81,6 +82,7 @@ pub fn execute_block<'alloc>(
             ),
             Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
         };
+        report_execution_status(output.status());
         data_cache.push_write_set(&output.write_set());
         result.push(output);
     }
@@ -118,14 +120,12 @@ where
     let validated_txn = match process_txn.validate(mode, publishing_option) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
-            counters::FAILED_TRANSACTION.inc();
             return ExecutedTransaction::discard_error_output(vm_status);
         }
     };
     let verified_txn = match validated_txn.verify() {
         Ok(verified_txn) => verified_txn,
         Err(vm_status) => {
-            counters::FAILED_TRANSACTION.inc();
             return ExecutedTransaction::discard_error_output(vm_status);
         }
     };
@@ -134,11 +134,9 @@ where
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.
     let output = executed_txn.into_output();
-    match output.status() {
-        TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)) => {
-            module_cache.reclaim_cached_module(arena.into_vec());
-        }
-        _ => counters::FAILED_TRANSACTION.inc(),
+    if let TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)) = output.status()
+    {
+        module_cache.reclaim_cached_module(arena.into_vec());
     };
     output
 }

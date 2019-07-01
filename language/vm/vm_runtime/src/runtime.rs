@@ -8,7 +8,7 @@ use crate::{
         module_cache::{BlockModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters,
+    counters::report_verification_status,
     data_cache::BlockDataCache,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
@@ -89,20 +89,17 @@ impl<'alloc> VMRuntime<'alloc> {
         let validated_txn = match process_txn.validate(mode, &self.publishing_option) {
             Ok(validated_txn) => validated_txn,
             Err(vm_status) => {
-                counters::UNVERIFIED_TRANSACTION.inc();
-                return Some(vm_status);
+                let res = Some(vm_status);
+                report_verification_status(&res);
+                return res;
             }
         };
-        match validated_txn.verify() {
-            Ok(_) => {
-                counters::VERIFIED_TRANSACTION.inc();
-                None
-            }
-            Err(vm_status) => {
-                counters::UNVERIFIED_TRANSACTION.inc();
-                Some(vm_status)
-            }
-        }
+        let res = match validated_txn.verify() {
+            Ok(_) => None,
+            Err(vm_status) => Some(vm_status),
+        };
+        report_verification_status(&res);
+        res
     }
 
     /// Execute a block of transactions. The output vector will have the exact same length as the
