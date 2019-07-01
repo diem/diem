@@ -94,7 +94,6 @@ module LibraAccount {
         let coin: R#LibraCoin.T;
         let payee_account_ref: &mut R#Self.T;
         let payee_exists: bool;
-        let sender: address;
 
         // Mint the coin
         mint_capability_ref = LibraCoin.borrow_sender_mint_capability();
@@ -103,7 +102,6 @@ module LibraAccount {
         // Create an account if it does not exist
         payee_exists = exists<T>(copy(payee));
         if (!move(payee_exists)) {
-            sender = get_txn_sender();
             Self.create_new_account(copy(payee), 0);
         }
 

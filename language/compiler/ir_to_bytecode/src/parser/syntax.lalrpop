@@ -19,7 +19,7 @@ grammar();
 U64: u64 = <s:r"[0-9]+"> => u64::from_str(s).unwrap();
 Name: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*"> => s.to_string();
 ByteArray: ByteArray = {
-    <s:r#"b"[0-9a-fA-F]+""#> => {
+    <s:r#"b"[0-9a-fA-F]*""#> => {
         ByteArray::new(hex::decode(&s[2..s.len()-1]).unwrap_or_else(|_| panic!("The string {:?} is not a valid hex-encoded byte array", s)))
     }
 };

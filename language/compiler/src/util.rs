@@ -29,6 +29,9 @@ pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
 
     let mut stdlib_modules = vec![];
     for e in [
+        "modules/address_util.mvir",
+        "modules/u64_util.mvir",
+        "modules/bytearray_util.mvir",
         "modules/hash.mvir",
         "modules/signature.mvir",
         "modules/libra_coin.mvir",

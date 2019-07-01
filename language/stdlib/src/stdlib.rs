@@ -22,6 +22,12 @@ lazy_static! {
         make_module_definition!("../modules/signature.mvir");
     static ref VALIDATOR_SET_MODULE: ModuleDefinition =
         make_module_definition!("../modules/validator_set.mvir");
+    static ref ADDRESS_UTIL_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/address_util.mvir");
+    static ref U64_UTIL_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/u64_util.mvir");
+    static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/bytearray_util.mvir");
 }
 
 pub fn account_module() -> ModuleDefinition {
@@ -42,4 +48,16 @@ pub fn signature_module() -> ModuleDefinition {
 
 pub fn validator_set_module() -> ModuleDefinition {
     VALIDATOR_SET_MODULE.clone()
+}
+
+pub fn address_util_module() -> ModuleDefinition {
+    ADDRESS_UTIL_MODULE.clone()
+}
+
+pub fn u64_util_module() -> ModuleDefinition {
+    U64_UTIL_MODULE.clone()
+}
+
+pub fn bytearray_util_module() -> ModuleDefinition {
+    BYTEARRAY_UTIL_MODULE.clone()
 }
