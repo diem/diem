@@ -32,6 +32,21 @@ fn put_account_state_set(
     root
 }
 
+fn purge_retired_records(
+    db: &LibraDB,
+    least_readable_version: Version,
+    limit: usize,
+    expected_num_purged: usize,
+) {
+    let mut batch = SchemaBatch::new();
+    let num_purged = db
+        .state_store
+        .purge_retired_records(least_readable_version, limit, &mut batch)
+        .unwrap();
+    assert_eq!(num_purged, expected_num_purged);
+    db.commit(batch).unwrap();
+}
+
 fn verify_state_in_store(
     store: &StateStore,
     address: AccountAddress,
@@ -104,4 +119,93 @@ fn test_state_store_reader_writer() {
     verify_state_in_store(&store, address1, Some(&value1_update), root);
     verify_state_in_store(&store, address2, Some(&value2), root);
     verify_state_in_store(&store, address3, Some(&value3), root);
+}
+
+#[test]
+fn test_purge_retired_records() {
+    let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
+    let address2 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
+    let address3 = AccountAddress::new([3u8; ADDRESS_LENGTH]);
+    let value1 = AccountStateBlob::from(vec![0x01]);
+    let value2 = AccountStateBlob::from(vec![0x02]);
+    let value2_update = AccountStateBlob::from(vec![0x12]);
+    let value3 = AccountStateBlob::from(vec![0x03]);
+    let value3_update = AccountStateBlob::from(vec![0x13]);
+    let root_default = *SPARSE_MERKLE_PLACEHOLDER_HASH;
+
+    let tmp_dir = tempdir().unwrap();
+    let db = LibraDB::new(&tmp_dir);
+    let store = &db.state_store;
+
+    // Update.
+    // ```text
+    // | batch    | 0      | 1             | 2             |
+    // | address1 | value1 |               |               |
+    // | address2 | value2 | value2_update |               |
+    // | address3 |        | value3        | value3_update |
+    // ```
+    let root0 = put_account_state_set(
+        &db,
+        vec![(address1, value1.clone()), (address2, value2.clone())],
+        0, /* version */
+        root_default,
+    );
+    let root1 = put_account_state_set(
+        &db,
+        vec![
+            (address2, value2_update.clone()),
+            (address3, value3.clone()),
+        ],
+        1, /* version */
+        root0,
+    );
+    let root2 = put_account_state_set(
+        &db,
+        vec![(address3, value3_update.clone())],
+        2, /* version */
+        root1,
+    );
+
+    // Verify.
+    // Purge with limit=0, nothing is gone.
+    {
+        purge_retired_records(
+            &db, 1, /* least_readable_version */
+            0, /* limit */
+            0, /* expected_num_purged */
+        );
+        verify_state_in_store(&store, address1, Some(&value1), root0);
+    }
+    // Purge till version=1.
+    {
+        purge_retired_records(
+            &db, 1,   /* least_readable_version */
+            100, /* limit */
+            2,   /* expected_num_purged */
+        );
+        // root0 is gone.
+        assert!(store
+            .get_account_state_with_proof_by_state_root(address2, root0)
+            .is_err());
+        // root1 is still there.
+        verify_state_in_store(&store, address1, Some(&value1), root1);
+        verify_state_in_store(&store, address2, Some(&value2_update), root1);
+        verify_state_in_store(&store, address3, Some(&value3), root1);
+    }
+    // Purge till version=2.
+    {
+        purge_retired_records(
+            &db, 2,   /* least_readable_version */
+            100, /* limit */
+            2,   /* expected_num_purged */
+        );
+        // root1 is gone.
+        assert!(store
+            .get_account_state_with_proof_by_state_root(address2, root1)
+            .is_err());
+        // root2 is still there.
+        verify_state_in_store(&store, address1, Some(&value1), root2);
+        verify_state_in_store(&store, address2, Some(&value2_update), root2);
+        verify_state_in_store(&store, address3, Some(&value3_update), root2);
+    }
 }

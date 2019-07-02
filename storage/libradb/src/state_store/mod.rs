@@ -6,11 +6,14 @@
 #[cfg(test)]
 mod state_store_test;
 
-use crate::schema::{account_state::AccountStateSchema, state_merkle_node::StateMerkleNodeSchema};
+use crate::schema::{
+    account_state::AccountStateSchema, retired_state_record::RetiredStateRecordSchema,
+    state_merkle_node::StateMerkleNodeSchema,
+};
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use schemadb::{SchemaBatch, DB};
-use sparse_merkle::{node_type::Node, SparseMerkleTree, TreeReader};
+use schemadb::{ReadOptions, SchemaBatch, DB};
+use sparse_merkle::{node_type::Node, RetiredRecordType, SparseMerkleTree, TreeReader};
 use std::{collections::HashMap, sync::Arc};
 use types::{
     account_address::AccountAddress,
@@ -64,7 +67,7 @@ impl StateStore {
 
         let (new_root_hash_vec, tree_update_batch) =
             SparseMerkleTree::new(self).put_blob_sets(blob_sets, first_version, root_hash)?;
-        let (node_batch, blob_batch, _retired_record_batch) = tree_update_batch.into();
+        let (node_batch, blob_batch, retired_record_batch) = tree_update_batch.into();
         node_batch
             .iter()
             .map(|(node_hash, node)| batch.put::<StateMerkleNodeSchema>(node_hash, node))
@@ -73,7 +76,47 @@ impl StateStore {
             .iter()
             .map(|(blob_hash, blob)| batch.put::<AccountStateSchema>(blob_hash, blob))
             .collect::<Result<Vec<()>>>()?;
+        retired_record_batch
+            .iter()
+            .map(|row| batch.put::<RetiredStateRecordSchema>(row, &()))
+            .collect::<Result<Vec<()>>>()?;
         Ok(new_root_hash_vec)
+    }
+
+    /// Purges retired account state blobs and sparse Merkle tree nodes. Yields up to `limit`
+    /// deletions to `batch` while keeps account states readable at `least readable version` and
+    /// beyond.
+    #[allow(dead_code)] // TODO: remove
+    pub fn purge_retired_records(
+        &self,
+        least_readable_version: Version,
+        limit: usize,
+        batch: &mut SchemaBatch,
+    ) -> Result<usize> {
+        let mut num_purged = 0;
+
+        let mut iter = self
+            .db
+            .iter::<RetiredStateRecordSchema>(ReadOptions::default())?;
+        iter.seek_to_first();
+        let mut iter = iter.take(limit);
+
+        while let Some((record, _)) = iter.next().transpose()? {
+            // Only records that have retired before or at version `least_readable_version` can be
+            // pruned in order to keep that version still readable after pruning.
+            if record.version_retired > least_readable_version {
+                break;
+            }
+            match record.record_type {
+                RetiredRecordType::Node => {
+                    batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
+                }
+            }
+            batch.delete::<RetiredStateRecordSchema>(&record)?;
+            num_purged += 1;
+        }
+
+        Ok(num_purged)
     }
 }
 
