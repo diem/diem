@@ -38,6 +38,14 @@ impl Position {
         self.0
     }
 
+    pub fn from_postorder_index(index: u64) -> Self {
+        Self::from_inorder_index(treebits::postorder_to_inorder(index))
+    }
+
+    pub fn to_postorder_index(self) -> u64 {
+        treebits::inorder_to_postorder(self.to_inorder_index())
+    }
+
     pub fn get_parent(self) -> Self {
         Self::from_inorder_index(treebits::parent(self.0))
     }
