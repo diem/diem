@@ -330,11 +330,11 @@ impl BranchNode {
     ///     3      [f   e   d   c   b   a   9   8] [7   6   5   4   3   2   1   0] width = 8
     ///                                  chs <--┘                        shs <--┘
     ///     2      [f   e   d   c] [b   a   9   8] [7   6   5   4] [3   2   1   0] width = 4
-    ///                  lhs <--┘               └--> chs
+    ///                  shs <--┘               └--> chs
     ///     1      [f   e] [d   c] [b   a] [9   8] [7   6] [5   4] [3   2] [1   0] width = 2
     ///                          chs <--┘       └--> shs
     ///     0      [f] [e] [d] [c] [b] [a] [9] [8] [7] [6] [5] [4] [3] [2] [1] [0] width = 1
-    ///     ^                chs <--┘   └--> schs
+    ///     ^                chs <--┘   └--> shs
     ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
     ///  height    chs: `child_half_start`         shs: `sibling_half_start`
     /// ```
