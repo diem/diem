@@ -39,6 +39,16 @@ fn main() {
         false, /* tee_logs */
     );
 
+    let config = &swarm.config.get_configs()[0].1;
+    let validator_set_file = &config.base.trusted_peers_file;
+    println!("To run the Libra CLI client in a separate process and connect to the local cluster of nodes you just spawned, use this command:");
+    println!(
+        "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",
+        config.admission_control.admission_control_service_port,
+        swarm.dir.as_ref().unwrap().path().join(validator_set_file),
+        faucet_key_file_path,
+    );
+
     let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
     if args.start_client {
         let client = client::InteractiveClient::new_with_inherit_io(

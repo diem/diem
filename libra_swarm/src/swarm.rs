@@ -210,10 +210,10 @@ pub enum HealthStatus {
 
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
-    dir: Option<TempDir>,
+    pub dir: Option<TempDir>,
     // Maps the peer id of a node to the LibraNode struct
-    nodes: HashMap<String, LibraNode>,
-    config: SwarmConfig,
+    pub nodes: HashMap<String, LibraNode>,
+    pub config: SwarmConfig,
     tee_logs: bool,
 }
 
