@@ -12,20 +12,37 @@ use types::{
 };
 
 fn put_account_state_set(
-    store: &StateStore,
+    db: &LibraDB,
     account_state_set: Vec<(AccountAddress, AccountStateBlob)>,
-    first_version: Version,
+    version: Version,
     root_hash: HashValue,
-    batch: &mut SchemaBatch,
 ) -> HashValue {
-    store
+    let mut batch = SchemaBatch::new();
+    let root = db
+        .state_store
         .put_account_state_sets(
             vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
-            first_version,
+            version,
             root_hash,
-            batch,
+            &mut batch,
         )
-        .unwrap()[0]
+        .unwrap()[0];
+    db.commit(batch).unwrap();
+
+    root
+}
+
+fn verify_state_in_store(
+    store: &StateStore,
+    address: AccountAddress,
+    expected_value: Option<&AccountStateBlob>,
+    root: HashValue,
+) {
+    let (value, proof) = store
+        .get_account_state_with_proof_by_state_root(address, root)
+        .unwrap();
+    assert_eq!(value.as_ref(), expected_value);
+    verify_sparse_merkle_element(root, address.hash(), &value, &proof).unwrap();
 }
 
 #[test]
@@ -57,65 +74,25 @@ fn test_state_store_reader_writer() {
     let mut root = *SPARSE_MERKLE_PLACEHOLDER_HASH;
 
     // Verify initial states.
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address1, root)
-            .unwrap();
-        assert!(value.is_none());
-        assert!(verify_sparse_merkle_element(root, address1.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address2, root)
-            .unwrap();
-        assert!(value.is_none());
-        assert!(verify_sparse_merkle_element(root, address2.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address3, root)
-            .unwrap();
-        assert!(value.is_none());
-        assert!(verify_sparse_merkle_element(root, address3.hash(), &value, &proof).is_ok());
-    }
+    verify_state_in_store(&store, address1, None, root);
+    verify_state_in_store(&store, address2, None, root);
+    verify_state_in_store(&store, address3, None, root);
 
     // Insert address1 with value 1 and verify new states.
-    let mut batch1 = SchemaBatch::new();
     root = put_account_state_set(
-        &store,
+        &db,
         vec![(address1, value1.clone())],
         0, /* version */
         root,
-        &mut batch1,
     );
-    db.commit(batch1).unwrap();
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address1, root)
-            .unwrap();
-        assert_eq!(value, Some(value1));
-        assert!(verify_sparse_merkle_element(root, address1.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address2, root)
-            .unwrap();
-        assert!(value.is_none());
-        assert!(verify_sparse_merkle_element(root, address2.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address3, root)
-            .unwrap();
-        assert!(value.is_none());
-        assert!(verify_sparse_merkle_element(root, address3.hash(), &value, &proof).is_ok());
-    }
+    verify_state_in_store(&store, address1, Some(&value1), root);
+    verify_state_in_store(&store, address2, None, root);
+    verify_state_in_store(&store, address3, None, root);
 
     // Insert address 1 with updated value1, address2 with value 2 and address3 with value3 and
     // verify new states.
-    let mut batch2 = SchemaBatch::new();
     root = put_account_state_set(
-        &store,
+        &db,
         vec![
             (address1, value1_update.clone()),
             (address2, value2.clone()),
@@ -123,28 +100,8 @@ fn test_state_store_reader_writer() {
         ],
         1, /* version */
         root,
-        &mut batch2,
     );
-    db.commit(batch2).unwrap();
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address1, root)
-            .unwrap();
-        assert_eq!(value, Some(value1_update));
-        assert!(verify_sparse_merkle_element(root, address1.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address2, root)
-            .unwrap();
-        assert_eq!(value, Some(value2));
-        assert!(verify_sparse_merkle_element(root, address2.hash(), &value, &proof).is_ok());
-    }
-    {
-        let (value, proof) = store
-            .get_account_state_with_proof_by_state_root(address3, root)
-            .unwrap();
-        assert_eq!(value, Some(value3));
-        assert!(verify_sparse_merkle_element(root, address3.hash(), &value, &proof).is_ok());
-    }
+    verify_state_in_store(&store, address1, Some(&value1_update), root);
+    verify_state_in_store(&store, address2, Some(&value2), root);
+    verify_state_in_store(&store, address3, Some(&value3), root);
 }
