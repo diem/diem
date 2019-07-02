@@ -39,7 +39,7 @@ fn main() {
         false, /* tee_logs */
     );
 
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();;
+    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
     if args.start_client {
         let client = client::InteractiveClient::new_with_inherit_io(
             *swarm.get_validators_public_ports().get(0).unwrap(),
