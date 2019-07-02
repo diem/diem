@@ -704,8 +704,7 @@ fn process_timeout_certificate_test() {
     });
 }
 
-#[allow(dead_code)]
-//#[test]
+#[test]
 /// Happy path for vote processing:
 /// 1) if a new QC is formed and a block is present send a PM event
 fn process_votes_basic_test() {
@@ -727,10 +726,15 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor.process_vote(vote_msg, 1).await;
+        // This is 'kick off' event from pacemaker initialization
         let new_round_event = node.new_rounds_receiver.next().await.unwrap();
         assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
-        assert_eq!(new_round_event.round, a1.round());
+        assert_eq!(new_round_event.round, 1);
+        node.event_processor.process_vote(vote_msg, 1).await;
+        let new_round_event = node.new_rounds_receiver.next().await.unwrap();
+        // This is event from processing qc for round 1
+        assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
+        assert_eq!(new_round_event.round, 2);
     });
     block_on(runtime.shutdown_now().compat()).unwrap();
 }
