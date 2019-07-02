@@ -30,7 +30,7 @@ fn test_insert_to_empty_tree() {
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
-    assert!(batch.retire_log_batch.is_empty());
+    assert!(batch.retired_record_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
 
     assert_eq!(tree.get(key, new_root).unwrap().unwrap(), value);
@@ -51,7 +51,7 @@ fn test_insert_at_leaf_with_branch_created() {
             *SPARSE_MERKLE_PLACEHOLDER_HASH, /* root hash being based on */
         )
         .unwrap();
-    assert!(batch.retire_log_batch.is_empty());
+    assert!(batch.retired_record_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
     assert_eq!(tree.get(key1, root1).unwrap().unwrap(), value1);
 
@@ -67,7 +67,7 @@ fn test_insert_at_leaf_with_branch_created() {
             root1, /* root hash being based on */
         )
         .unwrap();
-    assert!(batch.retire_log_batch.is_empty());
+    assert!(batch.retired_record_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
     assert_eq!(tree.get(key1, root1).unwrap().unwrap(), value1);
     assert!(tree.get(key2, root1).unwrap().is_none());
@@ -588,8 +588,8 @@ fn test_put_blob_sets() {
             batch_one_by_one.node_batch.extend(batch.node_batch);
             batch_one_by_one.blob_batch.extend(batch.blob_batch);
             batch_one_by_one
-                .retire_log_batch
-                .extend(batch.retire_log_batch);
+                .retired_record_batch
+                .extend(batch.retired_record_batch);
         }
     }
     {

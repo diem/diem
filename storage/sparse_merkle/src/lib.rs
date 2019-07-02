@@ -61,19 +61,19 @@ pub type NodeBatch = HashMap<HashValue, Node>;
 /// Blob batch that will be written into db atomically with other batches.
 pub type BlobBatch = HashMap<HashValue, AccountStateBlob>;
 /// RetireLog batch that will be written into db atomically with other batches.
-pub type RetireLogBatch = HashSet<RetireLog>;
+pub type RetireLogBatch = HashSet<RetiredStateRecord>;
 
-/// Indicates a record becomes outdated after `version_retired`.
+/// Indicates a record becomes outdated on `version_retired`.
 #[derive(Arbitrary, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct RetireLog {
+pub struct RetiredStateRecord {
     /// The version after which a record becomes outdated.
     pub version_retired: Version,
+    /// Indicates data set that the outdated record is stored in.
+    pub record_type: RetiredRecordType,
     /// The version at which the outdated record was created.
     pub version_created: Version,
     /// Hash of the outdated record, which is the key in the data set storing the record.
     pub hash: HashValue,
-    /// Indicates data set that the outdated record is stored in.
-    pub record_type: RetiredRecordType,
 }
 
 /// Types of data sets a retired record can come from.
@@ -95,13 +95,17 @@ const DUMMY_VERSION_CREATED: Version = 0;
 pub struct TreeUpdateBatch {
     node_batch: NodeBatch,
     blob_batch: BlobBatch,
-    retire_log_batch: RetireLogBatch,
+    retired_record_batch: RetireLogBatch,
 }
 
 /// Conversion between tuple type and `TreeUpdateBatch`.
 impl From<TreeUpdateBatch> for (NodeBatch, BlobBatch, RetireLogBatch) {
     fn from(batch: TreeUpdateBatch) -> Self {
-        (batch.node_batch, batch.blob_batch, batch.retire_log_batch)
+        (
+            batch.node_batch,
+            batch.blob_batch,
+            batch.retired_record_batch,
+        )
     }
 }
 

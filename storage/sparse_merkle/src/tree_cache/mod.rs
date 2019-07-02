@@ -70,7 +70,7 @@
 mod tree_cache_test;
 
 use crate::{
-    node_type::Node, RetireLog, RetiredRecordType, TreeReader, TreeUpdateBatch,
+    node_type::Node, RetiredRecordType, RetiredStateRecord, TreeReader, TreeUpdateBatch,
     DUMMY_VERSION_CREATED,
 };
 use crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
@@ -93,8 +93,8 @@ struct FrozenTreeCache {
     /// Immutable blob_cache.
     blob_cache: HashMap<HashValue, AccountStateBlob>,
 
-    /// Immutable retire_log_cache.
-    retire_log_cache: HashSet<RetireLog>,
+    /// Immutable retired_record_cache.
+    retired_record_cache: HashSet<RetiredStateRecord>,
 
     /// Frozen root hashes after each earlier transaction.
     root_hashes: Vec<HashValue>,
@@ -123,7 +123,7 @@ pub struct TreeCache<'a, R: 'a + TreeReader> {
 
     /// Partial retire log. (version_created, hash) to identify the retired record and record_type
     /// to indicate which data set the retired record belongs to.
-    retire_log_cache: HashSet<(Version, HashValue, RetiredRecordType)>,
+    retired_record_cache: HashSet<(Version, HashValue, RetiredRecordType)>,
 
     /// The immutable part of this cache
     frozen_cache: FrozenTreeCache,
@@ -168,7 +168,7 @@ where
         Self {
             node_cache: HashMap::default(),
             blob_cache: HashMap::default(),
-            retire_log_cache: HashSet::default(),
+            retired_record_cache: HashSet::default(),
             frozen_cache: FrozenTreeCache::default(),
             root_hash,
             next_version,
@@ -206,7 +206,7 @@ where
         // If node cache doesn't have this node, it means the node is in the previous version of
         // the tree on the disk.
         if self.node_cache.remove(&old_node_hash).is_none() {
-            let is_new_entry = self.retire_log_cache.insert((
+            let is_new_entry = self.retired_record_cache.insert((
                 DUMMY_VERSION_CREATED,
                 old_node_hash,
                 RetiredRecordType::Node,
@@ -249,17 +249,15 @@ where
             .extend(self.blob_cache.drain().map(|(k, v)| (k, v.0)));
         let version_retired = self.next_version;
         self.frozen_cache
-            .retire_log_cache
-            .extend(
-                self.retire_log_cache
-                    .drain()
-                    .map(|(version_created, hash, record_type)| RetireLog {
-                        version_retired,
-                        version_created,
-                        hash,
-                        record_type,
-                    }),
-            );
+            .retired_record_cache
+            .extend(self.retired_record_cache.drain().map(
+                |(version_created, hash, record_type)| RetiredStateRecord {
+                    version_retired,
+                    version_created,
+                    hash,
+                    record_type,
+                },
+            ));
         self.next_version += 1;
     }
 }
@@ -274,7 +272,7 @@ where
             TreeUpdateBatch {
                 node_batch: self.frozen_cache.node_cache,
                 blob_batch: self.frozen_cache.blob_cache,
-                retire_log_batch: self.frozen_cache.retire_log_cache,
+                retired_record_batch: self.frozen_cache.retired_record_cache,
             },
         )
     }

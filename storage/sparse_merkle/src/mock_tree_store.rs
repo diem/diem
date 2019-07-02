@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{node_type::Node, RetireLog, RetiredRecordType, TreeReader, TreeUpdateBatch};
+use crate::{node_type::Node, RetiredRecordType, RetiredStateRecord, TreeReader, TreeUpdateBatch};
 use crypto::HashValue;
 use failure::prelude::*;
 use std::{
@@ -15,7 +15,7 @@ pub(crate) struct MockTreeStore(
     RwLock<(
         HashMap<HashValue, Node>,
         HashMap<HashValue, AccountStateBlob>,
-        BTreeSet<RetireLog>,
+        BTreeSet<RetiredStateRecord>,
     )>,
 );
 
@@ -59,14 +59,14 @@ impl MockTreeStore {
         Ok(())
     }
 
-    fn put_retire_log(&self, retire_log: RetireLog) -> Result<()> {
-        let is_new_entry = self.0.write().unwrap().2.insert(retire_log);
+    fn put_retired_record(&self, record: RetiredStateRecord) -> Result<()> {
+        let is_new_entry = self.0.write().unwrap().2.insert(record);
         ensure!(is_new_entry, "Duplicated retire log.");
         Ok(())
     }
 
     pub fn write_tree_update_batch(&self, batch: TreeUpdateBatch) -> Result<()> {
-        let (node_batch, blob_batch, retire_log_batch) = batch.into();
+        let (node_batch, blob_batch, retired_record_batch) = batch.into();
         node_batch
             .into_iter()
             .map(|(k, v)| self.put_node(k, v))
@@ -75,9 +75,9 @@ impl MockTreeStore {
             .into_iter()
             .map(|(k, v)| self.put_blob(k, v))
             .collect::<Result<Vec<_>>>()?;
-        retire_log_batch
+        retired_record_batch
             .into_iter()
-            .map(|log| self.put_retire_log(log))
+            .map(|r| self.put_retired_record(r))
             .collect::<Result<Vec<_>>>()?;
         Ok(())
     }
