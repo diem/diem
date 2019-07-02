@@ -21,7 +21,7 @@ use schemadb::{
 use std::{io::Write, mem::size_of};
 use types::transaction::Version;
 
-define_schema!(ValidatorSchema, Key, Value, VALIDATOR_CF_NAME);
+define_schema!(ValidatorSchema, Key, (), VALIDATOR_CF_NAME);
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Key {
@@ -30,9 +30,6 @@ pub struct Key {
     /// public_key of validator
     pub(crate) public_key: PublicKey,
 }
-
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Value;
 
 impl KeyCodec<ValidatorSchema> for Key {
     fn encode_key(&self) -> Result<Vec<u8>> {
@@ -54,14 +51,14 @@ impl KeyCodec<ValidatorSchema> for Key {
     }
 }
 
-impl ValueCodec<ValidatorSchema> for Value {
+impl ValueCodec<ValidatorSchema> for () {
     fn encode_value(&self) -> Result<Vec<u8>> {
         Ok(vec![])
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, 0)?;
-        Ok(Value)
+        Ok(())
     }
 }
 
