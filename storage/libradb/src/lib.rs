@@ -337,14 +337,15 @@ impl LibraDB {
                 .state_root_hash()
         };
 
+        let last_version = first_version + num_txns - 1;
         if let Some(x) = ledger_info_with_sigs {
-            let last_version = x.ledger_info().version();
+            let claimed_last_version = x.ledger_info().version();
             ensure!(
-                first_version + num_txns - 1 == last_version,
+                claimed_last_version == last_version,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
-                last_version
+                claimed_last_version,
             );
         }
 
@@ -375,6 +376,7 @@ impl LibraDB {
         self.commit(batch)?;
         // Only increment counter if commit(batch) succeeds.
         OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
+        OP_COUNTER.set("latest_transaction_version", last_version as usize);
         Ok(())
     }
 
