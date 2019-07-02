@@ -704,7 +704,8 @@ fn process_timeout_certificate_test() {
     });
 }
 
-#[test]
+#[allow(dead_code)]
+//#[test]
 /// Happy path for vote processing:
 /// 1) if a new QC is formed and a block is present send a PM event
 fn process_votes_basic_test() {
