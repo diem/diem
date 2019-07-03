@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 futures = { version = "0.3.0-alpha.13", package = "futures-preview", features = ["compat"] }
 grpcio = "0.4.4"
-protobuf = "2.6"
+protobuf = "2.7"
 
 canonical_serialization = { path = "../../common/canonical_serialization" }
 config = { path = "../../config" }

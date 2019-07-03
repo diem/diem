@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 futures = "0.1.25"
 grpcio = "0.4.3"
-protobuf = "2.6"
+protobuf = "2.7"
 
 config = { path = "../../config" }
 grpc_helpers = { path = "../../common/grpc_helpers"}

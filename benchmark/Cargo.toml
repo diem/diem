@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 futures = "0.1.23"
 itertools = "0.8.0"
-protobuf = "2.6"
+protobuf = "2.7"
 grpcio = "0.4"
 
 admission_control_proto = { path = "../admission_control/admission_control_proto" }

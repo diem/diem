@@ -36,7 +36,7 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1.0.31"
 tiny-keccak = "1.4.2"
-protobuf = "2.6"
+protobuf = "2.7"
 sha3 = "0.8.2"
 
 [dev-dependencies]
