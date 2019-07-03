@@ -40,7 +40,7 @@ artifact to the test suite, copy it to a file inside
 `artifacts/<target>/`.
 
 `cargo test` will now test the deserializer against the new artifact.
-The test will likely fail at first; use.
+The test will likely fail at first use.
 
 Note that `cargo test` runs each test in a separate process by default
 to isolate failures and memory usage; if you're attaching a debugger and
