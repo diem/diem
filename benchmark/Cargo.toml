@@ -6,18 +6,23 @@ publish = false
 edition = "2018"
 
 [dependencies]
+bincode = "1.1.4"
+clap = "2.33.0"
 futures = "0.1.23"
+grpcio = "0.4"
 itertools = "0.8.0"
 protobuf = "2.7"
-grpcio = "0.4"
+regex = "1"
+structopt = "0.2.15"
 
 admission_control_proto = { path = "../admission_control/admission_control_proto" }
 client = { path = "../client" }
 config = { path = "../config" }
+crypto = { path = "../crypto/legacy_crypto" }
 debug_interface = { path = "../common/debug_interface" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
-libra_swarm = { path = "../libra_swarm" }
+libra_wallet = { path = "../client/libra_wallet" }
 logger = { path = "../common/logger" }
 proto_conv = { path = "../common/proto_conv" }
 types = { path = "../types" }

@@ -900,7 +900,7 @@ impl ClientProxy {
     }
 
     /// Craft a transaction request.
-    pub fn create_submit_transaction_req(
+    fn create_submit_transaction_req(
         &self,
         program: Program,
         sender_account: &AccountData,
