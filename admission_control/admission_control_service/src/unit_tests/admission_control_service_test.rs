@@ -13,7 +13,7 @@ use crypto::{
     hash::CryptoHash,
     signing::{generate_keypair, sign_message},
 };
-use mempool::MempoolAddTransactionStatus;
+use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use proto_conv::FromProto;
 use protobuf::{Message, UnknownFields};
 use std::sync::Arc;
@@ -224,8 +224,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InsufficientBalance,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InsufficientBalance
     );
     let invalid_seq_add = AccountAddress::new([101; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -240,8 +240,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InvalidSeqNumber,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InvalidSeqNumber
     );
     let sys_error_add = AccountAddress::new([102; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -256,8 +256,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InvalidUpdate,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InvalidUpdate
     );
     let accepted_add = AccountAddress::new([103; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(

@@ -89,7 +89,7 @@ impl FromProto for SubmitTransactionResponse {
         };
         let mempool_error = if object.has_mempool_status() {
             Some(MempoolAddTransactionStatus::from_proto(
-                object.get_mempool_status(),
+                object.take_mempool_status(),
             )?)
         } else {
             None

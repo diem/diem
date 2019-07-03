@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{CoreMempool, MempoolAddTransactionStatus, TimelineState, TxnPointer};
+use crate::{
+    core_mempool::{CoreMempool, TimelineState, TxnPointer},
+    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
+};
 use config::config::NodeConfigHelpers;
 use crypto::signing::generate_keypair_for_testing;
 use failure::prelude::*;
@@ -106,8 +109,11 @@ pub(crate) fn add_txns_to_mempool(
 
 pub(crate) fn add_txn(pool: &mut CoreMempool, transaction: TestTransaction) -> Result<()> {
     let txn = transaction.make_signed_transaction();
-    match pool.add_txn(txn.clone(), 0, 0, 1000, TimelineState::NotReady) {
-        MempoolAddTransactionStatus::Valid => Ok(()),
+    match pool
+        .add_txn(txn.clone(), 0, 0, 1000, TimelineState::NotReady)
+        .code
+    {
+        MempoolAddTransactionStatusCode::Valid => Ok(()),
         _ => Err(format_err!("insertion failure")),
     }
 }

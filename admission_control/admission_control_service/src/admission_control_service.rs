@@ -20,7 +20,10 @@ use logger::prelude::*;
 use mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
-    shared::mempool_status::MempoolAddTransactionStatus::{self, MempoolIsFull},
+    shared::mempool_status::{
+        MempoolAddTransactionStatus,
+        MempoolAddTransactionStatusCode::{self, MempoolIsFull},
+    },
 };
 use metrics::counters::SVC_COUNTERS;
 use proto_conv::{FromProto, IntoProto};
@@ -81,7 +84,10 @@ where
             debug!("Mempool is full");
             OP_COUNTERS.inc_by("submit_txn.rejected.mempool_full", 1);
             let mut response = SubmitTransactionResponse::new();
-            response.set_mempool_status(MempoolIsFull);
+            let mut status = MempoolAddTransactionStatus::new();
+            status.set_code(MempoolIsFull);
+            status.set_message("Mempool is full".to_string());
+            response.set_mempool_status(status);
             return Ok(response);
         }
 
@@ -151,13 +157,13 @@ where
         &self,
         add_transaction_request: AddTransactionWithValidationRequest,
     ) -> Result<SubmitTransactionResponse> {
-        let mempool_result = self
+        let mut mempool_result = self
             .mempool_client
             .add_transaction_with_validation(&add_transaction_request)?;
 
         debug!("[GRPC] Done with transaction submission request");
         let mut response = SubmitTransactionResponse::new();
-        if mempool_result.get_status() == MempoolAddTransactionStatus::Valid {
+        if mempool_result.get_status().get_code() == MempoolAddTransactionStatusCode::Valid {
             OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
             response.set_ac_status(AdmissionControlStatus::Accepted);
         } else {
@@ -167,7 +173,7 @@ where
                 add_transaction_request.get_signed_txn()
             );
             OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
-            response.set_mempool_status(mempool_result.get_status());
+            response.set_mempool_status(mempool_result.take_status());
         }
         Ok(response)
     }
