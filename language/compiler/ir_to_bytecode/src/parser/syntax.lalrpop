@@ -439,6 +439,26 @@ pub Program : Program = {
             None => vec![],
         };
         Program::new(modules, s)
+    },
+    <m: Module> => {
+        let return_stmt = Statement::CommandStatement(
+            Spanned {
+                span: Span::default(),
+                value: Cmd::Return(vec![])
+            }
+        );
+        let main =
+            Function::new(
+	        FunctionVisibility::Public,
+                vec![],
+                vec![],
+                vec![],
+                FunctionBody::Move {
+                    locals: vec![],
+                    code: Block::new(vec![return_stmt]),
+                },
+            );
+        Program::new(vec![m], Script::new(vec![], main))
     }
 }
 
