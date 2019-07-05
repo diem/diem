@@ -26,7 +26,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	elif which apt-get &>/dev/null; then
 		PACKAGE_MANAGER="apt-get"
 	elif which pacman &>/dev/null; then
-		PACKAGE_MANAGER="pacman"
+		PACKAGE_MANAGER="pacman"	
 	else
 		echo "Unable to find supported package manager (yum, apt-get, or pacman). Abort"
 		exit 1
@@ -38,12 +38,16 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 		echo "Missing package manager Homebrew (https://brew.sh/). Abort"
 		exit 1
 	fi
+elif [[ "$OSTYPE" == "freebsd"* ]]; then
+	if which pkg &>/dev/null; then
+		PACKAGE_MANAGER="pkg";
 else
 	echo "Unknown OS. Abort."
 	exit 1
 fi
 
 cat <<EOF
+
 Welcome to Libra!
 
 This script will download and install the necessary dependencies needed to
@@ -58,6 +62,7 @@ EOF
 
 printf "Proceed with installing necessary dependencies? (y/N) > "
 read -e input
+
 if [[ "$input" != "y"* ]]; then
 	echo "Exiting..."
 	exit 0
