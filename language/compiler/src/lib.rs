@@ -10,6 +10,7 @@ use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use std::mem;
+use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
     transaction::{Program, TransactionArgument},
@@ -91,7 +92,7 @@ impl<'a> Compiler<'a> {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = util::build_stdlib(&self.stdlib_address);
+            let mut deps = stdlib_modules().to_vec();
             deps.extend(extra_deps);
             deps
         }

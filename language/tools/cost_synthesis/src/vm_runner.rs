@@ -12,7 +12,7 @@ macro_rules! with_loaded_vm {
     ($module_generator:expr, $root_account:expr => $vm:ident, $mod:ident, $module_cache:ident) => {
         use vm::access::ModuleAccess;
 
-        let mut modules = STDLIB_MODULES.clone();
+        let mut modules = ::stdlib::stdlib_modules().to_vec();
         let mut generated_modules = $module_generator.collect();
         modules.append(&mut generated_modules);
         // The last module is the root module based upon how we generate modules.

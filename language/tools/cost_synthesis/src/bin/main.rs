@@ -25,7 +25,6 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
-use vm_genesis::STDLIB_MODULES;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},

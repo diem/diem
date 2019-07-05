@@ -1,20 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use config::config::{VMConfig, VMPublishingOption};
 use crypto::{signing, PrivateKey, PublicKey};
 use failure::prelude::*;
-use ir_to_bytecode::{
-    compiler::{compile_module, compile_program},
-    parser::ast,
-};
+use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};
 use stdlib::{
-    stdlib::*,
+    stdlib_modules,
     transaction_scripts::{
         CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
@@ -166,28 +162,6 @@ impl Accounts {
 }
 
 lazy_static! {
-    pub static ref STDLIB_ADDRESS: AccountAddress = { account_config::core_code_address() };
-    pub static ref STDLIB_MODULES: Vec<VerifiedModule> = {
-        let mut modules: Vec<VerifiedModule> = vec![];
-        let stdlib = vec![coin_module(), native_hash_module(), account_module(), signature_module(), validator_set_module(), address_util_module(), u64_util_module(), bytearray_util_module()];
-        for m in &stdlib {
-            let compiled_module = compile_module(&STDLIB_ADDRESS, m, &modules)
-                .expect("Failed to compile module");
-            let verified_module = VerifiedModule::new(compiled_module)
-                .expect("Failed to verify module");
-
-            let (verified_module, verification_errors) =
-                verify_module_dependencies(verified_module, &modules);
-            // Fail if the module doesn't verify
-            for e in &verification_errors {
-                println!("{:?}", e);
-            }
-            assert!(verification_errors.is_empty());
-
-            modules.push(verified_module);
-        }
-        modules
-    };
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
@@ -202,7 +176,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compile_program(&AccountAddress::default(), body, &STDLIB_MODULES.clone()).unwrap();
+        compile_program(&AccountAddress::default(), body, stdlib_modules()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -339,7 +313,7 @@ pub fn encode_genesis_transaction_with_validator(
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
-    let modules = STDLIB_MODULES.clone();
+    let modules = stdlib_modules();
     let arena = Arena::new();
     let state_view = FakeStateView;
     let vm_cache = VMModuleCache::new(&arena);
@@ -430,7 +404,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap();
 
             let stdlib_modules = modules
-                .into_iter()
+                .iter()
                 .map(|m| {
                     let mut module_vec = vec![];
                     m.serialize(&mut module_vec).unwrap();

@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::util::build_stdlib;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{parse_module, parse_program},
 };
+use stdlib::stdlib_modules;
 use types::account_address::AccountAddress;
 use vm::{
     access::ScriptAccess,
@@ -153,8 +153,8 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    build_stdlib(&AccountAddress::default())
-        .into_iter()
-        .map(|m| m.into_inner())
+    stdlib_modules()
+        .iter()
+        .map(|m| m.clone().into_inner())
         .collect()
 }

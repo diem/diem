@@ -12,12 +12,12 @@ use compiler::Compiler;
 use failure::Error;
 use getopts::{Options, ParsingStyle};
 use hex;
+use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
 };
-use vm_genesis::STDLIB_MODULES;
 use vm_runtime::static_verify_program;
 use vm_runtime_tests::{
     account::{Account, AccountResource},
@@ -83,7 +83,7 @@ impl Repl {
         Repl {
             executor,
             accounts,
-            modules: STDLIB_MODULES.clone(),
+            modules: stdlib_modules().to_vec(),
             source_parser,
             publish_parser,
             get_account_parser,
@@ -103,7 +103,6 @@ impl Repl {
         let compiler = Compiler {
             code: &program_str,
             address: sender_address,
-            // XXX extra_deps should probably be a Vec<VerifiedModule>?
             extra_deps: self.modules.clone(),
             ..Compiler::default()
         };

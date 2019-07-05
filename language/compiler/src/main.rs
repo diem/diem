@@ -8,6 +8,7 @@ use bytecode_verifier::{
 use compiler::{util, Compiler};
 use serde_json;
 use std::{fs, io::Write, path::PathBuf};
+use stdlib::stdlib_modules;
 use structopt::StructOpt;
 use types::{account_address::AccountAddress, transaction::Program};
 use vm::{errors::VerificationError, file_format::CompiledModule};
@@ -113,7 +114,7 @@ fn main() {
         let dependencies = if args.no_stdlib {
             vec![]
         } else {
-            util::build_stdlib(&AccountAddress::default())
+            stdlib_modules().to_vec()
         };
         let compiled_module = util::do_compile_module(&args.source_path, &address, &dependencies);
         let compiled_module = if !args.no_verify {
