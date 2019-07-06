@@ -1,29 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::{deserialize_whitelist, get_local_ip, serialize_whitelist};
-use parity_multiaddr::{Multiaddr, Protocol};
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::{Read, Write},
-    path::{Path, PathBuf},
-    string::ToString,
-};
-
-use crypto::{
-    signing,
-    x25519::{self, X25519PrivateKey, X25519PublicKey},
-};
-use logger::LoggerType;
-use serde::{Deserialize, Serialize};
-use tempfile::TempDir;
-use toml;
-
-use failure::prelude::*;
-use proto_conv::FromProtoBytes;
-use types::transaction::{SignedTransaction, SCRIPT_HASH_LENGTH};
-
 use crate::{
     config::ConsensusProposerType::{FixedProposer, RotatingProposer},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
@@ -31,8 +8,27 @@ use crate::{
         deserialize_key, serialize_key, TrustedPeerPrivateKeys, TrustedPeersConfig,
         TrustedPeersConfigHelpers,
     },
-    utils::get_available_port,
+    utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
+use crypto::{
+    signing,
+    x25519::{self, X25519PrivateKey, X25519PublicKey},
+};
+use failure::prelude::*;
+use logger::LoggerType;
+use parity_multiaddr::{Multiaddr, Protocol};
+use proto_conv::FromProtoBytes;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    string::ToString,
+};
+use tempfile::TempDir;
+use toml;
+use types::transaction::{SignedTransaction, SCRIPT_HASH_LENGTH};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
