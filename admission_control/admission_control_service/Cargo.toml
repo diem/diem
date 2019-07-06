@@ -29,6 +29,7 @@ types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }
 
 [dev-dependencies]
+assert_matches = "1.3.0"
 storage_service = { path = "../../storage/storage_service" }
 
 [build-dependencies]

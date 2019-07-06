@@ -6,11 +6,12 @@
 //! next step.
 
 use crate::OP_COUNTERS;
-use admission_control_proto::proto::{
-    admission_control::{
-        AdmissionControlStatus, SubmitTransactionRequest, SubmitTransactionResponse,
+use admission_control_proto::{
+    proto::{
+        admission_control::{SubmitTransactionRequest, SubmitTransactionResponse},
+        admission_control_grpc::AdmissionControl,
     },
-    admission_control_grpc::AdmissionControl,
+    AdmissionControlStatus,
 };
 use failure::prelude::*;
 use futures::future::Future;
@@ -101,7 +102,10 @@ where
                     .data(&signed_txn_proto)
                     .log();
                 let mut response = SubmitTransactionResponse::new();
-                response.set_ac_status(AdmissionControlStatus::Rejected);
+                response.set_ac_status(
+                    AdmissionControlStatus::Rejected("submit txn rejected".to_string())
+                        .into_proto(),
+                );
                 OP_COUNTERS.inc_by("submit_txn.rejected.invalid_txn", 1);
                 return Ok(response);
             }
@@ -165,7 +169,7 @@ where
         let mut response = SubmitTransactionResponse::new();
         if mempool_result.get_status().get_code() == MempoolAddTransactionStatusCode::Valid {
             OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
-            response.set_ac_status(AdmissionControlStatus::Accepted);
+            response.set_ac_status(AdmissionControlStatus::Accepted.into_proto());
         } else {
             debug!(
                 "txn failed in mempool, status: {:?}, txn: {:?}",

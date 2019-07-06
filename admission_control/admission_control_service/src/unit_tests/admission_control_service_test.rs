@@ -9,6 +9,8 @@ use crate::{
     unit_tests::LocalMockMempool,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+
+use assert_matches::assert_matches;
 use crypto::{
     hash::CryptoHash,
     signing::{generate_keypair, sign_message},
@@ -200,9 +202,9 @@ fn test_reject_unknown_fields() {
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
     .unwrap();
-    assert_eq!(
+    assert_matches!(
         response.ac_status.unwrap(),
-        AdmissionControlStatus::Rejected
+        AdmissionControlStatus::Rejected(_)
     );
 }
 
