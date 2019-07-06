@@ -11,6 +11,8 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum NativeReturnType {
     ByteArray(ByteArray),
     Bool(bool),
+    UInt64(u64),
+    Void,
 }
 
 pub struct CostedReturnType {
