@@ -38,6 +38,7 @@ pub trait StackAccessor {
     fn get_byte_array(&mut self) -> Result<ByteArray>;
     fn get_u64(&mut self) -> Result<u64>;
     fn get_address(&mut self) -> Result<AccountAddress>;
+    fn get_bool(&mut self) -> Result<bool>;
 }
 
 pub fn dispatch_native_call<T: StackAccessor>(

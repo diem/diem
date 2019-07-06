@@ -67,4 +67,8 @@ impl StackAccessor for &mut StackAccessorMocker {
     fn get_address(&mut self) -> Result<AccountAddress> {
         unimplemented!("Come back later")
     }
+
+    fn get_bool(&mut self) -> Result<bool> {
+        unimplemented!("Come back later")
+    }
 }

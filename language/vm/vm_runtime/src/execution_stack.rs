@@ -189,4 +189,15 @@ where
             None => Err(VMStaticViolation::TypeMismatch.into()),
         }
     }
+    
+    fn get_bool(&mut self) -> NativeResult<bool> {
+        match self.pop()?.value() {
+            Some(v) => match MutVal::try_own(v) {
+                Ok(Value::Bool(b)) => Ok(b),
+                Err(err) => Err(err.into()),
+                _ => Err(VMStaticViolation::TypeMismatch.into()),
+            },
+            None => Err(VMStaticViolation::TypeMismatch.into()),
+        }
+    }
 }
