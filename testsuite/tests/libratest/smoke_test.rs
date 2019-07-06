@@ -16,7 +16,13 @@ fn setup_swarm_and_client_proxy(
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
 
-    let swarm = LibraSwarm::launch_swarm(num_nodes, false, faucet_account_keypair, true);
+    let swarm = LibraSwarm::launch_swarm(
+        num_nodes,
+        false, /* disable_logging */
+        faucet_account_keypair,
+        true, /* tee_logs */
+        None, /* config_dir */
+    );
     let port = *swarm
         .get_validators_public_ports()
         .get(client_port_index)

@@ -18,6 +18,7 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
+    str::FromStr,
 };
 use tempfile::TempDir;
 use tools::output_capture::OutputCapture;
@@ -208,9 +209,26 @@ pub enum HealthStatus {
     RpcFailure(failure::Error),
 }
 
+/// A wrapper that unifies PathBuf and TempDir.
+#[derive(Debug)]
+pub enum LibraSwarmDir {
+    Persistent(PathBuf),
+    Temporary(TempDir),
+}
+
+impl AsRef<Path> for LibraSwarmDir {
+    fn as_ref(&self) -> &Path {
+        match self {
+            LibraSwarmDir::Persistent(path_buf) => path_buf.as_path(),
+            LibraSwarmDir::Temporary(temp_dir) => temp_dir.path(),
+        }
+    }
+}
+
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
-    pub dir: Option<TempDir>,
+    // Output log, LibraNodes' config file, libradb etc, into this dir.
+    pub dir: Option<LibraSwarmDir>,
     // Maps the peer id of a node to the LibraNode struct
     pub nodes: HashMap<String, LibraNode>,
     pub config: SwarmConfig,
@@ -236,6 +254,7 @@ impl LibraSwarm {
         disable_logging: bool,
         faucet_account_keypair: KeyPair,
         tee_logs: bool,
+        config_dir: Option<String>,
     ) -> Self {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
@@ -245,6 +264,7 @@ impl LibraSwarm {
                 disable_logging,
                 faucet_account_keypair.clone(),
                 tee_logs,
+                &config_dir,
             ) {
                 Ok(swarm) => {
                     return swarm;
@@ -260,13 +280,21 @@ impl LibraSwarm {
         disable_logging: bool,
         faucet_account_keypair: KeyPair,
         tee_logs: bool,
+        config_dir: &Option<String>,
     ) -> std::result::Result<Self, SwarmLaunchFailure> {
-        let dir = tempfile::tempdir().unwrap();
-        let logs_dir_path = &dir.path().join("logs");
-        println!(
-            "Base directory containing logs and configs: {:?}",
-            dir.path()
-        );
+        let dir = match config_dir {
+            Some(dir_str) => {
+                std::fs::create_dir_all(dir_str).expect("unable to create config dir");
+                LibraSwarmDir::Persistent(
+                    PathBuf::from_str(&dir_str).expect("unable to create config dir"),
+                )
+            }
+            None => LibraSwarmDir::Temporary(
+                tempfile::tempdir().expect("unable to create temporary config dir"),
+            ),
+        };
+        let logs_dir_path = &dir.as_ref().join("logs");
+        println!("Base directory containing logs and configs: {:?}", &dir);
         std::fs::create_dir(&logs_dir_path).unwrap();
         let base = utils::workspace_root().join("config/data/configs/node.config.toml");
         let mut config_builder = SwarmConfigBuilder::new();
@@ -497,7 +525,7 @@ impl LibraSwarm {
         config: &NodeConfig,
         disable_logging: bool,
     ) -> std::result::Result<(), SwarmLaunchFailure> {
-        let logs_dir_path = self.dir.as_ref().map(|x| x.path().join("logs")).unwrap();
+        let logs_dir_path = self.dir.as_ref().map(|x| x.as_ref().join("logs")).unwrap();
         let mut node =
             LibraNode::launch(config, path, &logs_dir_path, disable_logging, self.tee_logs)
                 .unwrap();
@@ -526,8 +554,10 @@ impl Drop for LibraSwarm {
         // If panicking, we don't want to gc the swarm directory.
         if std::thread::panicking() {
             if let Some(dir) = self.dir.take() {
-                let logs = dir.into_path();
-                println!("logs located: {:?}", logs);
+                if let LibraSwarmDir::Temporary(temp_dir) = dir {
+                    let log_path = temp_dir.into_path();
+                    println!("logs located at {:?}", log_path);
+                }
             }
         }
     }
