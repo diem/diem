@@ -12,7 +12,7 @@ use crate::{
         persistent_storage::PersistentStorage,
         test_utils::{consensus_runtime, MockStorage, TestPayload},
     },
-    mock_time_service::SimulatedTimeService,
+    util::mock_time_service::SimulatedTimeService,
 };
 use channel;
 use futures::{executor::block_on, StreamExt};

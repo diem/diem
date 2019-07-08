@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::time_service::{ScheduledTask, TimeService};
+use crate::util::time_service::{ScheduledTask, TimeService};
 use futures::{Future, FutureExt};
 use logger::prelude::*;
 use std::{

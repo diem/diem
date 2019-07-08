@@ -32,7 +32,7 @@ use crate::{
         },
     },
     state_replication::ExecutedState,
-    time_service::{ClockTimeService, TimeService},
+    util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use crypto::HashValue;

@@ -7,7 +7,7 @@ use crate::{
     chained_bft::{block_storage::BlockReader, common::Payload},
     counters,
     state_replication::TxnManager,
-    time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
+    util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
 use logger::prelude::*;
 use std::{

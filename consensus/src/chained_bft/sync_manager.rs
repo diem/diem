@@ -6,13 +6,13 @@ use crate::{
         block_storage::{BlockReader, BlockStore, InsertError},
         common::{Author, Payload},
         consensus_types::{block::Block, quorum_cert::QuorumCert},
-        mutex_map::MutexMap,
         network::ConsensusNetworkImpl,
         persistent_storage::PersistentStorage,
     },
     counters,
     state_replication::StateComputer,
     state_synchronizer::SyncStatus,
+    util::mutex_map::MutexMap,
 };
 use crypto::HashValue;
 use failure::{Fail, Result};

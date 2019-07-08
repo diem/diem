@@ -12,7 +12,7 @@ use crate::{
         persistent_storage::PersistentLivenessStorage,
     },
     counters,
-    time_service::{SendTask, TimeService},
+    util::time_service::{SendTask, TimeService},
 };
 use channel;
 use futures::{Future, FutureExt, SinkExt, StreamExt, TryFutureExt};

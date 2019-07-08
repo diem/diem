@@ -144,7 +144,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::chained_bft::mutex_map::*;
+    use crate::util::mutex_map::*;
     use futures::{
         channel::mpsc, executor::block_on, stream::StreamExt, FutureExt, SinkExt, TryFutureExt,
     };

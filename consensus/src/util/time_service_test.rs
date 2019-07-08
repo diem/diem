@@ -1,4 +1,4 @@
-use crate::{
+use crate::util::{
     mock_time_service::SimulatedTimeService,
     time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };

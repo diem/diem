@@ -24,7 +24,7 @@ use crate::{
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     state_synchronizer::SyncStatus,
-    time_service::{ClockTimeService, TimeService},
+    util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use failure::prelude::*;
