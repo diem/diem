@@ -16,7 +16,7 @@ crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../../common/proptest_helpers" }
 types = { path = "../../types" }
-mirai-annotations = "0.2.1"
+mirai-annotations = ">= 0.2.1"
 
 [features]
 mirai-contracts = []
