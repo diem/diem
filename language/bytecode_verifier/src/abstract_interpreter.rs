@@ -10,6 +10,7 @@ use crate::{
     control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph},
     nonce::Nonce,
 };
+use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
@@ -88,6 +89,9 @@ impl<'a> VerificationPass<'a> for AbstractInterpreter<'a> {
         let mut errors = vec![];
         while !self.work_list.is_empty() {
             let block_id = self.work_list.pop().unwrap();
+            if self.erroneous_blocks.contains(&block_id) {
+                continue;
+            }
             errors.append(&mut self.propagate(block_id));
         }
         errors
@@ -142,6 +146,8 @@ impl<'a> AbstractInterpreter<'a> {
     }
 
     fn compute(&mut self, block_id: BlockId) -> Result<AbstractState, Vec<VMStaticViolation>> {
+        checked_verify!(self.errors.is_empty());
+
         let mut state = self.block_id_to_state[&block_id].clone();
         let block = &self.cfg.block_of_id(block_id).unwrap();
         let mut offset = block.entry;
@@ -152,7 +158,9 @@ impl<'a> AbstractInterpreter<'a> {
                 offset as usize,
             );
             if !self.errors.is_empty() {
-                return Err(self.errors.clone());
+                let mut es = vec![];
+                es.append(&mut self.errors);
+                return Err(es);
             }
             offset += 1;
         }
