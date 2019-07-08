@@ -43,6 +43,7 @@ else
 	exit 1
 fi
 
+
 cat <<EOF
 Welcome to Libra!
 
@@ -62,6 +63,20 @@ if [[ "$input" != "y"* ]]; then
 	echo "Exiting..."
 	exit 0
 fi
+
+# Install cURL
+echo "Installing cURL......"
+if[[ "$OSTYPE" == "linux-gnu" ]]; then
+	if which yum &>/dev/null; then
+		yum install curl
+	elif which apt-get &>/dev/null; then
+		apt-get install curl
+	elif which pacman &>/dev/null; then
+		pacman -S curl
+	else
+		echo "Unable to find supported package manager (yum, apt-get, or pacman). Abort"
+		exit 1
+	fi
 
 # Install Rust
 echo "Installing Rust......"
