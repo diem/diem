@@ -365,7 +365,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 
-        <PersistentStorage<T>>::prune_tree(proxy.as_ref(), initial_data.take_blocks_to_prune())
+        <dyn PersistentStorage<T>>::prune_tree(proxy.as_ref(), initial_data.take_blocks_to_prune())
             .expect("unable to prune dangling blocks during restart");
 
         debug!("Consensus root to start with: {}", initial_data.root.0);

@@ -548,14 +548,14 @@ impl Node {
     /// Recovers from serialized bytes in physical storage.
     pub fn decode(val: &[u8]) -> Result<Node> {
         if val.is_empty() {
-            Err(NodeDecodeError::EmptyInput)?
+            return Err(NodeDecodeError::EmptyInput.into());
         }
         let node_tag = val[0];
         match node_tag {
             BranchNode::TAG => Ok(Node::Branch(deserialize(&val[1..].to_vec())?)),
             ExtensionNode::TAG => Ok(Node::Extension(deserialize(&val[1..].to_vec())?)),
             LeafNode::TAG => Ok(Node::Leaf(deserialize(&val[1..].to_vec())?)),
-            unknown_tag => Err(NodeDecodeError::UnknownTag { unknown_tag })?,
+            unknown_tag => Err(NodeDecodeError::UnknownTag { unknown_tag }.into()),
         }
     }
 }

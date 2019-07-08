@@ -22,6 +22,6 @@ vm = { path = "../../language/vm" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
-datatest = "0.3.1"
+datatest = "0.3.5"
 stats_alloc = "0.1.8"
 rusty-fork = "0.2.2"

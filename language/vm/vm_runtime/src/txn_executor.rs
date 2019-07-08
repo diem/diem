@@ -98,7 +98,7 @@ where
     /// transactions within the same block.
     pub fn new(
         module_cache: P,
-        data_cache: &'txn RemoteCache,
+        data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
         TransactionExecutor {
@@ -816,7 +816,7 @@ pub fn execute_function(
     caller_script: VerifiedScript,
     modules: Vec<VerifiedModule>,
     _args: Vec<TransactionArgument>,
-    data_cache: &RemoteCache,
+    data_cache: &dyn RemoteCache,
 ) -> VMResult<()> {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);

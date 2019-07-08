@@ -206,13 +206,10 @@ where
     async fn ping_peer(
         peer_id: PeerId,
         round: u64,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+        mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         ping_timeout: Duration,
     ) -> (PeerId, u64, Result<(), NetworkError>) {
-        let ping_result = async move |mut peer_mgr_reqs_tx: PeerManagerRequestSender<
-            TSubstream,
-        >|
-                    -> Result<(), NetworkError> {
+        let ping_result = async move {
             // Request a new substream to peer.
             debug!(
                 "Opening a new substream with peer: {} for Ping",
@@ -237,7 +234,7 @@ where
         (
             peer_id,
             round,
-            ping_result(peer_mgr_reqs_tx.clone())
+            ping_result
                 .boxed()
                 .compat()
                 .timeout(ping_timeout)

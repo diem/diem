@@ -23,7 +23,7 @@ where
 {
     txn: SignatureCheckedTransaction,
     module_cache: P,
-    data_cache: &'txn RemoteCache,
+    data_cache: &'txn dyn RemoteCache,
     allocator: &'txn Arena<LoadedModule>,
     phantom: PhantomData<&'alloc ()>,
 }
@@ -37,7 +37,7 @@ where
     pub fn new(
         txn: SignatureCheckedTransaction,
         module_cache: P,
-        data_cache: &'txn RemoteCache,
+        data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
     ) -> Self {
         Self {

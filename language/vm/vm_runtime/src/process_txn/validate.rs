@@ -292,7 +292,7 @@ where
     fn new(
         metadata: TransactionMetadata,
         module_cache: P,
-        data_cache: &'txn RemoteCache,
+        data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
     ) -> Self {
         // This temporary cache is used for modules published by a single transaction.

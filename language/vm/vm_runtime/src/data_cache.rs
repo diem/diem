@@ -85,11 +85,11 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: &'txn RemoteCache,
+    data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
-    pub fn new(data_cache: &'txn RemoteCache) -> Self {
+    pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
         TransactionDataCache {
             data_cache,
             data_map: BTreeMap::new(),

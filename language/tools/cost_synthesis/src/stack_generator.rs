@@ -96,7 +96,7 @@ where
 
     /// The module cache for all of the other modules in the universe. We need this in order to
     /// resolve struct and function handles to other modules other then the root module.
-    module_cache: &'txn ModuleCache<'alloc>,
+    module_cache: &'txn dyn ModuleCache<'alloc>,
 
     /// The bytecode instruction for which stack states are generated.
     op: Bytecode,
@@ -134,7 +134,7 @@ where
     pub fn new(
         account_address: &'txn AccountAddress,
         root_module: &'txn LoadedModule,
-        module_cache: &'txn ModuleCache<'alloc>,
+        module_cache: &'txn dyn ModuleCache<'alloc>,
         op: &Bytecode,
         max_stack_size: u64,
         iters: u16,

@@ -159,7 +159,7 @@ pub enum WaitingError {
 /// There are 4 potential outcomes, 2 successful and 2 errors, each represented by
 /// WaitingSuccess and WaitingError.
 pub async fn wait_if_possible(
-    time_service: &TimeService,
+    time_service: &dyn TimeService,
     min_duration_since_epoch: Duration,
     max_instant: Instant,
 ) -> Result<WaitingSuccess, WaitingError> {

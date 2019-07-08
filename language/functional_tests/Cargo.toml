@@ -17,6 +17,6 @@ config = { path = "../../config" }
 transaction_builder = { path = "../transaction_builder" }
 termcolor = "1.0.4"
 filecheck = "0.4.0"
-datatest = "0.3.1"
+datatest = "0.3.5"
 lazy_static = "1.3.0"
 regex = "1.1.6"

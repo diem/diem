@@ -219,7 +219,7 @@ impl Benchmarker {
         program: Program,
         sender_account: &mut AccountData,
     ) -> Result<SubmitTransactionRequest> {
-        let signer: Box<&TransactionSigner> = match &sender_account.key_pair {
+        let signer: Box<&dyn TransactionSigner> = match &sender_account.key_pair {
             Some(key_pair) => Box::new(key_pair),
             None => Box::new(&self.wallet),
         };
@@ -376,8 +376,8 @@ impl Benchmarker {
                 }
             }
         }
-        for i in 0..result.len() {
-            info!("{}th chunk with {} requests", i, &(*result[i]).len());
+        for (i, result) in result.iter().enumerate() {
+            info!("{}th chunk with {} requests", i, result.len());
         }
         result
     }

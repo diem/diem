@@ -57,7 +57,7 @@ impl SynchronizerEnv {
     }
 
     fn new_with(
-        handler: Box<Fn() -> Result<TransactionListWithProof> + Send + 'static>,
+        handler: Box<dyn Fn() -> Result<TransactionListWithProof> + Send + 'static>,
         opt_config: Option<NodeConfig>,
     ) -> Self {
         let mut runtime = test_utils::consensus_runtime();

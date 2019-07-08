@@ -23,7 +23,6 @@ allowed_features=(
   "--and" "--not" "-e" "specialization"
   "--and" "--not" "-e" "test"
   "--and" "--not" "-e" "trait_alias"
-  "--and" "--not" "-e" "type_alias_enum_variants"
 )
 
 # Search for nightly features

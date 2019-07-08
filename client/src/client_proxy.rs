@@ -460,7 +460,7 @@ impl ClientProxy {
             let signer_account = self.accounts.get(signer_account_ref_id).ok_or_else(|| {
                 format_err!("Unable to find sender account: {}", signer_account_ref_id)
             })?;
-            let signer: Box<&TransactionSigner> = match &signer_account.key_pair {
+            let signer: Box<&dyn TransactionSigner> = match &signer_account.key_pair {
                 Some(key_pair) => Box::new(key_pair),
                 None => Box::new(&self.wallet),
             };
@@ -907,7 +907,7 @@ impl ClientProxy {
         max_gas_amount: Option<u64>,
         gas_unit_price: Option<u64>,
     ) -> Result<SubmitTransactionRequest> {
-        let signer: Box<&TransactionSigner> = match &sender_account.key_pair {
+        let signer: Box<&dyn TransactionSigner> = match &sender_account.key_pair {
             Some(key_pair) => Box::new(key_pair),
             None => Box::new(&self.wallet),
         };

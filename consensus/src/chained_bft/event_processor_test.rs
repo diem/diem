@@ -97,7 +97,7 @@ impl NodeSetup {
     fn create_pacemaker(
         executor: TaskExecutor,
         time_service: Arc<dyn TimeService>,
-    ) -> (Arc<Pacemaker>, channel::Receiver<NewRoundEvent>) {
+    ) -> (Arc<dyn Pacemaker>, channel::Receiver<NewRoundEvent>) {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;

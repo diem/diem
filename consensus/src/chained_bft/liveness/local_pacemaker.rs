@@ -110,7 +110,7 @@ impl PacemakerTimeInterval for ExponentialTimeInterval {
 /// QC to f+1 other replicas for instance.
 struct LocalPacemakerInner {
     // Determines the time interval for a round interval
-    time_interval: Box<PacemakerTimeInterval>,
+    time_interval: Box<dyn PacemakerTimeInterval>,
     // Highest round that a block was committed
     highest_committed_round: Round,
     // Highest round known certified by QC.
@@ -137,7 +137,7 @@ struct LocalPacemakerInner {
 impl LocalPacemakerInner {
     pub fn new(
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
@@ -337,7 +337,7 @@ impl LocalPacemaker {
     pub fn new(
         executor: TaskExecutor,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,

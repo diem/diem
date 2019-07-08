@@ -46,7 +46,7 @@ impl HttpLocalSlogDrain {
     pub fn new(client: HttpLogClient) -> Self {
         HttpLocalSlogDrain { client }
     }
-    fn log_impl(&self, record: &Record, values: &OwnedKVList) -> Result<(), Box<Error>> {
+    fn log_impl(&self, record: &Record, values: &OwnedKVList) -> Result<(), Box<dyn Error>> {
         let mut serializer = PlainKVSerializer::new();
         values.serialize(record, &mut serializer)?;
         record.kv().serialize(record, &mut serializer)?;

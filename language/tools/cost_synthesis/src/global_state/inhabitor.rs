@@ -33,7 +33,7 @@ where
 
     /// The module cache for all of the other modules in the universe. We need this in order to
     /// resolve struct and function handles to other modules other then the root module.
-    module_cache: &'txn ModuleCache<'alloc>,
+    module_cache: &'txn dyn ModuleCache<'alloc>,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
     /// generating an inhabitant for a struct SignatureToken. This is lazily populated.
@@ -48,7 +48,10 @@ where
     ///
     /// It initializes each of the internal resolution tables for structs and function handles to
     /// be empty.
-    pub fn new(root_module: &'txn LoadedModule, module_cache: &'txn ModuleCache<'alloc>) -> Self {
+    pub fn new(
+        root_module: &'txn LoadedModule,
+        module_cache: &'txn dyn ModuleCache<'alloc>,
+    ) -> Self {
         let seed: [u8; 32] = [0; 32];
         Self {
             gen: StdRng::from_seed(seed),

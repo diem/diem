@@ -118,7 +118,7 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u8> {
     if let Ok(count) = cursor.read_u8() {
         Ok(count)
     } else {
-        return Err(BinaryError::Malformed);
+        Err(BinaryError::Malformed)
     }
 }
 
