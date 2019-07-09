@@ -70,7 +70,8 @@ impl<'a> VerificationPass<'a> for AbstractInterpreter<'a> {
             }
         }
         block_id_to_state.insert(0, AbstractState::new(locals));
-        let next_nonce = function_signature_view.arg_count();
+        // nonces in [0, locals_signature_view.len()) are reserved for constructing canonical state
+        let next_nonce = locals_signature_view.len();
         Self {
             module,
             function_definition_view,
