@@ -5,6 +5,7 @@
 
 use crate::{account::Account, compile::compile_script, gas_costs};
 use lazy_static::lazy_static;
+use stdlib::transaction_scripts;
 use types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -104,24 +105,18 @@ pub fn mint_txn(
     )
 }
 
-// TODO: replace these with helper functions/consts in stdlib
 fn create_account() -> Vec<u8> {
-    let code = include_str!("../../../../stdlib/transaction_scripts/create_account.mvir");
-    compile_script(code)
+    compile_script(transaction_scripts::create_account())
 }
 
 fn mint() -> Vec<u8> {
-    let code = include_str!("../../../../stdlib/transaction_scripts/mint.mvir");
-    compile_script(code)
+    compile_script(transaction_scripts::mint())
 }
 
 fn peer_to_peer() -> Vec<u8> {
-    let code = include_str!("../../../../stdlib/transaction_scripts/peer_to_peer_transfer.mvir");
-    compile_script(code)
+    compile_script(transaction_scripts::peer_to_peer())
 }
 
 fn rotate_key() -> Vec<u8> {
-    let code =
-        include_str!("../../../../stdlib/transaction_scripts/rotate_authentication_key.mvir");
-    compile_script(code)
+    compile_script(transaction_scripts::rotate_key())
 }
