@@ -10,12 +10,15 @@ use config::config::VMPublishingOption;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use std::time::Duration;
 use stdlib::stdlib_modules;
-use transaction_builder::transaction::make_transaction_program;
+use transaction_builder::transaction::{make_transaction_program, serialize_program};
 use types::{
     transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
 };
-use vm::file_format::CompiledProgram;
+use vm::{
+    access::ModuleAccess,
+    file_format::{CompiledModule, CompiledProgram, CompiledScript},
+};
 use vm_runtime_tests::{
     account::{AccountData, AccountResource},
     executor::FakeExecutor,
@@ -38,6 +41,7 @@ pub enum Stage {
     // However it could be merged into the compiler.
     Compiler,
     Verifier,
+    Serializer,
     Runtime,
 }
 
@@ -48,6 +52,7 @@ impl Stage {
             "parser" => Ok(Stage::Parser),
             "compiler" => Ok(Stage::Compiler),
             "verifier" => Ok(Stage::Verifier),
+            "serializer" => Ok(Stage::Serializer),
             "runtime" => Ok(Stage::Runtime),
             _ => Err(ErrorKind::Other(format!("unrecognized stage '{:?}'", s)).into()),
         }
@@ -141,6 +146,33 @@ fn run_transaction(
     }
 }
 
+/// Serializes the program then deserializes it.
+fn run_serializer_round_trip(program: &CompiledProgram) -> Result<()> {
+    let (script_blob, module_blobs) = serialize_program(program)?;
+
+    assert!(module_blobs.len() == program.modules.len());
+
+    let script = CompiledScript::deserialize(&script_blob)?;
+    if script != program.script {
+        return Err(ErrorKind::Other(
+            "deserialized script different from original one".to_string(),
+        )
+        .into());
+    }
+
+    for (i, blob) in module_blobs.iter().enumerate() {
+        let module = CompiledModule::deserialize(blob)?;
+        if module != program.modules[i] {
+            return Err(ErrorKind::Other(format!(
+                "deserialized module {} different from original one",
+                program.modules[i].name()
+            ))
+            .into());
+        }
+    }
+    Ok(())
+}
+
 /// Tries to unwrap the given result. Upon failure, log the error and aborts.
 macro_rules! unwrap_or_log {
     ($res: expr, $log: expr) => {{
@@ -216,7 +248,11 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
             compiled_program
         };
 
-        // stage 4: execute the program
+        // stage 4: serializer round trip
+        res.outputs.push(EvaluationOutput::Stage(Stage::Serializer));
+        unwrap_or_log!(run_serializer_round_trip(&compiled_program), res);
+
+        // stage 5: execute the program
         if !transaction.config.no_execute {
             res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
             let txn_output = unwrap_or_log!(

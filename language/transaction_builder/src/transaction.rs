@@ -5,12 +5,8 @@ use crate::errors::*;
 use types::transaction::{Program, TransactionArgument};
 use vm::file_format::CompiledProgram;
 
-/// Creates a transaction program by serializing the the given `CompiledProgram` and
-/// bundling it with transaction arguments.
-pub fn make_transaction_program(
-    program: &CompiledProgram,
-    args: &[TransactionArgument],
-) -> Result<Program> {
+/// Serializes the given script and modules to be published.
+pub fn serialize_program(program: &CompiledProgram) -> Result<(Vec<u8>, Vec<Vec<u8>>)> {
     let mut script_blob = vec![];
     program.script.serialize(&mut script_blob)?;
 
@@ -24,5 +20,15 @@ pub fn make_transaction_program(
         })
         .collect::<Result<Vec<_>>>()?;
 
+    Ok((script_blob, module_blobs))
+}
+
+/// Creates a transaction program by serializing the the given `CompiledProgram` and
+/// bundling it with transaction arguments.
+pub fn make_transaction_program(
+    program: &CompiledProgram,
+    args: &[TransactionArgument],
+) -> Result<Program> {
+    let (script_blob, module_blobs) = serialize_program(program)?;
     Ok(Program::new(script_blob, module_blobs, args.to_vec()))
 }
