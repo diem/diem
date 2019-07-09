@@ -16,7 +16,7 @@ The Move language directory consists of five parts:
 
 - The [bytecode verifier](https://github.com/libra/libra/tree/master/language/bytecode_verifier), which contains a static analysis tool for rejecting invalid Move bytecode. The virtual machine runs the bytecode verifier on any new Move code it encounters before executing it. The compiler runs the bytecode verifier on its output and surfaces the errors to the programmer.
 
-- The Move intermediate representation (IR) [compiler](https://github.com/libra/libra/tree/master/language/stdlib), which compiles human-readable program text into Move bytecode. *Warning: the IR compiler is a testing tool. It can generate invalid bytecode that will be rejected by the Move bytecode verifier. The IR syntax is a work in progress that will undergo significant changes.*
+- The Move intermediate representation (IR) [compiler](https://github.com/libra/libra/tree/master/language/compiler), which compiles human-readable program text into Move bytecode. *Warning: the IR compiler is a testing tool. It can generate invalid bytecode that will be rejected by the Move bytecode verifier. The IR syntax is a work in progress that will undergo significant changes.*
 
 - The [standard library](https://github.com/libra/libra/tree/master/language/stdlib), which contains the Move IR code for the core system modules such as `LibraAccount` and `LibraCoin`.
 
