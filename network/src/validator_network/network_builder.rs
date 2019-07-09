@@ -317,7 +317,7 @@ impl NetworkBuilder {
     ) {
         let identity = Identity::new(self.peer_id, self.supported_protocols());
         // Build network based on the transport type
-        let own_identity_keys = self.identity_keys.take().unwrap();
+        let own_identity_keys = self.identity_keys.take().expect("Identity keys not set");
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
             TransportType::Memory => self.build_with_transport(build_memory_transport(identity)),
@@ -511,7 +511,8 @@ impl NetworkBuilder {
             .spawn(conn_mgr.start().boxed().unit_error().compat());
 
         // Setup signer from keys.
-        let (signing_private_key, signing_public_key) = self.signing_keys.take().unwrap();
+        let (signing_private_key, signing_public_key) =
+            self.signing_keys.take().expect("Signing keys not set");
         let signer = ValidatorSigner::new(self.peer_id, signing_public_key, signing_private_key);
         // Initialize and start Discovery actor.
         let discovery = Discovery::new(

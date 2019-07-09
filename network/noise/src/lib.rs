@@ -52,7 +52,7 @@ impl NoiseConfig {
         let parameters: NoiseParams = NOISE_IX_PARAMETER.parse().expect("Invalid protocol name");
         let keypair = snow::Builder::new(parameters.clone())
             .generate_keypair()
-            .unwrap();
+            .expect("Noise failed to generate a random static keypair");
         Self {
             keypair,
             parameters,
@@ -99,7 +99,10 @@ impl NoiseConfig {
         let handshake = socket::Handshake::new(socket, session);
 
         let socket = handshake.handshake_1rt().await?;
-        let remote_static_key = socket.get_remote_static().unwrap().to_owned();
+        let remote_static_key = socket
+            .get_remote_static()
+            .expect("Noise remote static key already taken")
+            .to_owned();
         Ok((remote_static_key, socket))
     }
 }

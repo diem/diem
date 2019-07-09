@@ -351,7 +351,10 @@ where
     }
 
     fn start_connection_listener(&mut self) {
-        let connection_handler = self.connection_handler.take().unwrap();
+        let connection_handler = self
+            .connection_handler
+            .take()
+            .expect("Connection handler already taken");
         self.executor
             .spawn(connection_handler.listen().boxed().unit_error().compat());
     }
@@ -524,7 +527,9 @@ where
         dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
         internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
     ) -> (Self, Multiaddr) {
-        let (listener, listen_addr) = transport.listen_on(listen_addr).unwrap();
+        let (listener, listen_addr) = transport
+            .listen_on(listen_addr)
+            .expect("Transport listen on fails");
         debug!("listening on {:?}", listen_addr);
 
         (
