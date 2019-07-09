@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use codespan::{ByteIndex, Span};
 
-use crate::parser::ast::{ModuleDefinition, StructDefinition, Script, Program};
-use crate::parser::ast::{
+use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
+use crate::ast::{
     FunctionAnnotation, FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
     Kind, Block, Cmd, CopyableVal, Spanned,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,

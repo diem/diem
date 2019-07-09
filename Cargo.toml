@@ -34,6 +34,7 @@ members = [
     "language/transaction_builder",
     "language/compiler",
     "language/compiler/ir_to_bytecode",
+    "language/compiler/ir_to_bytecode/syntax",
     "language/tools/cost_synthesis",
     "language/stdlib/natives",
     "language/vm",

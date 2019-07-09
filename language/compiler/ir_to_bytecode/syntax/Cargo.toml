@@ -1,0 +1,19 @@
+[package]
+name = "ir_to_bytecode_syntax"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+codespan = "0.1.3"
+codespan-reporting = "0.1.4"
+hex = "0.3.2"
+lalrpop-util = "0.16.3"
+regex = "1.1.6"
+types = { path = "../../../../types" }
+
+[build-dependencies]
+lalrpop = "0.16.3"
