@@ -8,10 +8,7 @@
 //! the stack height by the number of values returned by the function as indicated in its
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
-use crate::{
-    code_unit_verifier::VerificationPass,
-    control_flow_graph::{BasicBlock, VMControlFlowGraph},
-};
+use crate::control_flow_graph::{BasicBlock, VMControlFlowGraph};
 use vm::{
     access::ModuleAccess,
     errors::VMStaticViolation,
@@ -25,30 +22,26 @@ pub struct StackUsageVerifier<'a> {
     cfg: &'a VMControlFlowGraph,
 }
 
-impl<'a> VerificationPass<'a> for StackUsageVerifier<'a> {
-    fn new(
+impl<'a> StackUsageVerifier<'a> {
+    pub fn verify(
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Self {
+    ) -> Vec<VMStaticViolation> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-        Self {
+        let verifier = Self {
             module,
             function_definition_view,
             cfg,
-        }
-    }
+        };
 
-    fn verify(self) -> Vec<VMStaticViolation> {
         let mut errors = vec![];
-        for (_, block) in self.cfg.blocks.iter() {
-            errors.append(&mut self.verify_block(&block));
+        for (_, block) in verifier.cfg.blocks.iter() {
+            errors.append(&mut verifier.verify_block(&block));
         }
         errors
     }
-}
 
-impl<'a> StackUsageVerifier<'a> {
     fn verify_block(&self, block: &BasicBlock) -> Vec<VMStaticViolation> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
