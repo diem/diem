@@ -12,9 +12,9 @@ use crate::{
     errors::*,
     evaluator::Transaction,
 };
+use language_e2e_tests::account::AccountData;
 use regex::{Captures, Regex};
 use std::collections::BTreeMap;
-use vm_runtime_tests::account::AccountData;
 
 /// Substitutes the placeholders (account names in double curly brackets) with addresses.
 pub fn substitute_addresses(accounts: &BTreeMap<String, AccountData>, text: &str) -> String {

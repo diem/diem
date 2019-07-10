@@ -39,6 +39,7 @@ Libra Core components interact with the language component through the VM. Speci
 ```
 ├── README.md          # This README
 ├── bytecode_verifier  # The bytecode verifier
+├── e2e_tests          # infrastructure and tests for the end-to-end flow
 ├── functional_tests   # Testing framework for the Move language
 ├── compiler           # The IR to Move bytecode compiler
 ├── stdlib             # Core Move modules and transaction scripts

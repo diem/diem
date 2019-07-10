@@ -12,6 +12,10 @@ use compiler::Compiler;
 use failure::Error;
 use getopts::{Options, ParsingStyle};
 use hex;
+use language_e2e_tests::{
+    account::{Account, AccountResource},
+    executor::FakeExecutor,
+};
 use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
@@ -19,10 +23,6 @@ use types::{
     transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
 };
 use vm_runtime::static_verify_program;
-use vm_runtime_tests::{
-    account::{Account, AccountResource},
-    executor::FakeExecutor,
-};
 
 struct Repl {
     accounts: Vec<Account>,

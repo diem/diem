@@ -5,11 +5,11 @@
 // A config entry starts with "//!", differentiating it from a directive.
 
 use crate::errors::*;
+use language_e2e_tests::account::AccountData;
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,
 };
-use vm_runtime_tests::account::AccountData;
 
 // unit: microlibra
 const DEFAULT_BALANCE: u64 = 1_000_000;

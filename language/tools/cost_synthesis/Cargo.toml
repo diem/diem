@@ -17,7 +17,7 @@ stdlib = { path = "../../stdlib" }
 types = { path = "../../../types" }
 vm = { path = "../../vm" }
 vm_runtime = { path = "../../vm/vm_runtime" }
-vm_runtime_tests = { path = "../../vm/vm_runtime/vm_runtime_tests" }
+language_e2e_tests = { path = "../../e2e_tests" }
 vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
 move_ir_natives = { path = "../../stdlib/natives" }
 crypto = { path = "../../../crypto/legacy_crypto" }

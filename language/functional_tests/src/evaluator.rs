@@ -8,6 +8,10 @@ use crate::{
 use bytecode_verifier::verifier::{VerifiedModule, VerifiedProgram};
 use config::config::VMPublishingOption;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
+use language_e2e_tests::{
+    account::{AccountData, AccountResource},
+    executor::FakeExecutor,
+};
 use std::time::Duration;
 use stdlib::stdlib_modules;
 use transaction_builder::transaction::{make_transaction_program, serialize_program};
@@ -18,10 +22,6 @@ use types::{
 use vm::{
     access::ModuleAccess,
     file_format::{CompiledModule, CompiledProgram, CompiledScript},
-};
-use vm_runtime_tests::{
-    account::{AccountData, AccountResource},
-    executor::FakeExecutor,
 };
 
 /// A transaction to be evaluated by the testing infra.

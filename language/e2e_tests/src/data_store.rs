@@ -24,8 +24,7 @@ lazy_static! {
     pub static ref GENESIS_WRITE_SET: WriteSet = {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.pop();
-        path.pop();
-        path.push("vm_genesis/genesis/genesis.blob");
+        path.push("vm/vm_genesis/genesis/genesis.blob");
 
         let mut f = File::open(&path).unwrap();
         let mut bytes = vec![];

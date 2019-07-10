@@ -14,6 +14,7 @@ use cost_synthesis::{
     with_loaded_vm,
 };
 use csv;
+use language_e2e_tests::data_store::FakeDataStore;
 use move_ir_natives::hash;
 use std::{collections::HashMap, convert::TryFrom, path::Path, time::Instant, u64};
 use vm::{
@@ -30,7 +31,6 @@ use vm_runtime::{
     loaded_data::function::{FunctionRef, FunctionReference},
     txn_executor::TransactionExecutor,
 };
-use vm_runtime_tests::data_store::FakeDataStore;
 
 const MAX_STACK_SIZE: u64 = 100;
 const NUM_ITERS: u16 = 10000;

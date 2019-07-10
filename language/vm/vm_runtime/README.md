@@ -81,9 +81,6 @@ visible to subsequent transactions within each block.
 * The data representation of values, and logic for write set generation can
   be found under the [value](./src/value.rs) and [data
   cache](./src/data_cache.rs) files.
-* Test cases and infrastructure for building proptests for the VM runtime
-  can be found under the [`vm_runtime_tests`](./vm_runtime_tests/)
-  directory.
 
 ## Folder Structure
 
@@ -94,7 +91,6 @@ visible to subsequent transactions within each block.
 │   ├── loaded_data     # VM Runtime loaded data types, runtime caches over code
 │   ├── unit_tests      # unit tests
 ├── vm_cache_map        # abstractions for the code cache
-└── vm_runtime_tests    # test infrastructure for the runtime, proptest and simple tests
 ```
 
 ## This Module Interacts With

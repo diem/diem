@@ -12,7 +12,7 @@ stdlib = { path = "../stdlib" }
 types = { path = "../../types" }
 vm = { path = "../vm" }
 bytecode_verifier = { path = "../bytecode_verifier" }
-vm_runtime_tests = { path = "../vm/vm_runtime/vm_runtime_tests" }
+language_e2e_tests = { path = "../e2e_tests" }
 config = { path = "../../config" }
 transaction_builder = { path = "../transaction_builder" }
 termcolor = "1.0.4"
