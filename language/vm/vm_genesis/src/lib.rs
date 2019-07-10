@@ -22,7 +22,6 @@ use types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
-    language_storage::ModuleId,
     transaction::{
         Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
@@ -41,13 +40,8 @@ use vm_runtime::{
     value::Local,
 };
 
-#[cfg(test)]
-mod tests;
-
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
-// Max size of the validator set
-const VALIDATOR_SIZE_LIMIT: usize = 10;
 
 lazy_static! {
     pub static ref GENESIS_KEYPAIR: (PrivateKey, PublicKey) = {
@@ -307,9 +301,11 @@ pub fn encode_genesis_transaction(
 pub fn encode_genesis_transaction_with_validator(
     private_key: &PrivateKey,
     public_key: PublicKey,
-    validator_set: Vec<ValidatorPublicKeys>,
+    _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
-    assert!(validator_set.len() <= VALIDATOR_SIZE_LIMIT);
+    // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
+    //       Fix it later when we have collections.
+
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
@@ -327,10 +323,6 @@ pub fn encode_genesis_transaction_with_validator(
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
-            let validator_set_key = ModuleId::new(
-                account_config::core_code_address(),
-                "ValidatorSet".to_string(),
-            );
 
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
             txn_executor.create_account(genesis_addr).unwrap().unwrap();
@@ -354,52 +346,6 @@ pub fn encode_genesis_transaction_with_validator(
                     "rotate_authentication_key",
                     vec![Local::bytearray(genesis_auth_key)],
                 )
-                .unwrap()
-                .unwrap();
-
-            let mut validator_args = vec![Local::u64(validator_set.len() as u64)];
-            for key in validator_set.iter() {
-                txn_executor
-                    .execute_function(
-                        &validator_set_key,
-                        "make_new_validator_key",
-                        vec![
-                            Local::address(*key.account_address()),
-                            Local::bytearray(ByteArray::new(
-                                key.consensus_public_key().to_slice().to_vec(),
-                            )),
-                            Local::bytearray(ByteArray::new(
-                                key.network_signing_public_key().to_slice().to_vec(),
-                            )),
-                            Local::bytearray(ByteArray::new(
-                                key.network_identity_public_key().to_slice().to_vec(),
-                            )),
-                        ],
-                    )
-                    .unwrap()
-                    .unwrap();
-                validator_args.push(txn_executor.pop_stack().unwrap());
-            }
-            let placeholder = {
-                txn_executor
-                    .execute_function(
-                        &validator_set_key,
-                        "make_new_validator_key",
-                        vec![
-                            Local::address(AccountAddress::default()),
-                            Local::bytearray(ByteArray::new(vec![])),
-                            Local::bytearray(ByteArray::new(vec![])),
-                            Local::bytearray(ByteArray::new(vec![])),
-                        ],
-                    )
-                    .unwrap()
-                    .unwrap();
-                txn_executor.pop_stack().unwrap()
-            };
-            validator_args.resize(VALIDATOR_SIZE_LIMIT + 1, placeholder);
-
-            txn_executor
-                .execute_function(&validator_set_key, "publish_validator_set", validator_args)
                 .unwrap()
                 .unwrap();
 

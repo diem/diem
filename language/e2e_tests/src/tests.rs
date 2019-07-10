@@ -19,5 +19,4 @@ mod module_publishing;
 mod pack_unpack;
 mod peer_to_peer;
 mod rotate_key;
-mod validator_set;
 mod verify_txn;
