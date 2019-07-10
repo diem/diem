@@ -26,12 +26,6 @@ protobuf = "2.7"
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 tiny-keccak = "1.4.2"
 vm_genesis = { path = "../vm/vm_genesis"}
-hex = "0.3.2"
-getopts = "0.2.18"
 config =  { path = "../../config"}
 logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
-
-[[bin]]
-name = "vm_repl"
-path = "src/bin/repl.rs"

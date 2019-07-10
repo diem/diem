@@ -37,6 +37,7 @@ members = [
     "language/compiler/ir_to_bytecode/syntax",
     "language/e2e_tests",
     "language/tools/cost_synthesis",
+    "language/tools/repl",
     "language/stdlib/natives",
     "language/vm",
     "language/vm/vm_runtime",
