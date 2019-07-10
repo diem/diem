@@ -25,7 +25,7 @@ admission_control_service_port = 30307
 need_to_check_mempool_before_validation = false
 
 [debug_interface]
-admission_control_node_debug_port = 32987
+admission_control_node_debug_port = 30306
 storage_node_debug_port = 49125
 secret_service_node_debug_port = 50316
 metrics_server_port = 14297
