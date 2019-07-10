@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: PackTypeMismatchError(1) }
 
-modules:
 module Test {
     struct T{fint: u64}
 
@@ -9,8 +8,10 @@ module Test {
     }
 }
 
-script:
-import Transaction.Test;
+//! new-transaction
+
+import {{default}}.Test;
+
 main() {
     let t1: V#Test.T;
     t1 = Test.t1();

@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: ReadRefResourceError(11) }
 
-modules:
 module Token {
     resource T {v: u64}
 
@@ -34,8 +33,11 @@ module Token {
     }
 
 }
-script:
-import Transaction.Token;
+
+//! new-transaction
+
+import {{default}}.Token;
+
 main() {
     let addr: address;
     let t: R#Token.T;

@@ -1,13 +1,12 @@
-modules:
-
 module M {
     public universal_truth(): u64 {
         return 42;
     }
 }
 
-script:
-import Transaction.M;
+//! new-transaction
+
+import {{default}}.M;
 
 main() {
     let x: u64;

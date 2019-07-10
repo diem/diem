@@ -1,4 +1,3 @@
-modules:
 module Token {
     resource T {balance: u64}
 
@@ -35,8 +34,10 @@ module Token {
     }
 }
 
-script:
-import Transaction.Token;
+//! new-transaction
+
+import {{default}}.Token;
+
 main() {
     let z: R#Token.T;
     let addr1: address;

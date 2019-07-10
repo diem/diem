@@ -1,4 +1,7 @@
-modules:
+//! account: alice
+
+//! sender: alice
+
 module LibraAccount {
     resource T{sequence_number: u64}
 
@@ -25,8 +28,9 @@ module LibraAccount {
     }
 }
 
-script:
-import Transaction.LibraAccount as MyAccount;
+//! new-transaction
+
+import {{alice}}.LibraAccount as MyAccount;
 import 0x0.LibraAccount;
 
 main() {

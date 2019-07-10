@@ -1,5 +1,4 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetUnsafeToDestroyError(5) }
-modules:
 module A {
     import 0x0.LibraCoin;
 
@@ -17,9 +16,11 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
+//! new-transaction
+
+import {{default}}.A;
 import 0x0.LibraCoin;
+
 main() {
     let zero_resource: R#LibraCoin.T;
     let s: R#A.T;

@@ -1,7 +1,6 @@
 // NOTE: this module appears in the "Getting Started With Move" guide on the Libra website.
 // Any changes to this code should also be reflected there.
 
-modules:
 // A module for earmarking a coin for a specific recipient
 module EarmarkedLibraCoin {
   import 0x0.LibraCoin;
@@ -83,10 +82,12 @@ module EarmarkedLibraCoin {
 
 // TODO: lines below this are tests
 
-script:
+//! new-transaction
+
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
-import Transaction.EarmarkedLibraCoin;
+import {{default}}.EarmarkedLibraCoin;
+
 main() {
   let recipient_address: address;
   let coin: R#LibraCoin.T;

@@ -2,7 +2,6 @@
 //! account: bob
 
 //! sender: alice
-modules:
 module M {
     public foo(x: u64): u64 {
         return move(x)*2;
@@ -12,7 +11,10 @@ module M {
         return move(x) + move(y);
     }
 }
-script:
+
+//! new-transaction
+//! sender: alice
+
 main() {
     return;
 }

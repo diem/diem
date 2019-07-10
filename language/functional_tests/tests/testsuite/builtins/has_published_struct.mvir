@@ -1,4 +1,3 @@
-modules:
 module Token {
     resource T { }
 
@@ -23,8 +22,11 @@ module Token {
         return;
     }
 }
-script:
-import Transaction.Token;
+
+//! new-transaction
+
+import {{default}}.Token;
+
 main() {
     let z: R#Token.T;
     let sender: address;

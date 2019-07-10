@@ -1,7 +1,6 @@
 // TODO: we might need to modify this test if we enable unreachable code
 // checking in the verifier.
 
-modules:
 module Test {
     public t(): u64 {
         return 100;
@@ -9,8 +8,9 @@ module Test {
     }
 }
 
-script:
-import Transaction.Test;
+//! new-transaction
+
+import {{default}}.Test;
 main() {
     let x: u64;
     x = Test.t();

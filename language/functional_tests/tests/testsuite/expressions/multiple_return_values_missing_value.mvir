@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 1, err: NegativeStackSizeInsideBlock(0, 3) }
 
-modules:
 module Test {
     resource T { }
 
@@ -17,8 +16,11 @@ module Test {
         return;
     }
 }
-script:
-import Transaction.Test;
+
+//! new-transaction
+
+import {{default}}.Test;
+
 main() {
     let i: u64;
     let t: R#Test.T;
