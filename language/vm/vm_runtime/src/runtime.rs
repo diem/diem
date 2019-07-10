@@ -94,7 +94,7 @@ impl<'alloc> VMRuntime<'alloc> {
                 return res;
             }
         };
-        let res = match validated_txn.verify() {
+        let res = match validated_txn.verify(&self.script_cache) {
             Ok(_) => None,
             Err(vm_status) => Some(vm_status),
         };

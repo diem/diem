@@ -123,13 +123,13 @@ where
             return ExecutedTransaction::discard_error_output(vm_status);
         }
     };
-    let verified_txn = match validated_txn.verify() {
+    let verified_txn = match validated_txn.verify(script_cache) {
         Ok(verified_txn) => verified_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);
         }
     };
-    let executed_txn = verified_txn.execute(script_cache);
+    let executed_txn = verified_txn.execute();
 
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.

@@ -1,5 +1,5 @@
 use crate::{
-    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
+    code_cache::module_cache::ModuleCache,
     process_txn::verify::{VerifiedTransaction, VerifiedTransactionState},
 };
 use logger::prelude::*;
@@ -20,15 +20,12 @@ pub struct ExecutedTransaction {
 
 impl ExecutedTransaction {
     /// Creates a new instance by executing this transaction.
-    pub fn new<'alloc, 'txn, P>(
-        verified_txn: VerifiedTransaction<'alloc, 'txn, P>,
-        script_cache: &'txn ScriptCache<'alloc>,
-    ) -> Self
+    pub fn new<'alloc, 'txn, P>(verified_txn: VerifiedTransaction<'alloc, 'txn, P>) -> Self
     where
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
     {
-        let output = execute(verified_txn, script_cache);
+        let output = execute(verified_txn);
         Self { output }
     }
 
@@ -40,7 +37,6 @@ impl ExecutedTransaction {
 
 fn execute<'alloc, 'txn, P>(
     mut verified_txn: VerifiedTransaction<'alloc, 'txn, P>,
-    script_cache: &'txn ScriptCache<'alloc>,
 ) -> TransactionOutput
 where
     'alloc: 'txn,
@@ -56,25 +52,11 @@ where
         TransactionPayload::Program(program) => {
             let VerifiedTransactionState {
                 mut txn_executor,
-                script,
+                main,
                 modules,
             } = txn_state.expect("program-based transactions should always have associated state");
 
-            // Add the script to the cache.
-            // XXX The cache should probably become a loader and do verification internally.
-            let (code, args, module_bytes) = program.into_inner();
-            debug!("[VM] Script to execute: {:?}", script);
-            let func_ref = match script_cache.cache_script(script, &code) {
-                Ok(Ok(func)) => func,
-                Ok(Err(err)) => {
-                    warn!("[VM] Error caching script: {:?}", err);
-                    return txn_executor.failed_transaction_cleanup(Ok(Err(err)));
-                }
-                Err(err) => {
-                    error!("[VM] VM internal error caching script: {:?}", err);
-                    return ExecutedTransaction::discard_error_output(&err);
-                }
-            };
+            let (_, args, module_bytes) = program.into_inner();
 
             // Add modules to the cache and prepare for publishing.
             let mut publish_modules = vec![];
@@ -121,7 +103,7 @@ where
             txn_executor.setup_main_args(args);
 
             // Run main.
-            match txn_executor.execute_function_impl(func_ref) {
+            match txn_executor.execute_function_impl(main) {
                 Ok(Ok(_)) => txn_executor.transaction_cleanup(publish_modules),
                 Ok(Err(err)) => {
                     warn!("[VM] User error running script: {:?}", err);

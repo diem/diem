@@ -1,5 +1,8 @@
 use crate::{
-    code_cache::module_cache::{ModuleCache, TransactionModuleCache},
+    code_cache::{
+        module_cache::{ModuleCache, TransactionModuleCache},
+        script_cache::ScriptCache,
+    },
     data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
@@ -251,8 +254,11 @@ where
     }
 
     /// Verifies the bytecode in this transaction.
-    pub fn verify(self) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
-        VerifiedTransaction::new(self)
+    pub fn verify(
+        self,
+        script_cache: &'txn ScriptCache<'alloc>,
+    ) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
+        VerifiedTransaction::new(self, script_cache)
     }
 
     /// Returns a reference to the `SignatureCheckedTransaction` within.
