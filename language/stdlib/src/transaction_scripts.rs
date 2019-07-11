@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiler::parser::{ast::Program, parse_program};
+use ir_to_bytecode::parser::{ast::Program, parse_program};
 use lazy_static::lazy_static;
 
 lazy_static! {

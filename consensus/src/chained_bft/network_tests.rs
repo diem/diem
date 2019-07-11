@@ -245,9 +245,9 @@ impl NetworkPlayground {
         true
     }
 
-    /// Returns true for any message other than new round
-    pub fn exclude_new_round(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        !msg_copy.1.has_new_round()
+    /// Returns true for any message other than timeout
+    pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        !msg_copy.1.has_timeout_msg()
     }
 
     /// Returns true for proposal messages only.
@@ -262,7 +262,7 @@ impl NetworkPlayground {
 
     /// Returns true for new round messages only.
     pub fn new_round_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_new_round()
+        msg_copy.1.has_timeout_msg()
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
@@ -335,10 +335,7 @@ fn test_network_api() {
         peers.push(random_validator_signer.author());
         signers.push(random_validator_signer);
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -410,10 +407,7 @@ fn test_rpc() {
             .unwrap()
             .push(random_validator_signer.author());
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);

@@ -1,3 +1,7 @@
+# Severeties: info, warning, [high, critical]
+# last 2 items go to PagerDuty
+#
+
 global:
 
 #templates:
@@ -22,13 +26,13 @@ route:
   repeat_interval: 10m
 
   # A default receiver
-  receiver: 'libra-${tf_workspace}-pagerduty'
+  receiver: 'default-receiver'
 
   # The child route trees.
   routes:
-    - match:
-        group_by: 'workspace'
-        receiver: 'libra-${tf_workspace}-pagerduty'
+    - match_re:
+        severity: high|critical
+      receiver: 'libra-${workspace}-pagerduty'
 
 inhibit_rules:
 - source_match:
@@ -40,8 +44,9 @@ inhibit_rules:
 
 
 receivers:
-  - name: 'libra-${tf_workspace}-pagerduty'
+  - name: 'default-receiver'
+  - name: 'libra-${workspace}-pagerduty'
   %{ if pagerduty_key != "" }
     pagerduty_configs:
     - service_key: ${pagerduty_key}
-%{ endif }
+  %{ endif }

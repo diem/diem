@@ -12,7 +12,9 @@ use crate::{
     counters,
     state_replication::StateComputer,
     state_synchronizer::SyncStatus,
+    util::mutex_map::MutexMap,
 };
+use crypto::HashValue;
 use failure::{Fail, Result};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
@@ -31,6 +33,7 @@ pub struct SyncManager<T> {
     storage: Arc<dyn PersistentStorage<T>>,
     network: ConsensusNetworkImpl,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
+    block_mutex_map: MutexMap<HashValue>,
 }
 
 /// This struct describes where do we sync to
@@ -61,11 +64,13 @@ where
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
         counters::STATE_SYNC_TXN_REPLAYED.get();
+        let block_mutex_map = MutexMap::new();
         SyncManager {
             block_store,
             storage,
             network,
             state_computer,
+            block_mutex_map,
         }
     }
 
@@ -99,6 +104,15 @@ where
             .await
     }
 
+    pub async fn execute_and_insert_block(
+        &self,
+        block: Block<T>,
+    ) -> std::result::Result<Arc<Block<T>>, InsertError> {
+        let _guard = self.block_mutex_map.lock(block.id());
+        // execute_and_insert_block has shortcut to return block if it exists
+        self.block_store.execute_and_insert_block(block).await
+    }
+
     /// Insert the quorum certificate separately from the block, used to split the processing of
     /// updating the consensus state(with qc) and deciding whether to vote(with block)
     /// The missing ancestors are going to be retrieved from the given peer. If a given peer
@@ -109,6 +123,7 @@ where
         preferred_peer: Author,
         deadline: Instant,
     ) -> std::result::Result<(), InsertError> {
+        let mut lock_set = self.block_mutex_map.new_lock_set();
         let mut pending = vec![];
         let network = self.network.clone();
         let mut retriever = BlockRetriever {
@@ -117,10 +132,25 @@ where
             preferred_peer,
         };
         let mut retrieve_qc = qc.clone();
-        while !self
-            .block_store
-            .block_exists(retrieve_qc.certified_block_id())
-        {
+        loop {
+            if lock_set
+                .lock(retrieve_qc.certified_block_id())
+                .await
+                .is_err()
+            {
+                // This should not be possible because that would mean we have circular
+                // dependency between signed blocks
+                panic!(
+                    "Can not re-acquire lock for block {} during fetch_quorum_cert",
+                    retrieve_qc.certified_block_id()
+                );
+            }
+            if self
+                .block_store
+                .block_exists(retrieve_qc.certified_block_id())
+            {
+                break;
+            }
             let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1).await?;
             // retrieve_block_for_qc guarantees that blocks has exactly 1 element
             let block = blocks.remove(0);
@@ -298,7 +328,9 @@ impl BlockRetriever {
                 Err(e) => {
                     warn!(
                         "Failed to fetch block {} from {}: {:?}, trying another peer",
-                        block_id, peer, e
+                        block_id,
+                        peer.short_str(),
+                        e
                     );
                     continue;
                 }
@@ -307,7 +339,9 @@ impl BlockRetriever {
             if response.status != BlockRetrievalStatus::SUCCEEDED {
                 warn!(
                     "Failed to fetch block {} from {}: {:?}, trying another peer",
-                    block_id, peer, response.status
+                    block_id,
+                    peer.short_str(),
+                    response.status
                 );
                 continue;
             }

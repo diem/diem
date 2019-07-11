@@ -191,6 +191,7 @@ impl Account {
         )
         .sign(&self.privkey, self.pubkey)
         .unwrap()
+        .into_inner()
     }
 
     /// Given a blob, materializes the VM Value behind it.

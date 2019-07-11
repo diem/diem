@@ -44,6 +44,9 @@ struct Args {
     /// But the preferred method is to simply use libra-swarm to run local networks
     #[structopt(short = "s", long = "validator_set_file")]
     pub validator_set_file: String,
+    /// If set, client will sync with validator during wallet recovery.
+    #[structopt(short = "r", long = "sync")]
+    pub sync: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -60,6 +63,7 @@ fn main() -> std::io::Result<()> {
         &args.port,
         &args.validator_set_file,
         &faucet_account_file,
+        args.sync,
         args.faucet_server,
         args.mnemonic_file,
     )

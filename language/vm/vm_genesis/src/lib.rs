@@ -1,16 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ::compiler::{compiler, parser::ast};
 use config::config::{VMConfig, VMPublishingOption};
 use crypto::{signing, PrivateKey, PublicKey};
 use failure::prelude::*;
+use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};
 use stdlib::{
-    stdlib::*,
+    stdlib_modules,
     transaction_scripts::{
         CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
@@ -22,13 +22,14 @@ use types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionArgument, SCRIPT_HASH_LENGTH,
+        Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
+        SCRIPT_HASH_LENGTH,
     },
     validator_public_keys::ValidatorPublicKeys,
 };
-use vm::{file_format::CompiledModule, transaction_metadata::TransactionMetadata};
+use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::{
@@ -55,7 +56,7 @@ lazy_static! {
     };
 }
 
-pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignedTransaction> {
+pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureCheckedTransaction> {
     let (private_key, public_key) = &*GENESIS_KEYPAIR;
     raw_txn.sign(private_key, *public_key)
 }
@@ -129,7 +130,7 @@ impl Accounts {
         self.accounts[account].pubkey
     }
 
-    pub fn create_signed_txn_with_args(
+    pub fn create_txn_with_args(
         &self,
         program: Vec<u8>,
         args: Vec<TransactionArgument>,
@@ -138,7 +139,7 @@ impl Accounts {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-    ) -> SignedTransaction {
+    ) -> SignatureCheckedTransaction {
         RawTransaction::new(
             sender,
             sequence_number,
@@ -161,24 +162,6 @@ impl Accounts {
 }
 
 lazy_static! {
-    pub static ref STDLIB_ADDRESS: AccountAddress = { account_config::core_code_address() };
-    pub static ref STDLIB_MODULES: Vec<CompiledModule> = {
-        let mut modules: Vec<CompiledModule> = vec![];
-        let stdlib = vec![coin_module(), native_hash_module(), account_module(), signature_module(), validator_set_module()];
-        for m in stdlib.iter() {
-            let (compiled_module, verification_errors) =
-                compiler::compile_and_verify_module(&STDLIB_ADDRESS, m, &modules).unwrap();
-
-            // Fail if the module doesn't verify
-            for e in &verification_errors {
-                println!("{:?}", e);
-            }
-            assert!(verification_errors.is_empty());
-
-            modules.push(compiled_module);
-        }
-        modules
-    };
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
@@ -193,8 +176,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compiler::compile_program(&AccountAddress::default(), body, &STDLIB_MODULES.clone())
-            .unwrap();
+        compile_program(&AccountAddress::default(), body, stdlib_modules()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -318,7 +300,7 @@ impl StateView for FakeStateView {
 pub fn encode_genesis_transaction(
     private_key: &PrivateKey,
     public_key: PublicKey,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     encode_genesis_transaction_with_validator(private_key, public_key, vec![])
 }
 
@@ -326,12 +308,12 @@ pub fn encode_genesis_transaction_with_validator(
     private_key: &PrivateKey,
     public_key: PublicKey,
     validator_set: Vec<ValidatorPublicKeys>,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     assert!(validator_set.len() <= VALIDATOR_SIZE_LIMIT);
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
-    let modules = STDLIB_MODULES.clone();
+    let modules = stdlib_modules();
     let arena = Arena::new();
     let state_view = FakeStateView;
     let vm_cache = VMModuleCache::new(&arena);
@@ -339,13 +321,13 @@ pub fn encode_genesis_transaction_with_validator(
     let genesis_auth_key = ByteArray::new(AccountAddress::from(public_key).to_vec());
 
     let genesis_write_set = {
-        let fake_fetcher = FakeFetcher::new(modules.clone());
+        let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
         let data_cache = BlockDataCache::new(&state_view);
         let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
-            let validator_set_key = CodeKey::new(
+            let validator_set_key = ModuleId::new(
                 account_config::core_code_address(),
                 "ValidatorSet".to_string(),
             );
@@ -422,11 +404,11 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap();
 
             let stdlib_modules = modules
-                .into_iter()
+                .iter()
                 .map(|m| {
                     let mut module_vec = vec![];
                     m.serialize(&mut module_vec).unwrap();
-                    (m.self_code_key(), module_vec)
+                    (m.self_id(), module_vec)
                 })
                 .collect();
 

@@ -54,6 +54,10 @@
             {"sourceVolume": "grafana-data", "containerPath": "/var/lib/grafana"},
             {"sourceVolume": "grafana-provisioning", "containerPath": "/etc/grafana/provisioning"},
             {"sourceVolume": "grafana-dashboards", "containerPath": "/var/lib/grafana/dashboards"}
+        ],
+        "environment": [
+            {"name": "GF_AUTH_ANONYMOUS_ENABLED", "value": "true"},
+            {"name": "GF_AUTH_ANONYMOUS_ORG_ROLE", "value": "Editor"}
         ]
     }
 ]

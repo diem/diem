@@ -1,4 +1,3 @@
-modules:
 module Test {
   resource NonEmpty1 { f1: u64, f2: bool }
 
@@ -6,9 +5,4 @@ module Test {
   resource Empty2 { }
 
   resource NonEmpty2 { f1: bool, f2: u64 }
-}
-
-script:
-main() {
-    return;
 }

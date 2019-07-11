@@ -1,10 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod testutils;
-use super::*;
+use crate::unit_tests::testutils::compile_script_string;
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use testutils::compile_script_string;
 use vm::access::ScriptAccess;
 
 #[test]

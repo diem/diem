@@ -11,10 +11,8 @@ Cargo.lock
 # Ignore generated files in proto folders
 **/proto/*.rs
 !**/proto/mod.rs
-!**/proto/converter.rs
 **/proto/*/*.rs
 !**/proto/*/mod.rs
-!**/proto/*/converter.rs
 
 # IDE
 .idea
@@ -26,8 +24,33 @@ Cargo.lock
 *.mnemonic
 
 # Generated Parser File by LALRPOP
-language/compiler/src/parser/syntax.rs
+language/compiler/ir_to_bytecode/src/parser/syntax.rs
 language/move_ir/
 
 # GDB related
 **/.gdb_history
+
+# macOS Specific ignores
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk

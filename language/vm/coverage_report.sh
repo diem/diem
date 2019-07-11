@@ -62,7 +62,7 @@ echo "Running tests..."
 while read line; do
     dirline=$(realpath $(dirname $line));
     (cd $dirline; CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads" cargo test)
-done < <(find . -name 'Cargo.toml')
+done < <(find ../ -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
 if [ ! -d $COVERAGE_DIR ]; then

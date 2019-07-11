@@ -17,6 +17,7 @@
 extern crate failure;
 
 mod chained_bft;
+mod util;
 
 /// Defines the public consensus provider traits to implement for
 /// use in the Libra Core blockchain.
@@ -27,13 +28,4 @@ mod counters;
 mod state_computer;
 mod state_replication;
 mod state_synchronizer;
-mod stream_utils;
-mod time_service;
 mod txn_manager;
-
-#[cfg(test)]
-mod mock_time_service;
-#[cfg(test)]
-mod stream_utils_test;
-#[cfg(test)]
-mod time_service_test;

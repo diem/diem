@@ -6,6 +6,7 @@ use crate::loaded_data::{
     function::{FunctionRef, FunctionReference},
     loaded_module::LoadedModule,
 };
+use bytecode_verifier::VerifiedScript;
 use logger::prelude::*;
 use tiny_keccak::Keccak;
 use types::transaction::SCRIPT_HASH_LENGTH;
@@ -29,9 +30,10 @@ impl<'alloc> ScriptCache<'alloc> {
     /// Cache and resolve `script` into a `FunctionRef` that can be executed
     pub fn cache_script(
         &self,
-        script: CompiledScript,
+        script: VerifiedScript,
         raw_bytes: &[u8],
     ) -> VMResult<FunctionRef<'alloc>> {
+        // XXX in the future, this will also be responsible for deserializing and verifying scripts.
         let mut hash = [0u8; SCRIPT_HASH_LENGTH];
         let mut keccak = Keccak::new_sha3_256();
 
@@ -44,14 +46,12 @@ impl<'alloc> ScriptCache<'alloc> {
         } else {
             trace!("[VM] Script cache miss");
             let fake_module = script.into_module();
-            let loaded_module = LoadedModule::new(fake_module)?;
-            self.map
-                .or_insert_with_try_transform(
-                    hash,
-                    move || loaded_module,
-                    |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
-                )
-                .map(Ok)
+            let loaded_module = LoadedModule::new(fake_module);
+            Ok(Ok(self.map.or_insert_with_transform(
+                hash,
+                move || loaded_module,
+                |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
+            )))
         }
     }
 }

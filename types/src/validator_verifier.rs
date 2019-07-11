@@ -3,7 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use crypto::{signing, HashValue, PublicKey, Signature};
-use failure::Fail;
+use failure::prelude::*;
 use std::collections::HashMap;
 
 /// Errors possible during signature verification.
@@ -42,33 +42,48 @@ pub struct ValidatorVerifier {
 }
 
 impl ValidatorVerifier {
-    /// Initialize with a map of author to public key.
-    pub fn new(
-        author_to_public_keys: HashMap<AccountAddress, PublicKey>,
-        quorum_size: usize,
-    ) -> Self {
+    /// Initialize with a map of author to public key and set quorum size to default (`2f + 1`) or
+    /// zero if `author_to_public_keys` is empty.
+    pub fn new(author_to_public_keys: HashMap<AccountAddress, PublicKey>) -> Self {
+        let quorum_size = if author_to_public_keys.is_empty() {
+            0
+        } else {
+            author_to_public_keys.len() * 2 / 3 + 1
+        };
         ValidatorVerifier {
             author_to_public_keys,
             quorum_size,
         }
     }
 
+    /// Initializes a validator verifier with specified quorum size.
+    pub fn new_with_quorum_size(
+        author_to_public_keys: HashMap<AccountAddress, PublicKey>,
+        quorum_size: usize,
+    ) -> Result<Self> {
+        ensure!(
+            quorum_size <= author_to_public_keys.len(),
+            "Quorum size is greater than the number of authors: author_to_public_keys.len(): {}, \
+             quorum_size: {}.",
+            author_to_public_keys.len(),
+            quorum_size
+        );
+        Ok(ValidatorVerifier {
+            author_to_public_keys,
+            quorum_size,
+        })
+    }
+
     /// Helper method to initialize with a single author and public key.
     pub fn new_single(author: AccountAddress, public_key: PublicKey) -> Self {
         let mut author_to_public_keys = HashMap::new();
         author_to_public_keys.insert(author, public_key);
-        ValidatorVerifier {
-            author_to_public_keys,
-            quorum_size: 1,
-        }
+        Self::new(author_to_public_keys)
     }
 
     /// Helper method to initialize with an empty validator set.
     pub fn new_empty() -> Self {
-        ValidatorVerifier {
-            author_to_public_keys: HashMap::new(),
-            quorum_size: 0,
-        }
+        Self::new(HashMap::new())
     }
 
     /// Verify the correctness of a signature of a hash by a known author.
@@ -77,7 +92,7 @@ impl ValidatorVerifier {
         author: AccountAddress,
         hash: HashValue,
         signature: &Signature,
-    ) -> Result<(), VerifyError> {
+    ) -> std::result::Result<(), VerifyError> {
         let public_key = self.author_to_public_keys.get(&author);
         match public_key {
             None => Err(VerifyError::UnknownAuthor),
@@ -100,7 +115,7 @@ impl ValidatorVerifier {
         &self,
         hash: HashValue,
         aggregated_signature: &HashMap<AccountAddress, Signature>,
-    ) -> Result<(), VerifyError> {
+    ) -> std::result::Result<(), VerifyError> {
         let num_of_signatures = aggregated_signature.len();
         if num_of_signatures < self.quorum_size {
             return Err(VerifyError::TooFewSignatures {
@@ -214,7 +229,9 @@ mod tests {
         }
 
         // Let's assume our verifier needs to satisfy at least 5 signatures from the original 7.
-        let validator_verifier = ValidatorVerifier::new(author_to_public_key_map, 5);
+        let validator_verifier =
+            ValidatorVerifier::new_with_quorum_size(author_to_public_key_map, 5)
+                .expect("Incorrect quorum size.");
 
         // Check against signatures == N; this will pass.
         assert_eq!(

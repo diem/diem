@@ -3,7 +3,6 @@
 
 # Allowed lints
 allowed_lints=(
-	"-A" "renamed_and_removed_lints"
 	"-A" "clippy::match_bool"
 	"-A" "clippy::get_unwrap"
     "-A" "clippy::new_without_default"

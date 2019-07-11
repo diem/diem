@@ -89,6 +89,7 @@ fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
     let response = block_on(executor.execute_block(vec![txn], parent_block_id, id))
         .unwrap()
         .unwrap();
+    assert_eq!(response.version(), txn_index + 1);
 
     let ledger_info = gen_ledger_info(txn_index + 1, response.root_hash(), id, txn_index + 1);
     block_on(executor.commit_block(ledger_info))
@@ -202,6 +203,7 @@ fn test_executor_one_block() {
         .collect();
     let execute_block_future = executor.execute_block(txns, parent_block_id, block_id);
     let execute_block_response = block_on(execute_block_future).unwrap().unwrap();
+    assert_eq!(execute_block_response.version(), 100);
 
     let ledger_info = gen_ledger_info(version, execute_block_response.root_hash(), block_id, 1);
     let commit_block_future = executor.commit_block(ledger_info);
@@ -452,12 +454,15 @@ proptest! {
         let response_a = block_on(executor.execute_block(
             block_a.txns.clone(), block_a.parent_id, block_a.id,
         )).unwrap().unwrap();
+        prop_assert_eq!(response_a.version(), a_size);
         let response_b = block_on(executor.execute_block(
             block_b.txns.clone(), block_b.parent_id, block_b.id,
         )).unwrap().unwrap();
+        prop_assert_eq!(response_b.version(), a_size + b_size);
         let response_c = block_on(executor.execute_block(
             block_c.txns.clone(), block_c.parent_id, block_c.id,
         )).unwrap().unwrap();
+        prop_assert_eq!(response_c.version(), a_size + c_size);
 
         let root_hash_a = response_a.root_hash();
         let root_hash_b = response_b.root_hash();

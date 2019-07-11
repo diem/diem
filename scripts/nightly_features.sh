@@ -7,16 +7,22 @@ set -e
 
 # Allowed Features
 allowed_features=(
-  "--and" "--not" "-e" "futures_api"
   "--and" "--not" "-e" "async_await"
-  "--and" "--not" "-e" "await_macro"
   "--and" "--not" "-e" "box_patterns"
+  "--and" "--not" "-e" "box_syntax"
+  "--and" "--not" "-e" "checked_duration_since"
+  "--and" "--not" "-e" "crate_visibility_modifier"
+  "--and" "--not" "-e" "drain_filter"
+  "--and" "--not" "-e" "duration_float"
+  "--and" "--not" "-e" "exhaustive_patterns"
+  "--and" "--not" "-e" "never_type"
   "--and" "--not" "-e" "panic_info_message"
-  "--and" "--not" "-e" "try_trait"
-  "--and" "--not" "-e" "test"
+  "--and" "--not" "-e" "repeat_generic_slice"
+  "--and" "--not" "-e" "set_stdio"
+  "--and" "--not" "-e" "slice_concat_ext"
   "--and" "--not" "-e" "specialization"
-  "--and" "--not" "-e" "wait_timeout_until"
-  "--and" "--not" "-e" "vec_remove_item"
+  "--and" "--not" "-e" "test"
+  "--and" "--not" "-e" "trait_alias"
 )
 
 # Search for nightly features

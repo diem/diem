@@ -323,7 +323,7 @@ where
             let time = std::time::Instant::now();
             let out = V::execute_block(transactions.clone(), &self.vm_config, &state_view);
             OP_COUNTERS.observe(
-                "vm_execute_block_time_us",
+                "vm_execute_chunk_time_us",
                 time.elapsed().as_micros() as f64,
             );
             out
@@ -604,11 +604,19 @@ where
             db_root_hash,
             &previous_state_tree,
         );
-        let vm_outputs = V::execute_block(
-            block_to_execute.transactions().to_vec(),
-            &self.vm_config,
-            &state_view,
-        );
+        let vm_outputs = {
+            let time = std::time::Instant::now();
+            let out = V::execute_block(
+                block_to_execute.transactions().to_vec(),
+                &self.vm_config,
+                &state_view,
+            );
+            OP_COUNTERS.observe(
+                "vm_execute_block_time_us",
+                time.elapsed().as_micros() as f64,
+            );
+            out
+        };
 
         let status: Vec<_> = vm_outputs
             .iter()
@@ -629,14 +637,17 @@ where
             previous_transaction_accumulator,
         ) {
             Ok(output) => {
-                let root_hash = output.clone_transaction_accumulator().root_hash();
+                let accumulator = output.clone_transaction_accumulator();
+                let root_hash = accumulator.root_hash();
+                let version = accumulator.num_elements() - 1;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to
                 // consensus.
                 // TODO: The VM will support a special transaction to set the validators for the
                 // next epoch that is part of a block execution.
-                let execute_block_response = ExecuteBlockResponse::new(root_hash, status, None);
+                let execute_block_response =
+                    ExecuteBlockResponse::new(root_hash, status, version, None);
                 block_to_execute.set_execute_block_response(execute_block_response);
             }
             Err(err) => {

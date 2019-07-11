@@ -14,8 +14,7 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
-  "id": 11,
+  "graphTooltip": 1,
   "links": [],
   "panels": [
     {
@@ -25,7 +24,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 0
@@ -111,7 +110,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 0
@@ -197,7 +196,7 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 16,
         "y": 0
@@ -283,10 +282,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "id": 4,
       "legend": {
@@ -369,10 +368,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 7
+        "y": 8
       },
       "id": 5,
       "legend": {
@@ -455,10 +454,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "id": 2,
       "legend": {
@@ -541,10 +540,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 16
       },
       "id": 3,
       "legend": {
@@ -627,10 +626,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 21
+        "y": 24
       },
       "id": 8,
       "legend": {
@@ -713,10 +712,10 @@
       "dashes": false,
       "fill": 1,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 21
+        "y": 24
       },
       "id": 9,
       "legend": {
@@ -800,7 +799,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -831,5 +830,5 @@
   "timezone": "",
   "title": "System - IO",
   "uid": "UAXogE7Zk",
-  "version": 5
+  "version": 1
 }

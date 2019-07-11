@@ -5,4 +5,4 @@ providers:
   folder: 'libra'
   type: file
   options:
-    path: /var/lib/grafana/dashboards
+    path: /var/lib/grafana/dashboards/libra

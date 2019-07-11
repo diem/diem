@@ -119,12 +119,12 @@ fn test_validate_invalid_signature() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
     let program = encode_transfer_program(&address, 100);
-    let signed_txn = transaction_test_helpers::get_unverified_test_signed_txn(
+    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         address,
         0,
         other_keypair.private_key().clone(),
@@ -336,7 +336,7 @@ fn test_validate_invalid_auth_key() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
@@ -477,7 +477,8 @@ fn test_validate_non_genesis_write_set() {
         keypair.private_key().clone(),
         keypair.public_key(),
         None,
-    );
+    )
+    .into_inner();
     let ret = vm_validator
         .validate_transaction(signed_txn)
         .wait()

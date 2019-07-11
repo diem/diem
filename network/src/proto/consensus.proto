@@ -14,7 +14,7 @@ message ConsensusMsg {
     Vote vote = 2;
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
-    NewRound new_round = 5;
+    TimeoutMsg timeout_msg = 5;
     RequestChunk request_chunk = 6;
     RespondChunk respond_chunk = 7;
   }
@@ -41,7 +41,7 @@ message PacemakerTimeout {
   bytes signature = 3;
 }
 
-message NewRound {
+message TimeoutMsg {
   // Highest quorum certificate known after a timeout ouf a round.
   QuorumCert highest_quorum_cert = 1;
   // Timeout

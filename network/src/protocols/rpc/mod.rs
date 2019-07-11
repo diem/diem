@@ -316,7 +316,7 @@ where
     // Wait for listener's response.
     let res_data = match substream.next().await {
         Some(res_data) => res_data?.freeze(),
-        None => Err(io::Error::from(io::ErrorKind::UnexpectedEof))?,
+        None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
 
     // Wait for listener to half-close their side.
@@ -386,7 +386,7 @@ where
     // Read the rpc request data.
     let req_data = match substream.next().await {
         Some(req_data) => req_data?.freeze(),
-        None => Err(io::Error::from(io::ErrorKind::UnexpectedEof))?,
+        None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
     counters::RPC_REQUESTS_RECEIVED.inc();
 

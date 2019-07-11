@@ -1,9 +1,8 @@
-version: 2
-jobs:
-  build:
-    docker:
-      - image: circleci/rust:stretch
-    resource_class: xlarge
+version: 2.1
+
+commands:
+  env_setup:
+    description: Environment Setup
     steps:
       - checkout
       - run:
@@ -23,6 +22,14 @@ jobs:
           command: |
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
+
+jobs:  
+  build:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: xlarge
+    steps:
+      - env_setup
       - run:
           name: Linting
           command: |
@@ -33,7 +40,40 @@ jobs:
           command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
       - run:
           name: Run All Unit Tests
-          command: cargo test --all --exclude testsuite
+          command: RUST_BACKTRACE=1 cargo test --all --exclude testsuite
       - run:
           name: Run All End to End Tests
-          command: RUST_TEST_THREADS=2 cargo test --package testsuite
+          command: RUST_BACKTRACE=1 RUST_TEST_THREADS=2 cargo test --package testsuite
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -f docker/validator/validator.Dockerfile . --tag libra_e2e --build-arg GIT_REV="$(git rev-parse HEAD)" --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+  audit:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: xlarge
+    steps:
+      - env_setup
+      - run:
+          name: Cargo Audit
+          command: |
+            cargo install --force cargo-audit
+            cargo generate-lockfile
+            cargo audit
+
+workflows:
+  commit-workflow:
+    jobs:
+      - build
+
+  scheduled-workflow:
+    triggers:
+      - schedule:
+          cron: "14 14 * * *"
+          filters:
+            branches:
+              only: master
+    jobs:
+      - audit

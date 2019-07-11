@@ -11,7 +11,7 @@ use state_view::StateView;
 use std::{collections::btree_map::BTreeMap, mem::replace};
 use types::{
     access_path::AccessPath,
-    language_storage::CodeKey,
+    language_storage::ModuleId,
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use vm::{errors::*, gas_schedule::AbstractMemorySize};
@@ -85,11 +85,11 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: &'txn RemoteCache,
+    data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
-    pub fn new(data_cache: &'txn RemoteCache) -> Self {
+    pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
         TransactionDataCache {
             data_cache,
             data_map: BTreeMap::new(),
@@ -111,7 +111,6 @@ impl<'txn> TransactionDataCache<'txn> {
                     self.data_map.insert(ap.clone(), new_root);
                 }
                 None => {
-                    warn!("[VM] Missing data in storage for {:?}", ap);
                     return Ok(Err(VMRuntimeError {
                         loc: Location::new(),
                         err: VMErrorKind::MissingData,
@@ -124,7 +123,20 @@ impl<'txn> TransactionDataCache<'txn> {
 
     /// BorrowGlobal opcode cache implementation
     pub fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
-        let root_ref = try_runtime!(self.load_data(ap, def));
+        let root_ref = match self.load_data(ap, def) {
+            Ok(Ok(gref)) => gref,
+            Ok(Err(e)) => {
+                warn!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
+                return Ok(Err(e));
+            }
+            Err(e) => {
+                error!(
+                    "[VM] (BorrowGlobal) Internal error reading data for {}: {:?}",
+                    ap, e
+                );
+                return Err(e);
+            }
+        };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             // shallow_ref increment ref count
@@ -157,7 +169,20 @@ impl<'txn> TransactionDataCache<'txn> {
 
     /// MoveFrom opcode cache implementation
     pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Local> {
-        let root_ref = try_runtime!(self.load_data(ap, def));
+        let root_ref = match self.load_data(ap, def) {
+            Ok(Ok(gref)) => gref,
+            Ok(Err(e)) => {
+                warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
+                return Ok(Err(e));
+            }
+            Err(e) => {
+                error!(
+                    "[VM] (MoveFrom) Internal error reading data for {}: {:?}",
+                    ap, e
+                );
+                return Err(e);
+            }
+        };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             Ok(Ok(Local::Value(root_ref.move_from())))
@@ -191,6 +216,7 @@ impl<'txn> TransactionDataCache<'txn> {
             self.data_map.insert(ap.clone(), new_root);
             Ok(Ok(()))
         } else {
+            warn!("[VM] Cannot write over existing resource {}", ap);
             Ok(Err(VMRuntimeError {
                 loc: Location::new(),
                 err: VMErrorKind::CannotWriteExistingResource,
@@ -205,7 +231,7 @@ impl<'txn> TransactionDataCache<'txn> {
     /// at the end of the transactions (all ReleaseRef are properly called)
     pub fn make_write_set(
         &mut self,
-        to_be_published_modules: Vec<(CodeKey, Vec<u8>)>,
+        to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
     ) -> VMRuntimeResult<WriteSet> {
         let mut write_set = WriteSetMut::new(Vec::new());
         let data_map = replace(&mut self.data_map, BTreeMap::new());

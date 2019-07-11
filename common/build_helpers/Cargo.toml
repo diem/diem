@@ -10,4 +10,4 @@ edition = "2018"
 protoc-grpcio = "0.3.1"
 walkdir = "2.2.0"
 
-grpcio-client = {path = "../grpcio-client"}
+grpcio-client = { path = "../grpcio-client" }

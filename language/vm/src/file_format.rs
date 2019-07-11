@@ -27,12 +27,12 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::BaseAccess, checks::BoundsChecker, errors::VerificationError, internals::ModuleIndex,
-    IndexKind, SignatureTokenKind,
+    access::ModuleAccess, check_bounds::BoundsChecker, errors::VerificationError,
+    internals::ModuleIndex, IndexKind, SignatureTokenKind,
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::CodeKey};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -1260,10 +1260,6 @@ impl CompiledModule {
     /// By convention, the index of the module being implemented is 0.
     pub const IMPLEMENTED_MODULE_INDEX: u16 = 0;
 
-    fn self_handle(&self) -> &ModuleHandle {
-        &self.module_handle_at(ModuleHandleIndex::new(Self::IMPLEMENTED_MODULE_INDEX))
-    }
-
     /// Returns a reference to the inner `CompiledModuleMut`.
     pub fn as_inner(&self) -> &CompiledModuleMut {
         &self.0
@@ -1275,32 +1271,22 @@ impl CompiledModule {
         self.0
     }
 
-    /// Returns the name of the module.
-    pub fn name(&self) -> &str {
-        self.string_at(self.self_handle().name)
-    }
-
-    /// Returns the address of the module.
-    pub fn address(&self) -> &AccountAddress {
-        self.address_at(self.self_handle().address)
-    }
-
     /// Returns the number of items of a specific `IndexKind`.
     pub fn kind_count(&self, kind: IndexKind) -> usize {
         self.as_inner().kind_count(kind)
     }
 
     /// Returns the code key of `module_handle`
-    pub fn code_key_for_handle(&self, module_handle: &ModuleHandle) -> CodeKey {
-        CodeKey::new(
+    pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
+        ModuleId::new(
             *self.address_at(module_handle.address),
             self.string_at(module_handle.name).to_string(),
         )
     }
 
     /// Returns the code key of `self`
-    pub fn self_code_key(&self) -> CodeKey {
-        self.code_key_for_handle(self.self_handle())
+    pub fn self_id(&self) -> ModuleId {
+        self.module_id_for_handle(self.self_handle())
     }
 
     /// This function should only be called on an instance of CompiledModule obtained by invoking

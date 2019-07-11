@@ -28,14 +28,18 @@ pub struct AccountStateBlob {
 
 impl fmt::Debug for AccountStateBlob {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let decoded = get_account_resource_or_default(&Some(self.clone()))
+            .map(|resource| format!("{:#?}", resource))
+            .unwrap_or_else(|_| String::from("[fail]"));
+
         write!(
             f,
             "AccountStateBlob {{ \n \
              Raw: 0x{} \n \
-             Decoded: {:#?} \n \
+             Decoded: {} \n \
              }}",
             hex::encode(&self.blob),
-            get_account_resource_or_default(&Some(self.clone()))
+            decoded,
         )
     }
 }

@@ -7,6 +7,7 @@ use crate::{
         persistent_storage::PersistentStorage,
     },
     consensus_provider::ConsensusProvider,
+    counters,
     state_computer::ExecutionProxy,
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
@@ -123,16 +124,15 @@ impl ChainedBftProvider {
                 .map(AccountAddress::clone)
                 .collect(),
         );
-        let quorum_size = peers_with_public_keys.len() * 2 / 3 + 1;
-        let validator = Arc::new(ValidatorVerifier::new(
-            peers_with_public_keys.clone(),
-            quorum_size,
-        ));
-        debug!("[Consensus]: quorum_size = {:?}", quorum_size);
+        let validator = Arc::new(ValidatorVerifier::new(peers_with_public_keys));
+        counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
+        counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_size() as i64);
+        debug!("[Consensus]: quorum_size = {:?}", validator.quorum_size());
         InitialSetup {
             author,
             signer,
-            quorum_size,
+            quorum_size: validator.quorum_size(),
             peers,
             validator,
         }

@@ -34,7 +34,7 @@ resource "aws_lb_target_group_attachment" "validator-ac" {
 
 resource "aws_lb_listener" "validator-ac" {
   load_balancer_arn = aws_lb.validator-ac.arn
-  port              = 80
+  port              = 8000
   protocol          = "TCP"
 
   default_action {

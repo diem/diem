@@ -330,11 +330,11 @@ impl BranchNode {
     ///     3      [f   e   d   c   b   a   9   8] [7   6   5   4   3   2   1   0] width = 8
     ///                                  chs <--┘                        shs <--┘
     ///     2      [f   e   d   c] [b   a   9   8] [7   6   5   4] [3   2   1   0] width = 4
-    ///                  lhs <--┘               └--> chs
+    ///                  shs <--┘               └--> chs
     ///     1      [f   e] [d   c] [b   a] [9   8] [7   6] [5   4] [3   2] [1   0] width = 2
     ///                          chs <--┘       └--> shs
     ///     0      [f] [e] [d] [c] [b] [a] [9] [8] [7] [6] [5] [4] [3] [2] [1] [0] width = 1
-    ///     ^                chs <--┘   └--> schs
+    ///     ^                chs <--┘   └--> shs
     ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
     ///  height    chs: `child_half_start`         shs: `sibling_half_start`
     /// ```
@@ -548,14 +548,14 @@ impl Node {
     /// Recovers from serialized bytes in physical storage.
     pub fn decode(val: &[u8]) -> Result<Node> {
         if val.is_empty() {
-            Err(NodeDecodeError::EmptyInput)?
+            return Err(NodeDecodeError::EmptyInput.into());
         }
         let node_tag = val[0];
         match node_tag {
             BranchNode::TAG => Ok(Node::Branch(deserialize(&val[1..].to_vec())?)),
             ExtensionNode::TAG => Ok(Node::Extension(deserialize(&val[1..].to_vec())?)),
             LeafNode::TAG => Ok(Node::Leaf(deserialize(&val[1..].to_vec())?)),
-            unknown_tag => Err(NodeDecodeError::UnknownTag { unknown_tag })?,
+            unknown_tag => Err(NodeDecodeError::UnknownTag { unknown_tag }.into()),
         }
     }
 }

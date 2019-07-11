@@ -11,10 +11,12 @@ use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
 use state_view::StateView;
 use types::{
     access_path::AccessPath,
+    language_storage::ModuleId,
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
     write_set::WriteSet,
 };
+use vm::CompiledModule;
 use vm_runtime::{
     loaded_data::{struct_def::StructDef, types::Type},
     value::Value,
@@ -90,6 +92,13 @@ impl FakeExecutor {
     /// Adds an account to this executor's data store.
     pub fn add_account_data(&mut self, account_data: &AccountData) {
         self.data_store.add_account_data(account_data)
+    }
+
+    /// Adds a module to this executor's data store.
+    ///
+    /// Does not do any sort of verification on the module.
+    pub fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
+        self.data_store.add_module(module_id, module)
     }
 
     /// Reads the resource [`Value`] for an account from this executor's data store.

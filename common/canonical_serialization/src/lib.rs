@@ -15,7 +15,7 @@
 //!
 //! An extremely simple implementation of CanonicalSerializer is also provided, the encoding
 //! rules are:
-//! (All unsigned integers are encoded in little endian representation unless specified otherwise)
+//! (All unsigned integers are encoded in little-endian representation unless specified otherwise)
 //!
 //! 1. The encoding of an unsigned 64-bit integer is defined as its little endian representation
 //!    in 8 bytes
@@ -29,7 +29,7 @@
 //!    [No. of items in the list, represented as 4-byte integer] || encoding(item_0) || ....
 //!
 //! 4. The encoding of an ordered map where the keys are ordered by lexicographic order.
-//!    Currently we only support key and value of type Vec<u8>. The encoding is defined as:
+//!    Currently, we only support key and value of type Vec<u8>. The encoding is defined as:
 //!    [No. of key value pairs in the map, represented as 4-byte integer] || encode(key1) ||
 //!    encode(value1) || encode(key2) || encode(value2)...
 //!    where the pairs are appended following the lexicographic order of the key

@@ -9,12 +9,12 @@ use crate::{
         event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            new_round_msg::{NewRoundMsg, PacemakerTimeout, PacemakerTimeoutCertificate},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -32,8 +32,7 @@ use crate::{
         },
     },
     state_replication::ExecutedState,
-    stream_utils::start_event_processing_loop,
-    time_service::{ClockTimeService, TimeService},
+    util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use crypto::HashValue;
@@ -67,8 +66,8 @@ struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload, Author>,
-    new_rounds_receiver: mpsc::Receiver<NewRoundEvent>,
-    proposal_winners_receiver: mpsc::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
+    new_rounds_receiver: channel::Receiver<NewRoundEvent>,
+    winning_proposals_receiver: channel::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
@@ -95,29 +94,49 @@ impl NodeSetup {
         )))
     }
 
-    fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Arc<Pacemaker> {
-        let base_timeout = Duration::new(5, 0);
+    fn create_pacemaker(
+        executor: TaskExecutor,
+        time_service: Arc<dyn TimeService>,
+    ) -> (Arc<dyn Pacemaker>, channel::Receiver<NewRoundEvent>) {
+        let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;
+        let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
-        Arc::new(LocalPacemaker::new(
-            MockStorage::<TestPayload>::start_for_testing()
-                .0
-                .persistent_liveness_storage(),
-            time_interval,
-            0,
-            highest_certified_round,
-            time_service,
-            pacemaker_timeout_sender,
-            1,
-            HighestTimeoutCertificates::new(None, None),
-        ))
+        (
+            Arc::new(LocalPacemaker::new(
+                executor,
+                MockStorage::<TestPayload>::start_for_testing()
+                    .0
+                    .persistent_liveness_storage(),
+                time_interval,
+                0,
+                highest_certified_round,
+                time_service,
+                new_round_events_sender,
+                pacemaker_timeout_sender,
+                1,
+                HighestTimeoutCertificates::new(None, None),
+            )),
+            new_round_events_receiver,
+        )
     }
 
     fn create_proposer_election(
         author: Author,
-    ) -> Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync> {
-        Arc::new(RotatingProposer::new(vec![author], 1))
+    ) -> (
+        Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync>,
+        channel::Receiver<ProposalInfo<TestPayload, Author>>,
+    ) {
+        let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
+        (
+            Arc::new(RotatingProposer::new(
+                vec![author],
+                1,
+                winning_proposals_sender,
+            )),
+            winning_proposals_receiver,
+        )
     }
 
     fn create_nodes(
@@ -191,20 +210,17 @@ impl NodeSetup {
             consensus_state,
         )));
 
-        let mut pacemaker = Self::create_pacemaker(time_service.clone());
-        let (pm_events_sender, new_rounds_receiver) =
-            start_event_processing_loop(&mut pacemaker, executor.clone());
-        let mut proposer_election = Self::create_proposer_election(proposer_author);
-        let (proposal_candidates_sender, proposal_winners_receiver) =
-            start_event_processing_loop(&mut proposer_election, executor.clone());
+        let (pacemaker, new_rounds_receiver) =
+            Self::create_pacemaker(executor.clone(), time_service.clone());
+
+        let (proposer_election, winning_proposals_receiver) =
+            Self::create_proposer_election(proposer_author);
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),
             Arc::clone(&pacemaker),
             Arc::clone(&proposer_election),
-            pm_events_sender,
-            proposal_candidates_sender,
             proposal_generator,
             safety_rules,
             Arc::new(MockStateComputer::new(commit_cb_sender)),
@@ -219,7 +235,7 @@ impl NodeSetup {
             block_store,
             event_processor,
             new_rounds_receiver,
-            proposal_winners_receiver,
+            winning_proposals_receiver,
             storage,
             signer,
             proposer_author,
@@ -489,7 +505,7 @@ fn process_round_mismatch_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");
@@ -557,7 +573,7 @@ fn process_new_round_msg_test() {
     block_on(
         static_proposer
             .event_processor
-            .process_new_round_msg(NewRoundMsg::new(
+            .process_timeout_msg(TimeoutMsg::new(
                 block_0_quorum_cert,
                 QuorumCert::certificate_for_genesis(),
                 PacemakerTimeout::new(2, &non_proposer.signer),
@@ -622,7 +638,7 @@ fn process_proposer_mismatch_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");
@@ -680,7 +696,7 @@ fn process_timeout_certificate_test() {
             .await;
 
         let winning = node
-            .proposal_winners_receiver
+            .winning_proposals_receiver
             .next()
             .await
             .expect("No winning proposal");
@@ -710,10 +726,15 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor.process_vote(vote_msg, 1).await;
+        // This is 'kick off' event from pacemaker initialization
         let new_round_event = node.new_rounds_receiver.next().await.unwrap();
         assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
-        assert_eq!(new_round_event.round, a1.round());
+        assert_eq!(new_round_event.round, 1);
+        node.event_processor.process_vote(vote_msg, 1).await;
+        let new_round_event = node.new_rounds_receiver.next().await.unwrap();
+        // This is event from processing qc for round 1
+        assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
+        assert_eq!(new_round_event.round, 2);
     });
     block_on(runtime.shutdown_now().compat()).unwrap();
 }
@@ -744,7 +765,7 @@ fn process_chunk_retrieval() {
         highest_ledger_info: genesis_qc.clone(),
     };
     node.pacemaker
-        .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+        .process_certificates(proposal_info.proposal.round() - 1, None);
 
     block_on(async move {
         node.event_processor
@@ -796,7 +817,7 @@ fn process_block_retrieval() {
         highest_ledger_info: genesis_qc.clone(),
     };
     node.pacemaker
-        .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+        .process_certificates(proposal_info.proposal.round() - 1, None);
 
     block_on(async move {
         node.event_processor
@@ -895,7 +916,7 @@ fn basic_restart_test() {
             proposals_mut.push(proposal_id);
             node_mut
                 .pacemaker
-                .process_certificates_from_proposal(proposal_info.proposal.round() - 1, None);
+                .process_certificates(proposal_info.proposal.round() - 1, None);
             node_mut
                 .event_processor
                 .process_winning_proposal(proposal_info)

@@ -16,10 +16,21 @@ pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use failure::prelude::*;
+use lazy_static::lazy_static;
+use metrics::OpMetrics;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
-use std::{collections::HashMap, iter::Iterator, marker::PhantomData, path::Path};
+use std::{
+    collections::{BTreeMap, HashMap},
+    iter::Iterator,
+    marker::PhantomData,
+    path::Path,
+};
+
+lazy_static! {
+    static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("schemadb");
+}
 
 /// Type alias to `rocksdb::ColumnFamilyOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ColumnFamilyOptions = rocksdb::ColumnFamilyOptions;
@@ -166,6 +177,10 @@ impl DB {
     pub fn open<P: AsRef<Path>>(path: P, mut cf_opts_map: ColumnFamilyOptionsMap) -> Result<Self> {
         let mut db_opts = DBOptions::new();
 
+        // For now we set the max total WAL size to be 1G. This config can be useful when column
+        // families are updated at non-uniform frequencies.
+        db_opts.set_max_total_wal_size(1 << 30);
+
         // If db exists, just open it with all cfs.
         if db_exists(path.as_ref()) {
             return DB::open_cf(db_opts, &path, cf_opts_map.into_iter().collect());
@@ -173,10 +188,6 @@ impl DB {
 
         // If db doesn't exist, create a db first with all column families.
         db_opts.create_if_missing(true);
-
-        // For now we set the max total WAL size to be 1G. This config can be useful when column
-        // families are updated at non-uniform frequencies.
-        db_opts.set_max_total_wal_size(1 << 30);
 
         let mut db = DB::open_cf(
             db_opts,
@@ -260,16 +271,61 @@ impl DB {
 
         self.inner
             .write_opt(&db_batch, &default_write_options())
-            .map_err(convert_rocksdb_err)
+            .map_err(convert_rocksdb_err)?;
+
+        for (cf_name, key, write_op) in &batch.rows {
+            match write_op {
+                WriteOp::Value(value) => OP_COUNTER.observe(
+                    &format!("db_put_bytes_{}", cf_name),
+                    (key.len() + value.len()) as f64,
+                ),
+                WriteOp::Deletion => OP_COUNTER.inc(&format!("db_delete_{}", cf_name)),
+            };
+        }
+
+        Ok(())
     }
 
-    fn get_cf_handle(&self, cf_name: ColumnFamilyName) -> Result<&CFHandle> {
+    fn get_cf_handle(&self, cf_name: &str) -> Result<&CFHandle> {
         self.inner.cf_handle(cf_name).ok_or_else(|| {
             format_err!(
                 "DB::cf_handle not found for column family name: {}",
                 cf_name
             )
         })
+    }
+
+    /// Returns the approximate size of each non-empty column family in bytes.
+    pub fn get_approximate_sizes_cf(&self) -> Result<BTreeMap<String, u64>> {
+        let mut cf_sizes = BTreeMap::new();
+
+        for cf_name in self.inner.cf_names().into_iter().map(ToString::to_string) {
+            let cf_handle = self.get_cf_handle(&cf_name)?;
+            let size = self
+                .inner
+                .get_property_int_cf(cf_handle, "rocksdb.estimate-live-data-size")
+                .ok_or_else(|| {
+                    format_err!(
+                        "Unable to get approximate size of {} column family.",
+                        cf_name,
+                    )
+                })?;
+            cf_sizes.insert(cf_name, size);
+        }
+
+        Ok(cf_sizes)
+    }
+
+    /// Flushes all memtable data. If `sync` is true, the flush will wait until it's done. This is
+    /// only used for testing `get_approximate_sizes_cf` in unit tests.
+    pub fn flush_all(&self, sync: bool) -> Result<()> {
+        for cf_name in self.inner.cf_names() {
+            let cf_handle = self.get_cf_handle(cf_name)?;
+            self.inner
+                .flush_cf(cf_handle, sync)
+                .map_err(convert_rocksdb_err)?;
+        }
+        Ok(())
     }
 }
 

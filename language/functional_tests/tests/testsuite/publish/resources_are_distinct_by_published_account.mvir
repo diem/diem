@@ -28,11 +28,13 @@ module LibraAccount {
 script:
 import Transaction.LibraAccount as MyAccount;
 import 0x0.LibraAccount;
+
 main() {
     let c1: R#MyAccount.T;
     let sender: address;
     let sequence_number: u64;
     let fake_ref: &mut R#MyAccount.T;
+    let fake_ref_frozen: &R#MyAccount.T;
     let fake_value: u64;
 
     c1 = MyAccount.new(112);
@@ -44,12 +46,10 @@ main() {
     assert(copy(sequence_number) == 0, 42);
 
     fake_ref = MyAccount.get(copy(sender));
-    fake_ref = freeze(move(fake_ref));
-    fake_value = MyAccount.sequence_number(move(fake_ref));
+    fake_ref_frozen = freeze(move(fake_ref));
+    fake_value = MyAccount.sequence_number(move(fake_ref_frozen));
     assert(copy(fake_value) == 112, 43);
 
     return;
 }
 
-// TODO: disabled test
-// check: Cannot find function

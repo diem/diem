@@ -9,11 +9,13 @@ use crate::{
     unit_tests::LocalMockMempool,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+
+use assert_matches::assert_matches;
 use crypto::{
     hash::CryptoHash,
     signing::{generate_keypair, sign_message},
 };
-use mempool::MempoolAddTransactionStatus;
+use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use proto_conv::FromProto;
 use protobuf::{Message, UnknownFields};
 use std::sync::Arc;
@@ -157,6 +159,7 @@ fn test_submit_txn_inner_vm() {
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::Execution(ExecutionStatus::Executed));
+
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = generate_keypair();
     req.set_signed_txn(get_test_signed_txn(
@@ -166,13 +169,10 @@ fn test_submit_txn_inner_vm() {
         test_key.1,
         None,
     ));
-    let response = SubmitTransactionResponse::from_proto(
-        ac_service.submit_transaction_inner(req.clone()).unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        response.ac_status.unwrap(),
-        AdmissionControlStatus::Rejected,
+    let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
+    assert_status(
+        response,
+        VMStatus::Validation(VMValidationStatus::InvalidSignature),
     );
 }
 
@@ -202,9 +202,9 @@ fn test_reject_unknown_fields() {
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
     .unwrap();
-    assert_eq!(
+    assert_matches!(
         response.ac_status.unwrap(),
-        AdmissionControlStatus::Rejected
+        AdmissionControlStatus::Rejected(_)
     );
 }
 
@@ -226,8 +226,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InsufficientBalance,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InsufficientBalance
     );
     let invalid_seq_add = AccountAddress::new([101; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -242,8 +242,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InvalidSeqNumber,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InvalidSeqNumber
     );
     let sys_error_add = AccountAddress::new([102; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -258,8 +258,8 @@ fn test_submit_txn_inner_mempool() {
     )
     .unwrap();
     assert_eq!(
-        response.mempool_error.unwrap(),
-        MempoolAddTransactionStatus::InvalidUpdate,
+        response.mempool_error.unwrap().code,
+        MempoolAddTransactionStatusCode::InvalidUpdate
     );
     let accepted_add = AccountAddress::new([103; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(

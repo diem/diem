@@ -5,14 +5,15 @@ use super::*;
 use crate::{
     code_cache::module_cache::VMModuleCache, txn_executor::TransactionExecutor, value::Local,
 };
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     file_format::{
-        AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
-        CompiledScriptMut, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
-        FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
+        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
+        FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
+        ModuleHandleIndex, SignatureToken, StringPoolIndex,
     },
     transaction_metadata::TransactionMetadata,
 };
@@ -38,15 +39,15 @@ impl RemoteCache for FakeDataCache {
     }
 }
 
-fn fake_script() -> CompiledScript {
-    CompiledScriptMut {
+fn fake_script() -> VerifiedScript {
+    let compiled_script = CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
-                code: vec![],
+                code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![ModuleHandle {
@@ -70,7 +71,8 @@ fn fake_script() -> CompiledScript {
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test script should satisfy bounds checker")
+    .expect("test script should satisfy bounds checker");
+    VerifiedScript::new(compiled_script).expect("test script should satisfy bytecode verifier")
 }
 
 fn test_simple_instruction_impl<'alloc, 'txn>(
@@ -156,8 +158,8 @@ fn test_simple_instruction_transition() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let data_cache = FakeDataCache::new();
     let mut vm =
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
@@ -346,8 +348,8 @@ fn test_arith_instructions() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let data_cache = FakeDataCache::new();
 
     let mut vm =
@@ -537,7 +539,7 @@ fn test_arith_instructions() {
     );
 }
 
-fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -> CompiledModule {
+fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -> VerifiedModule {
     let mut names: Vec<String> = sigs
         .iter()
         .enumerate()
@@ -567,7 +569,7 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         })
         .collect();
     let (local_sigs, function_sigs): (Vec<_>, Vec<_>) = sigs.into_iter().unzip();
-    CompiledModuleMut {
+    let compiled_module = CompiledModuleMut {
         function_defs,
         field_defs: vec![],
         struct_defs: vec![],
@@ -586,11 +588,17 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test module should satisfy the bounds checker")
+    .expect("test module should satisfy the bounds checker");
+
+    // XXX The modules generated here don't satisfy the bytecode verifier at the moment. This should
+    // probably be addressed, but it doesn't affect the validity of the test for now.
+    VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(compiled_module)
 }
 
 #[test]
 fn test_call() {
+    // Note that to pass verification, none of the signatures need to have duplicates.
+    // XXX fake_module_with_calls should probably be updated to dedup signatures.
     let module = fake_module_with_calls(vec![
         // () -> (), no local
         (
@@ -630,13 +638,18 @@ fn test_call() {
         ),
     ]);
 
-    let mod_id = module.self_code_key();
+    let mod_id = module.self_id();
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new_from_module(module, &allocator).unwrap();
     let fake_func = {
-        let fake_mod_entry = module_cache.get_loaded_module(&mod_id).unwrap().unwrap();
+        let fake_mod_entry = module_cache
+            .get_loaded_module(&mod_id)
+            .unwrap()
+            .unwrap()
+            .unwrap();
         module_cache
             .resolve_function_ref(fake_mod_entry, FunctionHandleIndex::new(0))
+            .unwrap()
             .unwrap()
             .unwrap()
     };
@@ -688,8 +701,8 @@ fn test_transaction_info() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = fake_script().into_module();
-    let loaded_main = LoadedModule::new(main_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
 
     let txn_info = {
         let (_, public_key) = crypto::signing::generate_genesis_keypair();

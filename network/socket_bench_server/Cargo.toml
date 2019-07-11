@@ -1,0 +1,22 @@
+[package]
+name = "socket_bench_server"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.12"
+futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+futures_01 = { version = "0.1.25", package = "futures" }
+parity-multiaddr = "0.4.0"
+structopt = "0.2.15"
+tokio = "0.1.16"
+unsigned-varint = { version = "0.2.2", features = ["codec"] }
+
+failure = { package = "failure_ext", path = "../../common/failure_ext" }
+logger = { path = "../../common/logger" }
+memsocket = { path = "../memsocket" }
+netcore = { path = "../netcore" }
+noise = { path = "../noise" }

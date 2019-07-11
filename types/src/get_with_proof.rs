@@ -199,7 +199,7 @@ fn verify_response_item(
         ),
         // Request-response item types mismatch.
         _ => bail!(
-            "ResquestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
+            "RequestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
             mem::discriminant(req),
             mem::discriminant(res),
         ),
@@ -420,7 +420,7 @@ impl FromProto for RequestItem {
                 fetch_events,
             }
         } else {
-            unreachable!("Unknown RequestItem type.")
+            bail!("Unknown RequestItem type.")
         })
     }
 }
@@ -608,7 +608,7 @@ impl FromProto for ResponseItem {
                 txn_list_with_proof,
             }
         } else {
-            unreachable!("Unknown ResponseItem type.")
+            bail!("Unknown ResponseItem type.")
         })
     }
 }

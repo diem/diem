@@ -9,11 +9,14 @@ use crate::{
     executor::FakeExecutor,
 };
 use assert_matches::assert_matches;
+use bytecode_verifier::VerifiedModule;
+use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::signing::KeyPair;
 use std::collections::HashSet;
 use tiny_keccak::Keccak;
 use types::{
+    account_address::AccountAddress,
     test_helpers::transaction_test_helpers,
     transaction::{
         TransactionArgument, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
@@ -33,7 +36,7 @@ fn verify_signature() {
     // Generate a new key pair to try and sign things with.
     let other_keypair = KeyPair::new(::crypto::signing::generate_keypair().0);
     let program = encode_transfer_program(sender.address(), 100);
-    let signed_txn = transaction_test_helpers::get_unverified_test_signed_txn(
+    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
         other_keypair.private_key().clone(),
@@ -59,7 +62,8 @@ fn verify_rejected_write_set() {
         sender.account().privkey.clone(),
         sender.account().pubkey,
         None,
-    );
+    )
+    .into_inner();
 
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()),
@@ -548,5 +552,80 @@ pub fn test_open_publishing() {
     assert_eq!(
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+    );
+}
+
+#[test]
+fn test_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+
+    // Get a module that fails verification into the store.
+    let bad_module_code = "
+    modules:
+    module Test {
+        resource R1 { }
+        struct S1 { r1: R#Self.R1 }
+
+        public new_S1(): V#Self.S1 {
+            let s: V#Self.S1;
+            let r: R#Self.R1;
+            r = R1 {};
+            s = S1 { r1: move(r) };
+            return move(s);
+        }
+    }
+
+    script:
+    main() {
+    }
+    ";
+    let compiler = Compiler {
+        code: bad_module_code,
+        ..Compiler::default()
+    };
+    let mut modules = compiler
+        .into_compiled_program()
+        .expect("Failed to compile")
+        .modules;
+    let module = modules.swap_remove(0);
+    executor.add_module(&module.self_id(), &module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let code = "
+    import 0x0.Test;
+
+    main() {
+        let x: V#Test.S1;
+        x = Test.new_S1();
+        return;
+    }
+    ";
+
+    let compiler = Compiler {
+        code,
+        address: *sender.address(),
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
+            module,
+        )],
+        ..Compiler::default()
+    };
+    let program = compiler.into_program(vec![]).expect("Failed to compile");
+    let txn = sender
+        .account()
+        .create_signed_txn_impl(*sender.address(), program, 10, 10_000, 1);
+    // As of now, we don't verify dependencies in verify_transaction.
+    assert_eq!(executor.verify_transaction(txn.clone()), None);
+    let errors = match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(VMStatus::Verification(errors)) => errors.to_vec(),
+        other => panic!("Unexpected status: {:?}", other),
+    };
+    assert_matches!(
+        &errors[0],
+        VMVerificationStatus::Dependency(module_id, _)
+            if module_id.address() == &AccountAddress::default() && module_id.name() == "Test"
     );
 }

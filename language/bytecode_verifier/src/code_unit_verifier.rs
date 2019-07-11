@@ -36,6 +36,7 @@ impl<'a> CodeUnitVerifier<'a> {
     pub fn verify(&self) -> Vec<VerificationError> {
         self.module
             .function_defs()
+            .iter()
             .enumerate()
             .map(move |(idx, function_definition)| {
                 self.verify_function(function_definition)

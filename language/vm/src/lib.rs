@@ -4,10 +4,16 @@
 #![feature(never_type)]
 #![feature(exhaustive_patterns)]
 
+#[macro_use]
+extern crate mirai_annotations;
+
+#[cfg(feature = "mirai-contracts")]
+pub mod foreign_contracts;
+
 use std::fmt;
 
 pub mod access;
-pub mod checks;
+pub mod check_bounds;
 #[macro_use]
 pub mod errors;
 pub mod deserializer;

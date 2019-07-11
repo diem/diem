@@ -4,11 +4,11 @@
 //! This module implements a resolver for importing a SignatureToken defined in one module into
 //! another. This functionaliy is used in verify_module_dependencies and verify_script_dependencies.
 use crate::{
-    access::BaseAccess,
+    access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{
-        AddressPoolIndex, CompiledModule, FunctionSignature, ModuleHandle, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructHandle, StructHandleIndex,
+        AddressPoolIndex, FunctionSignature, ModuleHandle, ModuleHandleIndex, SignatureToken,
+        StringPoolIndex, StructHandle, StructHandleIndex,
     },
 };
 use std::collections::BTreeMap;
@@ -24,21 +24,21 @@ pub struct Resolver {
 
 impl Resolver {
     /// create a new instance of Resolver for module
-    pub fn new(module: &CompiledModule) -> Self {
+    pub fn new(module: &impl ModuleAccess) -> Self {
         let mut address_map = BTreeMap::new();
-        for (idx, address) in module.address_pool().enumerate() {
+        for (idx, address) in module.address_pool().iter().enumerate() {
             address_map.insert(address.clone(), AddressPoolIndex(idx as u16));
         }
         let mut string_map = BTreeMap::new();
-        for (idx, name) in module.string_pool().enumerate() {
+        for (idx, name) in module.string_pool().iter().enumerate() {
             string_map.insert(name.clone(), StringPoolIndex(idx as u16));
         }
         let mut module_handle_map = BTreeMap::new();
-        for (idx, module_hadndle) in module.module_handles().enumerate() {
+        for (idx, module_hadndle) in module.module_handles().iter().enumerate() {
             module_handle_map.insert(module_hadndle.clone(), ModuleHandleIndex(idx as u16));
         }
         let mut struct_handle_map = BTreeMap::new();
-        for (idx, struct_handle) in module.struct_handles().enumerate() {
+        for (idx, struct_handle) in module.struct_handles().iter().enumerate() {
             struct_handle_map.insert(struct_handle.clone(), StructHandleIndex(idx as u16));
         }
         Self {
@@ -53,7 +53,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_signature_token(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         sig_token: &SignatureToken,
     ) -> Result<SignatureToken, VMStaticViolation> {
         match sig_token {
@@ -111,7 +111,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_function_signature(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         func_sig: &FunctionSignature,
     ) -> Result<FunctionSignature, VMStaticViolation> {
         let mut return_types = Vec::<SignatureToken>::new();

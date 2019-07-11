@@ -41,7 +41,7 @@ impl ExecutionProxy {
         pre_execution_instant: Instant,
     ) -> StateComputeResult {
         let execution_block_response = execution_proto::ExecuteBlockResponse::from_proto(response)
-            .expect("Couldn't decode ExcecutionBlockResponse from protobuf");
+            .expect("Couldn't decode ExecutionBlockResponse from protobuf");
         let execution_duration_ms = pre_execution_instant.elapsed().as_millis();
         let num_txns = execution_block_response.status().len();
         if num_txns == 0 {

@@ -57,7 +57,7 @@ pub enum NeedFetchResult {
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
     validator_signer: ValidatorSigner,
-    state_computer: Arc<StateComputer<Payload = T>>,
+    state_computer: Arc<dyn StateComputer<Payload = T>>,
     enforce_increasing_timestamps: bool,
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
@@ -69,7 +69,7 @@ impl<T: Payload> BlockStore<T> {
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
         validator_signer: ValidatorSigner,
-        state_computer: Arc<StateComputer<Payload = T>>,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
         enforce_increasing_timestamps: bool,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {

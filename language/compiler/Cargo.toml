@@ -5,22 +5,14 @@ authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
 publish = false
 edition = "2018"
-build = "build.rs"
 
 [dependencies]
 bytecode_verifier = { path = "../bytecode_verifier" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+ir_to_bytecode = { path = "ir_to_bytecode" }
+stdlib = { path = "../stdlib" }
 types = { path = "../../types" }
 vm = { path = "../vm" }
-lalrpop-util = "0.16.3"
 log = "0.4.6"
-codespan = "0.1.3"
-codespan-reporting = "0.1.4"
-serde = { version = "1.0.89", features = ["derive"] }
-serde_json = "1.0.38"
-hex = "0.3.2"
-regex = "1.1.6"
 structopt = "0.2.15"
-
-[build-dependencies]
-lalrpop = "0.16.3"
+serde_json = "1.0.38"

@@ -187,10 +187,10 @@ impl GasMeter {
             }
             Bytecode::Call(call_idx) => {
                 let self_module = &stk.top_frame()?.module();
-                let function_ref = stk
+                let function_ref = try_runtime!(stk
                     .module_cache
-                    .resolve_function_ref(self_module, *call_idx)?
-                    .ok_or(VMInvariantViolation::LinkerError)?;
+                    .resolve_function_ref(self_module, *call_idx))
+                .ok_or(VMInvariantViolation::LinkerError)?;
                 if function_ref.is_native() {
                     0 // This will be costed at the call site/by the native function
                 } else {
@@ -204,7 +204,7 @@ impl GasMeter {
                 Self::gas_of(static_cost_instr(instr, size))
             }
             Bytecode::Pack(struct_idx) => {
-                let struct_def = &stk.top_frame()?.module().module.struct_def_at(*struct_idx);
+                let struct_def = &stk.top_frame()?.module().struct_def_at(*struct_idx);
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
                 // the struct.
@@ -307,6 +307,6 @@ impl GasMeter {
     /// This is used internally for converting from a `GasCost` which is a triple of numbers
     /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
     fn gas_of(gas_cost: GasCost) -> GasUnits {
-        gas_cost.instruction_gas + gas_cost.memory_gas + gas_cost.stack_gas
+        gas_cost.instruction_gas + gas_cost.memory_gas
     }
 }

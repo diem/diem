@@ -193,7 +193,7 @@ pub struct LedgerInfoWithSignatures {
 
 impl Display for LedgerInfoWithSignatures {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "LedgerInfoWithSignatures: {}", self.ledger_info)
+        write!(f, "{}", self.ledger_info)
     }
 }
 

@@ -8,13 +8,13 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 (Write your motivation for proposed changes here.)
 
-### Have you read the [Contributing Guidelines on pull requests](../CONTRIBUTING.md#pull-requests)?
+### Have you read the [Contributing Guidelines on pull requests](https://github.com/libra/libra/blob/master/CONTRIBUTING.md#pull-requests)?
 
 (Write your answer here.)
 
 ## Test Plan
 
-(Share your test plan here. If you changed code, please provide us with clear instrutions for verifying that your changes work.)
+(Share your test plan here. If you changed code, please provide us with clear instructions for verifying that your changes work.)
 
 ## Related PRs
 

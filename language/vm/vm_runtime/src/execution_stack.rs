@@ -9,7 +9,7 @@ use crate::{
 };
 use move_ir_natives::dispatch::{Result as NativeResult, StackAccessor};
 use std::{fmt, marker::PhantomData};
-use types::byte_array::ByteArray;
+use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::errors::*;
 
 pub struct ExecutionStack<'alloc, 'txn, P>
@@ -161,6 +161,28 @@ where
         match self.pop()?.value() {
             Some(v) => match MutVal::try_own(v) {
                 Ok(Value::ByteArray(arr)) => Ok(arr),
+                Err(err) => Err(err.into()),
+                _ => Err(VMStaticViolation::TypeMismatch.into()),
+            },
+            None => Err(VMStaticViolation::TypeMismatch.into()),
+        }
+    }
+
+    fn get_u64(&mut self) -> NativeResult<u64> {
+        match self.pop()?.value() {
+            Some(v) => match MutVal::try_own(v) {
+                Ok(Value::U64(i)) => Ok(i),
+                Err(err) => Err(err.into()),
+                _ => Err(VMStaticViolation::TypeMismatch.into()),
+            },
+            None => Err(VMStaticViolation::TypeMismatch.into()),
+        }
+    }
+
+    fn get_address(&mut self) -> NativeResult<AccountAddress> {
+        match self.pop()?.value() {
+            Some(v) => match MutVal::try_own(v) {
+                Ok(Value::Address(addr)) => Ok(addr),
                 Err(err) => Err(err.into()),
                 _ => Err(VMStaticViolation::TypeMismatch.into()),
             },

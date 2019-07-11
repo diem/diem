@@ -23,7 +23,7 @@ Admission Control (AC) implements two public APIs:
 2. UpdateToLatestLedger(UpdateToLatestLedgerRequest). No extra processing is performed in AC.
 * The request is directly passed to storage for query.
 
-## Folder Structure
+## How is this module organized?
 ```
     .
     ├── README.md

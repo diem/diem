@@ -24,8 +24,8 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
-    event_store::EventStore, ledger_store::LedgerStore, schema::*, state_store::StateStore,
-    transaction_store::TransactionStore,
+    errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
+    state_store::StateStore, transaction_store::TransactionStore,
 };
 use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -59,6 +59,17 @@ lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
 }
 
+const MAX_LIMIT: u64 = 1000;
+const MAX_REQUEST_ITEMS: u64 = 100;
+
+fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
+    if num_requested > max_allowed {
+        Err(LibraDbError::TooManyRequested(num_requested, max_allowed).into())
+    } else {
+        Ok(())
+    }
+}
+
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Libra data structures.
 pub struct LibraDB {
@@ -81,7 +92,7 @@ impl LibraDB {
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
-            (SIGNATURE_CF_NAME, ColumnFamilyOptions::default()),
+            (RETIRED_STATE_RECORD_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
             (
@@ -165,6 +176,8 @@ impl LibraDB {
         limit: u64,
         ledger_version: Version,
     ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
+
         let get_latest = !ascending && start_seq_num == u64::max_value();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
@@ -324,14 +337,15 @@ impl LibraDB {
                 .state_root_hash()
         };
 
+        let last_version = first_version + num_txns - 1;
         if let Some(x) = ledger_info_with_sigs {
-            let last_version = x.ledger_info().version();
+            let claimed_last_version = x.ledger_info().version();
             ensure!(
-                first_version + num_txns - 1 == last_version,
+                claimed_last_version == last_version,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
-                last_version
+                claimed_last_version,
             );
         }
 
@@ -362,6 +376,7 @@ impl LibraDB {
         self.commit(batch)?;
         // Only increment counter if commit(batch) succeeds.
         OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
+        OP_COUNTER.set("latest_transaction_version", last_version as usize);
         Ok(())
     }
 
@@ -381,6 +396,7 @@ impl LibraDB {
             .collect::<Vec<_>>();
         let state_root_hashes = self.state_store.put_account_state_sets(
             account_state_sets,
+            first_version,
             cur_state_root_hash,
             &mut batch,
         )?;
@@ -439,6 +455,8 @@ impl LibraDB {
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
     )> {
+        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
+
         // Get the latest ledger info and signatures
         let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
         let ledger_version = ledger_info_with_sigs.ledger_info().version();
@@ -575,6 +593,8 @@ impl LibraDB {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
+
         if start_version > ledger_version || limit == 0 {
             return Ok(TransactionListWithProof::new_empty());
         }
@@ -625,7 +645,21 @@ impl LibraDB {
     /// Write the whole schema batch including all data necessary to mutate the ledge
     /// state of some transaction by leveraging rocksdb atomicity support.
     fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)
+        self.db.write_schemas(batch)?;
+
+        match self.db.get_approximate_sizes_cf() {
+            Ok(cf_sizes) => {
+                for (cf_name, size) in cf_sizes {
+                    OP_COUNTER.set(&format!("cf_size_bytes_{}", cf_name), size as usize);
+                }
+            }
+            Err(err) => warn!(
+                "Failed to get approximate size of column families: {}.",
+                err
+            ),
+        }
+
+        Ok(())
     }
 
     fn get_account_seq_num_by_version(

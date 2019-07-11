@@ -6,6 +6,7 @@ use failure::Fail;
 use std::{fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
+    language_storage::ModuleId,
     transaction::TransactionStatus,
     vm_error::{VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus},
 };
@@ -51,6 +52,7 @@ pub enum VMErrorKind {
     ValueDeserializerError,
     CodeSerializerError(BinaryError),
     CodeDeserializerError(BinaryError),
+    Verification(Vec<VerificationStatus>),
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -60,6 +62,8 @@ pub enum VerificationStatus {
     /// A verification error was detected in a module. The first element is the index of the module
     /// in the transaction.
     Module(u16, VerificationError),
+    /// A verification error was detected in a dependency of a module.
+    Dependency(ModuleId, VerificationError),
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -702,6 +706,9 @@ impl From<&VerificationStatus> for VMVerificationStatus {
             VerificationStatus::Module(module_idx, err) => {
                 VMVerificationStatus::Module(*module_idx, err.into())
             }
+            VerificationStatus::Dependency(dependency_id, err) => {
+                VMVerificationStatus::Dependency(dependency_id.clone(), err.into())
+            }
         }
     }
 }
@@ -745,8 +752,11 @@ impl From<&VMErrorKind> for VMStatus {
             VMErrorKind::ValueSerializerError => ExecutionStatus::ValueSerializationError,
             VMErrorKind::ValueDeserializerError => ExecutionStatus::ValueDeserializationError,
             VMErrorKind::DuplicateModuleName => ExecutionStatus::DuplicateModuleName,
+            // The below errors already have top-level VMStatus variants associated with them, so
+            // return those.
             VMErrorKind::CodeSerializerError(err) => return VMStatus::from(err),
             VMErrorKind::CodeDeserializerError(err) => return VMStatus::from(err),
+            VMErrorKind::Verification(statuses) => return statuses.iter().collect(),
         };
         VMStatus::Execution(err)
     }

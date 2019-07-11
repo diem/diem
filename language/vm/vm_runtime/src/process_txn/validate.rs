@@ -10,7 +10,8 @@ use logger::prelude::*;
 use tiny_keccak::Keccak;
 use types::{
     transaction::{
-        SignedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
+        SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES,
+        SCRIPT_HASH_LENGTH,
     },
     vm_error::{VMStatus, VMValidationStatus},
 };
@@ -39,7 +40,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    txn: SignedTransaction,
+    txn: SignatureCheckedTransaction,
     txn_state: Option<ValidatedTransactionState<'alloc, 'txn, P>>,
 }
 
@@ -77,10 +78,6 @@ where
             allocator,
             ..
         } = process_txn;
-        if txn.verify_signature().is_err() {
-            error!("[VM] Verify signature error");
-            return Err(VMStatus::Validation(VMValidationStatus::InvalidSignature));
-        }
 
         let txn_state = match txn.payload() {
             TransactionPayload::Program(program) => {
@@ -90,6 +87,11 @@ where
                         "max size: {}, txn size: {}",
                         MAX_TRANSACTION_SIZE_IN_BYTES,
                         txn.raw_txn_bytes_len()
+                    );
+                    warn!(
+                        "[VM] Transaction size too big {} (max {})",
+                        txn.raw_txn_bytes_len(),
+                        MAX_TRANSACTION_SIZE_IN_BYTES
                     );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::ExceededMaxTransactionSize(error_str),
@@ -102,6 +104,11 @@ where
                 if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS {
                     let error_str = format!(
                         "max gas units: {}, gas units submitted: {}",
+                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
+                        txn.max_gas_amount()
+                    );
+                    warn!(
+                        "[VM] Gas unit error; max {}, submitted {}",
                         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
                         txn.max_gas_amount()
                     );
@@ -121,6 +128,11 @@ where
                         min_txn_fee,
                         txn.max_gas_amount()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        min_txn_fee,
+                        txn.max_gas_amount()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(error_str),
                     ));
@@ -137,6 +149,11 @@ where
                         gas_schedule::MIN_PRICE_PER_GAS_UNIT,
                         txn.gas_unit_price()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        gas_schedule::MIN_PRICE_PER_GAS_UNIT,
+                        txn.gas_unit_price()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::GasUnitPriceBelowMinBound(error_str),
                     ));
@@ -149,6 +166,11 @@ where
                         gas_schedule::MAX_PRICE_PER_GAS_UNIT,
                         txn.gas_unit_price()
                     );
+                    warn!(
+                        "[VM] Gas unit error; min {}, submitted {}",
+                        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+                        txn.gas_unit_price()
+                    );
                     return Err(VMStatus::Validation(
                         VMValidationStatus::GasUnitPriceAboveMaxBound(error_str),
                     ));
@@ -156,14 +178,14 @@ where
 
                 // Verify against whitelist if we are locked. Otherwise allow.
                 if !is_allowed_script(&publishing_option, &program.code()) {
-                    error!("[VM] Custom scripts not allowed: {:?}", &program.code());
+                    warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
                     return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
                 }
 
                 if !publishing_option.is_open() {
                     // Not allowing module publishing for now.
                     if !program.modules().is_empty() {
-                        error!("[VM] Custom modules not allowed");
+                        warn!("[VM] Custom modules not allowed");
                         return Err(VMStatus::Validation(VMValidationStatus::UnknownModule));
                     }
                 }
@@ -196,7 +218,7 @@ where
                         }
                     }
                     Err(ref err) => {
-                        error!("[VM] VM error in prologue: {:?}", err);
+                        error!("[VM] VM internal error in prologue: {:?}", err);
                         return Err(err.into());
                     }
                 };
@@ -208,7 +230,7 @@ where
                 // transaction.
                 // XXX figure out a story for hard forks.
                 if mode != ValidationMode::Genesis {
-                    error!("[VM] Attempt to process genesis after initialization");
+                    warn!("[VM] Attempt to process genesis after initialization");
                     return Err(VMStatus::Validation(VMValidationStatus::RejectedWriteSet));
                 }
 
@@ -233,14 +255,14 @@ where
         VerifiedTransaction::new(self)
     }
 
-    /// Returns a reference to the `SignedTransaction` within.
-    pub fn as_inner(&self) -> &SignedTransaction {
+    /// Returns a reference to the `SignatureCheckedTransaction` within.
+    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
         &self.txn
     }
 
-    /// Consumes `self` and returns the `SignedTransaction` within.
+    /// Consumes `self` and returns the `SignatureCheckedTransaction` within.
     #[allow(dead_code)]
-    pub fn into_inner(self) -> SignedTransaction {
+    pub fn into_inner(self) -> SignatureCheckedTransaction {
         self.txn
     }
 
@@ -270,7 +292,7 @@ where
     fn new(
         metadata: TransactionMetadata,
         module_cache: P,
-        data_cache: &'txn RemoteCache,
+        data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
     ) -> Self {
         // This temporary cache is used for modules published by a single transaction.
