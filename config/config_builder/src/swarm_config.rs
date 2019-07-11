@@ -4,14 +4,13 @@
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction;
 use config::{
-    config::{KeyPairs, NodeConfig, NodeConfigHelpers},
+    config::{KeyPairs, NodeConfig, NodeConfigHelpers, VMPublishingOption},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
 use crypto::signing::KeyPair;
 use failure::prelude::*;
 use std::path::{Path, PathBuf};
-use vm_genesis::default_config;
 
 pub struct SwarmConfig {
     configs: Vec<(PathBuf, NodeConfig)>,
@@ -73,7 +72,7 @@ impl SwarmConfig {
             config.network.listen_address = addrs[0].clone();
             config.network.advertised_address = addrs[0].clone();
 
-            config.vm_config = default_config();
+            config.vm_config.publishing_options = VMPublishingOption::Open;
             configs.push(config);
         }
         if prune_seed_peers_for_discovery {
