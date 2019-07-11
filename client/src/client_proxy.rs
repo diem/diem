@@ -293,28 +293,20 @@ impl ClientProxy {
             stdout().flush().unwrap();
             max_iterations -= 1;
 
-            match self.client.get_sequence_number(account) {
-                Ok(chain_seq_number) => {
-                    if chain_seq_number >= sequence_number {
-                        println!(
-                            "Transaction completed, found sequence number {}]",
-                            chain_seq_number
-                        );
-                        break;
-                    }
-                    if max_iterations % 100 == 0 {
-                        print!("*");
-                    }
+            if let Ok(Some((_, Some(events)))) =
+                self.client
+                    .get_txn_by_acc_seq(account, sequence_number - 1, true)
+            {
+                println!("transaction is stored!");
+                if events.is_empty() {
+                    println!("but it didn't emit any events (failed execution)");
                 }
-                Err(e) => {
-                    if max_iterations == 0 {
-                        panic!("wait_for_transaction timeout: {}", e);
-                    } else if max_iterations % 100 == 0 {
-                        print!(".");
-                    }
-                }
+                break;
+            } else if max_iterations == 0 {
+                panic!("wait_for_transaction timeout");
+            } else {
+                print!(".");
             }
-
             thread::sleep(time::Duration::from_millis(10));
         }
     }
