@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 futures01 = { package = "futures", version = "0.1.26" }
-futures03 = { package = "futures-preview", version = "=0.3.0-alpha.16", features = ["compat"] }
+futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17", features = ["compat"] }
 grpcio = "0.4.4"
 
 config = { path = "../../config" }

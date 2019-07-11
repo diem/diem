@@ -69,16 +69,13 @@ pub type Receiver<T> = WithGauge<mpsc::Receiver<T>>;
 /// `Sender` implements `Sink` in the same way as `mpsc::Sender`, but it increments the
 /// associated `IntGauge` when it sends a message successfully.
 impl<T> Sink<T> for Sender<T> {
-    type SinkError = mpsc::SendError;
+    type Error = mpsc::SendError;
 
-    fn poll_ready(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         (*self).value.poll_ready(cx)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, msg: T) -> Result<(), Self::SinkError> {
+    fn start_send(mut self: Pin<&mut Self>, msg: T) -> Result<(), Self::Error> {
         self.gauge.inc();
         (*self).value.start_send(msg).map_err(|e| {
             self.gauge.dec();
@@ -89,10 +86,7 @@ impl<T> Sink<T> for Sender<T> {
 
     // `poll_flush` would block if `poll_ready` returns pending, which means the channel is at
     // capacity and the sender task is parked.
-    fn poll_flush(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         match (*self).value.poll_ready(cx) {
             Poll::Ready(Err(ref e)) if e.is_disconnected() => {
                 // If the receiver disconnected, we consider the sink to be flushed.
@@ -102,10 +96,7 @@ impl<T> Sink<T> for Sender<T> {
         }
     }
 
-    fn poll_close(
-        mut self: Pin<&mut Self>,
-        _: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_close(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.value.disconnect();
         Poll::Ready(Ok(()))
     }

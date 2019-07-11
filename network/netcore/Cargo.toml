@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.12"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["io-compat", "compat"] }
 futures_01 = { version = "0.1.25", package = "futures" }
 pin-utils = "=0.1.0-alpha.4"
 tokio = "0.1.16"

@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.12"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 futures_01 = { version = "0.1.25", package = "futures" }
 parity-multiaddr = "0.4.0"
 structopt = "0.2.15"

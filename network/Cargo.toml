@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.12"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 lazy_static = "1.3.0"
 parity-multiaddr = "0.4.0"
 pin-utils = "=0.1.0-alpha.4"
