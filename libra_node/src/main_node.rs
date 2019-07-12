@@ -250,7 +250,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, L
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port));
+    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
     instant = Instant::now();
     let mut consensus_provider = make_consensus_provider(
