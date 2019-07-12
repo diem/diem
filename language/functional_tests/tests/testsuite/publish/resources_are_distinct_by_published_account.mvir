@@ -1,7 +1,3 @@
-//! account: alice
-
-//! sender: alice
-
 module LibraAccount {
     resource T{sequence_number: u64}
 
@@ -30,7 +26,7 @@ module LibraAccount {
 
 //! new-transaction
 
-import {{alice}}.LibraAccount as MyAccount;
+import {{default}}.LibraAccount as MyAccount;
 import 0x0.LibraAccount;
 
 main() {
@@ -47,7 +43,7 @@ main() {
     sender = get_txn_sender();
 
     sequence_number = LibraAccount.sequence_number(copy(sender));
-    assert(copy(sequence_number) == 0, 42);
+    assert(copy(sequence_number) == 1, 42);
 
     fake_ref = MyAccount.get(copy(sender));
     fake_ref_frozen = freeze(move(fake_ref));
@@ -56,4 +52,3 @@ main() {
 
     return;
 }
-
