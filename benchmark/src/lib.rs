@@ -17,7 +17,7 @@ use grpcio::CallOption;
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
 use proto_conv::{FromProto, IntoProto};
-use std::{iter::FromIterator, sync::Arc, thread, time};
+use std::{slice::Chunks, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -242,7 +242,7 @@ impl Benchmarker {
 
     /// Craft TXN request to mint receiver FREE_LUNCH libra coins.
     fn gen_mint_txn_request(
-        &mut self,
+        &self,
         faucet_account: &mut AccountData,
         receiver: &AccountAddress,
     ) -> Result<SubmitTransactionRequest> {
@@ -265,7 +265,7 @@ impl Benchmarker {
     /// For example, given account (A1, A2, A3, ..., AN), this method returns a vector of TXNs
     /// like (A1->A2, A2->A3, A3->A4, ..., AN->A1).
     pub fn gen_ring_txn_requests(
-        &mut self,
+        &self,
         accounts: &mut [AccountData],
     ) -> Vec<SubmitTransactionRequest> {
         let mut receiver_addrs: Vec<AccountAddress> =
@@ -291,7 +291,7 @@ impl Benchmarker {
     /// transfer. For example, given account (A1, A2, A3, ..., AN), this method returns a vector
     /// of TXNs like (A1->A1, A1->A2, ..., A1->AN, A2->A1, A2->A2, ... A2->AN, ..., AN->A(N-1)).
     pub fn gen_pairwise_txn_requests(
-        &mut self,
+        &self,
         accounts: &mut [AccountData],
     ) -> Vec<SubmitTransactionRequest> {
         let receiver_addrs: Vec<AccountAddress> =
@@ -355,31 +355,14 @@ impl Benchmarker {
         }
     }
 
-    /// Divide TXN requests by #clients into a vector of request chunks of nearly equal size.
-    /// The last chunk will keep the remainder requests if txn_reqs.len() % num_chunks != 0.
-    fn divide_txn_requests(
-        txn_reqs: &[SubmitTransactionRequest],
-        num_chunks: usize,
-    ) -> Vec<Arc<Vec<SubmitTransactionRequest>>> {
-        let mut result = vec![];
-        if (num_chunks == 0) || (txn_reqs.len() / num_chunks == 0) {
-            result.push(Arc::new(Vec::from_iter(txn_reqs.iter().cloned())));
+    /// Divide generic items into a vector of chunks of nearly equal size.
+    fn divide_txn_requests<T>(items: &[T], num_chunks: usize) -> Chunks<T> {
+        let chunk_size = if (num_chunks == 0) || (items.len() / num_chunks == 0) {
+            std::cmp::max(items.len(), 1)
         } else {
-            let chunk_size = txn_reqs.len() / num_chunks;
-            let mut chunks = txn_reqs.chunks_exact(chunk_size);
-            for chunk in chunks.by_ref() {
-                result.push(Arc::new(Vec::from_iter(chunk.iter().cloned())));
-            }
-            if let Some(last_arc) = result.last_mut() {
-                if let Some(last) = Arc::get_mut(last_arc) {
-                    last.extend(chunks.remainder().iter().cloned());
-                }
-            }
-        }
-        for (i, result) in result.iter().enumerate() {
-            info!("{}th chunk with {} requests", i, result.len());
-        }
-        result
+            items.len() / num_chunks
+        };
+        items.chunks(chunk_size)
     }
 
     /// Send requests to AC async, wait for responses from AC and then wait for accepted TXNs
@@ -400,11 +383,14 @@ impl Benchmarker {
         // Zip txn_req_chunks with clients: when first iter returns none,
         // zip will short-circuit and next will not be called on the second iter.
         let children: Vec<thread::JoinHandle<Vec<SubmitTransactionResponse>>> = txn_req_chunks
-            .iter()
-            .zip(self.clients.iter())
+            .zip(self.clients.iter().cycle())
             .map(|(chunk, client)| {
-                let local_chunk = Arc::clone(chunk);
+                let local_chunk = Arc::new(Vec::from(chunk));
                 let local_client = Arc::clone(client);
+                info!(
+                    "Dispatch a chunk of {} requests to client.",
+                    local_chunk.len()
+                );
                 // Spawn threads with corresponding client.
                 thread::spawn(
                     // Submit a chunk of TXN requests async, wait and check the AC status,
@@ -487,5 +473,33 @@ impl Benchmarker {
         } else {
             0.0
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Benchmarker;
+
+    #[test]
+    fn test_divide_txns_requests() {
+        let items: Vec<_> = (0..4).collect();
+        let mut iter1 = Benchmarker::divide_txn_requests(&items, 3);
+        assert_eq!(iter1.next().unwrap(), &[0]);
+        assert_eq!(iter1.next().unwrap(), &[1]);
+        assert_eq!(iter1.next().unwrap(), &[2]);
+        assert_eq!(iter1.next().unwrap(), &[3]);
+
+        let mut iter2 = Benchmarker::divide_txn_requests(&items, 2);
+        assert_eq!(iter2.next().unwrap(), &[0, 1]);
+        assert_eq!(iter2.next().unwrap(), &[2, 3]);
+
+        let mut iter3 = Benchmarker::divide_txn_requests(&items, 0);
+        assert_eq!(iter3.next().unwrap(), &[0, 1, 2, 3]);
+
+        let empty_slice: Vec<u32> = vec![];
+        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 3);
+        assert!(empty_iter.next().is_none());
+        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 0);
+        assert!(empty_iter.next().is_none());
     }
 }
