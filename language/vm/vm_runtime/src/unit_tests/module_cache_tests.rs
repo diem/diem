@@ -11,7 +11,10 @@ use bytecode_verifier::VerifiedScript;
 use compiler::Compiler;
 use hex;
 use types::account_address::AccountAddress;
-use vm::file_format::*;
+use vm::{
+    file_format::*,
+    gas_schedule::{GasAlgebra, GasUnits},
+};
 use vm_cache_map::Arena;
 
 fn test_module(name: String) -> VerifiedModule {
@@ -525,7 +528,7 @@ fn test_same_module_struct_resolution() {
             .unwrap()
             .unwrap()
             .unwrap();
-        let gas = GasMeter::new(100_000_000);
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
@@ -578,7 +581,7 @@ fn test_multi_module_struct_resolution() {
             .unwrap()
             .unwrap();
 
-        let gas = GasMeter::new(100_000_000);
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()

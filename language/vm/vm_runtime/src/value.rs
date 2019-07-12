@@ -4,6 +4,7 @@
 use crate::loaded_data::{struct_def::StructDef, types::Type};
 use std::{
     cell::{Ref, RefCell},
+    ops::Add,
     rc::Rc,
 };
 use types::{
@@ -14,7 +15,10 @@ use types::{
 };
 use vm::{
     errors::*,
-    gas_schedule::{words_in, AbstractMemorySize, CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE},
+    gas_schedule::{
+        words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE,
+        STRUCT_SIZE,
+    },
 };
 
 #[cfg(test)]
@@ -38,19 +42,21 @@ pub enum Value {
 }
 
 impl Value {
-    fn size(&self) -> AbstractMemorySize {
+    fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
-            Value::U64(_) | Value::Bool(_) => CONST_SIZE,
-            Value::Address(_) => ADDRESS_LENGTH as AbstractMemorySize,
+            Value::U64(_) | Value::Bool(_) => *CONST_SIZE,
+            Value::Address(_) => AbstractMemorySize::new(ADDRESS_LENGTH as u64),
             // Possible debate topic: Should we charge based upon the size of the string.
             // At this moment, we take the view that you should be charged as though you are
             // copying the string onto the stack here. This doesn't replicate
             // the semantics that we utilize currently, but this string may
             // need to be copied at some later time, so we need to charge based
             // upon the size of the memory that will possibly need to be accessed.
-            Value::String(s) => words_in(s.len() as AbstractMemorySize),
-            Value::Struct(vals) => vals.iter().fold(STRUCT_SIZE, |acc, vl| acc + vl.size()),
-            Value::ByteArray(key) => key.len() as AbstractMemorySize,
+            Value::String(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
+            Value::Struct(vals) => vals
+                .iter()
+                .fold(*STRUCT_SIZE, |acc, vl| acc.map2(vl.size(), Add::add)),
+            Value::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
         }
     }
 
@@ -90,7 +96,7 @@ where
     fn read_reference(self) -> MutVal;
     fn mutate_reference(self, v: MutVal);
 
-    fn size(&self) -> AbstractMemorySize;
+    fn size(&self) -> AbstractMemorySize<GasCarrier>;
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -196,7 +202,7 @@ impl MutVal {
         MutVal::new(Value::ByteArray(v))
     }
 
-    fn size(&self) -> AbstractMemorySize {
+    fn size(&self) -> AbstractMemorySize<GasCarrier> {
         self.peek().size()
     }
 }
@@ -217,8 +223,8 @@ impl Reference for MutVal {
         self.0.replace(v.peek().clone());
     }
 
-    fn size(&self) -> AbstractMemorySize {
-        words_in(REFERENCE_SIZE as AbstractMemorySize)
+    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        words_in(*REFERENCE_SIZE)
     }
 }
 
@@ -301,12 +307,12 @@ impl Local {
         }
     }
 
-    pub fn size(&self) -> AbstractMemorySize {
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
             Local::Ref(v) => v.size(),
             Local::GlobalRef(v) => v.size(),
             Local::Value(v) => v.size(),
-            Local::Invalid => CONST_SIZE,
+            Local::Invalid => *CONST_SIZE,
         }
     }
 }
@@ -449,8 +455,8 @@ impl GlobalRef {
             .emit_event_data(byte_array, counter, data)
     }
 
-    fn size(&self) -> AbstractMemorySize {
-        REFERENCE_SIZE
+    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        *REFERENCE_SIZE
     }
 }
 
@@ -479,8 +485,8 @@ impl Reference for GlobalRef {
         self.reference.mutate_reference(v);
     }
 
-    fn size(&self) -> AbstractMemorySize {
-        words_in(REFERENCE_SIZE as AbstractMemorySize)
+    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        words_in(*REFERENCE_SIZE)
     }
 }
 

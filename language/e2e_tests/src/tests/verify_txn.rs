@@ -25,7 +25,7 @@ use types::{
         ExecutionStatus, VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus,
     },
 };
-use vm::gas_schedule;
+use vm::gas_schedule::{self, GasAlgebra};
 use vm_genesis::encode_transfer_program;
 
 #[test]
@@ -222,7 +222,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1_000_000,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT + 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -251,7 +251,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -263,8 +263,8 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         10,
-        gas_schedule::MIN_TRANSACTION_GAS_UNITS - 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+        gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -276,8 +276,8 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         10,
-        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS + 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -289,8 +289,8 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
         10,
-        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS + 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),

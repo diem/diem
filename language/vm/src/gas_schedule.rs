@@ -14,65 +14,182 @@ use crate::{
     serializer::serialize_instruction,
 };
 use lazy_static::lazy_static;
-use std::{collections::HashMap, u64};
+use std::{
+    collections::HashMap,
+    ops::{Add, Div, Mul, Sub},
+    u64,
+};
 use types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
 
-/// The underlying carrier for the gas cost
-pub type GasUnits = u64;
+/// The underlying carrier for gas-related units and costs. Data with this type should not be
+/// manipulated directly, but instead be manipulated using the newtype wrappers defined around
+/// them and the functions defined in the `GasAlgebra` trait.
+pub type GasCarrier = u64;
 
-/// Type for representing the size of our memory
-pub type AbstractMemorySize = u64;
+/// A trait encoding the operations permitted on the underlying carrier for the gas unit, and how
+/// other gas-related units can interact with other units -- operations can only be performed
+/// across units with the same underlying carrier (i.e. as long as the underlying data is
+/// the same).
+pub trait GasAlgebra<GasCarrier>: Sized
+where
+    GasCarrier: Add<Output = GasCarrier>
+        + Sub<Output = GasCarrier>
+        + Div<Output = GasCarrier>
+        + Mul<Output = GasCarrier>
+        + Copy,
+{
+    /// Project a value into the gas algebra.
+    fn new(carrier: GasCarrier) -> Self;
 
-/// A newtype wrapper around the on-chain representation of an instruciton key. This is the
+    /// Get the carrier.
+    fn get(&self) -> GasCarrier;
+
+    /// Map a function `f` of one argument over the underlying data.
+    fn map<F: Fn(GasCarrier) -> GasCarrier>(self, f: F) -> Self {
+        Self::new(f(self.get()))
+    }
+
+    /// Map a function `f` of two arguments over the underlying carrier. Note that this function
+    /// can take two different implementations of the trait -- one for `self` the other for the
+    /// second argument. But, we enforce that they have the same underlying carrier.
+    fn map2<F: Fn(GasCarrier, GasCarrier) -> GasCarrier>(
+        self,
+        other: impl GasAlgebra<GasCarrier>,
+        f: F,
+    ) -> Self {
+        Self::new(f(self.get(), other.get()))
+    }
+
+    /// Apply a function `f` of two arguments to the carrier. Since `f` is not an endomophism, we
+    /// return the resulting value, as opposed to the result wrapped up in ourselves.
+    fn app<T, F: Fn(GasCarrier, GasCarrier) -> T>(
+        &self,
+        other: &impl GasAlgebra<GasCarrier>,
+        f: F,
+    ) -> T {
+        f(self.get(), other.get())
+    }
+
+    /// We allow casting between GasAlgebras as long as they have the same underlying carrier --
+    /// i.e. they use the same type to store the underlying value.
+    fn unitary_cast<T: GasAlgebra<GasCarrier>>(self) -> T {
+        T::new(self.get())
+    }
+
+    /// Add the two `GasAlgebra`s together.
+    fn add(self, right: impl GasAlgebra<GasCarrier>) -> Self {
+        self.map2(right, Add::add)
+    }
+
+    /// Subtract one `GasAlgebra` from the other.
+    fn sub(self, right: impl GasAlgebra<GasCarrier>) -> Self {
+        self.map2(right, Sub::sub)
+    }
+
+    /// Multiply two `GasAlgebra`s together.
+    fn mul(self, right: impl GasAlgebra<GasCarrier>) -> Self {
+        self.map2(right, Mul::mul)
+    }
+
+    /// Divide one `GasAlgebra` by the other.
+    fn div(self, right: impl GasAlgebra<GasCarrier>) -> Self {
+        self.map2(right, Div::div)
+    }
+}
+
+// We would really like to be able to implement the standard arithmetic traits over the GasAlgebra
+// trait, but that isn't possible.
+macro_rules! define_gas_unit {
+    {
+        name: $name: ident,
+        carrier: $carrier: ty,
+        doc: $comment: literal
+    } => {
+        #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
+        #[doc=$comment]
+        pub struct $name<GasCarrier>(GasCarrier);
+        impl GasAlgebra<$carrier> for $name<$carrier> {
+            fn new(c: GasCarrier) -> Self {
+                Self(c)
+            }
+            fn get(&self) -> GasCarrier {
+                self.0
+            }
+        }
+    }
+}
+
+define_gas_unit! {
+    name: AbstractMemorySize,
+    carrier: GasCarrier,
+    doc: "A newtype wrapper that represents the (abstract) memory size that the instruciton will take up."
+}
+
+define_gas_unit! {
+    name: GasUnits,
+    carrier: GasCarrier,
+    doc: "A newtype wrapper around the underlying carrier for the gas cost."
+}
+
+define_gas_unit! {
+    name: GasPrice,
+    carrier: GasCarrier,
+    doc: "A newtype wrapper around the gas price for each unit of gas consumed."
+}
+
+/// A newtype wrapper around the on-chain representation of an instruction key. This is the
 /// serialization of the instruction but disregarding any instruction arguments.
 #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
 pub struct InstructionKey(pub u8);
-/// The maximum size representable by AbstractMemorySize
-pub const MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize = std::u64::MAX as AbstractMemorySize;
 
-/// The units of gas that should be charged per byte for every transaction.
-pub const INTRINSIC_GAS_PER_BYTE: GasUnits = 8;
+lazy_static! {
+    /// The maximum size representable by AbstractMemorySize
+    pub static ref MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(std::u64::MAX);
 
-/// The minimum gas price that a transaction can be submitted with.
-pub const MIN_PRICE_PER_GAS_UNIT: u64 = 0;
+    /// The units of gas that should be charged per byte for every transaction.
+    pub static ref INTRINSIC_GAS_PER_BYTE: GasUnits<GasCarrier> = GasUnits::new(8);
 
-/// The maximum gas unit price that a transaction can be submitted with.
-pub const MAX_PRICE_PER_GAS_UNIT: u64 = 10_000;
+    /// The minimum gas price that a transaction can be submitted with.
+    pub static ref MIN_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice::new(0);
 
-/// 1 nanosecond should equal one unit of computational gas. We bound the maximum
-/// computational time of any given transaction at 10 milliseconds. We want this number and
-/// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
-///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits::MAX)
-pub const MAXIMUM_NUMBER_OF_GAS_UNITS: GasUnits = 1_000_000;
+    /// The maximum gas unit price that a transaction can be submitted with.
+    pub static ref MAX_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice::new(10_000);
 
-/// We charge one unit of gas per-byte for the first 600 bytes
-pub const MIN_TRANSACTION_GAS_UNITS: GasUnits = 600;
+    /// 1 nanosecond should equal one unit of computational gas. We bound the maximum
+    /// computational time of any given transaction at 10 milliseconds. We want this number and
+    /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
+    ///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+    pub static ref MAXIMUM_NUMBER_OF_GAS_UNITS: GasUnits<GasCarrier> = GasUnits::new(1_000_000);
 
-/// The word size that we charge by
-pub const WORD_SIZE: AbstractMemorySize = 8;
+    /// We charge one unit of gas per-byte for the first 600 bytes
+    pub static ref MIN_TRANSACTION_GAS_UNITS: GasUnits<GasCarrier> = GasUnits::new(600);
 
-/// The size in words for a non-string or address constant on the stack
-pub const CONST_SIZE: AbstractMemorySize = 1;
+    /// The word size that we charge by
+    pub static ref WORD_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(8);
 
-/// The size in words for a reference on the stack
-pub const REFERENCE_SIZE: AbstractMemorySize = 8;
+    /// The size in words for a non-string or address constant on the stack
+    pub static ref CONST_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(1);
 
-/// The size of a struct in words
-pub const STRUCT_SIZE: AbstractMemorySize = 2;
+    /// The size in words for a reference on the stack
+    pub static ref REFERENCE_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(8);
 
-/// For V1 all accounts will be 32 words
-pub const DEFAULT_ACCOUNT_SIZE: AbstractMemorySize = 32;
+    /// The size of a struct in words
+    pub static ref STRUCT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(2);
 
-/// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
-pub const LARGE_TRANSACTION_CUTOFF: AbstractMemorySize = 600;
+    /// For V1 all accounts will be 32 words
+    pub static ref DEFAULT_ACCOUNT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(32);
+
+    /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
+    pub static ref LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(600);
+}
 
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
 /// on-chain representation of bytecode instructions in the future.
 #[derive(Debug)]
 pub struct CostTable {
-    pub compute_table: HashMap<InstructionKey, GasUnits>,
-    pub memory_table: HashMap<InstructionKey, GasUnits>,
+    pub compute_table: HashMap<InstructionKey, GasUnits<GasCarrier>>,
+    pub memory_table: HashMap<InstructionKey, GasUnits<GasCarrier>>,
 }
 
 impl InstructionKey {
@@ -86,13 +203,13 @@ impl InstructionKey {
 }
 
 impl CostTable {
-    pub fn new(instrs: Vec<(Bytecode, GasUnits, GasUnits)>) -> Self {
+    pub fn new(instrs: Vec<(Bytecode, u64, u64)>) -> Self {
         let mut compute_table = HashMap::new();
         let mut memory_table = HashMap::new();
         for (instr, comp_cost, mem_cost) in instrs.into_iter() {
             let code = InstructionKey::new(&instr);
-            compute_table.insert(code, comp_cost);
-            memory_table.insert(code, mem_cost);
+            compute_table.insert(code, GasUnits::new(comp_cost));
+            memory_table.insert(code, GasUnits::new(mem_cost));
         }
         Self {
             compute_table,
@@ -100,14 +217,28 @@ impl CostTable {
         }
     }
 
-    pub fn memory_gas(&self, instr: &Bytecode, size_provider: AbstractMemorySize) -> GasUnits {
+    pub fn memory_gas(
+        &self,
+        instr: &Bytecode,
+        size_provider: AbstractMemorySize<GasCarrier>,
+    ) -> GasUnits<GasCarrier> {
         let code = InstructionKey::new(instr);
-        self.memory_table.get(&code).unwrap() * size_provider
+        self.memory_table
+            .get(&code)
+            .unwrap()
+            .map2(size_provider, Mul::mul)
     }
 
-    pub fn comp_gas(&self, instr: &Bytecode, size_provider: AbstractMemorySize) -> GasUnits {
+    pub fn comp_gas(
+        &self,
+        instr: &Bytecode,
+        size_provider: AbstractMemorySize<GasCarrier>,
+    ) -> GasUnits<GasCarrier> {
         let code = InstructionKey::new(instr);
-        self.memory_table.get(&code).unwrap() * size_provider
+        self.memory_table
+            .get(&code)
+            .unwrap()
+            .map2(size_provider, Mul::mul)
     }
 }
 
@@ -186,15 +317,18 @@ lazy_static! {
 /// - memory cost: how much memory is required for the instruction, and storage overhead
 #[derive(Debug)]
 pub struct GasCost {
-    pub instruction_gas: GasUnits,
-    pub memory_gas: GasUnits,
+    pub instruction_gas: GasUnits<GasCarrier>,
+    pub memory_gas: GasUnits<GasCarrier>,
 }
 
 /// Statically cost a bytecode instruction.
 ///
 /// Don't take into account current stack or memory size. Don't track whether references are to
 /// global or local storage.
-pub fn static_cost_instr(instr: &Bytecode, size_provider: AbstractMemorySize) -> GasCost {
+pub fn static_cost_instr(
+    instr: &Bytecode,
+    size_provider: AbstractMemorySize<GasCarrier>,
+) -> GasCost {
     GasCost {
         instruction_gas: GAS_SCHEDULE.comp_gas(instr, size_provider),
         memory_gas: GAS_SCHEDULE.memory_gas(instr, size_provider),
@@ -202,21 +336,25 @@ pub fn static_cost_instr(instr: &Bytecode, size_provider: AbstractMemorySize) ->
 }
 
 /// Computes the number of words rounded up
-pub fn words_in(size: AbstractMemorySize) -> AbstractMemorySize {
-    precondition!(size <= MAX_ABSTRACT_MEMORY_SIZE - (WORD_SIZE + 1));
+pub fn words_in(size: AbstractMemorySize<GasCarrier>) -> AbstractMemorySize<GasCarrier> {
+    precondition!(size.get() <= MAX_ABSTRACT_MEMORY_SIZE.get() - (WORD_SIZE.get() + 1));
     // round-up div truncate
-    (size + (WORD_SIZE - 1)) / WORD_SIZE
+    size.map2(*WORD_SIZE, |size, word_size| {
+        (size + (word_size - 1)) / word_size
+    })
 }
 
 /// Calculate the intrinsic gas for the transaction based upon its size in bytes/words.
-pub fn calculate_intrinsic_gas(transaction_size: u64) -> GasUnits {
-    precondition!(transaction_size <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
-    let min_transaction_fee = MIN_TRANSACTION_GAS_UNITS;
+pub fn calculate_intrinsic_gas(
+    transaction_size: AbstractMemorySize<GasCarrier>,
+) -> GasUnits<GasCarrier> {
+    precondition!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
+    let min_transaction_fee = *MIN_TRANSACTION_GAS_UNITS;
 
-    if transaction_size > LARGE_TRANSACTION_CUTOFF {
-        let excess = words_in(transaction_size - LARGE_TRANSACTION_CUTOFF);
-        min_transaction_fee + INTRINSIC_GAS_PER_BYTE * excess
+    if transaction_size.get() > LARGE_TRANSACTION_CUTOFF.get() {
+        let excess = words_in(transaction_size.sub(*LARGE_TRANSACTION_CUTOFF));
+        min_transaction_fee.add(INTRINSIC_GAS_PER_BYTE.mul(excess))
     } else {
-        min_transaction_fee
+        min_transaction_fee.unitary_cast()
     }
 }

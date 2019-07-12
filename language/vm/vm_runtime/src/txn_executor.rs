@@ -31,6 +31,7 @@ use vm::{
     access::ModuleAccess,
     errors::*,
     file_format::{Bytecode, CodeOffset, CompiledScript, StructDefinitionIndex},
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -168,7 +169,7 @@ where
             try_runtime!(self.gas_meter.calculate_and_consume(
                 &instruction,
                 &self.execution_stack,
-                1
+                AbstractMemorySize::new(1)
             ));
 
             match instruction.clone() {
@@ -256,9 +257,10 @@ where
                             function_name,
                         )
                         .map_err(|_| VMInvariantViolation::LinkerError)?;
-                        try_runtime!(self
-                            .gas_meter
-                            .consume_gas(native_return.cost(), &self.execution_stack));
+                        try_runtime!(self.gas_meter.consume_gas(
+                            GasUnits::new(native_return.cost()),
+                            &self.execution_stack
+                        ));
                         match native_return.get_return_value() {
                             NativeReturnType::ByteArray(value) => {
                                 self.execution_stack.push(Local::bytearray(value));
@@ -439,11 +441,11 @@ where
                 }
                 Bytecode::GetTxnGasUnitPrice => {
                     self.execution_stack
-                        .push(Local::u64(self.txn_data.gas_unit_price()));
+                        .push(Local::u64(self.txn_data.gas_unit_price().get()));
                 }
                 Bytecode::GetTxnMaxGasUnits => {
                     self.execution_stack
-                        .push(Local::u64(self.txn_data.max_gas_amount()));
+                        .push(Local::u64(self.txn_data.max_gas_amount().get()));
                 }
                 Bytecode::GetTxnSequenceNumber => {
                     self.execution_stack
@@ -580,7 +582,7 @@ where
                 }
                 Bytecode::GetGasRemaining => {
                     self.execution_stack
-                        .push(Local::u64(self.gas_meter.remaining_gas()));
+                        .push(Local::u64(self.gas_meter.remaining_gas().get()));
                 }
             }
             pc += 1;
@@ -780,8 +782,12 @@ where
     ) -> VMRuntimeResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas: u64 = (self.txn_data.max_gas_amount - self.gas_meter.remaining_gas())
-            * self.txn_data.gas_unit_price;
+        let gas: u64 = self
+            .txn_data
+            .max_gas_amount
+            .sub(self.gas_meter.remaining_gas())
+            .mul(self.txn_data.gas_unit_price)
+            .get();
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
         Ok(TransactionOutput::new(
@@ -823,13 +829,14 @@ pub fn execute_function(
     let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+    let txn_metadata = TransactionMetadata::default();
     for m in modules {
         module_cache.cache_module(m);
     }
     let mut vm = TransactionExecutor {
         execution_stack: ExecutionStack::new(&module_cache),
-        gas_meter: GasMeter::new(10_000),
-        txn_data: TransactionMetadata::default(),
+        gas_meter: GasMeter::new(txn_metadata.max_gas_amount()),
+        txn_data: txn_metadata,
         event_data: Vec::new(),
         data_view: TransactionDataCache::new(data_cache),
     };
@@ -846,5 +853,10 @@ where
     pub fn clear_writes(&mut self) {
         self.data_view.clear();
         self.event_data.clear();
+    }
+
+    /// During cost synthesis, turn off gas metering so that we don't run out of gas.
+    pub fn turn_off_gas_metering(&mut self) {
+        self.gas_meter.disable_metering();
     }
 }

@@ -21,6 +21,7 @@ use vm::{
         ModuleHandle, SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
         StructHandleIndex, TableIndex,
     },
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
 use vm_runtime::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
@@ -46,7 +47,7 @@ pub struct StackState<'txn> {
     /// For certain instructions the cost is variable on the size of the data being loaded. This
     /// holds the size of data that was generated so this can be taken into account when
     /// determining the cost per byte.
-    pub size: u64,
+    pub size: AbstractMemorySize<GasCarrier>,
 
     /// A sparse mapping of local index to local value for the current function frame. This will
     /// be applied to the execution stack later on in the `stack_transition_function`.
@@ -59,7 +60,7 @@ impl<'txn> StackState<'txn> {
         module_info: (&'txn LoadedModule, Option<FunctionDefinitionIndex>),
         stack: Stack,
         instr: Bytecode,
-        size: u64,
+        size: AbstractMemorySize<GasCarrier>,
         local_mapping: HashMap<LocalIndex, Local>,
     ) -> Self {
         Self {
@@ -623,7 +624,9 @@ where
                         acc
                     },
                 );
-                let size = stack.iter().fold(0, |acc, local| local.size() + acc);
+                let size = stack.iter().fold(AbstractMemorySize::new(0), |acc, local| {
+                    acc.add(local.size())
+                });
                 StackState::new(
                     (self.root_module, Some(function_idx)),
                     self.random_pad(stack),
@@ -653,7 +656,9 @@ where
                         self.resolve_to_value(ty, &[])
                     })
                     .collect();
-                let size = stack.iter().fold(0, |acc, local| local.size() + acc);
+                let size = stack.iter().fold(AbstractMemorySize::new(0), |acc, local| {
+                    acc.add(local.size())
+                });
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
@@ -672,7 +677,7 @@ where
                     .struct_handle;
                 let struct_stack =
                     self.resolve_to_value(SignatureToken::Struct(struct_handle_idx), &[]);
-                let size = struct_stack.size() as u64;
+                let size = struct_stack.size();
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(vec![struct_stack]),
@@ -774,7 +779,9 @@ where
                 acc.push(self.generate_from_type(x, &acc));
                 acc
             });
-            let size = starting_stack.iter().fold(0, |acc, x| acc + x.size());
+            let size = starting_stack
+                .iter()
+                .fold(AbstractMemorySize::new(0), |acc, x| acc.add(x.size()));
             StackState::new(
                 (self.root_module, None),
                 self.random_pad(starting_stack),

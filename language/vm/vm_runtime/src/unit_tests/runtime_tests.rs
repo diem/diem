@@ -15,6 +15,7 @@ use vm::{
         FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
         ModuleHandleIndex, SignatureToken, StringPoolIndex,
     },
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -710,9 +711,9 @@ fn test_transaction_info() {
             sender: AccountAddress::default(),
             public_key,
             sequence_number: 10,
-            max_gas_amount: 100_000_009,
-            gas_unit_price: 5,
-            transaction_size: 100,
+            max_gas_amount: GasUnits::new(100_000_009),
+            gas_unit_price: GasPrice::new(5),
+            transaction_size: AbstractMemorySize::new(100),
         }
     };
     let data_cache = FakeDataCache::new();
