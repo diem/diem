@@ -48,7 +48,7 @@ fn test_hkdf_key_pair() {
     let (private_key, public_key) = derive_keypair_from_seed(salt, &seed, info);
     let hash = HashValue::zero();
     let signature = sign_message(hash, &private_key).unwrap();
-    assert!(verify_message(hash, &signature, &public_key).is_ok());
+    assert!(verify_signature(hash, &signature, &public_key).is_ok());
 
     // HKDF with salt and info.
     let raw_bytes = [2u8; 10];
@@ -62,7 +62,7 @@ fn test_hkdf_key_pair() {
 
     let hash = HashValue::zero();
     let signature = sign_message(hash, &private_key1).unwrap();
-    assert!(verify_message(hash, &signature, &public_key1).is_ok());
+    assert!(verify_signature(hash, &signature, &public_key1).is_ok());
 }
 
 #[test]
@@ -98,7 +98,7 @@ pub fn bench_verify(bh: &mut Bencher) {
     let signature = sign_message(hash, &private_key).unwrap();
 
     bh.iter(|| {
-        verify_message(hash, &signature, &public_key).unwrap();
+        verify_signature(hash, &signature, &public_key).unwrap();
     });
 }
 
@@ -150,7 +150,7 @@ proptest! {
         (private_key, public_key) in keypair_strategy()
     ) {
         let signature = sign_message(hash, &private_key).unwrap();
-        prop_assert!(verify_message(hash, &signature, &public_key).is_ok());
+        prop_assert!(verify_signature(hash, &signature, &public_key).is_ok());
     }
 
     // Check for canonical s and malleable signatures.
@@ -162,7 +162,7 @@ proptest! {
         // ed25519-dalek signing ensures a canonical s value.
         let signature = sign_message(hash, &private_key).unwrap();
         // Canonical signatures can be verified as expected.
-        prop_assert!(verify_message(hash, &signature, &public_key).is_ok());
+        prop_assert!(verify_signature(hash, &signature, &public_key).is_ok());
 
         let mut serialized = signature.to_compact();
 
@@ -195,7 +195,7 @@ proptest! {
 
         // Malleable signatures will fail to verify in our implementation, even if for some reason
         // we received one. We detect non canonical signatures.
-        prop_assert!(verify_message(hash, &non_canonical_sig, &public_key).is_err());
+        prop_assert!(verify_signature(hash, &non_canonical_sig, &public_key).is_err());
     }
 }
 

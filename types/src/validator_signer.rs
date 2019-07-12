@@ -66,7 +66,7 @@ impl ValidatorSigner {
 
     /// Checks that `signature` is valid for `message` using `public_key`.
     pub fn verify_message(&self, message: HashValue, signature: &Signature) -> Result<(), Error> {
-        signing::verify_message(message, signature, &self.public_key)
+        signing::verify_signature(message, signature, &self.public_key)
     }
 
     /// Returns the author associated with this signer.

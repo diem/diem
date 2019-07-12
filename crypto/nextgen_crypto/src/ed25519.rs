@@ -103,7 +103,7 @@ impl Ed25519Signature {
 
     /// Check for correct size and malleability issues.
     /// This method ensures s is of canonical form and R does not lie on a small group.
-    fn is_valid(bytes: &[u8]) -> std::result::Result<(), CryptoMaterialError> {
+    pub fn check_malleability(bytes: &[u8]) -> std::result::Result<(), CryptoMaterialError> {
         if bytes.len() != ed25519_dalek::SIGNATURE_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
         }
@@ -313,7 +313,7 @@ impl Signature for Ed25519Signature {
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
     fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Ed25519PublicKey) -> Result<()> {
-        Ed25519Signature::is_valid(&self.to_bytes())?;
+        Ed25519Signature::check_malleability(&self.to_bytes())?;
 
         public_key
             .0
@@ -338,7 +338,7 @@ impl TryFrom<&[u8]> for Ed25519Signature {
     type Error = CryptoMaterialError;
 
     fn try_from(bytes: &[u8]) -> std::result::Result<Ed25519Signature, CryptoMaterialError> {
-        Ed25519Signature::is_valid(bytes)?;
+        Ed25519Signature::check_malleability(bytes)?;
         Ed25519Signature::from_bytes_unchecked(bytes)
     }
 }

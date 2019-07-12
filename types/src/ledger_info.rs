@@ -223,7 +223,7 @@ impl LedgerInfoWithSignatures {
             return Ok(());
         }
         let ledger_hash = self.ledger_info().hash();
-        validator.verify_aggregated_signature(ledger_hash, self.signatures())
+        validator.batch_verify_aggregated_signature(ledger_hash, self.signatures())
     }
 }
 

@@ -110,7 +110,7 @@ pub fn verify_update_to_latest_ledger_response(
 
     // Verify ledger info signatures.
     if !(ledger_info.version() == 0 && signatures.is_empty()) {
-        validator_verifier.verify_aggregated_signature(ledger_info.hash(), signatures)?;
+        validator_verifier.batch_verify_aggregated_signature(ledger_info.hash(), signatures)?;
     }
 
     // Verify each sub response.

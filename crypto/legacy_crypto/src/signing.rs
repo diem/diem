@@ -21,13 +21,13 @@
 //!
 //! let (private_key, public_key) = generate_keypair();
 //! let signature = sign_message(hashed_message, &private_key).unwrap();
-//! assert!(verify_message(hashed_message, &signature, &public_key).is_ok());
+//! assert!(verify_signature(hashed_message, &signature, &public_key).is_ok());
 //! ```
 
 use crate::{hash::HashValue, hkdf::Hkdf, utils::*};
 use bincode::{deserialize, serialize};
 use curve25519_dalek::scalar::Scalar;
-use ed25519_dalek;
+use ed25519_dalek::{self, verify_batch};
 use failure::prelude::*;
 use proptest::{
     arbitrary::any,
@@ -99,15 +99,44 @@ pub fn sign_message(message: HashValue, private_key: &PrivateKey) -> Result<Sign
 }
 
 /// Checks that `signature` is valid for `message` using `public_key`.
-pub fn verify_message(
+pub fn verify_signature(
     message: HashValue,
     signature: &Signature,
     public_key: &PublicKey,
 ) -> Result<()> {
-    signature.is_valid()?;
+    signature.check_malleability()?;
     public_key
         .value
         .verify(message.as_ref(), &signature.value)?;
+    Ok(())
+}
+
+/// Batch signature verification as described in the original EdDSA article
+/// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
+/// signatures on the same message and it checks for malleability.
+pub fn batch_verify_signatures(
+    message: HashValue,
+    signatures: Vec<Signature>,
+    public_keys: Vec<PublicKey>,
+) -> Result<()> {
+    // Dalek's verify_batch panics if sizes are different, so we proactively handle this case.
+    if signatures.len() != public_keys.len() {
+        bail!("The number of signatures and public keys must be equal");
+    }
+    for sig in &signatures {
+        sig.check_malleability()?;
+    }
+    let dalek_signatures: Vec<ed25519_dalek::Signature> =
+        signatures.iter().map(|sig| sig.value).collect();
+    let dalek_public_keys: Vec<ed25519_dalek::PublicKey> =
+        public_keys.iter().map(|key| key.value).collect();
+    let message_ref = &message.as_ref()[..];
+    // The original batching algorithm works for different messages and it expects as many messages
+    // as the number of signatures. In our case, we just populate the same message to meet dalek's
+    // api requirements.
+    let messages = vec![message_ref; signatures.len()];
+
+    verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])?;
     Ok(())
 }
 
@@ -347,9 +376,9 @@ impl Signature {
         out
     }
 
-    // Check for malleable signatures. This method ensures that the S part is of canonical form
-    // and R does not lie on a small group (S and R as defined in RFC 8032).
-    fn is_valid(&self) -> Result<()> {
+    /// Check for malleable signatures. This method ensures that the S part is of canonical form
+    /// and R does not lie on a small group (S and R as defined in RFC 8032).
+    pub fn check_malleability(&self) -> Result<()> {
         let bytes = self.to_compact();
 
         let mut s_bits: [u8; 32] = [0u8; 32];

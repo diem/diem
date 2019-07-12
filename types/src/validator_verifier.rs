@@ -4,6 +4,7 @@
 use crate::account_address::AccountAddress;
 use crypto::{signing, HashValue, PublicKey, Signature};
 use failure::prelude::*;
+use logger::prelude::*;
 use std::collections::HashMap;
 
 /// Errors possible during signature verification.
@@ -97,7 +98,7 @@ impl ValidatorVerifier {
         match public_key {
             None => Err(VerifyError::UnknownAuthor),
             Some(public_key) => {
-                if signing::verify_message(hash, signature, public_key).is_err() {
+                if signing::verify_signature(hash, signature, public_key).is_err() {
                     Err(VerifyError::InvalidSignature)
                 } else {
                     Ok(())
@@ -116,6 +117,47 @@ impl ValidatorVerifier {
         hash: HashValue,
         aggregated_signature: &HashMap<AccountAddress, Signature>,
     ) -> std::result::Result<(), VerifyError> {
+        self.check_num_of_signatures(aggregated_signature)?;
+        for (author, signature) in aggregated_signature {
+            self.verify_signature(*author, hash, signature)?;
+        }
+        Ok(())
+    }
+
+    /// This function will try batch signature verification and falls back to normal
+    /// iterated verification if batching fails.
+    pub fn batch_verify_aggregated_signature(
+        &self,
+        hash: HashValue,
+        aggregated_signature: &HashMap<AccountAddress, Signature>,
+    ) -> std::result::Result<(), VerifyError> {
+        self.check_num_of_signatures(aggregated_signature)?;
+        self.check_keys(aggregated_signature)?;
+        let signatures = aggregated_signature.values().copied().collect();
+        let public_keys = aggregated_signature
+            .keys()
+            .map(|author| *(self.author_to_public_keys.get(&author).unwrap()))
+            .collect();
+        // Fallback is required to identify the source of the problem if batching fails.
+        if signing::batch_verify_signatures(hash, signatures, public_keys).is_err() {
+            let iterated_verification =
+                self.verify_aggregated_signature(hash, aggregated_signature);
+            match iterated_verification {
+                Ok(_) => warn!(
+                    "Inconsistency between batch and iterative signature verification detected! \
+                     Batch verification failed, while iterative passed."
+                ),
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(())
+    }
+
+    /// Ensure there are at least quorum_size and not more than maximum expected signatures.
+    fn check_num_of_signatures(
+        &self,
+        aggregated_signature: &HashMap<AccountAddress, Signature>,
+    ) -> std::result::Result<(), VerifyError> {
         let num_of_signatures = aggregated_signature.len();
         if num_of_signatures < self.quorum_size {
             return Err(VerifyError::TooFewSignatures {
@@ -129,14 +171,24 @@ impl ValidatorVerifier {
                 num_of_authors: self.len(),
             });
         }
-        for (author, signature) in aggregated_signature {
-            if let Err(err) = self.verify_signature(*author, hash, signature) {
-                return Err(err);
+        Ok(())
+    }
+
+    /// Ensure there are only known authors. According to the threshold verification policy,
+    /// invalid public keys are not allowed.
+    fn check_keys(
+        &self,
+        aggregated_signature: &HashMap<AccountAddress, Signature>,
+    ) -> std::result::Result<(), VerifyError> {
+        for author in aggregated_signature.keys() {
+            if self.author_to_public_keys.get(&author) == None {
+                return Err(VerifyError::UnknownAuthor);
             }
         }
         Ok(())
     }
 
+    /// Return the public key for this address.
     pub fn get_public_key(&self, author: AccountAddress) -> Option<PublicKey> {
         self.author_to_public_keys.get(&author).cloned()
     }
@@ -235,7 +287,8 @@ mod tests {
 
         // Check against signatures == N; this will pass.
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Ok(())
         );
 
@@ -244,7 +297,8 @@ mod tests {
         let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Err(VerifyError::TooManySignatures {
                 num_of_signatures: 8,
                 num_of_authors: 7
@@ -260,7 +314,8 @@ mod tests {
             );
         }
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Ok(())
         );
 
@@ -268,7 +323,8 @@ mod tests {
         // don't tolerate invalid signatures.
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
 
@@ -281,7 +337,8 @@ mod tests {
             );
         }
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Err(VerifyError::TooFewSignatures {
                 num_of_signatures: 4,
                 quorum_size: 5
@@ -291,7 +348,8 @@ mod tests {
         // Add an unknown signer, we have 5 signers, but one of them is invalid; this will fail.
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
-            validator_verifier.verify_aggregated_signature(random_hash, &author_to_signature_map),
+            validator_verifier
+                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
     }
