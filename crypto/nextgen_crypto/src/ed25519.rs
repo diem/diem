@@ -303,6 +303,7 @@ impl ValidKey for Ed25519PublicKey {
 
 impl Signature for Ed25519Signature {
     type VerifyingKeyMaterial = Ed25519PublicKey;
+    type SigningKeyMaterial = Ed25519PrivateKey;
 
     /// Checks that `self` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &Ed25519PublicKey) -> Result<()> {
@@ -351,3 +352,43 @@ impl PartialEq for Ed25519Signature {
 }
 
 impl Eq for Ed25519Signature {}
+
+//////////////////////////
+// Compatibility Traits //
+//////////////////////////
+
+/// Those transitory traits are meant to help with the progressive
+/// migration of the code base to the nextgen_crypto module and will
+/// disappear after
+pub mod compat {
+    use crate::ed25519::*;
+    use crypto::{PublicKey as LegacyPublicKey, Signature as LegacySignature};
+
+    impl From<Ed25519PublicKey> for LegacyPublicKey {
+        fn from(public_key: Ed25519PublicKey) -> Self {
+            LegacyPublicKey::from_slice(&public_key.to_bytes()).unwrap()
+        }
+    }
+
+    impl From<Ed25519Signature> for LegacySignature {
+        fn from(signature: Ed25519Signature) -> Self {
+            LegacySignature::from_compact(&signature.to_bytes()).unwrap()
+        }
+    }
+
+    impl From<LegacyPublicKey> for Ed25519PublicKey {
+        fn from(public_key: LegacyPublicKey) -> Self {
+            let encoded_privkey = public_key.to_slice();
+            let res_key = Ed25519PublicKey::try_from(&encoded_privkey[..]);
+            res_key.unwrap()
+        }
+    }
+
+    impl From<LegacySignature> for Ed25519Signature {
+        fn from(sig: LegacySignature) -> Self {
+            let data = sig.to_compact();
+            Ed25519Signature(ed25519_dalek::Signature::from_bytes(&data).unwrap())
+        }
+    }
+
+}

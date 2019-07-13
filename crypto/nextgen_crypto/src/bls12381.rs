@@ -217,6 +217,7 @@ impl ValidKey for BLS12381PublicKey {
 
 impl Signature for BLS12381Signature {
     type VerifyingKeyMaterial = BLS12381PublicKey;
+    type SigningKeyMaterial = BLS12381PrivateKey;
 
     /// Checks that `signature` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &BLS12381PublicKey) -> Result<()> {

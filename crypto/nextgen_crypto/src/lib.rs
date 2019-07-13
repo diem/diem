@@ -16,9 +16,7 @@ pub mod vrf;
 #[cfg(test)]
 mod unit_tests;
 
-mod test_utils;
+pub mod test_utils;
 
-pub use crypto::{
-    hash::HashValue,
-    signing::{PrivateKey, PublicKey, Signature},
-};
+pub use self::traits::*;
+pub use crypto::hash::HashValue;

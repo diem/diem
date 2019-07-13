@@ -126,6 +126,7 @@ impl SigningKey for PrivateK {
 
 impl Signature for Sig {
     type VerifyingKeyMaterial = PublicK;
+    type SigningKeyMaterial = PrivateK;
 
     fn verify(&self, message: &HashValue, public_key: &PublicK) -> Result<()> {
         self.verify_arbitrary_msg(message.as_ref(), public_key)

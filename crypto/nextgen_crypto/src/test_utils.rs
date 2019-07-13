@@ -7,13 +7,15 @@ use crate::traits::{SeedableCryptoRng, Uniform};
 use bincode::serialize;
 use serde::Serialize;
 
-/// A keypair consisting of a private and public key
-#[derive(Clone)]
-pub struct KeyPair<S, P>
-where
-    for<'a> P: From<&'a S>,
-{
+/// A seed number for testing
+pub const TEST_SEED: [u8; 32] = [0; 32];
+
+/// A labeled tuple consisting of a private and public key
+#[cfg_attr(test, derive(Clone))]
+pub struct KeyPair<S, P> {
+    /// the private (signing) key component
     pub private_key: S,
+    /// the corresponding public (verifying) key component
     pub public_key: P,
 }
 
