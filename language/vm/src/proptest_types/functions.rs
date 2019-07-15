@@ -356,7 +356,7 @@ impl BytecodeGen {
             Gt,
             Le,
             Ge,
-            Assert,
+            Abort,
             GetTxnGasUnitPrice,
             GetTxnMaxGasUnits,
             GetTxnSenderAddress,

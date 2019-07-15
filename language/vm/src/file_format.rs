@@ -854,14 +854,13 @@ pub enum Bytecode {
     ///
     /// ```..., u64_value(1), u64_value(2) -> ..., bool_value```
     Ge,
-    /// asserts that the value at the top of the stack is true. Abort execution with
-    /// errorcode otherwise.
+    /// Abort execution with errorcode
     ///
     ///
     /// Stack transition:
     ///
-    /// ```..., bool_value, errorcode -> ...```
-    Assert,
+    /// ```..., errorcode -> ...```
+    Abort,
     /// Get gas unit price from the transaction and pushes it on the stack.
     ///
     /// Stack transition:
@@ -979,7 +978,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Gt => write!(f, "Gt"),
             Bytecode::Le => write!(f, "Le"),
             Bytecode::Ge => write!(f, "Ge"),
-            Bytecode::Assert => write!(f, "Assert"),
+            Bytecode::Abort => write!(f, "Abort"),
             Bytecode::GetTxnGasUnitPrice => write!(f, "GetTxnGasUnitPrice"),
             Bytecode::GetTxnMaxGasUnits => write!(f, "GetTxnMaxGasUnits"),
             Bytecode::GetGasRemaining => write!(f, "GetGasRemaining"),

@@ -230,23 +230,26 @@ fn transform_code_with_easy_branching() {
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
         LdTrue(0),
-        BrFalse(8, 0),
+        BrFalse(10, 0),
         Branch(3),
-        LdConst(1, 42),
-        LdFalse(2),
+        LdFalse(1),
+        Not(2, 1),
         Not(3, 2),
-        Assert(3, 1),
+        BrFalse(9, 3),
+        LdConst(4, 42),
+        Abort(4),
         Ret(vec![]),
         Branch(0),
     ];
     let expected_types = vec![
         SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
         SignatureToken::U64,
-        SignatureToken::Bool,
-        SignatureToken::Bool,
     ];
-    assert_eq!(actual_types, expected_types);
     assert_eq!(actual_code, expected_code);
+    assert_eq!(actual_types, expected_types);
 }
 
 #[test]
@@ -284,12 +287,14 @@ fn transform_code_with_bool_ops() {
         Le(16, 14, 15),
         Or(17, 13, 16),
         StLoc(3, 17),
-        LdConst(18, 42),
-        MoveLoc(19, 2),
-        MoveLoc(20, 3),
-        Neq(21, 19, 20),
+        MoveLoc(18, 2),
+        MoveLoc(19, 3),
+        Neq(20, 18, 19),
+        Not(21, 20),
         Not(22, 21),
-        Assert(22, 18),
+        BrFalse(24, 22),
+        LdConst(23, 42),
+        Abort(23),
         Ret(vec![]),
     ];
     let expected_types = vec![
@@ -311,11 +316,12 @@ fn transform_code_with_bool_ops() {
         SignatureToken::U64,
         SignatureToken::Bool,
         SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
+        SignatureToken::Bool,
         SignatureToken::U64,
-        SignatureToken::Bool,
-        SignatureToken::Bool,
-        SignatureToken::Bool,
-        SignatureToken::Bool,
     ];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);

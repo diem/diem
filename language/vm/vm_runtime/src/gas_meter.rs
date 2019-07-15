@@ -127,7 +127,7 @@ impl GasMeter {
             | Bytecode::LdFalse
             | Bytecode::LdConst(_)
             | Bytecode::Branch(_)
-            | Bytecode::Assert
+            | Bytecode::Abort
             | Bytecode::Pop
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)

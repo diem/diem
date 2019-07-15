@@ -37,7 +37,7 @@ pub struct Location {}
 pub enum VMErrorKind {
     ArithmeticError,
     TypeError,
-    AssertionFailure(u64),
+    Aborted(u64),
     OutOfGasError,
     GlobalRefAlreadyReleased,
     MissingReleaseRef,
@@ -174,8 +174,8 @@ pub enum VMStaticViolation {
     #[fail(display = "Unable to verify BrTrue/BrFalse at offset {}", _0)]
     BrTypeMismatchError(usize),
 
-    #[fail(display = "Unable to verify Assert at offset {}", _0)]
-    AssertTypeMismatchError(usize),
+    #[fail(display = "Unable to verify Abort at offset {}", _0)]
+    AbortTypeMismatchError(usize),
 
     #[fail(display = "Unable to verify StLoc at offset {}", _0)]
     StLocTypeMismatchError(usize),
@@ -434,24 +434,24 @@ pub fn convert_prologue_runtime_error(
     use VMErrorKind::*;
     match err.err {
         // Invalid authentication key
-        AssertionFailure(EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
+        Aborted(EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
             VMStatus::Validation(VMValidationStatus::InvalidAuthKey)
         }
         // Sequence number too old
-        AssertionFailure(ESEQUENCE_NUMBER_TOO_OLD) => {
+        Aborted(ESEQUENCE_NUMBER_TOO_OLD) => {
             VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld)
         }
         // Sequence number too new
-        AssertionFailure(ESEQUENCE_NUMBER_TOO_NEW) => {
+        Aborted(ESEQUENCE_NUMBER_TOO_NEW) => {
             VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew)
         }
         // Sequence number too new
-        AssertionFailure(EACCOUNT_DOES_NOT_EXIST) => {
+        Aborted(EACCOUNT_DOES_NOT_EXIST) => {
             let error_msg = format!("sender address: {}", txn_sender);
             VMStatus::Validation(VMValidationStatus::SendingAccountDoesNotExist(error_msg))
         }
         // Can't pay for transaction gas deposit/fee
-        AssertionFailure(ECANT_PAY_GAS_DEPOSIT) => {
+        Aborted(ECANT_PAY_GAS_DEPOSIT) => {
             VMStatus::Validation(VMValidationStatus::InsufficientBalanceForTransactionFee)
         }
         _ => err.into(),
@@ -575,8 +575,8 @@ impl From<&VerificationError> for VMVerificationError {
             VMStaticViolation::BrTypeMismatchError(_) => {
                 VMVerificationError::BrTypeMismatchError(message)
             }
-            VMStaticViolation::AssertTypeMismatchError(_) => {
-                VMVerificationError::AssertTypeMismatchError(message)
+            VMStaticViolation::AbortTypeMismatchError(_) => {
+                VMVerificationError::AbortTypeMismatchError(message)
             }
             VMStaticViolation::StLocTypeMismatchError(_) => {
                 VMVerificationError::StLocTypeMismatchError(message)
@@ -730,7 +730,7 @@ impl From<&VMErrorKind> for VMStatus {
             VMErrorKind::ArithmeticError => {
                 ExecutionStatus::ArithmeticError(ArithmeticErrorType::Underflow)
             }
-            VMErrorKind::AssertionFailure(err_code) => ExecutionStatus::AssertionFailure(*err_code),
+            VMErrorKind::Aborted(err_code) => ExecutionStatus::Aborted(*err_code),
             VMErrorKind::OutOfGasError => ExecutionStatus::OutOfGas,
             VMErrorKind::TypeError => ExecutionStatus::TypeError,
             VMErrorKind::GlobalRefAlreadyReleased => ExecutionStatus::DynamicReferenceError(

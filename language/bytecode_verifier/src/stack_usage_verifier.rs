@@ -106,7 +106,7 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::ReadRef => 0,
 
-            Bytecode::WriteRef | Bytecode::Assert => -2,
+            Bytecode::WriteRef => -2,
 
             Bytecode::Add
             | Bytecode::Sub
@@ -123,7 +123,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::Lt
             | Bytecode::Gt
             | Bytecode::Le
-            | Bytecode::Ge => -1,
+            | Bytecode::Ge
+            | Bytecode::Abort => -1,
 
             Bytecode::Not => 0,
 

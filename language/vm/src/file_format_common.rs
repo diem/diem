@@ -126,7 +126,7 @@ pub enum Opcodes {
     GT                      = 0x24,
     LE                      = 0x25,
     GE                      = 0x26,
-    ASSERT                  = 0x27,
+    ABORT                   = 0x27,
     GET_TXN_GAS_UNIT_PRICE  = 0x28,
     GET_TXN_MAX_GAS_UNITS   = 0x29,
     GET_GAS_REMAINING       = 0x2A,

@@ -393,7 +393,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= gas_cost;
             (
-                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::AssertionFailure(6))),
+                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(6))),
                 false,
             )
         }
@@ -404,7 +404,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= low_gas_cost;
             (
-                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::AssertionFailure(10))),
+                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(10))),
                 false,
             )
         }

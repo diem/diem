@@ -126,7 +126,7 @@ enum VMVerificationErrorKind {
     PopResourceError = 23;
     ReleaseRefTypeMismatchError = 24;
     BrTypeMismatchError = 25;
-    AssertTypeMismatchError = 26;
+    AbortTypeMismatchError = 26;
     StLocTypeMismatchError = 27;
     StLocUnsafeToDestroyError = 28;
     RetUnsafeToDestroyError = 29;
@@ -232,9 +232,9 @@ enum RuntimeStatus {
     DuplicateModuleName = 15;
 }
 
-// user-defined assertion error code number
-message AssertionFailure {
-    uint64 assertion_error_code = 1;
+// user-defined abort error code number
+message Aborted {
+    uint64 aborted_error_code = 1;
 }
 
 message ArithmeticError {
@@ -263,7 +263,7 @@ message DynamicReferenceError {
 message ExecutionStatus {
     oneof execution_status {
         RuntimeStatus runtime_status = 1;
-        AssertionFailure assertion_failure = 2;
+        Aborted aborted = 2;
         ArithmeticError arithmetic_error = 3;
         DynamicReferenceError reference_error = 4;
     }

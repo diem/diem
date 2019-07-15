@@ -1736,6 +1736,16 @@ impl<S: Scope + Sized> Compiler<S> {
                 }
                 code.code.push(Bytecode::Ret);
             }
+            Cmd::Abort(exp_opt) => {
+                match exp_opt {
+                    Some(exp) => {
+                        self.compile_expression(exp, code, function_frame)?;
+                    }
+                    None => (),
+                };
+                code.code.push(Bytecode::Abort);
+                function_frame.pop()?;
+            }
             Cmd::Assign(lhs_variable, rhs_expression) => {
                 let _expr_type = self.compile_expression(rhs_expression, code, function_frame)?;
                 let loc_idx = function_frame.get_local(&lhs_variable.value)?;
@@ -1780,13 +1790,6 @@ impl<S: Scope + Sized> Compiler<S> {
                 function_frame.pop()?;
                 function_frame.pop()?;
             }
-            Cmd::Assert(ref condition, ref error_code) => {
-                self.compile_expression(error_code, code, function_frame)?;
-                self.compile_expression(condition, code, function_frame)?;
-                code.code.push(Bytecode::Assert);
-                function_frame.pop()?;
-                function_frame.pop()?;
-            }
             Cmd::Continue => {
                 let loc = function_frame.get_loop_start()?;
                 code.code.push(Bytecode::Branch(loc as u16));
@@ -1804,7 +1807,8 @@ impl<S: Scope + Sized> Compiler<S> {
             // as `
             //   `loop { if (cond) { body; continue; } else { break; } }`
             Cmd::Continue |
-            // `return` always makes a terminal node
+            // `return` and `abort` alway makes a terminal node
+            Cmd::Abort(_) |
             Cmd::Return(_) => (false, true),
             Cmd::Break => (true, false),
             _ => (false, false),

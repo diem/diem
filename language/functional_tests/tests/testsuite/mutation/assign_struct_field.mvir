@@ -1,4 +1,6 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: BorrowLocExistsBorrowError(14) }
+// check: VerificationError
+// check: BorrowLocExistsBorrowError
+
 module Tester {
     struct T{v: u64}
 

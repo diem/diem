@@ -190,7 +190,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     // bytecode gets added.
                     FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse
                     | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
-                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Assert
+                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
                     | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
                     | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
                     | GetTxnPublicKey => panic!(
@@ -223,7 +223,7 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         // bytecode gets added.
         FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
         | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt
-        | Gt | Le | Ge | Assert | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
+        | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
         | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
         | GetTxnPublicKey => false,
     }

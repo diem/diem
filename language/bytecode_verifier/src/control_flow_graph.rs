@@ -96,7 +96,7 @@ impl VMControlFlowGraph {
 
     fn is_unconditional_branch(bytecode: &Bytecode) -> bool {
         match bytecode {
-            Bytecode::Ret | Bytecode::Branch(_) => true,
+            Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_) => true,
             _ => false,
         }
     }

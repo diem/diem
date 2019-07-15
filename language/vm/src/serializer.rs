@@ -519,7 +519,7 @@ pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) {
         Bytecode::Gt => binary.push(Opcodes::GT as u8),
         Bytecode::Le => binary.push(Opcodes::LE as u8),
         Bytecode::Ge => binary.push(Opcodes::GE as u8),
-        Bytecode::Assert => binary.push(Opcodes::ASSERT as u8),
+        Bytecode::Abort => binary.push(Opcodes::ABORT as u8),
         Bytecode::GetTxnGasUnitPrice => binary.push(Opcodes::GET_TXN_GAS_UNIT_PRICE as u8),
         Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
         Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),

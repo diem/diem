@@ -277,17 +277,6 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::Assert => {
-                let condition = self.stack.pop().unwrap();
-                let error_code = self.stack.pop().unwrap();
-                if !(condition.signature == SignatureToken::Bool
-                    && error_code.signature == SignatureToken::U64)
-                {
-                    self.errors
-                        .push(VMStaticViolation::AssertTypeMismatchError(offset))
-                }
-            }
-
             Bytecode::StLoc(idx) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != *self.locals_signature_view.token_at(*idx).as_inner() {
@@ -303,6 +292,15 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     }
                 }
                 state.insert_local(*idx, operand.value);
+            }
+
+            Bytecode::Abort => {
+                let error_code = self.stack.pop().unwrap();
+                if error_code.signature != SignatureToken::U64 {
+                    self.errors
+                        .push(VMStaticViolation::AbortTypeMismatchError(offset))
+                }
+                *state = AbstractState::new(BTreeMap::new())
             }
 
             Bytecode::Ret => {

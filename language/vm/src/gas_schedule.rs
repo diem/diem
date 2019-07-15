@@ -274,7 +274,7 @@ lazy_static! {
             (Ret, 28, 1),
             (Lt, 49, 1),
             (LdConst(0), 29, 1),
-            (Assert, 39, 1),
+            (Abort, 39, 1),
             (BorrowLoc(0), 45, 1),
             (LdStr(StringPoolIndex::new(0)), 52, 1),
             (LdAddr(AddressPoolIndex::new(0)), 36, 1),

@@ -195,10 +195,8 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {
             type_transition! { bools(1) => empty() }
         }
-        Bytecode::Assert => {
-            let mut arg_tys = u64s(1);
-            arg_tys.append(&mut bools(1));
-            type_transition! { arg_tys => empty() }
+        Bytecode::Abort => {
+            type_transition! { u64s(1) => empty() }
         }
         Bytecode::Branch(_) => type_transition! { empty() => empty() },
         Bytecode::StLoc(_) => type_transition! { resources(1) => empty(), values(1) => empty() },

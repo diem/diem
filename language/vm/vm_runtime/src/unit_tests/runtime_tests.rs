@@ -317,21 +317,11 @@ fn test_simple_instruction_transition() {
         1,
     );
 
-    test_simple_instruction(
-        &mut vm,
-        Bytecode::Assert,
-        vec![Local::u64(42), Local::bool(true)],
-        vec![],
-        vec![],
-        vec![],
-        1,
-    );
-
     assert_eq!(
         test_simple_instruction_impl(
             &mut vm,
-            Bytecode::Assert,
-            vec![Local::u64(777), Local::bool(false)],
+            Bytecode::Abort,
+            vec![Local::u64(777)],
             vec![],
             vec![],
             vec![],
@@ -340,7 +330,7 @@ fn test_simple_instruction_transition() {
         .unwrap()
         .unwrap_err()
         .err,
-        VMErrorKind::AssertionFailure(777)
+        VMErrorKind::Aborted(777)
     );
 }
 

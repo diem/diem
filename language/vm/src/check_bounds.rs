@@ -326,7 +326,7 @@ impl FunctionDefinition {
                     // bytecode gets added.
                     FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse
                     | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
-                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Assert
+                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
                     | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
                     | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
                     | GetTxnPublicKey => None,

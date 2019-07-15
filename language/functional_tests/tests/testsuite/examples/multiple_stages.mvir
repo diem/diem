@@ -29,7 +29,7 @@ main() {
 // The following directives check that
 //     1) There are two function definitions in the compiled module.
 //     2) There are no verification errors.
-//     3) There is an AssertionFailure in the transaction output.
+//     3) There is an Aborted in the transaction output.
 
 // check: CompiledModule
 // check: FunctionDefinition
@@ -38,4 +38,4 @@ main() {
 
 // not: VerificationError
 
-// check: AssertionFailure
+// check: Aborted(42)

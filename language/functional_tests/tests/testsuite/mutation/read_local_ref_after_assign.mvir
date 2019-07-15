@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: ReadRefExistsMutableBorrowError(16) }
+// check: VerificationError
+// check: ReadRefExistsMutableBorrowError
 
 main() {
     let v: u64;

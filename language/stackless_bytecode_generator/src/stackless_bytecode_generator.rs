@@ -179,13 +179,9 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 );
             }
 
-            Bytecode::Assert => {
-                let condition_index = self.temp_stack.pop().unwrap();
+            Bytecode::Abort => {
                 let error_code_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Assert(condition_index, error_code_index),
-                    offset,
-                );
+                self.insert_stackless_bytecode(StacklessBytecode::Abort(error_code_index), offset);
             }
 
             Bytecode::StLoc(idx) => {

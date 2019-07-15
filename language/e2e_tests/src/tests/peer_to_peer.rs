@@ -190,7 +190,7 @@ fn zero_amount_peer_to_peer() {
     // Error code 7 means that the transaction was a zero-amount one.
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::AssertionFailure(7))),
+        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(7))),
     );
 }
 

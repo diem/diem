@@ -415,15 +415,12 @@ where
                 Bytecode::Gt => try_runtime!(self.binop_bool(|l: u64, r| l > r)),
                 Bytecode::Le => try_runtime!(self.binop_bool(|l: u64, r| l <= r)),
                 Bytecode::Ge => try_runtime!(self.binop_bool(|l: u64, r| l >= r)),
-                Bytecode::Assert => {
-                    let condition = try_runtime!(self.execution_stack.pop_as::<bool>());
+                Bytecode::Abort => {
                     let error_code = try_runtime!(self.execution_stack.pop_as::<u64>());
-                    if !condition {
-                        return Ok(Err(VMRuntimeError {
-                            loc: self.execution_stack.location()?,
-                            err: VMErrorKind::AssertionFailure(error_code),
-                        }));
-                    }
+                    return Ok(Err(VMRuntimeError {
+                        loc: self.execution_stack.location()?,
+                        err: VMErrorKind::Aborted(error_code),
+                    }));
                 }
 
                 // TODO: Should we emit different eq for different primitive type values?

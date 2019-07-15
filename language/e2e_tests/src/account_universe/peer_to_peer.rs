@@ -89,9 +89,7 @@ impl AUTransactionGen for P2PTransferGen {
                 // 6 means the balance was insufficient while trying to deduct gas costs in the
                 // epilogue.
                 // TODO: define these values in a central location
-                status = TransactionStatus::Keep(VMStatus::Execution(
-                    ExecutionStatus::AssertionFailure(6),
-                ));
+                status = TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(6)));
             }
             (true, false, _) => {
                 // Enough to pass validation but not to do the transfer. The transaction will be run
@@ -99,9 +97,7 @@ impl AUTransactionGen for P2PTransferGen {
                 sender.sequence_number += 1;
                 sender.balance -= *gas_costs::PEER_TO_PEER_TOO_LOW;
                 // 10 means the balance was insufficient while trying to transfer.
-                status = TransactionStatus::Keep(VMStatus::Execution(
-                    ExecutionStatus::AssertionFailure(10),
-                ));
+                status = TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(10)));
             }
             (false, _, _) => {
                 // Not enough gas to pass validation. Nothing will happen.

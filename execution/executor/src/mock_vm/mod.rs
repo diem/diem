@@ -39,7 +39,7 @@ pub const KEEP_STATUS: TransactionStatus =
 
 // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
 pub const DISCARD_STATUS: TransactionStatus =
-    TransactionStatus::Discard(VMStatus::Execution(ExecutionStatus::AssertionFailure(10)));
+    TransactionStatus::Discard(VMStatus::Execution(ExecutionStatus::Aborted(10)));
 
 pub struct MockVM;
 

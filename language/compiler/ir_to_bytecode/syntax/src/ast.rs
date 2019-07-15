@@ -327,8 +327,8 @@ pub enum Cmd {
     Unpack(StructName, Fields<Var_>, Exp_),
     /// `*e_1 = e_2`
     Mutate(Exp_, Exp_),
-    /// `assert(e1, e2)`
-    Assert(Exp_, Exp_),
+    /// `abort e`
+    Abort(Option<Exp_>),
     /// `return e_1, ... , e_j`
     Return(Vec<Exp_>),
     /// `break`
@@ -1206,7 +1206,8 @@ impl fmt::Display for Cmd {
                 e
             ),
             Cmd::Mutate(e, o) => write!(f, "*({}) = {};", e, o),
-            Cmd::Assert(e, err) => write!(f, "assert({}, {});", e, err),
+            Cmd::Abort(None) => write!(f, "abort;"),
+            Cmd::Abort(Some(err)) => write!(f, "abort {};", err),
             Cmd::Return(exps) => write!(f, "return {};", intersperse(exps, ", ")),
             Cmd::Break => write!(f, "break;"),
             Cmd::Continue => write!(f, "continue;"),

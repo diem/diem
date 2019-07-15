@@ -256,7 +256,7 @@ pub Cmd : Cmd = {
             bindings.into_iter().collect(),
             e,
         ),
-    "assert(" <e: Sp<Exp>> "," <err: Sp<Exp>> ")" => Cmd::Assert(e, err),
+    "abort" <err: Sp<Exp>?> => Cmd::Abort(err),
     "return" <v: Comma<Sp<Exp>>> => Cmd::Return(v),
     "continue" => Cmd::Continue,
     "break" => Cmd::Break,
@@ -268,6 +268,23 @@ Cmd_ : Cmd_ = {
 
 Statement : Statement = {
     <cmd: Cmd_> ";" => Statement::CommandStatement(cmd),
+    "assert(" <e: Sp<Exp>> "," <err: Sp<Exp>> ")" => {
+        let cond = {
+            let span = e.span;
+            Spanned {
+                value: Exp::UnaryExp(UnaryOp::Not, Box::new(e)),
+                span
+            }
+        };
+        let stmt = {
+            let span = err.span;
+            Statement::CommandStatement(Spanned {
+                value: Cmd::Abort(Some(err)),
+                span,
+            })
+        };
+        Statement::IfElseStatement(IfElse::if_block(cond, Block::new(vec![stmt])))
+    },
     <IfStatement>,
     <WhileStatement>,
     <LoopStatement>,

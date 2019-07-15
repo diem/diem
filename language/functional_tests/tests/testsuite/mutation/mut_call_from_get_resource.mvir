@@ -54,13 +54,13 @@ main() {
 
     imm_struct1 = freeze(copy(struct1));
     struct1_original_balance = Token.value(move(imm_struct1));
-    assert(copy(struct1_original_balance) == 0, 42);
+    if (move(struct1_original_balance) != 0) { abort 42; }
 
     Token.bump(copy(struct1));
 
     imm_struct1 = freeze(move(struct1));
     struct1_new_balance = Token.value(move(imm_struct1));
-    assert(copy(struct1_new_balance) == 1, 42);
+    if (move(struct1_new_balance) != 1) { abort 42; }
 
     return;
 }

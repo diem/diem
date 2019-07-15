@@ -67,6 +67,6 @@ pub enum StacklessBytecode {
     BrTrue(CodeOffset, TempIndex),  // if(t) goto code_ooffset
     BrFalse(CodeOffset, TempIndex), // if(!t) goto code_offset
 
-    Assert(TempIndex, TempIndex), // assert(t1, t2)
+    Abort(TempIndex), // abort t
     EmitEvent(TempIndex, TempIndex, TempIndex),
 }

@@ -251,7 +251,7 @@ pub fn test_publishing_with_error() {
     let result = executor.execute_block(vec![txn1, txn2]);
     assert_eq!(
         result[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::AssertionFailure(42)))
+        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(42)))
     );
 
     assert_eq!(

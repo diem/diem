@@ -63,7 +63,7 @@ pub enum VMVerificationError {
     PopResourceError(String),
     ReleaseRefTypeMismatchError(String),
     BrTypeMismatchError(String),
-    AssertTypeMismatchError(String),
+    AbortTypeMismatchError(String),
     StLocTypeMismatchError(String),
     StLocUnsafeToDestroyError(String),
     RetUnsafeToDestroyError(String),
@@ -174,7 +174,7 @@ pub enum ExecutionStatus {
     CannotWriteExistingResource,
     ValueSerializationError,
     ValueDeserializationError,
-    AssertionFailure(u64),
+    Aborted(u64),
     ArithmeticError(ArithmeticErrorType),
     DynamicReferenceError(DynamicReferenceErrorType),
     DuplicateModuleName,
@@ -424,8 +424,8 @@ impl IntoProto for VMVerificationError {
             VMVerificationError::BrTypeMismatchError(message) => {
                 (ProtoKind::BrTypeMismatchError, message)
             }
-            VMVerificationError::AssertTypeMismatchError(message) => {
-                (ProtoKind::AssertTypeMismatchError, message)
+            VMVerificationError::AbortTypeMismatchError(message) => {
+                (ProtoKind::AbortTypeMismatchError, message)
             }
             VMVerificationError::StLocTypeMismatchError(message) => {
                 (ProtoKind::StLocTypeMismatchError, message)
@@ -601,8 +601,8 @@ impl FromProto for VMVerificationError {
                 Ok(VMVerificationError::ReleaseRefTypeMismatchError(message))
             }
             ProtoKind::BrTypeMismatchError => Ok(VMVerificationError::BrTypeMismatchError(message)),
-            ProtoKind::AssertTypeMismatchError => {
-                Ok(VMVerificationError::AssertTypeMismatchError(message))
+            ProtoKind::AbortTypeMismatchError => {
+                Ok(VMVerificationError::AbortTypeMismatchError(message))
             }
             ProtoKind::StLocTypeMismatchError => {
                 Ok(VMVerificationError::StLocTypeMismatchError(message))
@@ -941,8 +941,8 @@ impl IntoProto for ExecutionStatus {
 
     fn into_proto(self) -> Self::ProtoType {
         use crate::proto::vm_errors::{
-            ArithmeticError, AssertionFailure as AssertStatus, DynamicReferenceError,
-            ExecutionStatus as ExecuteStatus, RuntimeStatus,
+            Aborted, ArithmeticError, DynamicReferenceError, ExecutionStatus as ExecuteStatus,
+            RuntimeStatus,
         };
         let mut exec_status = ExecuteStatus::new();
         match self {
@@ -997,10 +997,10 @@ impl IntoProto for ExecutionStatus {
                 arith_err.set_error_code(err_code);
                 exec_status.set_arithmetic_error(arith_err)
             }
-            ExecutionStatus::AssertionFailure(err_code) => {
-                let mut assert_error = AssertStatus::new();
-                assert_error.set_assertion_error_code(err_code);
-                exec_status.set_assertion_failure(assert_error)
+            ExecutionStatus::Aborted(err_code) => {
+                let mut aborted = Aborted::new();
+                aborted.set_aborted_error_code(err_code);
+                exec_status.set_aborted(aborted)
             }
         };
         exec_status
@@ -1061,10 +1061,8 @@ impl FromProto for ExecutionStatus {
             Ok(ExecutionStatus::DynamicReferenceError(from_proto))
         } else {
             // else it's an assertion error
-            let err_code = proto_execution_status.get_assertion_failure();
-            Ok(ExecutionStatus::AssertionFailure(
-                err_code.assertion_error_code,
-            ))
+            let err_code = proto_execution_status.get_aborted();
+            Ok(ExecutionStatus::Aborted(err_code.aborted_error_code))
         }
     }
 }
