@@ -10,6 +10,7 @@ use crate::{
         StructDefinition as MoveStruct, Tag, Type, UnaryOp, Var, Var_, While,
     },
 };
+
 use failure::*;
 use std::{
     clone::Clone,
@@ -1731,9 +1732,7 @@ impl<S: Scope + Sized> Compiler<S> {
         debug!("compile command {}", cmd);
         match cmd {
             Cmd::Return(exps) => {
-                for exp in exps {
-                    self.compile_expression(exp, code, function_frame)?;
-                }
+                self.compile_expression(exps, code, function_frame)?;
                 code.code.push(Bytecode::Ret);
             }
             Cmd::Abort(exp_opt) => {
@@ -1746,12 +1745,14 @@ impl<S: Scope + Sized> Compiler<S> {
                 code.code.push(Bytecode::Abort);
                 function_frame.pop()?;
             }
-            Cmd::Assign(lhs_variable, rhs_expression) => {
-                let _expr_type = self.compile_expression(rhs_expression, code, function_frame)?;
-                let loc_idx = function_frame.get_local(&lhs_variable.value)?;
-                let st_loc = Bytecode::StLoc(loc_idx);
-                code.code.push(st_loc);
-                function_frame.pop()?;
+            Cmd::Assign(lhs_variables, rhs_expressions) => {
+                let _expr_type = self.compile_expression(rhs_expressions, code, function_frame)?;
+                for var in lhs_variables.iter().rev() {
+                    let loc_idx = function_frame.get_local(&var.value)?;
+                    let st_loc = Bytecode::StLoc(loc_idx);
+                    code.code.push(st_loc);
+                    function_frame.pop()?;
+                }
             }
             Cmd::Unpack(name, bindings, e) => {
                 self.compile_expression(e, code, function_frame)?;
@@ -1762,23 +1763,6 @@ impl<S: Scope + Sized> Compiler<S> {
 
                 for lhs_variable in bindings.values().rev() {
                     let loc_idx = function_frame.get_local(&lhs_variable.value)?;
-                    let st_loc = Bytecode::StLoc(loc_idx);
-                    code.code.push(st_loc);
-                }
-            }
-            Cmd::Call {
-                ref return_bindings,
-                ref call,
-                ref actuals,
-            } => {
-                let mut actuals_tys = VecDeque::new();
-                for exp in actuals.iter() {
-                    actuals_tys.push_back(self.compile_expression(exp, code, function_frame)?);
-                }
-                let _ret_types =
-                    self.compile_call(&call.value, code, function_frame, actuals_tys)?;
-                for return_var in return_bindings.iter().rev() {
-                    let loc_idx = function_frame.get_local(&return_var.value)?;
                     let st_loc = Bytecode::StLoc(loc_idx);
                     code.code.push(st_loc);
                 }
@@ -1798,6 +1782,9 @@ impl<S: Scope + Sized> Compiler<S> {
                 function_frame.push_loop_break(code.code.len())?;
                 // placeholder, to be replaced when the enclosing while is compiled
                 code.code.push(Bytecode::Branch(0));
+            }
+            Cmd::Exp(exp) => {
+                self.compile_expression(exp, code, function_frame)?;
             }
         }
         let (reachable_break, terminal_node) = match cmd {
@@ -1819,13 +1806,19 @@ impl<S: Scope + Sized> Compiler<S> {
         })
     }
 
+    fn make_singleton_vec_deque(&mut self, t: InferredType) -> VecDeque<InferredType> {
+        let mut v = VecDeque::new();
+        v.push_back(t);
+        v
+    }
+
     fn compile_expression(
         &mut self,
         exp: &Exp,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
-    ) -> Result<InferredType> {
-        debug!("compile expression {}", exp);
+    ) -> Result<VecDeque<InferredType>> {
+        debug!("compile  expression {}", exp);
         match exp {
             Exp::Move(ref x) => self.compile_move_local(&x.value, code, function_frame),
             Exp::Copy(ref x) => self.compile_copy_local(&x.value, code, function_frame),
@@ -1837,18 +1830,18 @@ impl<S: Scope + Sized> Compiler<S> {
                     let addr_idx = self.make_address(&address)?;
                     code.code.push(Bytecode::LdAddr(addr_idx));
                     function_frame.push()?;
-                    Ok(InferredType::Address)
+                    Ok(self.make_singleton_vec_deque(InferredType::Address))
                 }
                 CopyableVal::U64(i) => {
                     code.code.push(Bytecode::LdConst(*i));
                     function_frame.push()?;
-                    Ok(InferredType::U64)
+                    Ok(self.make_singleton_vec_deque(InferredType::U64))
                 }
                 CopyableVal::ByteArray(buf) => {
                     let buf_idx = self.make_byte_array(buf)?;
                     code.code.push(Bytecode::LdByteArray(buf_idx));
                     function_frame.push()?;
-                    Ok(InferredType::ByteArray)
+                    Ok(self.make_singleton_vec_deque(InferredType::ByteArray))
                 }
                 CopyableVal::Bool(b) => {
                     if *b {
@@ -1857,7 +1850,7 @@ impl<S: Scope + Sized> Compiler<S> {
                         code.code.push(Bytecode::LdFalse);
                     }
                     function_frame.push()?;
-                    Ok(InferredType::Bool)
+                    Ok(self.make_singleton_vec_deque(InferredType::Bool))
                 }
                 CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
             },
@@ -1875,14 +1868,14 @@ impl<S: Scope + Sized> Compiler<S> {
                     function_frame.pop()?;
                 }
                 function_frame.push()?;
-                Ok(InferredType::Struct(sh))
+                Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
             }
             Exp::UnaryExp(op, e) => {
                 self.compile_expression(e, code, function_frame)?;
                 match op {
                     UnaryOp::Not => {
                         code.code.push(Bytecode::Not);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                 }
             }
@@ -1893,77 +1886,83 @@ impl<S: Scope + Sized> Compiler<S> {
                 match op {
                     BinOp::Add => {
                         code.code.push(Bytecode::Add);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Sub => {
                         code.code.push(Bytecode::Sub);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Mul => {
                         code.code.push(Bytecode::Mul);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Mod => {
                         code.code.push(Bytecode::Mod);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Div => {
                         code.code.push(Bytecode::Div);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::BitOr => {
                         code.code.push(Bytecode::BitOr);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::BitAnd => {
                         code.code.push(Bytecode::BitAnd);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Xor => {
                         code.code.push(Bytecode::Xor);
-                        Ok(InferredType::U64)
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     BinOp::Or => {
                         code.code.push(Bytecode::Or);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::And => {
                         code.code.push(Bytecode::And);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Eq => {
                         code.code.push(Bytecode::Eq);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Neq => {
                         code.code.push(Bytecode::Neq);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Lt => {
                         code.code.push(Bytecode::Lt);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Gt => {
                         code.code.push(Bytecode::Gt);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Le => {
                         code.code.push(Bytecode::Le);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     BinOp::Ge => {
                         code.code.push(Bytecode::Ge);
-                        Ok(InferredType::Bool)
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                 }
             }
             Exp::Dereference(e) => {
-                let loc_type = self.compile_expression(e, code, function_frame)?;
+                let loc_type = self
+                    .compile_expression(e, code, function_frame)?
+                    .pop_front();
                 code.code.push(Bytecode::ReadRef);
                 match loc_type {
-                    InferredType::MutableReference(sig_ref_token) => Ok(*sig_ref_token),
-                    InferredType::Reference(sig_ref_token) => Ok(*sig_ref_token),
-                    _ => Ok(InferredType::Anything),
+                    Some(InferredType::MutableReference(sig_ref_token)) => {
+                        Ok(self.make_singleton_vec_deque(*sig_ref_token))
+                    }
+                    Some(InferredType::Reference(sig_ref_token)) => {
+                        Ok(self.make_singleton_vec_deque(*sig_ref_token))
+                    }
+                    _ => Ok(self.make_singleton_vec_deque(InferredType::Anything)),
                 }
             }
             Exp::Borrow {
@@ -1971,14 +1970,34 @@ impl<S: Scope + Sized> Compiler<S> {
                 ref exp,
                 ref field,
             } => {
-                let this_type = self.compile_expression(exp, code, function_frame)?;
-                self.compile_load_field_reference(
-                    this_type,
-                    field,
-                    *is_mutable,
-                    code,
-                    function_frame,
-                )
+                let this_type_option = self
+                    .compile_expression(exp, code, function_frame)?
+                    .pop_front();
+                match this_type_option {
+                    Some(this_type) => self.compile_load_field_reference(
+                        this_type,
+                        field,
+                        *is_mutable,
+                        code,
+                        function_frame,
+                    ),
+                    None => bail!("Impossible no expression to borrow"),
+                }
+            }
+            Exp::FunctionCall(f, exps) => {
+                let mut actuals_tys = VecDeque::new();
+                for types in self.compile_expression(exps, code, function_frame)? {
+                    actuals_tys.push_back(types);
+                }
+                let result = self.compile_call(f, code, function_frame, actuals_tys)?;
+                Ok(result)
+            }
+            Exp::ExprList(exps) => {
+                let mut result = VecDeque::new();
+                for e in exps {
+                    result.append(&mut self.compile_expression(e, code, function_frame)?);
+                }
+                Ok(result)
             }
         }
     }
@@ -1990,7 +2009,7 @@ impl<S: Scope + Sized> Compiler<S> {
         is_mutable: bool,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
-    ) -> Result<InferredType> {
+    ) -> Result<VecDeque<InferredType>> {
         let sh_idx = struct_type.get_struct_handle()?;
         // TODO: the clone is to avoid the problem with mut/immut references, review...
         let field_type = self.scope.get_field_type(sh_idx, struct_field.name())?;
@@ -2007,60 +2026,60 @@ impl<S: Scope + Sized> Compiler<S> {
             if !input_is_mutable {
                 bail!("Unsupported Syntax: Cannot take a mutable field reference in an immutable reference. It is not expressible in the bytecode");
             }
-            InferredType::MutableReference(inner_token)
+            self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
         } else {
             if input_is_mutable {
                 code.code.push(Bytecode::FreezeRef);
             }
-            InferredType::Reference(inner_token)
+            self.make_singleton_vec_deque(InferredType::Reference(inner_token))
         })
     }
 
     fn compile_copy_local(
-        &self,
+        &mut self,
         v: &Var,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
-    ) -> Result<InferredType> {
+    ) -> Result<VecDeque<InferredType>> {
         let loc_idx = function_frame.get_local(&v)?;
         let load_loc = Bytecode::CopyLoc(loc_idx);
         code.code.push(load_loc);
         function_frame.push()?;
         let loc_type = function_frame.get_local_type(loc_idx)?;
-        Ok(InferredType::from_signature_token(loc_type))
+        Ok(self.make_singleton_vec_deque(InferredType::from_signature_token(loc_type)))
     }
 
     fn compile_move_local(
-        &self,
+        &mut self,
         v: &Var,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
-    ) -> Result<InferredType> {
+    ) -> Result<VecDeque<InferredType>> {
         let loc_idx = function_frame.get_local(&v)?;
         let load_loc = Bytecode::MoveLoc(loc_idx);
         code.code.push(load_loc);
         function_frame.push()?;
         let loc_type = function_frame.get_local_type(loc_idx)?;
-        Ok(InferredType::from_signature_token(loc_type))
+        Ok(self.make_singleton_vec_deque(InferredType::from_signature_token(loc_type)))
     }
 
     fn compile_borrow_local(
-        &self,
+        &mut self,
         v: &Var,
         is_mutable: bool,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
-    ) -> Result<InferredType> {
+    ) -> Result<VecDeque<InferredType>> {
         let loc_idx = function_frame.get_local(&v)?;
         code.code.push(Bytecode::BorrowLoc(loc_idx));
         function_frame.push()?;
         let loc_type = function_frame.get_local_type(loc_idx)?;
         let inner_token = Box::new(InferredType::from_signature_token(loc_type));
         Ok(if is_mutable {
-            InferredType::MutableReference(inner_token)
+            self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
         } else {
             code.code.push(Bytecode::FreezeRef);
-            InferredType::Reference(inner_token)
+            self.make_singleton_vec_deque(InferredType::Reference(inner_token))
         })
     }
 
@@ -2070,36 +2089,36 @@ impl<S: Scope + Sized> Compiler<S> {
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
         mut argument_types: VecDeque<InferredType>,
-    ) -> Result<Vec<InferredType>> {
+    ) -> Result<VecDeque<InferredType>> {
         match call {
             FunctionCall::Builtin(function) => {
                 match function {
                     Builtin::GetTxnGasUnitPrice => {
                         code.code.push(Bytecode::GetTxnGasUnitPrice);
                         function_frame.push()?;
-                        Ok(vec![InferredType::U64])
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     Builtin::GetTxnMaxGasUnits => {
                         code.code.push(Bytecode::GetTxnMaxGasUnits);
                         function_frame.push()?;
-                        Ok(vec![InferredType::U64])
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     Builtin::GetGasRemaining => {
                         code.code.push(Bytecode::GetGasRemaining);
                         function_frame.push()?;
-                        Ok(vec![InferredType::U64])
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     Builtin::GetTxnSender => {
                         code.code.push(Bytecode::GetTxnSenderAddress);
                         function_frame.push()?;
-                        Ok(vec![InferredType::Address])
+                        Ok(self.make_singleton_vec_deque(InferredType::Address))
                     }
                     Builtin::Exists(name) => {
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
                         code.code.push(Bytecode::Exists(def_idx));
                         function_frame.pop()?;
                         function_frame.push()?;
-                        Ok(vec![InferredType::Bool])
+                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     Builtin::BorrowGlobal(name) => {
                         let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
@@ -2110,28 +2129,30 @@ impl<S: Scope + Sized> Compiler<S> {
                         let module_idx = ModuleHandleIndex::new(0);
                         let name_idx = self.make_string(name.name_ref())?;
                         let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
-                        Ok(vec![InferredType::MutableReference(Box::new(
-                            InferredType::Struct(sh),
-                        ))])
+                        Ok(
+                            self.make_singleton_vec_deque(InferredType::MutableReference(
+                                Box::new(InferredType::Struct(sh)),
+                            )),
+                        )
                     }
                     Builtin::Release => {
                         code.code.push(Bytecode::ReleaseRef);
                         function_frame.pop()?;
                         function_frame.push()?;
-                        Ok(vec![])
+                        Ok(VecDeque::new())
                     }
                     Builtin::CreateAccount => {
                         code.code.push(Bytecode::CreateAccount);
                         function_frame.pop()?;
                         function_frame.push()?;
-                        Ok(vec![])
+                        Ok(VecDeque::new())
                     }
                     Builtin::EmitEvent => {
                         code.code.push(Bytecode::EmitEvent);
                         function_frame.pop()?;
                         function_frame.pop()?;
                         function_frame.pop()?;
-                        Ok(vec![])
+                        Ok(VecDeque::new())
                     }
                     Builtin::MoveFrom(name) => {
                         let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
@@ -2142,23 +2163,23 @@ impl<S: Scope + Sized> Compiler<S> {
                         let module_idx = ModuleHandleIndex::new(0);
                         let name_idx = self.make_string(name.name_ref())?;
                         let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
-                        Ok(vec![InferredType::Struct(sh)])
+                        Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
                     }
                     Builtin::MoveToSender(name) => {
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
                         code.code.push(Bytecode::MoveToSender(def_idx));
                         function_frame.push()?;
-                        Ok(vec![])
+                        Ok(VecDeque::new())
                     }
                     Builtin::GetTxnSequenceNumber => {
                         code.code.push(Bytecode::GetTxnSequenceNumber);
                         function_frame.push()?;
-                        Ok(vec![InferredType::U64])
+                        Ok(self.make_singleton_vec_deque(InferredType::U64))
                     }
                     Builtin::GetTxnPublicKey => {
                         code.code.push(Bytecode::GetTxnPublicKey);
                         function_frame.push()?;
-                        Ok(vec![InferredType::ByteArray])
+                        Ok(self.make_singleton_vec_deque(InferredType::ByteArray))
                     }
                     Builtin::Freeze => {
                         code.code.push(Bytecode::FreezeRef);
@@ -2170,7 +2191,7 @@ impl<S: Scope + Sized> Compiler<S> {
                             // Incorrect call
                             _ => Box::new(InferredType::Anything),
                         };
-                        Ok(vec![InferredType::Reference(inner_token)])
+                        Ok(self.make_singleton_vec_deque(InferredType::Reference(inner_token)))
                     }
                     _ => bail!("unsupported builtin function: {}", function),
                 }

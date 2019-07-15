@@ -315,14 +315,8 @@ pub type FunctionCall_ = Spanned<FunctionCall>;
 /// Enum for Move commands
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
-    /// `x_1, ..., x_j = call`
-    Call {
-        return_bindings: Vec<Var_>,
-        call: FunctionCall_,
-        actuals: Vec<Exp_>,
-    },
     /// `x = e`
-    Assign(Var_, Exp_),
+    Assign(Vec<Var_>, Exp_),
     /// `n { f_1: x_1, ... , f_j: x_j  } = e`
     Unpack(StructName, Fields<Var_>, Exp_),
     /// `*e_1 = e_2`
@@ -330,11 +324,12 @@ pub enum Cmd {
     /// `abort e`
     Abort(Option<Exp_>),
     /// `return e_1, ... , e_j`
-    Return(Vec<Exp_>),
+    Return(Exp_),
     /// `break`
     Break,
     /// `continue`
     Continue,
+    Exp(Exp_),
 }
 /// The type of a command with its location
 pub type Cmd_ = Spanned<Cmd>;
@@ -495,9 +490,13 @@ pub enum Exp {
     Copy(Var_),
     /// `&x` or `&mut x`
     BorrowLocal(bool, Var_),
+    /// `f(e)` or `f(e_1, e_2, ..., e_j)`
+    FunctionCall(FunctionCall, Box<Exp_>),
+    /// (e_1, e_2, e_3, ..., e_j)
+    ExprList(Vec<Exp_>),
 }
 
-/// The type for a `Exp` and it's location
+/// The type for a `Exp` and its location
 pub type Exp_ = Spanned<Exp>;
 
 //**************************************************************************************************
@@ -786,12 +785,12 @@ impl FunctionCall {
 impl Cmd {
     /// Creates a command that returns no values
     pub fn return_empty() -> Self {
-        Cmd::Return(vec![])
+        Cmd::Return(Spanned::no_loc(Exp::ExprList(vec![])))
     }
 
     /// Creates a command that returns a single value
     pub fn return_(op: Exp_) -> Self {
-        Cmd::Return(vec![op])
+        Cmd::Return(op)
     }
 }
 
@@ -916,6 +915,15 @@ impl Exp {
     /// Creates a new move-local `Exp` with no location information
     pub fn move_(v: Var_) -> Exp_ {
         Spanned::no_loc(Exp::Move(v))
+    }
+
+    /// Creates a new function call `Exp` with no location information
+    pub fn function_call(f: FunctionCall, e: Exp_) -> Exp_ {
+        Spanned::no_loc(Exp::FunctionCall(f, Box::new(e)))
+    }
+
+    pub fn expr_list(exps: Vec<Exp_>) -> Exp_ {
+        Spanned::no_loc(Exp::ExprList(exps))
     }
 }
 
@@ -1174,25 +1182,13 @@ impl fmt::Display for FunctionCall {
 impl fmt::Display for Cmd {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Cmd::Call {
-                return_bindings,
-                call,
-                actuals,
-            } => {
-                let args = intersperse(actuals, ", ");
-                if return_bindings.is_empty() {
-                    write!(f, "{}({});", call, args)
+            Cmd::Assign(var_list, e) => {
+                if var_list.is_empty() {
+                    write!(f, "{};", e)
                 } else {
-                    write!(
-                        f,
-                        "let {} = {}({});",
-                        intersperse(return_bindings, ", "),
-                        call,
-                        args
-                    )
+                    write!(f, "{} = ({});", intersperse(var_list, ", "), e)
                 }
             }
-            Cmd::Assign(v, e) => write!(f, "{} = {};", v, e,),
             Cmd::Unpack(n, bindings, e) => write!(
                 f,
                 "{} {{ {} }} = {}",
@@ -1208,9 +1204,10 @@ impl fmt::Display for Cmd {
             Cmd::Mutate(e, o) => write!(f, "*({}) = {};", e, o),
             Cmd::Abort(None) => write!(f, "abort;"),
             Cmd::Abort(Some(err)) => write!(f, "abort {};", err),
-            Cmd::Return(exps) => write!(f, "return {};", intersperse(exps, ", ")),
+            Cmd::Return(exps) => write!(f, "return {};", exps),
             Cmd::Break => write!(f, "break;"),
             Cmd::Continue => write!(f, "continue;"),
+            Cmd::Exp(e) => write!(f, "({});", e),
         }
     }
 }
@@ -1342,7 +1339,7 @@ impl fmt::Display for Exp {
                 n,
                 s.iter().fold(String::new(), |acc, (field, op)| format!(
                     "{} {} : {},",
-                    acc, field, op
+                    acc, field, op,
                 ))
             ),
             Exp::Borrow {
@@ -1360,6 +1357,14 @@ impl fmt::Display for Exp {
             Exp::Copy(v) => write!(f, "copy({})", v),
             Exp::BorrowLocal(is_mutable, v) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, v)
+            }
+            Exp::FunctionCall(func, e) => write!(f, "{}({})", func, e),
+            Exp::ExprList(exps) => {
+                if exps.is_empty() {
+                    write!(f, "()")
+                } else {
+                    write!(f, "({})", intersperse(exps, ", "))
+                }
             }
         }
     }
