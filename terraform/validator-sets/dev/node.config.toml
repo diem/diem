@@ -70,10 +70,10 @@ use_std_output = true
   [vm_config.publishing_options]
   type = "Locked"
   whitelist = [
-      "587b2d840dab19bd0f7412e1ca9fc3e50c0d790ca97e8bc5437934faa5c29a94",
-      "59c9d8d9e4d2b2eb5b60b2d19cbd33b407c0c2c164091947584ac48687593ecf",
-      "25e78410bf55d2f232d321722f1be3e8ba82a1b7198a79bc9c878bc4270773dd",
-      "e5cf5c50f35e09564df21d1cdfdf03cb393a837166e1c5237eb2d8b1a884abe2"
+      "ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e",
+      "fb999f2d6f45efc9b991993e332f40760171de8a46db40ca93f1baff56842c44",
+      "6465374a3ecf6d1a3836bbab3bcd624244a0217530a601fa20de80d562f87d80",
+      "774b10985dd9bf17ddee899256942c1dc0ab2c1b07d99ec78f774651f01e04b8"
   ]
 
 [secret_service]
