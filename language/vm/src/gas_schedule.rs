@@ -9,7 +9,7 @@
 use crate::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StringPoolIndex, StructDefinitionIndex,
+        StringPoolIndex, StructDefinitionIndex, NO_TYPE_ACTUALS,
     },
     serializer::serialize_instruction,
 };
@@ -253,9 +253,9 @@ lazy_static! {
         // TODO: At the moment the computational cost is correct, and the memory cost is not
         // correct at all (hence why they're all 1's at the moment).
         let instrs = vec![
-            (MoveToSender(StructDefinitionIndex::new(0), vec![]), 774, 1),
+            (MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
             (GetTxnSenderAddress, 30, 1),
-            (MoveFrom(StructDefinitionIndex::new(0), vec![]), 917, 1),
+            (MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 917, 1),
             (BrTrue(0), 31, 1),
             (WriteRef, 65, 1),
             (Mul, 41, 1),
@@ -282,29 +282,29 @@ lazy_static! {
             (Xor, 46, 1),
             (Neq, 51, 1),
             (Not, 35,1),
-            (Call(FunctionHandleIndex::new(0), vec![]), 197, 1),
+            (Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS), 197, 1),
             (Le, 47, 1),
             (CreateAccount, 1119, 1),
             (Branch(0), 10, 1),
-            (Unpack(StructDefinitionIndex::new(0), vec![]), 94, 1),
+            (Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 94, 1),
             (Or, 43, 1),
             (LdFalse, 30, 1),
             (LdTrue, 29, 1),
             (GetTxnGasUnitPrice, 29, 1),
             (Mod, 42, 1),
             (BrFalse(0), 29, 1),
-            (Exists(StructDefinitionIndex::new(0), vec![]), 856, 1),
+            (Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 856, 1),
             (GetGasRemaining, 32, 1),
             (BitOr, 45, 1),
             (GetTxnMaxGasUnits, 34, 1),
             (GetTxnSequenceNumber, 29, 1),
             (FreezeRef, 10, 1),
-            (BorrowGlobal(StructDefinitionIndex::new(0), vec![]), 929, 1),
+            (BorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 929, 1),
             (Div, 41, 1),
             (Eq, 48, 1),
             (LdByteArray(ByteArrayPoolIndex::new(0)), 56, 1),
             (Gt, 46, 1),
-            (Pack(StructDefinitionIndex::new(0), vec![]), 73, 1),
+            (Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 73, 1),
             // TODO/XXX: Need to get the cost for this still
             (EmitEvent, 1, 1),
             ];

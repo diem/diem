@@ -857,18 +857,18 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             }
             Opcodes::CALL => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::Call(FunctionHandleIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::Call(FunctionHandleIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::PACK => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::Pack(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::Pack(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::UNPACK => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::Unpack(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::Unpack(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::READ_REF => Bytecode::ReadRef,
             Opcodes::WRITE_REF => Bytecode::WriteRef,
@@ -896,24 +896,24 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::GET_TXN_SENDER => Bytecode::GetTxnSenderAddress,
             Opcodes::EXISTS => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::Exists(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::Exists(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::BORROW_REF => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::BorrowGlobal(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::BorrowGlobal(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::RELEASE_REF => Bytecode::ReleaseRef,
             Opcodes::MOVE_FROM => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::MoveFrom(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveFrom(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::MOVE_TO => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                let types = load_signature_tokens(cursor)?;
-                Bytecode::MoveToSender(StructDefinitionIndex(idx), types)
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveToSender(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::CREATE_ACCOUNT => Bytecode::CreateAccount,
             Opcodes::EMIT_EVENT => Bytecode::EmitEvent,

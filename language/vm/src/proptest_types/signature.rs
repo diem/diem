@@ -161,7 +161,7 @@ impl SignatureTokenGen {
                 StructHandleIndex::new(idx.index(struct_handles_len) as TableIndex),
                 types
                     .into_iter()
-                    .map(|t| t.materialize(struct_handles_len))
+                    .map(|t: SignatureTokenGen| t.materialize(struct_handles_len))
                     .collect(),
             ),
             Reference(token) => {

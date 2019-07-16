@@ -29,7 +29,7 @@ use vm::{
         FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature,
         LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
         StringPoolIndex, StructDefinition, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex, TypeSignature, TypeSignatureIndex, SELF_MODULE_NAME,
+        TableIndex, TypeSignature, TypeSignatureIndex, NO_TYPE_ACTUALS, SELF_MODULE_NAME,
     },
     printers::TableAccess,
 };
@@ -1784,7 +1784,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 self.compile_expression(e, code, function_frame)?;
 
                 let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                code.code.push(Bytecode::Unpack(def_idx, vec![]));
+                code.code.push(Bytecode::Unpack(def_idx, NO_TYPE_ACTUALS));
                 function_frame.pop()?;
 
                 for lhs_variable in bindings.values().rev() {
@@ -1889,7 +1889,7 @@ impl<S: Scope + Sized> Compiler<S> {
                     self.compile_expression(exp, code, function_frame)?;
                 }
 
-                code.code.push(Bytecode::Pack(def_idx, vec![]));
+                code.code.push(Bytecode::Pack(def_idx, NO_TYPE_ACTUALS));
                 for _ in fields.iter() {
                     function_frame.pop()?;
                 }
@@ -2141,14 +2141,15 @@ impl<S: Scope + Sized> Compiler<S> {
                     }
                     Builtin::Exists(name) => {
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::Exists(def_idx, vec![]));
+                        code.code.push(Bytecode::Exists(def_idx, NO_TYPE_ACTUALS));
                         function_frame.pop()?;
                         function_frame.push()?;
                         Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
                     Builtin::BorrowGlobal(name) => {
                         let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::BorrowGlobal(def_idx, vec![]));
+                        code.code
+                            .push(Bytecode::BorrowGlobal(def_idx, NO_TYPE_ACTUALS));
                         function_frame.pop()?;
                         function_frame.push()?;
 
@@ -2182,7 +2183,7 @@ impl<S: Scope + Sized> Compiler<S> {
                     }
                     Builtin::MoveFrom(name) => {
                         let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::MoveFrom(def_idx, vec![]));
+                        code.code.push(Bytecode::MoveFrom(def_idx, NO_TYPE_ACTUALS));
                         function_frame.pop()?; // pop the address
                         function_frame.push()?; // push the return value
 
@@ -2193,7 +2194,8 @@ impl<S: Scope + Sized> Compiler<S> {
                     }
                     Builtin::MoveToSender(name) => {
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::MoveToSender(def_idx, vec![]));
+                        code.code
+                            .push(Bytecode::MoveToSender(def_idx, NO_TYPE_ACTUALS));
                         function_frame.push()?;
                         Ok(VecDeque::new())
                     }
@@ -2269,7 +2271,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 let args_count = func_sig.arg_types.len();
                 let sig_idx = self.make_function_signature(&func_sig)?;
                 let fh_idx = self.make_function_handle(mh, name_idx, sig_idx)?;
-                let call = Bytecode::Call(fh_idx, vec![]);
+                let call = Bytecode::Call(fh_idx, NO_TYPE_ACTUALS);
                 code.code.push(call);
                 for _ in 0..args_count {
                     function_frame.pop()?;

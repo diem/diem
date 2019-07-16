@@ -171,6 +171,11 @@ pub type LocalsSignaturePool = Vec<LocalsSignature>;
 /// refers to itself in its module handle list. This is the name of that script.
 pub const SELF_MODULE_NAME: &str = "<SELF>";
 
+/// Index 0 into the LocalsSignaturePool, which is guaranteed to be an empty list.
+/// Used to represent function/struct instantiation with no type actuals -- effectively
+/// non-generic functions and structs.
+pub const NO_TYPE_ACTUALS: LocalsSignatureIndex = LocalsSignatureIndex(0);
+
 // HANDLES:
 // Handles are structs that accompany opcodes that need references: a type reference,
 // or a function reference (a field reference being available only within the module that
@@ -422,6 +427,7 @@ impl Arbitrary for SignatureToken {
             Just(String),
             Just(ByteArray),
             Just(Address),
+            // TODO: generate type actuals when generics is implemented
             any::<(StructHandleIndex)>().prop_map(|sh_idx| Struct(sh_idx, vec![])),
             any::<TypeParameterIndex>().prop_map(TypeParameter),
         ];
@@ -702,7 +708,7 @@ pub enum Bytecode {
     ///
     /// ```..., arg(1), arg(2), ...,  arg(n) -> ..., return_value(1), return_value(2), ...,
     /// return_value(k)```
-    Call(FunctionHandleIndex, Vec<SignatureToken>),
+    Call(FunctionHandleIndex, LocalsSignatureIndex),
     /// Create an instance of the type specified via `StructHandleIndex` and push it on the stack.
     /// The values of the fields of the struct, in the order they appear in the struct declaration,
     /// must be pushed on the stack. All fields must be provided.
@@ -712,7 +718,7 @@ pub enum Bytecode {
     /// Stack transition:
     ///
     /// ```..., field(1)_value, field(2)_value, ..., field(n)_value -> ..., instance_value```
-    Pack(StructDefinitionIndex, Vec<SignatureToken>),
+    Pack(StructDefinitionIndex, LocalsSignatureIndex),
     /// Destroy an instance of a type and push the values bound to each field on the
     /// stack.
     ///
@@ -725,7 +731,7 @@ pub enum Bytecode {
     /// Stack transition:
     ///
     /// ```..., instance_value -> ..., field(1)_value, field(2)_value, ..., field(n)_value```
-    Unpack(StructDefinitionIndex, Vec<SignatureToken>),
+    Unpack(StructDefinitionIndex, LocalsSignatureIndex),
     /// Read a reference. The reference is on the stack, it is consumed and the value read is
     /// pushed on the stack.
     ///
@@ -782,7 +788,7 @@ pub enum Bytecode {
     /// Stack transition:
     ///
     /// ```..., address_value -> ..., reference_value```
-    BorrowGlobal(StructDefinitionIndex, Vec<SignatureToken>),
+    BorrowGlobal(StructDefinitionIndex, LocalsSignatureIndex),
     /// Add the 2 u64 at the top of the stack and pushes the result on the stack.
     /// The operation aborts the transaction in case of overflow.
     ///
@@ -936,21 +942,21 @@ pub enum Bytecode {
     /// Stack transition:
     ///
     /// ```..., address_value -> ..., bool_value```
-    Exists(StructDefinitionIndex, Vec<SignatureToken>),
+    Exists(StructDefinitionIndex, LocalsSignatureIndex),
     /// Move the instance of type StructDefinitionIndex, at the address at the top of the stack.
     /// Abort execution if such an object does not exist.
     ///
     /// Stack transition:
     ///
     /// ```..., address_value -> ..., value```
-    MoveFrom(StructDefinitionIndex, Vec<SignatureToken>),
+    MoveFrom(StructDefinitionIndex, LocalsSignatureIndex),
     /// Move the instance at the top of the stack to the address of the sender.
     /// Abort execution if an object of type StructDefinitionIndex already exists in address.
     ///
     /// Stack transition:
     ///
     /// ```..., address_value -> ...```
-    MoveToSender(StructDefinitionIndex, Vec<SignatureToken>),
+    MoveToSender(StructDefinitionIndex, LocalsSignatureIndex),
     /// Create an account at the address specified. Does not return anything.
     ///
     /// Stack transition:

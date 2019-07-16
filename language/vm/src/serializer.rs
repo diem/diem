@@ -507,20 +507,20 @@ pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) -> 
             binary.push(Opcodes::LD_REF_FIELD as u8);
             write_u16_as_uleb128(binary, field_idx.0);
         }
-        Bytecode::Call(method_idx, types) => {
+        Bytecode::Call(method_idx, types_idx) => {
             binary.push(Opcodes::CALL as u8);
             write_u16_as_uleb128(binary, method_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
-        Bytecode::Pack(class_idx, types) => {
+        Bytecode::Pack(class_idx, types_idx) => {
             binary.push(Opcodes::PACK as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
-        Bytecode::Unpack(class_idx, types) => {
+        Bytecode::Unpack(class_idx, types_idx) => {
             binary.push(Opcodes::UNPACK as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
         Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
         Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
@@ -546,26 +546,26 @@ pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) -> 
         Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
         Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),
         Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
-        Bytecode::Exists(class_idx, types) => {
+        Bytecode::Exists(class_idx, types_idx) => {
             binary.push(Opcodes::EXISTS as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
-        Bytecode::BorrowGlobal(class_idx, types) => {
+        Bytecode::BorrowGlobal(class_idx, types_idx) => {
             binary.push(Opcodes::BORROW_REF as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
         Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
-        Bytecode::MoveFrom(class_idx, types) => {
+        Bytecode::MoveFrom(class_idx, types_idx) => {
             binary.push(Opcodes::MOVE_FROM as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
-        Bytecode::MoveToSender(class_idx, types) => {
+        Bytecode::MoveToSender(class_idx, types_idx) => {
             binary.push(Opcodes::MOVE_TO as u8);
             write_u16_as_uleb128(binary, class_idx.0);
-            serialize_signature_tokens(binary, &types)?;
+            write_u16_as_uleb128(binary, types_idx.0);
         }
         Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
         Bytecode::EmitEvent => binary.push(Opcodes::EMIT_EVENT as u8),

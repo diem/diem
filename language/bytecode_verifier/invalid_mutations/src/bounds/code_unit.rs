@@ -9,7 +9,7 @@ use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
         FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StringPoolIndex,
-        StructDefinitionIndex, TableIndex,
+        StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -64,7 +64,8 @@ macro_rules! struct_bytecode {
         let dst_len = $dst_len;
         let new_idx = (dst_len + $offset) as TableIndex;
         (
-            $bytecode_ident($idx_type::new(new_idx), vec![]),
+            // TODO: check this again once generics is implemented
+            $bytecode_ident($idx_type::new(new_idx), NO_TYPE_ACTUALS),
             VMStaticViolation::IndexOutOfBounds($idx_type::KIND, dst_len, new_idx as usize),
         )
     }};

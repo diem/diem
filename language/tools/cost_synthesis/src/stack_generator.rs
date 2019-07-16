@@ -19,7 +19,7 @@ use vm::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, MemberCount,
         ModuleHandle, SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
-        StructHandleIndex, TableIndex,
+        StructHandleIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
@@ -567,7 +567,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveToSender(struct_handle_idx, vec![]),
+                    MoveToSender(struct_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -580,7 +580,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveFrom(struct_handle_idx, vec![]),
+                    MoveFrom(struct_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -593,7 +593,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    BorrowGlobal(struct_handle_idx, vec![]),
+                    BorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -611,7 +611,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Exists(next_struct_handle_idx, vec![]),
+                    Exists(next_struct_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -636,7 +636,7 @@ where
                 StackState::new(
                     (self.root_module, Some(function_idx)),
                     self.random_pad(stack),
-                    Call(function_handle_idx, vec![]),
+                    Call(function_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -668,7 +668,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Pack(random_struct_idx, vec![]),
+                    Pack(random_struct_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )
@@ -687,7 +687,7 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(vec![struct_stack]),
-                    Unpack(random_struct_idx, vec![]),
+                    Unpack(random_struct_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )

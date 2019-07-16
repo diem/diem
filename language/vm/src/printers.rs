@@ -632,9 +632,13 @@ fn display_bytecode<T: TableAccess>(
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }
-        Bytecode::Call(idx, types) => {
+        Bytecode::Call(idx, types_idx) => {
             write!(f, "Call")?;
-            display_type_parameters(&types, tables, f)?;
+            display_type_parameters(
+                &tables.get_locals_signature_at(*types_idx).unwrap().0,
+                tables,
+                f,
+            )?;
             write!(f, "(")?;
             display_function_handle(tables.get_function_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")

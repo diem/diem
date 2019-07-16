@@ -13,7 +13,7 @@ use vm::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        ModuleHandleIndex, SignatureToken, StringPoolIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
@@ -666,7 +666,7 @@ fn test_call() {
 
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(0), vec![]),
+        Bytecode::Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
         vec![],
         vec![],
         vec![],
@@ -675,7 +675,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(1), vec![]),
+        Bytecode::Call(FunctionHandleIndex::new(1), NO_TYPE_ACTUALS),
         vec![],
         vec![],
         vec![],
@@ -684,7 +684,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(2), vec![]),
+        Bytecode::Call(FunctionHandleIndex::new(2), NO_TYPE_ACTUALS),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],
@@ -693,7 +693,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(3), vec![]),
+        Bytecode::Call(FunctionHandleIndex::new(3), NO_TYPE_ACTUALS),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],

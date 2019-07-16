@@ -6,7 +6,7 @@ use crate::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex,
+        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     proptest_types::signature::{FunctionSignatureGen, SignatureTokenGen},
 };
@@ -177,13 +177,13 @@ enum BytecodeGen {
     LdStr(PropIndex),
     LdByteArray(PropIndex),
     BorrowField(PropIndex),
-    Call(PropIndex, Vec<SignatureTokenGen>),
-    Pack(PropIndex, Vec<SignatureTokenGen>),
-    Unpack(PropIndex, Vec<SignatureTokenGen>),
-    Exists(PropIndex, Vec<SignatureTokenGen>),
-    BorrowGlobal(PropIndex, Vec<SignatureTokenGen>),
-    MoveFrom(PropIndex, Vec<SignatureTokenGen>),
-    MoveToSender(PropIndex, Vec<SignatureTokenGen>),
+    Call(PropIndex, PropIndex),
+    Pack(PropIndex, PropIndex),
+    Unpack(PropIndex, PropIndex),
+    Exists(PropIndex, PropIndex),
+    BorrowGlobal(PropIndex, PropIndex),
+    MoveFrom(PropIndex, PropIndex),
+    MoveToSender(PropIndex, PropIndex),
     BrTrue(PropIndex),
     BrFalse(PropIndex),
     Branch(PropIndex),
@@ -205,40 +205,14 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(LdStr),
             any::<PropIndex>().prop_map(LdByteArray),
             any::<PropIndex>().prop_map(BorrowField),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
-                .prop_map(|(idx, types)| Call(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
-                .prop_map(|(idx, types)| Pack(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
-                .prop_map(|(idx, types)| Unpack(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
-                .prop_map(|(idx, types)| Exists(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Call(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Pack(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Exists(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
                 .prop_map(|(idx, types)| BorrowGlobal(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
-                .prop_map(|(idx, types)| MoveFrom(idx, types)),
-            (
-                any::<PropIndex>(),
-                vec(SignatureTokenGen::strategy(), 1..10),
-            )
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| MoveFrom(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
                 .prop_map(|(idx, types)| MoveToSender(idx, types)),
             any::<PropIndex>().prop_map(BrTrue),
             any::<PropIndex>().prop_map(BrFalse),
@@ -300,54 +274,40 @@ impl BytecodeGen {
                     idx.index(state.field_defs_len) as TableIndex
                 ))
             }
-            BytecodeGen::Call(idx, types) => Bytecode::Call(
+            BytecodeGen::Call(idx, _types_idx) => Bytecode::Call(
                 FunctionHandleIndex::new(idx.index(state.function_handles_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::Pack(idx, types) => Bytecode::Pack(
+            BytecodeGen::Pack(idx, _types_idx) => Bytecode::Pack(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::Unpack(idx, types) => Bytecode::Unpack(
+            BytecodeGen::Unpack(idx, _types_idx) => Bytecode::Unpack(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::Exists(idx, types) => Bytecode::Exists(
+            BytecodeGen::Exists(idx, _types_idx) => Bytecode::Exists(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::BorrowGlobal(idx, types) => Bytecode::BorrowGlobal(
+            BytecodeGen::BorrowGlobal(idx, _types_idx) => Bytecode::BorrowGlobal(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::MoveFrom(idx, types) => Bytecode::MoveFrom(
+            BytecodeGen::MoveFrom(idx, _types_idx) => Bytecode::MoveFrom(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::MoveToSender(idx, types) => Bytecode::MoveToSender(
+            BytecodeGen::MoveToSender(idx, _types_idx) => Bytecode::MoveToSender(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t| t.materialize(state.struct_handles_len))
-                    .collect(),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
             ),
             BytecodeGen::BrTrue(idx) => Bytecode::BrTrue(idx.index(code_len) as CodeOffset),
             BytecodeGen::BrFalse(idx) => Bytecode::BrFalse(idx.index(code_len) as CodeOffset),
