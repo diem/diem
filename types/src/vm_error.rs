@@ -127,6 +127,7 @@ pub enum VMInvariantViolationError {
     LinkerError,
     LocalReferenceError,
     StorageError,
+    InternalTypeError,
 }
 
 #[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -800,6 +801,7 @@ impl IntoProto for VMInvariantViolationError {
             VMInvariantViolationError::LinkerError => ProtoStatus::LinkerError,
             VMInvariantViolationError::LocalReferenceError => ProtoStatus::LocalReferenceError,
             VMInvariantViolationError::StorageError => ProtoStatus::StorageError,
+            VMInvariantViolationError::InternalTypeError => ProtoStatus::InternalTypeError,
         }
     }
 }
@@ -818,6 +820,7 @@ impl FromProto for VMInvariantViolationError {
             ProtoError::LinkerError => Ok(VMInvariantViolationError::LinkerError),
             ProtoError::LocalReferenceError => Ok(VMInvariantViolationError::LocalReferenceError),
             ProtoError::StorageError => Ok(VMInvariantViolationError::StorageError),
+            ProtoError::InternalTypeError => Ok(VMInvariantViolationError::InternalTypeError),
             ProtoError::UnknownInvariantViolationError => {
                 bail_err!(DecodingError::UnknownInvariantViolationErrorEncountered)
             }

@@ -184,6 +184,7 @@ enum VMInvariantViolationError {
     LinkerError = 6;
     LocalReferenceError = 7;
     StorageError = 8;
+    InternalTypeError = 9;
 }
 
 // Errors that can arise from binary decoding (deserialization)

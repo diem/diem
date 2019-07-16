@@ -707,8 +707,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
             Bytecode::Eq | Bytecode::Neq => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
-                if operand1.signature.allows_equality() && operand1.signature == operand2.signature
-                {
+                let is_resource =
+                    SignatureTokenView::new(self.module, &operand1.signature).is_resource();
+                if !is_resource && operand1.signature == operand2.signature {
                     if let AbstractValue::Reference(nonce) = operand1.value {
                         state.destroy_nonce(nonce);
                     }

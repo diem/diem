@@ -429,12 +429,12 @@ where
                 Bytecode::Eq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    self.execution_stack.push(Local::bool(lhs == rhs));
+                    self.execution_stack.push(Local::bool(lhs.equals(rhs)?));
                 }
                 Bytecode::Neq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    self.execution_stack.push(Local::bool(lhs != rhs));
+                    self.execution_stack.push(Local::bool(lhs.not_equals(rhs)?));
                 }
                 Bytecode::GetTxnGasUnitPrice => {
                     self.execution_stack

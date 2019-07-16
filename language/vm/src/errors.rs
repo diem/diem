@@ -319,6 +319,8 @@ pub enum VMInvariantViolation {
     LocalReferenceError,
     #[fail(display = "Failed to get response from storage")]
     StorageError,
+    #[fail(display = "Internal runtime type error due to incorrect bytecode verification")]
+    InternalTypeError,
 }
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
@@ -499,6 +501,7 @@ impl From<&VMInvariantViolation> for VMStatus {
                 VMInvariantViolationError::LocalReferenceError
             }
             VMInvariantViolation::StorageError => VMInvariantViolationError::StorageError,
+            VMInvariantViolation::InternalTypeError => VMInvariantViolationError::InternalTypeError,
         };
         VMStatus::InvariantViolation(err)
     }

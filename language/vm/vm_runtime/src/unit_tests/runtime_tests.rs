@@ -91,9 +91,19 @@ fn test_simple_instruction_impl<'alloc, 'txn>(
         .set_with_states(0, local_before);
     vm.execution_stack.set_stack(value_stack_before);
     let offset = try_runtime!(vm.execute_block(code.as_slice(), 0));
-    assert_eq!(vm.execution_stack.get_value_stack(), &value_stack_after);
+    let stack_before_and_after = vm
+        .execution_stack
+        .get_value_stack()
+        .iter()
+        .zip(value_stack_after);
+    for (v_before, v_after) in stack_before_and_after {
+        assert!(v_before.clone().equals(v_after).unwrap())
+    }
     let top_frame = vm.execution_stack.top_frame()?;
-    assert_eq!(top_frame.get_locals(), &local_after);
+    let locals_before_and_after = top_frame.get_locals().iter().zip(local_after);
+    for (l_before, l_after) in locals_before_and_after {
+        assert!(l_before.clone().equals(l_after).unwrap())
+    }
     assert_eq!(offset, expected_offset);
     Ok(Ok(()))
 }
