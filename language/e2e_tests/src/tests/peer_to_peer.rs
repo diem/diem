@@ -406,9 +406,9 @@ fn cycle_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
 
-    // create and publish accounts with 1_000_000 coins
+    // create and publish accounts with 2_000_000 coins
     let account_size = 100usize;
-    let initial_balance = 1_000_000u64;
+    let initial_balance = 2_000_000u64;
     let initial_seq_num = 10u64;
     let accounts = executor.create_accounts(account_size, initial_balance, initial_seq_num);
 
@@ -486,9 +486,9 @@ fn one_to_many_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
 
-    // create and publish accounts with 1_000_000 coins
+    // create and publish accounts with 2_000_000 coins
     let account_size = 100usize;
-    let initial_balance = 1_000_000u64;
+    let initial_balance = 2_000_000u64;
     let initial_seq_num = 10u64;
     let accounts = executor.create_accounts(account_size, initial_balance, initial_seq_num);
 

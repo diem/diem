@@ -235,7 +235,7 @@ impl CostTable {
         size_provider: AbstractMemorySize<GasCarrier>,
     ) -> GasUnits<GasCarrier> {
         let code = InstructionKey::new(instr);
-        self.memory_table
+        self.compute_table
             .get(&code)
             .unwrap()
             .map2(size_provider, Mul::mul)

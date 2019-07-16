@@ -124,7 +124,7 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
-        10_000,
+        100_000,
         1,
     );
     assert_eq!(executor.verify_transaction(txn), None);
@@ -135,7 +135,7 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
-        10_000,
+        100_000,
         1,
     );
     assert_prologue_parity!(
@@ -149,7 +149,7 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         1,
-        10_000,
+        100_000,
         1,
     );
     assert_prologue_parity!(
@@ -163,7 +163,7 @@ fn verify_simple_payment() {
         PEER_TO_PEER.clone(),
         args.clone(),
         11,
-        10_000,
+        100_000,
         1,
     );
     assert_prologue_disparity!(
@@ -306,7 +306,7 @@ fn verify_simple_payment() {
     let txn =
         sender
             .account()
-            .create_signed_txn_with_args(PEER_TO_PEER.clone(), args, 10, 10_000, 1);
+            .create_signed_txn_with_args(PEER_TO_PEER.clone(), args, 10, 100_000, 1);
     assert_eq!(
         executor.verify_transaction(txn),
         Some(VMStatus::Verification(vec![VMVerificationStatus::Script(
@@ -318,7 +318,7 @@ fn verify_simple_payment() {
     let txn =
         sender
             .account()
-            .create_signed_txn_with_args(PEER_TO_PEER.clone(), vec![], 10, 10_000, 1);
+            .create_signed_txn_with_args(PEER_TO_PEER.clone(), vec![], 10, 100_000, 1);
     assert_eq!(
         executor.verify_transaction(txn),
         Some(VMStatus::Verification(vec![VMVerificationStatus::Script(
@@ -339,7 +339,7 @@ pub fn test_whitelist() {
     let random_script = compile_script("main() {return;}");
     let txn = sender
         .account()
-        .create_signed_txn_with_args(random_script, vec![], 10, 10_000, 1);
+        .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -359,7 +359,7 @@ pub fn test_arbitrary_script_execution() {
     let random_script = compile_script("main() {return;}");
     let txn = sender
         .account()
-        .create_signed_txn_with_args(random_script, vec![], 10, 10_000, 1);
+        .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -414,7 +414,7 @@ pub fn test_no_publishing() {
     let txn =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -469,7 +469,7 @@ pub fn test_open_publishing_invalid_address() {
     let txn =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
 
     // verify and fail because the addresses don't match
     let vm_status = executor.verify_transaction(txn.clone());
@@ -547,7 +547,7 @@ pub fn test_open_publishing() {
     let txn =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -616,7 +616,7 @@ fn test_dependency_fails_verification() {
     let program = compiler.into_program(vec![]).expect("Failed to compile");
     let txn = sender
         .account()
-        .create_signed_txn_impl(*sender.address(), program, 10, 10_000, 1);
+        .create_signed_txn_impl(*sender.address(), program, 10, 100_000, 1);
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     let errors = match executor.execute_transaction(txn).status() {

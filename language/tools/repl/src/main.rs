@@ -47,7 +47,7 @@ pub fn parse_address(s: Option<String>) -> usize {
 const ACCOUNT_SIZE: usize = 10;
 const GENESIS_BALANCE: u64 = 100_000_000;
 const DEFAULT_GAS_COST: u64 = 1;
-const DEFAULT_MAX_GAS: u64 = 10_000;
+const DEFAULT_MAX_GAS: u64 = 100_000;
 
 impl Repl {
     pub fn get_sequence_number(&self, account: &Account) -> u64 {

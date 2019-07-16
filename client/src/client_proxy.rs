@@ -44,7 +44,7 @@ use types::{
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 10_000;
+const MAX_GAS_AMOUNT: u64 = 100_000;
 const TX_EXPIRATION: i64 = 100;
 
 /// Enum used for error formatting.

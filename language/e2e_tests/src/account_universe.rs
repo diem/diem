@@ -148,11 +148,11 @@ impl AccountUniverseGen {
     }
 
     /// Returns a [`Strategy`] that generates a universe of accounts that's guaranteed to succeed,
-    /// assuming that any transfers out of accounts will be 10_000 or below.
+    /// assuming that any transfers out of accounts will be 100_000 or below.
     pub fn success_strategy(min_accounts: usize) -> impl Strategy<Value = Self> {
         // Set the minimum balance to be 5x possible transfers out to handle potential gas cost
         // issues.
-        let min_balance = (10_000 * (num_transactions()) * 5) as u64;
+        let min_balance = (100_000 * (num_transactions()) * 5) as u64;
         let max_balance = min_balance * 10;
         Self::strategy(min_accounts..num_accounts(), min_balance..max_balance)
     }

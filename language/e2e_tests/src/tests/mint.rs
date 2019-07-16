@@ -67,7 +67,7 @@ fn mint_to_new_account() {
     // create and publish a sender with 1_000_000 coins
     let new_account = Account::new();
 
-    let mint_amount = 10_000;
+    let mint_amount = 100_000;
     let txn = mint_txn(&genesis_account, &new_account, 0, mint_amount);
 
     // execute transaction

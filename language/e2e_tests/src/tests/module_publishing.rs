@@ -47,7 +47,7 @@ fn bad_module_address() {
         *account2.address(),
         compiled_script,
         10,
-        10_000,
+        100_000,
         1,
     );
 
@@ -108,7 +108,7 @@ fn duplicate_module() {
         *account.address(),
         compiled_script.clone(),
         sequence_number,
-        10_000,
+        100_000,
         1,
     );
 
@@ -116,7 +116,7 @@ fn duplicate_module() {
         *account.address(),
         compiled_script,
         sequence_number + 1,
-        10_000,
+        100_000,
         1,
     );
 
@@ -161,7 +161,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
     let txn =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
 
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -194,7 +194,7 @@ pub fn test_publishing_allow_modules() {
     let txn =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -227,7 +227,7 @@ pub fn test_publishing_with_error() {
     let txn1 =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
     let program = String::from(
         "
         modules:
@@ -243,7 +243,7 @@ pub fn test_publishing_with_error() {
     let txn2 =
         sender
             .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 11, 10_000, 1);
+            .create_signed_txn_impl(*sender.address(), random_script, 11, 100_000, 1);
 
     assert_eq!(executor.verify_transaction(txn1.clone()), None);
     assert_eq!(executor.verify_transaction(txn2.clone()), None);

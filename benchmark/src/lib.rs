@@ -29,7 +29,7 @@ use types::{
 pub mod ruben_opt;
 
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 10_000;
+const MAX_GAS_AMOUNT: u64 = 100_000;
 const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 const TX_EXPIRATION: i64 = 100;
 /// The amount of coins initially minted to all generated accounts.

@@ -14,7 +14,7 @@ use types::{account_address::AccountAddress, transaction::SignedTransaction};
 /// The gas each transaction is configured to reserve. If the gas available in the account,
 /// converted to microlibra, falls below this threshold, transactions are expected to fail with
 /// an insufficient balance.
-pub const TXN_RESERVED: u64 = 10_000;
+pub const TXN_RESERVED: u64 = 100_000;
 
 lazy_static! {
     /// The gas cost of a create-account transaction.
