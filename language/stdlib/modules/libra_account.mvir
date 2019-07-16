@@ -90,23 +90,13 @@ module LibraAccount {
     // for the transaction cost they will fail minting.
     // However those account can also mint to themselves so that is a decent workaround
     public mint_to_address(payee: address, amount: u64) {
-        let mint_capability_ref: &R#LibraCoin.MintCapability;
-        let coin: R#LibraCoin.T;
-        let payee_account_ref: &mut R#Self.T;
-        let payee_exists: bool;
-
-        // Mint the coin
-        mint_capability_ref = LibraCoin.borrow_sender_mint_capability();
-        coin = LibraCoin.mint(copy(amount), move(mint_capability_ref));
-
         // Create an account if it does not exist
-        payee_exists = exists<T>(copy(payee));
-        if (!move(payee_exists)) {
+        if (!exists<T>(copy(payee))) {
             Self.create_new_account(copy(payee), 0);
         }
 
-        // Deposit the minted `coin`
-        Self.deposit(move(payee), move(coin));
+        // Mint and deposit the coin
+        Self.deposit(move(payee), LibraCoin.mint_with_default_capability(move(amount)));
         return;
     }
 

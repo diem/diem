@@ -12,15 +12,13 @@ module LibraCoin {
     // sender does not have a MintCapability.
     // Since only the Association account has a mint capability, this will only succeed if it is
     // invoked by a transaction sent by that account.
-    public borrow_sender_mint_capability(): &R#Self.MintCapability {
-        let sender: address;
+    public mint_with_default_capability(amount: u64): R#Self.T {
         let capability_ref: &mut R#Self.MintCapability;
         let capability_immut_ref: &R#Self.MintCapability;
 
-        sender = get_txn_sender();
-        capability_ref = borrow_global<MintCapability>(move(sender));
+        capability_ref = borrow_global<MintCapability>(get_txn_sender());
         capability_immut_ref = freeze(move(capability_ref));
-        return move(capability_immut_ref);
+        return Self.mint(move(amount), move(capability_immut_ref));
     }
 
     // Mint a new LibraCoin.T worth `value`. The caller must have a reference to a MintCapability.
