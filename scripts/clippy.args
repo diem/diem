@@ -11,6 +11,8 @@ allowed_lints=(
     "-A" "clippy::identity-conversion"
     # Clippy seems to complain about async functions
     "-A" "clippy::needless_lifetimes"
+    # This ends up being platform dependent, e.g. the Instant type
+    "-A" "clippy::trivially-copy-pass-by-ref"
 )
 
 echo "${allowed_lints[@]}"
