@@ -34,7 +34,7 @@ impl FromStr for Directive {
             if s.is_empty() {
                 return Err(ErrorKind::Other("stage cannot be empty".to_string()).into());
             }
-            return Ok(Directive::Stage(Stage::parse(s)?));
+            return Ok(Directive::Stage(s.parse::<Stage>()?));
         }
         if s == "transaction" {
             // TODO: implement transaction directive

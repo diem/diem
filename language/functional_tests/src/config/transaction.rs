@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::global::Config as GlobalConfig, errors::*};
-use std::str::FromStr;
+use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
+use std::{collections::BTreeSet, str::FromStr};
 use transaction_builder::transaction_argument::parse_as_transaction_argument;
 use types::transaction::TransactionArgument;
 
@@ -30,8 +30,7 @@ impl FromStr for Argument {
 /// A raw entry extracted from the input. Used to build a transaction config table.
 #[derive(Debug)]
 pub enum Entry {
-    NoVerify,
-    NoExecute,
+    DisableStages(Vec<Stage>),
     Sender(String),
     Arguments(Vec<Argument>),
 }
@@ -47,15 +46,6 @@ impl FromStr for Entry {
             );
         }
         let s = s[3..].trim_start();
-        match s {
-            "no-verify" => {
-                return Ok(Entry::NoVerify);
-            }
-            "no-execute" => {
-                return Ok(Entry::NoExecute);
-            }
-            _ => {}
-        }
         if s.starts_with("sender:") {
             let s = s[7..].trim_start().trim_end();
             if s.is_empty() {
@@ -66,11 +56,20 @@ impl FromStr for Entry {
         if s.starts_with("args:") {
             let res: Result<Vec<_>> = s[5..]
                 .split(',')
-                .map(|s| s.trim_start().trim_end())
+                .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(|s| s.parse::<Argument>())
                 .collect();
             return Ok(Entry::Arguments(res?));
+        }
+        if s.starts_with("no-run:") {
+            let res: Result<Vec<_>> = s[7..]
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.parse::<Stage>())
+                .collect();
+            return Ok(Entry::DisableStages(res?));
         }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
@@ -103,8 +102,7 @@ impl Entry {
 /// is handled by the testing infra.
 #[derive(Debug)]
 pub struct Config {
-    pub no_verify: bool,
-    pub no_execute: bool,
+    pub disabled_stages: BTreeSet<Stage>,
     pub sender: String,
     pub args: Vec<TransactionArgument>,
 }
@@ -112,33 +110,12 @@ pub struct Config {
 impl Config {
     /// Builds a transaction config table from raw entries.
     pub fn build(config: &GlobalConfig, entries: &[Entry]) -> Result<Self> {
-        let mut no_verify = None;
-        let mut no_execute = None;
+        let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
         let mut args = None;
 
         for entry in entries {
             match entry {
-                Entry::NoVerify => match no_verify {
-                    None => {
-                        no_verify = Some(true);
-                    }
-                    _ => {
-                        return Err(
-                            ErrorKind::Other("flag 'no-verify' already set".to_string()).into()
-                        );
-                    }
-                },
-                Entry::NoExecute => match no_execute {
-                    None => {
-                        no_execute = Some(true);
-                    }
-                    _ => {
-                        return Err(
-                            ErrorKind::Other("flag 'no-execute' already set".to_string()).into(),
-                        );
-                    }
-                },
                 Entry::Sender(name) => match sender {
                     None => {
                         if config.accounts.contains_key(name) {
@@ -181,14 +158,29 @@ impl Config {
                         .into())
                     }
                 },
+                Entry::DisableStages(stages) => {
+                    for stage in stages {
+                        if !disabled_stages.insert(*stage) {
+                            return Err(ErrorKind::Other(format!(
+                                "duplicate stage '{:?}' in black list",
+                                stage
+                            ))
+                            .into());
+                        }
+                    }
+                }
             }
         }
 
         Ok(Config {
-            no_verify: no_verify.unwrap_or(false),
-            no_execute: no_execute.unwrap_or(false),
+            disabled_stages,
             sender: sender.unwrap_or_else(|| "default".to_string()),
             args: args.unwrap_or_else(|| vec![]),
         })
+    }
+
+    #[inline]
+    pub fn is_stage_disabled(&self, stage: Stage) -> bool {
+        self.disabled_stages.contains(&stage)
     }
 }

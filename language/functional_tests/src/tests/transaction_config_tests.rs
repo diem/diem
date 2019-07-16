@@ -16,10 +16,9 @@ use crate::{
 #[test]
 fn parse_simple_positive() {
     for s in &[
-        "//! no-verify",
-        "  //!no-verify ",
-        "//!no-verify",
-        "//! no-execute",
+        "//!no-run:",
+        "//! no-run: verifier",
+        "//! no-run: compiler, verifier, runtime",
         "//! sender: alice",
         "//! sender:foobar42",
     ] {
@@ -77,8 +76,7 @@ fn build_transaction_config_1() {
     let global = parse_and_build_global_config("").unwrap();
 
     parse_and_build_config(&global, r"
-        //! no-verify
-        //! no-execute
+        //! no-run: verifier, runtime
         //! sender: default
         //! args: 1, 2, 3
     ").unwrap();
