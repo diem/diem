@@ -14,8 +14,10 @@ use failure::prelude::*;
 use futures::Future;
 use generate_keypair::load_key_from_file;
 use grpcio::CallOption;
+use lazy_static::lazy_static;
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
+use metrics::OpMetrics;
 use proto_conv::{FromProto, IntoProto};
 use std::{slice::Chunks, sync::Arc, thread, time};
 use types::{
@@ -38,6 +40,10 @@ const TX_EXPIRATION: i64 = 100;
 /// due to short of balance error in generated transfer TXNs.
 const FREE_LUNCH: u64 = 1_000_000;
 
+lazy_static! {
+    pub static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("benchmark");
+}
+
 /// Benchmark library for Libra Blockchain.
 ///
 /// Benchmarker aims to automate the process of
@@ -51,6 +57,11 @@ const FREE_LUNCH: u64 = 1_000_000;
 /// 2. Generate some accounts: gen_and_mint_accounts. The number of accounts affects how many
 /// TXNs are sent,
 /// 3. Generate and submit transactions: gen_txn_reqs, submit_and_wait_txn_reqs.
+/// Metrics reported include:
+/// * Counters: created_txns, requested_txns, rejected_txns (AC responded with rejection or
+///   VM/mempool error), accepted_txns, failed_submissions (TXN request failed at submission stage),
+///   failed_responses (AC responded without accept + AC doesn't respond).
+/// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,
@@ -237,6 +248,7 @@ impl Benchmarker {
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         sender_account.sequence_number += 1;
+        OP_COUNTER.inc("created_txns");
         Ok(req)
     }
 
@@ -331,6 +343,7 @@ impl Benchmarker {
         let resp = client
             .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
             .then(|proto_resp| Ok(proto_resp?));
+        OP_COUNTER.inc("requested_txns");
         Ok(resp)
     }
 
@@ -338,20 +351,21 @@ impl Benchmarker {
     /// that we should wait for. Failed txn request will raise an error. Caller can decide
     /// whether to ignore this failed request, or stop processing later requests.
     fn handle_future_response(
-        future_resp: Result<
-            (impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>),
-        >,
+        future_resp: impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>,
     ) -> Result<SubmitTransactionResponse> {
-        let txn_proto_resp = future_resp?.wait()?;
+        let txn_proto_resp = future_resp.wait()?;
         let txn_resp = SubmitTransactionResponse::from_proto(txn_proto_resp)?;
         if let Some(status) = txn_resp.ac_status.as_ref() {
             if *status == AdmissionControlStatus::Accepted {
+                OP_COUNTER.inc("accepted_txns");
                 Ok(txn_resp)
             } else {
-                bail!("TXN request not accepted with response: {:?}", txn_resp);
+                OP_COUNTER.inc("rejected_txns");
+                bail!("TXN request is not accepted with response: {:?}", txn_resp);
             }
         } else {
-            bail!("Request causes error on VM/mempool: {:?}", txn_resp);
+            OP_COUNTER.inc("rejected_txns");
+            bail!("TXN request causes error on VM/mempool: {:?}", txn_resp);
         }
     }
 
@@ -395,18 +409,25 @@ impl Benchmarker {
                 thread::spawn(
                     // Submit a chunk of TXN requests async, wait and check the AC status,
                     // return the list of responses that are accepted by AC.
+                    // Ignore (but count) both failed submissions and AC-rejected TXNs.
                     move || -> Vec<SubmitTransactionResponse> {
                         let future_resps: Vec<_> = local_chunk
                             .iter()
-                            .map(|req| {
+                            .flat_map(|req| {
                                 Self::submit_transaction_async_with_request(&local_client, &req)
+                                    .or_else(|e| {
+                                        OP_COUNTER.inc("failed_submissions");
+                                        error!("Failed to submit TXN request: {:?}", e);
+                                        Err(e)
+                                    })
                             })
                             .collect();
                         future_resps
                             .into_iter()
                             .flat_map(|future_resp| {
                                 Self::handle_future_response(future_resp).or_else(|e| {
-                                    error!("Submitted txn failed: {:?}", e);
+                                    OP_COUNTER.inc("failed_responses");
+                                    error!("Submitted txn not accepted by AC: {:?}", e);
                                     Err(e)
                                 })
                             })
@@ -440,6 +461,8 @@ impl Benchmarker {
             txn_resps.len(),
             after_req_committed_txns - init_committed_txns,
         );
+        OP_COUNTER.set("request_duration_ms", request_duration_ms as usize);
+        OP_COUNTER.set("request_throughput", request_throughput as usize);
         info!(
             "#Committed txns after TXNs committed = {}.",
             final_committed_txns
@@ -469,8 +492,12 @@ impl Benchmarker {
                 "TXN throughput est = {} txns / {} ms = {:.2} tps.",
                 num_txns, running_duration_ms, throughput
             );
+            OP_COUNTER.set("txn_throughput", throughput as usize);
+            OP_COUNTER.set("running_duration_ms", running_duration_ms as usize);
             throughput
         } else {
+            OP_COUNTER.set("txn_throughput", 0);
+            OP_COUNTER.set("running_duration_ms", 0);
             0.0
         }
     }

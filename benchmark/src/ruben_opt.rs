@@ -52,6 +52,10 @@ pub struct Opt {
         raw(required_unless_all = r#"&["validator_addresses", "debug_address"]"#)
     )]
     pub swarm_config_dir: Option<String>,
+    /// Metrics server process's address.
+    /// If this argument is not present, RuBen will not spawn metrics server.
+    #[structopt(short = "m", long = "metrics_server_address")]
+    pub metrics_server_address: Option<String>,
     /// Valid faucet key file path.
     #[structopt(short = "f", long = "faucet_key_file_path", required = true)]
     pub faucet_key_file_path: String,
@@ -121,12 +125,10 @@ fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<(Vec<String>, St
                     let config = NodeConfig::parse(&config_string).unwrap_or_else(|_| {
                         panic!("failed to parse NodeConfig from {:?}", filename)
                     });
-                    if debug_address.is_none() {
-                        debug_address = Some(parse_socket_address(
-                            &config.debug_interface.address,
-                            config.debug_interface.admission_control_node_debug_port,
-                        ));
-                    }
+                    debug_address.get_or_insert(parse_socket_address(
+                        &config.debug_interface.address,
+                        config.debug_interface.admission_control_node_debug_port,
+                    ));
                     let address = parse_socket_address(
                         &config.admission_control.address,
                         config.admission_control.admission_control_service_port,
@@ -152,17 +154,21 @@ fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<(Vec<String>, St
 impl Opt {
     pub fn new_from_args() -> Self {
         let mut args = Opt::from_args();
-        // Override validator_addresses and debug_address if swarm_config_dir is provided.
-        if let Some(swarm_config_dir) = args.swarm_config_dir.as_ref() {
-            let (validator_addresses, debug_address) =
-                parse_swarm_config_from_dir(swarm_config_dir).expect("invalid arguments");
-            args.validator_addresses = validator_addresses;
-            args.debug_address = Some(debug_address);
-        }
+        args.try_parse_validator_addresses();
         if args.num_clients == 0 {
             args.num_clients = args.validator_addresses.len();
         }
         args
+    }
+
+    /// Override validator_addresses and debug_address if swarm_config_dir is provided.
+    pub fn try_parse_validator_addresses(&mut self) {
+        if let Some(swarm_config_dir) = &self.swarm_config_dir {
+            let (validator_addresses, debug_address) =
+                parse_swarm_config_from_dir(swarm_config_dir).expect("invalid arguments");
+            self.validator_addresses = validator_addresses;
+            self.debug_address = Some(debug_address);
+        }
     }
 }
 

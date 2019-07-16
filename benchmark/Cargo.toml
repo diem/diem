@@ -11,6 +11,7 @@ clap = "2.33.0"
 futures = "0.1.23"
 grpcio = "0.4"
 itertools = "0.8.0"
+lazy_static = "1.2.0"
 protobuf = "2.7"
 regex = "1"
 structopt = "0.2.15"
@@ -23,7 +24,10 @@ debug_interface = { path = "../common/debug_interface" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
+libra_swarm = { path = "../libra_swarm" }
 logger = { path = "../common/logger" }
+metrics = { path = "../common/metrics" }
 proto_conv = { path = "../common/proto_conv" }
+rusty-fork = "0.2.1"
 types = { path = "../types" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
