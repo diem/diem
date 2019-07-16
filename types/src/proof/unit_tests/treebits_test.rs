@@ -66,26 +66,6 @@ fn test_basic_invariants() {
 }
 
 #[test]
-fn test_children_from_level_nary() {
-    assert_eq!(children_from_level_nary(0, 2), 0);
-    assert_eq!(children_from_level_nary(1, 2), 4);
-    assert_eq!(children_from_level_nary(2, 2), 20);
-    assert_eq!(children_from_level_nary(3, 2), 84);
-}
-
-#[test]
-fn test_disk_write_order() {
-    assert_eq!(disk_write_order(0, 2), 0);
-    assert_eq!(disk_write_order(1, 2), 0);
-    assert_eq!(disk_write_order(2, 2), 0);
-    assert_eq!(disk_write_order(4, 2), 1);
-    assert_eq!(disk_write_order(3, 2), 4);
-    assert_eq!(disk_write_order(35, 2), 14);
-
-    assert_eq!(disk_write_order(57, 2), 17);
-}
-
-#[test]
 #[allow(clippy::cognitive_complexity)]
 fn test_treebits() {
     for x in 0..300 {
