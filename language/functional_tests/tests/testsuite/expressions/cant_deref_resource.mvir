@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: ReadRefResourceError(11) }
+// check: VerificationError
+// check: ReadRefResourceError(11)
 
 module Token {
     resource T {v: u64}
@@ -21,14 +22,22 @@ module Token {
         return move(yes);
     }
 
-    public get(addr: address): &mut R#Self.T {
-        let t_ref: &mut R#Self.T;
-        t_ref = borrow_global<T>(move(addr));
-        return move(t_ref);
-    }
-
     public publish(t: R#Self.T) {
         move_to_sender<T>(move(t));
+        return;
+    }
+
+    public test() {
+        let addr: address;
+        let t: R#Self.T;
+        let tref: &mut R#Self.T;
+        let y: R#Self.T;
+
+        addr = get_txn_sender();
+        t = Self.new(0);
+        Self.publish(move(t));
+        tref = borrow_global<T>(move(addr));
+        y = *move(tref);
         return;
     }
 
@@ -39,15 +48,6 @@ module Token {
 import {{default}}.Token;
 
 main() {
-    let addr: address;
-    let t: R#Token.T;
-    let tref: &mut R#Token.T;
-    let y: R#Token.T;
-
-    addr = get_txn_sender();
-    t = Token.new(0);
-    Token.publish(move(t));
-    tref = Token.get(move(addr));
-    y = *move(tref);
+    Token.test();
     return;
 }

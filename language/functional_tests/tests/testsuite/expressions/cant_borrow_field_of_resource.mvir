@@ -21,12 +21,6 @@ module Token {
         return move(yes);
     }
 
-    public get(addr: address): &mut R#Self.T {
-        let t_ref: &mut R#Self.T;
-        t_ref = borrow_global<T>(move(addr));
-        return move(t_ref);
-    }
-
     public publish(t: R#Self.T) {
         move_to_sender<T>(move(t));
         return;
@@ -46,8 +40,7 @@ main() {
 
     addr = get_txn_sender();
     t = Token.new(1);
-    Token.publish(move(t));
-    tref = Token.get(move(addr));
+    tref = &mut t;
     balance_ref = &move(tref).v;
     release(move(balance_ref));
     return;

@@ -18,14 +18,28 @@ module Token {
         return move(yes);
     }
 
-    public get(addr: address): &mut R#Self.T {
-        let t_ref: &mut R#Self.T;
-        t_ref = borrow_global<T>(move(addr));
-        return move(t_ref);
-    }
-
     public publish(t: R#Self.T) {
         move_to_sender<T>(move(t));
+        return;
+    }
+
+    public test() {
+        let z: R#Self.T;
+        let addr1: address;
+        let struct1: &mut R#Self.T;
+        let imms1: &R#Self.T;
+        let struct1_original_balance: u64;
+
+        z = Self.new(0);
+        Self.publish(move(z));
+
+        addr1 = get_txn_sender();
+        struct1 = borrow_global<T>(move(addr1));
+        imms1 = freeze(move(struct1));
+
+        struct1_original_balance = Self.value(move(imms1));
+        assert(copy(struct1_original_balance) == 0, 42);
+
         return;
     }
 }
@@ -35,21 +49,6 @@ module Token {
 import {{default}}.Token;
 
 main() {
-    let z: R#Token.T;
-    let addr1: address;
-    let struct1: &mut R#Token.T;
-    let imms1: &R#Token.T;
-    let struct1_original_balance: u64;
-
-    z = Token.new(0);
-    Token.publish(move(z));
-
-    addr1 = get_txn_sender();
-    struct1 = Token.get(move(addr1));
-    imms1 = freeze(move(struct1));
-
-    struct1_original_balance = Token.value(move(imms1));
-    assert(copy(struct1_original_balance) == 0, 42);
-
+    Token.test();
     return;
 }
