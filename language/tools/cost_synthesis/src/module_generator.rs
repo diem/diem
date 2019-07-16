@@ -17,7 +17,7 @@ use vm::{
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, FieldDefinition,
         FieldDefinitionIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
-        FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
+        FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature, LocalsSignatureIndex,
         MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
         StructDefinition, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
@@ -193,7 +193,12 @@ impl ModuleBuilder {
             .map(|struct_idx| StructHandle {
                 module: ModuleHandleIndex::new(0),
                 name: StringPoolIndex::new((struct_idx + offset) as TableIndex),
-                is_resource: self.gen.gen_bool(1.0 / 2.0),
+                kind: if self.gen.gen_bool(1.0 / 2.0) {
+                    Kind::Resource
+                } else {
+                    Kind::Copyable
+                },
+                kind_constraints: vec![],
             })
             .collect();
     }
@@ -231,6 +236,7 @@ impl ModuleBuilder {
                 let function_sig = FunctionSignature {
                     arg_types: args,
                     return_types: vec![],
+                    kind_constraints: vec![],
                 };
 
                 (locals, function_sig)

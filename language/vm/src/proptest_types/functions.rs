@@ -68,13 +68,18 @@ impl FunctionDefinitionGen {
     pub fn strategy(
         return_count: impl Into<SizeRange>,
         arg_count: impl Into<SizeRange>,
+        kind_count: impl Into<SizeRange>,
         code_len: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
         let return_count = return_count.into();
         let arg_count = arg_count.into();
         (
             any::<PropIndex>(),
-            FunctionSignatureGen::strategy(return_count.clone(), arg_count.clone()),
+            FunctionSignatureGen::strategy(
+                return_count.clone(),
+                arg_count.clone(),
+                kind_count.into(),
+            ),
             any::<bool>(),
             CodeUnitGen::strategy(arg_count, code_len),
         )
@@ -172,13 +177,13 @@ enum BytecodeGen {
     LdStr(PropIndex),
     LdByteArray(PropIndex),
     BorrowField(PropIndex),
-    Call(PropIndex),
-    Pack(PropIndex),
-    Unpack(PropIndex),
-    Exists(PropIndex),
-    BorrowGlobal(PropIndex),
-    MoveFrom(PropIndex),
-    MoveToSender(PropIndex),
+    Call(PropIndex, Vec<SignatureTokenGen>),
+    Pack(PropIndex, Vec<SignatureTokenGen>),
+    Unpack(PropIndex, Vec<SignatureTokenGen>),
+    Exists(PropIndex, Vec<SignatureTokenGen>),
+    BorrowGlobal(PropIndex, Vec<SignatureTokenGen>),
+    MoveFrom(PropIndex, Vec<SignatureTokenGen>),
+    MoveToSender(PropIndex, Vec<SignatureTokenGen>),
     BrTrue(PropIndex),
     BrFalse(PropIndex),
     Branch(PropIndex),
@@ -200,13 +205,41 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(LdStr),
             any::<PropIndex>().prop_map(LdByteArray),
             any::<PropIndex>().prop_map(BorrowField),
-            any::<PropIndex>().prop_map(Call),
-            any::<PropIndex>().prop_map(Pack),
-            any::<PropIndex>().prop_map(Unpack),
-            any::<PropIndex>().prop_map(Exists),
-            any::<PropIndex>().prop_map(BorrowGlobal),
-            any::<PropIndex>().prop_map(MoveFrom),
-            any::<PropIndex>().prop_map(MoveToSender),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| Call(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| Pack(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| Unpack(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| Exists(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| BorrowGlobal(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| MoveFrom(idx, types)),
+            (
+                any::<PropIndex>(),
+                vec(SignatureTokenGen::strategy(), 1..10),
+            )
+                .prop_map(|(idx, types)| MoveToSender(idx, types)),
             any::<PropIndex>().prop_map(BrTrue),
             any::<PropIndex>().prop_map(BrFalse),
             any::<PropIndex>().prop_map(Branch),
@@ -267,27 +300,55 @@ impl BytecodeGen {
                     idx.index(state.field_defs_len) as TableIndex
                 ))
             }
-            BytecodeGen::Call(idx) => Bytecode::Call(FunctionHandleIndex::new(
-                idx.index(state.function_handles_len) as TableIndex,
-            )),
-            BytecodeGen::Pack(idx) => Bytecode::Pack(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::Unpack(idx) => Bytecode::Unpack(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::Exists(idx) => Bytecode::Exists(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::BorrowGlobal(idx) => Bytecode::BorrowGlobal(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::MoveFrom(idx) => Bytecode::MoveFrom(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::MoveToSender(idx) => Bytecode::MoveToSender(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
+            BytecodeGen::Call(idx, types) => Bytecode::Call(
+                FunctionHandleIndex::new(idx.index(state.function_handles_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::Pack(idx, types) => Bytecode::Pack(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::Unpack(idx, types) => Bytecode::Unpack(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::Exists(idx, types) => Bytecode::Exists(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::BorrowGlobal(idx, types) => Bytecode::BorrowGlobal(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::MoveFrom(idx, types) => Bytecode::MoveFrom(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
+            BytecodeGen::MoveToSender(idx, types) => Bytecode::MoveToSender(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                types
+                    .into_iter()
+                    .map(|t| t.materialize(state.struct_handles_len))
+                    .collect(),
+            ),
             BytecodeGen::BrTrue(idx) => Bytecode::BrTrue(idx.index(code_len) as CodeOffset),
             BytecodeGen::BrFalse(idx) => Bytecode::BrFalse(idx.index(code_len) as CodeOffset),
             BytecodeGen::Branch(idx) => Bytecode::Branch(idx.index(code_len) as CodeOffset),

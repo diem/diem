@@ -248,7 +248,8 @@ impl<'alloc> VMModuleCache<'alloc> {
             SignatureToken::String => Ok(Ok(Some(Type::String))),
             SignatureToken::ByteArray => Ok(Ok(Some(Type::ByteArray))),
             SignatureToken::Address => Ok(Ok(Some(Type::Address))),
-            SignatureToken::Struct(sh_idx) => {
+            SignatureToken::TypeParameter(_) => unimplemented!(),
+            SignatureToken::Struct(sh_idx, _) => {
                 let struct_def =
                     try_runtime!(self
                         .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher));

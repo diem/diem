@@ -59,6 +59,17 @@ macro_rules! new_bytecode {
     }};
 }
 
+macro_rules! struct_bytecode {
+    ($dst_len: expr, $offset: expr, $idx_type: ident, $bytecode_ident: tt) => {{
+        let dst_len = $dst_len;
+        let new_idx = (dst_len + $offset) as TableIndex;
+        (
+            $bytecode_ident($idx_type::new(new_idx), vec![]),
+            VMStaticViolation::IndexOutOfBounds($idx_type::KIND, dst_len, new_idx as usize),
+        )
+    }};
+}
+
 macro_rules! code_bytecode {
     ($code_len: expr, $offset: expr, $bytecode_ident: tt) => {{
         let code_len = $code_len;
@@ -159,25 +170,33 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     BorrowField(_) => {
                         new_bytecode!(field_defs_len, offset, FieldDefinitionIndex, BorrowField)
                     }
-                    Call(_) => {
-                        new_bytecode!(function_handles_len, offset, FunctionHandleIndex, Call)
+                    Call(_, _) => {
+                        struct_bytecode!(function_handles_len, offset, FunctionHandleIndex, Call)
                     }
-                    Pack(_) => new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Pack),
-                    Unpack(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Unpack)
+                    Pack(_, _) => {
+                        struct_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Pack)
                     }
-                    Exists(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Exists)
+                    Unpack(_, _) => {
+                        struct_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Unpack)
                     }
-                    BorrowGlobal(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, BorrowGlobal)
+                    Exists(_, _) => {
+                        struct_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Exists)
                     }
-                    MoveFrom(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, MoveFrom)
+                    BorrowGlobal(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowGlobal
+                    ),
+                    MoveFrom(_, _) => {
+                        struct_bytecode!(struct_defs_len, offset, StructDefinitionIndex, MoveFrom)
                     }
-                    MoveToSender(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, MoveToSender)
-                    }
+                    MoveToSender(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToSender
+                    ),
                     BrTrue(_) => code_bytecode!(code_len, offset, BrTrue),
                     BrFalse(_) => code_bytecode!(code_len, offset, BrFalse),
                     Branch(_) => code_bytecode!(code_len, offset, Branch),
@@ -215,9 +234,24 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
     use Bytecode::*;
 
     match bytecode {
-        LdAddr(_) | LdStr(_) | LdByteArray(_) | BorrowField(_) | Call(_) | Pack(_) | Unpack(_)
-        | Exists(_) | BorrowGlobal(_) | MoveFrom(_) | MoveToSender(_) | BrTrue(_) | BrFalse(_)
-        | Branch(_) | CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) => true,
+        LdAddr(_)
+        | LdStr(_)
+        | LdByteArray(_)
+        | BorrowField(_)
+        | Call(_, _)
+        | Pack(_, _)
+        | Unpack(_, _)
+        | Exists(_, _)
+        | BorrowGlobal(_, _)
+        | MoveFrom(_, _)
+        | MoveToSender(_, _)
+        | BrTrue(_)
+        | BrFalse(_)
+        | Branch(_)
+        | CopyLoc(_)
+        | MoveLoc(_)
+        | StLoc(_)
+        | BorrowLoc(_) => true,
 
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.

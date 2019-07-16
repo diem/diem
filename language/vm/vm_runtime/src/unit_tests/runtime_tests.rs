@@ -65,6 +65,7 @@ fn fake_script() -> VerifiedScript {
         function_signatures: vec![FunctionSignature {
             arg_types: vec![],
             return_types: vec![],
+            kind_constraints: vec![],
         }],
         locals_signatures: vec![LocalsSignature(vec![])],
         string_pool: vec!["hello".to_string()],
@@ -607,6 +608,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // () -> (), two locals
@@ -615,6 +617,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // (Int, Int) -> (), two locals,
@@ -623,6 +626,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // (Int, Int) -> (), three locals,
@@ -635,6 +639,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
     ]);
@@ -661,7 +666,7 @@ fn test_call() {
 
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(0)),
+        Bytecode::Call(FunctionHandleIndex::new(0), vec![]),
         vec![],
         vec![],
         vec![],
@@ -670,7 +675,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(1)),
+        Bytecode::Call(FunctionHandleIndex::new(1), vec![]),
         vec![],
         vec![],
         vec![],
@@ -679,7 +684,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(2)),
+        Bytecode::Call(FunctionHandleIndex::new(2), vec![]),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],
@@ -688,7 +693,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(3)),
+        Bytecode::Call(FunctionHandleIndex::new(3), vec![]),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],

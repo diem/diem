@@ -47,22 +47,39 @@ fn transform_code_with_refs() {
         Ret(vec![13]),
     ];
     let expected_types = vec![
-        SignatureToken::Reference(Box::new(SignatureToken::Struct(StructHandleIndex::new(0)))),
+        SignatureToken::Reference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex::new(
-            0,
-        )))),
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::Reference(Box::new(SignatureToken::U64)),
-        SignatureToken::Reference(Box::new(SignatureToken::Struct(StructHandleIndex::new(0)))),
+        SignatureToken::Reference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::U64,
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        SignatureToken::Reference(Box::new(SignatureToken::Struct(StructHandleIndex::new(0)))),
+        SignatureToken::Reference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::Reference(Box::new(SignatureToken::U64)),
-        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex::new(
-            0,
-        )))),
-        SignatureToken::Reference(Box::new(SignatureToken::Struct(StructHandleIndex::new(0)))),
-        SignatureToken::Reference(Box::new(SignatureToken::Struct(StructHandleIndex::new(0)))),
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
+        SignatureToken::Reference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
+        SignatureToken::Reference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::Reference(Box::new(SignatureToken::U64)),
         SignatureToken::U64,
     ];
@@ -149,13 +166,13 @@ fn transform_code_with_pack_unpack() {
     ];
     let expected_types = vec![
         SignatureToken::Address,
-        SignatureToken::Struct(StructHandleIndex::new(0)),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
         SignatureToken::U64,
         SignatureToken::Address,
         SignatureToken::U64,
         SignatureToken::Address,
-        SignatureToken::Struct(StructHandleIndex::new(0)),
-        SignatureToken::Struct(StructHandleIndex::new(0)),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
         SignatureToken::U64,
         SignatureToken::Address,
     ];
@@ -479,23 +496,26 @@ fn transform_code_with_module_builtins() {
     ];
     let expected_types = vec![
         SignatureToken::Address,
-        SignatureToken::Struct(StructHandleIndex::new(0)),
-        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex::new(
-            0,
-        )))),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::Bool,
         SignatureToken::Address,
         SignatureToken::Bool,
         SignatureToken::Address,
-        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex::new(
-            0,
-        )))),
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
         SignatureToken::Address,
-        SignatureToken::Struct(StructHandleIndex::new(0)),
-        SignatureToken::Struct(StructHandleIndex::new(0)),
-        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex::new(
-            0,
-        )))),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![]),
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![],
+        ))),
     ];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);

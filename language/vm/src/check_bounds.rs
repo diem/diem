@@ -290,9 +290,9 @@ impl FunctionDefinition {
                     LdByteArray(idx) => check_bounds_impl(&module.byte_array_pool, *idx),
                     LdStr(idx) => check_bounds_impl(&module.string_pool, *idx),
                     BorrowField(idx) => check_bounds_impl(&module.field_defs, *idx),
-                    Call(idx) => check_bounds_impl(&module.function_handles, *idx),
-                    Pack(idx) | Unpack(idx) | Exists(idx) | BorrowGlobal(idx) | MoveFrom(idx)
-                    | MoveToSender(idx) => check_bounds_impl(&module.struct_defs, *idx),
+                    Call(idx, _) => check_bounds_impl(&module.function_handles, *idx), // FIXME: check bounds for type actuals?
+                    Pack(idx, _) | Unpack(idx, _) | Exists(idx, _) | BorrowGlobal(idx, _) | MoveFrom(idx, _)
+                    | MoveToSender(idx, _) => check_bounds_impl(&module.struct_defs, *idx),
                     // Instructions that refer to this code block.
                     BrTrue(offset) | BrFalse(offset) | Branch(offset) => {
                         // XXX IndexOutOfBounds seems correct, but IndexKind::CodeDefinition

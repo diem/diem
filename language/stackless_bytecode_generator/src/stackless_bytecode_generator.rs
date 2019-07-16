@@ -344,7 +344,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::Call(idx) => {
+            Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);
                 let function_signature =
                     self.module.function_signature_at(function_handle.signature);
@@ -372,7 +372,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 )
             }
 
-            Bytecode::Pack(idx) => {
+            Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
@@ -383,8 +383,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     let field_temp_index = self.temp_stack.pop().unwrap();
                     field_temp_indices.push(field_temp_index);
                 }
-                self.local_types
-                    .push(SignatureToken::Struct(struct_definition.struct_handle));
+                self.local_types.push(SignatureToken::Struct(
+                    struct_definition.struct_handle,
+                    vec![],
+                ));
                 self.temp_stack.push(struct_temp_index);
                 field_temp_indices.reverse();
                 self.insert_stackless_bytecode(
@@ -394,7 +396,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::Unpack(idx) => {
+            Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
@@ -604,7 +606,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     _ => {}
                 }
             }
-            Bytecode::Exists(struct_index) => {
+            Bytecode::Exists(struct_index, _) => {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.local_types.push(SignatureToken::Bool);
@@ -615,14 +617,14 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     offset,
                 );
             }
-            Bytecode::BorrowGlobal(idx) => {
+            Bytecode::BorrowGlobal(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
 
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.local_types
                     .push(SignatureToken::MutableReference(Box::new(
-                        SignatureToken::Struct(struct_definition.struct_handle),
+                        SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                     )));
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
@@ -631,20 +633,22 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     offset,
                 );
             }
-            Bytecode::MoveFrom(idx) => {
+            Bytecode::MoveFrom(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types
-                    .push(SignatureToken::Struct(struct_definition.struct_handle));
+                self.local_types.push(SignatureToken::Struct(
+                    struct_definition.struct_handle,
+                    vec![],
+                ));
                 self.temp_count += 1;
                 self.insert_stackless_bytecode(
                     StacklessBytecode::MoveFrom(temp_index, operand_index, *idx),
                     offset,
                 );
             }
-            Bytecode::MoveToSender(idx) => {
+            Bytecode::MoveToSender(idx, _) => {
                 let value_operand_index = self.temp_stack.pop().unwrap();
                 self.insert_stackless_bytecode(
                     StacklessBytecode::MoveToSender(value_operand_index, *idx),

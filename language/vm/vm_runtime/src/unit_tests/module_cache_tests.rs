@@ -64,10 +64,12 @@ fn test_module(name: String) -> VerifiedModule {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -124,10 +126,12 @@ fn test_script() -> VerifiedScript {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -409,10 +413,12 @@ fn test_multi_level_cache_write_back() {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],

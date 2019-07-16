@@ -167,8 +167,13 @@ where
     fn is_module_specific_op(&self) -> bool {
         use Bytecode::*;
         match self.op {
-            MoveToSender(_) | MoveFrom(_) | BorrowGlobal(_) | Exists(_) | Unpack(_) | Pack(_)
-            | Call(_) => true,
+            MoveToSender(_, _)
+            | MoveFrom(_, _)
+            | BorrowGlobal(_, _)
+            | Exists(_, _)
+            | Unpack(_, _)
+            | Pack(_, _)
+            | Call(_, _) => true,
             CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) | BorrowField(_) => true,
             _ => false,
         }
@@ -281,11 +286,11 @@ where
             .iter()
             .enumerate()
             .filter_map(|(idx, struct_def)| {
-                let is_resource = self
+                let kind = self
                     .root_module
                     .struct_handle_at(struct_def.struct_handle)
-                    .is_resource;
-                if is_resource {
+                    .kind;
+                if kind.is_resource() {
                     Some(idx)
                 } else {
                     None
@@ -496,7 +501,7 @@ where
                     .expect("Unable to generate valid reference value")
             }
             SignatureToken::ByteArray => Local::bytearray(self.next_bytearray()),
-            SignatureToken::Struct(struct_handle_idx) => {
+            SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
@@ -523,6 +528,7 @@ where
                     .collect();
                 Local::struct_(mutvals)
             }
+            SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }
 
@@ -550,7 +556,7 @@ where
     fn generate_from_module_info(&mut self) -> StackState<'txn> {
         use Bytecode::*;
         match self.op {
-            MoveToSender(_) => {
+            MoveToSender(_, _) => {
                 let struct_handle_idx = self.next_resource();
                 // We can just pick a random address -- this is incorrect by the bytecode semantics
                 // (since we're moving to an account that doesn't exist), but since we don't need
@@ -561,12 +567,12 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveToSender(struct_handle_idx),
+                    MoveToSender(struct_handle_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            MoveFrom(_) => {
+            MoveFrom(_, _) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Local::address(*self.account_address);
                 let size = addr.size();
@@ -574,12 +580,12 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    MoveFrom(struct_handle_idx),
+                    MoveFrom(struct_handle_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            BorrowGlobal(_) => {
+            BorrowGlobal(_, _) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Local::address(*self.account_address);
                 let size = addr.size();
@@ -587,12 +593,12 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    BorrowGlobal(struct_handle_idx),
+                    BorrowGlobal(struct_handle_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            Exists(_) => {
+            Exists(_, _) => {
                 let next_struct_handle_idx = self.next_resource();
                 // Flip a coin to determine if the resource should exist or not.
                 let addr = if self.next_bool() {
@@ -605,12 +611,12 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Exists(next_struct_handle_idx),
+                    Exists(next_struct_handle_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            Call(_) => {
+            Call(_, _) => {
                 let function_handle_idx = self.next_function_handle_idx();
                 let function_idx = self.resolve_function_handle(function_handle_idx).2;
                 let function_handle = self.root_module.function_handle_at(function_handle_idx);
@@ -630,12 +636,12 @@ where
                 StackState::new(
                     (self.root_module, Some(function_idx)),
                     self.random_pad(stack),
-                    Call(function_handle_idx),
+                    Call(function_handle_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            Pack(_struct_def_idx) => {
+            Pack(_struct_def_idx, _) => {
                 let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
@@ -662,12 +668,12 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    Pack(random_struct_idx),
+                    Pack(random_struct_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
             }
-            Unpack(_struct_def_idx) => {
+            Unpack(_struct_def_idx, _) => {
                 let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
@@ -676,12 +682,12 @@ where
                     .struct_def_at(random_struct_idx)
                     .struct_handle;
                 let struct_stack =
-                    self.resolve_to_value(SignatureToken::Struct(struct_handle_idx), &[]);
+                    self.resolve_to_value(SignatureToken::Struct(struct_handle_idx, vec![]), &[]);
                 let size = struct_stack.size();
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(vec![struct_stack]),
-                    Unpack(random_struct_idx),
+                    Unpack(random_struct_idx, vec![]),
                     size,
                     HashMap::new(),
                 )
@@ -698,6 +704,7 @@ where
                 let struct_stack = self.resolve_to_value(
                     SignatureToken::Reference(Box::new(SignatureToken::Struct(
                         struct_definition.struct_handle,
+                        vec![],
                     ))),
                     &[],
                 );

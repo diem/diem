@@ -186,7 +186,7 @@ impl GasMeter {
                 let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }
-            Bytecode::Call(call_idx) => {
+            Bytecode::Call(call_idx, _) => {
                 let self_module = &stk.top_frame()?.module();
                 let function_ref = try_runtime!(stk
                     .module_cache
@@ -200,11 +200,11 @@ impl GasMeter {
                     Self::gas_of(call_gas)
                 }
             }
-            Bytecode::Unpack(_) => {
+            Bytecode::Unpack(_, _) => {
                 let size = stk.peek()?.size();
                 Self::gas_of(static_cost_instr(instr, size))
             }
-            Bytecode::Pack(struct_idx) => {
+            Bytecode::Pack(struct_idx, _) => {
                 let struct_def = &stk.top_frame()?.module().struct_def_at(*struct_idx);
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
@@ -245,17 +245,17 @@ impl GasMeter {
             //
             // Borrowing a global causes a read of the underlying data. Therefore the cost is
             // dependent on the size of the data being borrowed.
-            Bytecode::BorrowGlobal(_)
+            Bytecode::BorrowGlobal(_, _)
             // In the process of determining if a resource exists, we need to load/read that
             // memory. We therefore need to charge for this query based on the size of the data
             // being accessed.
-            | Bytecode::Exists(_)
+            | Bytecode::Exists(_, _)
             // A MoveFrom does not trigger a write to memory. But it does push the value of that
             // size onto the stack. So we charge based upon the size of the instruction.
-            | Bytecode::MoveFrom(_)
+            | Bytecode::MoveFrom(_, _)
             // A MoveToSender causes a write of the resource to storage. We therefore charge based
             // on the size of the resource being moved.
-            | Bytecode::MoveToSender(_) => {
+            | Bytecode::MoveToSender(_, _) => {
                 let mem_size = if memory_size.get() > 1 {
                     memory_size.sub(AbstractMemorySize::new(1))
                 } else {

@@ -498,7 +498,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::Call(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);
                 let function_signature =
                     self.module.function_signature_at(function_handle.signature);
@@ -550,7 +551,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::Pack(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
@@ -563,15 +565,18 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     }
                 }
                 self.stack.push(StackAbstractValue {
-                    signature: SignatureToken::Struct(struct_definition.struct_handle),
+                    signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                     value: AbstractValue::full_value(struct_definition_view.is_resource()),
                 });
             }
 
-            Bytecode::Unpack(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let struct_arg = self.stack.pop().unwrap();
-                if struct_arg.signature != SignatureToken::Struct(struct_definition.struct_handle) {
+                if struct_arg.signature
+                    != SignatureToken::Struct(struct_definition.struct_handle, vec![])
+                {
                     self.errors
                         .push(VMStaticViolation::UnpackTypeMismatchError(offset));
                 }
@@ -742,7 +747,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::Exists(_) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::Exists(_, _) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
                     self.stack.push(StackAbstractValue {
@@ -755,7 +761,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::BorrowGlobal(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::BorrowGlobal(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
                     self.errors
@@ -767,7 +774,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     let nonce = self.get_nonce(&mut state);
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::MutableReference(Box::new(
-                            SignatureToken::Struct(struct_definition.struct_handle),
+                            SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                         )),
                         value: AbstractValue::Reference(nonce),
                     })
@@ -777,7 +784,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::MoveFrom(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveFrom(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
                     self.errors
@@ -787,7 +795,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
                     self.stack.push(StackAbstractValue {
-                        signature: SignatureToken::Struct(struct_definition.struct_handle),
+                        signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                         value: AbstractValue::full_value(true),
                     });
                 } else {
@@ -796,7 +804,8 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 }
             }
 
-            Bytecode::MoveToSender(idx) => {
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveToSender(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
                     self.errors
@@ -805,7 +814,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
 
                 let value_operand = self.stack.pop().unwrap();
                 if value_operand.signature
-                    == SignatureToken::Struct(struct_definition.struct_handle)
+                    == SignatureToken::Struct(struct_definition.struct_handle, vec![])
                 {
 
                 } else {

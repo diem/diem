@@ -240,7 +240,7 @@ where
                         .top_frame_mut()?
                         .store_local(idx, stack_top));
                 }
-                Bytecode::Call(idx) => {
+                Bytecode::Call(idx, _) => {
                     let self_module = &self.execution_stack.top_frame()?.module();
                     let callee_function_ref = try_runtime!(self
                         .execution_stack
@@ -322,7 +322,7 @@ where
                         }
                     }
                 }
-                Bytecode::Pack(sd_idx) => {
+                Bytecode::Pack(sd_idx, _) => {
                     let self_module = self.execution_stack.top_frame()?.module();
                     let struct_def = self_module.struct_def_at(sd_idx);
                     let args = self
@@ -343,7 +343,7 @@ where
                         }
                     }
                 }
-                Bytecode::Unpack(_sd_idx) => {
+                Bytecode::Unpack(_sd_idx, _) => {
                     let struct_arg = self.execution_stack.pop()?;
                     match struct_arg.value() {
                         Some(v) => match &*v.peek() {
@@ -457,7 +457,7 @@ where
                         self.txn_data.public_key().to_slice().to_vec(),
                     )));
                 }
-                Bytecode::BorrowGlobal(idx) => {
+                Bytecode::BorrowGlobal(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -478,7 +478,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::Exists(idx) => {
+                Bytecode::Exists(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -498,7 +498,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::MoveFrom(idx) => {
+                Bytecode::MoveFrom(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -519,7 +519,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::MoveToSender(idx) => {
+                Bytecode::MoveToSender(idx, _) => {
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, self.txn_data.sender());
                     if let Some(struct_def) = try_runtime!(self

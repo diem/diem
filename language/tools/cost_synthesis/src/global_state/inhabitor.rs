@@ -156,7 +156,7 @@ where
                     .expect("Unable to generate valid reference value")
             }
             SignatureToken::ByteArray => Local::bytearray(self.next_bytearray()),
-            SignatureToken::Struct(struct_handle_idx) => {
+            SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
@@ -181,6 +181,7 @@ where
                     .collect();
                 Local::struct_(mutvals)
             }
+            SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }
 }

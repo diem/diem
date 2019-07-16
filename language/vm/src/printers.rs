@@ -401,10 +401,9 @@ fn display_struct_handle<T: TableAccess>(
     write!(
         f,
         "{} ",
-        if struct_.is_resource {
-            "resource"
-        } else {
-            "struct"
+        match struct_.kind {
+            Kind::Resource => "resource",
+            Kind::Copyable => "struct",
         }
     )?;
     write!(f, "{}@", tables.get_string_at(struct_.name).unwrap())?;
@@ -561,6 +560,24 @@ fn display_locals_signature<T: TableAccess>(
     Ok(())
 }
 
+fn display_type_parameters<T: TableAccess>(
+    types: &[SignatureToken],
+    tables: &T,
+    f: &mut fmt::Formatter,
+) -> fmt::Result {
+    if types.is_empty() {
+        return Ok(());
+    }
+    write!(f, "<")?;
+    for (i, t) in types.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        display_signature_token(t, tables, f)?;
+    }
+    write!(f, ">")
+}
+
 fn display_signature_token<T: TableAccess>(
     token: &SignatureToken,
     tables: &T,
@@ -572,8 +589,9 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::String => write!(f, "String"),
         SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
-        SignatureToken::Struct(idx) => {
-            display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)
+        SignatureToken::Struct(idx, types) => {
+            display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)?;
+            display_type_parameters(&types, tables, f)
         }
         SignatureToken::Reference(token) => {
             write!(f, "&")?;
@@ -583,6 +601,7 @@ fn display_signature_token<T: TableAccess>(
             write!(f, "&mut ")?;
             display_signature_token(token, tables, f)
         }
+        SignatureToken::TypeParameter(idx) => write!(f, "T{}", idx),
     }
 }
 
@@ -613,8 +632,10 @@ fn display_bytecode<T: TableAccess>(
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }
-        Bytecode::Call(idx) => {
-            write!(f, "Call(")?;
+        Bytecode::Call(idx, types) => {
+            write!(f, "Call")?;
+            display_type_parameters(&types, tables, f)?;
+            write!(f, "(")?;
             display_function_handle(tables.get_function_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }

@@ -80,6 +80,16 @@ pub enum SerializedType {
     MUTABLE_REFERENCE       = 0x6,
     STRUCT                  = 0x7,
     BYTEARRAY               = 0x8,
+    TYPE_PARAMETER          = 0x9,
+}
+
+#[rustfmt::skip]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum SerializedKind {
+    RESOURCE                = 0x1,
+    COPYABLE                = 0x2,
 }
 
 /// List of opcodes constants.

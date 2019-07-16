@@ -51,12 +51,10 @@ impl Account {
             ret_vec.extend(mod_ref.struct_defs().iter().enumerate().filter_map(
                 |(struct_idx, struct_def)| {
                     // Determine if the struct definition is a resource
-                    let is_resource = mod_ref
-                        .struct_handle_at(struct_def.struct_handle)
-                        .is_resource;
-                    if is_resource {
+                    let kind = mod_ref.struct_handle_at(struct_def.struct_handle).kind;
+                    if kind.is_resource() {
                         // Generate the type for the struct
-                        let typ = SignatureToken::Struct(struct_def.struct_handle);
+                        let typ = SignatureToken::Struct(struct_def.struct_handle, vec![]);
                         // Generate a value of that type
                         let struct_val = inhabitor.inhabit(typ).value().unwrap();
                         // Now serialize that value into the correct binary blob.

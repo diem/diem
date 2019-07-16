@@ -84,7 +84,7 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::MoveLoc(_)
             | Bytecode::BorrowLoc(_) => 1,
 
-            Bytecode::Call(idx) => {
+            Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);
                 let signature = self.module.function_signature_at(function_handle.signature);
                 let arg_count = signature.arg_types.len() as i32;
@@ -92,13 +92,13 @@ impl<'a> StackUsageVerifier<'a> {
                 return_count - arg_count
             }
 
-            Bytecode::Pack(idx) => {
+            Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let num_fields = i32::from(struct_definition.field_count);
                 1 - num_fields
             }
 
-            Bytecode::Unpack(idx) => {
+            Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let num_fields = i32::from(struct_definition.field_count);
                 num_fields - 1
@@ -129,11 +129,11 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::Not => 0,
 
             Bytecode::FreezeRef => 0,
-            Bytecode::Exists(_) => 0,
-            Bytecode::BorrowGlobal(_) => 0,
+            Bytecode::Exists(_, _) => 0,
+            Bytecode::BorrowGlobal(_, _) => 0,
             Bytecode::ReleaseRef => -1,
-            Bytecode::MoveFrom(_) => 0,
-            Bytecode::MoveToSender(_) => -1,
+            Bytecode::MoveFrom(_, _) => 0,
+            Bytecode::MoveToSender(_, _) => -1,
 
             Bytecode::GetTxnGasUnitPrice
             | Bytecode::GetTxnMaxGasUnits
