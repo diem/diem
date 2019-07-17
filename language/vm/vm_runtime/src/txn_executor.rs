@@ -272,6 +272,11 @@ where
                                 // Call stack is not reconstructed for a native call, so we just
                                 // proceed on to next instruction.
                             }
+                            NativeReturnType::U64(value) => {
+                                self.execution_stack.push(Local::u64(value));
+                                // Call stack is not reconstructed for a native call, so we just
+                                // proceed on to next instruction.
+                            }
                         }
                     } else {
                         self.execution_stack.top_frame_mut()?.jump(pc);
