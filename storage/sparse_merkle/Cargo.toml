@@ -15,10 +15,10 @@ proptest-derive = "0.1.2"
 
 crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-serde = { version = "1.0.89", features = ["derive"] }
+serde = { version = "1.0.96", features = ["derive"] }
 types = { path = "../../types" }
 
 [dev-dependencies]
 proptest = "0.9"
 rand = "0.6.5"
-serde_test = "1.0.87"
+serde_test = "1.0.96"

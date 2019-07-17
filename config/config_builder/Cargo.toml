@@ -10,8 +10,8 @@ edition = "2018"
 bincode = "1.1.1"
 clap = "2.32"
 hex = "0.3.2"
-serde = { version = "1.0.91", features = ["derive"] }
-tempfile = "3.0.6"
+serde = { version = "1.0.96", features = ["derive"] }
+tempfile = "3.1.0"
 toml = "0.4"
 
 config = { path = ".." }

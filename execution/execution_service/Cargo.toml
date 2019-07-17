@@ -22,7 +22,7 @@ types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
-tempfile = "3.0.7"
+tempfile = "3.1.0"
 
 config = { path = "../../config" }
 config_builder = { path = "../../config/config_builder" }

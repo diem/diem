@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-byteorder = "1.3.1"
+byteorder = "1.3.2"
 bytes = "0.4.12"
 grpcio = "0.4.3"
 futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["io-compat", "compat"] }
@@ -18,9 +18,9 @@ num-derive = "0.2"
 proptest = "0.9"
 protobuf = "2.7"
 rand = "0.6.5"
-serde = { version = "1.0.87", features = ["derive"] }
-tokio = "0.1.11"
-termion = "1.5.1"
+serde = { version = "1.0.96", features = ["derive"] }
+tokio = "0.1.22"
+termion = "1.5.3"
 lazy_static = "1.3.0"
 rmp-serde = "0.13.7"
 
@@ -52,8 +52,8 @@ features = ["nightly", "push"]
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
-cached = "0.8.0"
-tempfile = "3.0.6"
+cached = "0.8.1"
+tempfile = "3.1.0"
 parity-multiaddr = "0.4.0"
 rusty-fork = "0.2.1"
 
