@@ -169,6 +169,14 @@ pub trait VerifyingKey:
     ) -> Result<()> {
         signature.verify(message, self)
     }
+
+    /// We provide the implementation which dispatches to the signature.
+    fn batch_verify_signatures(
+        message: &HashValue,
+        keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
+    ) -> Result<()> {
+        Self::SignatureMaterial::batch_verify_signatures(message, keys_and_signatures)
+    }
 }
 
 /// A type family for signature material that knows which public key type
@@ -203,6 +211,19 @@ pub trait Signature:
 
     /// Convert the signature into a byte representation.
     fn to_bytes(&self) -> Vec<u8>;
+
+    /// The implementer can override a batch verification implementation
+    /// that by default iterates over each signature. More efficient
+    /// implementations exist and should be implemented for many schemes.
+    fn batch_verify_signatures(
+        message: &HashValue,
+        keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
+    ) -> Result<()> {
+        for (key, signature) in keys_and_signatures {
+            signature.verify(message, &key)?
+        }
+        Ok(())
+    }
 }
 
 /// An alias for the RNG used in the [`Uniform`] trait.

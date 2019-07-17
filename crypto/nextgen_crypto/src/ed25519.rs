@@ -323,6 +323,29 @@ impl Signature for Ed25519Signature {
             .and(Ok(()))
     }
 
+    /// Batch signature verification as described in the original EdDSA article
+    /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
+    /// signatures on the same message and it checks for malleability.
+    fn batch_verify_signatures(
+        message: &HashValue,
+        keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
+    ) -> Result<()> {
+        for (_, sig) in keys_and_signatures.iter() {
+            Ed25519Signature::check_malleability(&sig.to_bytes())?
+        }
+        let batch_argument = keys_and_signatures
+            .into_iter()
+            .map(|(key, signature)| (key.0, signature.0));
+        let (dalek_public_keys, dalek_signatures): (Vec<_>, Vec<_>) = batch_argument.unzip();
+        let message_ref = &message.as_ref()[..];
+        // The original batching algorithm works for different messages and it expects as many
+        // messages as the number of signatures. In our case, we just populate the same
+        // message to meet dalek's api requirements.
+        let messages = vec![message_ref; dalek_signatures.len()];
+        ed25519_dalek::verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])?;
+        Ok(())
+    }
+
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
