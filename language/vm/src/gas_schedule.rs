@@ -143,6 +143,14 @@ define_gas_unit! {
 pub struct InstructionKey(pub u8);
 
 lazy_static! {
+    /// The cost per-byte written to global storage.
+    /// TODO: Fill this in with a proper number once it's determined.
+    pub static ref GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits::new(8);
+
+    /// The cost per-byte written to storage.
+    /// TODO: Fill this in with a proper number once it's determined.
+    pub static ref GLOBAL_MEMORY_PER_BYTE_WRITE_COST: GasUnits<GasCarrier> = GasUnits::new(8);
+
     /// The maximum size representable by AbstractMemorySize
     pub static ref MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(std::u64::MAX);
 
