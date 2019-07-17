@@ -22,6 +22,7 @@ unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
 channel = { path = "../common/channel" }
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
@@ -33,6 +34,10 @@ types = { path = "../types" }
 
 [dev-dependencies]
 criterion = { version = "0.2.11", features = ["real_blackbox"] }
+
+[dev-dependencies.nextgen_crypto]
+features = ["testing"]
+path = "../crypto/nextgen_crypto"
 
 [build-dependencies]
 protoc-rust = "2.5.0"

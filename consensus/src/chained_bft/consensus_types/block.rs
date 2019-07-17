@@ -14,11 +14,12 @@ use canonical_serialization::{
 };
 use crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
-    HashValue, Signature,
+    HashValue,
 };
 use failure::Result;
 use mirai_annotations::{checked_precondition, checked_precondition_eq};
 use network::proto::Block as ProtoBlock;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -84,7 +85,7 @@ pub struct Block<T> {
     /// Author of the block that can be validated by the author's public key and the signature
     author: Author,
     /// Signature that the hash of this block has been authored by the owner of the private key
-    signature: Signature,
+    signature: Ed25519Signature,
 }
 
 impl<T> Display for Block<T> {
@@ -104,7 +105,7 @@ where
     // Make an empty genesis block
     pub fn make_genesis_block() -> Self {
         let ancestor_id = HashValue::zero();
-        let genesis_validator_signer = ValidatorSigner::genesis();
+        let genesis_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
         let state = ExecutedState::state_for_genesis();
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
@@ -138,7 +139,7 @@ where
             timestamp_usecs: 0, // The beginning of UNIX TIME
             quorum_cert: genesis_quorum_cert,
             author: genesis_validator_signer.author(),
-            signature,
+            signature: signature.into(),
         }
     }
 
@@ -151,7 +152,7 @@ where
         height: Height,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner,
+        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
     ) -> Self {
         let block_internal = BlockSerializer {
             parent_id,
@@ -187,7 +188,7 @@ where
         round: Round,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner,
+        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
     ) -> Self {
         // A block must carry a QC to its parent.
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
@@ -210,7 +211,7 @@ where
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> ::std::result::Result<(), BlockVerificationError> {
         if self.is_genesis_block() {
             return Ok(());
@@ -251,7 +252,7 @@ where
         self.author
     }
 
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Ed25519Signature {
         &self.signature
     }
 
@@ -354,7 +355,7 @@ where
         proto.set_round(self.round());
         proto.set_height(self.height());
         proto.set_quorum_cert(self.quorum_cert().clone().into_proto());
-        proto.set_signature(self.signature().to_compact().as_ref().into());
+        proto.set_signature(self.signature().to_bytes().as_ref().into());
         proto.set_author(self.author.into());
         proto
     }
@@ -375,7 +376,7 @@ where
         let height = object.get_height();
         let quorum_cert = QuorumCert::from_proto(object.take_quorum_cert())?;
         let author = Author::try_from(object.take_author())?;
-        let signature = Signature::from_compact(object.get_signature())?;
+        let signature = Ed25519Signature::try_from(object.get_signature())?;
         Ok(Block {
             id,
             parent_id,

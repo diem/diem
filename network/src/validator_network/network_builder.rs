@@ -25,12 +25,10 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use crypto::{
-    x25519::{X25519PrivateKey, X25519PublicKey},
-    PrivateKey, PublicKey,
-};
+use crypto::x25519::{X25519PrivateKey, X25519PublicKey};
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
+use nextgen_crypto::ed25519::*;
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
@@ -95,7 +93,7 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: u32,
     max_concurrent_network_notifs: u32,
     max_connection_delay_ms: u64,
-    signing_keys: Option<(PrivateKey, PublicKey)>,
+    signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     identity_keys: Option<(X25519PrivateKey, X25519PublicKey)>,
 }
 
@@ -154,7 +152,7 @@ impl NetworkBuilder {
     }
 
     /// Set signing keys of local node.
-    pub fn signing_keys(&mut self, keys: (PrivateKey, PublicKey)) -> &mut Self {
+    pub fn signing_keys(&mut self, keys: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
         self.signing_keys = Some(keys);
         self
     }
@@ -511,9 +509,9 @@ impl NetworkBuilder {
             .spawn(conn_mgr.start().boxed().unit_error().compat());
 
         // Setup signer from keys.
-        let (signing_private_key, signing_public_key) =
+        let (signing_private_key, _signing_public_key) =
             self.signing_keys.take().expect("Signing keys not set");
-        let signer = ValidatorSigner::new(self.peer_id, signing_public_key, signing_private_key);
+        let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Initialize and start Discovery actor.
         let discovery = Discovery::new(
             self.peer_id,

@@ -14,6 +14,7 @@ use crypto::{
     HashValue, Signature,
 };
 use failure::prelude::*;
+use nextgen_crypto::ed25519::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -217,7 +218,10 @@ impl LedgerInfoWithSignatures {
         &self.signatures
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> ::std::result::Result<(), VerifyError> {
+    pub fn verify(
+        &self,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
+    ) -> ::std::result::Result<(), VerifyError> {
         if self.ledger_info.is_zero() {
             // We're not trying to verify nominal ledger info that does not carry any information.
             return Ok(());

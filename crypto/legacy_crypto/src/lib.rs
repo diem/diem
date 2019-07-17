@@ -5,7 +5,6 @@
 
 #![deny(missing_docs)]
 #![feature(test)]
-#![feature(trait_alias)]
 
 pub mod hash;
 pub mod hkdf;

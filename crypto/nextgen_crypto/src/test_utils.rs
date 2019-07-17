@@ -7,15 +7,18 @@ use crate::traits::{SeedableCryptoRng, Uniform};
 use bincode::serialize;
 use serde::Serialize;
 
-/// A seed number for testing
-pub const TEST_SEED: [u8; 32] = [0; 32];
+/// A deterministic seed for PRNGs related to keys
+pub const TEST_SEED: [u8; 32] = [0u8; 32];
 
-/// A labeled tuple consisting of a private and public key
+/// A keypair consisting of a private and public key
 #[cfg_attr(test, derive(Clone))]
-pub struct KeyPair<S, P> {
-    /// the private (signing) key component
+pub struct KeyPair<S, P>
+where
+    for<'a> P: From<&'a S>,
+{
+    /// the private key component
     pub private_key: S,
-    /// the corresponding public (verifying) key component
+    /// the public key component
     pub public_key: P,
 }
 
@@ -42,6 +45,22 @@ where
     {
         let private_key = S::generate_for_testing(rng);
         private_key.into()
+    }
+}
+
+/// A pair consisting of a private and public key
+impl<S, P> Uniform for (S, P)
+where
+    S: Uniform,
+    for<'a> P: From<&'a S>,
+{
+    fn generate_for_testing<R>(rng: &mut R) -> Self
+    where
+        R: SeedableCryptoRng,
+    {
+        let private_key = S::generate_for_testing(rng);
+        let public_key = (&private_key).into();
+        (private_key, public_key)
     }
 }
 

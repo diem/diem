@@ -44,8 +44,9 @@ use bytes::Bytes;
 use channel;
 use crypto::{
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, Signature,
+    HashValue, Signature as LegacySignature,
 };
+use failure::Fail;
 use futures::{
     compat::{Future01CompatExt, Sink01CompatExt},
     future::{Future, FutureExt, TryFutureExt},
@@ -54,6 +55,7 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use parity_multiaddr::Multiaddr;
 use protobuf::{self, Message};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
@@ -112,7 +114,7 @@ where
     pub fn new(
         self_peer_id: PeerId,
         self_addrs: Vec<Multiaddr>,
-        signer: Signer,
+        signer: Signer<Ed25519PrivateKey>,
         seed_peers: HashMap<PeerId, PeerInfo>,
         trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
@@ -380,7 +382,7 @@ fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
 
 // Creates a note by signing the given peer info, and combining the signature, peer_info and
 // peer_id into a note.
-fn create_note(signer: &Signer, peer_id: PeerId, peer_info: PeerInfo) -> Note {
+fn create_note(signer: &Signer<Ed25519PrivateKey>, peer_id: PeerId, peer_info: PeerInfo) -> Note {
     let raw_info = peer_info
         .write_to_bytes()
         .expect("Protobuf serialization fails");
@@ -469,30 +471,33 @@ fn verify_signatures(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_size(
+    let verifier = SignatureValidator::<Ed25519PublicKey>::new_with_quorum_size(
         trusted_peers
             .read()
             .unwrap()
             .iter()
             .map(|(peer_id, network_public_keys)| {
-                (*peer_id, network_public_keys.signing_public_key)
+                (
+                    *peer_id,
+                    network_public_keys.signing_public_key.clone().into(),
+                )
             })
             .collect(),
         1, /* quorum size */
     )
     .expect("Quorum size should be valid.");
-    let signature = Signature::from_compact(signature)
+    let signature = Ed25519Signature::try_from(signature)
         .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
     verifier.verify_signature(signer, get_hash(msg), &signature)?;
     Ok(())
 }
 
-fn sign(signer: &Signer, msg: &[u8]) -> Vec<u8> {
-    signer
+fn sign(signer: &Signer<Ed25519PrivateKey>, msg: &[u8]) -> Vec<u8> {
+    let signature: Ed25519Signature = signer
         .sign_message(get_hash(msg))
-        .expect("Message signing fails")
-        .to_compact()
-        .to_vec()
+        .expect("Message signing fails");
+    let sig: LegacySignature = signature.into();
+    sig.to_compact().to_vec()
 }
 
 async fn push_state_to_peer<TSubstream>(

@@ -191,7 +191,7 @@ impl ConsensusNetworkSender {
                             *keys.account_address(),
                             NetworkPublicKeys {
                                 identity_public_key: *keys.network_identity_public_key(),
-                                signing_public_key: *keys.network_signing_public_key(),
+                                signing_public_key: keys.network_signing_public_key().clone(),
                             },
                         )
                     })

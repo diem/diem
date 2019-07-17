@@ -28,6 +28,7 @@ admission_control_proto = { version = "0.1.0", path = "../admission_control/admi
 config = { path = "../config" }
 crash_handler = { path = "../common/crash_handler" }
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libc = "0.2.48"
 libra_wallet = { path = "./libra_wallet" }

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use crypto::{signing, HashValue, PublicKey, Signature};
 use failure::prelude::*;
 use logger::prelude::*;
+use nextgen_crypto::*;
 use std::collections::HashMap;
 
 /// Errors possible during signature verification.
@@ -37,12 +37,12 @@ pub enum VerifyError {
 /// Supports validation of signatures for known authors. This struct can be used for all signature
 /// verification operations including block and network signature verification, respectively.
 #[derive(Clone)]
-pub struct ValidatorVerifier {
-    author_to_public_keys: HashMap<AccountAddress, PublicKey>,
+pub struct ValidatorVerifier<P> {
+    author_to_public_keys: HashMap<AccountAddress, P>,
     quorum_size: usize,
 }
 
-impl ValidatorVerifier {
+impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Initialize with a map of author to public key and set quorum size to default (`2f + 1`) or
     /// zero if `author_to_public_keys` is empty.
     pub fn new(author_to_public_keys: HashMap<AccountAddress, PublicKey>) -> Self {
@@ -92,13 +92,13 @@ impl ValidatorVerifier {
         &self,
         author: AccountAddress,
         hash: HashValue,
-        signature: &Signature,
+        signature: &PublicKey::SignatureMaterial,
     ) -> std::result::Result<(), VerifyError> {
         let public_key = self.author_to_public_keys.get(&author);
         match public_key {
             None => Err(VerifyError::UnknownAuthor),
             Some(public_key) => {
-                if signing::verify_signature(hash, signature, public_key).is_err() {
+                if public_key.verify_signature(&hash, signature).is_err() {
                     Err(VerifyError::InvalidSignature)
                 } else {
                     Ok(())
@@ -112,34 +112,45 @@ impl ValidatorVerifier {
     /// attached signatures is invalid or it does not correspond to a known author. The latter is to
     /// prevent malicious users from adding arbitrary content to the signature payload that would go
     /// unnoticed.
-    pub fn verify_aggregated_signature(
+    pub fn verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
-        aggregated_signature: &HashMap<AccountAddress, Signature>,
-    ) -> std::result::Result<(), VerifyError> {
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
         self.check_num_of_signatures(aggregated_signature)?;
         for (author, signature) in aggregated_signature {
-            self.verify_signature(*author, hash, signature)?;
+            self.verify_signature(*author, hash, &signature.clone().into())?;
         }
         Ok(())
     }
 
     /// This function will try batch signature verification and falls back to normal
     /// iterated verification if batching fails.
-    pub fn batch_verify_aggregated_signature(
+    pub fn batch_verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
-        aggregated_signature: &HashMap<AccountAddress, Signature>,
-    ) -> std::result::Result<(), VerifyError> {
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
         self.check_num_of_signatures(aggregated_signature)?;
         self.check_keys(aggregated_signature)?;
-        let signatures = aggregated_signature.values().copied().collect();
-        let public_keys = aggregated_signature
-            .keys()
-            .map(|author| *(self.author_to_public_keys.get(&author).unwrap()))
-            .collect();
+        let keys_and_signatures: Vec<(PublicKey, PublicKey::SignatureMaterial)> =
+            aggregated_signature
+                .iter()
+                .flat_map(|(author, signature)| {
+                    let sig: PublicKey::SignatureMaterial = signature.clone().into();
+                    self.author_to_public_keys
+                        .get(&author)
+                        .and_then(|pub_key| Some((pub_key.clone(), sig)))
+                })
+                .collect();
         // Fallback is required to identify the source of the problem if batching fails.
-        if signing::batch_verify_signatures(hash, signatures, public_keys).is_err() {
+        if PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
             let iterated_verification =
                 self.verify_aggregated_signature(hash, aggregated_signature);
             match iterated_verification {
@@ -154,10 +165,13 @@ impl ValidatorVerifier {
     }
 
     /// Ensure there are at least quorum_size and not more than maximum expected signatures.
-    fn check_num_of_signatures(
+    fn check_num_of_signatures<T>(
         &self,
-        aggregated_signature: &HashMap<AccountAddress, Signature>,
-    ) -> std::result::Result<(), VerifyError> {
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
         let num_of_signatures = aggregated_signature.len();
         if num_of_signatures < self.quorum_size {
             return Err(VerifyError::TooFewSignatures {
@@ -176,10 +190,13 @@ impl ValidatorVerifier {
 
     /// Ensure there are only known authors. According to the threshold verification policy,
     /// invalid public keys are not allowed.
-    fn check_keys(
+    fn check_keys<T>(
         &self,
-        aggregated_signature: &HashMap<AccountAddress, Signature>,
-    ) -> std::result::Result<(), VerifyError> {
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
         for author in aggregated_signature.keys() {
             if self.author_to_public_keys.get(&author) == None {
                 return Err(VerifyError::UnknownAuthor);
@@ -228,12 +245,13 @@ mod tests {
         validator_signer::ValidatorSigner,
         validator_verifier::{ValidatorVerifier, VerifyError},
     };
-    use crypto::{HashValue, PublicKey, Signature};
+    use crypto::HashValue;
+    use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED};
     use std::collections::HashMap;
 
     #[test]
     fn test_validator() {
-        let validator_signer = ValidatorSigner::random();
+        let validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random(TEST_SEED);
         let random_hash = HashValue::random();
         let signature = validator_signer.sign_message(random_hash).unwrap();
         let validator =
@@ -242,7 +260,7 @@ mod tests {
             validator.verify_signature(validator_signer.author(), random_hash, &signature),
             Ok(())
         );
-        let unknown_validator_signer = ValidatorSigner::random();
+        let unknown_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1; 32]);
         let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
         assert_eq!(
             validator.verify_signature(
@@ -260,30 +278,36 @@ mod tests {
 
     #[test]
     fn test_quorum_validators() {
-        // Generate 7 random signers.
-        let validator_signers: Vec<ValidatorSigner> =
-            (0..7).map(|_| ValidatorSigner::random()).collect();
+        const NUM_SIGNERS: u8 = 7;
+        // Generate NUM_SIGNERS random signers.
+        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+            .map(|i| ValidatorSigner::random([i; 32]))
+            .collect();
         let random_hash = HashValue::random();
 
         // Create a map from authors to public keys.
-        let mut author_to_public_key_map: HashMap<AccountAddress, PublicKey> = HashMap::new();
+        let mut author_to_public_key_map: HashMap<AccountAddress, Ed25519PublicKey> =
+            HashMap::new();
         for validator in validator_signers.iter() {
             author_to_public_key_map.insert(validator.author(), validator.public_key());
         }
 
         // Create a map from author to signatures.
-        let mut author_to_signature_map: HashMap<AccountAddress, Signature> = HashMap::new();
+        let mut author_to_signature_map: HashMap<AccountAddress, Ed25519Signature> = HashMap::new();
         for validator in validator_signers.iter() {
             author_to_signature_map.insert(
                 validator.author(),
-                validator.sign_message(random_hash).unwrap(),
+                validator.sign_message(random_hash).unwrap().into(),
             );
         }
 
-        // Let's assume our verifier needs to satisfy at least 5 signatures from the original 7.
-        let validator_verifier =
-            ValidatorVerifier::new_with_quorum_size(author_to_public_key_map, 5)
-                .expect("Incorrect quorum size.");
+        // Let's assume our verifier needs to satisfy at least 5 signatures from the original
+        // NUM_SIGNERS.
+        let validator_verifier = ValidatorVerifier::<Ed25519PublicKey>::new_with_quorum_size(
+            author_to_public_key_map,
+            5,
+        )
+        .expect("Incorrect quorum size.");
 
         // Check against signatures == N; this will pass.
         assert_eq!(
@@ -293,9 +317,11 @@ mod tests {
         );
 
         // Add an extra unknown signer, signatures > N; this will fail.
-        let unknown_validator_signer = ValidatorSigner::random();
+        let unknown_validator_signer =
+            ValidatorSigner::<Ed25519PrivateKey>::random([NUM_SIGNERS + 1; 32]);
         let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
-        author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
+        author_to_signature_map
+            .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
                 .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
@@ -321,7 +347,8 @@ mod tests {
 
         // Add an unknown signer, but quorum is satisfied and signatures <= N; this will fail as we
         // don't tolerate invalid signatures.
-        author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
+        author_to_signature_map
+            .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
                 .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),

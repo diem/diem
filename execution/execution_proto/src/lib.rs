@@ -10,6 +10,7 @@ mod protobuf_conversion_test;
 
 use crypto::HashValue;
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use types::{
@@ -19,8 +20,9 @@ use types::{
     vm_error::VMStatus,
 };
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::execution::ExecuteBlockRequest)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ExecuteBlockRequest {
     /// The list of transactions from consensus.
     pub transactions: Vec<SignedTransaction>,
@@ -46,7 +48,8 @@ impl ExecuteBlockRequest {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ExecuteBlockResponse {
     /// Root hash of the transaction accumulator as if all transactions in this block are applied.
     root_hash: HashValue,
@@ -144,13 +147,15 @@ impl IntoProto for ExecuteBlockResponse {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::execution::CommitBlockRequest)]
 pub struct CommitBlockRequest {
     pub ledger_info_with_sigs: LedgerInfoWithSignatures,
 }
 
-#[derive(Arbitrary, Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum CommitBlockResponse {
     Succeeded,
     Failed,
@@ -182,13 +187,15 @@ impl IntoProto for CommitBlockResponse {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::execution::ExecuteChunkRequest)]
 pub struct ExecuteChunkRequest {
     pub txn_list_with_proof: TransactionListWithProof,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures,
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::execution::ExecuteChunkResponse)]
 pub struct ExecuteChunkResponse {}

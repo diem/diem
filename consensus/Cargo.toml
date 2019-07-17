@@ -28,6 +28,7 @@ canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 execution_proto = { path = "../execution/execution_proto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
@@ -61,3 +62,11 @@ execution_service = { path = "../execution/execution_service" }
 storage_service = { path = "../storage/storage_service" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
+
+[dev-dependencies.nextgen_crypto]
+features = ["testing"]
+path = "../crypto/nextgen_crypto"
+
+[dev-dependencies.types]
+features = ["testing"]
+path = "../types"

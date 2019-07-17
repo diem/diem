@@ -12,6 +12,7 @@
 #![feature(drain_filter)]
 #![feature(checked_duration_since)]
 #![feature(crate_visibility_modifier)]
+#![feature(test)]
 #![recursion_limit = "128"]
 #[macro_use]
 extern crate failure;

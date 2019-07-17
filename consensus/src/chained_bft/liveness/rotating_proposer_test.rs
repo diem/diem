@@ -11,14 +11,15 @@ use crate::chained_bft::{
 };
 use channel;
 use futures::{executor::block_on, StreamExt};
+use nextgen_crypto::ed25519::*;
 use std::sync::Arc;
 use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
     let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
@@ -97,9 +98,9 @@ fn test_rotating_proposer() {
 
 #[test]
 fn test_rotating_proposer_with_three_contiguous_rounds() {
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
     let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
@@ -175,9 +176,9 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
 
 #[test]
 fn test_fixed_proposer() {
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
     let pe = Arc::new(RotatingProposer::<u32, Author>::new(

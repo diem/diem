@@ -5,7 +5,7 @@ use config::{
     config::{NodeConfig, NodeConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
-use crypto::signing::KeyPair;
+use crypto::signing::{self, KeyPair};
 use failure::prelude::*;
 use proto_conv::IntoProtoBytes;
 use std::{convert::TryFrom, fs::File, io::prelude::*, path::Path};
@@ -23,8 +23,8 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
         .map(|(peer_id, peer)| {
             ValidatorPublicKeys::new(
                 AccountAddress::try_from(peer_id.clone()).expect("[config] invalid peer_id"),
-                peer.get_consensus_public(),
-                peer.get_network_signing_public(),
+                peer.get_consensus_public().into(),
+                peer.get_network_signing_public().into(),
                 peer.get_network_identity_public(),
             )
         })
@@ -43,7 +43,7 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
 pub fn get_test_config() -> (NodeConfig, KeyPair) {
     // TODO: test config should be moved here instead of config crate
     let config = NodeConfigHelpers::get_single_node_test_config(true);
-    let (private_key, _) = ::crypto::signing::generate_keypair();
+    let (private_key, _) = signing::generate_keypair();
     let keypair = KeyPair::new(private_key);
 
     gen_genesis_transaction(

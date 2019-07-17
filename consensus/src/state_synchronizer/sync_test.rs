@@ -30,9 +30,11 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED};
 use parity_multiaddr::Multiaddr;
 use proto_conv::IntoProto;
 use protobuf::Message;
+use rand::{rngs::StdRng, SeedableRng};
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
     collections::HashMap,
@@ -72,8 +74,9 @@ impl SynchronizerEnv {
         let protocols = vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)];
 
         // Setup signing public keys.
-        let (a_signing_private_key, a_signing_public_key) = signing::generate_keypair();
-        let (b_signing_private_key, b_signing_public_key) = signing::generate_keypair();
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        let (a_signing_private_key, a_signing_public_key) = compat::generate_keypair(&mut rng);
+        let (b_signing_private_key, b_signing_public_key) = compat::generate_keypair(&mut rng);
         // Setup identity public keys.
         let (a_identity_private_key, a_identity_public_key) = x25519::generate_keypair();
         let (b_identity_private_key, b_identity_public_key) = x25519::generate_keypair();
@@ -82,14 +85,14 @@ impl SynchronizerEnv {
             (
                 peers[0],
                 NetworkPublicKeys {
-                    signing_public_key: a_signing_public_key,
+                    signing_public_key: a_signing_public_key.clone(),
                     identity_public_key: a_identity_public_key,
                 },
             ),
             (
                 peers[1],
                 NetworkPublicKeys {
-                    signing_public_key: b_signing_public_key,
+                    signing_public_key: b_signing_public_key.clone(),
                     identity_public_key: b_identity_public_key,
                 },
             ),

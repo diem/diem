@@ -29,3 +29,7 @@ canonical_serialization = { path = "../../../common/canonical_serialization" }
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../../common/proptest_helpers" }
+
+[dev-dependencies.types]
+features = ["testing"]
+path = "../../../types"

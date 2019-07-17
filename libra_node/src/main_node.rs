@@ -159,7 +159,7 @@ pub fn setup_network(
             (
                 peer_id,
                 NetworkPublicKeys {
-                    signing_public_key,
+                    signing_public_key: signing_public_key.into(),
                     identity_public_key,
                 },
             )
@@ -174,6 +174,7 @@ pub fn setup_network(
         .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
         .collect();
     let network_signing_keypair = config.base.peer_keypairs.get_network_signing_keypair();
+    let (private_key, public_key) = network_signing_keypair;
     let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
     let (
         (mempool_network_sender, mempool_network_events),
@@ -187,7 +188,7 @@ pub fn setup_network(
         })
         .advertised_address(advertised_addr)
         .seed_peers(seed_peers)
-        .signing_keys(network_signing_keypair)
+        .signing_keys((private_key.into(), public_key.into()))
         .identity_keys(network_identity_keypair)
         .trusted_peers(trusted_peers)
         .discovery_interval_ms(config.network.discovery_interval_ms)

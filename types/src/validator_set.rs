@@ -12,6 +12,7 @@ use canonical_serialization::{
     SimpleDeserializer,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::collections::btree_map::BTreeMap;
@@ -32,7 +33,8 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
     AccessPath::resource_access_vec(&validator_set_tag(), &Accesses::empty())
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
 
 impl ValidatorSet {

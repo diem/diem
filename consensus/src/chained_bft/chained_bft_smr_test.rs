@@ -18,6 +18,8 @@ use channel;
 use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+#[allow(unused_imports)]
+use nextgen_crypto::ed25519::{compat, *};
 use proto_conv::FromProto;
 use std::sync::Arc;
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
@@ -34,8 +36,8 @@ use types::ledger_info::LedgerInfoWithSignatures;
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
     author: Author,
-    signer: ValidatorSigner,
-    validator: Arc<ValidatorVerifier>,
+    signer: ValidatorSigner<Ed25519PrivateKey>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
     smr_id: usize,
@@ -50,8 +52,8 @@ impl SMRNode {
     fn start(
         quorum_size: usize,
         playground: &mut NetworkPlayground,
-        signer: ValidatorSigner,
-        validator: Arc<ValidatorVerifier>,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
+        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
         peers: Arc<Vec<Author>>,
         proposer: Vec<Author>,
         smr_id: usize,
@@ -159,13 +161,8 @@ impl SMRNode {
             ValidatorVerifier::new_with_quorum_size(author_to_public_keys, quorum_size)
                 .expect("Invalid quorum_size."),
         );
-        let peers: Arc<Vec<Author>> = Arc::new(
-            signers
-                .clone()
-                .into_iter()
-                .map(|signer| signer.author())
-                .collect(),
-        );
+        let peers: Arc<Vec<Author>> =
+            Arc::new(signers.iter().map(|signer| signer.author()).collect());
         let proposer = {
             match proposer_type {
                 FixedProposer => vec![peers[0]],
@@ -197,7 +194,7 @@ fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSi
         assert_eq!(
             Ok(()),
             node.validator
-                .verify_signature(*author, ledger_info_hash, signature)
+                .verify_signature(*author, ledger_info_hash, &(signature.clone().into()))
         );
     }
 }

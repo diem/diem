@@ -16,6 +16,7 @@ toml = "0.4"
 
 config = { path = ".." }
 crypto = { path = "../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 generate_keypair = { path = "../generate_keypair" }
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }

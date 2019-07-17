@@ -9,9 +9,10 @@ use crate::chained_bft::{
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
-    HashValue, Signature,
+    HashValue,
 };
 use network;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::RepeatedField;
 use serde::{Deserialize, Serialize};
@@ -55,12 +56,12 @@ impl CryptoHash for PacemakerTimeoutSerializer {
 pub struct PacemakerTimeout {
     round: Round,
     author: Author,
-    signature: Signature,
+    signature: Ed25519Signature,
 }
 
 impl PacemakerTimeout {
     /// Creates new PacemakerTimeout
-    pub fn new(round: Round, validator_signer: &ValidatorSigner) -> Self {
+    pub fn new(round: Round, validator_signer: &ValidatorSigner<Ed25519PrivateKey>) -> Self {
         let author = validator_signer.author();
         let digest = PacemakerTimeoutSerializer { round, author }.hash();
         let signature = validator_signer
@@ -87,7 +88,10 @@ impl PacemakerTimeout {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), VerifyError> {
+    pub fn verify(
+        &self,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
+    ) -> Result<(), VerifyError> {
         validator.verify_signature(self.author, self.digest(), &self.signature)
     }
 
@@ -97,7 +101,7 @@ impl PacemakerTimeout {
     }
 
     /// Returns the signature of the author for this timeout
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Ed25519Signature {
         &self.signature
     }
 }
@@ -109,7 +113,7 @@ impl IntoProto for PacemakerTimeout {
         let mut proto = Self::ProtoType::new();
         proto.set_round(self.round);
         proto.set_author(self.author.into());
-        proto.set_signature(self.signature.to_compact().as_ref().into());
+        proto.set_signature(self.signature.to_bytes().as_ref().into());
         proto
     }
 }
@@ -120,7 +124,7 @@ impl FromProto for PacemakerTimeout {
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let round = object.get_round();
         let author = Author::try_from(object.take_author())?;
-        let signature = Signature::from_compact(object.get_signature())?;
+        let signature = Ed25519Signature::try_from(object.get_signature())?;
         Ok(PacemakerTimeout {
             round,
             author,
@@ -171,7 +175,7 @@ pub struct TimeoutMsg {
     highest_ledger_info: QuorumCert,
     pacemaker_timeout: PacemakerTimeout,
     author: Author,
-    signature: Signature,
+    signature: Ed25519Signature,
 }
 
 impl TimeoutMsg {
@@ -180,7 +184,7 @@ impl TimeoutMsg {
         highest_quorum_certificate: QuorumCert,
         highest_ledger_info: QuorumCert,
         pacemaker_timeout: PacemakerTimeout,
-        validator_signer: &ValidatorSigner,
+        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
     ) -> TimeoutMsg {
         let author = validator_signer.author();
         let digest = Self::new_round_digest(
@@ -234,7 +238,10 @@ impl TimeoutMsg {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), VerifyError> {
+    pub fn verify(
+        &self,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
+    ) -> Result<(), VerifyError> {
         validator.verify_signature(self.author, self.digest(), &self.signature)?;
         self.pacemaker_timeout.verify(validator)
     }
@@ -246,7 +253,7 @@ impl TimeoutMsg {
 
     /// Returns a reference to the signature of the author
     #[allow(dead_code)]
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Ed25519Signature {
         &self.signature
     }
 }
@@ -260,7 +267,7 @@ impl IntoProto for TimeoutMsg {
         proto.set_highest_ledger_info(self.highest_ledger_info.into_proto());
         proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
         proto.set_author(self.author.into());
-        proto.set_signature(self.signature.to_compact().as_ref().into());
+        proto.set_signature(self.signature.to_bytes().as_ref().into());
         proto
     }
 }
@@ -273,7 +280,7 @@ impl FromProto for TimeoutMsg {
         let highest_ledger_info = QuorumCert::from_proto(object.take_highest_ledger_info())?;
         let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
         let author = Author::try_from(object.take_author())?;
-        let signature = Signature::from_compact(object.get_signature())?;
+        let signature = Ed25519Signature::try_from(object.get_signature())?;
         Ok(TimeoutMsg {
             highest_quorum_certificate,
             highest_ledger_info,
@@ -324,7 +331,7 @@ impl PacemakerTimeoutCertificate {
     /// Verifies that timeouts in message actually certify the round
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> Result<(), PacemakerTimeoutCertificateVerificationError> {
         let mut min_round: Option<Round> = None;
         let mut unique_authors = HashSet::new();

@@ -10,6 +10,7 @@ use futures::{future::Future, stream::Stream};
 use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
+use nextgen_crypto::ed25519::Ed25519PublicKey;
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
@@ -117,7 +118,11 @@ impl ClientProxy {
         );
         // Total 3f + 1 validators, 2f + 1 correct signatures are required.
         // If < 4 validators, all validators have to agree.
-        let validator_verifier = Arc::new(ValidatorVerifier::new(validators));
+        let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
+            .into_iter()
+            .map(|(key, value)| (key, value.into()))
+            .collect();
+        let validator_verifier = Arc::new(ValidatorVerifier::new(validator_pubkeys));
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
 
         let accounts = vec![];
