@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 10,
+  "id": 5,
   "links": [],
   "panels": [
     {
@@ -58,6 +58,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_default'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -142,6 +143,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_signed_transaction'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -226,6 +228,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_transaction_info'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -310,6 +313,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_transaction_accumulator'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -394,6 +398,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_state_merkle_node'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -478,6 +483,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_account_state'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -562,6 +568,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_event'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -646,6 +653,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_event_accumulator'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -730,6 +738,7 @@
           "expr": "storage_gauge{op='cf_size_bytes_event_by_access_path'}",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
