@@ -6,7 +6,7 @@ use crate::{
     evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
 };
 use filecheck;
-use std::{slice::SliceConcatExt, str::FromStr};
+use std::str::FromStr;
 
 /// A directive specifies a pattern in the output.
 /// Directives are extracted from comments starting with "//".

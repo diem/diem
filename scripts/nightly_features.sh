@@ -12,9 +12,7 @@ allowed_features=(
   "--and" "--not" "-e" "crate_visibility_modifier"
   "--and" "--not" "-e" "drain_filter"
   "--and" "--not" "-e" "panic_info_message"
-  "--and" "--not" "-e" "repeat_generic_slice"
   "--and" "--not" "-e" "set_stdio"
-  "--and" "--not" "-e" "slice_concat_ext"
   "--and" "--not" "-e" "specialization"
   "--and" "--not" "-e" "test"
 )
