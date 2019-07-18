@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(duration_float)]
 #![deny(missing_docs)]
 //! Libra Client
 //!
