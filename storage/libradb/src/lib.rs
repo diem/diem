@@ -13,10 +13,11 @@ pub mod mock_genesis;
 pub mod test_helper;
 
 pub mod errors;
+pub mod schema;
 
 mod event_store;
+mod ledger_counters;
 mod ledger_store;
-pub mod schema;
 mod state_store;
 mod transaction_store;
 
@@ -92,6 +93,7 @@ impl LibraDB {
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
+            (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (RETIRED_STATE_RECORD_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
