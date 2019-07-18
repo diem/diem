@@ -6,13 +6,17 @@
 #[cfg(test)]
 mod state_store_test;
 
-use crate::schema::{
-    account_state::AccountStateSchema, retired_state_record::RetiredStateRecordSchema,
-    state_merkle_node::StateMerkleNodeSchema,
+use crate::{
+    change_set::ChangeSet,
+    ledger_counters::LedgerCounter,
+    schema::{
+        account_state::AccountStateSchema, retired_state_record::RetiredStateRecordSchema,
+        state_merkle_node::StateMerkleNodeSchema,
+    },
 };
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use schemadb::{ReadOptions, SchemaBatch, DB};
+use schemadb::{ReadOptions, DB};
 use sparse_merkle::{node_type::Node, RetiredRecordType, SparseMerkleTree, TreeReader};
 use std::{collections::HashMap, sync::Arc};
 use types::{
@@ -53,7 +57,7 @@ impl StateStore {
         account_state_sets: Vec<HashMap<AccountAddress, AccountStateBlob>>,
         first_version: Version,
         root_hash: HashValue,
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<Vec<HashValue>> {
         let blob_sets = account_state_sets
             .into_iter()
@@ -67,18 +71,28 @@ impl StateStore {
 
         let (new_root_hash_vec, tree_update_batch) =
             SparseMerkleTree::new(self).put_blob_sets(blob_sets, first_version, root_hash)?;
+
         let (node_batch, blob_batch, retired_record_batch) = tree_update_batch.into();
+        cs.counters
+            .inc(LedgerCounter::StateNodesCreated, node_batch.len());
+        cs.counters
+            .inc(LedgerCounter::StateBlobsCreated, blob_batch.len());
         node_batch
             .iter()
-            .map(|(node_hash, node)| batch.put::<StateMerkleNodeSchema>(node_hash, node))
+            .map(|(node_hash, node)| cs.batch.put::<StateMerkleNodeSchema>(node_hash, node))
             .collect::<Result<Vec<()>>>()?;
         blob_batch
             .iter()
-            .map(|(blob_hash, blob)| batch.put::<AccountStateSchema>(blob_hash, blob))
+            .map(|(blob_hash, blob)| cs.batch.put::<AccountStateSchema>(blob_hash, blob))
             .collect::<Result<Vec<()>>>()?;
         retired_record_batch
             .iter()
-            .map(|row| batch.put::<RetiredStateRecordSchema>(row, &()))
+            .map(|row| {
+                match row.record_type {
+                    RetiredRecordType::Node => cs.counters.inc(LedgerCounter::StateNodesRetired, 1),
+                };
+                cs.batch.put::<RetiredStateRecordSchema>(row, &())
+            })
             .collect::<Result<Vec<()>>>()?;
         Ok(new_root_hash_vec)
     }
@@ -91,7 +105,7 @@ impl StateStore {
         &self,
         least_readable_version: Version,
         limit: usize,
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<usize> {
         let mut num_purged = 0;
 
@@ -109,10 +123,10 @@ impl StateStore {
             }
             match record.record_type {
                 RetiredRecordType::Node => {
-                    batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
+                    cs.batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
                 }
             }
-            batch.delete::<RetiredStateRecordSchema>(&record)?;
+            cs.batch.delete::<RetiredStateRecordSchema>(&record)?;
             num_purged += 1;
         }
 

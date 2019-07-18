@@ -145,7 +145,7 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    /// Write the whole schema batch including all data necessary to mutate the ledge
+    /// Write the whole schema batch including all data necessary to mutate the ledger
     /// state of some transaction by leveraging rocksdb atomicity support.
     fn commit(&self, batch: SchemaBatch) -> Result<()> {
         self.db.write_schemas(batch)

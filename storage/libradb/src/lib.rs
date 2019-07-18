@@ -15,6 +15,7 @@ pub mod test_helper;
 pub mod errors;
 pub mod schema;
 
+mod change_set;
 mod event_store;
 mod ledger_counters;
 mod ledger_store;
@@ -26,8 +27,15 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
-    errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
-    state_store::StateStore, system_store::SystemStore, transaction_store::TransactionStore,
+    change_set::{ChangeSet, SealedChangeSet},
+    errors::LibraDbError,
+    event_store::EventStore,
+    ledger_counters::{LedgerCounter, LedgerCounters},
+    ledger_store::LedgerStore,
+    schema::*,
+    state_store::StateStore,
+    system_store::SystemStore,
+    transaction_store::TransactionStore,
 };
 use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -38,7 +46,7 @@ use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use logger::prelude::*;
 use metrics::OpMetrics;
-use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, SchemaBatch, DB, DEFAULT_CF_NAME};
+use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::ExecutorStartupInfo;
 use types::{
@@ -356,13 +364,13 @@ impl LibraDB {
         }
 
         // Gather db mutations to `batch`.
-        let mut batch = SchemaBatch::new();
+        let mut cs = ChangeSet::new();
 
         let new_root_hash = self.save_transactions_impl(
             txns_to_commit,
             first_version,
             cur_state_root_hash,
-            &mut batch,
+            &mut cs,
         )?;
 
         // If expected ledger info is provided, verify result root hash and save the ledger info.
@@ -375,14 +383,34 @@ impl LibraDB {
                 expected_root_hash,
             );
 
-            self.ledger_store.put_ledger_info(x, &mut batch)?;
+            self.ledger_store.put_ledger_info(x, &mut cs)?;
         }
 
         // Persist.
-        self.commit(batch)?;
-        // Only increment counter if commit(batch) succeeds.
+        let (sealed_cs, counters) = self.seal_change_set(first_version, last_version, cs)?;
+        self.commit(sealed_cs)?;
+
+        // Only increment counter if commit succeeds.
         OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
         OP_COUNTER.set("latest_transaction_version", last_version as usize);
+        OP_COUNTER.set("events_created", counters.get(LedgerCounter::EventsCreated));
+        OP_COUNTER.set(
+            "state_nodes_created",
+            counters.get(LedgerCounter::StateNodesCreated),
+        );
+        OP_COUNTER.set(
+            "state_nodes_retired",
+            counters.get(LedgerCounter::StateNodesRetired),
+        );
+        OP_COUNTER.set(
+            "state_blobs_created",
+            counters.get(LedgerCounter::StateBlobsCreated),
+        );
+        OP_COUNTER.set(
+            "state_blobs_retired",
+            counters.get(LedgerCounter::StateBlobsRetired),
+        );
+
         Ok(())
     }
 
@@ -391,7 +419,7 @@ impl LibraDB {
         txns_to_commit: &[TransactionToCommit],
         first_version: u64,
         cur_state_root_hash: HashValue,
-        mut batch: &mut SchemaBatch,
+        mut cs: &mut ChangeSet,
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
@@ -404,14 +432,14 @@ impl LibraDB {
             account_state_sets,
             first_version,
             cur_state_root_hash,
-            &mut batch,
+            &mut cs,
         )?;
 
         // Event updates. Gather event accumulator root hashes.
         let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.event_store
-                    .put_events(ver, txn_to_commit.events(), &mut batch)
+                    .put_events(ver, txn_to_commit.events(), &mut cs)
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -419,7 +447,7 @@ impl LibraDB {
         zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.transaction_store
-                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut batch)
+                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
             })
             .collect::<Result<()>>()?;
         let txn_hashes = txns_to_commit
@@ -444,7 +472,7 @@ impl LibraDB {
 
         let new_root_hash =
             self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut batch)?;
+                .put_transaction_infos(first_version, &txn_infos, &mut cs)?;
 
         Ok(new_root_hash)
     }
@@ -648,10 +676,31 @@ impl LibraDB {
     }
 
     // ================================== Private APIs ==================================
-    /// Write the whole schema batch including all data necessary to mutate the ledge
-    /// state of some transaction by leveraging rocksdb atomicity support.
-    fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)?;
+    /// Convert a `ChangeSet` to `SealedChangeSet`.
+    ///
+    /// Specifically, counter increases are added to current counter values and converted to DB
+    /// alternations.
+    fn seal_change_set(
+        &self,
+        first_version: Version,
+        last_version: Version,
+        mut cs: ChangeSet,
+    ) -> Result<(SealedChangeSet, LedgerCounters)> {
+        let counters = self.system_store.inc_ledger_counters(
+            first_version,
+            last_version,
+            cs.counters,
+            &mut cs.batch,
+        )?;
+
+        Ok((SealedChangeSet { batch: cs.batch }, counters))
+    }
+
+    /// Write the whole schema batch including all data necessary to mutate the ledger
+    /// state of some transaction by leveraging rocksdb atomicity support. Also committed are the
+    /// LedgerCounters.
+    fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
+        self.db.write_schemas(sealed_cs.batch)?;
 
         match self.db.get_approximate_sizes_cf() {
             Ok(cf_sizes) => {

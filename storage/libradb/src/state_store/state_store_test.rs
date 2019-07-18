@@ -16,17 +16,27 @@ fn put_account_state_set(
     account_state_set: Vec<(AccountAddress, AccountStateBlob)>,
     version: Version,
     root_hash: HashValue,
+    expected_nodes_created: usize,
+    expected_nodes_retired: usize,
 ) -> HashValue {
-    let mut batch = SchemaBatch::new();
+    let mut cs = ChangeSet::new();
     let root = store
         .put_account_state_sets(
             vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
             version,
             root_hash,
-            &mut batch,
+            &mut cs,
         )
         .unwrap()[0];
-    store.db.write_schemas(batch).unwrap();
+    store.db.write_schemas(cs.batch).unwrap();
+    assert_eq!(
+        cs.counters.get(LedgerCounter::StateNodesCreated),
+        expected_nodes_created
+    );
+    assert_eq!(
+        cs.counters.get(LedgerCounter::StateNodesRetired),
+        expected_nodes_retired
+    );
 
     root
 }
@@ -37,12 +47,12 @@ fn purge_retired_records(
     limit: usize,
     expected_num_purged: usize,
 ) {
-    let mut batch = SchemaBatch::new();
+    let mut cs = ChangeSet::new();
     let num_purged = store
-        .purge_retired_records(least_readable_version, limit, &mut batch)
+        .purge_retired_records(least_readable_version, limit, &mut cs)
         .unwrap();
     assert_eq!(num_purged, expected_num_purged);
-    store.db.write_schemas(batch).unwrap();
+    store.db.write_schemas(cs.batch).unwrap();
 }
 
 fn verify_state_in_store(
@@ -97,6 +107,8 @@ fn test_state_store_reader_writer() {
         vec![(address1, value1.clone())],
         0, /* version */
         root,
+        1, /* expected_nodes_created */
+        0, /* expected_nodes_retired */
     );
     verify_state_in_store(store, address1, Some(&value1), root);
     verify_state_in_store(store, address2, None, root);
@@ -113,6 +125,8 @@ fn test_state_store_reader_writer() {
         ],
         1, /* version */
         root,
+        4, /* expected_nodes_created */
+        1, /* expected_nodes_retired */
     );
     verify_state_in_store(store, address1, Some(&value1_update), root);
     verify_state_in_store(store, address2, Some(&value2), root);
@@ -147,6 +161,8 @@ fn test_purge_retired_records() {
         vec![(address1, value1.clone()), (address2, value2.clone())],
         0, /* version */
         root_default,
+        3, /* expected_nodes_created */
+        0, /* expected_nodes_retired */
     );
     let root1 = put_account_state_set(
         store,
@@ -156,12 +172,16 @@ fn test_purge_retired_records() {
         ],
         1, /* version */
         root0,
+        3, /* expected_nodes_created */
+        2, /* expected_nodes_retired */
     );
     let root2 = put_account_state_set(
         store,
         vec![(address3, value3_update.clone())],
         2, /* version */
         root1,
+        2, /* expected_nodes_created */
+        2, /* expected_nodes_retired */
     );
 
     // Verify.

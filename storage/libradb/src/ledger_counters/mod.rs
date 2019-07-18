@@ -14,9 +14,12 @@ pub(crate) enum LedgerCounter {
 
     StateBlobsCreated = 201,
     StateBlobsRetired = 202,
+
+    StateNodesCreated = 301,
+    StateNodesRetired = 302,
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub(crate) struct LedgerCounters {
     counters: BTreeMap<u16, usize>,
 }
