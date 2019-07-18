@@ -35,6 +35,7 @@ jobs:
           command: |
             ./scripts/clippy.sh
             cargo fmt -- --check
+            ./scripts/nightly_features.sh
       - run:
           name: Build All Targets
           command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
