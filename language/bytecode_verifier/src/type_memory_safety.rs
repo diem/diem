@@ -1,15 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the abstract interpretater for verifying type and memory safety on a
-//! function body.
+//! This module defines the transfer functions for verifying type and memory safety of a
+//! procedure body.
 use crate::{
-    absint::{self, AbstractDomain, TransferFunctions},
-    abstract_state::{AbstractState, AbstractValue, JoinResult},
-    control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph},
+    absint::{AbstractInterpreter, TransferFunctions},
+    abstract_state::{AbstractState, AbstractValue},
+    control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
 };
-use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
@@ -30,20 +29,16 @@ struct StackAbstractValue {
     value: AbstractValue,
 }
 
-pub struct AbstractInterpreter<'a> {
+pub struct TypeAndMemorySafetyAnalysis<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
     locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
-    cfg: &'a VMControlFlowGraph,
-    block_id_to_state: BTreeMap<BlockId, AbstractState>,
-    erroneous_blocks: BTreeSet<BlockId>,
-    work_list: Vec<BlockId>,
     stack: Vec<StackAbstractValue>,
     next_nonce: usize,
     errors: Vec<VMStaticViolation>,
 }
 
-impl<'a> AbstractInterpreter<'a> {
+impl<'a> TypeAndMemorySafetyAnalysis<'a> {
     pub fn verify(
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
@@ -52,8 +47,6 @@ impl<'a> AbstractInterpreter<'a> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         let function_signature_view = function_definition_view.signature();
-        let mut block_id_to_state = BTreeMap::new();
-        let erroneous_blocks = BTreeSet::new();
         let mut locals = BTreeMap::new();
         for (arg_idx, arg_type_view) in function_signature_view.arg_tokens().enumerate() {
             if arg_type_view.is_reference() {
@@ -68,100 +61,20 @@ impl<'a> AbstractInterpreter<'a> {
                 );
             }
         }
-        block_id_to_state.insert(0, AbstractState::new(locals));
+        let initial_state = AbstractState::new(locals);
         // nonces in [0, locals_signature_view.len()) are reserved for constructing canonical state
         let next_nonce = locals_signature_view.len();
         let mut verifier = Self {
             module,
-            function_definition_view,
+            function_definition_view: FunctionDefinitionView::new(module, function_definition),
             locals_signature_view,
-            cfg,
-            block_id_to_state,
-            erroneous_blocks,
-            work_list: vec![0],
             stack: vec![],
             next_nonce,
             errors: vec![],
         };
 
-        let mut errors = vec![];
-        while !verifier.work_list.is_empty() {
-            let block_id = verifier.work_list.pop().unwrap();
-            if verifier.erroneous_blocks.contains(&block_id) {
-                continue;
-            }
-
-            errors.append(&mut verifier.propagate(block_id));
-        }
-        errors
-    }
-
-    fn propagate(&mut self, block_id: BlockId) -> Vec<VMStaticViolation> {
-        match self.compute(block_id) {
-            Ok(flow_state) => {
-                let state = flow_state.construct_canonical_state();
-                let mut errors = vec![];
-                let block = &self
-                    .cfg
-                    .block_of_id(block_id)
-                    .expect("block_id is not the start offset of a block");
-                for next_block_id in &block.successors {
-                    if self.erroneous_blocks.contains(next_block_id) {
-                        continue;
-                    }
-                    if !self.block_id_to_state.contains_key(next_block_id) {
-                        self.work_list.push(*next_block_id);
-                        self.block_id_to_state
-                            .entry(*next_block_id)
-                            .or_insert_with(|| state.clone());
-                    } else {
-                        let curr_state = &self.block_id_to_state[next_block_id];
-                        let join_result = curr_state.join(&state);
-                        match join_result {
-                            JoinResult::Unchanged => {}
-                            JoinResult::Changed(next_state) => {
-                                self.block_id_to_state
-                                    .entry(*next_block_id)
-                                    .and_modify(|entry| *entry = next_state);
-                                self.work_list.push(*next_block_id);
-                            }
-                            JoinResult::Error => {
-                                errors.append(&mut vec![VMStaticViolation::JoinFailure(
-                                    *next_block_id as usize,
-                                )]);
-                            }
-                        }
-                    }
-                }
-                errors
-            }
-            Err(es) => {
-                self.erroneous_blocks.insert(block_id);
-                es
-            }
-        }
-    }
-
-    fn compute(&mut self, block_id: BlockId) -> Result<AbstractState, Vec<VMStaticViolation>> {
-        checked_verify!(self.errors.is_empty());
-
-        let mut state = self.block_id_to_state[&block_id].clone();
-        let block = &self.cfg.block_of_id(block_id).unwrap();
-        let mut offset = block.entry;
-        while offset <= block.exit {
-            self.execute(
-                &mut state,
-                &self.function_definition_view.code().code[offset as usize],
-                offset as usize,
-            );
-            if !self.errors.is_empty() {
-                let mut es = vec![];
-                es.append(&mut self.errors);
-                return Err(es);
-            }
-            offset += 1;
-        }
-        Ok(state)
+        verifier.analyze_function(initial_state, &function_definition_view, cfg);
+        verifier.errors
     }
 
     fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> SignatureToken {
@@ -233,29 +146,22 @@ impl<'a> AbstractInterpreter<'a> {
             }
         }
     }
-}
 
-impl AbstractDomain for AbstractState {
-    fn join(&mut self, _other: &Self) -> absint::JoinResult {
-        // TODO: add this once we are using the generic abstract interpreter. only needed to keep
-        // the type checker happy for now; this will never be called.
-        panic!("Unimplemented")
-    }
-}
-
-impl<'a> TransferFunctions for AbstractInterpreter<'a> {
-    type State = AbstractState;
-
-    fn execute(&mut self, mut state: &mut Self::State, bytecode: &Bytecode, offset: usize) {
+    fn execute_inner(
+        &mut self,
+        mut state: &mut AbstractState,
+        bytecode: &Bytecode,
+        offset: usize,
+    ) -> Result<(), VMStaticViolation> {
         match bytecode {
             Bytecode::Pop => {
                 let operand = self.stack.pop().unwrap();
                 if SignatureTokenView::new(self.module, &operand.signature).is_resource() {
-                    self.errors
-                        .push(VMStaticViolation::PopResourceError(offset))
+                    Err(VMStaticViolation::PopResourceError(offset))
                 } else if operand.value.is_reference() {
-                    self.errors
-                        .push(VMStaticViolation::PopReferenceError(offset))
+                    Err(VMStaticViolation::PopReferenceError(offset))
+                } else {
+                    Ok(())
                 }
             }
 
@@ -263,52 +169,51 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 let operand = self.stack.pop().unwrap();
                 if let AbstractValue::Reference(nonce) = operand.value {
                     state.destroy_nonce(nonce);
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::ReleaseRefTypeMismatchError(offset))
+                    Err(VMStaticViolation::ReleaseRefTypeMismatchError(offset))
                 }
             }
 
             Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != SignatureToken::Bool {
-                    self.errors
-                        .push(VMStaticViolation::BrTypeMismatchError(offset))
+                    Err(VMStaticViolation::BrTypeMismatchError(offset))
+                } else {
+                    Ok(())
                 }
             }
 
             Bytecode::StLoc(idx) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != *self.locals_signature_view.token_at(*idx).as_inner() {
-                    self.errors
-                        .push(VMStaticViolation::StLocTypeMismatchError(offset));
+                    return Err(VMStaticViolation::StLocTypeMismatchError(offset));
                 }
                 if state.is_available(*idx) {
                     if self.is_safe_to_destroy(&state, *idx) {
                         state.destroy_local(*idx);
                     } else {
-                        self.errors
-                            .push(VMStaticViolation::StLocUnsafeToDestroyError(offset));
+                        return Err(VMStaticViolation::StLocUnsafeToDestroyError(offset));
                     }
                 }
                 state.insert_local(*idx, operand.value);
+                Ok(())
             }
 
             Bytecode::Abort => {
                 let error_code = self.stack.pop().unwrap();
                 if error_code.signature != SignatureToken::U64 {
-                    self.errors
-                        .push(VMStaticViolation::AbortTypeMismatchError(offset))
+                    return Err(VMStaticViolation::AbortTypeMismatchError(offset));
                 }
-                *state = AbstractState::new(BTreeMap::new())
+                *state = AbstractState::new(BTreeMap::new());
+                Ok(())
             }
 
             Bytecode::Ret => {
                 for arg_idx in 0..self.locals_signature_view.len() {
                     let idx = arg_idx as LocalIndex;
                     if state.is_available(idx) && !self.is_safe_to_destroy(&state, idx) {
-                        self.errors
-                            .push(VMStaticViolation::RetUnsafeToDestroyError(offset));
+                        return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
                     }
                 }
                 for return_type_view in self
@@ -319,14 +224,14 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 {
                     let operand = self.stack.pop().unwrap();
                     if operand.signature != *return_type_view.as_inner() {
-                        self.errors
-                            .push(VMStaticViolation::RetTypeMismatchError(offset));
+                        return Err(VMStaticViolation::RetTypeMismatchError(offset));
                     }
                 }
-                *state = AbstractState::new(BTreeMap::new())
+                *state = AbstractState::new(BTreeMap::new());
+                Ok(())
             }
 
-            Bytecode::Branch(_) => {}
+            Bytecode::Branch(_) => Ok(()),
 
             Bytecode::FreezeRef => {
                 let operand = self.stack.pop().unwrap();
@@ -337,14 +242,13 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         self.stack.push(StackAbstractValue {
                             signature: SignatureToken::Reference(signature),
                             value: operand.value,
-                        })
+                        });
+                        Ok(())
                     } else {
-                        self.errors
-                            .push(VMStaticViolation::FreezeRefExistsMutableBorrowError(offset))
+                        Err(VMStaticViolation::FreezeRefExistsMutableBorrowError(offset))
                     }
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::FreezeRefTypeMismatchError(offset))
+                    Err(VMStaticViolation::FreezeRefTypeMismatchError(offset))
                 }
             }
 
@@ -376,9 +280,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                                 );
                                 state.destroy_nonce(operand_nonce);
                             } else {
-                                self.errors.push(
+                                return Err(
                                     VMStaticViolation::BorrowFieldExistsMutableBorrowError(offset),
-                                )
+                                );
                             }
                         } else {
                             self.stack.push(StackAbstractValue {
@@ -393,13 +297,12 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                             state.destroy_nonce(operand_nonce);
                         }
                     } else {
-                        self.errors
-                            .push(VMStaticViolation::BorrowFieldBadFieldError(offset))
+                        return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
                     }
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::BorrowFieldTypeMismatchError(offset))
+                    return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
                 }
+                Ok(())
             }
 
             Bytecode::LdConst(_) => {
@@ -407,6 +310,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::U64,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::LdAddr(_) => {
@@ -414,6 +318,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::Address,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::LdStr(_) => {
@@ -421,6 +326,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::String,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::LdByteArray(_) => {
@@ -428,6 +334,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::ByteArray,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::LdTrue | Bytecode::LdFalse => {
@@ -435,66 +342,63 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::Bool,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::CopyLoc(idx) => {
                 let signature_view = self.locals_signature_view.token_at(*idx);
                 if !state.is_available(*idx) {
-                    self.errors
-                        .push(VMStaticViolation::CopyLocUnavailableError(offset))
+                    Err(VMStaticViolation::CopyLocUnavailableError(offset))
                 } else if signature_view.is_reference() {
                     let nonce = self.get_nonce(&mut state);
                     state.borrow_from_local_reference(*idx, nonce.clone());
                     self.stack.push(StackAbstractValue {
                         signature: signature_view.as_inner().clone(),
                         value: AbstractValue::Reference(nonce),
-                    })
+                    });
+                    Ok(())
                 } else if signature_view.is_resource() {
-                    self.errors
-                        .push(VMStaticViolation::CopyLocResourceError(offset))
+                    Err(VMStaticViolation::CopyLocResourceError(offset))
                 } else if state.is_full(state.local(*idx)) {
                     self.stack.push(StackAbstractValue {
                         signature: signature_view.as_inner().clone(),
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::CopyLocExistsBorrowError(offset))
+                    Err(VMStaticViolation::CopyLocExistsBorrowError(offset))
                 }
             }
 
             Bytecode::MoveLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 if !state.is_available(*idx) {
-                    self.errors
-                        .push(VMStaticViolation::MoveLocUnavailableError(offset))
+                    Err(VMStaticViolation::MoveLocUnavailableError(offset))
                 } else if signature.is_reference() || state.is_full(state.local(*idx)) {
                     let value = state.remove_local(*idx);
-                    self.stack.push(StackAbstractValue { signature, value })
+                    self.stack.push(StackAbstractValue { signature, value });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::MoveLocExistsBorrowError(offset))
+                    Err(VMStaticViolation::MoveLocExistsBorrowError(offset))
                 }
             }
 
             Bytecode::BorrowLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 if signature.is_reference() {
-                    self.errors
-                        .push(VMStaticViolation::BorrowLocReferenceError(offset))
+                    Err(VMStaticViolation::BorrowLocReferenceError(offset))
                 } else if !state.is_available(*idx) {
-                    self.errors
-                        .push(VMStaticViolation::BorrowLocUnavailableError(offset))
+                    Err(VMStaticViolation::BorrowLocUnavailableError(offset))
                 } else if state.is_full(state.local(*idx)) {
                     let nonce = self.get_nonce(&mut state);
                     state.borrow_from_local_value(*idx, nonce.clone());
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::MutableReference(Box::new(signature)),
                         value: AbstractValue::Reference(nonce),
-                    })
+                    });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::BorrowLocExistsBorrowError(offset))
+                    Err(VMStaticViolation::BorrowLocExistsBorrowError(offset))
                 }
             }
 
@@ -510,12 +414,10 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 for arg_type in function_signature.arg_types.iter().rev() {
                     let arg = self.stack.pop().unwrap();
                     if arg.signature != *arg_type {
-                        self.errors
-                            .push(VMStaticViolation::CallTypeMismatchError(offset));
+                        return Err(VMStaticViolation::CallTypeMismatchError(offset));
                     }
                     if arg_type.is_mutable_reference() && !state.is_full(&arg.value) {
-                        self.errors
-                            .push(VMStaticViolation::CallBorrowedMutableReferenceError(offset))
+                        return Err(VMStaticViolation::CallBorrowedMutableReferenceError(offset));
                     }
                     if let AbstractValue::Reference(nonce) = arg.value {
                         all_references_to_borrow_from.insert(nonce.clone());
@@ -549,6 +451,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 for x in all_references_to_borrow_from {
                     state.destroy_nonce(x);
                 }
+                Ok(())
             }
 
             // TODO: Handle type actuals for generics
@@ -560,14 +463,14 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     let field_signature_view = field_definition_view.type_signature();
                     let arg = self.stack.pop().unwrap();
                     if arg.signature != *field_signature_view.token().as_inner() {
-                        self.errors
-                            .push(VMStaticViolation::PackTypeMismatchError(offset));
+                        return Err(VMStaticViolation::PackTypeMismatchError(offset));
                     }
                 }
                 self.stack.push(StackAbstractValue {
                     signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                     value: AbstractValue::full_value(struct_definition_view.is_resource()),
                 });
+                Ok(())
             }
 
             // TODO: Handle type actuals for generics
@@ -577,8 +480,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 if struct_arg.signature
                     != SignatureToken::Struct(struct_definition.struct_handle, vec![])
                 {
-                    self.errors
-                        .push(VMStaticViolation::UnpackTypeMismatchError(offset));
+                    return Err(VMStaticViolation::UnpackTypeMismatchError(offset));
                 }
                 let struct_definition_view =
                     StructDefinitionView::new(self.module, struct_definition);
@@ -589,6 +491,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         value: AbstractValue::full_value(field_signature_view.is_resource()),
                     })
                 }
+                Ok(())
             }
 
             Bytecode::ReadRef => {
@@ -597,21 +500,20 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     SignatureToken::Reference(signature) => {
                         let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
                         if SignatureTokenView::new(self.module, &signature).is_resource() {
-                            self.errors
-                                .push(VMStaticViolation::ReadRefResourceError(offset))
+                            Err(VMStaticViolation::ReadRefResourceError(offset))
                         } else {
                             self.stack.push(StackAbstractValue {
                                 signature: *signature,
                                 value: AbstractValue::full_value(false),
                             });
-                            state.destroy_nonce(operand_nonce)
+                            state.destroy_nonce(operand_nonce);
+                            Ok(())
                         }
                     }
                     SignatureToken::MutableReference(signature) => {
                         let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
                         if SignatureTokenView::new(self.module, &signature).is_resource() {
-                            self.errors
-                                .push(VMStaticViolation::ReadRefResourceError(offset))
+                            Err(VMStaticViolation::ReadRefResourceError(offset))
                         } else {
                             let borrowed_nonces = state.borrowed_nonces(operand_nonce.clone());
                             if self.freeze_ok(&state, borrowed_nonces) {
@@ -619,17 +521,14 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                                     signature: *signature,
                                     value: AbstractValue::full_value(false),
                                 });
-                                state.destroy_nonce(operand_nonce)
+                                state.destroy_nonce(operand_nonce);
+                                Ok(())
                             } else {
-                                self.errors.push(
-                                    VMStaticViolation::ReadRefExistsMutableBorrowError(offset),
-                                )
+                                Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset))
                             }
                         }
                     }
-                    _ => self
-                        .errors
-                        .push(VMStaticViolation::ReadRefTypeMismatchError(offset)),
+                    _ => Err(VMStaticViolation::ReadRefTypeMismatchError(offset)),
                 }
             }
 
@@ -638,22 +537,19 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 let val_operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = ref_operand.signature {
                     if SignatureTokenView::new(self.module, &signature).is_resource() {
-                        self.errors
-                            .push(VMStaticViolation::WriteRefResourceError(offset))
+                        Err(VMStaticViolation::WriteRefResourceError(offset))
                     } else if val_operand.signature != *signature {
-                        self.errors
-                            .push(VMStaticViolation::WriteRefTypeMismatchError(offset))
+                        Err(VMStaticViolation::WriteRefTypeMismatchError(offset))
                     } else if state.is_full(&ref_operand.value) {
                         let ref_operand_nonce =
                             Self::extract_nonce(&ref_operand.value).unwrap().clone();
-                        state.destroy_nonce(ref_operand_nonce)
+                        state.destroy_nonce(ref_operand_nonce);
+                        Ok(())
                     } else {
-                        self.errors
-                            .push(VMStaticViolation::WriteRefExistsBorrowError(offset))
+                        Err(VMStaticViolation::WriteRefExistsBorrowError(offset))
                     }
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::WriteRefNoMutableReferenceError(offset))
+                    Err(VMStaticViolation::WriteRefNoMutableReferenceError(offset))
                 }
             }
 
@@ -674,9 +570,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::U64,
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::IntegerOpTypeMismatchError(offset))
+                    Err(VMStaticViolation::IntegerOpTypeMismatchError(offset))
                 }
             }
 
@@ -690,9 +586,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::BooleanOpTypeMismatchError(offset))
+                    Err(VMStaticViolation::BooleanOpTypeMismatchError(offset))
                 }
             }
 
@@ -703,9 +599,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::BooleanOpTypeMismatchError(offset))
+                    Err(VMStaticViolation::BooleanOpTypeMismatchError(offset))
                 }
             }
 
@@ -724,10 +620,10 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::full_value(false),
-                    })
+                    });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::EqualityOpTypeMismatchError(offset))
+                    Err(VMStaticViolation::EqualityOpTypeMismatchError(offset))
                 }
             }
 
@@ -741,9 +637,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::IntegerOpTypeMismatchError(offset))
+                    Err(VMStaticViolation::IntegerOpTypeMismatchError(offset))
                 }
             }
 
@@ -755,9 +651,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::full_value(false),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::ExistsResourceTypeMismatchError(offset))
+                    Err(VMStaticViolation::ExistsResourceTypeMismatchError(offset))
                 }
             }
 
@@ -765,8 +661,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
             Bytecode::BorrowGlobal(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
-                    self.errors
-                        .push(VMStaticViolation::BorrowGlobalNoResourceError(offset));
+                    return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
                 }
 
                 let operand = self.stack.pop().unwrap();
@@ -777,10 +672,10 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                             SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                         )),
                         value: AbstractValue::Reference(nonce),
-                    })
+                    });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::BorrowGlobalTypeMismatchError(offset))
+                    Err(VMStaticViolation::BorrowGlobalTypeMismatchError(offset))
                 }
             }
 
@@ -788,8 +683,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
             Bytecode::MoveFrom(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
-                    self.errors
-                        .push(VMStaticViolation::MoveFromNoResourceError(offset));
+                    return Err(VMStaticViolation::MoveFromNoResourceError(offset));
                 }
 
                 let operand = self.stack.pop().unwrap();
@@ -798,9 +692,9 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                         signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
                         value: AbstractValue::full_value(true),
                     });
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::MoveFromTypeMismatchError(offset))
+                    Err(VMStaticViolation::MoveFromTypeMismatchError(offset))
                 }
             }
 
@@ -808,18 +702,16 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
             Bytecode::MoveToSender(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
-                    self.errors
-                        .push(VMStaticViolation::MoveToSenderNoResourceError(offset));
+                    return Err(VMStaticViolation::MoveToSenderNoResourceError(offset));
                 }
 
                 let value_operand = self.stack.pop().unwrap();
                 if value_operand.signature
                     == SignatureToken::Struct(struct_definition.struct_handle, vec![])
                 {
-
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::MoveToSenderTypeMismatchError(offset))
+                    Err(VMStaticViolation::MoveToSenderTypeMismatchError(offset))
                 }
             }
 
@@ -831,6 +723,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::U64,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::GetTxnSenderAddress => {
@@ -838,6 +731,7 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::Address,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::GetTxnPublicKey => {
@@ -845,15 +739,15 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                     signature: SignatureToken::ByteArray,
                     value: AbstractValue::full_value(false),
                 });
+                Ok(())
             }
 
             Bytecode::CreateAccount => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
-
+                    Ok(())
                 } else {
-                    self.errors
-                        .push(VMStaticViolation::CreateAccountTypeMismatchError(offset))
+                    Err(VMStaticViolation::CreateAccountTypeMismatchError(offset))
                 }
             }
 
@@ -863,7 +757,36 @@ impl<'a> TransferFunctions for AbstractInterpreter<'a> {
                 self.stack.pop();
                 self.stack.pop();
                 self.stack.pop();
+                Ok(())
             }
         }
     }
 }
+
+impl<'a> TransferFunctions for TypeAndMemorySafetyAnalysis<'a> {
+    type State = AbstractState;
+    type AnalysisError = VMStaticViolation;
+
+    fn execute(
+        &mut self,
+        state: &mut Self::State,
+        bytecode: &Bytecode,
+        index: usize,
+        last_index: usize,
+    ) -> Result<(), Self::AnalysisError> {
+        match self.execute_inner(state, bytecode, index) {
+            Err(err) => {
+                self.errors.push(err.clone());
+                Err(err)
+            }
+            Ok(()) => {
+                if index == last_index {
+                    *state = state.construct_canonical_state()
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<'a> AbstractInterpreter for TypeAndMemorySafetyAnalysis<'a> {}

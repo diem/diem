@@ -62,7 +62,7 @@ impl Partition {
     // returns a canonical version of self in which an id of a set is determined
     // to be the least element of the set.
     // the choice of returned id is arbitrary but it must be a function on nonce sets.
-    pub fn construct_canonical_partition(self, nonce_map: &BTreeMap<Nonce, Nonce>) -> Self {
+    pub fn construct_canonical_partition(&self, nonce_map: &BTreeMap<Nonce, Nonce>) -> Self {
         let mut id_to_nonce_set = BTreeMap::new();
         for nonce_set in self.id_to_nonce_set.values() {
             let canonical_nonce_set: BTreeSet<Nonce> = nonce_set

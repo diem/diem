@@ -12,7 +12,9 @@ use vm::{
     IndexKind,
 };
 
-use crate::{abstract_interpreter::AbstractInterpreter, stack_usage_verifier::StackUsageVerifier};
+use crate::{
+    stack_usage_verifier::StackUsageVerifier, type_memory_safety::TypeAndMemorySafetyAnalysis,
+};
 
 pub struct CodeUnitVerifier<'a> {
     module: &'a CompiledModule,
@@ -61,6 +63,6 @@ impl<'a> CodeUnitVerifier<'a> {
         if !errors.is_empty() {
             return errors;
         }
-        AbstractInterpreter::verify(self.module, function_definition, cfg)
+        TypeAndMemorySafetyAnalysis::verify(self.module, function_definition, cfg)
     }
 }
