@@ -272,7 +272,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(storage{op=\"committed_txns\"})",
+          "expr": "max(storage_gauge{op=\"latest_transaction_version\"}) + 1",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
