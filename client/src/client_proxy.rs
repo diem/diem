@@ -529,7 +529,7 @@ impl ClientProxy {
         self.get_account_state_and_update(account)
     }
 
-    /// Get committed txn by account and sequnce number.
+    /// Get committed txn by account and sequence number.
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],
