@@ -52,21 +52,6 @@ variable "validator_type" {
   default     = "m5.large"
 }
 
-variable "faucet_image_repo" {
-  description = "Docker image repository to use for faucet server"
-  default     = "docker.libra.org/faucet"
-}
-
-variable "faucet_log_level" {
-  description = "Log level for faucet to pass to gunicorn"
-  default     = "info"
-}
-
-variable "faucet_image_tag" {
-  description = "Docker image tag to use for faucet server"
-  default     = "latest"
-}
-
 variable "zone_id" {
   description = "Route53 ZoneId to create records in"
   default     = ""
