@@ -3,9 +3,6 @@
 
 //! Verifies bytecode sanity.
 
-#![feature(exhaustive_patterns)]
-#![feature(never_type)]
-
 // Bounds checks are implemented in the `vm` crate.
 pub mod absint;
 pub mod abstract_state;

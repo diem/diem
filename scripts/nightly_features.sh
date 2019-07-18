@@ -11,8 +11,6 @@ allowed_features=(
   "--and" "--not" "-e" "checked_duration_since"
   "--and" "--not" "-e" "crate_visibility_modifier"
   "--and" "--not" "-e" "drain_filter"
-  "--and" "--not" "-e" "exhaustive_patterns"
-  "--and" "--not" "-e" "never_type"
   "--and" "--not" "-e" "panic_info_message"
   "--and" "--not" "-e" "repeat_generic_slice"
   "--and" "--not" "-e" "set_stdio"
