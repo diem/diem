@@ -19,7 +19,7 @@ logger = { path = "../logger" }
 [dependencies.prometheus]
 version  = "0.4.2"
 default-features = false
-features = ["nightly", "push"]
+features = ["push"]
 
 [dev-dependencies]
 rusty-fork = "0.2.1"
