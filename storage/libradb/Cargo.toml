@@ -15,7 +15,9 @@ num-traits = "0.2"
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
 rand = "0.4.2"
-tempfile = "3.1.0"
+strum = "0.15.0"
+strum_macros = "0.15.0"
+tempfile = "3.0.6"
 
 accumulator = { path = "../accumulator" }
 canonical_serialization = { path = "../../common/canonical_serialization" }

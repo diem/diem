@@ -30,7 +30,7 @@ use crate::{
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
-    ledger_counters::{LedgerCounter, LedgerCounters},
+    ledger_counters::LedgerCounters,
     ledger_store::LedgerStore,
     schema::*,
     state_store::StateStore,
@@ -393,23 +393,7 @@ impl LibraDB {
         // Only increment counter if commit succeeds.
         OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
         OP_COUNTER.set("latest_transaction_version", last_version as usize);
-        OP_COUNTER.set("events_created", counters.get(LedgerCounter::EventsCreated));
-        OP_COUNTER.set(
-            "state_nodes_created",
-            counters.get(LedgerCounter::StateNodesCreated),
-        );
-        OP_COUNTER.set(
-            "state_nodes_retired",
-            counters.get(LedgerCounter::StateNodesRetired),
-        );
-        OP_COUNTER.set(
-            "state_blobs_created",
-            counters.get(LedgerCounter::StateBlobsCreated),
-        );
-        OP_COUNTER.set(
-            "state_blobs_retired",
-            counters.get(LedgerCounter::StateBlobsRetired),
-        );
+        counters.bump_op_counters();
 
         Ok(())
     }
