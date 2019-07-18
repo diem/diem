@@ -9,7 +9,6 @@ set -e
 allowed_features=(
   "--and" "--not" "-e" "async_await"
   "--and" "--not" "-e" "checked_duration_since"
-  "--and" "--not" "-e" "drain_filter"
   "--and" "--not" "-e" "set_stdio"
   "--and" "--not" "-e" "specialization"
   "--and" "--not" "-e" "test"

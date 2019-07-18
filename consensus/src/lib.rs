@@ -9,7 +9,6 @@
 
 #![deny(missing_docs)]
 #![feature(async_await, slice_patterns)]
-#![feature(drain_filter)]
 #![feature(checked_duration_since)]
 #![recursion_limit = "128"]
 #[macro_use]
