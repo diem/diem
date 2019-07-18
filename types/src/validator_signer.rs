@@ -4,8 +4,8 @@
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
 use crypto::HashValue;
 use failure::Error;
-use nextgen_crypto::{test_utils::TEST_SEED, SeedableCryptoRng, *};
-use rand::rngs::StdRng;
+use nextgen_crypto::{test_utils::TEST_SEED, *};
+use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
 /// ValidatorSigner associates an author with public and private keys with helpers for signing and

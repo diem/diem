@@ -226,16 +226,13 @@ pub trait Signature:
     }
 }
 
-/// An alias for the RNG used in the [`Uniform`] trait.
-pub trait SeedableCryptoRng = ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
-
 /// A type family for schemes which know how to generate key material from
 /// a cryptographically-secure [`CryptoRng`][::rand::CryptoRng].
 pub trait Uniform {
     /// Generate key material from an RNG for testing purposes.
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng;
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
 }
 
 /// A type family with a by-convention notion of genesis private key.

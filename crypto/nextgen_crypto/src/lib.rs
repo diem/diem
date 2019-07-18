@@ -4,8 +4,6 @@
 //! A library supplying various cryptographic primitives that will be used in the next version.
 
 #![deny(missing_docs)]
-#![feature(test)]
-#![feature(trait_alias)]
 
 pub mod bls12381;
 pub mod ed25519;

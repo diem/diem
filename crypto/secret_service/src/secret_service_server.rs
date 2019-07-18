@@ -19,7 +19,7 @@ use crypto::hash::HashValue;
 use failure::prelude::*;
 use grpc_helpers::provide_grpc_response;
 use nextgen_crypto::{bls12381::BLS12381PrivateKey, ed25519::Ed25519PrivateKey, traits::*};
-use rand::{rngs::EntropyRng, Rng};
+use rand::{rngs::EntropyRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use std::{
     collections::HashMap,

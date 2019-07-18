@@ -165,7 +165,7 @@ impl SigningKey for Ed25519PrivateKey {
 impl Uniform for Ed25519PrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng,
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
         Ed25519PrivateKey(ed25519_dalek::SecretKey::generate(rng))
     }
@@ -466,7 +466,7 @@ pub mod compat {
         }
     }
 
-    use rand::rngs::StdRng;
+    use rand::{rngs::StdRng, SeedableRng};
     /// Generate an arbitrary key pair, with possible Rng input
     pub fn generate_keypair<'a, T>(opt_rng: T) -> (Ed25519PrivateKey, Ed25519PublicKey)
     where
