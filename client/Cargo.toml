@@ -20,6 +20,7 @@ rust_decimal = "1.0.1"
 num-traits = "0.2"
 serde = { version = "1.0.96", features = ["derive"] }
 structopt = "0.2.15"
+tempfile = "3.1.0"
 
 admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
 config = { path = "../config" }
@@ -34,6 +35,3 @@ metrics = { path = "../common/metrics" }
 proto_conv = { path = "../common/proto_conv" }
 types = { path = "../types" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
-
-[dev-dependencies]
-tempfile = "3.1.0"

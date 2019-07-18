@@ -1,4 +1,52 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{client_proxy::ClientProxy, commands::*};
+
+/// Major command for account related operations.
+pub struct DevCommand {}
+
+impl Command for DevCommand {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["dev"]
+    }
+    fn get_description(&self) -> &'static str {
+        "Local move development"
+    }
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        let commands: Vec<Box<dyn Command>> = vec![
+            Box::new(DevCommandCompile {}),
+            Box::new(SubmitTransactionFromDiskCommand {}),
+        ];
+        subcommand_execute(&params[0], commands, client, &params[1..]);
+    }
+}
+
+/// Sub command to compile move program
+pub struct DevCommandCompile {}
+
+impl Command for DevCommandCompile {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["compile", "c"]
+    }
+    fn get_params_help(&self) -> &'static str {
+        "<file_path> [output_file_path (compile into tmp file by default)]"
+    }
+    fn get_description(&self) -> &'static str {
+        "Compile move program"
+    }
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() < 2 || params.len() > 3 {
+            println!("Invalid number of arguments for compilation");
+            return;
+        }
+        println!(">> Compiling program");
+        match client.compile_program(params) {
+            Ok(path) => println!("Successfully compiled a program at {}", path),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
 
 pub struct SubmitTransactionFromDiskCommand {}
 

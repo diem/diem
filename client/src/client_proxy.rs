@@ -24,10 +24,12 @@ use std::{
     fs::{self, File},
     io::{stdout, Read, Write},
     path::Path,
+    process::Command,
     str::FromStr,
     sync::Arc,
     thread, time,
 };
+use tempfile::{NamedTempFile, TempPath};
 use tokio::{self, runtime::Runtime};
 use types::{
     access_path::AccessPath,
@@ -97,6 +99,8 @@ pub struct ClientProxy {
     wallet: WalletLibrary,
     /// Whether to sync with validator on account creation.
     sync_on_wallet_recovery: bool,
+    /// temp files (alive for duration of program)
+    temp_files: Vec<TempPath>,
 }
 
 impl ClientProxy {
@@ -162,6 +166,7 @@ impl ClientProxy {
             faucet_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
+            temp_files: vec![],
         })
     }
 
@@ -415,6 +420,30 @@ impl ClientProxy {
             max_gas_amount,
             is_blocking,
         )
+    }
+
+    /// Compile move program
+    pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+        let file_path = space_delim_strings[1];
+        let output_path = {
+            if space_delim_strings.len() == 3 {
+                space_delim_strings[2].to_string()
+            } else {
+                let tmp_path = NamedTempFile::new()?.into_temp_path();
+                let path = tmp_path.to_str().unwrap().to_string();
+                self.temp_files.push(tmp_path);
+                path
+            }
+        };
+        let args = format!("run -p compiler -- -o {} {}", output_path, file_path);
+        let status = Command::new("cargo")
+            .args(args.split(' '))
+            .spawn()?
+            .wait()?;
+        if !status.success() {
+            return Err(format_err!("compilation failed"));
+        }
+        Ok(output_path)
     }
 
     /// Submit a transaction to the network.
