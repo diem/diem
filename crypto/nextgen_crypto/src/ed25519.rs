@@ -386,7 +386,8 @@ impl Eq for Ed25519Signature {}
 pub mod compat {
     use crate::ed25519::*;
     #[cfg(any(test, feature = "testing"))]
-    use bincode::{deserialize, serialize};
+    use bincode::deserialize;
+    use bincode::serialize;
     use crypto::{
         PrivateKey as LegacyPrivateKey, PublicKey as LegacyPublicKey, Signature as LegacySignature,
     };
@@ -429,7 +430,10 @@ pub mod compat {
         }
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    // This is impossible to activate due to reliance on private key
+    // conversion from legacy in chained_bft_consensus_provider.
+    // TODO: remove this when NodeConfig accepts nextgen_config keys
+    // #[cfg(any(test, feature = "testing"))]
     impl From<LegacyPrivateKey> for Ed25519PrivateKey {
         fn from(private_key: LegacyPrivateKey) -> Self {
             let serialized: Vec<u8> = serialize(&private_key).unwrap();
