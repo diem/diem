@@ -56,8 +56,6 @@ module EarmarkedLibraCoin {
   // Allow the creator of the earmarked coin to reclaim it.
   public claim_for_creator(): R#Self.T {
     let t: R#Self.T;
-    let coin: R#LibraCoin.T;
-    let recipient: address;
     let sender: address;
 
     sender = get_txn_sender();
