@@ -97,6 +97,7 @@ impl MockTreeStore {
         for log in to_prune {
             let removed = match log.record_type {
                 RetiredRecordType::Node => wlocked.0.remove(&log.hash).is_some(),
+                RetiredRecordType::Blob => wlocked.1.remove(&log.hash).is_some(),
             };
             ensure!(removed, "Retire log refers to non-existent record.");
             wlocked.2.remove(&log);

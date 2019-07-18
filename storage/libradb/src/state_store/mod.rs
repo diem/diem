@@ -90,6 +90,7 @@ impl StateStore {
             .map(|row| {
                 match row.record_type {
                     RetiredRecordType::Node => cs.counters.inc(LedgerCounter::StateNodesRetired, 1),
+                    RetiredRecordType::Blob => cs.counters.inc(LedgerCounter::StateBlobsRetired, 1),
                 };
                 cs.batch.put::<RetiredStateRecordSchema>(row, &())
             })
@@ -124,6 +125,10 @@ impl StateStore {
             match record.record_type {
                 RetiredRecordType::Node => {
                     cs.batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
+                }
+                RetiredRecordType::Blob => {
+                    // TODO: prune state blobs after its key is changed to
+                    // (version_created, address_hash)
                 }
             }
             cs.batch.delete::<RetiredStateRecordSchema>(&record)?;

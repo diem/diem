@@ -18,8 +18,10 @@ fn put_account_state_set(
     root_hash: HashValue,
     expected_nodes_created: usize,
     expected_nodes_retired: usize,
+    expected_blobs_retired: usize,
 ) -> HashValue {
     let mut cs = ChangeSet::new();
+    let blobs_created = account_state_set.len();
     let root = store
         .put_account_state_sets(
             vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
@@ -36,6 +38,14 @@ fn put_account_state_set(
     assert_eq!(
         cs.counters.get(LedgerCounter::StateNodesRetired),
         expected_nodes_retired
+    );
+    assert_eq!(
+        cs.counters.get(LedgerCounter::StateBlobsCreated),
+        blobs_created
+    );
+    assert_eq!(
+        cs.counters.get(LedgerCounter::StateBlobsRetired),
+        expected_blobs_retired
     );
 
     root
@@ -109,6 +119,7 @@ fn test_state_store_reader_writer() {
         root,
         1, /* expected_nodes_created */
         0, /* expected_nodes_retired */
+        0, /* expected_blobs_retired */
     );
     verify_state_in_store(store, address1, Some(&value1), root);
     verify_state_in_store(store, address2, None, root);
@@ -127,6 +138,7 @@ fn test_state_store_reader_writer() {
         root,
         4, /* expected_nodes_created */
         1, /* expected_nodes_retired */
+        1, /* expected_blobs_retired */
     );
     verify_state_in_store(store, address1, Some(&value1_update), root);
     verify_state_in_store(store, address2, Some(&value2), root);
@@ -163,6 +175,7 @@ fn test_purge_retired_records() {
         root_default,
         3, /* expected_nodes_created */
         0, /* expected_nodes_retired */
+        0, /* expected_blobs_retired */
     );
     let root1 = put_account_state_set(
         store,
@@ -174,6 +187,7 @@ fn test_purge_retired_records() {
         root0,
         3, /* expected_nodes_created */
         2, /* expected_nodes_retired */
+        1, /* expected_blobs_retired */
     );
     let root2 = put_account_state_set(
         store,
@@ -182,6 +196,7 @@ fn test_purge_retired_records() {
         root1,
         2, /* expected_nodes_created */
         2, /* expected_nodes_retired */
+        1, /* expected_blobs_retired */
     );
 
     // Verify.
@@ -199,7 +214,7 @@ fn test_purge_retired_records() {
         purge_retired_records(
             store, 1,   /* least_readable_version */
             100, /* limit */
-            2,   /* expected_num_purged */
+            3,   /* expected_num_purged */
         );
         // root0 is gone.
         assert!(store
@@ -215,7 +230,7 @@ fn test_purge_retired_records() {
         purge_retired_records(
             store, 2,   /* least_readable_version */
             100, /* limit */
-            2,   /* expected_num_purged */
+            3,   /* expected_num_purged */
         );
         // root1 is gone.
         assert!(store

@@ -83,6 +83,8 @@ pub struct RetiredStateRecord {
 pub enum RetiredRecordType {
     /// The Sparse Merkle nodes data set.
     Node = 0,
+    /// The account state blob data set.
+    Blob = 1,
 }
 
 // TODO: remove once version_created is for real part of the key.
