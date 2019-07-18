@@ -19,6 +19,7 @@ mod event_store;
 mod ledger_counters;
 mod ledger_store;
 mod state_store;
+mod system_store;
 mod transaction_store;
 
 #[cfg(test)]
@@ -26,7 +27,7 @@ mod libradb_test;
 
 use crate::{
     errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
-    state_store::StateStore, transaction_store::TransactionStore,
+    state_store::StateStore, system_store::SystemStore, transaction_store::TransactionStore,
 };
 use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -79,6 +80,8 @@ pub struct LibraDB {
     transaction_store: TransactionStore,
     state_store: StateStore,
     event_store: EventStore,
+    #[allow(dead_code)]
+    system_store: SystemStore,
 }
 
 impl LibraDB {
@@ -127,6 +130,7 @@ impl LibraDB {
             ledger_store: LedgerStore::new(Arc::clone(&db)),
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
+            system_store: SystemStore::new(Arc::clone(&db)),
         }
     }
 
