@@ -3,17 +3,16 @@ use crate::{ledger_counters::LedgerCounter, LibraDB};
 use tempfile::tempdir;
 
 fn inc_ledger_counters(
-    db: &LibraDB,
+    store: &SystemStore,
     first_version: Version,
     last_version: Version,
     diff: LedgerCounters,
 ) -> LedgerCounters {
     let mut batch = SchemaBatch::new();
-    let counters = db
-        .system_store
+    let counters = store
         .inc_ledger_counters(first_version, last_version, diff, &mut batch)
         .unwrap();
-    db.commit(batch).unwrap();
+    store.db.write_schemas(batch).unwrap();
 
     counters
 }
@@ -22,6 +21,7 @@ fn inc_ledger_counters(
 fn test_inc_ledger_counters() {
     let tmp_dir = tempdir().unwrap();
     let db = LibraDB::new(&tmp_dir);
+    let store = &db.system_store;
 
     // First batch, add to zeros.
     {
@@ -29,7 +29,7 @@ fn test_inc_ledger_counters() {
         diff.inc(LedgerCounter::EventsCreated, 10);
 
         let counters = inc_ledger_counters(
-            &db, 0, /* first_version */
+            store, 0, /* first_version */
             1, /* last_version */
             diff,
         );
@@ -41,7 +41,7 @@ fn test_inc_ledger_counters() {
         diff.inc(LedgerCounter::EventsCreated, 20);
 
         let counters = inc_ledger_counters(
-            &db, 2,  /* first_version */
+            store, 2,  /* first_version */
             10, /* last_version */
             diff,
         );
@@ -53,7 +53,7 @@ fn test_inc_ledger_counters() {
         diff.inc(LedgerCounter::EventsCreated, 5);
 
         let counters = inc_ledger_counters(
-            &db, 2, /* first_version */
+            store, 2, /* first_version */
             8, /* last_version */
             diff,
         );
@@ -65,7 +65,7 @@ fn test_inc_ledger_counters() {
         diff.inc(LedgerCounter::EventsCreated, 1);
 
         let counters = inc_ledger_counters(
-            &db, 3, /* first_version */
+            store, 3, /* first_version */
             8, /* last_version */
             diff,
         );

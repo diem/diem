@@ -8,7 +8,7 @@ use tempfile::tempdir;
 use types::proof::verify_transaction_accumulator_element;
 
 fn verify(
-    db: &LibraDB,
+    store: &LedgerStore,
     txn_infos: &[TransactionInfo],
     first_version: Version,
     ledger_version: Version,
@@ -20,8 +20,7 @@ fn verify(
         .for_each(|(idx, expected_txn_info)| {
             let version = first_version + idx as u64;
 
-            let (txn_info, proof) = db
-                .ledger_store
+            let (txn_info, proof) = store
                 .get_transaction_info_with_proof(version, ledger_version)
                 .unwrap();
 
@@ -31,13 +30,12 @@ fn verify(
         })
 }
 
-fn save(db: &LibraDB, first_version: Version, txn_infos: &[TransactionInfo]) -> HashValue {
+fn save(store: &LedgerStore, first_version: Version, txn_infos: &[TransactionInfo]) -> HashValue {
     let mut batch = SchemaBatch::new();
-    let root_hash = db
-        .ledger_store
+    let root_hash = store
         .put_transaction_infos(first_version, &txn_infos, &mut batch)
         .unwrap();
-    db.commit(batch).unwrap();
+    store.db.write_schemas(batch).unwrap();
     root_hash
 }
 
@@ -52,18 +50,19 @@ proptest! {
 
         let tmp_dir = tempdir().unwrap();
         let db = LibraDB::new(&tmp_dir);
+        let store = &db.ledger_store;
 
         // insert two batches of transaction infos
-        let root_hash1 = save(&db, 0, &batch1);
+        let root_hash1 = save(store, 0, &batch1);
         let ledger_version1 = batch1.len() as u64 - 1;
-        let root_hash2 = save(&db, batch1.len() as u64, &batch2);
+        let root_hash2 = save(store, batch1.len() as u64, &batch2);
         let ledger_version2 = batch1.len() as u64 + batch2.len() as u64 - 1;
 
         // retrieve all leaves and verify against latest root hash
-        verify(&db, &batch1, 0, ledger_version2, root_hash2);
-        verify(&db, &batch2, batch1.len() as u64, ledger_version2, root_hash2);
+        verify(store, &batch1, 0, ledger_version2, root_hash2);
+        verify(store, &batch2, batch1.len() as u64, ledger_version2, root_hash2);
 
         // retrieve batch1 and verify against root_hash after batch1 was interted
-        verify(&db, &batch1, 0, ledger_version1, root_hash1);
+        verify(store, &batch1, 0, ledger_version1, root_hash1);
     }
 }
