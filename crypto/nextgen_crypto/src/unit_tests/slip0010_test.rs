@@ -3,6 +3,17 @@
 
 use crate::slip0010::Slip0010;
 
+#[test]
+fn test_slip0010_valid_paths() {
+    assert!(Slip0010::is_valid_path("m/2147483647"));
+    assert!(!Slip0010::is_valid_path("m/2147483648"));
+    assert!(!Slip0010::is_valid_path("/m/0"));
+    assert!(!Slip0010::is_valid_path("m/0/"));
+    assert!(!Slip0010::is_valid_path("m/+5"));
+    assert!(Slip0010::is_valid_path("m"));
+    assert!(!Slip0010::is_valid_path("0"));
+}
+
 // Testing against SLIP-0010 test vectors.
 #[test]
 fn test_slip0010_vectors() {
