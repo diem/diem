@@ -8,7 +8,7 @@
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
 #![deny(missing_docs)]
-#![feature(async_await, slice_patterns)]
+#![feature(async_await)]
 #![feature(checked_duration_since)]
 #![recursion_limit = "128"]
 #[macro_use]
