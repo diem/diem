@@ -8,7 +8,10 @@ use crate::{
         FunctionSignatureIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
         ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
-    proptest_types::signature::{FunctionSignatureGen, SignatureTokenGen},
+    proptest_types::{
+        signature::{FunctionSignatureGen, SignatureTokenGen},
+        TableSize,
+    },
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -39,18 +42,21 @@ pub struct FnDefnMaterializeState {
 impl FnDefnMaterializeState {
     #[inline]
     fn add_function_signature(&mut self, sig: FunctionSignature) -> FunctionSignatureIndex {
+        precondition!(self.function_signatures.len() < TableSize::max_value() as usize);
         self.function_signatures.push(sig);
         FunctionSignatureIndex::new((self.function_signatures.len() - 1) as TableIndex)
     }
 
     #[inline]
     fn add_locals_signature(&mut self, sig: LocalsSignature) -> LocalsSignatureIndex {
+        precondition!(self.locals_signatures.len() < TableSize::max_value() as usize);
         self.locals_signatures.push(sig);
         LocalsSignatureIndex::new((self.locals_signatures.len() - 1) as TableIndex)
     }
 
     #[inline]
     fn add_function_handle(&mut self, handle: FunctionHandle) -> FunctionHandleIndex {
+        precondition!(self.function_handles.len() < TableSize::max_value() as usize);
         self.function_handles.push(handle);
         FunctionHandleIndex::new((self.function_handles.len() - 1) as TableIndex)
     }
@@ -92,6 +98,13 @@ impl FunctionDefinitionGen {
     }
 
     pub fn materialize(self, state: &mut FnDefnMaterializeState) -> FunctionDefinition {
+        // This precondition should never fail because the table size cannot be greater
+        // than TableSize::max_value()
+        checked_precondition!(
+            state.function_signatures.len() < TableSize::max_value() as usize
+                && state.locals_signatures.len() < TableSize::max_value() as usize
+                && state.function_handles.len() < TableSize::max_value() as usize
+        );
         let signature = self.signature.materialize(state.struct_handles_len);
 
         let handle = FunctionHandle {
@@ -139,6 +152,7 @@ impl CodeUnitGen {
     }
 
     fn materialize(self, state: &mut FnDefnMaterializeState) -> CodeUnit {
+        precondition!(state.locals_signatures.len() < TableSize::max_value() as usize);
         let locals_signature = LocalsSignature(
             self.locals_signature
                 .into_iter()
