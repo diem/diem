@@ -56,7 +56,7 @@ impl Account {
                         // Generate the type for the struct
                         let typ = SignatureToken::Struct(struct_def.struct_handle, vec![]);
                         // Generate a value of that type
-                        let struct_val = inhabitor.inhabit(typ).value().unwrap();
+                        let struct_val = inhabitor.inhabit(&typ).value().unwrap();
                         // Now serialize that value into the correct binary blob.
                         let val_blob = MutVal::try_own(struct_val)
                             .unwrap()

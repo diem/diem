@@ -8,8 +8,6 @@ set -e
 # Allowed Features
 allowed_features=(
   "--and" "--not" "-e" "async_await"
-  "--and" "--not" "-e" "box_patterns"
-  "--and" "--not" "-e" "box_syntax"
   "--and" "--not" "-e" "checked_duration_since"
   "--and" "--not" "-e" "crate_visibility_modifier"
   "--and" "--not" "-e" "drain_filter"

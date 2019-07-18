@@ -334,7 +334,7 @@ where
             .0;
         // Pick a random local within that function in which we'll store the local
         let local_index = self.gen.gen_range(0, type_sig.len());
-        let type_tok = type_sig[local_index].clone();
+        let type_tok = &type_sig[local_index];
         let stack_local = self.resolve_to_value(type_tok, &[]);
         (
             module,
@@ -488,13 +488,13 @@ where
     // Build an inhabitant of the type given by `sig_token`. We pass the current stack state in
     // since for certain instructions (...Sub) we need to generate number pairs that when
     // subtracted from each other do not cause overflow.
-    fn resolve_to_value(&mut self, sig_token: SignatureToken, stk: &[Local]) -> Local {
+    fn resolve_to_value(&mut self, sig_token: &SignatureToken, stk: &[Local]) -> Local {
         match sig_token {
             SignatureToken::Bool => Local::bool(self.next_bool()),
             SignatureToken::U64 => Local::u64(self.next_int(stk)),
             SignatureToken::String => Local::string(self.next_str(false)),
             SignatureToken::Address => Local::address(self.next_addr(false)),
-            SignatureToken::Reference(box sig) | SignatureToken::MutableReference(box sig) => {
+            SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);
                 underlying_value
                     .borrow_local()
@@ -505,7 +505,7 @@ where
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
-                    .struct_def_at(self.resolve_struct_handle(struct_handle_idx).2);
+                    .struct_def_at(self.resolve_struct_handle(*struct_handle_idx).2);
                 let num_fields = struct_definition.field_count as usize;
                 let index = struct_definition.fields;
                 let fields = self
@@ -515,11 +515,10 @@ where
                     .iter()
                     .map(|field| {
                         self.resolve_to_value(
-                            self.root_module
+                            &self.root_module
 
                                 .type_signature_at(field.signature)
-                                .0
-                                .clone(),
+                                .0,
                             stk,
                         )
                         .value()
@@ -534,18 +533,18 @@ where
 
     // Generate starting state of the stack based upon the type transition in the call info table.
     fn generate_from_type(&mut self, typ: SignatureTy, stk: &[Local]) -> Local {
+        let is_variable = typ.is_variable();
+        let underlying = typ.underlying();
         // If the underlying type is a variable type, then we can choose any type that we want.
-        let typ = if typ.is_variable() {
-            let underlying_type = typ.underlying();
-            let index = self.gen.gen_range(0, underlying_type.len());
-            underlying_type[index].clone()
+        let typ = if is_variable {
+            let index = self.gen.gen_range(0, underlying.len());
+            &underlying[index]
         } else {
-            typ.underlying()
+            underlying
                 .first()
                 .expect("Unable to get underlying type for sigty in generate_from_type")
-                .clone()
         };
-        self.resolve_to_value(typ.0, stk)
+        self.resolve_to_value(&typ.0, stk)
     }
 
     // Certain instructions require specific stack states; e.g. Pack() requires the correct number
@@ -623,13 +622,13 @@ where
                 let function_sig = self
                     .root_module
                     .function_signature_at(function_handle.signature);
-                let stack = function_sig.arg_types.clone().into_iter().fold(
-                    Vec::new(),
-                    |mut acc, sig_tok| {
+                let stack = function_sig
+                    .arg_types
+                    .iter()
+                    .fold(Vec::new(), |mut acc, sig_tok| {
                         acc.push(self.resolve_to_value(sig_tok, &acc));
                         acc
-                    },
-                );
+                    });
                 let size = stack.iter().fold(AbstractMemorySize::new(0), |acc, local| {
                     acc.add(local.size())
                 });
@@ -659,7 +658,7 @@ where
                             .type_signature_at(field.signature)
                             .0
                             .clone();
-                        self.resolve_to_value(ty, &[])
+                        self.resolve_to_value(&ty, &[])
                     })
                     .collect();
                 let size = stack.iter().fold(AbstractMemorySize::new(0), |acc, local| {
@@ -682,7 +681,7 @@ where
                     .struct_def_at(random_struct_idx)
                     .struct_handle;
                 let struct_stack =
-                    self.resolve_to_value(SignatureToken::Struct(struct_handle_idx, vec![]), &[]);
+                    self.resolve_to_value(&SignatureToken::Struct(struct_handle_idx, vec![]), &[]);
                 let size = struct_stack.size();
                 StackState::new(
                     (self.root_module, None),
@@ -702,7 +701,7 @@ where
                 // Grab a random field within that struct to borrow
                 let field_index = self.gen.gen_range(0, num_fields);
                 let struct_stack = self.resolve_to_value(
-                    SignatureToken::Reference(Box::new(SignatureToken::Struct(
+                    &SignatureToken::Reference(Box::new(SignatureToken::Struct(
                         struct_definition.struct_handle,
                         vec![],
                     ))),
