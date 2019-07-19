@@ -6,7 +6,6 @@ use bincode::{deserialize, serialize};
 use core::ops::{Index, IndexMut};
 use proptest::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
-use test::Bencher;
 
 #[test]
 fn test_generate_and_encode_keypair() {
@@ -79,27 +78,6 @@ fn test_generate_key_pair_with_seed() {
     let (_, public_key3) = derive_keypair_from_seed(Some(salt), &seed, Some(info));
     assert_ne!(public_key3, public_key1);
     assert_ne!(public_key3, public_key2);
-}
-
-#[bench]
-pub fn bench_sign(bh: &mut Bencher) {
-    let (private_key, _) = generate_keypair();
-    let hash = HashValue::zero();
-
-    bh.iter(|| {
-        let _ = sign_message(hash, &private_key);
-    });
-}
-
-#[bench]
-pub fn bench_verify(bh: &mut Bencher) {
-    let (private_key, public_key) = generate_keypair();
-    let hash = HashValue::zero();
-    let signature = sign_message(hash, &private_key).unwrap();
-
-    bh.iter(|| {
-        verify_signature(hash, &signature, &public_key).unwrap();
-    });
 }
 
 proptest! {
