@@ -33,7 +33,7 @@ socket_bench_server = { path = "socket_bench_server" }
 types = { path = "../types" }
 
 [dev-dependencies]
-criterion = { version = "0.2.11", features = ["real_blackbox"] }
+criterion = "0.2.11"
 
 [dev-dependencies.nextgen_crypto]
 features = ["testing"]
