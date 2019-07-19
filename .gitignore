@@ -59,3 +59,6 @@ Temporary Items
 
 # Generated VM config in vm_genesis
 language/vm/vm_genesis/genesis/vm_config.toml
+
+# local cargo config
+.cargo/config

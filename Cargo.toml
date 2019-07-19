@@ -62,6 +62,7 @@ members = [
     "storage/storage_proto",
     "storage/storage_service",
     "testsuite",
+    "testsuite/cluster_test",
     "testsuite/libra_fuzzer",
     "types",
     "vm_validator",
