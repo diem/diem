@@ -43,8 +43,24 @@ impl AbstractValue {
         }
     }
 
+    pub fn is_safe_to_destroy(&self) -> bool {
+        match self {
+            AbstractValue::Reference(_) => false,
+            AbstractValue::Value(is_resource, borrowed_nonces) => {
+                !is_resource && borrowed_nonces.is_empty()
+            }
+        }
+    }
+
     pub fn full_value(is_resource: bool) -> Self {
         AbstractValue::Value(is_resource, BTreeSet::new())
+    }
+
+    pub fn extract_nonce(&self) -> Option<&Nonce> {
+        match self {
+            AbstractValue::Reference(nonce) => Some(nonce),
+            AbstractValue::Value(_, _) => None,
+        }
     }
 }
 
@@ -106,6 +122,11 @@ impl AbstractState {
     /// checks if local@idx is a value
     pub fn is_value(&self, idx: LocalIndex) -> bool {
         self.locals[&idx].is_value()
+    }
+
+    /// Return true if local@idx may safely be released
+    pub fn is_safe_to_destroy(&self, idx: LocalIndex) -> bool {
+        self.local(idx).is_safe_to_destroy()
     }
 
     /// destroys local@idx

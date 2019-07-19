@@ -109,22 +109,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         existing_borrows.is_empty()
     }
 
-    fn extract_nonce(value: &AbstractValue) -> Option<&Nonce> {
-        match value {
-            AbstractValue::Reference(nonce) => Some(nonce),
-            AbstractValue::Value(_, _) => None,
-        }
-    }
-
-    fn is_safe_to_destroy(&self, state: &AbstractState, idx: LocalIndex) -> bool {
-        match state.local(idx) {
-            AbstractValue::Reference(_) => false,
-            AbstractValue::Value(is_resource, borrowed_nonces) => {
-                !is_resource && borrowed_nonces.is_empty()
-            }
-        }
-    }
-
     fn execute_inner(
         &mut self,
         mut state: &mut AbstractState,
@@ -168,7 +152,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     return Err(VMStaticViolation::StLocTypeMismatchError(offset));
                 }
                 if state.is_available(*idx) {
-                    if self.is_safe_to_destroy(&state, *idx) {
+                    if state.is_safe_to_destroy(*idx) {
                         state.destroy_local(*idx);
                     } else {
                         return Err(VMStaticViolation::StLocUnsafeToDestroyError(offset));
@@ -190,7 +174,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Ret => {
                 for arg_idx in 0..self.locals_signature_view.len() {
                     let idx = arg_idx as LocalIndex;
-                    if state.is_available(idx) && !self.is_safe_to_destroy(&state, idx) {
+                    if state.is_available(idx) && !state.is_safe_to_destroy(idx) {
                         return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
                     }
                 }
@@ -214,7 +198,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::FreezeRef => {
                 let operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = operand.signature {
-                    let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
+                    let operand_nonce = operand.value.extract_nonce().unwrap().clone();
                     let borrowed_nonces = state.borrowed_nonces(operand_nonce.clone());
                     if self.freeze_ok(&state, borrowed_nonces) {
                         self.stack.push(StackAbstractValue {
@@ -244,7 +228,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             .get_field_signature(*field_definition_index)
                             .0
                             .clone();
-                        let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
+                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
                         let nonce = self.get_nonce(&mut state);
                         if operand.signature.is_mutable_reference() {
                             let borrowed_nonces = state.borrowed_nonces_for_field(
@@ -483,7 +467,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 match operand.signature {
                     SignatureToken::Reference(signature) => {
-                        let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
+                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
                         if SignatureTokenView::new(self.module, &signature).is_resource() {
                             Err(VMStaticViolation::ReadRefResourceError(offset))
                         } else {
@@ -496,7 +480,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         }
                     }
                     SignatureToken::MutableReference(signature) => {
-                        let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
+                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
                         if SignatureTokenView::new(self.module, &signature).is_resource() {
                             Err(VMStaticViolation::ReadRefResourceError(offset))
                         } else {
@@ -526,8 +510,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     } else if val_operand.signature != *signature {
                         Err(VMStaticViolation::WriteRefTypeMismatchError(offset))
                     } else if state.is_full(&ref_operand.value) {
-                        let ref_operand_nonce =
-                            Self::extract_nonce(&ref_operand.value).unwrap().clone();
+                        let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap().clone();
                         state.destroy_nonce(ref_operand_nonce);
                         Ok(())
                     } else {
