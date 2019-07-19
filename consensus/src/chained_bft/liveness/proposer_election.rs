@@ -6,7 +6,7 @@ use crate::chained_bft::{
     consensus_types::{block::Block, quorum_cert::QuorumCert},
     liveness::timeout_msg::PacemakerTimeoutCertificate,
 };
-use failure::Result;
+use failure::prelude::*;
 use futures::Future;
 use network::proto::Proposal as ProtoProposal;
 use nextgen_crypto::ed25519::*;
@@ -48,8 +48,33 @@ impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
         self.proposal
             .verify(validator)
             .map_err(|e| format_err!("{:?}", e))?;
+        ensure!(
+            self.proposal.round() > 0,
+            "Proposal for {} has an incorrect round of 0",
+            self.proposal,
+        );
+        let previous_round = self.proposal.round() - 1;
         if let Some(tc) = &self.timeout_certificate {
+            let previous_round = self.proposal.round() - 1;
             tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
+            ensure!(
+                tc.round() == previous_round,
+                "Proposal for {} has a timeout certificate with an incorrect round={}",
+                self.proposal,
+                tc.round(),
+            );
+            ensure!(
+                self.proposal.quorum_cert().certified_block_round() != tc.round(),
+                "Proposal for {} has a timeout certificate and a quorum certificate that have the same round",
+                self.proposal,
+            );
+        } else {
+            ensure!(
+                self.proposal.quorum_cert().certified_block_round() == previous_round,
+                "Proposal for {} has a timeout certificate with an incorrect round={}",
+                self.proposal,
+                self.proposal.quorum_cert().certified_block_round(),
+            );
         }
         if self.proposal.author() != self.proposer_info.get_author() {
             return Err(format_err!("Proposal for {} has mismatching author of block and proposer info: block={}, proposer={}", self.proposal,

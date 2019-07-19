@@ -362,11 +362,13 @@ fn test_network_api() {
         placeholder_ledger_info(),
         &signers[0],
     );
+    let previous_block = Block::make_genesis_block();
+    let previous_qc = QuorumCert::certificate_for_genesis();
     let proposal = ProposalInfo {
-        proposal: Block::make_genesis_block(),
-        proposer_info: ValidatorSigner::<Ed25519PrivateKey>::genesis().author(),
+        proposal: Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
+        proposer_info: signers[0].author(),
         timeout_certificate: None,
-        highest_ledger_info: QuorumCert::certificate_for_genesis(),
+        highest_ledger_info: previous_qc,
     };
     block_on(async move {
         nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;
