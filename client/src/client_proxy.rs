@@ -17,6 +17,7 @@ use num_traits::{
 };
 use proto_conv::{FromProtoBytes, IntoProto};
 use rust_decimal::Decimal;
+use serde_json;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -309,7 +310,7 @@ impl ClientProxy {
             {
                 println!("transaction is stored!");
                 if events.is_empty() {
-                    println!("but it didn't emit any events (failed execution)");
+                    println!("but it didn't emit any events");
                 }
                 break;
             } else if max_iterations == 0 {
@@ -424,10 +425,11 @@ impl ClientProxy {
 
     /// Compile move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
-        let file_path = space_delim_strings[1];
+        let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let file_path = space_delim_strings[2];
         let output_path = {
-            if space_delim_strings.len() == 3 {
-                space_delim_strings[2].to_string()
+            if space_delim_strings.len() == 4 {
+                space_delim_strings[3].to_string()
             } else {
                 let tmp_path = NamedTempFile::new()?.into_temp_path();
                 let path = tmp_path.to_str().unwrap().to_string();
@@ -435,7 +437,10 @@ impl ClientProxy {
                 path
             }
         };
-        let args = format!("run -p compiler -- -o {} {}", output_path, file_path);
+        let args = format!(
+            "run -p compiler -- -a {} -o {} {}",
+            address, output_path, file_path
+        );
         let status = Command::new("cargo")
             .args(args.split(' '))
             .spawn()?
@@ -444,6 +449,23 @@ impl ClientProxy {
             return Err(format_err!("compilation failed"));
         }
         Ok(output_path)
+    }
+
+    /// Publish move module
+    pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let sender_ref_id = self.get_account_ref_id(&sender_address)?;
+        let sender = self.accounts.get(sender_ref_id).unwrap();
+        let sequence_number = sender.sequence_number;
+
+        let program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let req = self.create_submit_transaction_req(program, &sender, None, None)?;
+
+        self.client
+            .submit_transaction(self.accounts.get_mut(sender_ref_id), &req)?;
+        self.wait_for_transaction(sender_address, sequence_number + 1);
+
+        Ok(())
     }
 
     /// Submit a transaction to the network.

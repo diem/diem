@@ -7,7 +7,7 @@ use bytecode_verifier::{
 };
 use compiler::{util, Compiler};
 use serde_json;
-use std::{fs, io::Write, path::PathBuf};
+use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
 use types::{account_address::AccountAddress, transaction::Program};
@@ -26,6 +26,9 @@ struct Args {
     /// Treat input file as a module (default is to treat file as a program)
     #[structopt(short = "m", long = "module")]
     pub module_input: bool,
+    /// Account address used for publishing
+    #[structopt(short = "a", long = "address")]
+    pub address: Option<String>,
     /// Do not automatically compile stdlib dependencies
     #[structopt(long = "no-stdlib")]
     pub no_stdlib: bool,
@@ -67,11 +70,15 @@ fn write_output(path: &str, buf: &[u8]) {
 fn main() {
     let args = Args::from_args();
 
-    let address = AccountAddress::default();
+    let address = args
+        .address
+        .map(|a| AccountAddress::try_from(a).unwrap())
+        .unwrap_or_else(AccountAddress::default);
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path).expect("Unable to read file");
         let compiler = Compiler {
+            address,
             code: &source,
             skip_stdlib_deps: args.no_stdlib,
             ..Compiler::default()

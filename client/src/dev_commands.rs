@@ -16,6 +16,7 @@ impl Command for DevCommand {
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         let commands: Vec<Box<dyn Command>> = vec![
             Box::new(DevCommandCompile {}),
+            Box::new(DevCommandPublish {}),
             Box::new(SubmitTransactionFromDiskCommand {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
@@ -30,19 +31,47 @@ impl Command for DevCommandCompile {
         vec!["compile", "c"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<file_path> [output_file_path (compile into tmp file by default)]"
+        "<sender_account_address>|<sender_account_ref_id> <file_path> [output_file_path (compile into tmp file by default)]"
     }
     fn get_description(&self) -> &'static str {
         "Compile move program"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() < 2 || params.len() > 3 {
+        if params.len() < 3 || params.len() > 4 {
             println!("Invalid number of arguments for compilation");
             return;
         }
         println!(">> Compiling program");
         match client.compile_program(params) {
             Ok(path) => println!("Successfully compiled a program at {}", path),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+/// Sub command to publish move resource
+pub struct DevCommandPublish {}
+
+impl Command for DevCommandPublish {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["publish", "p"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<sender_account_address>|<sender_account_ref_id> <compiled_module_path>"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Publish move module on-chain"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 3 {
+            println!("Invalid number of arguments to publish module");
+            return;
+        }
+        match client.publish_module(params) {
+            Ok(_) => println!("Successfully published module"),
             Err(e) => println!("{}", e),
         }
     }
