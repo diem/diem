@@ -105,7 +105,7 @@ impl SharedMempoolNetwork {
         }
     }
 
-    /// deliveres next message from given node to it's peer
+    /// delivers next message from given node to it's peer
     fn deliver_message(&mut self, peer: &PeerId) -> (SignedTransaction, PeerId) {
         // emulate timer tick
         self.timers

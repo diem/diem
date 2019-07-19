@@ -22,8 +22,8 @@ arg_enum! {
     about = "RuBen (Ru)ns The Libra (Ben)chmarker For You."
 )]
 pub struct Opt {
-    /// Validator address list seperated by whitespace: `ip_address:port ip_address:port ...`.
-    /// It is requried unless (and hence conflict with) swarm_config_dir is present.
+    /// Validator address list separated by whitespace: `ip_address:port ip_address:port ...`.
+    /// It is required unless (and hence conflict with) swarm_config_dir is present.
     #[structopt(
         short = "a",
         long = "validator_addresses",
@@ -33,7 +33,7 @@ pub struct Opt {
     )]
     pub validator_addresses: Vec<String>,
     /// Debug interface address in the form of ip_address:port.
-    /// It is requried unless (and hence conflict with) swarm_config_dir is present.
+    /// It is required unless (and hence conflict with) swarm_config_dir is present.
     #[structopt(
         short = "d",
         long = "debug_address",
@@ -43,7 +43,7 @@ pub struct Opt {
     )]
     pub debug_address: Option<String>,
     /// libra_swarm's config file directory, which holds libra_node's config .toml file(s).
-    /// It is requried unless (and hence conflict with)
+    /// It is required unless (and hence conflict with)
     /// validator_addresses and debug_address are both present.
     #[structopt(
         short = "s",

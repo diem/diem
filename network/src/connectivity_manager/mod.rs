@@ -7,7 +7,7 @@
 //! to system membership.
 //!
 //! In our current system design, the Consensus actor informs the ConnectivityManager of
-//! eligible nodes, and the Discovery actor infroms it about updates to addresses of eligible
+//! eligible nodes, and the Discovery actor informs it about updates to addresses of eligible
 //! nodes.
 use crate::{
     common::NetworkPublicKeys,

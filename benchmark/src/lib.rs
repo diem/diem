@@ -67,7 +67,7 @@ pub struct Benchmarker {
     clients: Vec<Arc<AdmissionControlClient>>,
     /// Use WalletLibrary to setup the benchmarking environment.
     wallet: WalletLibrary,
-    /// Interface to metric counters in validator nodes, e.g., #commited_txns in storage.
+    /// Interface to metric counters in validator nodes, e.g., #committed_txns in storage.
     debug_client: NodeDebugClient,
 }
 
@@ -86,7 +86,7 @@ impl Benchmarker {
         }
     }
 
-    /// Use debug client interface to query #commited TXNs in validator's storage.
+    /// Use debug client interface to query #committed TXNs in validator's storage.
     /// If it is not available, we can still count on timeout to terminate the wait.
     /// So in that case we return a default value 0.
     fn get_committed_txns_counter(&self) -> i64 {

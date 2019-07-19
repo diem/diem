@@ -212,7 +212,7 @@ fn setup_extension_case(db: &MockTreeStore, n: usize) -> (HashValue, HashValue) 
 }
 
 #[test]
-fn test_insert_at_extension_fork_at_begining() {
+fn test_insert_at_extension_fork_at_beginning() {
     let db = MockTreeStore::default();
     let (root, extension_child_hash) = setup_extension_case(&db, 6);
     let tree = SparseMerkleTree::new(&db);
