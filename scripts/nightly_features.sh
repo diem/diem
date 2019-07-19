@@ -11,7 +11,6 @@ allowed_features=(
   "--and" "--not" "-e" "checked_duration_since"
   "--and" "--not" "-e" "custom_test_frameworks"
   "--and" "--not" "-e" "set_stdio"
-  "--and" "--not" "-e" "specialization"
   "--and" "--not" "-e" "test"
 )
 
