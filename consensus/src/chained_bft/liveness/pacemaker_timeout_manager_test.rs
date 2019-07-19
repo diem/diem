@@ -3,8 +3,8 @@
 
 use crate::chained_bft::{
     liveness::{
-        new_round_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
+        timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     },
     persistent_storage::PersistentStorage,
     test_utils::{MockStorage, TestPayload},
@@ -21,8 +21,8 @@ fn test_basic() {
             .persistent_liveness_storage(),
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
-    let validator_signer1 = ValidatorSigner::random();
-    let validator_signer2 = ValidatorSigner::random();
+    let validator_signer1 = ValidatorSigner::random([0u8; 32]);
+    let validator_signer2 = ValidatorSigner::random([1u8; 32]);
 
     // No timeout certificate generated on adding 2 timeouts from the same author
     let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signer1);
@@ -103,8 +103,8 @@ fn test_basic() {
 
 #[test]
 fn test_recovery_from_highest_timeout_certificate() {
-    let validator_signer1 = ValidatorSigner::random();
-    let validator_signer2 = ValidatorSigner::random();
+    let validator_signer1 = ValidatorSigner::random([0u8; 32]);
+    let validator_signer2 = ValidatorSigner::random([1u8; 32]);
 
     let timeout1 = PacemakerTimeout::new(10, &validator_signer1);
     let timeout2 = PacemakerTimeout::new(11, &validator_signer2);

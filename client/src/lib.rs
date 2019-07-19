@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(duration_float)]
 #![deny(missing_docs)]
 //! Libra Client
 //!
@@ -16,6 +15,7 @@ pub(crate) mod account_commands;
 pub mod client_proxy;
 /// Command struct to interact with client.
 pub mod commands;
+pub(crate) mod dev_commands;
 /// gRPC client wrapper to connect to validator.
 pub(crate) mod grpc_client;
 pub(crate) mod query_commands;

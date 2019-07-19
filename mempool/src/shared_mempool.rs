@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, MempoolAddTransactionStatus, TimelineState},
+    core_mempool::{CoreMempool, TimelineState},
+    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use config::config::{MempoolConfig, NodeConfig};
@@ -237,7 +238,7 @@ async fn process_incoming_transactions<V>(
                     balance,
                     TimelineState::NonQualified,
                 );
-                if insertion_result == MempoolAddTransactionStatus::Valid {
+                if insertion_result.code == MempoolAddTransactionStatusCode::Valid {
                     OP_COUNTERS.inc(&format!("smp.transactions.success.{:?}", peer_id));
                 }
             }

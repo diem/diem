@@ -8,7 +8,7 @@
 //! generated synthesis binary.
 use move_ir_natives::dispatch::{Result, StackAccessor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use types::byte_array::ByteArray;
+use types::{account_address::AccountAddress, byte_array::ByteArray};
 
 /// A wrapper around data used to generate random valid bytearrays that replicate the semantics of
 /// a `StackAccessor`.
@@ -58,5 +58,13 @@ impl Default for StackAccessorMocker {
 impl StackAccessor for &mut StackAccessorMocker {
     fn get_byte_array(&mut self) -> Result<ByteArray> {
         Ok(std::mem::replace(&mut self.curr_byte_array, None).unwrap())
+    }
+
+    fn get_u64(&mut self) -> Result<u64> {
+        unimplemented!("Come back later")
+    }
+
+    fn get_address(&mut self) -> Result<AccountAddress> {
+        unimplemented!("Come back later")
     }
 }

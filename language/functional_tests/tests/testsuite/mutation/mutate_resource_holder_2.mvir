@@ -1,7 +1,6 @@
 // check: no struct handle index 1
 // TODO is it possible to get this to compile to let the bytecode verifier complain?
 
-modules:
 module A {
     import 0x0.LibraCoin;
     resource A { c: R#LibraCoin.T }
@@ -26,9 +25,11 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
+//! new-transaction
+
+import {{default}}.A;
 import 0x0.LibraCoin;
+
 main() {
     let zero_resource: R#LibraCoin.T;
     let s: R#A.A;

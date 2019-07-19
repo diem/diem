@@ -3,9 +3,9 @@
 
 use futures::{
     future::Future,
+    ready,
     sink::Sink,
     task::{Context, Poll},
-    try_ready,
 };
 use std::pin::Pin;
 
@@ -34,7 +34,7 @@ impl<'a, S: Sink<Item> + Unpin + ?Sized, Item> BufferedSend<'a, S, Item> {
 }
 
 impl<S: Sink<Item> + Unpin + ?Sized, Item> Future for BufferedSend<'_, S, Item> {
-    type Output = Result<(), S::SinkError>;
+    type Output = Result<(), S::Error>;
 
     fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         // Get a &mut Self from the Pin<&mut Self>.
@@ -48,7 +48,7 @@ impl<S: Sink<Item> + Unpin + ?Sized, Item> Future for BufferedSend<'_, S, Item> 
 
         // Poll the underlying sink until it's ready to send an item (or errors).
         let mut sink = Pin::new(&mut this.sink);
-        try_ready!(sink.as_mut().poll_ready(context));
+        ready!(sink.as_mut().poll_ready(context))?;
 
         // We need ownership of the pending item to send it on the sink. We take
         // it _after_ the sink.poll_ready to avoid awkward control flow with
@@ -73,7 +73,7 @@ mod test {
     // It should work.
     #[test]
     fn buffered_send() {
-        let (mut tx, mut rx) = mpsc::channel::<u32>(0);
+        let (mut tx, mut rx) = mpsc::channel::<u32>(1);
 
         block_on(tx.send(123)).unwrap();
         assert_eq!(Some(123), block_on(rx.next()));
@@ -86,7 +86,7 @@ mod test {
 
         // A 0-capacity channel + one sender gives the channel 1 available buffer
         // slot.
-        let (tx, mut rx) = mpsc::channel::<u32>(0);
+        let (tx, mut rx) = mpsc::channel::<u32>(1);
         let mut tx = tx.buffer(2);
 
         // Initial state
@@ -143,11 +143,13 @@ mod test {
         // to the underlying channel
         let f_flush = async move {
             tx.flush().await.unwrap();
+            tx
         };
 
         let f_recv = async move {
             assert_eq!(Some(2), rx.next().await);
             assert_eq!(Some(3), rx.next().await);
+            rx
         };
 
         // flush 2
@@ -178,13 +180,13 @@ mod test {
         // +-----------------+
         //  .buffer \ channel
 
-        block_on(join(f_flush, f_recv));
+        let (_tx, _rx) = block_on(join(f_flush, f_recv));
     }
 
     // Polling after the future has completed should not panic.
     #[test]
     fn poll_after_ready() {
-        let (mut tx, mut rx) = mpsc::channel::<u32>(0);
+        let (mut tx, mut rx) = mpsc::channel::<u32>(1);
 
         let mut f_send = tx.send(123);
 

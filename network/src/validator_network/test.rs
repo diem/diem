@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
-
+#![cfg(test)]
 use crate::{
     common::NetworkPublicKeys,
     proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock, SignedTransaction},
@@ -12,13 +12,12 @@ use crate::{
     },
     ProtocolId,
 };
-use crypto::{
-    signing::{self, generate_keypair},
-    x25519,
-};
+use crypto::x25519;
 use futures::{executor::block_on, future::join, StreamExt};
+use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED};
 use parity_multiaddr::Multiaddr;
 use protobuf::Message as proto_msg;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
 use types::{
@@ -35,7 +34,7 @@ fn test_network_builder() {
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
     let consensus_get_blocks_protocol = ProtocolId::from_static(b"get_blocks");
     let synchronizer_get_chunks_protocol = ProtocolId::from_static(b"get_chunks");
-    let (signing_private_key, signing_public_key) = signing::generate_keypair();
+    let (signing_private_key, signing_public_key) = compat::generate_keypair(None);
     let (identity_private_key, identity_public_key) = x25519::generate_keypair();
 
     let (
@@ -44,7 +43,7 @@ fn test_network_builder() {
         _listen_addr,
     ) = NetworkBuilder::new(runtime.executor(), peer_id, addr)
         .transport(TransportType::Memory)
-        .signing_keys((signing_private_key, signing_public_key))
+        .signing_keys((signing_private_key, signing_public_key.clone()))
         .identity_keys((identity_private_key, identity_public_key))
         .trusted_peers(
             vec![(
@@ -78,8 +77,11 @@ fn test_mempool_sync() {
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
     // Setup signing public keys.
-    let (listener_signing_private_key, listener_signing_public_key) = signing::generate_keypair();
-    let (dialer_signing_private_key, dialer_signing_public_key) = signing::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (listener_signing_private_key, listener_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (dialer_signing_private_key, dialer_signing_public_key) =
+        compat::generate_keypair(&mut rng);
     // Setup identity public keys.
     let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
     let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
@@ -91,14 +93,14 @@ fn test_mempool_sync() {
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key,
+                signing_public_key: listener_signing_public_key.clone(),
                 identity_public_key: listener_identity_public_key,
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key,
+                signing_public_key: dialer_signing_public_key.clone(),
                 identity_public_key: dialer_identity_public_key,
             },
         ),
@@ -141,8 +143,8 @@ fn test_mempool_sync() {
     let mut mempool_msg = MempoolSyncMsg::new();
     mempool_msg.set_peer_id(dialer_peer_id.into());
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    let keypair = generate_keypair();
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
+    let keypair = compat::generate_keypair(&mut rng);
+    let txn = get_test_signed_txn(sender, 0, keypair.0.into(), keypair.1.into(), None);
     mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
 
     let f_dialer = async move {
@@ -197,8 +199,11 @@ fn test_consensus_rpc() {
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
     // Setup signing public keys.
-    let (listener_signing_private_key, listener_signing_public_key) = signing::generate_keypair();
-    let (dialer_signing_private_key, dialer_signing_public_key) = signing::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (listener_signing_private_key, listener_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (dialer_signing_private_key, dialer_signing_public_key) =
+        compat::generate_keypair(&mut rng);
     // Setup identity public keys.
     let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
     let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
@@ -210,14 +215,14 @@ fn test_consensus_rpc() {
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key,
+                signing_public_key: listener_signing_public_key.clone(),
                 identity_public_key: listener_identity_public_key,
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key,
+                signing_public_key: dialer_signing_public_key.clone(),
                 identity_public_key: dialer_identity_public_key,
             },
         ),

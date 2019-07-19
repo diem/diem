@@ -14,6 +14,7 @@ use crate::{
     },
     value::{Local, MutVal, Reference, Value},
 };
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use move_ir_natives::dispatch::{dispatch_native_call, NativeReturnType};
 use types::{
     access_path::AccessPath,
@@ -29,7 +30,8 @@ use types::{
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, StructDefinitionIndex},
+    file_format::{Bytecode, CodeOffset, CompiledScript, StructDefinitionIndex},
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -97,7 +99,7 @@ where
     /// transactions within the same block.
     pub fn new(
         module_cache: P,
-        data_cache: &'txn RemoteCache,
+        data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
         TransactionExecutor {
@@ -167,7 +169,7 @@ where
             try_runtime!(self.gas_meter.calculate_and_consume(
                 &instruction,
                 &self.execution_stack,
-                1
+                AbstractMemorySize::new(1)
             ));
 
             match instruction.clone() {
@@ -238,7 +240,7 @@ where
                         .top_frame_mut()?
                         .store_local(idx, stack_top));
                 }
-                Bytecode::Call(idx) => {
+                Bytecode::Call(idx, _) => {
                     let self_module = &self.execution_stack.top_frame()?.module();
                     let callee_function_ref = try_runtime!(self
                         .execution_stack
@@ -255,9 +257,10 @@ where
                             function_name,
                         )
                         .map_err(|_| VMInvariantViolation::LinkerError)?;
-                        try_runtime!(self
-                            .gas_meter
-                            .consume_gas(native_return.cost(), &self.execution_stack));
+                        try_runtime!(self.gas_meter.consume_gas(
+                            GasUnits::new(native_return.cost()),
+                            &self.execution_stack
+                        ));
                         match native_return.get_return_value() {
                             NativeReturnType::ByteArray(value) => {
                                 self.execution_stack.push(Local::bytearray(value));
@@ -266,6 +269,11 @@ where
                             }
                             NativeReturnType::Bool(value) => {
                                 self.execution_stack.push(Local::bool(value));
+                                // Call stack is not reconstructed for a native call, so we just
+                                // proceed on to next instruction.
+                            }
+                            NativeReturnType::U64(value) => {
+                                self.execution_stack.push(Local::u64(value));
                                 // Call stack is not reconstructed for a native call, so we just
                                 // proceed on to next instruction.
                             }
@@ -319,7 +327,7 @@ where
                         }
                     }
                 }
-                Bytecode::Pack(sd_idx) => {
+                Bytecode::Pack(sd_idx, _) => {
                     let self_module = self.execution_stack.top_frame()?.module();
                     let struct_def = self_module.struct_def_at(sd_idx);
                     let args = self
@@ -340,7 +348,7 @@ where
                         }
                     }
                 }
-                Bytecode::Unpack(_sd_idx) => {
+                Bytecode::Unpack(_sd_idx, _) => {
                     let struct_arg = self.execution_stack.pop()?;
                     match struct_arg.value() {
                         Some(v) => match &*v.peek() {
@@ -412,15 +420,12 @@ where
                 Bytecode::Gt => try_runtime!(self.binop_bool(|l: u64, r| l > r)),
                 Bytecode::Le => try_runtime!(self.binop_bool(|l: u64, r| l <= r)),
                 Bytecode::Ge => try_runtime!(self.binop_bool(|l: u64, r| l >= r)),
-                Bytecode::Assert => {
-                    let condition = try_runtime!(self.execution_stack.pop_as::<bool>());
+                Bytecode::Abort => {
                     let error_code = try_runtime!(self.execution_stack.pop_as::<u64>());
-                    if !condition {
-                        return Ok(Err(VMRuntimeError {
-                            loc: self.execution_stack.location()?,
-                            err: VMErrorKind::AssertionFailure(error_code),
-                        }));
-                    }
+                    return Ok(Err(VMRuntimeError {
+                        loc: self.execution_stack.location()?,
+                        err: VMErrorKind::Aborted(error_code),
+                    }));
                 }
 
                 // TODO: Should we emit different eq for different primitive type values?
@@ -429,20 +434,20 @@ where
                 Bytecode::Eq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    self.execution_stack.push(Local::bool(lhs == rhs));
+                    self.execution_stack.push(Local::bool(lhs.equals(rhs)?));
                 }
                 Bytecode::Neq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    self.execution_stack.push(Local::bool(lhs != rhs));
+                    self.execution_stack.push(Local::bool(lhs.not_equals(rhs)?));
                 }
                 Bytecode::GetTxnGasUnitPrice => {
                     self.execution_stack
-                        .push(Local::u64(self.txn_data.gas_unit_price()));
+                        .push(Local::u64(self.txn_data.gas_unit_price().get()));
                 }
                 Bytecode::GetTxnMaxGasUnits => {
                     self.execution_stack
-                        .push(Local::u64(self.txn_data.max_gas_amount()));
+                        .push(Local::u64(self.txn_data.max_gas_amount().get()));
                 }
                 Bytecode::GetTxnSequenceNumber => {
                     self.execution_stack
@@ -457,7 +462,7 @@ where
                         self.txn_data.public_key().to_slice().to_vec(),
                     )));
                 }
-                Bytecode::BorrowGlobal(idx) => {
+                Bytecode::BorrowGlobal(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -478,7 +483,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::Exists(idx) => {
+                Bytecode::Exists(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -498,7 +503,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::MoveFrom(idx) => {
+                Bytecode::MoveFrom(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
@@ -519,7 +524,7 @@ where
                         return Err(VMInvariantViolation::LinkerError);
                     }
                 }
-                Bytecode::MoveToSender(idx) => {
+                Bytecode::MoveToSender(idx, _) => {
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, self.txn_data.sender());
                     if let Some(struct_def) = try_runtime!(self
@@ -579,7 +584,7 @@ where
                 }
                 Bytecode::GetGasRemaining => {
                     self.execution_stack
-                        .push(Local::u64(self.gas_meter.remaining_gas()));
+                        .push(Local::u64(self.gas_meter.remaining_gas().get()));
                 }
             }
             pc += 1;
@@ -779,8 +784,12 @@ where
     ) -> VMRuntimeResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas: u64 = (self.txn_data.max_gas_amount - self.gas_meter.remaining_gas())
-            * self.txn_data.gas_unit_price;
+        let gas: u64 = self
+            .txn_data
+            .max_gas_amount
+            .sub(self.gas_meter.remaining_gas())
+            .mul(self.txn_data.gas_unit_price)
+            .get();
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
         Ok(TransactionOutput::new(
@@ -812,23 +821,24 @@ fn error_output(err: impl Into<VMStatus>) -> TransactionOutput {
 /// A helper function for executing a single script. Will be deprecated once we have a better
 /// testing framework for executing arbitrary script.
 pub fn execute_function(
-    caller_script: CompiledScript,
-    modules: Vec<CompiledModule>,
+    caller_script: VerifiedScript,
+    modules: Vec<VerifiedModule>,
     _args: Vec<TransactionArgument>,
-    data_cache: &RemoteCache,
+    data_cache: &dyn RemoteCache,
 ) -> VMResult<()> {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+    let txn_metadata = TransactionMetadata::default();
     for m in modules {
         module_cache.cache_module(m);
     }
     let mut vm = TransactionExecutor {
         execution_stack: ExecutionStack::new(&module_cache),
-        gas_meter: GasMeter::new(10_000),
-        txn_data: TransactionMetadata::default(),
+        gas_meter: GasMeter::new(txn_metadata.max_gas_amount()),
+        txn_data: txn_metadata,
         event_data: Vec::new(),
         data_view: TransactionDataCache::new(data_cache),
     };
@@ -845,5 +855,10 @@ where
     pub fn clear_writes(&mut self) {
         self.data_view.clear();
         self.event_data.clear();
+    }
+
+    /// During cost synthesis, turn off gas metering so that we don't run out of gas.
+    pub fn turn_off_gas_metering(&mut self) {
+        self.gas_meter.disable_metering();
     }
 }

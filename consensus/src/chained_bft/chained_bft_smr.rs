@@ -8,12 +8,12 @@ use crate::{
         event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            new_round_msg::NewRoundMsg,
             pacemaker::{NewRoundEvent, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
+            timeout_msg::TimeoutMsg,
         },
         network::{
             BlockRetrievalRequest, ChunkRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers,
@@ -24,7 +24,7 @@ use crate::{
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     state_synchronizer::SyncStatus,
-    time_service::{ClockTimeService, TimeService},
+    util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use failure::prelude::*;
@@ -34,6 +34,7 @@ use futures::{
     future::{FutureExt, TryFutureExt},
     stream::StreamExt,
 };
+use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
 use config::config::ConsensusConfig;
@@ -78,7 +79,7 @@ pub struct ChainedBftSMR<T, P> {
     author: P,
     // TODO [Reconfiguration] quorum size is just a function of current validator set.
     quorum_size: usize,
-    signer: ValidatorSigner,
+    signer: Option<ValidatorSigner<Ed25519PrivateKey>>,
     proposers: Vec<P>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
@@ -93,7 +94,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     pub fn new(
         author: P,
         quorum_size: usize,
-        signer: ValidatorSigner,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
         proposers: Vec<P>,
         network: ConsensusNetworkImpl,
         runtime: Runtime,
@@ -104,7 +105,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         Self {
             author,
             quorum_size,
-            signer,
+            signer: Some(signer),
             proposers,
             runtime: Some(runtime),
             block_store: None,
@@ -250,13 +251,13 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         }
     }
 
-    async fn process_new_round_msg(
-        mut receiver: channel::Receiver<NewRoundMsg>,
+    async fn process_timeout_msg(
+        mut receiver: channel::Receiver<TimeoutMsg>,
         event_processor: ConcurrentEventProcessor<T, P>,
     ) {
-        while let Some(new_round_msg) = receiver.next().await {
+        while let Some(timeout_msg) = receiver.next().await {
             let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_new_round_msg(new_round_msg).await;
+            guard.process_timeout_msg(timeout_msg).await;
         }
     }
 
@@ -271,7 +272,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
             let timeout_msg = guard.process_outgoing_pacemaker_timeout(round).await;
             match timeout_msg {
                 Some(timeout_msg) => {
-                    network.broadcast_new_round(timeout_msg).await;
+                    network.broadcast_timeout_msg(timeout_msg).await;
                 }
                 None => {
                     info!("Broadcast not sent as the processing of the timeout failed.  Will retry again on the next timeout.");
@@ -366,7 +367,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         );
 
         executor.spawn(
-            Self::process_new_round_msg(network_receivers.new_rounds, event_processor.clone())
+            Self::process_timeout_msg(network_receivers.timeout_msgs, event_processor.clone())
                 .boxed()
                 .unit_error()
                 .compat(),
@@ -437,72 +438,79 @@ impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P
             }
         }
 
-        let block_store = Arc::new(block_on(BlockStore::new(
-            Arc::clone(&self.storage),
-            initial_data,
-            self.signer.clone(),
-            Arc::clone(&state_computer),
-            true,
-            self.config.max_pruned_blocks_in_mem,
-        )));
-        self.block_store = Some(Arc::clone(&block_store));
+        // the signer is only stored in the SMR to be provided here
+        let opt_signer = std::mem::replace(&mut self.signer, None);
+        if let Some(signer) = opt_signer {
+            let block_store = Arc::new(block_on(BlockStore::new(
+                Arc::clone(&self.storage),
+                initial_data,
+                signer,
+                Arc::clone(&state_computer),
+                true,
+                self.config.max_pruned_blocks_in_mem,
+            )));
 
-        // txn manager is required both by proposal generator (to pull the proposers)
-        // and by event processor (to update their status).
-        let proposal_generator = ProposalGenerator::new(
-            block_store.clone(),
-            Arc::clone(&txn_manager),
-            time_service.clone(),
-            self.config.max_block_size,
-            true,
-        );
+            self.block_store = Some(Arc::clone(&block_store));
 
-        let safety_rules = Arc::new(RwLock::new(SafetyRules::new(
-            block_store.clone(),
-            consensus_state,
-        )));
+            // txn manager is required both by proposal generator (to pull the proposers)
+            // and by event processor (to update their status).
+            let proposal_generator = ProposalGenerator::new(
+                block_store.clone(),
+                Arc::clone(&txn_manager),
+                time_service.clone(),
+                self.config.max_block_size,
+                true,
+            );
 
-        let (external_timeout_sender, external_timeout_receiver) =
-            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
-        let (new_round_events_sender, new_round_events_receiver) =
-            channel::new(1_024, &counters::PENDING_NEW_ROUND_EVENTS);
-        let pacemaker = self.create_pacemaker(
-            executor.clone(),
-            self.storage.persistent_liveness_storage(),
-            safety_rules.read().unwrap().last_committed_round(),
-            block_store.highest_certified_block().round(),
-            highest_timeout_certificates,
-            time_service.clone(),
-            new_round_events_sender,
-            external_timeout_sender,
-        );
+            let safety_rules = Arc::new(RwLock::new(SafetyRules::new(
+                block_store.clone(),
+                consensus_state,
+            )));
 
-        let (winning_proposals_sender, winning_proposals_receiver) =
-            channel::new(1_024, &counters::PENDING_WINNING_PROPOSALS);
-        let proposer_election = self.create_proposer_election(winning_proposals_sender);
-        let event_processor = Arc::new(futures_locks::RwLock::new(EventProcessor::new(
-            self.author,
-            Arc::clone(&block_store),
-            Arc::clone(&pacemaker),
-            Arc::clone(&proposer_election),
-            proposal_generator,
-            safety_rules,
-            state_computer,
-            txn_manager,
-            self.network.clone(),
-            Arc::clone(&self.storage),
-            time_service.clone(),
-            true,
-        )));
+            let (external_timeout_sender, external_timeout_receiver) =
+                channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+            let (new_round_events_sender, new_round_events_receiver) =
+                channel::new(1_024, &counters::PENDING_NEW_ROUND_EVENTS);
+            let pacemaker = self.create_pacemaker(
+                executor.clone(),
+                self.storage.persistent_liveness_storage(),
+                safety_rules.read().unwrap().last_committed_round(),
+                block_store.highest_certified_block().round(),
+                highest_timeout_certificates,
+                time_service.clone(),
+                new_round_events_sender,
+                external_timeout_sender,
+            );
 
-        self.start_event_processing(
-            event_processor,
-            executor.clone(),
-            new_round_events_receiver,
-            winning_proposals_receiver,
-            network_receivers,
-            external_timeout_receiver,
-        );
+            let (winning_proposals_sender, winning_proposals_receiver) =
+                channel::new(1_024, &counters::PENDING_WINNING_PROPOSALS);
+            let proposer_election = self.create_proposer_election(winning_proposals_sender);
+            let event_processor = Arc::new(futures_locks::RwLock::new(EventProcessor::new(
+                self.author,
+                Arc::clone(&block_store),
+                Arc::clone(&pacemaker),
+                Arc::clone(&proposer_election),
+                proposal_generator,
+                safety_rules,
+                state_computer,
+                txn_manager,
+                self.network.clone(),
+                Arc::clone(&self.storage),
+                time_service.clone(),
+                true,
+            )));
+
+            self.start_event_processing(
+                event_processor,
+                executor.clone(),
+                new_round_events_receiver,
+                winning_proposals_receiver,
+                network_receivers,
+                external_timeout_receiver,
+            );
+        } else {
+            panic!("start called twice on the same Chained BFT SMR!");
+        }
 
         debug!("Chained BFT SMR started.");
         Ok(())

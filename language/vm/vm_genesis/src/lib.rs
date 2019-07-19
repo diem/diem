@@ -4,13 +4,13 @@
 use config::config::{VMConfig, VMPublishingOption};
 use crypto::{signing, PrivateKey, PublicKey};
 use failure::prelude::*;
-use ir_to_bytecode::{compiler, parser::ast};
+use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};
 use stdlib::{
-    stdlib::*,
+    stdlib_modules,
     transaction_scripts::{
         CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
@@ -22,14 +22,13 @@ use types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
-    language_storage::ModuleId,
     transaction::{
         Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
     },
     validator_public_keys::ValidatorPublicKeys,
 };
-use vm::{file_format::CompiledModule, transaction_metadata::TransactionMetadata};
+use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::{
@@ -41,13 +40,8 @@ use vm_runtime::{
     value::Local,
 };
 
-#[cfg(test)]
-mod tests;
-
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
-// Max size of the validator set
-const VALIDATOR_SIZE_LIMIT: usize = 10;
 
 lazy_static! {
     pub static ref GENESIS_KEYPAIR: (PrivateKey, PublicKey) = {
@@ -162,24 +156,6 @@ impl Accounts {
 }
 
 lazy_static! {
-    pub static ref STDLIB_ADDRESS: AccountAddress = { account_config::core_code_address() };
-    pub static ref STDLIB_MODULES: Vec<CompiledModule> = {
-        let mut modules: Vec<CompiledModule> = vec![];
-        let stdlib = vec![coin_module(), native_hash_module(), account_module(), signature_module(), validator_set_module()];
-        for m in stdlib.iter() {
-            let (compiled_module, verification_errors) =
-                compiler::compile_and_verify_module(&STDLIB_ADDRESS, m, &modules).unwrap();
-
-            // Fail if the module doesn't verify
-            for e in &verification_errors {
-                println!("{:?}", e);
-            }
-            assert!(verification_errors.is_empty());
-
-            modules.push(compiled_module);
-        }
-        modules
-    };
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
@@ -194,8 +170,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compiler::compile_program(&AccountAddress::default(), body, &STDLIB_MODULES.clone())
-            .unwrap();
+        compile_program(&AccountAddress::default(), body, stdlib_modules()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -326,13 +301,15 @@ pub fn encode_genesis_transaction(
 pub fn encode_genesis_transaction_with_validator(
     private_key: &PrivateKey,
     public_key: PublicKey,
-    validator_set: Vec<ValidatorPublicKeys>,
+    _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
-    assert!(validator_set.len() <= VALIDATOR_SIZE_LIMIT);
+    // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
+    //       Fix it later when we have collections.
+
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
-    let modules = STDLIB_MODULES.clone();
+    let modules = stdlib_modules();
     let arena = Arena::new();
     let state_view = FakeStateView;
     let vm_cache = VMModuleCache::new(&arena);
@@ -340,21 +317,17 @@ pub fn encode_genesis_transaction_with_validator(
     let genesis_auth_key = ByteArray::new(AccountAddress::from(public_key).to_vec());
 
     let genesis_write_set = {
-        let fake_fetcher = FakeFetcher::new(modules.clone());
+        let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
         let data_cache = BlockDataCache::new(&state_view);
         let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
-            let validator_set_key = ModuleId::new(
-                account_config::core_code_address(),
-                "ValidatorSet".to_string(),
-            );
 
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
             txn_executor.create_account(genesis_addr).unwrap().unwrap();
             txn_executor
-                .execute_function(&COIN_MODULE, "grant_mint_capability", vec![])
+                .execute_function(&COIN_MODULE, "initialize", vec![])
                 .unwrap()
                 .unwrap();
 
@@ -376,54 +349,8 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap()
                 .unwrap();
 
-            let mut validator_args = vec![Local::u64(validator_set.len() as u64)];
-            for key in validator_set.iter() {
-                txn_executor
-                    .execute_function(
-                        &validator_set_key,
-                        "make_new_validator_key",
-                        vec![
-                            Local::address(*key.account_address()),
-                            Local::bytearray(ByteArray::new(
-                                key.consensus_public_key().to_slice().to_vec(),
-                            )),
-                            Local::bytearray(ByteArray::new(
-                                key.network_signing_public_key().to_slice().to_vec(),
-                            )),
-                            Local::bytearray(ByteArray::new(
-                                key.network_identity_public_key().to_slice().to_vec(),
-                            )),
-                        ],
-                    )
-                    .unwrap()
-                    .unwrap();
-                validator_args.push(txn_executor.pop_stack().unwrap());
-            }
-            let placeholder = {
-                txn_executor
-                    .execute_function(
-                        &validator_set_key,
-                        "make_new_validator_key",
-                        vec![
-                            Local::address(AccountAddress::default()),
-                            Local::bytearray(ByteArray::new(vec![])),
-                            Local::bytearray(ByteArray::new(vec![])),
-                            Local::bytearray(ByteArray::new(vec![])),
-                        ],
-                    )
-                    .unwrap()
-                    .unwrap();
-                txn_executor.pop_stack().unwrap()
-            };
-            validator_args.resize(VALIDATOR_SIZE_LIMIT + 1, placeholder);
-
-            txn_executor
-                .execute_function(&validator_set_key, "publish_validator_set", validator_args)
-                .unwrap()
-                .unwrap();
-
             let stdlib_modules = modules
-                .into_iter()
+                .iter()
                 .map(|m| {
                     let mut module_vec = vec![];
                     m.serialize(&mut module_vec).unwrap();

@@ -4,11 +4,12 @@
 use crate::chained_bft::{
     common::{Author, Payload, Round},
     consensus_types::{block::Block, quorum_cert::QuorumCert},
-    liveness::new_round_msg::PacemakerTimeoutCertificate,
+    liveness::timeout_msg::PacemakerTimeoutCertificate,
 };
 use failure::Result;
 use futures::Future;
 use network::proto::Proposal as ProtoProposal;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Serialize};
@@ -43,7 +44,7 @@ pub struct ProposalInfo<T, P> {
 }
 
 impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier<Ed25519PublicKey>) -> Result<()> {
         self.proposal
             .verify(validator)
             .map_err(|e| format_err!("{:?}", e))?;

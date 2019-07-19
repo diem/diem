@@ -9,7 +9,7 @@ use crate::{
     },
     counters,
     state_replication::{ExecutedState, StateComputeResult},
-    time_service::duration_since_epoch,
+    util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
 use crypto::HashValue;

@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 2, err: WriteRefResourceError(7) }
 
-modules:
 module A {
     import 0x0.LibraCoin;
     resource A { c: R#LibraCoin.T }
@@ -25,9 +24,11 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
+//! new-transaction
+
+import {{default}}.A;
 import 0x0.LibraCoin;
+
 main() {
     let zero_resource: R#LibraCoin.T;
     let s: R#A.A;

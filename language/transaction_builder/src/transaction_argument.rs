@@ -24,8 +24,7 @@ pub fn parse_as_address(s: &str) -> Result<TransactionArgument> {
         return Err(ErrorKind::ParseError("address must be 32 bytes or less".to_string()).into());
     }
     if addr.len() < 32 {
-        addr = [0 as u8]
-            .repeat(32 - addr.len())
+        addr = vec![0u8; 32 - addr.len()]
             .into_iter()
             .chain(addr.into_iter())
             .collect();

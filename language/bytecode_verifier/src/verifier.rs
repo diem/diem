@@ -7,16 +7,143 @@ use crate::{
     resources::ResourceTransitiveChecker, signature::SignatureChecker,
     struct_defs::RecursiveStructDefChecker,
 };
-use std::collections::BTreeMap;
+use failure::Error;
+use std::{collections::BTreeMap, fmt};
 use types::language_storage::ModuleId;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{VMStaticViolation, VerificationError},
-    file_format::{CompiledModule, CompiledScript},
+    errors::{VMStaticViolation, VerificationError, VerificationStatus},
+    file_format::{CompiledModule, CompiledProgram, CompiledScript},
     resolver::Resolver,
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
+
+/// A program that has been verified for internal consistency.
+///
+/// This includes cross-module checking for the base dependencies.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VerifiedProgram<'a> {
+    script: VerifiedScript,
+    modules: Vec<VerifiedModule>,
+    deps: Vec<&'a VerifiedModule>,
+}
+
+impl<'a> VerifiedProgram<'a> {
+    /// Creates a new `VerifiedProgram` after verifying the provided `CompiledProgram` against
+    /// the provided base dependencies.
+    ///
+    /// On error, returns a list of verification statuses.
+    pub fn new(
+        program: CompiledProgram,
+        deps: impl IntoIterator<Item = &'a VerifiedModule>,
+    ) -> Result<Self, Vec<VerificationStatus>> {
+        let deps: Vec<&VerifiedModule> = deps.into_iter().collect();
+        // This is done separately to avoid unnecessary codegen due to monomorphization.
+        Self::new_impl(program, deps)
+    }
+
+    fn new_impl(
+        program: CompiledProgram,
+        deps: Vec<&'a VerifiedModule>,
+    ) -> Result<Self, Vec<VerificationStatus>> {
+        let mut modules = vec![];
+
+        for (module_idx, module) in program.modules.into_iter().enumerate() {
+            let to_statuses = |errors: Vec<VerificationError>| {
+                errors
+                    .into_iter()
+                    .map(|error| VerificationStatus::Module(module_idx as u16, error))
+                    .collect::<Vec<_>>()
+            };
+            let module = match VerifiedModule::new(module) {
+                Ok(module) => module,
+                Err((_, errors)) => {
+                    return Err(to_statuses(errors));
+                }
+            };
+
+            let (module, errors) = {
+                // Verify against any modules compiled earlier as well.
+                let deps = deps.iter().copied().chain(&modules);
+                verify_module_dependencies(module, deps)
+            };
+            if !errors.is_empty() {
+                return Err(to_statuses(errors));
+            }
+
+            modules.push(module);
+        }
+
+        let to_statuses = |errors: Vec<VerificationError>| {
+            errors
+                .into_iter()
+                .map(VerificationStatus::Script)
+                .collect::<Vec<_>>()
+        };
+        let script = match VerifiedScript::new(program.script) {
+            Ok(script) => script,
+            Err((_, errors)) => {
+                let statuses = errors.into_iter().map(VerificationStatus::Script).collect();
+                return Err(statuses);
+            }
+        };
+
+        let (script, errors) = {
+            let deps = deps.iter().copied().chain(&modules);
+            verify_script_dependencies(script, deps)
+        };
+        if !errors.is_empty() {
+            return Err(to_statuses(errors));
+        }
+
+        Ok(VerifiedProgram {
+            script,
+            modules,
+            deps,
+        })
+    }
+
+    /// Returns a reference to the script.
+    pub fn script(&self) -> &VerifiedScript {
+        &self.script
+    }
+
+    /// Returns a reference to the modules in this program.
+    pub fn modules(&self) -> &[VerifiedModule] {
+        &self.modules
+    }
+
+    /// Returns the dependencies this program was verified against.
+    pub fn deps(&self) -> &[&'a VerifiedModule] {
+        &self.deps
+    }
+
+    /// Converts this `VerifiedProgram` into a `CompiledProgram` instance.
+    ///
+    /// Converting back would require re-verifying this program.
+    pub fn into_inner(self) -> CompiledProgram {
+        CompiledProgram {
+            modules: self
+                .modules
+                .into_iter()
+                .map(|module| module.into_inner())
+                .collect(),
+            script: self.script.into_inner(),
+        }
+    }
+}
+
+impl<'a> fmt::Display for VerifiedProgram<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "VerifiedProgram: {{\nModules: [\n")?;
+        for m in &self.modules {
+            writeln!(f, "{},", m)?;
+        }
+        // XXX Should this print out dependencies? Trying to avoid that for brevity for now.
+        write!(f, "],\nScript: {},\nDependencies: ...}}", self.script)
+    }
+}
 
 /// A module that has been verified for internal consistency.
 ///
@@ -43,13 +170,33 @@ impl VerifiedModule {
             errors.append(&mut RecursiveStructDefChecker::new(&module).verify());
         }
         if errors.is_empty() {
-            errors.append(&mut CodeUnitVerifier::new(&module).verify());
+            errors.append(&mut CodeUnitVerifier::verify(&module));
         }
         if errors.is_empty() {
             Ok(VerifiedModule(module))
         } else {
             Err((module, errors))
         }
+    }
+
+    /// Returns a new `VerifiedModule` that **does not do any verification.**
+    ///
+    /// THIS IS INCREDIBLY DANGEROUS BECAUSE IT BREAKS CORE ASSUMPTIONS. DO NOT USE THIS OUTSIDE OF
+    /// TESTS.
+    #[allow(non_snake_case)]
+    #[doc(hidden)]
+    pub fn bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(module: CompiledModule) -> VerifiedModule {
+        VerifiedModule(module)
+    }
+
+    /// Serializes this module into the provided buffer.
+    ///
+    /// This is merely a convenience wrapper around `module.as_inner().serialize(buf)`.
+    ///
+    /// `VerifiedModule` instances cannot be deserialized directly, since the input is potentially
+    /// untrusted. Instead, one must go through `CompiledModule`.
+    pub fn serialize(&self, buf: &mut Vec<u8>) -> Result<(), Error> {
+        self.as_inner().serialize(buf)
     }
 
     /// Returns a reference to the `CompiledModule` within.
@@ -67,6 +214,12 @@ impl VerifiedModule {
 impl ModuleAccess for VerifiedModule {
     fn as_module(&self) -> &CompiledModule {
         self.as_inner()
+    }
+}
+
+impl fmt::Display for VerifiedModule {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "VerifiedModule: {}", self.0)
     }
 }
 
@@ -122,6 +275,16 @@ impl VerifiedScript {
         VerifiedModule(self.into_inner().into_module())
     }
 
+    /// Serializes this script into the provided buffer.
+    ///
+    /// This is merely a convenience wrapper around `script.as_inner().serialize(buf)`.
+    ///
+    /// `VerifiedScript` instances cannot be deserialized directly, since the input is potentially
+    /// untrusted. Instead, one must go through `CompiledScript`.
+    pub fn serialize(&self, buf: &mut Vec<u8>) -> Result<(), Error> {
+        self.as_inner().serialize(buf)
+    }
+
     /// Returns a reference to the `CompiledScript` within.
     pub fn as_inner(&self) -> &CompiledScript {
         &self.0
@@ -140,19 +303,9 @@ impl ScriptAccess for VerifiedScript {
     }
 }
 
-/// Legacy version of `VerifiedModule`. Will be removed soon, please use `VerifiedModule` instead.
-pub fn verify_module(module: CompiledModule) -> (CompiledModule, Vec<VerificationError>) {
-    match VerifiedModule::new(module) {
-        Ok(module) => (module.into_inner(), vec![]),
-        Err((module, errors)) => (module, errors),
-    }
-}
-
-/// Legacy version of `VerifiedScript`. Will be removed soon, please use `VerifiedScript` instead.
-pub fn verify_script(script: CompiledScript) -> (CompiledScript, Vec<VerificationError>) {
-    match VerifiedScript::new(script) {
-        Ok(script) => (script.into_inner(), vec![]),
-        Err((script, errors)) => (script, errors),
+impl fmt::Display for VerifiedScript {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "VerifiedScript: {}", self.0)
     }
 }
 
@@ -178,10 +331,10 @@ pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStaticViolation> 
 /// error is included in the returned list of errors.  If found, usage of types and functions of the
 /// dependency in 'module' is checked against the declarations in the found module and mismatch
 /// errors are returned.
-pub fn verify_module_dependencies(
-    module: CompiledModule,
-    dependencies: &[CompiledModule],
-) -> (CompiledModule, Vec<VerificationError>) {
+pub fn verify_module_dependencies<'a>(
+    module: VerifiedModule,
+    dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
+) -> (VerifiedModule, Vec<VerificationError>) {
     let module_id = module.self_id();
     let mut dependency_map = BTreeMap::new();
     for dependency in dependencies {
@@ -209,19 +362,21 @@ pub fn verify_module_dependencies(
 /// looked up in 'dependencies'.  If not found, an error is included in the returned list of errors.
 /// If found, usage of types and functions of the dependency in 'script' is checked against the
 /// declarations in the found module and mismatch errors are returned.
-pub fn verify_script_dependencies(
-    script: CompiledScript,
-    dependencies: &[CompiledModule],
-) -> (CompiledScript, Vec<VerificationError>) {
+pub fn verify_script_dependencies<'a>(
+    script: VerifiedScript,
+    dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
+) -> (VerifiedScript, Vec<VerificationError>) {
     let fake_module = script.into_module();
     let (fake_module, errors) = verify_module_dependencies(fake_module, dependencies);
-    let script = fake_module.into_script();
+    // We just converted the script into a module so this doesn't break any invariants, even though
+    // not every VerifiedModule is a VerifiedScript.
+    let script = VerifiedScript(fake_module.into_inner().into_script());
     (script, errors)
 }
 
 fn verify_all_dependencies_provided(
-    module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
+    module_view: &ModuleView<VerifiedModule>,
+    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
 ) -> Vec<VerificationError> {
     let mut errors = vec![];
     for (idx, module_handle_view) in module_view.module_handles().enumerate() {
@@ -240,8 +395,8 @@ fn verify_all_dependencies_provided(
 }
 
 fn verify_struct_kind(
-    module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
+    module_view: &ModuleView<VerifiedModule>,
+    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
 ) -> Vec<VerificationError> {
     let mut errors = vec![];
     for (idx, struct_handle_view) in module_view.struct_handles().enumerate() {
@@ -272,8 +427,8 @@ fn verify_struct_kind(
 }
 
 fn verify_function_visibility_and_type(
-    module_view: &ModuleView<CompiledModule>,
-    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
+    module_view: &ModuleView<VerifiedModule>,
+    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
 ) -> Vec<VerificationError> {
     let resolver = Resolver::new(module_view.as_inner());
     let mut errors = vec![];
@@ -283,8 +438,8 @@ fn verify_function_visibility_and_type(
             continue;
         }
         let function_name = function_handle_view.name();
-        let owner_module = &dependency_map[&owner_module_id];
-        let owner_module_view = ModuleView::new(*owner_module);
+        let owner_module = dependency_map[&owner_module_id];
+        let owner_module_view = ModuleView::new(owner_module);
         if let Some(function_definition_view) = owner_module_view.function_definition(function_name)
         {
             if function_definition_view.is_public() {

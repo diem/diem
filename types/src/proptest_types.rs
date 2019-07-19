@@ -159,13 +159,13 @@ impl SignatureCheckedTransaction {
         Self::strategy_impl(keypair_strategy, TransactionPayload::program_strategy())
     }
 
-    pub fn write_set_stratedy(
+    pub fn write_set_strategy(
         keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::write_set_strategy())
     }
 
-    pub fn genesis_stratedy(
+    pub fn genesis_strategy(
         keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::genesis_strategy())

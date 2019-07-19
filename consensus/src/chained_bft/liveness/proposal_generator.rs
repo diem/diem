@@ -7,7 +7,7 @@ use crate::{
     chained_bft::{block_storage::BlockReader, common::Payload},
     counters,
     state_replication::TxnManager,
-    time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
+    util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
 use logger::prelude::*;
 use std::{
@@ -68,7 +68,7 @@ pub struct ProposalGenerator<T> {
 impl<T: Payload> ProposalGenerator<T> {
     pub fn new(
         block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
-        txn_manager: Arc<TxnManager<Payload = T>>,
+        txn_manager: Arc<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
         enforce_increasing_timestamps: bool,

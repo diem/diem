@@ -14,6 +14,7 @@ use cost_synthesis::{
     with_loaded_vm,
 };
 use csv;
+use language_e2e_tests::data_store::FakeDataStore;
 use move_ir_natives::hash;
 use std::{collections::HashMap, convert::TryFrom, path::Path, time::Instant, u64};
 use vm::{
@@ -21,17 +22,16 @@ use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, StringPoolIndex, StructDefinitionIndex,
+        NO_TYPE_ACTUALS,
     },
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
-use vm_genesis::STDLIB_MODULES;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
     txn_executor::TransactionExecutor,
 };
-use vm_runtime_tests::data_store::FakeDataStore;
 
 const MAX_STACK_SIZE: u64 = 100;
 const NUM_ITERS: u16 = 10000;
@@ -59,18 +59,18 @@ fn stack_instructions() {
         WriteRef,
         ReleaseRef,
         FreezeRef,
-        MoveToSender(StructDefinitionIndex::new(0)),
-        Exists(StructDefinitionIndex::new(0)),
-        BorrowGlobal(StructDefinitionIndex::new(0)),
-        MoveFrom(StructDefinitionIndex::new(0)),
+        MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        BorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         BorrowField(FieldDefinitionIndex::new(0)),
         CopyLoc(0),
         MoveLoc(0),
         BorrowLoc(0),
         StLoc(0),
-        Unpack(StructDefinitionIndex::new(0)),
-        Pack(StructDefinitionIndex::new(0)),
-        Call(FunctionHandleIndex::new(0)),
+        Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
         CreateAccount,
         Sub,
         Ret,
@@ -90,7 +90,7 @@ fn stack_instructions() {
         Gt,
         Le,
         Ge,
-        Assert,
+        Abort,
         LdFalse,
         LdTrue,
         LdConst(0),
@@ -137,20 +137,19 @@ fn stack_instructions() {
                     let before = Instant::now();
                     let ignore = vm.execute_block(&[instr], 0);
                     let time = before.elapsed().as_nanos();
-                    // Check to make sure we didn't error. Need to special case the assertion
-                    // bytecode.
-                    if instruction != Bytecode::Assert {
+                    // Check to make sure we didn't error. Need to special case the abort bytecode.
+                    if instruction != Bytecode::Abort {
                         // We want any errors here to bubble up to us with the actual VM error.
                         ignore.unwrap().unwrap();
                     } else {
-                        // In the case of the Assert bytecode we want to only make sure that we
+                        // In the case of the Abort bytecode we want to only make sure that we
                         // don't have a VMInvariantViolation error, and then make sure that the any
-                        // error generated was an assertion failure.
+                        // error generated was an abort failure.
                         match ignore.unwrap() {
                             Ok(_) => (),
                             Err(err) => match err.err {
-                                VMErrorKind::AssertionFailure(_) => (),
-                                _ => panic!("Assertion bytecode failed"),
+                                VMErrorKind::Aborted(_) => (),
+                                _ => panic!("Abort bytecode failed"),
                             },
                         }
                     }

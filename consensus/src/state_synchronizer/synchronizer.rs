@@ -28,7 +28,7 @@ use types::transaction::TransactionListWithProof;
 /// Used for synchronization between validators for committed states
 pub struct StateSynchronizer {
     synchronizer_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg>,
-    storage_read_client: Arc<StorageRead>,
+    storage_read_client: Arc<dyn StorageRead>,
 }
 
 impl StateSynchronizer {

@@ -98,7 +98,7 @@ impl<T: Payload> PersistentLivenessStorage for MockStorage<T> {
 
 // A impl that always start from genesis.
 impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
-    fn persistent_liveness_storage(&self) -> Box<PersistentLivenessStorage> {
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
         Box::new(MockStorage {
             shared_storage: Arc::clone(&self.shared_storage),
         })
@@ -182,7 +182,7 @@ impl PersistentLivenessStorage for EmptyStorage {
 }
 
 impl<T: Payload> PersistentStorage<T> for EmptyStorage {
-    fn persistent_liveness_storage(&self) -> Box<PersistentLivenessStorage> {
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
         Box::new(EmptyStorage)
     }
 

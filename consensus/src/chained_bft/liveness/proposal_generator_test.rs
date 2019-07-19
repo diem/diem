@@ -10,7 +10,7 @@ use crate::{
             build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },
     },
-    mock_time_service::SimulatedTimeService,
+    util::mock_time_service::SimulatedTimeService,
 };
 use futures::executor::block_on;
 use std::{

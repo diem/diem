@@ -6,7 +6,7 @@
 use futures::{
     future::poll_fn,
     io::{AsyncRead, AsyncWrite},
-    ready, try_ready,
+    ready,
 };
 use logger::prelude::*;
 use std::{
@@ -447,7 +447,7 @@ where
                     }
                 }
                 WriteState::Flush => {
-                    try_ready!(Pin::new(&mut self.socket).poll_flush(&mut context));
+                    ready!(Pin::new(&mut self.socket).poll_flush(&mut context))?;
                     self.write_state = WriteState::Init;
                 }
                 WriteState::Eof => return Poll::Ready(Err(io::ErrorKind::WriteZero.into())),
@@ -462,7 +462,7 @@ where
     }
 
     fn poll_write(&mut self, context: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
-        if let Some(bytes_written) = try_ready!(self.poll_write_or_flush(context, Some(buf))) {
+        if let Some(bytes_written) = ready!(self.poll_write_or_flush(context, Some(buf)))? {
             Poll::Ready(Ok(bytes_written))
         } else {
             unreachable!();
@@ -470,7 +470,7 @@ where
     }
 
     fn poll_flush(&mut self, context: &mut Context) -> Poll<io::Result<()>> {
-        if try_ready!(self.poll_write_or_flush(context, None)).is_none() {
+        if ready!(self.poll_write_or_flush(context, None))?.is_none() {
             Poll::Ready(Ok(()))
         } else {
             unreachable!();

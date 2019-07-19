@@ -1,0 +1,21 @@
+module Token {
+    resource T { }
+
+    public test() {
+        let no: bool;
+        no = T{} == T{};
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.Token;
+
+main() {
+    Token.test();
+    return;
+}
+
+// check: VerificationError
+// check: EqualityOpTypeMismatchError

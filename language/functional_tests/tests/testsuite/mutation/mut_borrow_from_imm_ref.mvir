@@ -1,5 +1,4 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 2, err: MoveLocUnavailableError(9) }
-modules:
 module Token {
     resource T{value: u64}
     public new(m: u64): R#Self.T {
@@ -21,8 +20,10 @@ module Token {
     }
 }
 
-script:
-import Transaction.Token;
+//! new-transaction
+
+import {{default}}.Token;
+
 main() {
     let t: R#Token.T;
     let tr: &R#Token.T;

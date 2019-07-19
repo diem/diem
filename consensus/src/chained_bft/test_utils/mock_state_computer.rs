@@ -46,7 +46,7 @@ impl StateComputer for MockStateComputer {
     fn commit(
         &self,
         commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<Future<Output = Result<()>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         self.commit_callback
             .unbounded_send(commit)
             .expect("Fail to notify about commit.");

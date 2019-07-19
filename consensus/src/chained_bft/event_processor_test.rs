@@ -9,12 +9,12 @@ use crate::{
         event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            new_round_msg::{NewRoundMsg, PacemakerTimeout, PacemakerTimeoutCertificate},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -32,7 +32,7 @@ use crate::{
         },
     },
     state_replication::ExecutedState,
-    time_service::{ClockTimeService, TimeService},
+    util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
 use crypto::HashValue;
@@ -46,6 +46,7 @@ use network::{
     proto::BlockRetrievalStatus,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{
     collections::HashMap,
@@ -69,7 +70,7 @@ struct NodeSetup {
     new_rounds_receiver: channel::Receiver<NewRoundEvent>,
     winning_proposals_receiver: channel::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
-    signer: ValidatorSigner,
+    signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
     pacemaker: Arc<dyn Pacemaker>,
@@ -78,7 +79,7 @@ struct NodeSetup {
 
 impl NodeSetup {
     fn build_empty_store(
-        signer: ValidatorSigner,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
@@ -97,8 +98,8 @@ impl NodeSetup {
     fn create_pacemaker(
         executor: TaskExecutor,
         time_service: Arc<dyn TimeService>,
-    ) -> (Arc<Pacemaker>, channel::Receiver<NewRoundEvent>) {
-        let base_timeout = Duration::new(5, 0);
+    ) -> (Arc<dyn Pacemaker>, channel::Receiver<NewRoundEvent>) {
+        let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;
         let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
@@ -146,8 +147,8 @@ impl NodeSetup {
     ) -> Vec<NodeSetup> {
         let mut signers = vec![];
         let mut peers = vec![];
-        for _ in 0..num_nodes {
-            let signer = ValidatorSigner::random();
+        for i in 0..num_nodes {
+            let signer = ValidatorSigner::random([i as u8; 32]);
             peers.push(signer.author());
             signers.push(signer);
         }
@@ -172,7 +173,7 @@ impl NodeSetup {
     fn new(
         playground: &mut NetworkPlayground,
         executor: TaskExecutor,
-        signer: ValidatorSigner,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
         proposer_author: Author,
         peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
@@ -543,7 +544,7 @@ fn process_new_round_msg_test() {
 
     // Populate block_0 and a quorum certificate for block_0 on non_proposer
     let block_0_quorum_cert = placeholder_certificate_for_block(
-        vec![static_proposer.signer.clone(), non_proposer.signer.clone()],
+        vec![&static_proposer.signer, &non_proposer.signer],
         block_0_id,
         1,
     );
@@ -573,7 +574,7 @@ fn process_new_round_msg_test() {
     block_on(
         static_proposer
             .event_processor
-            .process_new_round_msg(NewRoundMsg::new(
+            .process_timeout_msg(TimeoutMsg::new(
                 block_0_quorum_cert,
                 QuorumCert::certificate_for_genesis(),
                 PacemakerTimeout::new(2, &non_proposer.signer),
@@ -726,10 +727,15 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor.process_vote(vote_msg, 1).await;
+        // This is 'kick off' event from pacemaker initialization
         let new_round_event = node.new_rounds_receiver.next().await.unwrap();
         assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
-        assert_eq!(new_round_event.round, a1.round());
+        assert_eq!(new_round_event.round, 1);
+        node.event_processor.process_vote(vote_msg, 1).await;
+        let new_round_event = node.new_rounds_receiver.next().await.unwrap();
+        // This is event from processing qc for round 1
+        assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
+        assert_eq!(new_round_event.round, 2);
     });
     block_on(runtime.shutdown_now().compat()).unwrap();
 }

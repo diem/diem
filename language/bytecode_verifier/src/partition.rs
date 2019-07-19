@@ -31,16 +31,26 @@ impl Partition {
         self.id_to_nonce_set.entry(id).and_modify(|x| {
             x.remove(&nonce);
         });
+        if self.id_to_nonce_set[&id].is_empty() {
+            self.id_to_nonce_set.remove(&id).unwrap();
+        }
     }
 
-    // adds an equality between nonce1 an nonce2
+    // adds an equality between nonce1 and nonce2
     pub fn add_equality(&mut self, nonce1: Nonce, nonce2: Nonce) {
         let id1 = self.nonce_to_id[&nonce1];
-        let id2 = self.nonce_to_id.remove(&nonce2).unwrap();
-        self.nonce_to_id.insert(nonce2, id1);
-        let mut nonce_set = self.id_to_nonce_set.remove(&id2).unwrap();
+        let id2 = self.nonce_to_id[&nonce2];
+        if id1 == id2 {
+            return;
+        }
+        let mut nonce_set2 = self.id_to_nonce_set.remove(&id2).unwrap();
+        for nonce in &nonce_set2 {
+            self.nonce_to_id
+                .entry(nonce.clone())
+                .and_modify(|x| *x = id1);
+        }
         self.id_to_nonce_set.entry(id1).and_modify(|x| {
-            x.append(&mut nonce_set);
+            x.append(&mut nonce_set2);
         });
     }
 
@@ -52,7 +62,7 @@ impl Partition {
     // returns a canonical version of self in which an id of a set is determined
     // to be the least element of the set.
     // the choice of returned id is arbitrary but it must be a function on nonce sets.
-    pub fn construct_canonical_partition(self, nonce_map: &BTreeMap<Nonce, Nonce>) -> Self {
+    pub fn construct_canonical_partition(&self, nonce_map: &BTreeMap<Nonce, Nonce>) -> Self {
         let mut id_to_nonce_set = BTreeMap::new();
         for nonce_set in self.id_to_nonce_set.values() {
             let canonical_nonce_set: BTreeSet<Nonce> = nonce_set

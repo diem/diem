@@ -9,4 +9,4 @@ publish = false
 [dependencies]
 bytes = "0.4.12"
 lazy_static = "1.3.0"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview" }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview" }

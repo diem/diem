@@ -1,14 +1,7 @@
 // check: VerificationError { kind: StructHandle, idx: 0, err: UnimplementedHandle }
 
-modules:
 module M {
     public no(x: V#Self.M) {
         return;
     }
-}
-
-script:
-import Transaction.M;
-main() {
-    return;
 }

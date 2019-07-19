@@ -38,7 +38,7 @@ impl Command for AccountCommandCreate {
     }
     fn execute(&self, client: &mut ClientProxy, _params: &[&str]) {
         println!(">> Creating/retrieving next account from wallet");
-        match client.create_next_account() {
+        match client.create_next_account(true) {
             Ok(account_data) => println!(
                 "Created/retrieved account #{} address {}",
                 account_data.index,

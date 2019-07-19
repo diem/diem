@@ -10,6 +10,6 @@ proptest! {
         let struct_def = value.to_struct_def_FOR_TESTING();
         let blob = value.simple_serialize().expect("must serialize");
         let value1 = Value::simple_deserialize(&blob, struct_def).expect("must deserialize");
-        assert_eq!(value, value1);
+        assert!(value.equals(&value1).unwrap());
     }
 }

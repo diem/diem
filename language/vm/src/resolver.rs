@@ -7,8 +7,8 @@ use crate::{
     access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{
-        AddressPoolIndex, CompiledModule, FunctionSignature, ModuleHandle, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructHandle, StructHandleIndex,
+        AddressPoolIndex, FunctionSignature, ModuleHandle, ModuleHandleIndex, SignatureToken,
+        StringPoolIndex, StructHandle, StructHandleIndex,
     },
 };
 use std::collections::BTreeMap;
@@ -24,7 +24,7 @@ pub struct Resolver {
 
 impl Resolver {
     /// create a new instance of Resolver for module
-    pub fn new(module: &CompiledModule) -> Self {
+    pub fn new(module: &impl ModuleAccess) -> Self {
         let mut address_map = BTreeMap::new();
         for (idx, address) in module.address_pool().iter().enumerate() {
             address_map.insert(address.clone(), AddressPoolIndex(idx as u16));
@@ -53,7 +53,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_signature_token(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         sig_token: &SignatureToken,
     ) -> Result<SignatureToken, VMStaticViolation> {
         match sig_token {
@@ -61,8 +61,9 @@ impl Resolver {
             | SignatureToken::U64
             | SignatureToken::String
             | SignatureToken::ByteArray
-            | SignatureToken::Address => Ok(sig_token.clone()),
-            SignatureToken::Struct(sh_idx) => {
+            | SignatureToken::Address
+            | SignatureToken::TypeParameter(_) => Ok(sig_token.clone()),
+            SignatureToken::Struct(sh_idx, types) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);
                 let defining_module_address = dependency.address_at(defining_module_handle.address);
@@ -87,13 +88,18 @@ impl Resolver {
                         .string_map
                         .get(struct_name)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
-                    is_resource: struct_handle.is_resource,
+                    kind: struct_handle.kind,
+                    kind_constraints: struct_handle.kind_constraints.clone(),
                 };
                 Ok(SignatureToken::Struct(
                     *self
                         .struct_handle_map
                         .get(&local_struct_handle)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                    types
+                        .iter()
+                        .map(|t| self.import_signature_token(dependency, &t))
+                        .collect::<Result<Vec<_>, VMStaticViolation>>()?,
                 ))
             }
             SignatureToken::Reference(sub_sig_token) => Ok(SignatureToken::Reference(Box::new(
@@ -111,7 +117,7 @@ impl Resolver {
     /// context of this resolver and return it; return an error if resolution fails
     pub fn import_function_signature(
         &self,
-        dependency: &CompiledModule,
+        dependency: &impl ModuleAccess,
         func_sig: &FunctionSignature,
     ) -> Result<FunctionSignature, VMStaticViolation> {
         let mut return_types = Vec::<SignatureToken>::new();
@@ -125,6 +131,7 @@ impl Resolver {
         Ok(FunctionSignature {
             return_types,
             arg_types,
+            kind_constraints: func_sig.kind_constraints.clone(),
         })
     }
 }

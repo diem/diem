@@ -5,17 +5,18 @@ use crate::{
     chained_bft::{
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker, PacemakerTimeInterval},
-            new_round_msg::PacemakerTimeout,
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
+            timeout_msg::PacemakerTimeout,
         },
         persistent_storage::PersistentStorage,
         test_utils::{consensus_runtime, MockStorage, TestPayload},
     },
-    mock_time_service::SimulatedTimeService,
+    util::mock_time_service::SimulatedTimeService,
 };
 use channel;
 use futures::{executor::block_on, StreamExt};
+use nextgen_crypto::ed25519::*;
 use std::{sync::Arc, time::Duration, u64};
 use tokio::runtime;
 use types::validator_signer::ValidatorSigner;
@@ -72,9 +73,9 @@ fn test_basic_timeout() {
 fn test_timeout_certificate() {
     let runtime = consensus_runtime();
     let rounds = 5;
-    let mut signers: Vec<ValidatorSigner> = vec![];
-    for _round in 1..rounds {
-        let signer = ValidatorSigner::random();
+    let mut signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = vec![];
+    for round in 1..rounds {
+        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([round as u8; 32]);
         signers.push(signer);
     }
     let (pm, mut new_round_events_receiver) = make_pacemaker(&runtime);

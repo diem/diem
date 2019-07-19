@@ -14,7 +14,6 @@ mod chained_bft_smr;
 mod event_processor;
 mod network;
 
-mod mutex_map;
 pub mod persistent_storage;
 mod sync_manager;
 

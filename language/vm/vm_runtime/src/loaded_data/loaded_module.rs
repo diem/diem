@@ -3,6 +3,7 @@
 //! Loaded representation for Move modules.
 
 use crate::loaded_data::{function::FunctionDef, struct_def::StructDef};
+use bytecode_verifier::VerifiedModule;
 use std::{collections::HashMap, sync::RwLock};
 use vm::{
     access::ModuleAccess,
@@ -18,7 +19,7 @@ use vm::{
 /// reverse mapping that allows querying definition of struct/function by name.
 #[derive(Debug, Eq, PartialEq)]
 pub struct LoadedModule {
-    module: CompiledModule,
+    module: VerifiedModule,
     #[allow(dead_code)]
     pub struct_defs_table: HashMap<String, StructDefinitionIndex>,
     #[allow(dead_code)]
@@ -35,7 +36,7 @@ pub struct LoadedModule {
 
 impl ModuleAccess for LoadedModule {
     fn as_module(&self) -> &CompiledModule {
-        &self.module
+        &self.module.as_inner()
     }
 }
 
@@ -56,7 +57,7 @@ impl PartialEq for LoadedModuleCache {
 impl Eq for LoadedModuleCache {}
 
 impl LoadedModule {
-    pub fn new(module: CompiledModule) -> Self {
+    pub fn new(module: VerifiedModule) -> Self {
         let mut struct_defs_table = HashMap::new();
         let mut field_defs_table = HashMap::new();
         let mut function_defs_table = HashMap::new();

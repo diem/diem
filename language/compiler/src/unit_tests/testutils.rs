@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::util::build_stdlib;
-use bytecode_verifier::verifier::{verify_module, verify_script};
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{parse_module, parse_program},
 };
+use stdlib::stdlib_modules;
 use types::account_address::AccountAddress;
 use vm::{
     access::ScriptAccess,
@@ -44,7 +44,13 @@ fn compile_script_string_impl(
     let deserialized_script = CompiledScript::deserialize(&serialized_script)?;
     assert_eq!(compiled_program.script, deserialized_script);
 
-    Ok(verify_script(compiled_program.script))
+    // Always return a CompiledScript because some callers explicitly care about unverified
+    // modules.
+    let ret = match VerifiedScript::new(compiled_program.script) {
+        Ok(script) => (script.into_inner(), vec![]),
+        Err((script, errors)) => (script, errors),
+    };
+    Ok(ret)
 }
 
 pub fn compile_script_string_and_assert_no_error(
@@ -91,7 +97,13 @@ fn compile_module_string_impl(
     let deserialized_module = CompiledModule::deserialize(&serialized_module)?;
     assert_eq!(compiled_module, deserialized_module);
 
-    Ok(verify_module(compiled_module))
+    // Always return a CompiledModule because some callers explicitly care about unverified
+    // modules.
+    let ret = match VerifiedModule::new(compiled_module) {
+        Ok(module) => (module.into_inner(), vec![]),
+        Err((module, errors)) => (module, errors),
+    };
+    Ok(ret)
 }
 
 pub fn compile_module_string_and_assert_no_error(
@@ -133,9 +145,16 @@ pub fn count_locals(script: &CompiledScript) -> usize {
 }
 
 pub fn compile_module_string_with_stdlib(code: &str) -> Result<CompiledModule> {
-    compile_module_string_and_assert_no_error(code, build_stdlib(&AccountAddress::default()))
+    compile_module_string_and_assert_no_error(code, stdlib())
 }
 
 pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
-    compile_script_string_and_assert_no_error(code, build_stdlib(&AccountAddress::default()))
+    compile_script_string_and_assert_no_error(code, stdlib())
+}
+
+fn stdlib() -> Vec<CompiledModule> {
+    stdlib_modules()
+        .iter()
+        .map(|m| m.clone().into_inner())
+        .collect()
 }

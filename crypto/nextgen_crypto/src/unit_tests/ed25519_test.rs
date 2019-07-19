@@ -36,6 +36,22 @@ proptest! {
     }
 
     #[test]
+    fn test_batch_verify(
+        hash in any::<HashValue>(),
+        keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())) {
+        let mut signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = keypairs.iter().map(|keypair| {
+            (keypair.public_key.clone(), keypair.private_key.sign_message(&hash))
+        }).collect();
+        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures.clone()).is_ok());
+        // We swap message and signature for the last element,
+        // resulting in an incorrect signature
+        let (key, _sig) = signatures.pop().unwrap();
+        let other_sig = signatures.last().unwrap().clone().1;
+        signatures.push((key, other_sig));
+        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures).is_err());
+    }
+
+    #[test]
     fn test_keys_custom_serialisation(
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
     ) {
@@ -62,7 +78,7 @@ proptest! {
         let serialized: &[u8] = &(signature.to_bytes());
         prop_assert_eq!(ed25519_dalek::SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
-        assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
+        prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
     }
 
     // Check for canonical s.

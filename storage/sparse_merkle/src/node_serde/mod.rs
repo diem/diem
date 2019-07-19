@@ -81,20 +81,20 @@ impl<'de> Visitor<'de> for BranchNodeVisitor {
             .next_element()?
             .ok_or_else(|| de::Error::invalid_length(1, &self))?;
         if child_bitmap | leaf_bitmap != child_bitmap {
-            Err(de::Error::custom(
+            return Err(de::Error::custom(
                 "Invalid branch node in deserialization: \
                  leaf_bitmap conflicts with child_bitmap",
-            ))?;
+            ));
         }
         let hashes: Vec<HashValue> = seq
             .next_element()?
             .ok_or_else(|| de::Error::invalid_length(2, &self))?;
 
         if child_bitmap.count_ones() as usize != hashes.len() {
-            Err(de::Error::custom(
+            return Err(de::Error::custom(
                 "Invalid branch node in deserialization: \
                  children number doesn't match child_bitmap",
-            ))?;
+            ));
         }
         let children = (0..16)
             .filter(|i| child_bitmap >> i & 1 == 1)

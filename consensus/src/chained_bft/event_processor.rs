@@ -9,10 +9,10 @@ use crate::{
         common::{Author, Payload, Round},
         consensus_types::block::Block,
         liveness::{
-            new_round_msg::{NewRoundMsg, PacemakerTimeout},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
+            timeout_msg::{PacemakerTimeout, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -24,7 +24,7 @@ use crate::{
     },
     counters,
     state_replication::{StateComputer, TxnManager},
-    time_service::{
+    util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
@@ -187,34 +187,19 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         proposal: ProposalInfo<T, P>,
     ) -> ProcessProposalResult<T, P> {
         debug!("Receive proposal {}", proposal);
-        let qc = proposal.proposal.quorum_cert();
-
-        self.pacemaker
-            .process_certificates(
-                qc.certified_block_round(),
-                proposal.timeout_certificate.as_ref(),
-            )
-            .await;
-
-        if self.pacemaker.current_round() != proposal.proposal.round() {
-            if self.pacemaker.current_round() < proposal.proposal.round() {
-                warn!(
-                    "Received proposal {} is ignored as it is from a future round {} and does not match the pacemaker round {}",
-                    proposal,
-                    proposal.proposal.round(),
-                    self.pacemaker.current_round(),
-                );
-            } else {
-                warn!(
-                    "Received proposal {} is ignored as it is from a past round {} and does not match the pacemaker round {}",
-                    proposal,
-                    proposal.proposal.round(),
-                    self.pacemaker.current_round(),
-                );
-            }
+        // Pacemaker is going to be updated with all the proposal certificates later,
+        // but it's known that the pacemaker's round is not going to decrease so we can already
+        // filter out the proposals from old rounds.
+        let current_round = self.pacemaker.current_round();
+        if proposal.proposal.round() < self.pacemaker.current_round() {
+            warn!(
+                "Proposal {} is ignored because its round {} != current round {}",
+                proposal,
+                proposal.proposal.round(),
+                current_round
+            );
             return ProcessProposalResult::Done;
         }
-
         if self
             .proposer_election
             .is_valid_proposer(proposal.proposer_info, proposal.proposal.round())
@@ -241,7 +226,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             return ProcessProposalResult::Done;
         }
 
-        match self.block_store.need_fetch_for_quorum_cert(&qc) {
+        match self
+            .block_store
+            .need_fetch_for_quorum_cert(proposal.proposal.quorum_cert())
+        {
             NeedFetchResult::NeedFetch => {
                 return ProcessProposalResult::NeedFetch(deadline, proposal)
             }
@@ -250,7 +238,11 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 return ProcessProposalResult::Done;
             }
             NeedFetchResult::QCBlockExist => {
-                if let Err(e) = self.block_store.insert_single_quorum_cert(qc.clone()).await {
+                if let Err(e) = self
+                    .block_store
+                    .insert_single_quorum_cert(proposal.proposal.quorum_cert().clone())
+                    .await
+                {
                     warn!(
                         "Quorum certificate for proposal {} could not be inserted to the block store: {:?}",
                         proposal, e
@@ -268,7 +260,27 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// Finish proposal processing: note that multiple tasks can execute this function in parallel
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
+    /// This function is invoked when all the dependencies for the given proposal are ready.
     async fn finish_proposal_processing(&self, proposal: ProposalInfo<T, P>) {
+        let qc = proposal.proposal.quorum_cert();
+        self.pacemaker
+            .process_certificates(
+                qc.certified_block_round(),
+                proposal.timeout_certificate.as_ref(),
+            )
+            .await;
+
+        let current_round = self.pacemaker.current_round();
+        if self.pacemaker.current_round() != proposal.proposal.round() {
+            warn!(
+                "Proposal {} is ignored because its round {} != current round {}",
+                proposal,
+                proposal.proposal.round(),
+                current_round
+            );
+            return;
+        }
+
         self.proposer_election.process_proposal(proposal).await;
     }
 
@@ -325,22 +337,22 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         self.finish_proposal_processing(proposal).await;
     }
 
-    /// Upon receiving NewRoundMsg, ensure that any branches with higher quorum certificates are
+    /// Upon receiving TimeoutMsg, ensure that any branches with higher quorum certificates are
     /// populated to this replica prior to processing the pacemaker timeout.  This ensures that when
     /// a pacemaker timeout certificate is formed with 2f+1 timeouts, the next proposer will be
     /// able to chain a proposal block to a highest quorum certificate such that all honest replicas
     /// can vote for it.
-    pub async fn process_new_round_msg(&mut self, new_round_msg: NewRoundMsg) {
+    pub async fn process_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
         debug!(
             "Received a new round msg for round {} from {}",
-            new_round_msg.pacemaker_timeout().round(),
-            new_round_msg.author().short_str()
+            timeout_msg.pacemaker_timeout().round(),
+            timeout_msg.author().short_str()
         );
         let current_highest_quorum_cert_round = self
             .block_store
             .highest_quorum_cert()
             .certified_block_round();
-        let new_round_highest_quorum_cert_round = new_round_msg
+        let new_round_highest_quorum_cert_round = timeout_msg
             .highest_quorum_certificate()
             .certified_block_round();
 
@@ -353,9 +365,9 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 .sync_to(
                     deadline,
                     SyncInfo {
-                        highest_ledger_info: new_round_msg.highest_ledger_info().clone(),
-                        highest_quorum_cert: new_round_msg.highest_quorum_certificate().clone(),
-                        peer: new_round_msg.author(),
+                        highest_ledger_info: timeout_msg.highest_ledger_info().clone(),
+                        highest_quorum_cert: timeout_msg.highest_quorum_certificate().clone(),
+                        peer: timeout_msg.author(),
                     },
                 )
                 .await
@@ -366,14 +378,14 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                     ),
                     Err(e) => warn!(
                         "Unable to insert new highest quorum certificate {} from old round {} due to {:?}",
-                        new_round_msg.highest_quorum_certificate(),
+                        timeout_msg.highest_quorum_certificate(),
                         current_highest_quorum_cert_round,
                         e
                     ),
                 }
         }
         self.pacemaker
-            .process_remote_timeout(new_round_msg.pacemaker_timeout().clone())
+            .process_remote_timeout(timeout_msg.pacemaker_timeout().clone())
             .await;
     }
 
@@ -381,7 +393,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// to ensure that the next proposer can make a proposal that can be voted on by all replicas.
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
-    pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<NewRoundMsg> {
+    pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<TimeoutMsg> {
         // Stop voting at this round, persist the consensus state to support restarting from
         // a recent round (i.e. > the last vote round)  and then send the highest quorum
         // certificate known
@@ -396,12 +408,21 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 return None;
             }
         }
-        debug!(
-            "Sending new round message at round {} due to timeout and will not vote at this round",
-            round
+
+        let last_vote_round = self
+            .safety_rules
+            .read()
+            .unwrap()
+            .consensus_state()
+            .last_vote_round();
+        warn!(
+            "Round {} timed out and {}, expected round proposer was {:?}, broadcasting new round to all replicas",
+            round,
+            if last_vote_round == round { "already executed and voted at this round" } else { "will never vote at this round" },
+            self.proposer_election.get_valid_proposers(round),
         );
 
-        Some(NewRoundMsg::new(
+        Some(TimeoutMsg::new(
             self.block_store.highest_quorum_cert().as_ref().clone(),
             self.block_store.highest_ledger_info().as_ref().clone(),
             PacemakerTimeout::new(round, self.block_store.signer()),
@@ -603,7 +624,6 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                     .error(VoteReceptionResult::DuplicateVote)
                     .data(vote)
                     .log();
-                return;
             }
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
@@ -631,9 +651,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                     .await;
             }
             // nothing interesting with votes arriving for the QC that has been formed
-            _ => {
-                return;
-            }
+            _ => {}
         };
     }
 

@@ -16,7 +16,13 @@ fn setup_swarm_and_client_proxy(
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
 
-    let swarm = LibraSwarm::launch_swarm(num_nodes, false, faucet_account_keypair, true);
+    let swarm = LibraSwarm::launch_swarm(
+        num_nodes,
+        false, /* disable_logging */
+        faucet_account_keypair,
+        true, /* tee_logs */
+        None, /* config_dir */
+    );
     let port = *swarm
         .get_validators_public_ports()
         .get(client_port_index)
@@ -44,7 +50,7 @@ fn setup_swarm_and_client_proxy(
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "10"], true)
         .unwrap();
@@ -52,7 +58,7 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "3"], true)
@@ -65,7 +71,7 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
         Decimal::from_f64(4.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "2", "15"], true)
         .unwrap();
@@ -90,11 +96,11 @@ fn smoke_test_multi_node() {
 #[test]
 fn test_concurrent_transfers_single_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "100"], true)
         .unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     for _ in 0..20 {
         client_proxy
             .transfer_coins(&["t", "0", "1", "1"], false)
@@ -128,8 +134,8 @@ fn test_basic_fault_tolerance() {
 #[test]
 fn test_basic_restartability() {
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
-    client_proxy.create_next_account().unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
@@ -176,8 +182,8 @@ fn test_basic_state_synchronization() {
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
-    client_proxy.create_next_account().unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)

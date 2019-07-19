@@ -82,7 +82,7 @@ impl std::ops::Deref for TestValidator {
 // errors are not exercised:
 // * Sequence number too old -- We can't test sequence number too old here without running execution
 //   first in order to bump the account's sequence number. This needs to (and is) tested in the
-//   vm_runtime_tests in: libra/language/vm/vm_runtime/vm_runtime_tests/src/tests/verify_txn.rs ->
+//   language e2e tests in: libra/language/e2e_tests/src/tests/verify_txn.rs ->
 //   verify_simple_payment.
 // * Errors arising from deserializing the code -- these are tested in
 //   - libra/language/vm/src/unit_tests/deserializer_tests.rs
@@ -90,7 +90,7 @@ impl std::ops::Deref for TestValidator {
 // * Errors arising from calls to `static_verify_program` -- this is tested separately in tests for
 //   the bytecode verifier.
 // * Testing for invalid genesis write sets -- this is tested in
-//   libra/language/vm/vm_runtime/vm_runtime_tests/src/tests/genesis.rs
+//   libra/language/e2e_tests/src/tests/genesis.rs
 
 #[test]
 fn test_validate_transaction() {

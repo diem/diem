@@ -1,0 +1,12 @@
+//check: VerificationError
+//check: PositiveStackSizeAtBlockEnd(2)
+
+//check: VerificationError
+//check: PositiveStackSizeAtBlockEnd(4)
+
+main() {
+    if (true) { (4); }
+    else { (5); }
+    return;
+}
+

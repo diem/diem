@@ -29,17 +29,18 @@ fn to_blocks_to_commit(
         .map(|(txns_to_commit, partial_ledger_info_with_sigs)| {
             for txn_to_commit in txns_to_commit.iter() {
                 cur_ver += 1;
-                let mut batch = SchemaBatch::new();
+                let mut cs = ChangeSet::new();
 
                 let txn_hash = txn_to_commit.signed_txn().hash();
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
+                    cur_ver,
                     cur_state_root_hash,
-                    &mut batch,
+                    &mut cs,
                 )?[0];
                 let event_root_hash =
                     db.event_store
-                        .put_events(cur_ver, txn_to_commit.events(), &mut batch)?;
+                        .put_events(cur_ver, txn_to_commit.events(), &mut cs)?;
 
                 let txn_info = TransactionInfo::new(
                     txn_hash,
@@ -49,8 +50,8 @@ fn to_blocks_to_commit(
                 );
                 let txn_accu_hash =
                     db.ledger_store
-                        .put_transaction_infos(cur_ver, &[txn_info], &mut batch)?;
-                db.commit(batch)?;
+                        .put_transaction_infos(cur_ver, &[txn_info], &mut cs)?;
+                db.db.write_schemas(cs.batch)?;
 
                 cur_state_root_hash = state_root_hash;
                 cur_txn_accu_hash = txn_accu_hash;

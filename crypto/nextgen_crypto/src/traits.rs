@@ -96,6 +96,11 @@ pub trait PrivateKey: ValidKey {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
     type PublicKeyMaterial: PublicKey<PrivateKeyMaterial = Self>;
+
+    /// Returns the associated public key
+    fn public_key(&self) -> Self::PublicKeyMaterial {
+        self.into()
+    }
 }
 
 /// A type family of valid keys that know how to sign.
@@ -105,13 +110,18 @@ pub trait PrivateKey: ValidKey {
 pub trait SigningKey:
     PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial>
 {
-    /// The associated verifying key for this signing key.
+    /// The associated verifying key type for this signing key.
     type VerifyingKeyMaterial: VerifyingKey<SigningKeyMaterial = Self>;
-    /// The associated signature for this signing key.
-    type SignatureMaterial: Signature;
+    /// The associated signature type for this signing key.
+    type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
 
     /// Signs an input message.
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
+
+    /// Returns the associated verifying key
+    fn verifying_key(&self) -> Self::VerifyingKeyMaterial {
+        self.public_key()
+    }
 }
 
 /// A type for key material that can be publicly shared, and in asymmetric
@@ -146,9 +156,9 @@ pub trait PublicKey: ValidKey + Clone + Eq + Hash +
 pub trait VerifyingKey:
     PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial>
 {
-    /// The associated signing key for this verifying key.
+    /// The associated signing key type for this verifying key.
     type SigningKeyMaterial: SigningKey<VerifyingKeyMaterial = Self>;
-    /// The associated signature for this verifying key.
+    /// The associated signature type for this verifying key.
     type SignatureMaterial: Signature<VerifyingKeyMaterial = Self>;
 
     /// We provide the logical implementation which dispatches to the signature.
@@ -158,6 +168,14 @@ pub trait VerifyingKey:
         signature: &Self::SignatureMaterial,
     ) -> Result<()> {
         signature.verify(message, self)
+    }
+
+    /// We provide the implementation which dispatches to the signature.
+    fn batch_verify_signatures(
+        message: &HashValue,
+        keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
+    ) -> Result<()> {
+        Self::SignatureMaterial::batch_verify_signatures(message, keys_and_signatures)
     }
 }
 
@@ -176,8 +194,10 @@ pub trait VerifyingKey:
 pub trait Signature:
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Sized + Debug + Clone + Eq + Hash
 {
-    /// The associated verifying key for this signature.
+    /// The associated verifying key type for this signature.
     type VerifyingKeyMaterial: VerifyingKey<SignatureMaterial = Self>;
+    /// The associated signing key type for this signature
+    type SigningKeyMaterial: SigningKey<SignatureMaterial = Self>;
 
     /// The verification function.
     fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> Result<()>;
@@ -191,10 +211,20 @@ pub trait Signature:
 
     /// Convert the signature into a byte representation.
     fn to_bytes(&self) -> Vec<u8>;
-}
 
-/// An alias for the RNG used in the [`Uniform`] trait.
-pub trait SeedableCryptoRng = ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
+    /// The implementer can override a batch verification implementation
+    /// that by default iterates over each signature. More efficient
+    /// implementations exist and should be implemented for many schemes.
+    fn batch_verify_signatures(
+        message: &HashValue,
+        keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
+    ) -> Result<()> {
+        for (key, signature) in keys_and_signatures {
+            signature.verify(message, &key)?
+        }
+        Ok(())
+    }
+}
 
 /// A type family for schemes which know how to generate key material from
 /// a cryptographically-secure [`CryptoRng`][::rand::CryptoRng].
@@ -202,7 +232,7 @@ pub trait Uniform {
     /// Generate key material from an RNG for testing purposes.
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng;
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
 }
 
 /// A type family with a by-convention notion of genesis private key.

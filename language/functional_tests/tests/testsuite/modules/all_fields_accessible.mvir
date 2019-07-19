@@ -1,4 +1,3 @@
-modules:
 module M {
     resource A{x: u64}
     struct B{y: u64}
@@ -40,8 +39,10 @@ module M {
     }
 }
 
-script:
-import Transaction.M;
+//! new-transaction
+
+import {{default}}.M;
+
 main() {
     let a: R#M.A;
     let a_ref: &R#M.A;

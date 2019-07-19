@@ -5,14 +5,14 @@ use crate::{
     chained_bft::{
         common::Round,
         liveness::{
-            new_round_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         },
         persistent_storage::PersistentLivenessStorage,
     },
     counters,
-    time_service::{SendTask, TimeService},
+    util::time_service::{SendTask, TimeService},
 };
 use channel;
 use futures::{Future, FutureExt, SinkExt, StreamExt, TryFutureExt};
@@ -110,7 +110,7 @@ impl PacemakerTimeInterval for ExponentialTimeInterval {
 /// QC to f+1 other replicas for instance.
 struct LocalPacemakerInner {
     // Determines the time interval for a round interval
-    time_interval: Box<PacemakerTimeInterval>,
+    time_interval: Box<dyn PacemakerTimeInterval>,
     // Highest round that a block was committed
     highest_committed_round: Round,
     // Highest round known certified by QC.
@@ -121,7 +121,7 @@ struct LocalPacemakerInner {
     // it changes
     current_round: Round,
     // Approximate deadline when current round ends
-    current_round_deadline: Option<Instant>,
+    current_round_deadline: Instant,
     // Service for timer
     time_service: Arc<dyn TimeService>,
     // To send new round events.
@@ -137,7 +137,7 @@ struct LocalPacemakerInner {
 impl LocalPacemakerInner {
     pub fn new(
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
@@ -172,7 +172,7 @@ impl LocalPacemakerInner {
             highest_committed_round,
             highest_qc_round,
             current_round,
-            current_round_deadline: None,
+            current_round_deadline: Instant::now(),
             time_service,
             new_round_events_sender,
             local_timeout_sender,
@@ -257,7 +257,7 @@ impl LocalPacemakerInner {
         let timeout = self
             .time_interval
             .get_round_duration(round_index_after_committed_round);
-        self.current_round_deadline = Some(Instant::now() + timeout);
+        self.current_round_deadline = Instant::now() + timeout;
         timeout
     }
 
@@ -337,7 +337,7 @@ impl LocalPacemaker {
     pub fn new(
         executor: TaskExecutor,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
@@ -361,14 +361,16 @@ impl LocalPacemaker {
             highest_timeout_certificates,
         )));
 
-        // To jump start the execution return the new round event for the current round.
-        let jumpstart_task = inner
-            .write()
-            .unwrap()
-            .create_new_round_task(NewRoundReason::QCReady);
         let inner_ref = Arc::clone(&inner);
         let timeout_processing_loop = async move {
-            jumpstart_task.await;
+            // To jump start the execution return the new round event for the current round.
+            inner_ref
+                .write()
+                .unwrap()
+                .create_new_round_task(NewRoundReason::QCReady)
+                .await;
+
+            // Start the loop of processing local timeouts
             while let Some(round) = local_timeouts_receiver.next().await {
                 Self::process_local_timeout(Arc::clone(&inner_ref), round).await;
             }
@@ -390,11 +392,7 @@ impl LocalPacemaker {
 
 impl Pacemaker for LocalPacemaker {
     fn current_round_deadline(&self) -> Instant {
-        self.inner
-            .read()
-            .unwrap()
-            .current_round_deadline
-            .expect("Round deadline was not set")
+        self.inner.read().unwrap().current_round_deadline
     }
 
     fn current_round(&self) -> Round {

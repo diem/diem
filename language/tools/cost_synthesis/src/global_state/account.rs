@@ -1,4 +1,5 @@
 use crate::global_state::inhabitor::RandomInhabitor;
+use bytecode_verifier::VerifiedModule;
 use crypto::{PrivateKey, PublicKey};
 use std::iter::Iterator;
 use types::{
@@ -6,7 +7,7 @@ use types::{
 };
 use vm::{
     access::*,
-    file_format::{CompiledModule, SignatureToken, StructDefinitionIndex, TableIndex},
+    file_format::{SignatureToken, StructDefinitionIndex, TableIndex},
 };
 use vm_runtime::{
     identifier::{create_access_path, resource_storage_key},
@@ -23,7 +24,7 @@ pub struct Account {
     /// The account public key
     pub pubkey: PublicKey,
     /// The set of modules that are published under that account.
-    pub modules: Vec<CompiledModule>,
+    pub modules: Vec<VerifiedModule>,
 }
 
 impl Account {
@@ -50,14 +51,12 @@ impl Account {
             ret_vec.extend(mod_ref.struct_defs().iter().enumerate().filter_map(
                 |(struct_idx, struct_def)| {
                     // Determine if the struct definition is a resource
-                    let is_resource = mod_ref
-                        .struct_handle_at(struct_def.struct_handle)
-                        .is_resource;
-                    if is_resource {
+                    let kind = mod_ref.struct_handle_at(struct_def.struct_handle).kind;
+                    if kind.is_resource() {
                         // Generate the type for the struct
-                        let typ = SignatureToken::Struct(struct_def.struct_handle);
+                        let typ = SignatureToken::Struct(struct_def.struct_handle, vec![]);
                         // Generate a value of that type
-                        let struct_val = inhabitor.inhabit(typ).value().unwrap();
+                        let struct_val = inhabitor.inhabit(&typ).value().unwrap();
                         // Now serialize that value into the correct binary blob.
                         let val_blob = MutVal::try_own(struct_val)
                             .unwrap()

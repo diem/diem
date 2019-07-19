@@ -27,3 +27,8 @@ proptest! {
         assert_protobuf_encode_decode(&account_state_with_proof);
     }
 }
+
+#[test]
+fn test_debug_does_not_panic() {
+    format!("{:#?}", AccountStateBlob::from(vec![1u8, 2u8, 3u8]));
+}

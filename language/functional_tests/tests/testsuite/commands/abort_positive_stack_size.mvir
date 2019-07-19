@@ -1,0 +1,19 @@
+// check: VerificationError
+// check: PositiveStackSizeAtBlockEnd
+
+module M {
+
+    public foo(): u64 {
+        return 0;
+    }
+
+}
+
+//! new-transaction
+
+import {{default}}.M;
+
+main() {
+    M.foo();
+    abort 0;
+}

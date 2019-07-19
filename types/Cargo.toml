@@ -8,26 +8,36 @@ edition = "2018"
 
 [dependencies]
 bech32 = "0.6.0"
-byteorder = "1.3.1"
+byteorder = "1.3.2"
 bytes = "0.4.12"
-chrono = "0.4.6"
+chrono = "0.4.7"
 hex = "0.3.2"
 itertools = "0.8.0"
 lazy_static = "1.3.0"
+logger = { path = "../common/logger" }
 proptest = "0.9"
 proptest-derive = "0.1.0"
-protobuf = "2.6"
+protobuf = "2.7"
 radix_trie = "0.1.3"
 rand = "0.6.5"
-serde = { version = "1.0.89", features = ["derive"] }
-serde_json = "1.0.38"
-tiny-keccak = "1.4.2"
+serde = { version = "1.0.96", features = ["derive"] }
+serde_json = "1.0.40"
+tiny-keccak = "1.5.0"
 
 canonical_serialization = { path = "../common/canonical_serialization"}
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../common/proptest_helpers" }
 proto_conv = { path = "../common/proto_conv", features = ["derive"] }
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
+
+[dev-dependencies.nextgen_crypto]
+features = ["testing"]
+path = "../crypto/nextgen_crypto"
+
+[features]
+default = []
+testing = ["nextgen_crypto/testing"]

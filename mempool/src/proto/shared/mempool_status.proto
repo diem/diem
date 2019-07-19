@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package mempool;
 
-enum MempoolAddTransactionStatus {
+enum MempoolAddTransactionStatusCode {
   // Transaction was sent to Mempool
   Valid = 0;
   // The sender does not have enough balance for the transaction.
@@ -18,4 +18,9 @@ enum MempoolAddTransactionStatus {
   TooManyTransactions = 4;
   // Invalid update. Only gas price increase is allowed
   InvalidUpdate = 5;
+}
+
+message MempoolAddTransactionStatus {
+  MempoolAddTransactionStatusCode code = 1;
+  string message = 2;
 }

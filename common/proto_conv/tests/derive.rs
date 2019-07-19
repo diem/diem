@@ -7,7 +7,7 @@ mod proto;
 
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
+use proto_conv::{test_helper::assert_protobuf_encode_decode_non_message, FromProto, IntoProto};
 
 macro_rules! test_conversion {
     ($struct_name: ident, $test_name: ident, $field_type: ty) => {
@@ -59,7 +59,7 @@ struct Structs {
 proptest! {
     #[test]
     fn test_convert_vecs(rust_object in any::<Vec<Int32>>()) {
-        assert_protobuf_encode_decode(&rust_object);
+        assert_protobuf_encode_decode_non_message(&rust_object);
     }
 
     #[test]

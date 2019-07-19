@@ -14,7 +14,10 @@ use types::{
     language_storage::ModuleId,
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use vm::{errors::*, gas_schedule::AbstractMemorySize};
+use vm::{
+    errors::*,
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+};
 
 /// The wrapper around the StateVersionView for the block.
 /// It keeps track of the value that have been changed during execution of a block.
@@ -85,11 +88,11 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: &'txn RemoteCache,
+    data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
-    pub fn new(data_cache: &'txn RemoteCache) -> Self {
+    pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
         TransactionDataCache {
             data_cache,
             data_map: BTreeMap::new(),
@@ -154,16 +157,16 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> Result<(bool, AbstractMemorySize), VMInvariantViolation> {
+    ) -> Result<(bool, AbstractMemorySize<GasCarrier>), VMInvariantViolation> {
         Ok(match self.load_data(ap, def)? {
             Ok(gref) => {
                 if gref.is_deleted() {
-                    (false, 0)
+                    (false, AbstractMemorySize::new(0))
                 } else {
                     (true, gref.size())
                 }
             }
-            Err(_) => (false, 0),
+            Err(_) => (false, AbstractMemorySize::new(0)),
         })
     }
 

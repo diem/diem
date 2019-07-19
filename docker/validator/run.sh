@@ -1,7 +1,7 @@
 #!/bin/sh
 set -ex
 
-IMAGE="libra_e2e:latest"
+IMAGE="${1:-libra_e2e:latest}"
 CONFIGDIR="$(dirname "$0")/../../terraform/validator-sets/dev/"
 
 SEED_PEERS="$(sed 's,SEED_IP,172.18.0.10,' $CONFIGDIR/seed_peers.config.toml)"

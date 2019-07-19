@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{
-    unit_tests::common::{add_txn, add_txns_to_mempool, setup_mempool, TestTransaction},
-    CoreMempool, MempoolAddTransactionStatus, TimelineState,
+use crate::{
+    core_mempool::{
+        unit_tests::common::{add_txn, add_txns_to_mempool, setup_mempool, TestTransaction},
+        CoreMempool, TimelineState,
+    },
+    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
 };
 use config::config::NodeConfigHelpers;
 use std::{collections::HashSet, time::Duration};
@@ -110,8 +113,9 @@ fn test_balance_check() {
             0,
             2,
             TimelineState::NotReady
-        ),
-        MempoolAddTransactionStatus::Valid
+        )
+        .code,
+        MempoolAddTransactionStatusCode::Valid
     );
 
     assert_eq!(
@@ -121,8 +125,9 @@ fn test_balance_check() {
             1,
             5,
             TimelineState::NotReady
-        ),
-        MempoolAddTransactionStatus::InsufficientBalance
+        )
+        .code,
+        MempoolAddTransactionStatusCode::InsufficientBalance
     );
 
     // check that gas unit price is taking into account for balance check
@@ -133,8 +138,9 @@ fn test_balance_check() {
             1,
             5,
             TimelineState::NotReady
-        ),
-        MempoolAddTransactionStatus::InsufficientBalance
+        )
+        .code,
+        MempoolAddTransactionStatusCode::InsufficientBalance
     );
 }
 

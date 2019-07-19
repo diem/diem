@@ -6,21 +6,22 @@ use crate::{
         block_storage::{BlockReader, BlockStore, InsertError},
         common::{Author, Payload},
         consensus_types::{block::Block, quorum_cert::QuorumCert},
-        mutex_map::MutexMap,
         network::ConsensusNetworkImpl,
         persistent_storage::PersistentStorage,
     },
     counters,
     state_replication::StateComputer,
     state_synchronizer::SyncStatus,
+    util::mutex_map::MutexMap,
 };
 use crypto::HashValue;
-use failure::{Fail, Result};
+use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
 use std::{
     clone::Clone,
+    result::Result,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -77,7 +78,7 @@ where
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_ledger_info
     /// Inserts sync_info.quorum_cert into block store as the last step
-    pub async fn sync_to(&mut self, deadline: Instant, sync_info: SyncInfo) -> Result<()> {
+    pub async fn sync_to(&mut self, deadline: Instant, sync_info: SyncInfo) -> failure::Result<()> {
         let highest_ledger_info = sync_info.highest_ledger_info.clone();
 
         self.process_highest_ledger_info(highest_ledger_info, sync_info.peer, deadline)
@@ -98,7 +99,7 @@ where
         start_version: u64,
         target_version: u64,
         batch_size: u64,
-    ) -> Result<TransactionListWithProof> {
+    ) -> failure::Result<TransactionListWithProof> {
         self.state_computer
             .get_chunk(start_version, target_version, batch_size)
             .await
@@ -107,7 +108,7 @@ where
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> std::result::Result<Arc<Block<T>>, InsertError> {
+    ) -> Result<Arc<Block<T>>, InsertError> {
         let _guard = self.block_mutex_map.lock(block.id());
         // execute_and_insert_block has shortcut to return block if it exists
         self.block_store.execute_and_insert_block(block).await
@@ -122,7 +123,7 @@ where
         qc: QuorumCert,
         preferred_peer: Author,
         deadline: Instant,
-    ) -> std::result::Result<(), InsertError> {
+    ) -> Result<(), InsertError> {
         let mut lock_set = self.block_mutex_map.new_lock_set();
         let mut pending = vec![];
         let network = self.network.clone();
@@ -179,7 +180,7 @@ where
         highest_ledger_info: QuorumCert,
         peer: Author,
         deadline: Instant,
-    ) -> Result<()> {
+    ) -> failure::Result<()> {
         let committed_block_id = highest_ledger_info
             .committed_block_id()
             .ok_or_else(|| format_err!("highest ledger info has no committed block"))?;
@@ -289,7 +290,7 @@ impl BlockRetriever {
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> std::result::Result<Vec<Block<T>>, BlockRetrieverError>
+    ) -> Result<Vec<Block<T>>, BlockRetrieverError>
     where
         T: Payload,
     {

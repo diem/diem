@@ -1,4 +1,5 @@
-// check:  VerificationFailure([VerificationError { kind: FunctionDefinition, idx: 0, err: MoveLocExistsBorrowError(10) }])
+// check:  VerificationFailure
+// check: MoveLocExistsBorrowError
 
 main() {
     let v: u64;
