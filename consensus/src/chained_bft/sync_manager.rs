@@ -379,10 +379,11 @@ fn retrieval_timeout(deadline: &Instant, attempt: u32) -> Option<Duration> {
     assert!(attempt > 0, "retrieval_timeout attempt can't be 0");
     let exp = RETRIEVAL_MAX_EXP.min(attempt - 1); // [0..RETRIEVAL_MAX_EXP]
     let request_timeout = RETRIEVAL_INITIAL_TIMEOUT * 2_u32.pow(exp);
-    let deadline_timeout = deadline.checked_duration_since(Instant::now());
-    if let Some(deadline_timeout) = deadline_timeout {
-        Some(request_timeout.min(deadline_timeout))
+    let now = Instant::now();
+    let deadline_timeout = if *deadline >= now {
+        Some(deadline.duration_since(now))
     } else {
         None
-    }
+    };
+    deadline_timeout.map(|delay| request_timeout.min(delay))
 }
