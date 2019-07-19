@@ -50,7 +50,7 @@ pub trait TransferFunctions {
     /// Should return an AnalysisError if executing the instruction is unsuccessful, and () if
     /// the effects of successfully executing local@instr have been reflected by mutatating
     /// local@pre.
-    /// Auxilary data from the analysis that is not part of the abstract state can be collected by
+    /// Auxiliary data from the analysis that is not part of the abstract state can be collected by
     /// mutating local@self.
     /// The last instruction index in the current block is local@last_index. Knowing this
     /// information allows clients to detect the end of a basic block and special-case appropriately

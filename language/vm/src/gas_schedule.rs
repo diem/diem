@@ -122,7 +122,7 @@ macro_rules! define_gas_unit {
 define_gas_unit! {
     name: AbstractMemorySize,
     carrier: GasCarrier,
-    doc: "A newtype wrapper that represents the (abstract) memory size that the instruciton will take up."
+    doc: "A newtype wrapper that represents the (abstract) memory size that the instruction will take up."
 }
 
 define_gas_unit! {
