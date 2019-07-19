@@ -327,8 +327,11 @@ impl LibraDB {
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.
     ///
+    /// `first_version` is the version of the first transaction in `txns_to_commit`.
     /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
     /// it carries is generated after the `txns_to_commit` are applied.
+    /// Note that even if `txns_to_commit` is empty, `frist_version` is checked to be
+    /// `ledger_info_with_sigs.ledger_info.version + 1` if `ledger_info_with_sigs` is not `None`.
     pub fn save_transactions(
         &self,
         txns_to_commit: &[TransactionToCommit],
@@ -351,11 +354,10 @@ impl LibraDB {
                 .state_root_hash()
         };
 
-        let last_version = first_version + num_txns - 1;
         if let Some(x) = ledger_info_with_sigs {
             let claimed_last_version = x.ledger_info().version();
             ensure!(
-                claimed_last_version == last_version,
+                claimed_last_version + 1 == first_version + num_txns,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
@@ -387,13 +389,19 @@ impl LibraDB {
         }
 
         // Persist.
-        let (sealed_cs, counters) = self.seal_change_set(first_version, last_version, cs)?;
+        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
         self.commit(sealed_cs)?;
 
-        // Only increment counter if commit succeeds.
-        OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
-        OP_COUNTER.set("latest_transaction_version", last_version as usize);
-        counters.bump_op_counters();
+        // Only increment counter if commit succeeds and there are at least one transaction written
+        // to the storage.
+        if num_txns > 0 {
+            let last_version = first_version + num_txns - 1;
+            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
+            OP_COUNTER.set("latest_transaction_version", last_version as usize);
+            counters
+                .expect("Counters should be bumped with transactions being saved.")
+                .bump_op_counters();
+        }
 
         Ok(())
     }
@@ -667,15 +675,20 @@ impl LibraDB {
     fn seal_change_set(
         &self,
         first_version: Version,
-        last_version: Version,
+        num_txns: Version,
         mut cs: ChangeSet,
-    ) -> Result<(SealedChangeSet, LedgerCounters)> {
-        let counters = self.system_store.inc_ledger_counters(
-            first_version,
-            last_version,
-            cs.counters,
-            &mut cs.batch,
-        )?;
+    ) -> Result<(SealedChangeSet, Option<LedgerCounters>)> {
+        // Avoid reading base counter values when not necessary.
+        let counters = if num_txns > 0 {
+            Some(self.system_store.bump_ledger_counters(
+                first_version,
+                first_version + num_txns - 1,
+                cs.counter_bumps,
+                &mut cs.batch,
+            )?)
+        } else {
+            None
+        };
 
         Ok((SealedChangeSet { batch: cs.batch }, counters))
     }

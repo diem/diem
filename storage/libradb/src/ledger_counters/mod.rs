@@ -24,14 +24,12 @@ pub(crate) enum LedgerCounter {
     StateNodesRetired = 302,
 }
 
-/// A set of LedgerCounters with `usize` values.
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub(crate) struct LedgerCounters {
+struct InnerLedgerCounters {
     counters: BTreeMap<u16, usize>,
 }
 
-impl LedgerCounters {
-    /// Constructs a empty set of counters.
+impl InnerLedgerCounters {
     pub fn new() -> Self {
         Self {
             counters: BTreeMap::new(),
@@ -44,20 +42,14 @@ impl LedgerCounters {
             .expect("LedgerCounter should convert to u16.")
     }
 
-    /// Gets the value of a certain counter.
-    ///
-    /// If the counter has never been `inc`ed, returns 0.
-    pub fn get(&self, counter: LedgerCounter) -> usize {
+    fn get(&self, counter: LedgerCounter) -> usize {
         self.counters
             .get(&Self::raw_key(counter))
             .cloned()
             .unwrap_or(0)
     }
 
-    /// Increases the value of a counter.
-    ///
-    /// If the counter doesn't already exist, assumes value of 0.
-    pub fn inc(&mut self, counter: LedgerCounter, by: usize) -> &mut Self {
+    fn inc(&mut self, counter: LedgerCounter, by: usize) -> &mut Self {
         self.raw_inc(Self::raw_key(counter), by)
     }
 
@@ -67,11 +59,56 @@ impl LedgerCounters {
 
         self
     }
+}
 
-    /// Bump each counter that's present in `rhs` with the value in `rhs`.
-    pub fn combine(&mut self, rhs: Self) -> &mut Self {
-        for (key, value) in rhs.counters.into_iter() {
-            self.raw_inc(key, value);
+/// Represents `LedgerCounter` bumps yielded by saving a batch of transactions.
+pub(crate) struct LedgerCounterBumps {
+    bumps: InnerLedgerCounters,
+}
+
+impl LedgerCounterBumps {
+    /// Construsts an empty set of bumps.
+    pub fn new() -> Self {
+        Self {
+            bumps: InnerLedgerCounters::new(),
+        }
+    }
+
+    /// Makes the bump of a certain counter bigger.
+    ///
+    /// If a bump has not already been recorded for the counter, assumes current value of 0.
+    pub fn bump(&mut self, counter: LedgerCounter, by: usize) -> &mut Self {
+        self.bumps.inc(counter, by);
+
+        self
+    }
+
+    /// Get the current value of the bump of `counter`.
+    ///
+    /// Defaults to 0.
+    pub fn get(&mut self, counter: LedgerCounter) -> usize {
+        self.bumps.get(counter)
+    }
+}
+
+/// Represents ledger counter values at a certain version.
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub(crate) struct LedgerCounters {
+    counters: InnerLedgerCounters,
+}
+
+impl LedgerCounters {
+    /// Constructs a new empty counter set.
+    pub fn new() -> Self {
+        Self {
+            counters: InnerLedgerCounters::new(),
+        }
+    }
+
+    /// Bump each counter in `bumps` with the value in `bumps`.
+    pub fn bump(&mut self, bumps: LedgerCounterBumps) -> &mut Self {
+        for (key, value) in bumps.bumps.counters.into_iter() {
+            self.counters.raw_inc(key, value);
         }
 
         self
@@ -83,11 +120,16 @@ impl LedgerCounters {
             OP_COUNTER.set(counter.as_ref(), self.get(counter));
         }
     }
+
+    /// Get the value of `counter`.
+    pub fn get(&self, counter: LedgerCounter) -> usize {
+        self.counters.get(counter)
+    }
 }
 
 impl CanonicalSerialize for LedgerCounters {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_btreemap(&self.counters)?;
+        serializer.encode_btreemap(&self.counters.counters)?;
         Ok(())
     }
 }
@@ -96,20 +138,22 @@ impl CanonicalDeserialize for LedgerCounters {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let counters = deserializer.decode_btreemap::<u16, usize>()?;
 
-        Ok(Self { counters })
+        Ok(Self {
+            counters: InnerLedgerCounters { counters },
+        })
     }
 }
 
 prop_compose! {
-    fn ledger_counters_strategy()(
+    pub(crate) fn ledger_counters_strategy()(
         counters_map in hash_map(any::<LedgerCounter>(), any::<usize>(), 0..3)
     ) -> LedgerCounters {
-        let mut counters = LedgerCounters::new();
+        let mut counters = InnerLedgerCounters::new();
         for (counter, value) in counters_map {
             counters.inc(counter, value);
         }
 
-        counters
+        LedgerCounters { counters }
     }
 }
 

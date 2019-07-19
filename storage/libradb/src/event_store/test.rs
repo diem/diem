@@ -22,7 +22,10 @@ fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashV
     let mut cs = ChangeSet::new();
     let root_hash = store.put_events(version, events, &mut cs).unwrap();
     store.db.write_schemas(cs.batch).unwrap();
-    assert_eq!(cs.counters.get(LedgerCounter::EventsCreated), events.len());
+    assert_eq!(
+        cs.counter_bumps.get(LedgerCounter::EventsCreated),
+        events.len()
+    );
 
     root_hash
 }

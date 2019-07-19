@@ -73,10 +73,10 @@ impl StateStore {
             SparseMerkleTree::new(self).put_blob_sets(blob_sets, first_version, root_hash)?;
 
         let (node_batch, blob_batch, retired_record_batch) = tree_update_batch.into();
-        cs.counters
-            .inc(LedgerCounter::StateNodesCreated, node_batch.len());
-        cs.counters
-            .inc(LedgerCounter::StateBlobsCreated, blob_batch.len());
+        cs.counter_bumps
+            .bump(LedgerCounter::StateNodesCreated, node_batch.len());
+        cs.counter_bumps
+            .bump(LedgerCounter::StateBlobsCreated, blob_batch.len());
         node_batch
             .iter()
             .map(|(node_hash, node)| cs.batch.put::<StateMerkleNodeSchema>(node_hash, node))
@@ -89,8 +89,12 @@ impl StateStore {
             .iter()
             .map(|row| {
                 match row.record_type {
-                    RetiredRecordType::Node => cs.counters.inc(LedgerCounter::StateNodesRetired, 1),
-                    RetiredRecordType::Blob => cs.counters.inc(LedgerCounter::StateBlobsRetired, 1),
+                    RetiredRecordType::Node => {
+                        cs.counter_bumps.bump(LedgerCounter::StateNodesRetired, 1)
+                    }
+                    RetiredRecordType::Blob => {
+                        cs.counter_bumps.bump(LedgerCounter::StateBlobsRetired, 1)
+                    }
                 };
                 cs.batch.put::<RetiredStateRecordSchema>(row, &())
             })

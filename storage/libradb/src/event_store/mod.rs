@@ -192,7 +192,8 @@ impl EventStore {
         events: &[ContractEvent],
         cs: &mut ChangeSet,
     ) -> Result<HashValue> {
-        cs.counters.inc(LedgerCounter::EventsCreated, events.len());
+        cs.counter_bumps
+            .bump(LedgerCounter::EventsCreated, events.len());
 
         // EventSchema and EventByAccessPathSchema updates
         events

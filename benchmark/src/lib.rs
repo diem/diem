@@ -90,7 +90,7 @@ impl Benchmarker {
     /// If it is not available, we can still count on timeout to terminate the wait.
     /// So in that case we return a default value 0.
     fn get_committed_txns_counter(&self) -> i64 {
-        let name = String::from("storage{op=committed_txns}");
+        let name = String::from("storage_gauge{op=latest_transaction_version}");
         match self.debug_client.get_node_metric(name) {
             Err(e) => {
                 error!("Pull committed_txns error: {:?}", e);

@@ -1,4 +1,4 @@
-use crate::ledger_counters::LedgerCounters;
+use crate::ledger_counters::LedgerCounterBumps;
 use schemadb::SchemaBatch;
 
 /// Structure that collects changes to be made to the DB in one transaction.
@@ -9,8 +9,8 @@ use schemadb::SchemaBatch;
 pub(crate) struct ChangeSet {
     /// A batch of db alternations.
     pub batch: SchemaBatch,
-    /// Counter increases to be make on commit.
-    pub counters: LedgerCounters,
+    /// Counter bumps to be made on commit.
+    pub counter_bumps: LedgerCounterBumps,
 }
 
 impl ChangeSet {
@@ -18,7 +18,7 @@ impl ChangeSet {
     pub fn new() -> Self {
         Self {
             batch: SchemaBatch::new(),
-            counters: LedgerCounters::new(),
+            counter_bumps: LedgerCounterBumps::new(),
         }
     }
 }

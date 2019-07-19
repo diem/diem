@@ -32,19 +32,19 @@ fn put_account_state_set(
         .unwrap()[0];
     store.db.write_schemas(cs.batch).unwrap();
     assert_eq!(
-        cs.counters.get(LedgerCounter::StateNodesCreated),
+        cs.counter_bumps.get(LedgerCounter::StateNodesCreated),
         expected_nodes_created
     );
     assert_eq!(
-        cs.counters.get(LedgerCounter::StateNodesRetired),
+        cs.counter_bumps.get(LedgerCounter::StateNodesRetired),
         expected_nodes_retired
     );
     assert_eq!(
-        cs.counters.get(LedgerCounter::StateBlobsCreated),
+        cs.counter_bumps.get(LedgerCounter::StateBlobsCreated),
         blobs_created
     );
     assert_eq!(
-        cs.counters.get(LedgerCounter::StateBlobsRetired),
+        cs.counter_bumps.get(LedgerCounter::StateBlobsRetired),
         expected_blobs_retired
     );
 
