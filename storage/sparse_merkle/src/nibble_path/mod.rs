@@ -6,12 +6,13 @@
 
 #[cfg(test)]
 mod nibble_path_test;
+use serde::{Deserialize, Serialize};
 
 use crate::ROOT_NIBBLE_HEIGHT;
 use std::{fmt, iter::FromIterator};
 
 /// NibblePath defines a path in Merkle tree in the unit of nibble (4 bits)
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NibblePath {
     /// the underlying bytes that stores the path, 2 nibbles per byte. If the number of nibbles is
     /// odd, the second half of the last byte must be 0.
@@ -32,22 +33,11 @@ impl fmt::Debug for NibblePath {
 /// Convert a vector of bytes into `NibblePath` using the lower 4 bits of each byte as nibble.
 impl FromIterator<u8> for NibblePath {
     fn from_iter<I: IntoIterator<Item = u8>>(iter: I) -> Self {
-        let mut bytes = vec![];
-        let mut count = 0;
+        let mut nibble_path = NibblePath::new(vec![]);
         for nibble in iter {
-            assert!(nibble < 16);
-            if count % 2 == 0 {
-                bytes.push(nibble << 4);
-            } else {
-                *bytes.last_mut().expect("Cannot be None") |= nibble;
-            }
-            count += 1;
+            nibble_path.push(nibble);
         }
-        if count % 2 == 0 {
-            NibblePath::new(bytes)
-        } else {
-            NibblePath::new_odd(bytes)
-        }
+        nibble_path
     }
 }
 
@@ -69,6 +59,18 @@ impl NibblePath {
         let num_nibbles = bytes.len() * 2 - 1;
         assert!(num_nibbles <= ROOT_NIBBLE_HEIGHT);
         NibblePath { bytes, num_nibbles }
+    }
+
+    /// Adds a nibble to the end of nibble path.
+    pub fn push(&mut self, nibble: u8) {
+        assert!(nibble < 16);
+        assert!(ROOT_NIBBLE_HEIGHT > self.num_nibbles);
+        if self.num_nibbles % 2 == 0 {
+            self.bytes.push(nibble << 4);
+        } else {
+            self.bytes[self.num_nibbles / 2] |= nibble;
+        }
+        self.num_nibbles += 1;
     }
 
     /// Get the i-th bit.
