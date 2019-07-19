@@ -156,10 +156,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=~\"insert..*\"}[1m])\n",
+	  "expr": "label_replace(irate(mempool{op=~'insert..*'}[1m]), 'status', '$1', 'op', '.*code: (.*?),.*')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}:{{op}}",
+          "legendFormat": "{{peer_id}}: {{status}}",
           "refId": "A"
         }
       ],
@@ -778,11 +778,11 @@
       "stack": false,
       "steppedLine": false,
       "targets": [
-        {
-          "expr": "irate(mempool{op=~\"smp.event.*\"}[1m])",
+          {
+	      "expr": "label_replace(irate(mempool{op=~'smp.event.*'}[1m]), 'event', '$1', 'op', 'smp.event.(.*)')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}}: {{event}}",
           "refId": "A"
         }
       ],
@@ -790,7 +790,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "incoming events per sec",
+      "title": "Incoming events per sec",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -863,11 +863,11 @@
       "stack": false,
       "steppedLine": false,
       "targets": [
-        {
-          "expr": "irate(mempool{op=~\"smp.transactions.received.*\"}[1m])",
+          {
+	      "expr": "label_replace(irate(mempool{op=~'smp.transactions.received.*'}[1m]), 'sender', '$1', 'op', 'smp.transactions.received.(.{8}).*')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} <- {{sender}}",
           "refId": "A"
         }
       ],
@@ -875,7 +875,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "new transactions received per sec",
+      "title": "New transactions received per sec",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -949,10 +949,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=~'smp.smp.transactions.success.*'}[1m])",
+	    "expr": "label_replace(irate(mempool{op=~'smp.transactions.success.*'}[1m]), 'sender', '$1', 'op', 'smp.transactions.success.(.{8}).*')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} <- {{sender}}",
           "refId": "A"
         }
       ],
@@ -960,7 +960,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "successful transactions per sec",
+      "title": "Successful transaction sync per sec",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1035,6 +1035,6 @@
   },
   "timezone": "",
   "title": "Mempool",
-  "uid": "jiPCqF7Zz",
+  "uid": "mempool",
   "version": 1
 }
