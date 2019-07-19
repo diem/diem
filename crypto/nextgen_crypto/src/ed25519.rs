@@ -36,18 +36,19 @@ use crypto_derive::{SilentDebug, SilentDisplay};
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek;
 use failure::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{de, export, ser};
+use std::fmt;
 
 /// An Ed25519 private key
-#[derive(Serialize, Deserialize, SilentDisplay, SilentDebug)]
+#[derive(SilentDisplay, SilentDebug)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
 /// An Ed25519 public key
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
 /// An Ed25519 signature
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
@@ -489,4 +490,122 @@ pub mod compat {
         type Parameters = ();
     }
 
+}
+
+//////////////////////////////
+// Compact Serialization    //
+//////////////////////////////
+
+impl ser::Serialize for Ed25519PrivateKey {
+    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        ed25519_dalek::SecretKey::serialize(&self.0, serializer)
+    }
+}
+
+impl ser::Serialize for Ed25519PublicKey {
+    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        ed25519_dalek::PublicKey::serialize(&self.0, serializer)
+    }
+}
+
+impl ser::Serialize for Ed25519Signature {
+    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        ed25519_dalek::Signature::serialize(&self.0, serializer)
+    }
+}
+
+struct Ed25519PrivateKeyVisitor;
+
+struct Ed25519PublicKeyVisitor;
+
+struct Ed25519SignatureVisitor;
+
+impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
+    type Value = Ed25519PrivateKey;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("ed25519_dalek private key in bytes")
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519PrivateKey, E>
+    where
+        E: de::Error,
+    {
+        match Ed25519PrivateKey::try_from(value) {
+            Ok(key) => Ok(key),
+            Err(error) => Err(E::custom(error)),
+        }
+    }
+}
+
+impl<'de> de::Visitor<'de> for Ed25519PublicKeyVisitor {
+    type Value = Ed25519PublicKey;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("public key in bytes")
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519PublicKey, E>
+    where
+        E: de::Error,
+    {
+        match Ed25519PublicKey::try_from(value) {
+            Ok(key) => Ok(key),
+            Err(error) => Err(E::custom(error)),
+        }
+    }
+}
+
+impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
+    type Value = Ed25519Signature;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("ed25519_dalek signature in compact encoding")
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519Signature, E>
+    where
+        E: de::Error,
+    {
+        match Ed25519Signature::try_from(value) {
+            Ok(key) => Ok(key),
+            Err(error) => Err(E::custom(error)),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Ed25519PrivateKey {
+    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(Ed25519PrivateKeyVisitor {})
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Ed25519PublicKey {
+    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(Ed25519PublicKeyVisitor {})
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Ed25519Signature {
+    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(Ed25519SignatureVisitor {})
+    }
 }
