@@ -92,7 +92,7 @@ impl<T: ValidKey> ValidKeyStringExt for T {}
 
 /// A type family for key material that should remain secret and has an
 /// associated type of the [`PublicKey`][PublicKey] family.
-pub trait PrivateKey: ValidKey {
+pub trait PrivateKey: Sized {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
     type PublicKeyMaterial: PublicKey<PrivateKeyMaterial = Self>;
@@ -108,7 +108,7 @@ pub trait PrivateKey: ValidKey {
 /// A trait for a [`ValidKey`][ValidKey] which knows how to sign a
 /// message, and return an associated `Signature` type.
 pub trait SigningKey:
-    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial>
+    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial> + ValidKey
 {
     /// The associated verifying key type for this signing key.
     type VerifyingKeyMaterial: VerifyingKey<SigningKeyMaterial = Self>;
@@ -129,7 +129,7 @@ pub trait SigningKey:
 /// reference.
 /// This convertibility requirement ensures the existence of a
 /// deterministic, canonical public key construction from a private key.
-pub trait PublicKey: ValidKey + Clone + Eq + Hash +
+pub trait PublicKey: Sized + Clone + Eq + Hash +
     // This unsightly turbofish type parameter is the precise constraint
     // needed to require that there exists an
     //
@@ -154,7 +154,7 @@ pub trait PublicKey: ValidKey + Clone + Eq + Hash +
 /// It is linked to a type of the Signature family, which carries the
 /// verification implementation.
 pub trait VerifyingKey:
-    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial>
+    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial> + ValidKey
 {
     /// The associated signing key type for this verifying key.
     type SigningKeyMaterial: SigningKey<VerifyingKeyMaterial = Self>;
