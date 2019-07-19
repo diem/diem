@@ -90,6 +90,11 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_defs[idx.into_index()]
     }
 
+    fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> &TypeSignature {
+        let field_definition = self.field_def_at(field_definition_index);
+        self.type_signature_at(field_definition.signature)
+    }
+
     // XXX is a partial range required here?
     fn module_handles(&self) -> &[ModuleHandle] {
         &self.as_module().as_inner().module_handles
@@ -156,6 +161,15 @@ pub trait ModuleAccess: Sync {
         let field_count = field_count as usize;
         let last_field = first_field + field_count;
         &self.as_module().as_inner().field_defs[first_field..last_field]
+    }
+
+    fn is_field_in_struct(
+        &self,
+        field_definition_index: FieldDefinitionIndex,
+        struct_handle_index: StructHandleIndex,
+    ) -> bool {
+        let field_definition = self.field_def_at(field_definition_index);
+        struct_handle_index == field_definition.struct_
     }
 }
 

@@ -291,6 +291,10 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
         TypeSignatureView::new(self.module, type_signature)
     }
 
+    pub fn signature_token(&self) -> &SignatureToken {
+        &self.module.type_signature_at(self.field_def.signature).0
+    }
+
     // Field definitions are always private.
 
     /// The struct this field is defined in.

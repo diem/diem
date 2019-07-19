@@ -13,13 +13,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     errors::VMStaticViolation,
-    file_format::{
-        Bytecode, CompiledModule, FieldDefinitionIndex, FunctionDefinition, LocalIndex,
-        SignatureToken, StructHandleIndex,
-    },
+    file_format::{Bytecode, CompiledModule, FunctionDefinition, LocalIndex, SignatureToken},
     views::{
-        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView,
-        SignatureTokenView, StructDefinitionView, ViewInternals,
+        FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView, SignatureTokenView,
+        StructDefinitionView, ViewInternals,
     },
 };
 
@@ -75,25 +72,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
         verifier.analyze_function(initial_state, &function_definition_view, cfg);
         verifier.errors
-    }
-
-    fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> SignatureToken {
-        let field_definition = self.module.field_def_at(field_definition_index);
-        let field_definition_view = FieldDefinitionView::new(self.module, field_definition);
-        field_definition_view
-            .type_signature()
-            .token()
-            .as_inner()
-            .clone()
-    }
-
-    fn is_field_in_struct(
-        &self,
-        field_definition_index: FieldDefinitionIndex,
-        struct_handle_index: StructHandleIndex,
-    ) -> bool {
-        let field_definition = self.module.field_def_at(field_definition_index);
-        struct_handle_index == field_definition.struct_
     }
 
     fn get_nonce(&mut self, state: &mut AbstractState) -> Nonce {
@@ -257,8 +235,15 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if let Some(struct_handle_index) =
                     SignatureToken::get_struct_handle_from_reference(&operand.signature)
                 {
-                    if self.is_field_in_struct(*field_definition_index, struct_handle_index) {
-                        let field_signature = self.get_field_signature(*field_definition_index);
+                    if self
+                        .module
+                        .is_field_in_struct(*field_definition_index, struct_handle_index)
+                    {
+                        let field_signature = self
+                            .module
+                            .get_field_signature(*field_definition_index)
+                            .0
+                            .clone();
                         let operand_nonce = Self::extract_nonce(&operand.value).unwrap().clone();
                         let nonce = self.get_nonce(&mut state);
                         if operand.signature.is_mutable_reference() {
@@ -269,7 +254,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             if Self::write_borrow_ok(borrowed_nonces) {
                                 self.stack.push(StackAbstractValue {
                                     signature: SignatureToken::MutableReference(Box::new(
-                                        field_signature,
+                                        field_signature.clone(),
                                     )),
                                     value: AbstractValue::Reference(nonce.clone()),
                                 });
