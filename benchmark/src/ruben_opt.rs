@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use clap::arg_enum;
 use config::config::NodeConfig;
 use failure::prelude::*;

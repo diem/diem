@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
 use benchmark::{
     ruben_opt::{Executable, Opt},
@@ -25,15 +28,15 @@ fn test_liveness(
             let tx_reqs = bm.gen_ring_txn_requests(accounts);
             repeated_tx_reqs.extend(tx_reqs.into_iter());
         }
-        bm.submit_and_wait_txn_requests(&repeated_tx_reqs);
+        bm.submit_and_wait_txn_committed(&repeated_tx_reqs);
     }
 }
 
 /// Measure both `burst` and `epoch` throughput with pairwise TXN pattern.
 /// * `burst throughput`: the average committed txns per second during one run of playing TXNs
-///   (e.g., Benchmarker::submit_and_wait_txn_requests). Since time is counted from submission until
-///   all TXNs are committed, this measurement is in a sense the user-side throughput. In one epoch,
-///   we play the pairwise TXN request sequence repeatedly for num_rounds times.
+///   (e.g., Benchmarker::measure_txn_throughput). Since time is counted from submission until all
+///   TXNs are committed, this measurement is in a sense the user-side throughput. In one epoch, we
+///   play the pairwise TXN request sequence repeatedly for num_rounds times.
 /// * `epoch throughput`: Since single run of playing TXNs may have high variance, we can repeat
 ///   playing TXNs many times and calculate the averaged `burst throughput` along with standard
 ///   deviation (will be added shortly).
@@ -53,7 +56,7 @@ pub(crate) fn measure_throughput(
         let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs);
         txn_throughput_seq.push(txn_throughput);
     }
-    println!(
+    info!(
         "{:?} epoch(s) of TXN throughput = {:?}",
         num_epochs, txn_throughput_seq
     );
@@ -173,9 +176,9 @@ mod tests {
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
             let failed_submissions = OP_COUNTER.counter("failed_submissions").get();
             let accepted_txns = OP_COUNTER.counter("accepted_txns").get();
-            let failed_responses = OP_COUNTER.counter("failed_responses").get();
+            let rejected_txns = OP_COUNTER.counter("rejected_txns").get();
             assert_eq!(created_txns, requested_txns + failed_submissions);
-            assert_eq!(requested_txns, accepted_txns + failed_responses);
+            assert_eq!(requested_txns, accepted_txns + rejected_txns);
         }
     }
 }

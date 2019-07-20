@@ -1,38 +1,40 @@
-use admission_control_proto::{
-    proto::{
-        admission_control::{
-            SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
-        },
-        admission_control_grpc::AdmissionControlClient,
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use admission_control_proto::proto::{
+    admission_control::{
+        SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
     },
-    AdmissionControlStatus, SubmitTransactionResponse,
+    admission_control_grpc::AdmissionControlClient,
 };
 use client::{AccountData, AccountStatus};
 use crypto::signing::KeyPair;
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
-use futures::Future;
 use generate_keypair::load_key_from_file;
-use grpcio::CallOption;
 use lazy_static::lazy_static;
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
 use metrics::OpMetrics;
-use proto_conv::{FromProto, IntoProto};
+use proto_conv::IntoProto;
 use std::{slice::Chunks, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
-    account_config::{association_address, get_account_resource_or_default},
-    get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
+    account_config::association_address,
     transaction::Program,
     transaction_helpers::{create_signed_txn, TransactionSigner},
 };
 
+pub mod grpc_helpers;
 pub mod ruben_opt;
 
+use grpc_helpers::{divide_items, get_account_states, submit_and_wait_txn_requests};
+
+/// Number of iteration to query storage counter when waiting for TXNs to become committed.
+pub const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
+/// Placehodler values used to generate offline TXNs.
+const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 100_000;
-const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 const TX_EXPIRATION: i64 = 100;
 /// The amount of coins initially minted to all generated accounts.
 /// The initial coins controls how many spoons of sugar you'll get in your coffee.
@@ -56,12 +58,13 @@ lazy_static! {
 /// 1. Create a benchmarker with AdmissionControlClient(s) and NodeDebugClient,
 /// 2. Generate some accounts: gen_and_mint_accounts. The number of accounts affects how many
 /// TXNs are sent,
-/// 3. Generate and submit transactions: gen_txn_reqs, submit_and_wait_txn_reqs.
+/// 3. Generate and submit transactions: gen_ring_txn_requests, gen_pairwise_txn_requests,
+/// submit_and_wait_txn_reqs, measure_txn_throughput.
 /// Metrics reported include:
 /// * Counters: created_txns, requested_txns, rejected_txns (AC responded with rejection or
 ///   VM/mempool error), accepted_txns, failed_submissions (TXN request failed at submission stage),
 ///   failed_responses (AC responded without accept + AC doesn't respond).
-/// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
+/// * Gauges: submit_duration_ms, running_duration_ms, request_throughput, txns_throughput.
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,
@@ -86,99 +89,9 @@ impl Benchmarker {
         }
     }
 
-    /// Use debug client interface to query #commited TXNs in validator's storage.
-    /// If it is not available, we can still count on timeout to terminate the wait.
-    /// So in that case we return a default value 0.
-    fn get_committed_txns_counter(&self) -> i64 {
-        let name = String::from("storage_gauge{op=latest_transaction_version}");
-        match self.debug_client.get_node_metric(name) {
-            Err(e) => {
-                error!("Pull committed_txns error: {:?}", e);
-                0
-            }
-            Ok(cnt) => match cnt {
-                Some(c) => c,
-                None => 0,
-            },
-        }
-    }
-
-    /// Wait for #committed TXNs reaching target within fixed timeout duration.
-    fn wait_for_commit(&self, target: i64) {
-        let mut max_iterations = MAX_WAIT_COMMIT_ITERATIONS;
-        let now = time::Instant::now();
-        while max_iterations > 0 {
-            max_iterations -= 1;
-            if self.get_committed_txns_counter() == target {
-                return;
-            }
-            thread::sleep(time::Duration::from_micros(500));
-        }
-        warn!(
-            "wait_for_commit() timeout after {} seconds of sleep",
-            now.elapsed().as_secs()
-        );
-    }
-
-    /// Load keypair from given faucet_account_path,
-    /// then try to sync with a validator to get up-to-date faucet account's sequence number.
-    /// Why restore faucet account: Benchmarker as a client can be stopped/restarted repeatedly
-    /// while the libra swarm as a server keeping running.
-    fn load_faucet_account(&self, faucet_account_path: &str) -> AccountData {
-        let faucet_account_keypair: KeyPair =
-            load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
-        let address = association_address();
-        let (sequence_number, status) = self
-            .get_account_state_from_validator(address)
-            .expect("failed to sync faucet account with validator");
-        AccountData {
-            address,
-            key_pair: Some(faucet_account_keypair),
-            sequence_number,
-            status,
-        }
-    }
-
-    /// Request and wait for account's (sequence_number, account_status) from a validator.
-    /// Assume Benchmarker is the ONLY active client in the libra network.
-    fn get_account_state_from_validator(
-        &self,
-        address: AccountAddress,
-    ) -> Result<(u64, AccountStatus)> {
-        let req_item = RequestItem::GetAccountState { address };
-        let future_resp = self.get_account_state_async(req_item)?;
-        let mut response = future_resp.wait()?;
-        let account_state_proof = response
-            .response_items
-            .remove(0)
-            .into_get_account_state_response()?;
-        if let Some(account_state_blob) = account_state_proof.blob {
-            let account_resource = get_account_resource_or_default(&Some(account_state_blob))?;
-            Ok((account_resource.sequence_number(), AccountStatus::Persisted))
-        } else {
-            bail!("failed to get account state because account doesn't exist")
-        }
-    }
-
-    /// Send the request using one of self's AC client.
-    fn get_account_state_async(
-        &self,
-        requested_item: RequestItem,
-    ) -> Result<impl Future<Item = UpdateToLatestLedgerResponse, Error = failure::Error>> {
-        let requested_items = vec![requested_item];
-        let req = UpdateToLatestLedgerRequest::new(0, requested_items);
-        let proto_req = req.into_proto();
-        let ret = self
-            .clients
-            .get(0)
-            .ok_or_else(|| format_err!("no available AdmissionControlClient"))?
-            .update_to_latest_ledger_async_opt(&proto_req, Self::get_default_grpc_call_option())?
-            .then(move |account_state_proof_resp| {
-                let resp = UpdateToLatestLedgerResponse::from_proto(account_state_proof_resp?)?;
-                Ok(resp)
-            });
-        Ok(ret)
-    }
+    /// -------------------------------------------------------------------- ///
+    ///  Benchmark setup: account generation and minting APIs and helpers.   ///
+    /// -------------------------------------------------------------------- ///
 
     /// Create a new account without keypair from self's wallet.
     fn gen_next_account(&mut self) -> AccountData {
@@ -191,6 +104,33 @@ impl Benchmarker {
             key_pair: None,
             sequence_number: 0,
             status: AccountStatus::Local,
+        }
+    }
+
+    /// Load keypair from given faucet_account_path,
+    /// then try to sync with a validator to get up-to-date faucet account's sequence number.
+    /// Why restore faucet account: Benchmarker as a client can be stopped/restarted repeatedly
+    /// while the libra swarm as a server keeping running.
+    fn load_faucet_account(&self, faucet_account_path: &str) -> AccountData {
+        let faucet_account_keypair: KeyPair =
+            load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
+        let address = association_address();
+        // Request and wait for account's (sequence_number, account_status) from a validator.
+        // Assume Benchmarker is the ONLY active client in the libra network.
+        let client = self
+            .clients
+            .get(0)
+            .expect("no available AdmissionControlClient");
+        let states = get_account_states(client, &[address]);
+        let (sequence_number, status) = states
+            .expect("failed to get faucet account from validator")
+            .pop()
+            .expect("faucet account not found");
+        AccountData {
+            address,
+            key_pair: Some(faucet_account_keypair),
+            sequence_number,
+            status,
         }
     }
 
@@ -211,18 +151,24 @@ impl Benchmarker {
             results.push(account);
             mint_requests.push(mint_txn_req);
         }
-        // Though unlikely, we should stop if any minting fails.
-        let (num_txns, _) = self.submit_and_wait_txn_requests(&mint_requests);
-        if num_txns != (mint_requests.len() as i64) {
+        // We stop immediately if any minting fails.
+        let (num_accepted, num_committed, _, _) =
+            self.submit_and_wait_txn_committed(&mint_requests);
+        if num_accepted != mint_requests.len() || num_accepted - num_committed > 0 {
             bail!(
-                "{} of {} mint transaction(s) failed",
-                mint_requests.len() as i64 - num_txns,
-                mint_requests.len()
+                "{} of {} mint transaction(s) accepted, and {} failed",
+                num_accepted,
+                mint_requests.len(),
+                num_accepted - num_committed,
             )
         } else {
             Ok(results)
         }
     }
+
+    /// ------------------------------------------ ///
+    ///  Transaction generation helpers and APIs.  ///
+    /// ------------------------------------------ ///
 
     /// Craft a transaction request.
     fn gen_submit_transaction_request(
@@ -325,81 +271,24 @@ impl Benchmarker {
         txn_reqs
     }
 
-    /// This parameter controls how "patient" AC clients are,
-    /// who are waiting the response from AC for this amount of time.
-    fn get_default_grpc_call_option() -> CallOption {
-        CallOption::default()
-            .wait_for_ready(true)
-            .timeout(std::time::Duration::from_millis(10_000))
-    }
+    /// ----------------------------------------------------------------- ///
+    ///  Transaction submission and waiting for commit APIs and helpers.  ///
+    /// ----------------------------------------------------------------- ///
 
-    /// Submit transction async with pre-generated request.
-    /// Note here we return proto version of the response to caller site
-    /// in order to reduce the overhead of submission.
-    fn submit_transaction_async_with_request(
-        client: &AdmissionControlClient,
-        req: &SubmitTransactionRequest,
-    ) -> Result<(impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>)> {
-        let resp = client
-            .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
-            .then(|proto_resp| Ok(proto_resp?));
-        OP_COUNTER.inc("requested_txns");
-        Ok(resp)
-    }
-
-    /// If response is correct proto && accepted by AC, return corresponding rust struct
-    /// that we should wait for. Failed txn request will raise an error. Caller can decide
-    /// whether to ignore this failed request, or stop processing later requests.
-    fn handle_future_response(
-        future_resp: impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>,
-    ) -> Result<SubmitTransactionResponse> {
-        let txn_proto_resp = future_resp.wait()?;
-        let txn_resp = SubmitTransactionResponse::from_proto(txn_proto_resp)?;
-        if let Some(status) = txn_resp.ac_status.as_ref() {
-            if *status == AdmissionControlStatus::Accepted {
-                OP_COUNTER.inc("accepted_txns");
-                Ok(txn_resp)
-            } else {
-                OP_COUNTER.inc("rejected_txns");
-                bail!("TXN request is not accepted with response: {:?}", txn_resp);
-            }
-        } else {
-            OP_COUNTER.inc("rejected_txns");
-            bail!("TXN request causes error on VM/mempool: {:?}", txn_resp);
-        }
-    }
-
-    /// Divide generic items into a vector of chunks of nearly equal size.
-    fn divide_txn_requests<T>(items: &[T], num_chunks: usize) -> Chunks<T> {
-        let chunk_size = if (num_chunks == 0) || (items.len() / num_chunks == 0) {
-            std::cmp::max(items.len(), 1)
-        } else {
-            items.len() / num_chunks
-        };
-        items.chunks(chunk_size)
-    }
-
-    /// Send requests to AC async, wait for responses from AC and then wait for accepted TXNs
-    /// to commit or time out, return (#committed TXNs, time to commit/timeout in milliseconds).
-    pub fn submit_and_wait_txn_requests(
+    /// Send requests to AC async, wait for responses from AC.
+    /// Return #accepted TXNs and submission duration.
+    pub fn submit_txns(
         &mut self,
-        txn_reqs: &[SubmitTransactionRequest],
-    ) -> (i64, u128) {
-        let init_committed_txns: i64 = self.get_committed_txns_counter();
-        info!(
-            "#Committed txns before TXNs submitted = {}.",
-            init_committed_txns
-        );
-        // Split requests into even chunks for each client.
-        let txn_req_chunks = Self::divide_txn_requests(txn_reqs, self.clients.len());
-        // Start submission.
+        txn_req_chunks: Chunks<SubmitTransactionRequest>,
+    ) -> (usize, u128) {
+        let init_storage_cntr = self.get_committed_txns_counter();
         let now = time::Instant::now();
         // Zip txn_req_chunks with clients: when first iter returns none,
         // zip will short-circuit and next will not be called on the second iter.
-        let children: Vec<thread::JoinHandle<Vec<SubmitTransactionResponse>>> = txn_req_chunks
+        let children: Vec<thread::JoinHandle<Vec<ProtoSubmitTransactionResponse>>> = txn_req_chunks
             .zip(self.clients.iter().cycle())
             .map(|(chunk, client)| {
-                let local_chunk = Arc::new(Vec::from(chunk));
+                let local_chunk = Vec::from(chunk);
                 let local_client = Arc::clone(client);
                 info!(
                     "Dispatch a chunk of {} requests to client.",
@@ -410,71 +299,110 @@ impl Benchmarker {
                     // Submit a chunk of TXN requests async, wait and check the AC status,
                     // return the list of responses that are accepted by AC.
                     // Ignore (but count) both failed submissions and AC-rejected TXNs.
-                    move || -> Vec<SubmitTransactionResponse> {
-                        let future_resps: Vec<_> = local_chunk
-                            .iter()
-                            .flat_map(|req| {
-                                Self::submit_transaction_async_with_request(&local_client, &req)
-                                    .or_else(|e| {
-                                        OP_COUNTER.inc("failed_submissions");
-                                        error!("Failed to submit TXN request: {:?}", e);
-                                        Err(e)
-                                    })
-                            })
-                            .collect();
-                        future_resps
-                            .into_iter()
-                            .flat_map(|future_resp| {
-                                Self::handle_future_response(future_resp).or_else(|e| {
-                                    OP_COUNTER.inc("failed_responses");
-                                    error!("Submitted txn not accepted by AC: {:?}", e);
-                                    Err(e)
-                                })
-                            })
-                            .collect()
+                    move || -> Vec<ProtoSubmitTransactionResponse> {
+                        submit_and_wait_txn_requests(&local_client, &local_chunk)
                     },
                 )
             })
             .collect();
         // Wait for threads and gather reponses.
-        let mut txn_resps: Vec<SubmitTransactionResponse> = Vec::with_capacity(txn_reqs.len());
+        // TODO: Group response by error type and report staticstics.
+        let mut txn_resps: Vec<ProtoSubmitTransactionResponse> = vec![];
         for child in children {
             let txn_resp_chunk = child.join().expect("failed to join a request thread");
-            txn_resps.extend(txn_resp_chunk.iter().cloned());
+            txn_resps.extend(txn_resp_chunk.into_iter());
         }
-        let after_req_committed_txns: i64 = self.get_committed_txns_counter();
         let request_duration_ms = now.elapsed().as_millis();
-        self.wait_for_commit(init_committed_txns + txn_resps.len() as i64);
-        let committed_time_ms = now.elapsed().as_millis();
-        let final_committed_txns = self.get_committed_txns_counter();
-        // TODO: Group response by error type and report staticstics.
-        let request_throughput = if request_duration_ms != 0 {
-            (txn_resps.len() as f64) * 1000f64 / (request_duration_ms as f64)
-        } else {
-            0.0
-        };
-        println!(
-            "Submitted {} txns in {} ms ({:.2} rps), in which {} succeeded, {} already committed.",
-            txn_reqs.len(),
-            request_duration_ms,
-            request_throughput,
-            txn_resps.len(),
-            after_req_committed_txns - init_committed_txns,
-        );
-        OP_COUNTER.set("request_duration_ms", request_duration_ms as usize);
-        OP_COUNTER.set("request_throughput", request_throughput as usize);
+        let comitted_during_submit = self.get_committed_txns_counter() - init_storage_cntr;
         info!(
-            "#Committed txns after TXNs committed = {}.",
-            final_committed_txns
+            "Submitted and accepted {} TXNs within {} ms, during which {} already committed",
+            txn_resps.len(),
+            request_duration_ms,
+            comitted_during_submit
         );
+        (txn_resps.len(), request_duration_ms)
+    }
+
+    /// Use debug client interface to query #commited TXNs in validator's storage.
+    /// If it is not available, though we cannot know the status of any submitted TXNs,
+    /// waiting can still timeout, and we continue in the hope that debug interface will be
+    /// available later.
+    fn get_committed_txns_counter(&self) -> i64 {
+        let name = String::from("storage{op=committed_txns}");
+        self.debug_client
+            .get_node_metric(name)
+            .expect("Failed to query TXN status from debug interface")
+            .expect("Failed to query TXN status from debug interface")
+    }
+
+    /// Wait for #committed TXNs reaching target with fixed number of query iterations.
+    fn wait_for_commit(&self, target: i64) -> u128 {
+        let mut max_iterations = MAX_WAIT_COMMIT_ITERATIONS;
+        let now = time::Instant::now();
+        while max_iterations > 0 {
+            max_iterations -= 1;
+            if self.get_committed_txns_counter() == target {
+                return now.elapsed().as_millis();
+            }
+            thread::sleep(time::Duration::from_micros(500));
+        }
+        let wait_duration_ms = now.elapsed().as_millis();
+        warn!("wait_for_commit() timeout after {} ms", wait_duration_ms);
+        wait_duration_ms
+    }
+
+    /// Wait for accepted TXNs to commit or time out.
+    /// Return #committed txn during the waiting, and how long we have waited.
+    pub fn wait_txns(&self, init_storage_cntr: i64, num_to_waits: i64) -> (usize, u128) {
+        let wait_duration_ms = self.wait_for_commit(init_storage_cntr + num_to_waits);
+        let curr_storage_cntr = self.get_committed_txns_counter();
+        let num_committed = (curr_storage_cntr - init_storage_cntr) as usize;
+        info!(
+            "Waited {} TXNs committed for {} ms",
+            num_committed, wait_duration_ms
+        );
+        (num_committed, wait_duration_ms)
+    }
+
+    /// -------------------------------------------------- ///
+    ///  Transaction playing, throughput measureing APIs.  ///
+    /// -------------------------------------------------- ///
+
+    /// Implement the general way to submit TXNs to Libra and then
+    /// wait for all accepted ones to become committed.
+    /// Return (#accepted TXNs, #committed TXNs, submit duration, wait duration).
+    pub fn submit_and_wait_txn_committed(
+        &mut self,
+        txn_reqs: &[SubmitTransactionRequest],
+    ) -> (usize, usize, u128, u128) {
+        let txn_req_chunks = divide_items(txn_reqs, self.clients.len());
+        let init_storage_cntr = self.get_committed_txns_counter();
+
+        let (num_txns_accepted, submit_duration_ms) = self.submit_txns(txn_req_chunks);
+        let (num_committed, wait_duration_ms) =
+            self.wait_txns(init_storage_cntr, num_txns_accepted as i64);
         (
-            final_committed_txns - init_committed_txns,
-            committed_time_ms,
+            num_txns_accepted,
+            num_committed,
+            submit_duration_ms,
+            wait_duration_ms,
         )
     }
 
-    /// Run given TXNs and measure throughput. How TXNs are played and how time durations
-    /// (submission, commit and running) are defined is illustrated as follows:
+    /// Calcuate average committed transactions per second.
+    fn calculate_throughput(num_txns: usize, duration_ms: u128, prefix: &str) -> f64 {
+        assert!(duration_ms > 0);
+        let throughput = num_txns as f64 * 1000f64 / duration_ms as f64;
+        info!(
+            "{} throughput est = {} txns / {} ms = {:.2} rps.",
+            prefix, num_txns, duration_ms, throughput,
+        );
+        throughput
+    }
+
+    /// Similar to submit_and_wait_txn_committed but with timing.
+    /// How given TXNs are played and how time durations (submission, commit and running)
+    /// are defined are illustrated as follows:
     ///                t_submit                AC responds all requests
     /// |==============================================>|
     ///                t_commit (unable to measure)     Storage stores all committed TXNs
@@ -484,49 +412,22 @@ impl Benchmarker {
     /// Estimated TXN throughput from user perspective = #TXN / t_run.
     /// Estimated request throughput = #TXN / t_submit.
     /// Estimated TXN throughput internal to libra = #TXN / t_commit, not measured by this API.
-    pub fn measure_txn_throughput(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> f64 {
-        let (num_txns, running_duration_ms) = self.submit_and_wait_txn_requests(&txn_reqs);
-        if running_duration_ms != 0 {
-            let throughput = (num_txns as f64) * 1000f64 / (running_duration_ms as f64);
-            println!(
-                "TXN throughput est = {} txns / {} ms = {:.2} tps.",
-                num_txns, running_duration_ms, throughput
-            );
-            OP_COUNTER.set("txn_throughput", throughput as usize);
-            OP_COUNTER.set("running_duration_ms", running_duration_ms as usize);
-            throughput
-        } else {
-            OP_COUNTER.set("txn_throughput", 0);
-            OP_COUNTER.set("running_duration_ms", 0);
-            0.0
-        }
-    }
-}
+    /// Return request througnhput and TXN throughput.
+    pub fn measure_txn_throughput(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> (f64, f64) {
+        let (_, num_committed, submit_duration_ms, wait_duration_ms) =
+            self.submit_and_wait_txn_committed(txn_reqs);
 
-#[cfg(test)]
-mod tests {
-    use crate::Benchmarker;
+        let request_throughput =
+            Self::calculate_throughput(txn_reqs.len(), submit_duration_ms, "REQ");
+        let running_duration_ms = submit_duration_ms + wait_duration_ms;
+        let txn_throughput = Self::calculate_throughput(num_committed, running_duration_ms, "TXN");
 
-    #[test]
-    fn test_divide_txns_requests() {
-        let items: Vec<_> = (0..4).collect();
-        let mut iter1 = Benchmarker::divide_txn_requests(&items, 3);
-        assert_eq!(iter1.next().unwrap(), &[0]);
-        assert_eq!(iter1.next().unwrap(), &[1]);
-        assert_eq!(iter1.next().unwrap(), &[2]);
-        assert_eq!(iter1.next().unwrap(), &[3]);
+        OP_COUNTER.set("submit_duration_ms", submit_duration_ms as usize);
+        OP_COUNTER.set("wait_duration_ms", wait_duration_ms as usize);
+        OP_COUNTER.set("running_duration_ms", running_duration_ms as usize);
+        OP_COUNTER.set("request_throughput", request_throughput as usize);
+        OP_COUNTER.set("txn_throughput", txn_throughput as usize);
 
-        let mut iter2 = Benchmarker::divide_txn_requests(&items, 2);
-        assert_eq!(iter2.next().unwrap(), &[0, 1]);
-        assert_eq!(iter2.next().unwrap(), &[2, 3]);
-
-        let mut iter3 = Benchmarker::divide_txn_requests(&items, 0);
-        assert_eq!(iter3.next().unwrap(), &[0, 1, 2, 3]);
-
-        let empty_slice: Vec<u32> = vec![];
-        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 3);
-        assert!(empty_iter.next().is_none());
-        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 0);
-        assert!(empty_iter.next().is_none());
+        (request_throughput, txn_throughput)
     }
 }
