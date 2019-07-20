@@ -17,7 +17,7 @@
 //! rules are:
 //! (All unsigned integers are encoded in little-endian representation unless specified otherwise)
 //!
-//! 1. The encoding of an unsigned 64-bit integer is defined as its little endian representation
+//! 1. The encoding of an unsigned 64-bit integer is defined as its little-endian representation
 //!    in 8 bytes
 //!
 //! 2. The encoding of an item (byte array) is defined as:
