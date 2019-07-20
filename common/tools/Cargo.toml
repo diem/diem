@@ -7,4 +7,4 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.1.24"
+futures = "0.1.28"

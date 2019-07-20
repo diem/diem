@@ -1,6 +1,5 @@
 // check: VerificationError { kind: StructDefinition, idx: 0, err: InvalidResourceField }
 
-modules:
 module Test {
     import 0x0.LibraCoin;
 
@@ -8,9 +7,4 @@ module Test {
         fc: R#LibraCoin.T,
         fint: u64,
     }
-}
-
-script:
-main() {
-    return;
 }

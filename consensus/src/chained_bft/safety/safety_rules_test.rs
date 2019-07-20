@@ -16,7 +16,7 @@ use std::{
     hash::{Hash, Hasher},
     sync::Arc,
 };
-use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
+use types::validator_signer::ValidatorSigner;
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
@@ -56,20 +56,22 @@ cached_key! {
 proptest! {
     #[test]
     fn test_blocks_commits_safety_rules(
-        (keypairs, blocks) in block_test::block_forest_and_its_keys(
+        (mut keypairs, blocks) in block_test::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
             50)
     ) {
-        let (priv_key, pub_key) = keypairs.first().expect("several keypairs generated");
-        let signer = ValidatorSigner::new(AccountAddress::from(*pub_key), *pub_key, priv_key.clone());
+        let first_key = keypairs.pop().expect("several keys");
+        let first_signer = ValidatorSigner::new(None, first_key);
+        let mut qc_signers = vec![first_signer.clone()];
 
-        let mut qc_signers = vec![];
-        for (priv_key, pub_key) in keypairs {
-            qc_signers.push(ValidatorSigner::new(AccountAddress::from(pub_key), pub_key, priv_key.clone()));
+        for priv_key in keypairs {
+            let signer = ValidatorSigner::new(None, priv_key);
+            qc_signers.push(signer);
         }
-        let block_tree = build_empty_tree_with_custom_signing(signer.clone());
+
+        let block_tree = build_empty_tree_with_custom_signing(first_signer.clone());
         let mut inserter = TreeInserter::new(block_tree.clone());
         let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
 
@@ -90,7 +92,7 @@ proptest! {
                 continue;
             }
 
-            let insert_res = inserter.insert_pre_made_block(block.clone(), &signer, qc_signers.clone());
+            let insert_res = inserter.insert_pre_made_block(block.clone(), &first_signer, qc_signers.iter().collect());
             let id_and_qc = |ref block: Arc<Block<Vec<usize>>>| { (block.id(), block.quorum_cert().clone()) };
             let (inserted_id, inserted_qc) = id_and_qc(insert_res.clone());
             safety_rules.update(&inserted_qc);

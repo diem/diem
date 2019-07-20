@@ -1,4 +1,4 @@
-//! no-execute
+//! no-run: runtime
 
 // Multiple payee example. This is written in a slightly verbose way to
 // emphasize the ability to split a `LibraCoin.T` resource. The more concise

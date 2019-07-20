@@ -362,7 +362,7 @@ impl SignedTransaction {
     /// the signature is valid.
     pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
         let hash = RawTransactionBytes(&self.raw_txn_bytes).hash();
-        signing::verify_message(hash, &self.signature, &self.public_key)?;
+        signing::verify_signature(hash, &self.signature, &self.public_key)?;
         Ok(SignatureCheckedTransaction(self))
     }
 

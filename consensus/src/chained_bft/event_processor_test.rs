@@ -46,6 +46,7 @@ use network::{
     proto::BlockRetrievalStatus,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{
     collections::HashMap,
@@ -69,7 +70,7 @@ struct NodeSetup {
     new_rounds_receiver: channel::Receiver<NewRoundEvent>,
     winning_proposals_receiver: channel::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
-    signer: ValidatorSigner,
+    signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
     pacemaker: Arc<dyn Pacemaker>,
@@ -78,7 +79,7 @@ struct NodeSetup {
 
 impl NodeSetup {
     fn build_empty_store(
-        signer: ValidatorSigner,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
@@ -146,8 +147,8 @@ impl NodeSetup {
     ) -> Vec<NodeSetup> {
         let mut signers = vec![];
         let mut peers = vec![];
-        for _ in 0..num_nodes {
-            let signer = ValidatorSigner::random();
+        for i in 0..num_nodes {
+            let signer = ValidatorSigner::random([i as u8; 32]);
             peers.push(signer.author());
             signers.push(signer);
         }
@@ -172,7 +173,7 @@ impl NodeSetup {
     fn new(
         playground: &mut NetworkPlayground,
         executor: TaskExecutor,
-        signer: ValidatorSigner,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
         proposer_author: Author,
         peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
@@ -543,7 +544,7 @@ fn process_new_round_msg_test() {
 
     // Populate block_0 and a quorum certificate for block_0 on non_proposer
     let block_0_quorum_cert = placeholder_certificate_for_block(
-        vec![static_proposer.signer.clone(), non_proposer.signer.clone()],
+        vec![&static_proposer.signer, &non_proposer.signer],
         block_0_id,
         1,
     );

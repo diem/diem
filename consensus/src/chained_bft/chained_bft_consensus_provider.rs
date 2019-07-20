@@ -13,6 +13,7 @@ use crate::{
     txn_manager::MempoolProxy,
 };
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use nextgen_crypto::ed25519::*;
 
 use crate::{
     chained_bft::{
@@ -34,10 +35,10 @@ use types::{
 
 struct InitialSetup {
     author: Author,
-    signer: ValidatorSigner,
+    signer: ValidatorSigner<Ed25519PrivateKey>,
     quorum_size: usize,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.
@@ -115,16 +116,21 @@ impl ChainedBftProvider {
         let author =
             AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
         let private_key = node_config.base.peer_keypairs.get_consensus_private();
-        let public_key = node_config.base.peer_keypairs.get_consensus_public();
-        let signer = ValidatorSigner::new(author, public_key, private_key);
+        let _public_key = node_config.base.peer_keypairs.get_consensus_public();
+        let signer = ValidatorSigner::new(author, private_key.into());
         let peers_with_public_keys = node_config.base.trusted_peers.get_trusted_consensus_peers();
+        let peers_with_nextgen_public_keys = peers_with_public_keys
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (AccountAddress::clone(&k), v.into()))
+            .collect();
         let peers = Arc::new(
             peers_with_public_keys
                 .keys()
                 .map(AccountAddress::clone)
                 .collect(),
         );
-        let validator = Arc::new(ValidatorVerifier::new(peers_with_public_keys));
+        let validator = Arc::new(ValidatorVerifier::new(peers_with_nextgen_public_keys));
         counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_size() as i64);

@@ -3,11 +3,8 @@
 
 //! Verifies bytecode sanity.
 
-#![feature(exhaustive_patterns)]
-#![feature(never_type)]
-
 // Bounds checks are implemented in the `vm` crate.
-pub mod abstract_interpreter;
+pub mod absint;
 pub mod abstract_state;
 pub mod check_duplication;
 pub mod code_unit_verifier;
@@ -18,6 +15,7 @@ pub mod resources;
 pub mod signature;
 pub mod stack_usage_verifier;
 pub mod struct_defs;
+pub mod type_memory_safety;
 #[cfg(test)]
 mod unit_tests;
 pub mod verifier;
@@ -32,5 +30,3 @@ pub use verifier::{
     verify_main_signature, verify_module_dependencies, verify_script_dependencies, VerifiedModule,
     VerifiedScript,
 };
-
-pub mod absint;

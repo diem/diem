@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetUnsafeToDestroyError(6) }
 
-modules:
 module Tester {
     public no(): &u64 {
         let x: u64;
@@ -12,8 +11,10 @@ module Tester {
 
 }
 
-script:
-import Transaction.Tester;
+//! new-transaction
+
+import {{default}}.Tester;
+
 main() {
     let x: u64;
     let r: &u64;

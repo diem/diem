@@ -14,6 +14,14 @@
 //! }
 //! ```
 
+// This is really annoying. The `error!` and other macros in `slog_scope` depend on the
+// `slog_error!` and other macros exported by `slog`. They need to be exported into the environment
+// for the `slog_scope` macros to pick them up. However if you use `#[macro_use]` then the linter
+// complains about unused imports. Ugh.
+#[allow(unused_imports)]
+#[macro_use]
+extern crate slog;
+
 mod collector_serializer;
 mod glog_format;
 mod http_local_slog_drain;

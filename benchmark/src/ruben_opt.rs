@@ -1,5 +1,6 @@
 use clap::arg_enum;
 use config::config::NodeConfig;
+use failure::prelude::*;
 use logger::prelude::*;
 use regex::Regex;
 use std::{fs, net::IpAddr, path::PathBuf, str::FromStr};
@@ -51,6 +52,10 @@ pub struct Opt {
         raw(required_unless_all = r#"&["validator_addresses", "debug_address"]"#)
     )]
     pub swarm_config_dir: Option<String>,
+    /// Metrics server process's address.
+    /// If this argument is not present, RuBen will not spawn metrics server.
+    #[structopt(short = "m", long = "metrics_server_address")]
+    pub metrics_server_address: Option<String>,
     /// Valid faucet key file path.
     #[structopt(short = "f", long = "faucet_key_file_path", required = true)]
     pub faucet_key_file_path: String,
@@ -82,24 +87,26 @@ pub struct Opt {
 }
 
 /// Helper that checks if address is valid, and converts unspecified address to localhost.
+/// If parsing as numeric network address fails, treat as valid domain name.
 fn parse_socket_address(address: &str, port: u16) -> String {
-    let ip_address = IpAddr::from_str(address).expect("invalid network address");
-    if ip_address.is_unspecified() {
-        match ip_address.is_ipv4() {
-            true => format!("127.0.0.1:{}", port),
-            false => format!("::1:{}", port),
+    match IpAddr::from_str(address) {
+        Ok(ip_address) => {
+            if ip_address.is_unspecified() {
+                format!("localhost:{}", port)
+            } else {
+                format!("{}:{}", address, port)
+            }
         }
-    } else {
-        format!("{}:{}", address, port)
+        Err(_) => format!("{}:{}", address, port),
     }
 }
 
 /// Scan *.node.config.toml files under config_dir_name, parse them as node config
 /// and return libra_swarm's configuration info as a tuple:
 /// (addresses for all nodes, debug_address)
-fn parse_swarm_config_from_dir(config_dir_name: &str) -> (Vec<String>, String) {
+fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<(Vec<String>, String)> {
     let mut validator_addresses: Vec<String> = Vec::new();
-    let mut debug_address = String::new();
+    let mut debug_address = None;
     let re = Regex::new(r"[[:alnum:]]{64}\.node\.config\.toml").expect("failed to build regex");
     let config_dir = PathBuf::from(config_dir_name);
     if config_dir.is_dir() {
@@ -118,12 +125,10 @@ fn parse_swarm_config_from_dir(config_dir_name: &str) -> (Vec<String>, String) {
                     let config = NodeConfig::parse(&config_string).unwrap_or_else(|_| {
                         panic!("failed to parse NodeConfig from {:?}", filename)
                     });
-                    if debug_address.is_empty() {
-                        debug_address = parse_socket_address(
-                            &config.debug_interface.address,
-                            config.debug_interface.admission_control_node_debug_port,
-                        );
-                    }
+                    debug_address.get_or_insert(parse_socket_address(
+                        &config.debug_interface.address,
+                        config.debug_interface.admission_control_node_debug_port,
+                    ));
                     let address = parse_socket_address(
                         &config.admission_control.address,
                         config.admission_control.admission_control_service_port,
@@ -133,26 +138,79 @@ fn parse_swarm_config_from_dir(config_dir_name: &str) -> (Vec<String>, String) {
             }
         }
     }
-    info!(
-        "Parsed arguments from {:?}: {:?}, {:?}",
-        config_dir_name, validator_addresses, debug_address,
-    );
-    (validator_addresses, debug_address)
+    if validator_addresses.is_empty() {
+        bail!(
+            "unable to parse validator_addresses from {}",
+            config_dir_name
+        )
+    }
+    Ok((
+        validator_addresses,
+        debug_address
+            .ok_or_else(|| format_err!("unable to parse debug_address from {}", config_dir_name))?,
+    ))
 }
 
 impl Opt {
     pub fn new_from_args() -> Self {
         let mut args = Opt::from_args();
-        // Override validator_addresses and debug_address if swarm_config_dir is provided.
-        if let Some(swarm_config_dir) = args.swarm_config_dir.as_ref() {
-            let (validator_addresses, debug_address) =
-                parse_swarm_config_from_dir(swarm_config_dir);
-            args.validator_addresses = validator_addresses;
-            args.debug_address = Some(debug_address);
-        }
+        args.try_parse_validator_addresses();
         if args.num_clients == 0 {
             args.num_clients = args.validator_addresses.len();
         }
         args
+    }
+
+    /// Override validator_addresses and debug_address if swarm_config_dir is provided.
+    pub fn try_parse_validator_addresses(&mut self) {
+        if let Some(swarm_config_dir) = &self.swarm_config_dir {
+            let (validator_addresses, debug_address) =
+                parse_swarm_config_from_dir(swarm_config_dir).expect("invalid arguments");
+            self.validator_addresses = validator_addresses;
+            self.debug_address = Some(debug_address);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ruben_opt::{parse_socket_address, parse_swarm_config_from_dir};
+
+    #[test]
+    fn test_parse_socket_address() {
+        assert_eq!(
+            parse_socket_address("216.10.234.56", 12345),
+            "216.10.234.56:12345"
+        );
+        assert_eq!(parse_socket_address("0.0.0.0", 12345), "localhost:12345");
+        assert_eq!(parse_socket_address("::", 12345), "localhost:12345");
+        assert_eq!(
+            parse_socket_address("face:booc::0", 12345),
+            "face:booc::0:12345"
+        );
+        assert_eq!(
+            parse_socket_address("2401:dbff:121f:a2f1:face:d:6c:0", 12345),
+            "2401:dbff:121f:a2f1:face:d:6c:0:12345"
+        );
+        assert_eq!(parse_socket_address("localhost", 12345), "localhost:12345");
+        assert_eq!(
+            parse_socket_address("www.facebook.com", 12345),
+            "www.facebook.com:12345"
+        );
+    }
+
+    #[test]
+    fn test_parse_swarm_config_from_invalid_dir() {
+        // Directory doesn't exist at all.
+        let non_exist_dir_name = String::from("NonExistDir");
+        let mut result = parse_swarm_config_from_dir(&non_exist_dir_name);
+        assert_eq!(result.is_err(), true);
+
+        // Directory exists but config file does not.
+        let path = std::env::current_dir().expect("unable to get current dir");
+        if let Some(dir_without_config) = path.to_str() {
+            result = parse_swarm_config_from_dir(&dir_without_config);
+            assert_eq!(result.is_err(), true);
+        }
     }
 }

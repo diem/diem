@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{hash, primitive_helpers, signature};
+use crate::{hash, primitive_helpers, signature, vector};
 pub use failure::Error;
 use failure::*;
 use types::{account_address::AccountAddress, byte_array::ByteArray};
@@ -11,6 +11,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum NativeReturnType {
     ByteArray(ByteArray),
     Bool(bool),
+    U64(u64),
 }
 
 pub struct CostedReturnType {
@@ -81,6 +82,14 @@ pub fn dispatch_native_call<T: StackAccessor>(
         },
         "BytearrayUtil" => match function_name {
             "bytearray_concat" => primitive_helpers::native_bytearray_concat(accessor),
+            &_ => bail!(
+                "Unknown native function `{}.{}'",
+                module_name,
+                function_name
+            ),
+        },
+        "Vector" => match function_name {
+            "length" => vector::native_length(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,

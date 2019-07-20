@@ -167,7 +167,7 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     assert_eq!(db.num_blobs(), 3);
     db.purge_retired_records(2).unwrap();
     assert_eq!(db.num_nodes(), 4);
-    assert_eq!(db.num_blobs(), 3); // TODO: verify blob retirement after implemented.
+    assert_eq!(db.num_blobs(), 2);
     assert_eq!(tree.get(key1, root3).unwrap().unwrap(), value1);
     assert_eq!(tree.get(key2, root3).unwrap().unwrap(), value2_update);
 }
@@ -251,6 +251,7 @@ fn test_insert_at_extension_fork_at_begining() {
     // Purge retired nodes. (The old extension should be gone.)
     db.purge_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 6);
+    assert_eq!(db.num_blobs(), 3);
 }
 
 #[test]
@@ -296,6 +297,7 @@ fn test_insert_at_extension_fork_in_the_middle() {
     // Purge retired nodes. (The old extension should be gone.)
     db.purge_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 7);
+    assert_eq!(db.num_blobs(), 3);
 }
 
 #[test]
@@ -337,6 +339,7 @@ fn test_insert_at_extension_fork_at_end() {
     // Purge retired nodes. (The old extension should be gone.)
     db.purge_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 6);
+    assert_eq!(db.num_blobs(), 3);
 }
 
 #[test]
@@ -371,6 +374,7 @@ fn test_insert_at_extension_fork_at_only_nibble() {
     // Purge retired nodes. (The old extension should be gone.)
     db.purge_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 5);
+    assert_eq!(db.num_blobs(), 3);
 }
 
 #[test]
@@ -482,8 +486,10 @@ fn test_batch_insertion() {
         assert_eq!(db.num_nodes(), 17);
         db.purge_retired_records(5).unwrap();
         assert_eq!(db.num_nodes(), 14);
+        assert_eq!(db.num_blobs(), 7); // no blobs purged till this point
         db.purge_retired_records(6).unwrap();
         assert_eq!(db.num_nodes(), 12);
+        assert_eq!(db.num_blobs(), 6); // and the old value2 is gone here
         verify_fn(&tree, root);
     }
 }

@@ -16,7 +16,7 @@ use std::iter::DoubleEndedIterator;
 use crate::{
     access::ModuleAccess,
     file_format::{
-        CodeUnit, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionSignature,
+        CodeUnit, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionSignature, Kind,
         LocalIndex, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition, StructHandle,
         StructHandleIndex, TypeSignature,
     },
@@ -182,7 +182,10 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
     }
 
     pub fn is_resource(&self) -> bool {
-        self.struct_handle.is_resource
+        match self.struct_handle.kind {
+            Kind::Resource => true,
+            Kind::Copyable => false,
+        }
     }
 
     pub fn definition(&self) -> StructDefinitionView<'a, T> {
@@ -286,6 +289,10 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
     pub fn type_signature(&self) -> TypeSignatureView<'a, T> {
         let type_signature = self.module.type_signature_at(self.field_def.signature);
         TypeSignatureView::new(self.module, type_signature)
+    }
+
+    pub fn signature_token(&self) -> &SignatureToken {
+        &self.module.type_signature_at(self.field_def.signature).0
     }
 
     // Field definitions are always private.
@@ -471,7 +478,11 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     #[inline]
     pub fn is_resource(&self) -> bool {
         match self.token {
-            SignatureToken::Struct(sh_idx) => self.module.struct_handle_at(*sh_idx).is_resource,
+            // TODO: Type actuals are ignored, fix it (generics).
+            SignatureToken::Struct(sh_idx, _) => {
+                StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
+                    .is_resource()
+            }
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool
@@ -479,6 +490,9 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::String
             | SignatureToken::ByteArray
             | SignatureToken::Address => false,
+            // TODO: To get the kind of a type parameter we need to look at the struct/function
+            // that contains it. Change the API or remodel accesses/views with a tiered system.
+            SignatureToken::TypeParameter(_) => panic!("cannot tell if a type parameter is a resource or not (feature not yet implemented)"),
         }
     }
 

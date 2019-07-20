@@ -1,12 +1,6 @@
 // check: VerificationError { kind: StructDefinition, idx: 1, err: DuplicateElement }
 
-modules:
 module M {
     struct T{}
     struct T{}
-}
-
-script:
-main() {
-    return;
 }

@@ -7,20 +7,20 @@ publish = false
 edition = "2018"
 
 [dependencies]
-byteorder = "1.3.1"
+byteorder = "1.3.2"
 bytes = "0.4.12"
 grpcio = "0.4.3"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["io-compat", "compat"] }
 futures_locks = { version = "=0.3.0", package = "futures-locks", features=["tokio"]}
-mirai-annotations = "0.1.0"
+mirai-annotations = "^1.2.2"
 num-traits = "0.2"
 num-derive = "0.2"
 proptest = "0.9"
 protobuf = "2.7"
 rand = "0.6.5"
-serde = { version = "1.0.87", features = ["derive"] }
-tokio = "0.1.11"
-termion = "1.5.1"
+serde = { version = "1.0.96", features = ["derive"] }
+tokio = "0.1.22"
+termion = "1.5.3"
 lazy_static = "1.3.0"
 rmp-serde = "0.13.7"
 
@@ -28,6 +28,7 @@ canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 execution_proto = { path = "../execution/execution_proto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
@@ -45,14 +46,14 @@ types = { path = "../types" }
 [dependencies.prometheus]
 version  = "0.4.2"
 default-features = false
-features = ["nightly", "push"]
+features = ["push"]
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
-cached = "0.8.0"
-tempfile = "3.0.6"
+cached = "0.8.1"
+tempfile = "3.1.0"
 parity-multiaddr = "0.4.0"
 rusty-fork = "0.2.1"
 
@@ -61,3 +62,11 @@ execution_service = { path = "../execution/execution_service" }
 storage_service = { path = "../storage/storage_service" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
+
+[dev-dependencies.nextgen_crypto]
+features = ["testing"]
+path = "../crypto/nextgen_crypto"
+
+[dev-dependencies.types]
+features = ["testing"]
+path = "../types"

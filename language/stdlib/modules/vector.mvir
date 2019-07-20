@@ -1,0 +1,13 @@
+// A variable-sized container that can hold both unrestricted types and resources.
+
+module Vector {
+
+  struct T{}
+
+  native public length(v: &R#Self.T): u64;
+
+  public is_empty(v: &R#Self.T): bool {
+    return Self.length(move(v)) == 0;
+  }
+
+}

@@ -140,6 +140,7 @@ impl SigningKey for GenericPrivateKey {
 
 impl Signature for GenericSignature {
     type VerifyingKeyMaterial = GenericPublicKey;
+    type SigningKeyMaterial = GenericPrivateKey;
 
     fn verify(&self, message: &HashValue, public_key: &GenericPublicKey) -> Result<()> {
         self.verify_arbitrary_msg(message.as_ref(), public_key)

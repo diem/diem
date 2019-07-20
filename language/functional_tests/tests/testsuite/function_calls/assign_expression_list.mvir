@@ -1,0 +1,16 @@
+main() {
+    let x: u64;
+    let y: u64;
+    let z: u64;
+    let z_var: u64;
+
+    x, y = (4, 5);
+    z = (6);
+    z_var = 6;
+
+    assert(move(x) == 4, 42);
+    assert(move(y) == 5, 42);
+    assert(move(z) == 6, 42);
+    assert(move(z_var) == 6, 42);
+    return;
+}

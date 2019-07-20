@@ -6,39 +6,25 @@
 
 
 //! sender: alice
-modules:
 module M {
     public foo(): u64 {
         return 5;
     }
 }
 
-script:
-main() { 
-    return; 
-}
-
-
 
 //! new-transaction
 //! sender: bob
-modules:
+
 module M {
     public bar(): u64 {
         return 7;
     }
 }
 
-script:
-main() { 
-    return; 
-}
-
-
-
 //! new-transaction
 //! sender: carol
-modules:
+
 module M {
     import {{alice}}.M as M1;
     import {{bob}}.M as M2;
@@ -53,30 +39,30 @@ module M {
     }
 }
 
-script:
-import Transaction.M;
+//! new-transaction
+
+import {{carol}}.M;
 
 main() {
     M.run();
     return;
 }
 
-
-
 //! new-transaction
 //! sender: dave
 
-modules:
 module M {
     public baz(): u64 {
         return 9;
     }
 }
 
-script:
+//! new-transaction
+//! sender: dave
+
 import {{alice}}.M as M1;
 import {{bob}}.M as M2;
-import Transaction.M as M3;
+import {{dave}}.M as M3;
 
 main() {
     let x: u64;

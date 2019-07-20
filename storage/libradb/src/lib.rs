@@ -13,19 +13,29 @@ pub mod mock_genesis;
 pub mod test_helper;
 
 pub mod errors;
-
-mod event_store;
-mod ledger_store;
 pub mod schema;
+
+mod change_set;
+mod event_store;
+mod ledger_counters;
+mod ledger_store;
 mod state_store;
+mod system_store;
 mod transaction_store;
 
 #[cfg(test)]
 mod libradb_test;
 
 use crate::{
-    errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
-    state_store::StateStore, transaction_store::TransactionStore,
+    change_set::{ChangeSet, SealedChangeSet},
+    errors::LibraDbError,
+    event_store::EventStore,
+    ledger_counters::LedgerCounters,
+    ledger_store::LedgerStore,
+    schema::*,
+    state_store::StateStore,
+    system_store::SystemStore,
+    transaction_store::TransactionStore,
 };
 use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -36,7 +46,7 @@ use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use logger::prelude::*;
 use metrics::OpMetrics;
-use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, SchemaBatch, DB, DEFAULT_CF_NAME};
+use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::ExecutorStartupInfo;
 use types::{
@@ -78,6 +88,8 @@ pub struct LibraDB {
     transaction_store: TransactionStore,
     state_store: StateStore,
     event_store: EventStore,
+    #[allow(dead_code)]
+    system_store: SystemStore,
 }
 
 impl LibraDB {
@@ -92,6 +104,7 @@ impl LibraDB {
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
+            (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (RETIRED_STATE_RECORD_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
@@ -125,6 +138,7 @@ impl LibraDB {
             ledger_store: LedgerStore::new(Arc::clone(&db)),
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
+            system_store: SystemStore::new(Arc::clone(&db)),
         }
     }
 
@@ -313,8 +327,11 @@ impl LibraDB {
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.
     ///
+    /// `first_version` is the version of the first transaction in `txns_to_commit`.
     /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
     /// it carries is generated after the `txns_to_commit` are applied.
+    /// Note that even if `txns_to_commit` is empty, `frist_version` is checked to be
+    /// `ledger_info_with_sigs.ledger_info.version + 1` if `ledger_info_with_sigs` is not `None`.
     pub fn save_transactions(
         &self,
         txns_to_commit: &[TransactionToCommit],
@@ -337,11 +354,10 @@ impl LibraDB {
                 .state_root_hash()
         };
 
-        let last_version = first_version + num_txns - 1;
         if let Some(x) = ledger_info_with_sigs {
             let claimed_last_version = x.ledger_info().version();
             ensure!(
-                claimed_last_version == last_version,
+                claimed_last_version + 1 == first_version + num_txns,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
@@ -350,13 +366,13 @@ impl LibraDB {
         }
 
         // Gather db mutations to `batch`.
-        let mut batch = SchemaBatch::new();
+        let mut cs = ChangeSet::new();
 
         let new_root_hash = self.save_transactions_impl(
             txns_to_commit,
             first_version,
             cur_state_root_hash,
-            &mut batch,
+            &mut cs,
         )?;
 
         // If expected ledger info is provided, verify result root hash and save the ledger info.
@@ -369,14 +385,24 @@ impl LibraDB {
                 expected_root_hash,
             );
 
-            self.ledger_store.put_ledger_info(x, &mut batch)?;
+            self.ledger_store.put_ledger_info(x, &mut cs)?;
         }
 
         // Persist.
-        self.commit(batch)?;
-        // Only increment counter if commit(batch) succeeds.
-        OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
-        OP_COUNTER.set("latest_transaction_version", last_version as usize);
+        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
+        self.commit(sealed_cs)?;
+
+        // Only increment counter if commit succeeds and there are at least one transaction written
+        // to the storage.
+        if num_txns > 0 {
+            let last_version = first_version + num_txns - 1;
+            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
+            OP_COUNTER.set("latest_transaction_version", last_version as usize);
+            counters
+                .expect("Counters should be bumped with transactions being saved.")
+                .bump_op_counters();
+        }
+
         Ok(())
     }
 
@@ -385,7 +411,7 @@ impl LibraDB {
         txns_to_commit: &[TransactionToCommit],
         first_version: u64,
         cur_state_root_hash: HashValue,
-        mut batch: &mut SchemaBatch,
+        mut cs: &mut ChangeSet,
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
@@ -398,14 +424,14 @@ impl LibraDB {
             account_state_sets,
             first_version,
             cur_state_root_hash,
-            &mut batch,
+            &mut cs,
         )?;
 
         // Event updates. Gather event accumulator root hashes.
         let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.event_store
-                    .put_events(ver, txn_to_commit.events(), &mut batch)
+                    .put_events(ver, txn_to_commit.events(), &mut cs)
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -413,7 +439,7 @@ impl LibraDB {
         zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.transaction_store
-                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut batch)
+                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
             })
             .collect::<Result<()>>()?;
         let txn_hashes = txns_to_commit
@@ -438,7 +464,7 @@ impl LibraDB {
 
         let new_root_hash =
             self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut batch)?;
+                .put_transaction_infos(first_version, &txn_infos, &mut cs)?;
 
         Ok(new_root_hash)
     }
@@ -642,10 +668,36 @@ impl LibraDB {
     }
 
     // ================================== Private APIs ==================================
-    /// Write the whole schema batch including all data necessary to mutate the ledge
-    /// state of some transaction by leveraging rocksdb atomicity support.
-    fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)?;
+    /// Convert a `ChangeSet` to `SealedChangeSet`.
+    ///
+    /// Specifically, counter increases are added to current counter values and converted to DB
+    /// alternations.
+    fn seal_change_set(
+        &self,
+        first_version: Version,
+        num_txns: Version,
+        mut cs: ChangeSet,
+    ) -> Result<(SealedChangeSet, Option<LedgerCounters>)> {
+        // Avoid reading base counter values when not necessary.
+        let counters = if num_txns > 0 {
+            Some(self.system_store.bump_ledger_counters(
+                first_version,
+                first_version + num_txns - 1,
+                cs.counter_bumps,
+                &mut cs.batch,
+            )?)
+        } else {
+            None
+        };
+
+        Ok((SealedChangeSet { batch: cs.batch }, counters))
+    }
+
+    /// Write the whole schema batch including all data necessary to mutate the ledger
+    /// state of some transaction by leveraging rocksdb atomicity support. Also committed are the
+    /// LedgerCounters.
+    fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
+        self.db.write_schemas(sealed_cs.batch)?;
 
         match self.db.get_approximate_sizes_cf() {
             Ok(cf_sizes) => {

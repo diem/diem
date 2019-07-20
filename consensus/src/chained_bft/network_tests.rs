@@ -21,6 +21,7 @@ use network::{
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{
     collections::{HashMap, HashSet},
@@ -326,8 +327,8 @@ fn test_network_api() {
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
     let mut signers = Vec::new();
-    for _ in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random();
+    for i in 0..num_nodes {
+        let random_validator_signer = ValidatorSigner::random([i as u8; 32]);
         author_to_public_keys.insert(
             random_validator_signer.author(),
             random_validator_signer.public_key(),
@@ -363,7 +364,7 @@ fn test_network_api() {
     );
     let proposal = ProposalInfo {
         proposal: Block::make_genesis_block(),
-        proposer_info: ValidatorSigner::genesis().author(),
+        proposer_info: ValidatorSigner::<Ed25519PrivateKey>::genesis().author(),
         timeout_certificate: None,
         highest_ledger_info: QuorumCert::certificate_for_genesis(),
     };
@@ -397,8 +398,8 @@ fn test_rpc() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
-    for _ in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random();
+    for i in 0..num_nodes {
+        let random_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([i as u8; 32]);
         author_to_public_keys.insert(
             random_validator_signer.author(),
             random_validator_signer.public_key(),

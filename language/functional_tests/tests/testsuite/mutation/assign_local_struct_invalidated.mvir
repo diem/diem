@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: BorrowLocExistsBorrowError(6) }
 
-modules:
 module Tester {
     struct T{v: u64}
 
@@ -33,8 +32,10 @@ module Tester {
 
 }
 
-script:
-import Transaction.Tester;
+//! new-transaction
+
+import {{default}}.Tester;
+
 main() {
     let t: V#Tester.T;
     let old_ref: &V#Tester.T;

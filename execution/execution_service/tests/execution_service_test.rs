@@ -30,7 +30,7 @@ fn encode_mint_transaction(seqnum: u64, sender_keypair: &KeyPair) -> SignedTrans
         sender,
         seqnum,
         program,
-        /* max_gas_amount = */ 10_000,
+        /* max_gas_amount = */ 100_000,
         /* gas_unit_price = */ 1,
         std::time::Duration::from_secs(u64::max_value()),
     );

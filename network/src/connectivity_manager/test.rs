@@ -4,9 +4,10 @@
 use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
-use crypto::{signing, x25519};
+use crypto::x25519;
 use futures::{FutureExt, SinkExt, TryFutureExt};
 use memsocket::MemorySocket;
+use nextgen_crypto::ed25519::compat;
 use std::io;
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
@@ -27,7 +28,7 @@ fn setup_conn_mgr(
     let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let (_, signing_public_key) = signing::generate_keypair();
+    let (_, signing_public_key) = compat::generate_keypair(None);
     let (_, identity_public_key) = x25519::generate_keypair();
     let conn_mgr = {
         ConnectivityManager::new(
@@ -61,7 +62,7 @@ fn setup_conn_mgr(
 
 fn gen_peer() -> (PeerId, NetworkPublicKeys) {
     let peer_id = PeerId::random();
-    let (_, signing_public_key) = signing::generate_keypair();
+    let (_, signing_public_key) = compat::generate_keypair(None);
     let (_, identity_public_key) = x25519::generate_keypair();
     (
         peer_id,

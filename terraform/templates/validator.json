@@ -8,7 +8,8 @@
         "portMappings": [
             {"containerPort": 30307, "hostPort": 30307},
             {"containerPort": 30303, "hostPort": 30303},
-            {"containerPort": 14297, "hostPort": 14297}
+            {"containerPort": 14297, "hostPort": 14297},
+	    {"containerPort": 30306, "hostPort": 30306}
         ],
         "mountPoints": [
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}

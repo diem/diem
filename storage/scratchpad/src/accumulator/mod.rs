@@ -21,7 +21,6 @@ use std::marker::PhantomData;
 use types::proof::{position::Position, treebits::NodeDirection, MerkleTreeInternalNode};
 
 /// The Accumulator implementation.
-#[derive(Default)]
 pub struct Accumulator<H> {
     /// Represents the roots of all the full subtrees from left to right in this accumulator. For
     /// example, if we have the following accumulator, this vector will have two hashes that
@@ -43,6 +42,9 @@ pub struct Accumulator<H> {
     /// The total number of elements in this accumulator.
     num_elements: u64,
 
+    /// The root hash of this accumulator.
+    root_hash: HashValue,
+
     phantom: PhantomData<H>,
 }
 
@@ -63,9 +65,12 @@ where
             num_elements,
         );
 
+        let root_hash = Self::compute_root_hash(&frozen_subtree_roots, num_elements);
+
         Accumulator {
             frozen_subtree_roots,
             num_elements,
+            root_hash,
             phantom: PhantomData,
         }
     }
@@ -118,21 +123,27 @@ where
         }
     }
 
-    /// Computes the root hash of an accumulator given the frozen subtree roots.
+    /// Returns the root hash of the accumulator.
     pub fn root_hash(&self) -> HashValue {
-        if self.frozen_subtree_roots.is_empty() {
+        self.root_hash
+    }
+
+    /// Computes the root hash of an accumulator given the frozen subtree roots and the number of
+    /// elements in this accumulator.
+    fn compute_root_hash(frozen_subtree_roots: &[HashValue], num_elements: u64) -> HashValue {
+        if frozen_subtree_roots.is_empty() {
             return *ACCUMULATOR_PLACEHOLDER_HASH;
         }
 
         // First, start from the rightmost leaf position and move it to the rightmost frozen root.
-        let max_leaf_index = self.num_elements - 1;
+        let max_leaf_index = num_elements - 1;
         let mut current_position = Position::from_leaf_index(max_leaf_index);
         // Move current position up until it reaches the corresponding frozen subtree root.
         while current_position.get_parent().is_freezable(max_leaf_index) {
             current_position = current_position.get_parent();
         }
 
-        let mut roots = self.frozen_subtree_roots.iter().rev();
+        let mut roots = frozen_subtree_roots.iter().rev();
         let mut current_hash = *roots
             .next()
             .expect("We have checked frozen_subtree_roots is not empty.");
@@ -176,5 +187,14 @@ impl<H> std::fmt::Debug for Accumulator<H> {
             "Accumulator {{ frozen_subtree_roots: {:?}, num_elements: {:?} }}",
             self.frozen_subtree_roots, self.num_elements
         )
+    }
+}
+
+impl<H> Default for Accumulator<H>
+where
+    H: CryptoHasher,
+{
+    fn default() -> Self {
+        Accumulator::new(vec![], 0)
     }
 }

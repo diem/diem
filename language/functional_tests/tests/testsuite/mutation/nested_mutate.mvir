@@ -1,4 +1,3 @@
-modules:
 module B {
     struct T{g: u64}
 
@@ -16,8 +15,10 @@ module B {
     }
 }
 
+//! new-transaction
+
 module A {
-    import Transaction.B;
+    import {{default}}.B;
     struct T{f: V#B.T}
 
     public new(f: V#B.T): V#Self.T {
@@ -33,9 +34,11 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
-import Transaction.B;
+//! new-transaction
+
+import {{default}}.A;
+import {{default}}.B;
+
 main() {
     let b: V#B.T;
     let x: V#A.T;

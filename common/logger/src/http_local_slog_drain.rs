@@ -17,8 +17,8 @@
 //! slog_info!(logger, "test info log"; "log-key" => true);
 use crate::{collector_serializer::PlainKVSerializer, http_log_client::HttpLogClient};
 use serde_json::json;
-use slog::{slog_error, Drain, OwnedKVList, Record, KV};
-pub use slog_scope::error;
+use slog::{Drain, OwnedKVList, Record, KV};
+use slog_scope::error;
 use std::{
     error::Error,
     time::{SystemTime, UNIX_EPOCH},

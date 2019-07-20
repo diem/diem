@@ -15,7 +15,7 @@
 //! that any subtree containing 0 or 1 leaf node will be replaced by that leaf node or a placeholder
 //! node with default hash value. With this optimization we can save CPU by avoiding hashing on
 //! many sparse levels in the tree. Physically, the tree is structurally similar to the modified
-//! Pactricia Merkle tree of Ethereum, with some modifications. Please read the code for details.
+//! Patricia Merkle tree of Ethereum, with some modifications. Please read the code for details.
 
 #![allow(clippy::unit_arg)]
 
@@ -83,6 +83,8 @@ pub struct RetiredStateRecord {
 pub enum RetiredRecordType {
     /// The Sparse Merkle nodes data set.
     Node = 0,
+    /// The account state blob data set.
+    Blob = 1,
 }
 
 // TODO: remove once version_created is for real part of the key.

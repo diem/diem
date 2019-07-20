@@ -1,5 +1,8 @@
 use crate::{
-    code_cache::module_cache::{ModuleCache, TransactionModuleCache},
+    code_cache::{
+        module_cache::{ModuleCache, TransactionModuleCache},
+        script_cache::ScriptCache,
+    },
     data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
@@ -16,7 +19,9 @@ use types::{
     vm_error::{VMStatus, VMValidationStatus},
 };
 use vm::{
-    errors::convert_prologue_runtime_error, gas_schedule, transaction_metadata::TransactionMetadata,
+    errors::convert_prologue_runtime_error,
+    gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
+    transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
 
@@ -81,16 +86,17 @@ where
 
         let txn_state = match txn.payload() {
             TransactionPayload::Program(program) => {
+                let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
                 // The transaction is too large.
                 if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
                     let error_str = format!(
                         "max size: {}, txn size: {}",
                         MAX_TRANSACTION_SIZE_IN_BYTES,
-                        txn.raw_txn_bytes_len()
+                        raw_bytes_len.get()
                     );
                     warn!(
                         "[VM] Transaction size too big {} (max {})",
-                        txn.raw_txn_bytes_len(),
+                        raw_bytes_len.get(),
                         MAX_TRANSACTION_SIZE_IN_BYTES
                     );
                     return Err(VMStatus::Validation(
@@ -101,15 +107,15 @@ where
                 // The submitted max gas units that the transaction can consume is greater than the
                 // maximum number of gas units bound that we have set for any
                 // transaction.
-                if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS {
+                if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
                     let error_str = format!(
                         "max gas units: {}, gas units submitted: {}",
-                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
+                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
                         txn.max_gas_amount()
                     );
                     warn!(
                         "[VM] Gas unit error; max {}, submitted {}",
-                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS,
+                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
                         txn.max_gas_amount()
                     );
                     return Err(VMStatus::Validation(
@@ -120,17 +126,16 @@ where
                 // The submitted transactions max gas units needs to be at least enough to cover the
                 // intrinsic cost of the transaction as calculated against the size of the
                 // underlying `RawTransaction`
-                let min_txn_fee =
-                    gas_schedule::calculate_intrinsic_gas(txn.raw_txn_bytes_len() as u64);
-                if txn.max_gas_amount() < min_txn_fee {
+                let min_txn_fee = gas_schedule::calculate_intrinsic_gas(raw_bytes_len);
+                if txn.max_gas_amount() < min_txn_fee.get() {
                     let error_str = format!(
                         "min gas required for txn: {}, gas submitted: {}",
-                        min_txn_fee,
+                        min_txn_fee.get(),
                         txn.max_gas_amount()
                     );
                     warn!(
                         "[VM] Gas unit error; min {}, submitted {}",
-                        min_txn_fee,
+                        min_txn_fee.get(),
                         txn.max_gas_amount()
                     );
                     return Err(VMStatus::Validation(
@@ -142,16 +147,17 @@ where
                 // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
                 // we turn off the clippy warning.
                 #[allow(clippy::absurd_extreme_comparisons)]
-                let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT;
+                let below_min_bound =
+                    txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
                 if below_min_bound {
                     let error_str = format!(
                         "gas unit min price: {}, submitted price: {}",
-                        gas_schedule::MIN_PRICE_PER_GAS_UNIT,
+                        gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
                         txn.gas_unit_price()
                     );
                     warn!(
                         "[VM] Gas unit error; min {}, submitted {}",
-                        gas_schedule::MIN_PRICE_PER_GAS_UNIT,
+                        gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
                         txn.gas_unit_price()
                     );
                     return Err(VMStatus::Validation(
@@ -160,15 +166,15 @@ where
                 }
 
                 // The submitted gas price is greater than the maximum gas unit price set by the VM.
-                if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT {
+                if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() {
                     let error_str = format!(
                         "gas unit max price: {}, submitted price: {}",
-                        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+                        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
                         txn.gas_unit_price()
                     );
                     warn!(
                         "[VM] Gas unit error; min {}, submitted {}",
-                        gas_schedule::MAX_PRICE_PER_GAS_UNIT,
+                        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
                         txn.gas_unit_price()
                     );
                     return Err(VMStatus::Validation(
@@ -251,8 +257,11 @@ where
     }
 
     /// Verifies the bytecode in this transaction.
-    pub fn verify(self) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
-        VerifiedTransaction::new(self)
+    pub fn verify(
+        self,
+        script_cache: &'txn ScriptCache<'alloc>,
+    ) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
+        VerifiedTransaction::new(self, script_cache)
     }
 
     /// Returns a reference to the `SignatureCheckedTransaction` within.

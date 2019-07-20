@@ -15,6 +15,7 @@ use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::sync::Arc;
 use types::{
@@ -36,12 +37,16 @@ const MAX_GRPC_RETRY_COUNT: u64 = 1;
 /// Struct holding dependencies of client.
 pub struct GRPCClient {
     client: AdmissionControlClient,
-    validator_verifier: Arc<ValidatorVerifier>,
+    validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(host: &str, port: &str, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
+    pub fn new(
+        host: &str,
+        port: &str,
+        validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    ) -> Result<Self> {
         let conn_addr = format!("{}:{}", host, port);
 
         // Create a GRPC client

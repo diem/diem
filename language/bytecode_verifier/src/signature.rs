@@ -132,7 +132,7 @@ pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStaticViolatio
     let inner_token_opt = match token {
         Reference(token) => Some(token),
         MutableReference(token) => Some(token),
-        Bool | U64 | String | ByteArray | Address | Struct(_) => None,
+        Bool | U64 | String | ByteArray | Address | Struct(_, _) | TypeParameter(_) => None,
     };
     if let Some(inner_token) = inner_token_opt {
         if inner_token.is_reference() {

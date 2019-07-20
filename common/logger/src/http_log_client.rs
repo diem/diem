@@ -12,8 +12,7 @@
 use failure::Result;
 use futures::{future::Future, stream::Stream};
 use hyper::{header, Body, Client, Request, Uri};
-use slog::{slog_error, slog_trace};
-pub use slog_scope::{debug, error, trace};
+use slog_scope::{error, trace};
 use std::thread;
 use tokio::runtime::current_thread;
 

@@ -1,4 +1,3 @@
-modules:
 module Token {
     resource T { }
 
@@ -12,19 +11,16 @@ module Token {
         return move(yes);
     }
 
-    public get(addr: address): &mut R#Self.T {
-        let t_ref: &mut R#Self.T;
-        t_ref = borrow_global<T>(move(addr));
-        return move(t_ref);
-    }
-
     public publish(t: R#Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
 }
-script:
-import Transaction.Token;
+
+//! new-transaction
+
+import {{default}}.Token;
+
 main() {
     let z: R#Token.T;
     let sender: address;

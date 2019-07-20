@@ -11,7 +11,10 @@ use bytecode_verifier::VerifiedScript;
 use compiler::Compiler;
 use hex;
 use types::account_address::AccountAddress;
-use vm::file_format::*;
+use vm::{
+    file_format::*,
+    gas_schedule::{GasAlgebra, GasUnits},
+};
 use vm_cache_map::Arena;
 
 fn test_module(name: String) -> VerifiedModule {
@@ -61,10 +64,12 @@ fn test_module(name: String) -> VerifiedModule {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -121,10 +126,12 @@ fn test_script() -> VerifiedScript {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -406,10 +413,12 @@ fn test_multi_level_cache_write_back() {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                kind_constraints: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                kind_constraints: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -525,7 +534,7 @@ fn test_same_module_struct_resolution() {
             .unwrap()
             .unwrap()
             .unwrap();
-        let gas = GasMeter::new(100_000_000);
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
@@ -578,7 +587,7 @@ fn test_multi_module_struct_resolution() {
             .unwrap()
             .unwrap();
 
-        let gas = GasMeter::new(100_000_000);
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()

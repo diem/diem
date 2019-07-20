@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefTypeMismatchError(5) }
 
-modules:
 module Test {
     struct T{fr: bool}
 
@@ -16,8 +15,10 @@ module Test {
     }
 }
 
-script:
-import Transaction.Test;
+//! new-transaction
+
+import {{default}}.Test;
+
 main() {
     let t: V#Test.T;
     t = Test.new();

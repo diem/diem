@@ -1,4 +1,3 @@
-modules:
 module M {
   struct Foo {
       a: u64,
@@ -14,9 +13,4 @@ module M {
       release(move(addr));
       return;
   }
-}
-
-script:
-main() {
-    return;
 }

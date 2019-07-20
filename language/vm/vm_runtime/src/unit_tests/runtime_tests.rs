@@ -13,8 +13,9 @@ use vm::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        ModuleHandleIndex, SignatureToken, StringPoolIndex, NO_TYPE_ACTUALS,
     },
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -64,6 +65,7 @@ fn fake_script() -> VerifiedScript {
         function_signatures: vec![FunctionSignature {
             arg_types: vec![],
             return_types: vec![],
+            kind_constraints: vec![],
         }],
         locals_signatures: vec![LocalsSignature(vec![])],
         string_pool: vec!["hello".to_string()],
@@ -90,9 +92,19 @@ fn test_simple_instruction_impl<'alloc, 'txn>(
         .set_with_states(0, local_before);
     vm.execution_stack.set_stack(value_stack_before);
     let offset = try_runtime!(vm.execute_block(code.as_slice(), 0));
-    assert_eq!(vm.execution_stack.get_value_stack(), &value_stack_after);
+    let stack_before_and_after = vm
+        .execution_stack
+        .get_value_stack()
+        .iter()
+        .zip(value_stack_after);
+    for (v_before, v_after) in stack_before_and_after {
+        assert!(v_before.clone().equals(v_after).unwrap())
+    }
     let top_frame = vm.execution_stack.top_frame()?;
-    assert_eq!(top_frame.get_locals(), &local_after);
+    let locals_before_and_after = top_frame.get_locals().iter().zip(local_after);
+    for (l_before, l_after) in locals_before_and_after {
+        assert!(l_before.clone().equals(l_after).unwrap())
+    }
     assert_eq!(offset, expected_offset);
     Ok(Ok(()))
 }
@@ -316,21 +328,11 @@ fn test_simple_instruction_transition() {
         1,
     );
 
-    test_simple_instruction(
-        &mut vm,
-        Bytecode::Assert,
-        vec![Local::u64(42), Local::bool(true)],
-        vec![],
-        vec![],
-        vec![],
-        1,
-    );
-
     assert_eq!(
         test_simple_instruction_impl(
             &mut vm,
-            Bytecode::Assert,
-            vec![Local::u64(777), Local::bool(false)],
+            Bytecode::Abort,
+            vec![Local::u64(777)],
             vec![],
             vec![],
             vec![],
@@ -339,7 +341,7 @@ fn test_simple_instruction_transition() {
         .unwrap()
         .unwrap_err()
         .err,
-        VMErrorKind::AssertionFailure(777)
+        VMErrorKind::Aborted(777)
     );
 }
 
@@ -606,6 +608,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // () -> (), two locals
@@ -614,6 +617,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // (Int, Int) -> (), two locals,
@@ -622,6 +626,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
         // (Int, Int) -> (), three locals,
@@ -634,6 +639,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
+                kind_constraints: vec![],
             },
         ),
     ]);
@@ -660,7 +666,7 @@ fn test_call() {
 
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(0)),
+        Bytecode::Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
         vec![],
         vec![],
         vec![],
@@ -669,7 +675,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(1)),
+        Bytecode::Call(FunctionHandleIndex::new(1), NO_TYPE_ACTUALS),
         vec![],
         vec![],
         vec![],
@@ -678,7 +684,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(2)),
+        Bytecode::Call(FunctionHandleIndex::new(2), NO_TYPE_ACTUALS),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],
@@ -687,7 +693,7 @@ fn test_call() {
     );
     test_simple_instruction(
         &mut vm,
-        Bytecode::Call(FunctionHandleIndex::new(3)),
+        Bytecode::Call(FunctionHandleIndex::new(3), NO_TYPE_ACTUALS),
         vec![Local::u64(5), Local::u64(4)],
         vec![],
         vec![],
@@ -710,9 +716,9 @@ fn test_transaction_info() {
             sender: AccountAddress::default(),
             public_key,
             sequence_number: 10,
-            max_gas_amount: 100_000_009,
-            gas_unit_price: 5,
-            transaction_size: 100,
+            max_gas_amount: GasUnits::new(100_000_009),
+            gas_unit_price: GasPrice::new(5),
+            transaction_size: AbstractMemorySize::new(100),
         }
     };
     let data_cache = FakeDataCache::new();

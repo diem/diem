@@ -119,9 +119,16 @@ impl SimulatedTimeService {
         let mut inner = self.inner.lock().unwrap();
         inner.time_limit += time;
         let time_limit = inner.time_limit;
-        let drain = inner
-            .pending
-            .drain_filter(move |(deadline, _)| *deadline <= time_limit);
+        let mut i = 0;
+        let mut drain = vec![];
+        while i != inner.pending.len() {
+            let deadline = inner.pending[i].0;
+            if deadline <= time_limit {
+                drain.push(inner.pending.remove(i));
+            } else {
+                i += 1;
+            }
+        }
         for (_, mut t) in drain {
             // probably could be done better then that, but for now I feel its good enough for tests
             futures::executor::block_on(t.run());

@@ -23,7 +23,7 @@ fn parse_input_nothing_before_first_empty_transaction() {
 #[test]
 fn parse_input_config_before_first_empty_transaction() {
     parse_input(r"
-        //! no-execute
+        //! no-run: runtime
         //! new-transaction
         main() {}
     ").unwrap_err();

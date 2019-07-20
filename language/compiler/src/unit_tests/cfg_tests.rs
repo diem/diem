@@ -209,3 +209,83 @@ fn cfg_compile_if_else_with_two_returns() {
     assert!(cfg.reachable_from(5).len() == 1);
     assert!(cfg.reachable_from(6).len() == 1);
 }
+
+#[test]
+fn cfg_compile_if_else_with_else_abort() {
+    let code = String::from(
+        "
+        main() {
+            let x: u64;
+            if (42 > 0) {
+                x = 1;
+            } else {
+                abort 0;
+            }
+            abort 0;
+        }
+        ",
+    );
+
+    let compiled_script_res = compile_script_string(&code);
+    let compiled_script = compiled_script_res.unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
+    println!("SCRIPT:\n {:?}", compiled_script);
+    cfg.display();
+    assert!(cfg.blocks.len() == 4);
+    assert!(cfg.num_blocks() == 4);
+    assert!(cfg.reachable_from(0).len() == 4);
+}
+
+#[test]
+fn cfg_compile_if_else_with_if_abort() {
+    let code = String::from(
+        "
+        main() {
+            let x: u64;
+            if (42 > 0) {
+                abort 0;
+            } else {
+                x = 1;
+            }
+            abort 0;
+        }
+        ",
+    );
+    let compiled_script_res = compile_script_string(&code);
+    let compiled_script = compiled_script_res.unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
+    println!("SCRIPT:\n {}", compiled_script);
+    cfg.display();
+    assert!(cfg.blocks.len() == 3);
+    assert!(cfg.num_blocks() == 3);
+    assert!(cfg.reachable_from(0).len() == 3);
+    assert!(cfg.reachable_from(4).len() == 1);
+    assert!(cfg.reachable_from(6).len() == 1);
+}
+
+#[test]
+fn cfg_compile_if_else_with_two_aborts() {
+    let code = String::from(
+        "
+        main() {
+            if (42 > 0) {
+                abort 0;
+            } else {
+                abort 0;
+            }
+            abort 0;
+        }
+        ",
+    );
+    let compiled_script_res = compile_script_string(&code);
+    let compiled_script = compiled_script_res.unwrap();
+    let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code).unwrap();
+    println!("SCRIPT:\n {}", compiled_script);
+    cfg.display();
+    assert!(cfg.blocks.len() == 4);
+    assert!(cfg.num_blocks() == 4);
+    assert!(cfg.reachable_from(0).len() == 3);
+    assert!(cfg.reachable_from(4).len() == 1);
+    assert!(cfg.reachable_from(6).len() == 1);
+    assert!(cfg.reachable_from(8).len() == 1);
+}

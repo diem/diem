@@ -118,7 +118,7 @@ impl VRFExpandedPrivateKey {
 impl Uniform for VRFPrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng,
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
         VRFPrivateKey(ed25519_PrivateKey::generate(rng))
     }

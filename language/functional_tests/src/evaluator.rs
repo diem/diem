@@ -8,17 +8,20 @@ use crate::{
 use bytecode_verifier::verifier::{VerifiedModule, VerifiedProgram};
 use config::config::VMPublishingOption;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
-use std::time::Duration;
+use language_e2e_tests::{
+    account::{AccountData, AccountResource},
+    executor::FakeExecutor,
+};
+use std::{str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
-use transaction_builder::transaction::make_transaction_program;
+use transaction_builder::transaction::{make_transaction_program, serialize_program};
 use types::{
     transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
 };
-use vm::file_format::CompiledProgram;
-use vm_runtime_tests::{
-    account::{AccountData, AccountResource},
-    executor::FakeExecutor,
+use vm::{
+    access::ModuleAccess,
+    file_format::{CompiledModule, CompiledProgram, CompiledScript},
 };
 
 /// A transaction to be evaluated by the testing infra.
@@ -31,23 +34,26 @@ pub struct Transaction {
 
 /// Indicates one step in the pipeline the given move module/program goes through.
 //  Ord is derived as we need to be able to determine if one stage is before another.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Stage {
     Parser,
     // Right now parser is a separate stage.
     // However it could be merged into the compiler.
     Compiler,
     Verifier,
+    Serializer,
     Runtime,
 }
 
-impl Stage {
-    /// Parses the input string as Stage.
-    pub fn parse(s: &str) -> Result<Stage> {
+impl FromStr for Stage {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "parser" => Ok(Stage::Parser),
             "compiler" => Ok(Stage::Compiler),
             "verifier" => Ok(Stage::Verifier),
+            "serializer" => Ok(Stage::Serializer),
             "runtime" => Ok(Stage::Runtime),
             _ => Err(ErrorKind::Other(format!("unrecognized stage '{:?}'", s)).into()),
         }
@@ -93,7 +99,7 @@ impl EvaluationResult {
         let mut stage = None;
         for output in self.outputs.iter().rev() {
             if let EvaluationOutput::Stage(s) = output {
-                stage = Some(s.clone());
+                stage = Some(*s);
                 break;
             }
         }
@@ -141,6 +147,33 @@ fn run_transaction(
     }
 }
 
+/// Serializes the program then deserializes it.
+fn run_serializer_round_trip(program: &CompiledProgram) -> Result<()> {
+    let (script_blob, module_blobs) = serialize_program(program)?;
+
+    assert!(module_blobs.len() == program.modules.len());
+
+    let script = CompiledScript::deserialize(&script_blob)?;
+    if script != program.script {
+        return Err(ErrorKind::Other(
+            "deserialized script different from original one".to_string(),
+        )
+        .into());
+    }
+
+    for (i, blob) in module_blobs.iter().enumerate() {
+        let module = CompiledModule::deserialize(blob)?;
+        if module != program.modules[i] {
+            return Err(ErrorKind::Other(format!(
+                "deserialized module {} different from original one",
+                program.modules[i].name()
+            ))
+            .into());
+        }
+    }
+    Ok(())
+}
+
 /// Tries to unwrap the given result. Upon failure, log the error and aborts.
 macro_rules! unwrap_or_log {
     ($res: expr, $log: expr) => {{
@@ -183,19 +216,25 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
         res.outputs.push(EvaluationOutput::Transaction);
 
         // stage 1: parse the program
+        if transaction.config.is_stage_disabled(Stage::Parser) {
+            continue;
+        }
         res.outputs.push(EvaluationOutput::Stage(Stage::Parser));
         let parsed_program = unwrap_or_log!(parse_program(&transaction.program), res);
         res.outputs
             .push(EvaluationOutput::Output(format!("{:?}", parsed_program)));
 
         // stage 2: compile the program
+        if transaction.config.is_stage_disabled(Stage::Compiler) {
+            continue;
+        }
         res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
         let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &deps), res);
         res.outputs
             .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
 
         // stage 3: verify the program
-        let compiled_program = if !transaction.config.no_verify {
+        let compiled_program = if !transaction.config.is_stage_disabled(Stage::Verifier) {
             res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
             let verified_program = unwrap_or_log!(do_verify_program(compiled_program, &deps), res);
             res.outputs.push(EvaluationOutput::Output("".to_string()));
@@ -216,8 +255,14 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
             compiled_program
         };
 
-        // stage 4: execute the program
-        if !transaction.config.no_execute {
+        // stage 4: serializer round trip
+        if !transaction.config.is_stage_disabled(Stage::Serializer) {
+            res.outputs.push(EvaluationOutput::Stage(Stage::Serializer));
+            unwrap_or_log!(run_serializer_round_trip(&compiled_program), res);
+        }
+
+        // stage 5: execute the program
+        if !transaction.config.is_stage_disabled(Stage::Runtime) {
             res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
             let txn_output = unwrap_or_log!(
                 run_transaction(&mut exec, data, &compiled_program, &transaction.config.args),

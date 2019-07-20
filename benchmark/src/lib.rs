@@ -14,10 +14,12 @@ use failure::prelude::*;
 use futures::Future;
 use generate_keypair::load_key_from_file;
 use grpcio::CallOption;
+use lazy_static::lazy_static;
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
+use metrics::OpMetrics;
 use proto_conv::{FromProto, IntoProto};
-use std::{iter::FromIterator, sync::Arc, thread, time};
+use std::{slice::Chunks, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -29,7 +31,7 @@ use types::{
 pub mod ruben_opt;
 
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 10_000;
+const MAX_GAS_AMOUNT: u64 = 100_000;
 const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 const TX_EXPIRATION: i64 = 100;
 /// The amount of coins initially minted to all generated accounts.
@@ -37,6 +39,10 @@ const TX_EXPIRATION: i64 = 100;
 /// Setting to a large value(e.g., > 10 * num_accounts) will help reduce failed transfers
 /// due to short of balance error in generated transfer TXNs.
 const FREE_LUNCH: u64 = 1_000_000;
+
+lazy_static! {
+    pub static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("benchmark");
+}
 
 /// Benchmark library for Libra Blockchain.
 ///
@@ -51,6 +57,11 @@ const FREE_LUNCH: u64 = 1_000_000;
 /// 2. Generate some accounts: gen_and_mint_accounts. The number of accounts affects how many
 /// TXNs are sent,
 /// 3. Generate and submit transactions: gen_txn_reqs, submit_and_wait_txn_reqs.
+/// Metrics reported include:
+/// * Counters: created_txns, requested_txns, rejected_txns (AC responded with rejection or
+///   VM/mempool error), accepted_txns, failed_submissions (TXN request failed at submission stage),
+///   failed_responses (AC responded without accept + AC doesn't respond).
+/// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,
@@ -79,7 +90,7 @@ impl Benchmarker {
     /// If it is not available, we can still count on timeout to terminate the wait.
     /// So in that case we return a default value 0.
     fn get_committed_txns_counter(&self) -> i64 {
-        let name = String::from("storage{op=committed_txns}");
+        let name = String::from("storage_gauge{op=latest_transaction_version}");
         match self.debug_client.get_node_metric(name) {
             Err(e) => {
                 error!("Pull committed_txns error: {:?}", e);
@@ -237,12 +248,13 @@ impl Benchmarker {
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         sender_account.sequence_number += 1;
+        OP_COUNTER.inc("created_txns");
         Ok(req)
     }
 
     /// Craft TXN request to mint receiver FREE_LUNCH libra coins.
     fn gen_mint_txn_request(
-        &mut self,
+        &self,
         faucet_account: &mut AccountData,
         receiver: &AccountAddress,
     ) -> Result<SubmitTransactionRequest> {
@@ -265,7 +277,7 @@ impl Benchmarker {
     /// For example, given account (A1, A2, A3, ..., AN), this method returns a vector of TXNs
     /// like (A1->A2, A2->A3, A3->A4, ..., AN->A1).
     pub fn gen_ring_txn_requests(
-        &mut self,
+        &self,
         accounts: &mut [AccountData],
     ) -> Vec<SubmitTransactionRequest> {
         let mut receiver_addrs: Vec<AccountAddress> =
@@ -291,7 +303,7 @@ impl Benchmarker {
     /// transfer. For example, given account (A1, A2, A3, ..., AN), this method returns a vector
     /// of TXNs like (A1->A1, A1->A2, ..., A1->AN, A2->A1, A2->A2, ... A2->AN, ..., AN->A(N-1)).
     pub fn gen_pairwise_txn_requests(
-        &mut self,
+        &self,
         accounts: &mut [AccountData],
     ) -> Vec<SubmitTransactionRequest> {
         let receiver_addrs: Vec<AccountAddress> =
@@ -331,6 +343,7 @@ impl Benchmarker {
         let resp = client
             .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
             .then(|proto_resp| Ok(proto_resp?));
+        OP_COUNTER.inc("requested_txns");
         Ok(resp)
     }
 
@@ -338,48 +351,32 @@ impl Benchmarker {
     /// that we should wait for. Failed txn request will raise an error. Caller can decide
     /// whether to ignore this failed request, or stop processing later requests.
     fn handle_future_response(
-        future_resp: Result<
-            (impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>),
-        >,
+        future_resp: impl Future<Item = ProtoSubmitTransactionResponse, Error = failure::Error>,
     ) -> Result<SubmitTransactionResponse> {
-        let txn_proto_resp = future_resp?.wait()?;
+        let txn_proto_resp = future_resp.wait()?;
         let txn_resp = SubmitTransactionResponse::from_proto(txn_proto_resp)?;
         if let Some(status) = txn_resp.ac_status.as_ref() {
             if *status == AdmissionControlStatus::Accepted {
+                OP_COUNTER.inc("accepted_txns");
                 Ok(txn_resp)
             } else {
-                bail!("TXN request not accepted with response: {:?}", txn_resp);
+                OP_COUNTER.inc("rejected_txns");
+                bail!("TXN request is not accepted with response: {:?}", txn_resp);
             }
         } else {
-            bail!("Request causes error on VM/mempool: {:?}", txn_resp);
+            OP_COUNTER.inc("rejected_txns");
+            bail!("TXN request causes error on VM/mempool: {:?}", txn_resp);
         }
     }
 
-    /// Divide TXN requests by #clients into a vector of request chunks of nearly equal size.
-    /// The last chunk will keep the remainder requests if txn_reqs.len() % num_chunks != 0.
-    fn divide_txn_requests(
-        txn_reqs: &[SubmitTransactionRequest],
-        num_chunks: usize,
-    ) -> Vec<Arc<Vec<SubmitTransactionRequest>>> {
-        let mut result = vec![];
-        if (num_chunks == 0) || (txn_reqs.len() / num_chunks == 0) {
-            result.push(Arc::new(Vec::from_iter(txn_reqs.iter().cloned())));
+    /// Divide generic items into a vector of chunks of nearly equal size.
+    fn divide_txn_requests<T>(items: &[T], num_chunks: usize) -> Chunks<T> {
+        let chunk_size = if (num_chunks == 0) || (items.len() / num_chunks == 0) {
+            std::cmp::max(items.len(), 1)
         } else {
-            let chunk_size = txn_reqs.len() / num_chunks;
-            let mut chunks = txn_reqs.chunks_exact(chunk_size);
-            for chunk in chunks.by_ref() {
-                result.push(Arc::new(Vec::from_iter(chunk.iter().cloned())));
-            }
-            if let Some(last_arc) = result.last_mut() {
-                if let Some(last) = Arc::get_mut(last_arc) {
-                    last.extend(chunks.remainder().iter().cloned());
-                }
-            }
-        }
-        for (i, result) in result.iter().enumerate() {
-            info!("{}th chunk with {} requests", i, result.len());
-        }
-        result
+            items.len() / num_chunks
+        };
+        items.chunks(chunk_size)
     }
 
     /// Send requests to AC async, wait for responses from AC and then wait for accepted TXNs
@@ -400,27 +397,37 @@ impl Benchmarker {
         // Zip txn_req_chunks with clients: when first iter returns none,
         // zip will short-circuit and next will not be called on the second iter.
         let children: Vec<thread::JoinHandle<Vec<SubmitTransactionResponse>>> = txn_req_chunks
-            .iter()
-            .zip(self.clients.iter())
+            .zip(self.clients.iter().cycle())
             .map(|(chunk, client)| {
-                let local_chunk = Arc::clone(chunk);
+                let local_chunk = Arc::new(Vec::from(chunk));
                 let local_client = Arc::clone(client);
+                info!(
+                    "Dispatch a chunk of {} requests to client.",
+                    local_chunk.len()
+                );
                 // Spawn threads with corresponding client.
                 thread::spawn(
                     // Submit a chunk of TXN requests async, wait and check the AC status,
                     // return the list of responses that are accepted by AC.
+                    // Ignore (but count) both failed submissions and AC-rejected TXNs.
                     move || -> Vec<SubmitTransactionResponse> {
                         let future_resps: Vec<_> = local_chunk
                             .iter()
-                            .map(|req| {
+                            .flat_map(|req| {
                                 Self::submit_transaction_async_with_request(&local_client, &req)
+                                    .or_else(|e| {
+                                        OP_COUNTER.inc("failed_submissions");
+                                        error!("Failed to submit TXN request: {:?}", e);
+                                        Err(e)
+                                    })
                             })
                             .collect();
                         future_resps
                             .into_iter()
                             .flat_map(|future_resp| {
                                 Self::handle_future_response(future_resp).or_else(|e| {
-                                    error!("Submitted txn failed: {:?}", e);
+                                    OP_COUNTER.inc("failed_responses");
+                                    error!("Submitted txn not accepted by AC: {:?}", e);
                                     Err(e)
                                 })
                             })
@@ -454,6 +461,8 @@ impl Benchmarker {
             txn_resps.len(),
             after_req_committed_txns - init_committed_txns,
         );
+        OP_COUNTER.set("request_duration_ms", request_duration_ms as usize);
+        OP_COUNTER.set("request_throughput", request_throughput as usize);
         info!(
             "#Committed txns after TXNs committed = {}.",
             final_committed_txns
@@ -483,9 +492,41 @@ impl Benchmarker {
                 "TXN throughput est = {} txns / {} ms = {:.2} tps.",
                 num_txns, running_duration_ms, throughput
             );
+            OP_COUNTER.set("txn_throughput", throughput as usize);
+            OP_COUNTER.set("running_duration_ms", running_duration_ms as usize);
             throughput
         } else {
+            OP_COUNTER.set("txn_throughput", 0);
+            OP_COUNTER.set("running_duration_ms", 0);
             0.0
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Benchmarker;
+
+    #[test]
+    fn test_divide_txns_requests() {
+        let items: Vec<_> = (0..4).collect();
+        let mut iter1 = Benchmarker::divide_txn_requests(&items, 3);
+        assert_eq!(iter1.next().unwrap(), &[0]);
+        assert_eq!(iter1.next().unwrap(), &[1]);
+        assert_eq!(iter1.next().unwrap(), &[2]);
+        assert_eq!(iter1.next().unwrap(), &[3]);
+
+        let mut iter2 = Benchmarker::divide_txn_requests(&items, 2);
+        assert_eq!(iter2.next().unwrap(), &[0, 1]);
+        assert_eq!(iter2.next().unwrap(), &[2, 3]);
+
+        let mut iter3 = Benchmarker::divide_txn_requests(&items, 0);
+        assert_eq!(iter3.next().unwrap(), &[0, 1, 2, 3]);
+
+        let empty_slice: Vec<u32> = vec![];
+        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 3);
+        assert!(empty_iter.next().is_none());
+        let mut empty_iter = Benchmarker::divide_txn_requests(&empty_slice, 0);
+        assert!(empty_iter.next().is_none());
     }
 }

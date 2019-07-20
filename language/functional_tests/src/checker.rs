@@ -6,7 +6,7 @@ use crate::{
     evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
 };
 use filecheck;
-use std::{slice::SliceConcatExt, str::FromStr};
+use std::str::FromStr;
 
 /// A directive specifies a pattern in the output.
 /// Directives are extracted from comments starting with "//".
@@ -34,7 +34,7 @@ impl FromStr for Directive {
             if s.is_empty() {
                 return Err(ErrorKind::Other("stage cannot be empty".to_string()).into());
             }
-            return Ok(Directive::Stage(Stage::parse(s)?));
+            return Ok(Directive::Stage(s.parse::<Stage>()?));
         }
         if s == "transaction" {
             // TODO: implement transaction directive

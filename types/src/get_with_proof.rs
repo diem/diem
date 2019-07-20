@@ -24,6 +24,7 @@ use crate::{
 };
 use crypto::hash::CryptoHash;
 use failure::prelude::*;
+use nextgen_crypto::ed25519::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::{cmp, mem, sync::Arc};
@@ -73,7 +74,7 @@ impl UpdateToLatestLedgerResponse {
     /// verification.
     pub fn verify(
         &self,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
         request: &UpdateToLatestLedgerRequest,
     ) -> Result<()> {
         verify_update_to_latest_ledger_response(
@@ -89,7 +90,7 @@ impl UpdateToLatestLedgerResponse {
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
 pub fn verify_update_to_latest_ledger_response(
-    validator_verifier: Arc<ValidatorVerifier>,
+    validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
@@ -110,7 +111,7 @@ pub fn verify_update_to_latest_ledger_response(
 
     // Verify ledger info signatures.
     if !(ledger_info.version() == 0 && signatures.is_empty()) {
-        validator_verifier.verify_aggregated_signature(ledger_info.hash(), signatures)?;
+        validator_verifier.batch_verify_aggregated_signature(ledger_info.hash(), signatures)?;
     }
 
     // Verify each sub response.

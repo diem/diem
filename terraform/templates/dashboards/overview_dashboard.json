@@ -272,7 +272,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(storage{op=\"committed_txns\"})",
+          "expr": "max(storage_gauge{op=\"latest_transaction_version\"}) + 1",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -313,7 +313,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Rate of submit_transaction requsets accepted by AdmissionControl, per-instance view.",
+      "description": "Rate of submit_transaction requests accepted by AdmissionControl, per-instance view.",
       "fill": 5,
       "gridPos": {
         "h": 7,

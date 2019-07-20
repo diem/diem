@@ -1,0 +1,56 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+//! This module defines physical storage schema for system counters associated with ledger versions.
+//!
+//! Each version has values for multiple counters and they are serialized as a map.
+//! ```text
+//! |<--key-->|<--value->|
+//! | version | counters |
+//! ```
+//!
+//! `Version` is serialized in big endian so that records in RocksDB will be in order of it's
+//! numeric value.
+
+use super::LEDGER_COUNTERS_CF_NAME;
+use crate::{ledger_counters::LedgerCounters, schema::ensure_slice_len_eq};
+use byteorder::{BigEndian, ReadBytesExt};
+use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
+use failure::prelude::*;
+use schemadb::{
+    define_schema,
+    schema::{KeyCodec, ValueCodec},
+};
+use std::mem::size_of;
+use types::transaction::Version;
+
+define_schema!(
+    LedgerCountersSchema,
+    Version,
+    LedgerCounters,
+    LEDGER_COUNTERS_CF_NAME
+);
+
+impl KeyCodec<LedgerCountersSchema> for Version {
+    fn encode_key(&self) -> Result<Vec<u8>> {
+        Ok(self.to_be_bytes().to_vec())
+    }
+
+    fn decode_key(data: &[u8]) -> Result<Self> {
+        ensure_slice_len_eq(data, size_of::<Version>())?;
+        Ok((&data[..]).read_u64::<BigEndian>()?)
+    }
+}
+
+impl ValueCodec<LedgerCountersSchema> for LedgerCounters {
+    fn encode_value(&self) -> Result<Vec<u8>> {
+        SimpleSerializer::serialize(self)
+    }
+
+    fn decode_value(data: &[u8]) -> Result<Self> {
+        SimpleDeserializer::deserialize::<Self>(data)
+    }
+}
+
+#[cfg(test)]
+mod test;

@@ -143,24 +143,24 @@ where
     /// Build an inhabitant of the type given by `sig_token`. Note that as opposed to the
     /// inhabitant generation that is performed in the `StackGenerator` this does _not_ take the
     /// instruction and generates inhabitants in a semantically agnostic way.
-    pub fn inhabit(&mut self, sig_token: SignatureToken) -> Local {
+    pub fn inhabit(&mut self, sig_token: &SignatureToken) -> Local {
         match sig_token {
             SignatureToken::Bool => Local::bool(self.next_bool()),
             SignatureToken::U64 => Local::u64(self.next_int()),
             SignatureToken::String => Local::string(self.next_str()),
             SignatureToken::Address => Local::address(self.next_addr()),
-            SignatureToken::Reference(box sig) | SignatureToken::MutableReference(box sig) => {
-                let underlying_value = self.inhabit(sig);
+            SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
+                let underlying_value = self.inhabit(&*sig);
                 underlying_value
                     .borrow_local()
                     .expect("Unable to generate valid reference value")
             }
             SignatureToken::ByteArray => Local::bytearray(self.next_bytearray()),
-            SignatureToken::Struct(struct_handle_idx) => {
+            SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
                     .root_module
-                    .struct_def_at(self.resolve_struct_handle(struct_handle_idx).2);
+                    .struct_def_at(self.resolve_struct_handle(*struct_handle_idx).2);
                 let num_fields = struct_definition.field_count as usize;
                 let index = struct_definition.fields;
                 let fields = self
@@ -170,10 +170,9 @@ where
                     .iter()
                     .map(|field| {
                         self.inhabit(
-                            self.root_module
+                            &self.root_module
                                 .type_signature_at(field.signature)
                                 .0
-                                .clone(),
                         )
                         .value()
                         .expect("[Struct Generation] Unable to get underlying value for generated struct field.")
@@ -181,6 +180,7 @@ where
                     .collect();
                 Local::struct_(mutvals)
             }
+            SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }
 }

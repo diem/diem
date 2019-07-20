@@ -80,6 +80,8 @@ pub trait CanonicalSerializer {
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
 
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self>;
+
     fn encode_u8(&mut self, v: u8) -> Result<&mut Self>;
 
     fn encode_bool(&mut self, b: bool) -> Result<&mut Self>;
@@ -154,6 +156,11 @@ where
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self> {
         self.output.write_u32::<Endianness>(v)?;
+        Ok(self)
+    }
+
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self> {
+        self.output.write_u16::<Endianness>(v)?;
         Ok(self)
     }
 
@@ -249,6 +256,8 @@ pub trait CanonicalDeserializer {
 
     fn decode_u32(&mut self) -> Result<u32>;
 
+    fn decode_u16(&mut self) -> Result<u16>;
+
     fn decode_u8(&mut self) -> Result<u8>;
 
     fn decode_bool(&mut self) -> Result<bool>;
@@ -303,6 +312,11 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
 
     fn decode_u32(&mut self) -> Result<u32> {
         let num = self.raw_bytes.read_u32::<Endianness>()?;
+        Ok(num)
+    }
+
+    fn decode_u16(&mut self) -> Result<u16> {
+        let num = self.raw_bytes.read_u16::<Endianness>()?;
         Ok(num)
     }
 
@@ -412,6 +426,19 @@ where
         Self: Sized,
     {
         deserializer.decode_vec()
+    }
+}
+
+impl CanonicalSerialize for u16 {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_u16(*self)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for u16 {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        deserializer.decode_u16()
     }
 }
 

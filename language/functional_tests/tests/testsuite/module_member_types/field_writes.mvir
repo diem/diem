@@ -1,4 +1,3 @@
-modules:
 module VTest {
     struct T{fint: u64, fv: bool}
 
@@ -34,6 +33,9 @@ module VTest {
         return;
     }
 }
+
+//! new-transaction
+
 module RTest {
     resource T{fint: u64, fr: bool}
 
@@ -79,9 +81,11 @@ module RTest {
     }
 }
 
-script:
-import Transaction.RTest;
-import Transaction.VTest;
+//! new-transaction
+
+import {{default}}.RTest;
+import {{default}}.VTest;
+
 main() {
     let vt: V#VTest.T;
     let vref: &mut V#VTest.T;

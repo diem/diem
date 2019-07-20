@@ -10,7 +10,10 @@ use bytecode_verifier::VerifiedScript;
 use logger::prelude::*;
 use tiny_keccak::Keccak;
 use types::transaction::SCRIPT_HASH_LENGTH;
-use vm::{errors::VMResult, file_format::CompiledScript};
+use vm::{
+    errors::{Location, VMErrorKind, VMResult, VMRuntimeError, VerificationStatus},
+    file_format::CompiledScript,
+};
 use vm_cache_map::{Arena, CacheMap};
 
 /// The cache for commonly executed scripts. Currently there's no eviction policy, and it maps
@@ -27,24 +30,22 @@ impl<'alloc> ScriptCache<'alloc> {
         }
     }
 
-    /// Cache and resolve `script` into a `FunctionRef` that can be executed
-    pub fn cache_script(
-        &self,
-        script: VerifiedScript,
-        raw_bytes: &[u8],
-    ) -> VMResult<FunctionRef<'alloc>> {
-        // XXX in the future, this will also be responsible for deserializing and verifying scripts.
+    /// Compiles, verifies, caches and resolves `raw_bytes` into a `FunctionRef` that can be
+    /// executed.
+    pub fn cache_script(&self, raw_bytes: &[u8]) -> VMResult<FunctionRef<'alloc>> {
         let mut hash = [0u8; SCRIPT_HASH_LENGTH];
         let mut keccak = Keccak::new_sha3_256();
 
         keccak.update(raw_bytes);
         keccak.finalize(&mut hash);
 
+        // XXX We may want to put in some negative caching for scripts that fail verification.
         if let Some(f) = self.map.get(&hash) {
             trace!("[VM] Script cache hit");
             Ok(Ok(f))
         } else {
             trace!("[VM] Script cache miss");
+            let script = try_runtime!(Self::deserialize_and_verify(raw_bytes));
             let fake_module = script.into_module();
             let loaded_module = LoadedModule::new(fake_module);
             Ok(Ok(self.map.or_insert_with_transform(
@@ -52,6 +53,34 @@ impl<'alloc> ScriptCache<'alloc> {
                 move || loaded_module,
                 |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
             )))
+        }
+    }
+
+    fn deserialize_and_verify(raw_bytes: &[u8]) -> VMResult<VerifiedScript> {
+        let script = match CompiledScript::deserialize(raw_bytes) {
+            Ok(script) => script,
+            Err(err) => {
+                warn!("[VM] deserializer returned error for script: {:?}", err);
+                return Ok(Err(VMRuntimeError {
+                    loc: Location::default(),
+                    err: VMErrorKind::CodeDeserializerError(err),
+                }));
+            }
+        };
+
+        match VerifiedScript::new(script) {
+            Ok(script) => Ok(Ok(script)),
+            Err((_, errs)) => {
+                warn!(
+                    "[VM] bytecode verifier returned errors for script: {:?}",
+                    errs
+                );
+                let statuses = errs.into_iter().map(VerificationStatus::Script).collect();
+                Ok(Err(VMRuntimeError {
+                    loc: Location::default(),
+                    err: VMErrorKind::Verification(statuses),
+                }))
+            }
         }
     }
 }

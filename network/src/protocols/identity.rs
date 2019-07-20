@@ -169,7 +169,7 @@ mod tests {
             let (identity, _connection) =
                 exchange_identity(&server_identity_config, inbound, ConnectionOrigin::Inbound)
                     .await
-                    .unwrap();
+                    .expect("Identity exchange fails");
 
             assert_eq!(identity, client_identity);
         };
@@ -181,7 +181,7 @@ mod tests {
                 ConnectionOrigin::Outbound,
             )
             .await
-            .unwrap();
+            .expect("Identity exchange fails");
 
             assert_eq!(identity, server_identity);
         };

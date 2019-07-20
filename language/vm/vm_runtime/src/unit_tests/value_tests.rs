@@ -11,7 +11,7 @@ fn test_simple_mutate() {
     let v_ref = v.borrow_local().unwrap();
     let v2 = Local::u64(2);
     v_ref.mutate_reference(v2.value().unwrap());
-    assert_eq!(v, Local::u64(2));
+    assert!(v.equals(Local::u64(2)).unwrap());
 }
 
 #[test]
@@ -22,8 +22,8 @@ fn test_cloned_value() {
     let v_ref = v.borrow_local().unwrap();
     let v3 = Local::u64(2);
     v_ref.mutate_reference(v3.value().unwrap());
-    assert_eq!(v, Local::u64(2));
-    assert_eq!(v2, Local::u64(1));
+    assert!(v.equals(Local::u64(2)).unwrap());
+    assert!(v2.equals(Local::u64(1)).unwrap());
 }
 
 #[test]
@@ -35,8 +35,12 @@ fn test_cloned_references() {
 
     let v3 = Local::u64(2);
     v_ref.mutate_reference(v3.value().unwrap());
-    assert_eq!(v, Local::u64(2));
-    assert_eq!(v_ref_clone.read_reference().unwrap(), Local::u64(2));
+    assert!(v.equals(Local::u64(2)).unwrap());
+    assert!(v_ref_clone
+        .read_reference()
+        .unwrap()
+        .equals(Local::u64(2))
+        .unwrap());
 }
 
 #[test]
@@ -59,10 +63,11 @@ fn test_mutate_struct() {
             .map(|v| v.value().unwrap())
             .collect(),
     );
-    assert_eq!(
-        v_ref.read_reference().expect("must be a reference"),
-        v_after
-    );
+    assert!(v_ref
+        .read_reference()
+        .expect("must be a reference")
+        .equals(v_after)
+        .unwrap());
 }
 
 #[test]

@@ -80,6 +80,16 @@ pub enum SerializedType {
     MUTABLE_REFERENCE       = 0x6,
     STRUCT                  = 0x7,
     BYTEARRAY               = 0x8,
+    TYPE_PARAMETER          = 0x9,
+}
+
+#[rustfmt::skip]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum SerializedKind {
+    RESOURCE                = 0x1,
+    COPYABLE                = 0x2,
 }
 
 /// List of opcodes constants.
@@ -126,7 +136,7 @@ pub enum Opcodes {
     GT                      = 0x24,
     LE                      = 0x25,
     GE                      = 0x26,
-    ASSERT                  = 0x27,
+    ABORT                   = 0x27,
     GET_TXN_GAS_UNIT_PRICE  = 0x28,
     GET_TXN_MAX_GAS_UNITS   = 0x29,
     GET_GAS_REMAINING       = 0x2A,

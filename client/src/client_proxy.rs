@@ -10,6 +10,7 @@ use futures::{future::Future, stream::Stream};
 use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
+use nextgen_crypto::ed25519::Ed25519PublicKey;
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
@@ -23,10 +24,12 @@ use std::{
     fs::{self, File},
     io::{stdout, Read, Write},
     path::Path,
+    process::Command,
     str::FromStr,
     sync::Arc,
     thread, time,
 };
+use tempfile::{NamedTempFile, TempPath};
 use tokio::{self, runtime::Runtime};
 use types::{
     access_path::AccessPath,
@@ -44,7 +47,7 @@ use types::{
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 10_000;
+const MAX_GAS_AMOUNT: u64 = 100_000;
 const TX_EXPIRATION: i64 = 100;
 
 /// Enum used for error formatting.
@@ -96,6 +99,8 @@ pub struct ClientProxy {
     wallet: WalletLibrary,
     /// Whether to sync with validator on account creation.
     sync_on_wallet_recovery: bool,
+    /// temp files (alive for duration of program)
+    temp_files: Vec<TempPath>,
 }
 
 impl ClientProxy {
@@ -117,7 +122,11 @@ impl ClientProxy {
         );
         // Total 3f + 1 validators, 2f + 1 correct signatures are required.
         // If < 4 validators, all validators have to agree.
-        let validator_verifier = Arc::new(ValidatorVerifier::new(validators));
+        let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
+            .into_iter()
+            .map(|(key, value)| (key, value.into()))
+            .collect();
+        let validator_verifier = Arc::new(ValidatorVerifier::new(validator_pubkeys));
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
 
         let accounts = vec![];
@@ -157,6 +166,7 @@ impl ClientProxy {
             faucet_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
+            temp_files: vec![],
         })
     }
 
@@ -293,28 +303,20 @@ impl ClientProxy {
             stdout().flush().unwrap();
             max_iterations -= 1;
 
-            match self.client.get_sequence_number(account) {
-                Ok(chain_seq_number) => {
-                    if chain_seq_number >= sequence_number {
-                        println!(
-                            "Transaction completed, found sequence number {}]",
-                            chain_seq_number
-                        );
-                        break;
-                    }
-                    if max_iterations % 100 == 0 {
-                        print!("*");
-                    }
+            if let Ok(Some((_, Some(events)))) =
+                self.client
+                    .get_txn_by_acc_seq(account, sequence_number - 1, true)
+            {
+                println!("transaction is stored!");
+                if events.is_empty() {
+                    println!("but it didn't emit any events (failed execution)");
                 }
-                Err(e) => {
-                    if max_iterations == 0 {
-                        panic!("wait_for_transaction timeout: {}", e);
-                    } else if max_iterations % 100 == 0 {
-                        print!(".");
-                    }
-                }
+                break;
+            } else if max_iterations == 0 {
+                panic!("wait_for_transaction timeout");
+            } else {
+                print!(".");
             }
-
             thread::sleep(time::Duration::from_millis(10));
         }
     }
@@ -420,6 +422,30 @@ impl ClientProxy {
         )
     }
 
+    /// Compile move program
+    pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+        let file_path = space_delim_strings[1];
+        let output_path = {
+            if space_delim_strings.len() == 3 {
+                space_delim_strings[2].to_string()
+            } else {
+                let tmp_path = NamedTempFile::new()?.into_temp_path();
+                let path = tmp_path.to_str().unwrap().to_string();
+                self.temp_files.push(tmp_path);
+                path
+            }
+        };
+        let args = format!("run -p compiler -- -o {} {}", output_path, file_path);
+        let status = Command::new("cargo")
+            .args(args.split(' '))
+            .spawn()?
+            .wait()?;
+        if !status.success() {
+            return Err(format_err!("compilation failed"));
+        }
+        Ok(output_path)
+    }
+
     /// Submit a transaction to the network.
     pub fn submit_transaction_from_disk(
         &mut self,
@@ -503,7 +529,7 @@ impl ClientProxy {
         self.get_account_state_and_update(account)
     }
 
-    /// Get committed txn by account and sequnce number.
+    /// Get committed txn by account and sequence number.
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],

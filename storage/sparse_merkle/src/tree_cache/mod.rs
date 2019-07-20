@@ -235,6 +235,13 @@ where
             } else {
                 blob.remove_entry();
             }
+        } else {
+            let is_new_entry = self.retired_record_cache.insert((
+                DUMMY_VERSION_CREATED,
+                old_blob_hash,
+                RetiredRecordType::Blob,
+            ));
+            assert!(is_new_entry, "Blob retired twice unexpectedly.");
         }
     }
 

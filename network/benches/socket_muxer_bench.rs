@@ -78,7 +78,7 @@ const SENDS_PER_ITER: usize = 100;
 fn bench_client_send<S>(b: &mut Bencher, msg_len: usize, client_stream: &mut S)
 where
     S: Sink<Bytes> + Stream<Item = Result<BytesMut, io::Error>> + Unpin,
-    S::SinkError: Debug,
+    S::Error: Debug,
 {
     // Benchmark sending over the in-memory stream.
     let data = Bytes::from(vec![0u8; msg_len]);

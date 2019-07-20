@@ -170,7 +170,7 @@ impl VerifiedModule {
             errors.append(&mut RecursiveStructDefChecker::new(&module).verify());
         }
         if errors.is_empty() {
-            errors.append(&mut CodeUnitVerifier::new(&module).verify());
+            errors.append(&mut CodeUnitVerifier::verify(&module));
         }
         if errors.is_empty() {
             Ok(VerifiedModule(module))

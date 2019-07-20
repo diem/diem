@@ -72,61 +72,61 @@ fn test_execution_with_storage() {
     let account3 = AccountAddress::from(pubkey3);
     let genesis_account = association_address();
 
-    // Create account1 with 10k coins.
+    // Create account1 with 2M coins.
     let txn1 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 0,
         genesis_keypair.private_key().clone(),
         genesis_keypair.public_key(),
-        Some(encode_create_account_program(&account1, 200_000)),
+        Some(encode_create_account_program(&account1, 2_000_000)),
     );
 
-    // Create account2 with 20k coins.
+    // Create account2 with 200k coins.
     let txn2 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
         genesis_keypair.private_key().clone(),
         genesis_keypair.public_key(),
-        Some(encode_create_account_program(&account2, 20_000)),
+        Some(encode_create_account_program(&account2, 200_000)),
     );
 
-    // Create account3 with 30k coins.
+    // Create account3 with 100k coins.
     let txn3 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 2,
         genesis_keypair.private_key().clone(),
         genesis_keypair.public_key(),
-        Some(encode_create_account_program(&account3, 10_000)),
+        Some(encode_create_account_program(&account3, 100_000)),
     );
 
-    // Transfer 2k coins from account1 to account2.
-    // balance: <198k, 22k, 10k
+    // Transfer 20k coins from account1 to account2.
+    // balance: <1.98M, 220k, 100k
     let txn4 = get_test_signed_transaction(
         account1,
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1,
-        Some(encode_transfer_program(&account2, 2_000)),
+        Some(encode_transfer_program(&account2, 20_000)),
     );
 
-    // Transfer 1k coins from account2 to account3.
-    // balance: <198k, <21k, 11k
+    // Transfer 10k coins from account2 to account3.
+    // balance: <1.98M, <210k, 110k
     let txn5 = get_test_signed_transaction(
         account2,
         /* sequence_number = */ 0,
         privkey2.clone(),
         pubkey2,
-        Some(encode_transfer_program(&account3, 1_000)),
+        Some(encode_transfer_program(&account3, 10_000)),
     );
 
-    // Transfer 7k coins from account1 to account3.
-    // balance: <191k, <21k, 18k
+    // Transfer 70k coins from account1 to account3.
+    // balance: <1.91M, <210k, 180k
     let txn6 = get_test_signed_transaction(
         account1,
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1,
-        Some(encode_transfer_program(&account3, 7_000)),
+        Some(encode_transfer_program(&account3, 70_000)),
     );
 
     let block1 = vec![txn1, txn2, txn3, txn4, txn5, txn6];
@@ -135,14 +135,14 @@ fn test_execution_with_storage() {
     let mut block2 = vec![];
     let block2_id = gen_block_id(2);
 
-    // Create 14 txns transferring 1k from account1 to account3 each.
+    // Create 14 txns transferring 10k from account1 to account3 each.
     for i in 2..=15 {
         block2.push(get_test_signed_transaction(
             account1,
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1,
-            Some(encode_transfer_program(&account3, 1_000)),
+            Some(encode_transfer_program(&account3, 10_000)),
         ));
     }
 
@@ -313,21 +313,21 @@ fn test_execution_with_storage() {
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account1_state_with_proof, |x| x < 191_000).unwrap();
+    verify_account_balance(&account1_state_with_proof, |x| x < 1_910_000).unwrap();
 
     let account2_state_with_proof = response_items
         .pop()
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account2_state_with_proof, |x| x < 21_000).unwrap();
+    verify_account_balance(&account2_state_with_proof, |x| x < 210_000).unwrap();
 
     let account3_state_with_proof = response_items
         .pop()
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 18_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 180_000).unwrap();
 
     let transaction_list_with_proof = response_items
         .pop()
@@ -464,14 +464,14 @@ fn test_execution_with_storage() {
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account1_state_with_proof, |x| x < 17_7000).unwrap();
+    verify_account_balance(&account1_state_with_proof, |x| x < 1_770_000).unwrap();
 
     let account3_state_with_proof = response_items
         .pop()
         .unwrap()
         .into_get_account_state_response()
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 32_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 320_000).unwrap();
 
     let transaction_list_with_proof = response_items
         .pop()
