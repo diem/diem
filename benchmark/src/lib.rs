@@ -17,7 +17,7 @@ use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
 use metrics::OpMetrics;
 use proto_conv::IntoProto;
-use std::{slice::Chunks, sync::Arc, thread, time};
+use std::{convert::TryFrom, slice::Chunks, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::association_address,
@@ -61,10 +61,12 @@ lazy_static! {
 /// 3. Generate and submit transactions: gen_ring_txn_requests, gen_pairwise_txn_requests,
 /// submit_and_wait_txn_reqs, measure_txn_throughput.
 /// Metrics reported include:
-/// * Counters: created_txns, requested_txns, rejected_txns (AC responded with rejection or
-///   VM/mempool error), accepted_txns, failed_submissions (TXN request failed at submission stage),
-///   failed_responses (AC responded without accept + AC doesn't respond).
-/// * Gauges: submit_duration_ms, running_duration_ms, request_throughput, txns_throughput.
+/// * Counters related to:
+///   * TXN generation: requested_txns, created_txns, sign_failed_txns;
+///   * Submission to AC and AC response: submit_txns.{ac_status_code},
+///     submit_txns.{mempool_status_code}, submit_txns.{vm_status}, submit_txns.{grpc_error};
+///   * Final status within epoch: committed_txns, timedout_txns;
+/// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,
@@ -176,6 +178,7 @@ impl Benchmarker {
         program: Program,
         sender_account: &mut AccountData,
     ) -> Result<SubmitTransactionRequest> {
+        OP_COUNTER.inc("requested_txns");
         let signer: Box<&dyn TransactionSigner> = match &sender_account.key_pair {
             Some(key_pair) => Box::new(key_pair),
             None => Box::new(&self.wallet),
@@ -190,7 +193,11 @@ impl Benchmarker {
             MAX_GAS_AMOUNT,
             GAS_UNIT_PRICE,
             TX_EXPIRATION,
-        )?;
+        )
+        .or_else(|e| {
+            OP_COUNTER.inc("sign_failed_txns");
+            Err(e)
+        })?;
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         sender_account.sequence_number += 1;
@@ -353,14 +360,19 @@ impl Benchmarker {
 
     /// Wait for accepted TXNs to commit or time out.
     /// Return #committed txn during the waiting, and how long we have waited.
-    pub fn wait_txns(&self, init_storage_cntr: i64, num_to_waits: i64) -> (usize, u128) {
-        let wait_duration_ms = self.wait_for_commit(init_storage_cntr + num_to_waits);
+    pub fn wait_txns(&self, init_storage_cntr: i64, num_to_wait: usize) -> (usize, u128) {
+        let num_to_wait_i64 = i64::try_from(num_to_wait).expect("Unable to convert usize to i64");
+        let wait_duration_ms = self.wait_for_commit(init_storage_cntr + num_to_wait_i64);
         let curr_storage_cntr = self.get_committed_txns_counter();
         let num_committed = (curr_storage_cntr - init_storage_cntr) as usize;
         info!(
             "Waited {} TXNs committed for {} ms",
             num_committed, wait_duration_ms
         );
+        OP_COUNTER.inc_by("committed_txns", num_committed);
+        if num_to_wait > 0 {
+            OP_COUNTER.inc_by("timedout_txns", num_to_wait - num_committed);
+        }
         (num_committed, wait_duration_ms)
     }
 
@@ -377,10 +389,9 @@ impl Benchmarker {
     ) -> (usize, usize, u128, u128) {
         let txn_req_chunks = divide_items(txn_reqs, self.clients.len());
         let init_storage_cntr = self.get_committed_txns_counter();
-
         let (num_txns_accepted, submit_duration_ms) = self.submit_txns(txn_req_chunks);
         let (num_committed, wait_duration_ms) =
-            self.wait_txns(init_storage_cntr, num_txns_accepted as i64);
+            self.wait_txns(init_storage_cntr, num_txns_accepted);
         (
             num_txns_accepted,
             num_committed,
@@ -416,7 +427,6 @@ impl Benchmarker {
     pub fn measure_txn_throughput(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> (f64, f64) {
         let (_, num_committed, submit_duration_ms, wait_duration_ms) =
             self.submit_and_wait_txn_committed(txn_reqs);
-
         let request_throughput =
             Self::calculate_throughput(txn_reqs.len(), submit_duration_ms, "REQ");
         let running_duration_ms = submit_duration_ms + wait_duration_ms;

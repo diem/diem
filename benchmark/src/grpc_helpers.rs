@@ -52,24 +52,28 @@ pub fn divide_items<T>(items: &[T], num_chunks: usize) -> Chunks<T> {
 /// from AC is accepted. If not, classify what the error type is.
 fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
     if resp.has_ac_status() {
-        if resp.get_ac_status().get_code() == AdmissionControlStatusCode::Accepted {
-            OP_COUNTER.inc("accepted_txns");
+        let status = resp.get_ac_status().get_code();
+        if status == AdmissionControlStatusCode::Accepted {
+            OP_COUNTER.inc(&format!("submit_txns.{:?}", status));
             true
         } else {
-            OP_COUNTER.inc("rejected_txns");
+            OP_COUNTER.inc(&format!("submit_txns.{:?}", status));
             error!("Request rejected by AC: {:?}", resp);
             false
         }
     } else if resp.has_vm_status() {
-        OP_COUNTER.inc("rejected_txns");
+        OP_COUNTER.inc(&format!("submit_txns.{:?}", resp.get_vm_status()));
         error!("Request causes error on VM: {:?}", resp);
         false
     } else if resp.has_mempool_status() {
-        OP_COUNTER.inc("rejected_txns");
+        OP_COUNTER.inc(&format!(
+            "submit_txns.{:?}",
+            resp.get_mempool_status().get_code()
+        ));
         error!("Request causes error on mempool: {:?}", resp);
         false
     } else {
-        OP_COUNTER.inc("rejected_txns");
+        OP_COUNTER.inc("submit_txns.Unknown");
         error!("Request rejected by AC for unknown error: {:?}", resp);
         false
     }
@@ -88,7 +92,7 @@ pub fn submit_and_wait_txn_requests(
             match client.submit_transaction_async_opt(&req, get_default_grpc_call_option()) {
                 Ok(future) => Some(future),
                 Err(e) => {
-                    OP_COUNTER.inc("failed_submissions");
+                    OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
                     error!("Failed to send gRPC request: {:?}", e);
                     None
                 }
@@ -100,7 +104,6 @@ pub fn submit_and_wait_txn_requests(
         .wait()
         .filter_map(|future_result| match future_result {
             Ok(proto_resp) => {
-                OP_COUNTER.inc("requested_txns");
                 if check_ac_response(&proto_resp) {
                     Some(proto_resp)
                 } else {
@@ -108,7 +111,7 @@ pub fn submit_and_wait_txn_requests(
                 }
             }
             Err(e) => {
-                OP_COUNTER.inc("failed_submissions");
+                OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
                 error!("Failed to receive gRPC response: {:?}", e);
                 None
             }

@@ -162,8 +162,8 @@ mod tests {
                 num_accounts: 32,
                 free_lunch: 10_000_000,
                 num_clients: 4,
-                num_rounds: 8,
-                num_epochs: 1,
+                num_rounds: 20,
+                num_epochs: 2,
                 executable: Executable::MeasureThroughput,
             };
             args.try_parse_validator_addresses();
@@ -172,13 +172,15 @@ mod tests {
                 .gen_and_mint_accounts(&args.faucet_key_file_path, args.num_accounts)
                 .expect("failed to generate and mint all accounts");
             measure_throughput(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
-            let created_txns = OP_COUNTER.counter("created_txns").get();
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
-            let failed_submissions = OP_COUNTER.counter("failed_submissions").get();
-            let accepted_txns = OP_COUNTER.counter("accepted_txns").get();
-            let rejected_txns = OP_COUNTER.counter("rejected_txns").get();
-            assert_eq!(created_txns, requested_txns + failed_submissions);
-            assert_eq!(requested_txns, accepted_txns + rejected_txns);
+            let created_txns = OP_COUNTER.counter("created_txns").get();
+            let sign_failed_txns = OP_COUNTER.counter("sign_failed_txns").get();
+            assert_eq!(requested_txns, created_txns + sign_failed_txns);
+            let accepted_txns = OP_COUNTER.counter("submit_txns.Accepted").get();
+            let committed_txns = OP_COUNTER.counter("committed_txns").get();
+            let timedout_txns = OP_COUNTER.counter("timedout_txns").get();
+            // Why `<=`: timedout TXNs in previous epochs can be committed in the next epoch.
+            assert!(accepted_txns <= committed_txns + timedout_txns);
         }
     }
 }
