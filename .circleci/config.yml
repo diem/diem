@@ -31,6 +31,9 @@ jobs:
     steps:
       - env_setup
       - run:
+          name: Git Hooks and Checks
+          command: ./scripts/git-checks.sh
+      - run:
           name: Linting
           command: |
             ./scripts/nightly_features.sh
