@@ -6,7 +6,7 @@
 *.md text
 *.proto text
 *.rs text
-*.sh text eol=lf
+*.sh text whitespace=indent,trail,space,tabwidth=4 eol=lf
 *.toml text
 *.txt text
 *.yml text
