@@ -15,9 +15,9 @@ struct Args {
     /// Number of nodes to start (1 by default)
     #[structopt(short = "n", long = "num_nodes")]
     pub num_nodes: Option<usize>,
-    /// Disable logging (for performance testing)"
-    #[structopt(short = "d", long = "disable_logging")]
-    pub disable_logging: bool,
+    /// Enable logging
+    #[structopt(short = "l", long = "enable_logging")]
+    pub enable_logging: bool,
     /// Start client
     #[structopt(short = "s", long = "start_client")]
     pub start_client: bool,
@@ -45,7 +45,7 @@ fn main() {
 
     let swarm = LibraSwarm::launch_swarm(
         num_nodes,
-        args.disable_logging,
+        !args.enable_logging,
         faucet_account_keypair,
         false, /* tee_logs */
         args.config_dir.clone(),
