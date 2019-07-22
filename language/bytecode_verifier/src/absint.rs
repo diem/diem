@@ -73,8 +73,8 @@ pub trait AbstractInterpreter: TransferFunctions {
         cfg: &VMControlFlowGraph,
     ) -> InvariantMap<Self::State> {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
-        let entry_block_id = 0; // 0 is always the entry block
-                                // seed worklist/precondition map with initial block/state
+        let entry_block_id = cfg.entry_block_id();
+        // seed worklist/precondition map with initial block/state
         let mut work_list = vec![entry_block_id];
         inv_map.insert(
             entry_block_id,

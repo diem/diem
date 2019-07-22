@@ -33,6 +33,10 @@ pub trait ControlFlowGraph: Sized {
 
     /// Return the number of blocks (vertices) in the control flow graph
     fn num_blocks(&self) -> u16;
+
+    /// Return the id of the entry block.
+    /// Note: even a CFG with no instructions has an (empty) entry block.
+    fn entry_block_id(&self) -> BlockId;
 }
 
 /// A basic block
@@ -121,6 +125,8 @@ impl VMControlFlowGraph {
     }
 }
 
+const ENTRY_BLOCK_ID: BlockId = 0;
+
 impl ControlFlowGraph for VMControlFlowGraph {
     fn num_blocks(&self) -> u16 {
         self.blocks.len() as u16
@@ -150,11 +156,15 @@ impl ControlFlowGraph for VMControlFlowGraph {
         self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
     }
 
+    fn entry_block_id(&self) -> BlockId {
+        ENTRY_BLOCK_ID
+    }
+
     fn new(code: &[Bytecode]) -> Self {
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
-        block_ids.insert(0);
+        block_ids.insert(ENTRY_BLOCK_ID);
         for pc in 0..code.len() {
             VMControlFlowGraph::record_block_ids(pc as CodeOffset, code, &mut block_ids);
         }
