@@ -129,9 +129,9 @@ impl TransactionStore {
         MempoolAddTransactionStatus::new(MempoolAddTransactionStatusCode::Valid, "".to_string())
     }
 
-    /// Check whether the queue size >= threshold in config.
+    /// Check if mempool can handle new insertion requests
     pub(crate) fn health_check(&self) -> bool {
-        self.system_ttl_index.size() <= self.capacity
+        self.system_ttl_index.size() < self.capacity || self.parking_lot_index.size() > 0
     }
 
     /// checks if Mempool is full
