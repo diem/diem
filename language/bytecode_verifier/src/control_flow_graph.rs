@@ -44,7 +44,7 @@ pub struct BasicBlock {
     pub exit: CodeOffset,
 
     /// Flows-to
-    pub successors: Set<BlockId>,
+    pub successors: Vec<BlockId>,
 }
 
 /// The control flow graph that we build from the bytecode.
@@ -92,7 +92,7 @@ impl VMControlFlowGraph {
     /// respect to get_targets function
     fn traverse_by(
         &self,
-        get_targets: fn(&BasicBlock) -> &Set<BlockId>,
+        get_targets: fn(&BasicBlock) -> &Vec<BlockId>,
         block_id: BlockId,
     ) -> Vec<&BasicBlock> {
         let mut ret = Vec::new();

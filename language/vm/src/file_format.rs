@@ -32,7 +32,6 @@ use crate::{
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
-use std::collections::BTreeSet;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Generic index into one of the tables in the binary format.
@@ -1079,22 +1078,28 @@ impl Bytecode {
         }
     }
 
-    // TODO: switch from Set to Vec
     /// Return the successor offsets of this bytecode instruction.
-    pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> BTreeSet<CodeOffset> {
+    pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
-        let mut v = BTreeSet::new();
+        let mut v = vec![];
 
         if let Some(offset) = bytecode.offset() {
-            v.insert(*offset);
+            v.push(*offset);
         }
 
-        if pc + 1 >= code.len() as CodeOffset {
+        let next_pc = pc + 1;
+        if next_pc >= code.len() as CodeOffset {
             return v;
         }
 
-        if !bytecode.is_branch() || bytecode.is_conditional_branch() {
-            v.insert(pc + 1);
+        if !bytecode.is_unconditional_branch() && !v.contains(&next_pc) {
+            // avoid duplicates
+            v.push(pc + 1);
+        }
+
+        // always give successors in ascending order
+        if v.len() > 1 && v[0] > v[1] {
+            v.swap(0, 1);
         }
 
         v
