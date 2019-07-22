@@ -27,7 +27,6 @@ digest = "0.8.1"
 hmac = "0.7.1"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
-regex = "1.1.9"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 crypto-derive = { path = "../legacy_crypto/src/macros" }
