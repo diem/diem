@@ -41,7 +41,9 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{Program, RawTransaction, SignedTransaction, Version},
+    transaction::{
+        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
+    },
     transaction_helpers::{create_signed_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
@@ -451,14 +453,12 @@ impl ClientProxy {
         Ok(output_path)
     }
 
-    /// Publish move module
-    pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+    fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
         let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sender_ref_id = self.get_account_ref_id(&sender_address)?;
         let sender = self.accounts.get(sender_ref_id).unwrap();
         let sequence_number = sender.sequence_number;
 
-        let program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
         let req = self.create_submit_transaction_req(program, &sender, None, None)?;
 
         self.client
@@ -466,6 +466,26 @@ impl ClientProxy {
         self.wait_for_transaction(sender_address, sequence_number + 1);
 
         Ok(())
+    }
+
+    /// Publish move module
+    pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        let program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        self.submit_program(space_delim_strings, program)
+    }
+
+    /// Execute custom script
+    pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        let program: Program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let arguments: Vec<_> = space_delim_strings[3..]
+            .iter()
+            .filter_map(|arg| parse_as_transaction_argument(arg).ok())
+            .collect();
+        let (script, _, modules) = program.into_inner();
+        self.submit_program(
+            space_delim_strings,
+            Program::new(script, modules, arguments),
+        )
     }
 
     /// Submit a transaction to the network.

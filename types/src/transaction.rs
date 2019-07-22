@@ -34,10 +34,12 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
 mod program;
+mod transaction_argument;
 
 pub use program::{Program, TransactionArgument, SCRIPT_HASH_LENGTH};
 use protobuf::well_known_types::UInt64Value;
 use std::ops::Deref;
+pub use transaction_argument::parse_as_transaction_argument;
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 

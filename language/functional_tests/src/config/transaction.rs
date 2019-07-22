@@ -3,8 +3,7 @@
 
 use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use std::{collections::BTreeSet, str::FromStr};
-use transaction_builder::transaction_argument::parse_as_transaction_argument;
-use types::transaction::TransactionArgument;
+use types::transaction::{parse_as_transaction_argument, TransactionArgument};
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]

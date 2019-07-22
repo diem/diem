@@ -6,10 +6,9 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
-use transaction_builder::transaction_argument::*;
 use types::{
     account_address::AccountAddress,
-    transaction::{Program, RawTransaction, TransactionArgument},
+    transaction::{parse_as_transaction_argument, Program, RawTransaction, TransactionArgument},
 };
 
 #[derive(Debug, StructOpt)]

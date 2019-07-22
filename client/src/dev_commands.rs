@@ -17,6 +17,7 @@ impl Command for DevCommand {
         let commands: Vec<Box<dyn Command>> = vec![
             Box::new(DevCommandCompile {}),
             Box::new(DevCommandPublish {}),
+            Box::new(DevCommandExecute {}),
             Box::new(SubmitTransactionFromDiskCommand {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
@@ -72,6 +73,34 @@ impl Command for DevCommandPublish {
         }
         match client.publish_module(params) {
             Ok(_) => println!("Successfully published module"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+/// Sub command to execute custom move script
+pub struct DevCommandExecute {}
+
+impl Command for DevCommandExecute {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["execute", "e"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<sender_account_address>|<sender_account_ref_id> <compiled_module_path> [parameters]"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Execute custom move script"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() < 3 {
+            println!("Invalid number of arguments to execute script");
+            return;
+        }
+        match client.execute_script(params) {
+            Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }
     }

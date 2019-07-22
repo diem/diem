@@ -1,11 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::errors::*;
-use std::convert::TryFrom;
-use types::{
+//use crate::errors::*;
+use crate::{
     account_address::AccountAddress, byte_array::ByteArray, transaction::TransactionArgument,
 };
+use failure::prelude::*;
+use std::convert::TryFrom;
+
+#[derive(Clone, Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "ParseError: {}", _0)]
+    ParseError(String),
+}
 
 /// Parses the given string as address.
 pub fn parse_as_address(s: &str) -> Result<TransactionArgument> {
@@ -73,4 +80,65 @@ pub fn parse_as_transaction_argument(s: &str) -> Result<TransactionArgument> {
     return_if_ok!(parse_as_u64(s));
     return_if_ok!(parse_as_byte_array(s));
     Err(ErrorKind::ParseError(format!("cannot parse \"{}\" as transaction argument", s)).into())
+}
+
+#[cfg(test)]
+mod test_transaction_argument {
+    use crate::transaction::transaction_argument::*;
+
+    #[test]
+    fn parse_u64() {
+        for s in &["0", "42", "18446744073709551615"] {
+            parse_as_u64(s).unwrap();
+        }
+        for s in &["xx", "", "-3"] {
+            parse_as_u64(s).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn parse_address() {
+        for s in &[
+            "0x0",
+            "0x1",
+            "0x00",
+            "0x05",
+            "0x100",
+            "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        ] {
+            parse_as_address(s).unwrap();
+        }
+
+        for s in &[
+            "0x",
+            "100",
+            "",
+            "0xG",
+            "0xBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        ] {
+            parse_as_address(s).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn parse_byte_array() {
+        for s in &["0", "00", "deadbeef", "aaa"] {
+            parse_as_byte_array(&format!("b\"{}\"", s)).unwrap();
+        }
+
+        for s in &["", "b\"\"", "123", "b\"G\""] {
+            parse_as_byte_array(s).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn parse_args() {
+        for s in &["123", "0xf", "b\"aaa\""] {
+            parse_as_transaction_argument(s).unwrap();
+        }
+
+        for s in &["garbage", ""] {
+            parse_as_transaction_argument(s).unwrap_err();
+        }
+    }
 }
