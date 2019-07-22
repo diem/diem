@@ -159,10 +159,10 @@ mod tests {
                 // Don't start metrics server as we are not testing with prometheus.
                 metrics_server_address: None,
                 faucet_key_file_path,
-                num_accounts: 32,
+                num_accounts: 4,
                 free_lunch: 10_000_000,
                 num_clients: 4,
-                num_rounds: 20,
+                num_rounds: 4,
                 num_epochs: 2,
                 executable: Executable::MeasureThroughput,
             };

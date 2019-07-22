@@ -361,16 +361,22 @@ impl Benchmarker {
     /// Wait for accepted TXNs to commit or time out.
     /// Return #committed txn during the waiting, and how long we have waited.
     pub fn wait_txns(&self, init_storage_cntr: i64, num_to_wait: usize) -> (usize, u128) {
+        // We're waiting and then reportig about n transactions
+        // at the same time, other txns might be in progress of getting committed.
+        // We'll fail to verify that our transactions got committed
+        // and we can underflow unsigned number
         let num_to_wait_i64 = i64::try_from(num_to_wait).expect("Unable to convert usize to i64");
         let wait_duration_ms = self.wait_for_commit(init_storage_cntr + num_to_wait_i64);
-        let curr_storage_cntr = self.get_committed_txns_counter();
+        let curr_storage_cntr = self.get_committed_txns_counter(); //i64
+
+        // this counter never goes down as long as the server is up
         let num_committed = (curr_storage_cntr - init_storage_cntr) as usize;
         info!(
             "Waited {} TXNs committed for {} ms",
             num_committed, wait_duration_ms
         );
         OP_COUNTER.inc_by("committed_txns", num_committed);
-        if num_to_wait > 0 {
+        if num_to_wait >= num_committed {
             OP_COUNTER.inc_by("timedout_txns", num_to_wait - num_committed);
         }
         (num_committed, wait_duration_ms)
