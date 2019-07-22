@@ -7,7 +7,8 @@
 use prometheus::{
     core::{Collector, Desc},
     proto::MetricFamily,
-    Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts,
+    Histogram, HistogramOpts, HistogramTimer, HistogramVec, IntCounter, IntCounterVec, IntGauge,
+    IntGaugeVec, Opts,
 };
 
 #[derive(Clone)]
@@ -115,6 +116,10 @@ impl OpMetrics {
     #[inline]
     pub fn observe(&self, op: &str, v: f64) {
         self.histograms.with_label_values(&[op]).observe(v);
+    }
+
+    pub fn timer(&self, op: &str) -> HistogramTimer {
+        self.histograms.with_label_values(&[op]).start_timer()
     }
 }
 
