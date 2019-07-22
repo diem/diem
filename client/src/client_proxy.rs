@@ -429,9 +429,14 @@ impl ClientProxy {
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
         let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
+        let is_module = if space_delim_strings.len() > 3 {
+            parse_bool(space_delim_strings[3])?
+        } else {
+            false
+        };
         let output_path = {
-            if space_delim_strings.len() == 4 {
-                space_delim_strings[3].to_string()
+            if space_delim_strings.len() == 5 {
+                space_delim_strings[4].to_string()
             } else {
                 let tmp_path = NamedTempFile::new()?.into_temp_path();
                 let path = tmp_path.to_str().unwrap().to_string();
@@ -439,9 +444,33 @@ impl ClientProxy {
                 path
             }
         };
+        // custom handler of old module format
+        // TODO: eventually retire code after vm separation between modules and scripts
+        let tmp_source = if is_module {
+            let mut tmp_file = NamedTempFile::new()?;
+            let code = format!(
+                "\
+                 modules:\n\
+                 {}\n\
+                 script:\n\
+                 main(){{\n\
+                 return;\n\
+                 }}",
+                fs::read_to_string(file_path)?
+            );
+            writeln!(tmp_file, "{}", code)?;
+            Some(tmp_file)
+        } else {
+            None
+        };
+
+        let source_path = tmp_source
+            .as_ref()
+            .map(|f| f.path().to_str().unwrap())
+            .unwrap_or(file_path);
         let args = format!(
             "run -p compiler -- -a {} -o {} {}",
-            address, output_path, file_path
+            address, output_path, source_path
         );
         let status = Command::new("cargo")
             .args(args.split(' '))
