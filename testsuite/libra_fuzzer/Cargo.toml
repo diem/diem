@@ -25,3 +25,19 @@ vm_runtime = { path = "../../language/vm/vm_runtime" }
 datatest = "0.3.5"
 stats_alloc = "0.1.8"
 rusty-fork = "0.2.2"
+
+[dev-dependencies.types]
+features = ["testing"]
+path = "../../types"
+
+[dev-dependencies.vm]
+features = ["testing"]
+path = "../../language/vm"
+
+[dev-dependencies.vm_runtime]
+features = ["testing"]
+path = "../../language/vm/vm_runtime"
+
+[features]
+default = ["testing"]
+testing = ["types/testing", "vm/testing", "vm_runtime/testing"]

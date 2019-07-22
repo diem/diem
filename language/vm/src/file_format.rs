@@ -30,7 +30,9 @@ use crate::{
     access::ModuleAccess, check_bounds::BoundsChecker, errors::VerificationError,
     internals::ModuleIndex, IndexKind, SignatureTokenKind,
 };
+#[cfg(any(test, feature = "testing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
@@ -43,8 +45,9 @@ macro_rules! define_index {
         kind: $kind: ident,
         doc: $comment: literal,
     } => {
-        #[derive(Arbitrary, Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-        #[proptest(no_params)]
+        #[derive(Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+        #[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
         #[doc=$comment]
         pub struct $name(pub TableIndex);
 
@@ -195,8 +198,9 @@ pub const NO_TYPE_ACTUALS: LocalsSignatureIndex = LocalsSignatureIndex(0);
 /// Modules introduce a scope made of all types defined in the module and all functions.
 /// Type definitions (fields) are private to the module. Outside the module a
 /// Type is an opaque handle.
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct ModuleHandle {
     /// Index into the `AddressPool`. Identifies the account that holds the module.
     pub address: AddressPoolIndex,
@@ -217,8 +221,9 @@ pub struct ModuleHandle {
 ///
 /// At link time kind checking is performed and an error is reported if there is a
 /// mismatch with the definition.
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct StructHandle {
     /// The module that defines the type.
     pub module: ModuleHandleIndex,
@@ -237,8 +242,9 @@ pub struct StructHandle {
 /// and the verifier enforces that property. The signature of the function is used at link time to
 /// ensure the function reference is valid and it is also used by the verifier to type check
 /// function calls.
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct FunctionHandle {
     /// The module that defines the function.
     pub module: ModuleHandleIndex,
@@ -252,8 +258,9 @@ pub struct FunctionHandle {
 // Definitions are the module code. So the set of types and functions in the module.
 
 /// A `StructDefinition` is a user type definition. It defines all the fields declared on the type.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct StructDefinition {
     /// The `StructHandle` for this `StructDefinition`. This has the name and the resource flag
     /// for the type.
@@ -267,8 +274,9 @@ pub struct StructDefinition {
 
 /// A `FieldDefinition` is the definition of a field: the type the field is defined on,
 /// its name and the field type.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct FieldDefinition {
     /// The type (resource or unrestricted) the field is defined on.
     pub struct_: StructHandleIndex,
@@ -280,15 +288,19 @@ pub struct FieldDefinition {
 
 /// A `FunctionDefinition` is the implementation of a function. It defines
 /// the *prototype* of the function and the function body.
-#[derive(Arbitrary, Clone, Debug, Default, Eq, PartialEq)]
-#[proptest(params = "usize")]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(params = "usize"))]
 pub struct FunctionDefinition {
     /// The prototype of the function (module, name, signature).
     pub function: FunctionHandleIndex,
     /// Flags for this function (private, public, native, etc.)
     pub flags: u8,
     /// Code for this function.
-    #[proptest(strategy = "any_with::<CodeUnit>(params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "any_with::<CodeUnit>(params)")
+    )]
     pub code: CodeUnit,
 }
 
@@ -310,8 +322,9 @@ impl FunctionDefinition {
 
 /// A type definition. `SignatureToken` allows the definition of the set of known types and their
 /// composition.
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
-#[proptest(no_params)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct TypeSignature(pub SignatureToken);
 
 /// A `FunctionSignature` describes the types of a function.
@@ -319,14 +332,21 @@ pub struct TypeSignature(pub SignatureToken);
 /// The `FunctionSignature` is polymorphic: it can have type parameters in the argument and return
 /// types and carries kind constraints for those type parameters (empty list for non-generic
 /// functions).
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
-#[proptest(params = "usize")]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(params = "usize"))]
 pub struct FunctionSignature {
     /// The list of return types.
-    #[proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")
+    )]
     pub return_types: Vec<SignatureToken>,
     /// The list of arguments to the function.
-    #[proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")
+    )]
     pub arg_types: Vec<SignatureToken>,
     /// The kind constraints of the type parameters.
     pub kind_constraints: Vec<Kind>,
@@ -336,10 +356,15 @@ pub struct FunctionSignature {
 ///
 /// Locals include the arguments to the function from position `0` to argument `count - 1`.
 /// The remaining elements are the type of each local.
-#[derive(Arbitrary, Clone, Debug, Default, Eq, Hash, PartialEq)]
-#[proptest(params = "usize")]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(params = "usize"))]
 pub struct LocalsSignature(
-    #[proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")] pub Vec<SignatureToken>,
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")
+    )]
+    pub Vec<SignatureToken>,
 );
 
 impl LocalsSignature {
@@ -364,7 +389,8 @@ pub type TypeParameterIndex = u16;
 /// must follow.
 ///
 /// Currently there are two kinds in Move: `resource` and `copyable`.
-#[derive(Arbitrary, Debug, Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum Kind {
     /// `resource` types must follow move semantics and various resource safety rules.
     Resource,
@@ -414,6 +440,7 @@ pub enum SignatureToken {
 }
 
 /// `Arbitrary` for `SignatureToken` cannot be derived automatically as it's a recursive type.
+#[cfg(any(test, feature = "testing"))]
 impl Arbitrary for SignatureToken {
     type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
@@ -576,15 +603,19 @@ impl SignatureToken {
 }
 
 /// A `CodeUnit` is the body of a function. It has the function header and the instruction stream.
-#[derive(Arbitrary, Clone, Debug, Default, Eq, PartialEq)]
-#[proptest(params = "usize")]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(params = "usize"))]
 pub struct CodeUnit {
     /// Max stack size for the function - currently unused.
     pub max_stack_size: u16,
     /// List of locals type. All locals are typed.
     pub locals: LocalsSignatureIndex,
     /// Code stream, function body.
-    #[proptest(strategy = "vec(any::<Bytecode>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<Bytecode>(), 0..=params)")
+    )]
     pub code: Vec<Bytecode>,
 }
 
@@ -601,8 +632,9 @@ impl CodeUnit {
 ///
 /// Bytecodes operate on a stack machine and each bytecode has side effect on the stack and the
 /// instruction stream.
-#[derive(Arbitrary, Clone, Hash, Eq, PartialEq)]
-#[proptest(no_params)]
+#[derive(Clone, Hash, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum Bytecode {
     /// Pop and discard the value at the top of the stack.
     /// The value on the stack must be an unrestricted type.
@@ -1135,42 +1167,73 @@ pub struct CompiledScript(CompiledScriptMut);
 
 /// A mutable version of `CompiledScript`. Converting to a `CompiledScript` requires this to pass
 /// the bounds checker.
-#[derive(Arbitrary, Clone, Default, Eq, PartialEq, Debug)]
-#[proptest(params = "usize")]
+#[derive(Clone, Default, Eq, PartialEq, Debug)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(params = "usize"))]
 pub struct CompiledScriptMut {
     /// Handles to all modules referenced.
-    #[proptest(strategy = "vec(any::<ModuleHandle>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<ModuleHandle>(), 0..=params)")
+    )]
     pub module_handles: Vec<ModuleHandle>,
     /// Handles to external/imported types.
-    #[proptest(strategy = "vec(any::<StructHandle>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<StructHandle>(), 0..=params)")
+    )]
     pub struct_handles: Vec<StructHandle>,
     /// Handles to external/imported functions.
-    #[proptest(strategy = "vec(any::<FunctionHandle>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<FunctionHandle>(), 0..=params)")
+    )]
     pub function_handles: Vec<FunctionHandle>,
 
     /// Type pool. All external types referenced by the transaction.
-    #[proptest(strategy = "vec(any::<TypeSignature>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<TypeSignature>(), 0..=params)")
+    )]
     pub type_signatures: TypeSignaturePool,
     /// Function signature pool. The signatures of the function referenced by the transaction.
-    #[proptest(strategy = "vec(any_with::<FunctionSignature>(params), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any_with::<FunctionSignature>(params), 0..=params)")
+    )]
     pub function_signatures: FunctionSignaturePool,
     /// Locals signature pool. The signature of the locals in `main`.
-    #[proptest(strategy = "vec(any_with::<LocalsSignature>(params), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any_with::<LocalsSignature>(params), 0..=params)")
+    )]
     pub locals_signatures: LocalsSignaturePool,
 
     /// String pool. All literals and identifiers used in this transaction.
-    #[proptest(strategy = "vec(\".*\", 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(\".*\", 0..=params)")
+    )]
     pub string_pool: StringPool,
     /// ByteArray pool. The byte array literals used in the transaction.
-    #[proptest(strategy = "vec(any::<ByteArray>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<ByteArray>(), 0..=params)")
+    )]
     pub byte_array_pool: ByteArrayPool,
     /// Address pool. The address literals used in the module. Those include literals for
     /// code references (`ModuleHandle`).
-    #[proptest(strategy = "vec(any::<AccountAddress>(), 0..=params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "vec(any::<AccountAddress>(), 0..=params)")
+    )]
     pub address_pool: AddressPool,
 
     /// The main (script) to execute.
-    #[proptest(strategy = "any_with::<FunctionDefinition>(params)")]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "any_with::<FunctionDefinition>(params)")
+    )]
     pub main: FunctionDefinition,
 }
 
@@ -1277,6 +1340,7 @@ pub struct CompiledModuleMut {
 
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
+#[cfg(any(test, feature = "testing"))]
 impl Arbitrary for CompiledModuleMut {
     type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled module.

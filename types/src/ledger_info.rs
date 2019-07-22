@@ -15,6 +15,7 @@ use crypto::{
 };
 use failure::prelude::*;
 use nextgen_crypto::ed25519::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -40,7 +41,8 @@ use std::{
 /// LedgerInfo with the `version` being the latest version that will be committed if B gets 2f+1
 /// votes. It sets `consensus_data_hash` to represent B so that if those 2f+1 votes are gathered a
 /// QC is formed on B.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, IntoProto, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, IntoProto, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::ledger_info::LedgerInfo)]
 pub struct LedgerInfo {
     /// The version of latest transaction in the ledger.

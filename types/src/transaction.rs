@@ -28,6 +28,7 @@ use crypto::{
     signing, HashValue, PrivateKey, PublicKey, Signature,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
@@ -444,7 +445,8 @@ impl IntoProto for SignatureCheckedTransaction {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct SignedTransactionWithProof {
     pub version: Version,
     pub signed_transaction: SignedTransaction,
@@ -671,7 +673,8 @@ impl TransactionOutput {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::transaction_info::TransactionInfo)]
 pub struct TransactionInfo {
     /// The hash of this transaction.
