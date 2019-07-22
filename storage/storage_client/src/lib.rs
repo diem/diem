@@ -14,7 +14,9 @@ use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
+use metrics::counters::SVC_COUNTERS;
 use proto_conv::{FromProto, IntoProto};
+use protobuf::Message;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::{storage::GetExecutorStartupInfoRequest, storage_grpc},
@@ -42,6 +44,12 @@ fn convert_grpc_response<T>(
     future::ready(response.map_err(convert_grpc_err))
         .map_ok(Future01CompatExt::compat)
         .and_then(|x| x.map_err(convert_grpc_err))
+}
+
+fn log_and_convert<M: Message, P: IntoProto<ProtoType = M>>(message: P) -> M {
+    let proto_message = message.into_proto();
+    SVC_COUNTERS.message(&proto_message);
+    proto_message
 }
 
 /// This provides storage read interfaces backed by real storage service.
@@ -91,16 +99,19 @@ impl StorageRead for StorageReadServiceClient {
             client_known_version,
             requested_items,
         };
-        convert_grpc_response(self.client.update_to_latest_ledger_async(&req.into_proto()))
-            .map(|resp| {
-                let rust_resp = UpdateToLatestLedgerResponse::from_proto(resp?)?;
-                Ok((
-                    rust_resp.response_items,
-                    rust_resp.ledger_info_with_sigs,
-                    rust_resp.validator_change_events,
-                ))
-            })
-            .boxed()
+        convert_grpc_response(
+            self.client
+                .update_to_latest_ledger_async(&log_and_convert(req)),
+        )
+        .map(|resp| {
+            let rust_resp = UpdateToLatestLedgerResponse::from_proto(resp?)?;
+            Ok((
+                rust_resp.response_items,
+                rust_resp.ledger_info_with_sigs,
+                rust_resp.validator_change_events,
+            ))
+        })
+        .boxed()
     }
 
     fn get_transactions(
@@ -127,7 +138,7 @@ impl StorageRead for StorageReadServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let req =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
-        convert_grpc_response(self.client.get_transactions_async(&req.into_proto()))
+        convert_grpc_response(self.client.get_transactions_async(&log_and_convert(req)))
             .map(|resp| {
                 let rust_resp = GetTransactionsResponse::from_proto(resp?)?;
                 Ok(rust_resp.txn_list_with_proof)
@@ -152,7 +163,7 @@ impl StorageRead for StorageReadServiceClient {
         let req = GetAccountStateWithProofByStateRootRequest::new(address, state_root_hash);
         convert_grpc_response(
             self.client
-                .get_account_state_with_proof_by_state_root_async(&req.into_proto()),
+                .get_account_state_with_proof_by_state_root_async(&log_and_convert(req)),
         )
         .map(|resp| {
             let resp = GetAccountStateWithProofByStateRootResponse::from_proto(resp?)?;
@@ -211,7 +222,7 @@ impl StorageWrite for StorageWriteServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
-        convert_grpc_response(self.client.save_transactions_async(&req.into_proto()))
+        convert_grpc_response(self.client.save_transactions_async(&log_and_convert(req)))
             .map_ok(|_| ())
             .boxed()
     }
