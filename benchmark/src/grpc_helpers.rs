@@ -26,12 +26,15 @@ use types::{
 
 use crate::OP_COUNTER;
 
+/// Timeout duration for grpc call option.
+const GRPC_TIMEOUT_MS: u64 = 8_000;
+
 /// Return a parameter that controls how "patient" AC clients are,
 /// who are waiting the response from AC for this amount of time.
 fn get_default_grpc_call_option() -> CallOption {
     CallOption::default()
         .wait_for_ready(true)
-        .timeout(std::time::Duration::from_millis(8_000))
+        .timeout(std::time::Duration::from_millis(GRPC_TIMEOUT_MS))
 }
 
 /// Divide generic items into a vector of chunks of nearly equal size.
