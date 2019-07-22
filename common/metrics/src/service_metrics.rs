@@ -28,9 +28,11 @@ use grpcio::RpcContext;
 use logger::prelude::*;
 use prometheus::{
     core::{Collector, Desc},
+    exponential_buckets,
     proto::MetricFamily,
     HistogramOpts, HistogramTimer, HistogramVec, IntCounterVec, Opts, Result,
 };
+use protobuf::Message;
 use std::str;
 
 #[derive(Clone)]
@@ -41,11 +43,15 @@ pub struct ServiceMetrics {
     // e.g., calc_service.duration_sum{method="add"} = 6
     num_req: IntCounterVec,
     num_error: IntCounterVec,
-    duration: HistogramVec, // we want .avg and .p90 (but really p99)
+    duration: HistogramVec,     // we want .avg and .p90 (but really p99)
+    message_size: HistogramVec, // collect the size of messages, up to max-send-size
 }
 
 impl ServiceMetrics {
     pub fn default() -> ServiceMetrics {
+        let message_size_buckets = exponential_buckets(2.0, 2.0, 22)
+            .expect("Could not create buckets for message-size histogram");
+
         ServiceMetrics {
             num_req: IntCounterVec::new(Opts::new("num_req", "Number of requests"), &["method"])
                 .unwrap(),
@@ -55,6 +61,13 @@ impl ServiceMetrics {
                 //TODO: frumious: how to ensure units?
                 HistogramOpts::new("duration", "Duration for a request, in units of time"),
                 &["method"],
+            )
+            .unwrap(),
+
+            message_size: HistogramVec::new(
+                HistogramOpts::new("message_size", "gRPC message size, in bytes (or close to)")
+                    .buckets(message_size_buckets),
+                &["message"],
             )
             .unwrap(),
         }
@@ -96,6 +109,14 @@ impl ServiceMetrics {
         }
     }
 
+    pub fn message<M: Message>(&self, message: &M) {
+        let computed_size = message.compute_size();
+        let message_fullname = message.descriptor().full_name();
+        self.message_size
+            .with_label_values(&[message_fullname])
+            .observe(f64::from(computed_size));
+    }
+
     pub fn register_default(&self) -> Result<()> {
         prometheus::register(Box::new(self.clone()))
     }
@@ -108,6 +129,7 @@ impl Collector for ServiceMetrics {
             self.num_req.desc(),
             self.num_error.desc(),
             self.duration.desc(),
+            self.message_size.desc(),
         ]
         .into_iter()
         .map(|m| m[0])
@@ -120,6 +142,7 @@ impl Collector for ServiceMetrics {
             self.num_req.collect(),
             self.num_error.collect(),
             self.duration.collect(),
+            self.message_size.collect(),
         ];
         // The model here is annoying --
         // I'd like a single MetricFamily with a name (of the service) and
