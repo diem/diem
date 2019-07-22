@@ -11,6 +11,7 @@ use canonical_serialization::{
 };
 use crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
 use failure::Result;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -51,21 +52,11 @@ impl ResourceKey {
 /// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
 #[derive(
-    Serialize,
-    Deserialize,
-    Debug,
-    PartialEq,
-    Hash,
-    Eq,
-    Clone,
-    PartialOrd,
-    Ord,
-    FromProto,
-    IntoProto,
-    Arbitrary,
+    Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord, FromProto, IntoProto,
 )]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(ProtoModuleId)]
-#[proptest(no_params)]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct ModuleId {
     address: AccountAddress,
     name: String,

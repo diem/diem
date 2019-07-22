@@ -3,6 +3,7 @@
 
 pub mod definition;
 pub mod position;
+#[cfg(any(test, feature = "testing"))]
 pub mod proptest_proof;
 pub mod treebits;
 

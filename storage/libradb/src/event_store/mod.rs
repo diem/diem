@@ -115,7 +115,7 @@ impl EventStore {
                 // from the most recent end, for limited tries.
                 // TODO: Optimize: Physical store use reverse order.
                 let mut n_try_recent = 10;
-                #[cfg(test)]
+                #[cfg(any(test, feature = "testing"))]
                 let mut n_try_recent = 1;
                 while seq > 0 && n_try_recent > 0 {
                     seq -= 1;
