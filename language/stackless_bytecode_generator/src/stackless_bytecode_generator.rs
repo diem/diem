@@ -48,7 +48,7 @@ impl<'a> StacklessModuleGenerator<'a> {
             .function_defs()
             .iter()
             .map(move |function_definition| {
-                let cfg = VMControlFlowGraph::new(&function_definition.code.code).unwrap();
+                let cfg = VMControlFlowGraph::new(&function_definition.code.code);
                 StacklessBytecodeGenerator::new(self.module, function_definition, &cfg)
                     .generate_function()
             })

@@ -46,12 +46,19 @@ impl<'a> CodeUnitVerifier<'a> {
         if function_definition.is_native() {
             return vec![];
         }
-        let result: Result<VMControlFlowGraph, VMStaticViolation> =
-            VMControlFlowGraph::new(&function_definition.code.code);
-        match result {
-            Ok(cfg) => self.verify_function_inner(function_definition, &cfg),
-            Err(e) => vec![e],
+
+        let code = &function_definition.code.code;
+
+        // Check to make sure that the bytecode vector ends with a branching instruction.
+        if let Some(bytecode) = code.last() {
+            if !bytecode.is_branch() {
+                return vec![VMStaticViolation::InvalidFallThrough];
+            }
+        } else {
+            return vec![VMStaticViolation::InvalidFallThrough];
         }
+
+        self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
     }
 
     fn verify_function_inner(

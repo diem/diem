@@ -5,12 +5,8 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     marker::Sized,
-    result::Result,
 };
-use vm::{
-    errors::VMStaticViolation,
-    file_format::{Bytecode, CodeOffset},
-};
+use vm::file_format::{Bytecode, CodeOffset};
 
 // BTree/Hash agnostic type wrappers
 type Map<K, V> = BTreeMap<K, V>;
@@ -21,9 +17,7 @@ pub type BlockId = CodeOffset;
 /// A trait that specifies the basic requirements for a CFG
 pub trait ControlFlowGraph: Sized {
     /// Given a vector of bytecodes, constructs the control flow graph for it.
-    /// Return a VMStaticViolation if we were unable to construct a control flow graph, or
-    /// if we encounter an invalid jump instruction.
-    fn new(code: &[Bytecode]) -> Result<Self, VMStaticViolation>;
+    fn new(code: &[Bytecode]) -> Self;
 
     /// Given a block ID, return the reachable blocks from that block
     /// including the block itself.
@@ -156,16 +150,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
         self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
     }
 
-    fn new(code: &[Bytecode]) -> Result<Self, VMStaticViolation> {
-        // Check to make sure that the bytecode vector ends with a branching instruction.
-        if let Some(bytecode) = code.last() {
-            if !Bytecode::is_branch(bytecode) {
-                return Err(VMStaticViolation::InvalidFallThrough);
-            }
-        } else {
-            return Err(VMStaticViolation::InvalidFallThrough);
-        }
-
+    fn new(code: &[Bytecode]) -> Self {
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
@@ -175,7 +160,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
         }
 
         // Create basic blocks
-        let mut ret = VMControlFlowGraph { blocks: Map::new() };
+        let mut cfg = VMControlFlowGraph { blocks: Map::new() };
         let mut entry = 0;
         for pc in 0..code.len() {
             let co_pc: CodeOffset = pc as CodeOffset;
@@ -188,12 +173,12 @@ impl ControlFlowGraph for VMControlFlowGraph {
                     exit: co_pc,
                     successors,
                 };
-                ret.blocks.insert(entry, bb);
+                cfg.blocks.insert(entry, bb);
                 entry = co_pc + 1;
             }
         }
 
         assert!(entry == code.len() as CodeOffset);
-        Ok(ret)
+        cfg
     }
 }
