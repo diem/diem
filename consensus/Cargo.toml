@@ -60,13 +60,7 @@ rusty-fork = "0.2.1"
 config_builder = { path = "../config/config_builder" }
 execution_service = { path = "../execution/execution_service" }
 storage_service = { path = "../storage/storage_service" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
-
-[dev-dependencies.nextgen_crypto]
-features = ["testing"]
-path = "../crypto/nextgen_crypto"
-
-[dev-dependencies.types]
-features = ["testing"]
-path = "../types"

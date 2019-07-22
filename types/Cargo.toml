@@ -34,9 +34,8 @@ proto_conv = { path = "../common/proto_conv", features = ["derive"] }
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
 
-[dev-dependencies.nextgen_crypto]
-features = ["testing"]
-path = "../crypto/nextgen_crypto"
+[dev-dependencies]
+nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
 
 [features]
 default = []

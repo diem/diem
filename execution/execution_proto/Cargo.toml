@@ -22,6 +22,5 @@ types = { path = "../../types" }
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }
 
-[dev-dependencies.types]
-features = ["testing"]
-path = "../../types"
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }

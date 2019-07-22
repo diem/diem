@@ -36,5 +36,10 @@ features = ["push"]
 assert_matches = "1.3.0"
 compiler = { path = "../../compiler"}
 
+types = { path = "../../../types", features = ["testing"] }
+vm = { path = "../", features = ["testing"]}
+
 [features]
+default = []
 instruction_synthesis = []
+testing = ["types/testing"]

@@ -15,6 +15,7 @@ use crypto::{
 use failure::prelude::*;
 use hex;
 use nextgen_crypto::{ed25519::*, VerifyingKey};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::OsRng, Rng};
@@ -30,9 +31,8 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 
 /// A struct that represents an account address.
 /// Currently Public Key is used.
-#[derive(
-    Arbitrary, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Serialize, Deserialize, Copy,
-)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Serialize, Deserialize, Copy)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
 impl AccountAddress {

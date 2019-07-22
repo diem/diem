@@ -5,14 +5,17 @@
 
 use crate::language_storage::ModuleId;
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest::{collection::vec, prelude::*};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 
 // We want conversions here so that we don't need to be dealing with the unknown default values
 // that we want in the protobuf.
-#[derive(Arbitrary, Clone, PartialEq, Eq, Debug, Hash)]
-#[proptest(no_params)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum VMValidationStatus {
     InvalidSignature,
     InvalidAuthKey,
@@ -33,8 +36,9 @@ pub enum VMValidationStatus {
 }
 
 // TODO: Add string parameters to all the other types as well
-#[derive(Arbitrary, Clone, PartialEq, Eq, Debug, Hash)]
-#[proptest(no_params)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum VMVerificationError {
     IndexOutOfBounds(String),
     RangeOutOfBounds(String),
@@ -105,8 +109,9 @@ pub enum VMVerificationError {
     CreateAccountTypeMismatchError(String),
 }
 
-#[derive(Arbitrary, Clone, PartialEq, Eq, Debug, Hash)]
-#[proptest(no_params)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum VMVerificationStatus {
     /// Verification error in a transaction script.
     Script(VMVerificationError),
@@ -117,7 +122,8 @@ pub enum VMVerificationStatus {
     Dependency(ModuleId, VMVerificationError),
 }
 
-#[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum VMInvariantViolationError {
     OutOfBoundsIndex,
     OutOfBoundsRange,
@@ -130,7 +136,8 @@ pub enum VMInvariantViolationError {
     InternalTypeError,
 }
 
-#[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum BinaryError {
     Malformed,
     BadMagic,
@@ -144,7 +151,8 @@ pub enum BinaryError {
     DuplicateTable,
 }
 
-#[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum DynamicReferenceErrorType {
     MoveOfBorrowedResource,
     GlobalRefAlreadyReleased,
@@ -152,14 +160,16 @@ pub enum DynamicReferenceErrorType {
     GlobalAlreadyBorrowed,
 }
 
-#[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum ArithmeticErrorType {
     Underflow,
     Overflow,
     DivisionByZero,
 }
 
-#[derive(Arbitrary, Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum ExecutionStatus {
     Executed,
     OutOfGas,
@@ -181,8 +191,9 @@ pub enum ExecutionStatus {
     DuplicateModuleName,
 }
 
-#[derive(Arbitrary, Clone, PartialEq, Eq, Debug, Hash)]
-#[proptest(no_params)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum VMStatus {
     Validation(VMValidationStatus),
     InvariantViolation(VMInvariantViolationError),
@@ -201,8 +212,11 @@ pub enum VMStatus {
     //
     // Also reduce the size of the vector because VMVerificationStatus is slow to generate
     // for the exact same reason.
-    #[proptest(
-        strategy = "vec(any::<VMVerificationStatus>(), 0..16).prop_map(VMStatus::Verification)"
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(
+            strategy = "vec(any::<VMVerificationStatus>(), 0..16).prop_map(VMStatus::Verification)"
+        )
     )]
     Verification(Vec<VMVerificationStatus>),
 }

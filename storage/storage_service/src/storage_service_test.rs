@@ -5,7 +5,9 @@ use super::*;
 use config::config::NodeConfigHelpers;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
-use libradb::{mock_genesis::db_with_mock_genesis, test_helper::arb_blocks_to_commit};
+use libradb::mock_genesis::db_with_mock_genesis;
+#[cfg(any(test, feature = "testing"))]
+use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
 use std::collections::HashMap;
 use storage_client::{

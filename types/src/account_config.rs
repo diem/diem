@@ -15,6 +15,7 @@ use canonical_serialization::{
     SimpleDeserializer,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::{collections::BTreeMap, convert::TryInto};
 
@@ -67,7 +68,8 @@ pub fn account_struct_tag() -> StructTag {
 
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
-#[derive(Arbitrary, Debug, Default)]
+#[derive(Debug, Default)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountResource {
     balance: u64,
     sequence_number: u64,
