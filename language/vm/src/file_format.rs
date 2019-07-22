@@ -32,6 +32,7 @@ use crate::{
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
+use std::collections::BTreeSet;
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Generic index into one of the tables in the binary format.
@@ -1041,6 +1042,62 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
         }
+    }
+}
+
+impl Bytecode {
+    /// Return true if this bytecode instruction always branches
+    pub fn is_unconditional_branch(&self) -> bool {
+        match self {
+            Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Return true if the branching behavior of this bytecode instruction depends on a runtime
+    /// value
+    pub fn is_conditional_branch(&self) -> bool {
+        match self {
+            Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this bytecode instruction is either a conditional or an unconditional branch
+    pub fn is_branch(&self) -> bool {
+        self.is_conditional_branch() || self.is_unconditional_branch()
+    }
+
+    /// Returns the offset that this bytecode instruction branches to, if any.
+    /// Note that return and abort are branch instructions, but have no offset.
+    pub fn offset(&self) -> Option<&CodeOffset> {
+        match self {
+            Bytecode::BrFalse(offset) | Bytecode::BrTrue(offset) | Bytecode::Branch(offset) => {
+                Some(offset)
+            }
+            _ => None,
+        }
+    }
+
+    // TODO: switch from Set to Vec
+    /// Return the successor offsets of this bytecode instruction.
+    pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> BTreeSet<CodeOffset> {
+        let bytecode = &code[pc as usize];
+        let mut v = BTreeSet::new();
+
+        if let Some(offset) = bytecode.offset() {
+            v.insert(*offset);
+        }
+
+        if pc + 1 >= code.len() as CodeOffset {
+            return v;
+        }
+
+        if !bytecode.is_branch() || bytecode.is_conditional_branch() {
+            v.insert(pc + 1);
+        }
+
+        v
     }
 }
 

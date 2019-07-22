@@ -85,62 +85,13 @@ impl VMControlFlowGraph {
     fn record_block_ids(pc: CodeOffset, code: &[Bytecode], block_ids: &mut Set<BlockId>) {
         let bytecode = &code[pc as usize];
 
-        if let Some(offset) = VMControlFlowGraph::offset(bytecode) {
+        if let Some(offset) = bytecode.offset() {
             block_ids.insert(*offset);
         }
 
-        if VMControlFlowGraph::is_branch(bytecode) && pc + 1 < (code.len() as CodeOffset) {
+        if bytecode.is_branch() && pc + 1 < (code.len() as CodeOffset) {
             block_ids.insert(pc + 1);
         }
-    }
-
-    fn is_unconditional_branch(bytecode: &Bytecode) -> bool {
-        match bytecode {
-            Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_) => true,
-            _ => false,
-        }
-    }
-
-    fn is_conditional_branch(bytecode: &Bytecode) -> bool {
-        match bytecode {
-            Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => true,
-            _ => false,
-        }
-    }
-
-    fn is_branch(bytecode: &Bytecode) -> bool {
-        VMControlFlowGraph::is_conditional_branch(bytecode)
-            || VMControlFlowGraph::is_unconditional_branch(bytecode)
-    }
-
-    fn offset(bytecode: &Bytecode) -> Option<&CodeOffset> {
-        match bytecode {
-            Bytecode::BrFalse(offset) | Bytecode::BrTrue(offset) | Bytecode::Branch(offset) => {
-                Some(offset)
-            }
-            _ => None,
-        }
-    }
-
-    fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Set<CodeOffset> {
-        let bytecode = &code[pc as usize];
-        let mut v = Set::new();
-
-        if let Some(offset) = VMControlFlowGraph::offset(bytecode) {
-            v.insert(*offset);
-        }
-
-        if pc + 1 >= code.len() as CodeOffset {
-            return v;
-        }
-
-        if !VMControlFlowGraph::is_branch(bytecode)
-            || VMControlFlowGraph::is_conditional_branch(bytecode)
-        {
-            v.insert(pc + 1);
-        }
-
-        v
     }
 
     /// A utility function that implements BFS-reachability from block_id with
@@ -208,7 +159,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
     fn new(code: &[Bytecode]) -> Result<Self, VMStaticViolation> {
         // Check to make sure that the bytecode vector ends with a branching instruction.
         if let Some(bytecode) = code.last() {
-            if !VMControlFlowGraph::is_branch(bytecode) {
+            if !Bytecode::is_branch(bytecode) {
                 return Err(VMStaticViolation::InvalidFallThrough);
             }
         } else {
@@ -231,7 +182,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
 
             // Create a basic block
             if VMControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = VMControlFlowGraph::get_successors(co_pc, code);
+                let successors = Bytecode::get_successors(co_pc, code);
                 let bb = BasicBlock {
                     entry,
                     exit: co_pc,
