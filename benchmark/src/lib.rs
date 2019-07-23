@@ -17,6 +17,7 @@ use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
 use metrics::OpMetrics;
 use proto_conv::IntoProto;
+use rand::Rng;
 use std::{convert::TryFrom, slice::Chunks, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
@@ -74,11 +75,17 @@ pub struct Benchmarker {
     wallet: WalletLibrary,
     /// Interface to metric counters in validator nodes, e.g., #commited_txns in storage.
     debug_client: NodeDebugClient,
+    /// Upper bound duration to stagger the clients before submitting TXNs.
+    stagger_range_ms: u16,
 }
 
 impl Benchmarker {
     /// Construct Benchmarker with a vector of AC clients and a NodeDebugClient.
-    pub fn new(clients: Vec<AdmissionControlClient>, debug_client: NodeDebugClient) -> Self {
+    pub fn new(
+        clients: Vec<AdmissionControlClient>,
+        debug_client: NodeDebugClient,
+        stagger_range_ms: u16,
+    ) -> Self {
         if clients.is_empty() {
             panic!("failed to create benchmarker without any AdmissionControlClient");
         }
@@ -88,6 +95,7 @@ impl Benchmarker {
             clients: arc_clients,
             wallet,
             debug_client,
+            stagger_range_ms,
         }
     }
 
@@ -153,9 +161,13 @@ impl Benchmarker {
             results.push(account);
             mint_requests.push(mint_txn_req);
         }
-        // We stop immediately if any minting fails.
+        // Disable client staggering for mint operations.
+        let stagger_range_ms = self.stagger_range_ms;
+        self.stagger_range_ms = 1;
         let (num_accepted, num_committed, _, _) =
             self.submit_and_wait_txn_committed(&mint_requests);
+        self.stagger_range_ms = stagger_range_ms;
+        // We stop immediately if any minting fails.
         if num_accepted != mint_requests.len() || num_accepted - num_committed > 0 {
             bail!(
                 "{} of {} mint transaction(s) accepted, and {} failed",
@@ -282,6 +294,16 @@ impl Benchmarker {
     ///  Transaction submission and waiting for commit APIs and helpers.  ///
     /// ----------------------------------------------------------------- ///
 
+    /// Put client to sleep for a random duration before submitting TXN requests.
+    /// Return how long the client is scheduled to be delayed.
+    fn stagger_client(stagger_range_ms: u16) -> u16 {
+        let mut rng = rand::thread_rng();
+        // Double check the upper bound value to be no less than 1.
+        let duration = rng.gen_range(0, std::cmp::max(1, stagger_range_ms));
+        thread::sleep(time::Duration::from_millis(u64::from(duration)));
+        duration
+    }
+
     /// Send requests to AC async, wait for responses from AC.
     /// Return #accepted TXNs and submission duration.
     pub fn submit_txns(
@@ -292,22 +314,24 @@ impl Benchmarker {
         let now = time::Instant::now();
         // Zip txn_req_chunks with clients: when first iter returns none,
         // zip will short-circuit and next will not be called on the second iter.
-        let children: Vec<thread::JoinHandle<Vec<ProtoSubmitTransactionResponse>>> = txn_req_chunks
+        let children: Vec<thread::JoinHandle<_>> = txn_req_chunks
             .zip(self.clients.iter().cycle())
             .map(|(chunk, client)| {
                 let local_chunk = Vec::from(chunk);
                 let local_client = Arc::clone(client);
-                info!(
-                    "Dispatch a chunk of {} requests to client.",
-                    local_chunk.len()
-                );
+                let stagger_range_ms = self.stagger_range_ms;
                 // Spawn threads with corresponding client.
                 thread::spawn(
-                    // Submit a chunk of TXN requests async, wait and check the AC status,
-                    // return the list of responses that are accepted by AC.
-                    // Ignore (but count) both failed submissions and AC-rejected TXNs.
-                    move || -> Vec<ProtoSubmitTransactionResponse> {
-                        submit_and_wait_txn_requests(&local_client, &local_chunk)
+                    // Dispatch TXN requests to client and submit, return the list of responses
+                    // that are accepted by AC, and how long the client is delayed.
+                    move || -> (Vec<ProtoSubmitTransactionResponse>, u16) {
+                        let delay_duration_ms = Self::stagger_client(stagger_range_ms);
+                        info!(
+                            "Dispatch a chunk of {} requests to client and start to submit after staggered {} ms.",
+                            local_chunk.len(),
+                            delay_duration_ms,
+                        );
+                        (submit_and_wait_txn_requests(&local_client, &local_chunk), delay_duration_ms)
                     },
                 )
             })
@@ -315,11 +339,18 @@ impl Benchmarker {
         // Wait for threads and gather reponses.
         // TODO: Group response by error type and report staticstics.
         let mut txn_resps: Vec<ProtoSubmitTransactionResponse> = vec![];
+        let mut delay_duration_ms = self.stagger_range_ms;
         for child in children {
-            let txn_resp_chunk = child.join().expect("failed to join a request thread");
-            txn_resps.extend(txn_resp_chunk.into_iter());
+            let resp_tuple = child.join().expect("failed to join a request thread");
+            txn_resps.extend(resp_tuple.0.into_iter());
+            // Start counting time as soon as the first client starts to submit TXNs.
+            delay_duration_ms = std::cmp::min(delay_duration_ms, resp_tuple.1);
         }
-        let request_duration_ms = now.elapsed().as_millis();
+        let mut request_duration_ms = now.elapsed().as_millis();
+        // Calling stagger_client() should ensure delay duration strictly < self.stagger_range_ms.
+        if delay_duration_ms < self.stagger_range_ms {
+            request_duration_ms -= u128::from(delay_duration_ms);
+        }
         let comitted_during_submit = self.get_committed_txns_counter() - init_storage_cntr;
         info!(
             "Submitted and accepted {} TXNs within {} ms, during which {} already committed",

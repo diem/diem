@@ -72,6 +72,10 @@ pub struct Opt {
     /// If not specified or equals 0, it will be set to validator_addresses.len().
     #[structopt(short = "c", long = "num_clients", default_value = "0")]
     pub num_clients: usize,
+    /// Randomly distribute the clients to start sending requests over the stagger_range_ms time.
+    /// A value of 1 ms effectively means starting all clients at once.
+    #[structopt(short = "g", long = "stagger_range_ms", default_value = "64")]
+    pub stagger_range_ms: u16,
     /// Number of repetition to attempt, in one epoch, to increase overal number of sent TXNs.
     #[structopt(short = "r", long = "num_rounds", default_value = "1")]
     pub num_rounds: u64,

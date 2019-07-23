@@ -83,7 +83,7 @@ fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
 }
 
 /// Send TXN requests to AC async, wait for and check the responses from AC.
-/// Return only the responses of accepted TXN requests.
+/// Return the responses of only accepted TXN requests.
 /// Ignore but count both gRPC-failed submissions and AC-rejected TXNs.
 pub fn submit_and_wait_txn_requests(
     client: &AdmissionControlClient,
