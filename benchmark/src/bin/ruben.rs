@@ -11,7 +11,9 @@ use debug_interface::NodeDebugClient;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::{self, prelude::*};
 use metrics::metric_server::start_server;
-use std::sync::Arc;
+use num::traits::Float;
+use statistical::{mean, population_standard_deviation};
+use std::{fmt::Display, sync::Arc};
 
 /// Simply submit some TXNs to test the liveness of the network. Here we use ring TXN pattern
 /// to generate request, which scales linear with the number of accounts.
@@ -46,6 +48,7 @@ pub(crate) fn measure_throughput(
     num_rounds: u64,
     num_epochs: u64,
 ) {
+    let mut req_throughput_seq = vec![];
     let mut txn_throughput_seq = vec![];
     for _ in 0..num_epochs {
         let mut repeated_tx_reqs = vec![];
@@ -53,13 +56,29 @@ pub(crate) fn measure_throughput(
             let tx_reqs = bm.gen_pairwise_txn_requests(accounts);
             repeated_tx_reqs.extend(tx_reqs.into_iter());
         }
-        let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs);
+        let (req_throughput, txn_throughput) = bm.measure_txn_throughput(&repeated_tx_reqs);
+        req_throughput_seq.push(req_throughput);
         txn_throughput_seq.push(txn_throughput);
     }
     info!(
-        "{:?} epoch(s) of TXN throughput = {:?}",
-        num_epochs, txn_throughput_seq
+        "{:?} epoch(s) of REQ/TXN throughputs = {:?}",
+        num_epochs,
+        req_throughput_seq
+            .iter()
+            .zip(txn_throughput_seq.iter())
+            .collect::<Vec<_>>()
     );
+    calculate_avg_std(&req_throughput_seq, &"REQ Throughput");
+    calculate_avg_std(&txn_throughput_seq, &"TXN Throughput");
+}
+
+fn calculate_avg_std<T: Float + Display>(sequence: &[T], name: &str) -> (T, T) {
+    let (mean, std) = (
+        mean(sequence),
+        population_standard_deviation(sequence, None),
+    );
+    info!("{} Mean = {:.2} Stdev = {:.2}", name, mean, std);
+    (mean, std)
 }
 
 fn create_ac_client(conn_addr: &str) -> AdmissionControlClient {
