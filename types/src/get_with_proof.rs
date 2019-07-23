@@ -25,13 +25,11 @@ use crate::{
 use crypto::hash::CryptoHash;
 use failure::prelude::*;
 use nextgen_crypto::ed25519::*;
-#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::{cmp, mem, sync::Arc};
 
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::get_with_proof::UpdateToLatestLedgerRequest)]
 pub struct UpdateToLatestLedgerRequest {
     pub client_known_version: u64,
@@ -354,8 +352,7 @@ fn verify_get_txns_resp(
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
         account: AccountAddress,
@@ -484,8 +481,7 @@ impl IntoProto for RequestItem {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub enum ResponseItem {
     GetAccountTransactionBySequenceNumber {
         signed_transaction_with_proof: Option<SignedTransactionWithProof>,

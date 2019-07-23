@@ -29,7 +29,6 @@ pub mod proto;
 
 use crypto::HashValue;
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use types::{
@@ -134,8 +133,7 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct SaveTransactionsRequest {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
@@ -205,8 +203,7 @@ impl IntoProto for SaveTransactionsRequest {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct GetTransactionsRequest {
     pub start_version: Version,
     pub batch_size: u64,
@@ -261,8 +258,7 @@ impl IntoProto for GetTransactionsRequest {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::storage::GetTransactionsResponse)]
 pub struct GetTransactionsResponse {
     pub txn_list_with_proof: TransactionListWithProof,
@@ -281,8 +277,7 @@ impl GetTransactionsResponse {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct ExecutorStartupInfo {
     pub ledger_info: LedgerInfo,
     pub latest_version: Version,
@@ -334,8 +329,7 @@ impl IntoProto for ExecutorStartupInfo {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct GetExecutorStartupInfoResponse {
     pub info: Option<ExecutorStartupInfo>,
 }
