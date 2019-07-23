@@ -37,7 +37,7 @@ use std::{
 use tokio::runtime::TaskExecutor;
 use types::{transaction::TransactionListWithProof, validator_verifier::ValidatorVerifier};
 
-/// The response sent back from event_processor for the BlockRetrievalRequest.
+/// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
 pub struct BlockRetrievalResponse<T> {
     pub status: BlockRetrievalStatus,
