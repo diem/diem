@@ -11,7 +11,6 @@ pub mod get_with_proof;
 pub mod language_storage;
 pub mod ledger_info;
 pub mod proof;
-#[cfg(any(test, feature = "testing"))]
 pub mod proptest_types;
 pub mod proto;
 pub mod test_helpers;

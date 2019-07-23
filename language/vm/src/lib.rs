@@ -19,7 +19,6 @@ pub mod file_format_common;
 pub mod gas_schedule;
 pub mod internals;
 pub mod printers;
-#[cfg(any(test, feature = "testing"))]
 pub mod proptest_types;
 pub mod resolver;
 pub mod serializer;

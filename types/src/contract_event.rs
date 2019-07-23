@@ -17,7 +17,6 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 
@@ -101,8 +100,7 @@ impl CryptoHash for ContractEvent {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::events::EventWithProof)]
 pub struct EventWithProof {
     pub transaction_version: u64, // Should be `Version`, but FromProto derive won't work that way.

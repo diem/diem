@@ -54,7 +54,6 @@ use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
@@ -248,10 +247,10 @@ lazy_static! {
     Deserialize,
     Ord,
     PartialOrd,
+    Arbitrary,
     FromProto,
     IntoProto,
 )]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::access_path::AccessPath)]
 pub struct AccessPath {
     pub address: AccountAddress,

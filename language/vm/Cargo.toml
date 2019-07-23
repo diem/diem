@@ -19,10 +19,4 @@ types = { path = "../../types" }
 mirai-annotations = "^1.2.2"
 
 [features]
-default = []
 mirai-contracts = []
-testing = ["types/testing"]
-
-[dev-dependencies.types]
-features = ["testing"]
-path = "../../types"

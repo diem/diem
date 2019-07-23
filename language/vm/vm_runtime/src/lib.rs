@@ -111,7 +111,6 @@ mod frame;
 mod gas_meter;
 mod move_vm;
 mod process_txn;
-#[cfg(any(test, feature = "testing"))]
 mod proptest_types;
 mod runtime;
 mod value_serializer;

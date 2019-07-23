@@ -16,13 +16,11 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::{collections::BTreeMap, convert::TryFrom, fmt};
 
-#[derive(Clone, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
@@ -92,8 +90,7 @@ impl CryptoHash for AccountStateBlob {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct AccountStateWithProof {
     /// The transaction version at which this account state is seen.
     pub version: Version,
