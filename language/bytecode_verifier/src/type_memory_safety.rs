@@ -4,7 +4,7 @@
 //! This module defines the transfer functions for verifying type and memory safety of a
 //! procedure body.
 use crate::{
-    absint::{AbstractInterpreter, TransferFunctions},
+    absint::{AbstractInterpreter, BlockPrecondition, TransferFunctions},
     abstract_state::{AbstractState, AbstractValue},
     control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
@@ -70,7 +70,16 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             errors: vec![],
         };
 
-        verifier.analyze_function(initial_state, &function_definition_view, cfg);
+        let inv_map = verifier.analyze_function(initial_state, &function_definition_view, cfg);
+        // Report all the join failures
+        for (block_id, inv) in inv_map.iter() {
+            match inv.pre() {
+                BlockPrecondition::JoinFailure => verifier
+                    .errors
+                    .push(VMStaticViolation::JoinFailure(*block_id as usize)),
+                BlockPrecondition::State(_) => (),
+            }
+        }
         verifier.errors
     }
 
