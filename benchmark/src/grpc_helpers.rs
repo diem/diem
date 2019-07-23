@@ -8,7 +8,7 @@ use admission_control_proto::proto::{
     },
     admission_control_grpc::AdmissionControlClient,
 };
-use client::AccountStatus;
+use client::{AccountData, AccountStatus};
 use failure::prelude::*;
 use futures::{
     stream::{self, Stream},
@@ -17,17 +17,22 @@ use futures::{
 use grpcio::{self, CallOption};
 use logger::prelude::*;
 use proto_conv::{FromProto, IntoProto};
-use std::slice::Chunks;
+use std::{collections::HashMap, slice::Chunks, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
-    get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
+    get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
 };
 
 use crate::OP_COUNTER;
 
 /// Timeout duration for grpc call option.
 const GRPC_TIMEOUT_MS: u64 = 8_000;
+/// Duration to sleep between consecutive queries for accounts' sequence numbers.
+const QUERY_SEQUENCE_NUMBERS_INTERVAL_US: u64 = 100;
+/// Max number of iterations to wait (using accounts' sequence number) for submitted
+/// TXNs to become committed.
+pub const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 
 /// Return a parameter that controls how "patient" AC clients are,
 /// who are waiting the response from AC for this amount of time.
@@ -127,33 +132,36 @@ pub fn submit_and_wait_txn_requests(
 /// ------------------------------------------------------------ ///
 
 /// Send account state request async with a AC client.
+/// Try to unmarshall only the first ResponseItem in the succeeded response.
+/// Return a tuple consisting of address (as account's identifier), and deserialized response item.
 fn get_account_state_async(
     client: &AdmissionControlClient,
-    address: &AccountAddress,
-) -> Result<impl Future<Item = UpdateToLatestLedgerResponse, Error = failure::Error>> {
-    let requested_item = RequestItem::GetAccountState { address: *address };
+    address: AccountAddress,
+) -> Result<impl Future<Item = (AccountAddress, ResponseItem), Error = failure::Error>> {
+    let requested_item = RequestItem::GetAccountState { address };
     let requested_items = vec![requested_item];
     let req = UpdateToLatestLedgerRequest::new(0, requested_items);
     let proto_req = req.into_proto();
     let ret = client
         .update_to_latest_ledger_async_opt(&proto_req, get_default_grpc_call_option())?
         .then(move |account_state_proof_resp| {
-            let resp = UpdateToLatestLedgerResponse::from_proto(account_state_proof_resp?)?;
-            Ok(resp)
+            // Instead of convert entire account_state_proof_resp to UpdateToLatestLedgerResponse,
+            // directly get the ResponseItems and convert only first item to rust struct.
+            let mut response_items = account_state_proof_resp?.take_response_items();
+            // Directly call response_items.remove(0) may panic, which is not what we want.
+            if response_items.is_empty() {
+                bail!("Failed to get first item from empty ResponseItem array")
+            } else {
+                let response_item = ResponseItem::from_proto(response_items.remove(0))?;
+                Ok((address, response_item))
+            }
         });
     Ok(ret)
 }
 
-/// Wait and process the response of account state request.
-/// For valid response, return account's sequence number and status.
-fn handle_account_state_response(
-    future_resp: impl Future<Item = UpdateToLatestLedgerResponse, Error = failure::Error>,
-) -> Result<(u64, AccountStatus)> {
-    let mut response = future_resp.wait()?;
-    let account_state_proof = response
-        .response_items
-        .remove(0)
-        .into_get_account_state_response()?;
+/// Process valid ResponseItem to return account's sequence number and status.
+fn handle_account_state_response(resp: ResponseItem) -> Result<(u64, AccountStatus)> {
+    let account_state_proof = resp.into_get_account_state_response()?;
     if let Some(account_state_blob) = account_state_proof.blob {
         let account_resource = get_account_resource_or_default(&Some(account_state_blob))?;
         Ok((account_resource.sequence_number(), AccountStatus::Persisted))
@@ -162,22 +170,98 @@ fn handle_account_state_response(
     }
 }
 
-/// Query a bunch of accounts' sequence numbers and status from an validator.
-/// If operation for one account fails, during either querying or handling, return immediately.
-/// When everything is fine, the return vector, whose item is (sequence_number, account_status),
-/// is ensured to be in consistent order with the given account_address vector.
+/// Request a bunch of accounts' states, including sequence numbers and status from validator.
+/// Ignore any failure, during either requesting or processing, and continue for next account.
+/// Return the mapping from address to (sequence number, account status) tuple
+/// for all successfully requested accounts.
 pub fn get_account_states(
     client: &AdmissionControlClient,
-    account_address: &[AccountAddress],
-) -> Result<Vec<(u64, AccountStatus)>> {
-    let future_resps: Result<Vec<_>> = account_address
+    addresses: &[AccountAddress],
+) -> HashMap<AccountAddress, (u64, AccountStatus)> {
+    let futures: Vec<_> = addresses
         .iter()
-        .map(|address| get_account_state_async(client, address))
+        .filter_map(|address| match get_account_state_async(client, *address) {
+            Ok(future) => Some(future),
+            Err(e) => {
+                error!("Failed to send account request: {:?}", e);
+                None
+            }
+        })
         .collect();
-    future_resps?
-        .into_iter()
-        .map(handle_account_state_response)
-        .collect()
+    let future_stream = stream::futures_unordered(futures);
+    // Collect successfully requested account states.
+    let mut states = HashMap::new();
+    for pair_result in future_stream.wait() {
+        match pair_result {
+            Ok((address, future_resp)) => match handle_account_state_response(future_resp) {
+                Ok((sequence_number, status)) => {
+                    debug!(
+                        "Update {:?}'s sequence number to {:?}",
+                        address, sequence_number
+                    );
+                    states.insert(address, (sequence_number, status));
+                }
+                Err(e) => {
+                    error!("Invalid account response for {:?}: {:?}", address, e);
+                }
+            },
+            Err(e) => {
+                error!("Failed to receive account response: {:?}", e);
+            }
+        }
+    }
+    states
+}
+
+/// For each sender account, synchronize its persisted sequence number from validator.
+/// When this sync sequence number equals the account's local sequence number,
+/// all its transactions are committed. Timeout if such condition is never met for all senders.
+/// Return sender accounts' most recent persisted sequence numbers.
+pub fn sync_account_sequence_number(
+    client: &AdmissionControlClient,
+    senders: &[AccountData],
+) -> HashMap<AccountAddress, u64> {
+    // Invariants for the keys in targets (T), unfinished (U) and finished (F):
+    // (1) T = U union F, and (2) U and F are disjoint.
+    let targets: HashMap<AccountAddress, u64> = senders
+        .iter()
+        .map(|sender| (sender.address, sender.sequence_number))
+        .collect();
+    let mut unfinished: HashMap<AccountAddress, u64> =
+        senders.iter().map(|sender| (sender.address, 0)).collect();
+    let mut finished = HashMap::new();
+
+    let mut num_iters = 0;
+    while num_iters < MAX_WAIT_COMMIT_ITERATIONS {
+        let unfinished_addresses: Vec<_> = unfinished.keys().copied().collect();
+        let states = get_account_states(client, &unfinished_addresses);
+        for (address, (sequence_number, _status)) in states.iter() {
+            if let Some(target) = targets.get(address) {
+                if sequence_number == target {
+                    debug!("All TXNs from {:?} are committed", address);
+                    finished.insert(*address, *sequence_number);
+                    unfinished.remove(address);
+                } else {
+                    debug!(
+                        "{} TXNs from {:?} still uncommitted",
+                        target - sequence_number,
+                        address
+                    );
+                    unfinished.insert(*address, *sequence_number);
+                }
+            }
+        }
+        if finished.len() == senders.len() {
+            break;
+        }
+        thread::sleep(time::Duration::from_micros(
+            QUERY_SEQUENCE_NUMBERS_INTERVAL_US,
+        ));
+        num_iters += 1;
+    }
+    // Merging won't have conflict because F and U are disjoint.
+    finished.extend(unfinished);
+    finished
 }
 
 #[cfg(test)]

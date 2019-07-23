@@ -28,7 +28,7 @@ fn test_liveness(
             let tx_reqs = bm.gen_ring_txn_requests(accounts);
             repeated_tx_reqs.extend(tx_reqs.into_iter());
         }
-        bm.submit_and_wait_txn_committed(&repeated_tx_reqs);
+        bm.submit_and_wait_txn_committed(&repeated_tx_reqs, accounts);
     }
 }
 
@@ -53,7 +53,7 @@ pub(crate) fn measure_throughput(
             let tx_reqs = bm.gen_pairwise_txn_requests(accounts);
             repeated_tx_reqs.extend(tx_reqs.into_iter());
         }
-        let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs);
+        let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs, accounts);
         txn_throughput_seq.push(txn_throughput);
     }
     info!(
