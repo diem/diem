@@ -92,7 +92,7 @@ pub(crate) fn create_benchmarker_from_opt(args: &Opt) -> Benchmarker {
             .expect("failed to parse debug_address"),
     );
     // Ready to instantiate Benchmarker.
-    Benchmarker::new(clients, debug_client)
+    Benchmarker::new(clients, debug_client, args.stagger_range_ms)
 }
 
 /// Benchmarker is not a long-lived job, so starting a server and expecting it to be polled
@@ -162,6 +162,7 @@ mod tests {
                 num_accounts: 4,
                 free_lunch: 10_000_000,
                 num_clients: 4,
+                stagger_range_ms: 1,
                 num_rounds: 4,
                 num_epochs: 2,
                 executable: Executable::MeasureThroughput,
