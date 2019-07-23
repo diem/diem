@@ -52,6 +52,9 @@ pub enum NetworkErrorKind {
 
     #[fail(display = "Peer disconnected")]
     NotConnected,
+
+    #[fail(display = "Peer note has different discovery chain id")]
+    DifferentChainId,
 }
 
 impl Fail for NetworkError {

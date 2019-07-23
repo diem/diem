@@ -6,6 +6,7 @@ pub mod account_address;
 pub mod account_config;
 pub mod account_state_blob;
 pub mod byte_array;
+pub mod chain_id;
 pub mod contract_event;
 pub mod get_with_proof;
 pub mod language_storage;

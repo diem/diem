@@ -38,7 +38,7 @@ use std::{
 use tokio::runtime::TaskExecutor;
 use tokio_retry::strategy::ExponentialBackoff;
 use tokio_timer::Interval;
-use types::{validator_signer::ValidatorSigner, PeerId};
+use types::{chain_id::ChainId, validator_signer::ValidatorSigner, PeerId};
 
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
@@ -72,6 +72,7 @@ pub struct NetworkBuilder {
     executor: TaskExecutor,
     peer_id: PeerId,
     addr: Multiaddr,
+    chain_id: ChainId,
     advertised_address: Option<Multiaddr>,
     seed_peers: HashMap<PeerId, PeerInfo>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
@@ -104,6 +105,7 @@ impl NetworkBuilder {
             executor,
             peer_id,
             addr,
+            chain_id: ChainId::mainnet(),
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
@@ -176,6 +178,7 @@ impl NetworkBuilder {
                         .map(|addr| addr.as_ref().into())
                         .collect(),
                 );
+                peer_info.set_chain_id(self.chain_id.into_inner());
                 (peer_id, peer_info)
             })
             .collect();
@@ -514,6 +517,7 @@ impl NetworkBuilder {
         let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Initialize and start Discovery actor.
         let discovery = Discovery::new(
+            self.chain_id,
             self.peer_id,
             vec![self
                 .advertised_address

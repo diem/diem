@@ -69,7 +69,7 @@ use std::{
 };
 use tokio::{codec::Framed, prelude::FutureExt as _};
 use types::{
-    validator_signer::ValidatorSigner as Signer,
+    chain_id::ChainId, validator_signer::ValidatorSigner as Signer,
     validator_verifier::ValidatorVerifier as SignatureValidator, PeerId,
 };
 use unsigned_varint::codec::UviBytes;
@@ -81,6 +81,10 @@ pub const DISCOVERY_PROTOCOL_NAME: &[u8] = b"/libra/discovery/0.1.0";
 
 /// The actor running the discovery protocol.
 pub struct Discovery<TTicker, TSubstream> {
+    /// Our configured chain_id. We will reject any PeerInfo's with a different
+    /// chain_id to prevent e.g. mainnet and testnet discovery from mixing
+    /// accidentally.
+    chain_id: ChainId,
     /// Note for self.
     self_note: Note,
     /// Validator for verifying signatures on messages.
@@ -112,6 +116,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + Debug + 'static,
 {
     pub fn new(
+        chain_id: ChainId,
         self_peer_id: PeerId,
         self_addrs: Vec<Multiaddr>,
         signer: Signer<Ed25519PrivateKey>,
@@ -123,12 +128,17 @@ where
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         msg_timeout: Duration,
     ) -> Self {
-        let self_peer_info = create_peer_info(self_addrs);
+        let self_peer_info = create_peer_info(chain_id, self_addrs);
         let self_note = create_note(&signer, self_peer_id, self_peer_info.clone());
         let known_peers = vec![(self_peer_id, (self_peer_info, self_note.clone()))]
             .into_iter()
             .collect();
+        let seed_peers = seed_peers
+            .into_iter()
+            .filter(|(_peer_id, peer_info)| ChainId::new(peer_info.chain_id) == chain_id)
+            .collect();
         Self {
+            chain_id,
             self_note,
             seed_peers,
             trusted_peers,
@@ -277,6 +287,7 @@ where
                 unprocessed_inbound.push(
                     handle_inbound_substream(
                         self.trusted_peers.clone(),
+                        self.chain_id,
                         peer_id,
                         substream,
                         self.msg_timeout,
@@ -366,7 +377,7 @@ where
 }
 
 // Creates a PeerInfo combining the given addresses with the current unix timestamp as epoch.
-fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
+fn create_peer_info(chain_id: ChainId, addrs: Vec<Multiaddr>) -> PeerInfo {
     let mut peer_info = PeerInfo::new();
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
@@ -377,6 +388,7 @@ fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
         .as_millis() as u64;
     peer_info.set_epoch(time_since_epoch);
     peer_info.set_addrs(addrs.into_iter().map(|addr| addr.as_ref().into()).collect());
+    peer_info.set_chain_id(chain_id.into_inner());
     peer_info
 }
 
@@ -401,6 +413,7 @@ fn create_note(signer: &Signer<Ed25519PrivateKey>, peer_id: PeerId, peer_info: P
 // 3. Sends a message to the discovery peer with the notes received from the remote.
 async fn handle_inbound_substream<TSubstream>(
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    chain_id: ChainId,
     peer_id: PeerId,
     substream: NegotiatedSubstream<TSubstream>,
     timeout: Duration,
@@ -421,7 +434,7 @@ where
                 .get_notes()
                 .iter()
                 .map(|note| {
-                    is_valid(&note.to_owned(), trusted_peers.clone()).map_err(|e| {
+                    is_valid(&note.to_owned(), trusted_peers.clone(), chain_id).map_err(|e| {
                         security_log(SecurityEvent::InvalidNetworkPeer)
                             .error(&e)
                             .data(&note)
@@ -439,10 +452,12 @@ where
 // Verifies validity of notes. Following conditions should be met for validity:
 // 1. We should be able to correctly parse the peer id in each note.
 // 2. The signature should be verified to be of the given peer for the serialized peer info.
-// 3. The address(es) in the PeerInfo should be correctly parsable as Multiaddrs.
+// 3. The chain ids must match our configured chain id for all notes.
+// 4. The address(es) in the PeerInfo should be correctly parsable as Multiaddrs.
 fn is_valid(
     note: &Note,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    chain_id: ChainId,
 ) -> Result<(), NetworkError> {
     let peer_id = PeerId::try_from(note.get_peer_id())
         .map_err(|err| err.context(NetworkErrorKind::ParsingError))?;
@@ -453,6 +468,10 @@ fn is_valid(
         note.get_peer_info(),
     )?;
     let peer_info: PeerInfo = protobuf::parse_from_bytes(note.get_peer_info())?;
+    let peer_chain_id = ChainId::new(peer_info.get_chain_id());
+    if peer_chain_id != chain_id {
+        return Err(NetworkError::from(NetworkErrorKind::DifferentChainId));
+    }
     for addr in peer_info.get_addrs() {
         let _: Multiaddr = Multiaddr::try_from(addr.clone())?;
     }
