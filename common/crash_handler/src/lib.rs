@@ -15,22 +15,18 @@ pub struct CrashInfo {
     backtrace: String,
 }
 
+/// Invoke to ensure process exits on a thread panic.
+///
+/// Tokio's default behavior is to catch panics and ignore them.  Invoking this function will
+/// ensure that all subsequent thread panics (even Tokio threads) will report the
+/// details/backtrace and then exit.
 pub fn setup_panic_handler() {
-    // If RUST_BACKTRACE variable isn't present or RUST_BACKTRACE=0, we setup panic handler
-    let is_backtrace_set = std::env::var_os("RUST_BACKTRACE")
-        .map(|x| &x != "0")
-        .unwrap_or(false);
-
-    if is_backtrace_set {
-        info!("Skip panic handler setup because RUST_BACKTRACE is set");
-    } else {
-        panic::set_hook(Box::new(move |pi: &PanicInfo<'_>| {
-            handle_panic(pi);
-        }));
-    }
+    panic::set_hook(Box::new(move |pi: &PanicInfo<'_>| {
+        handle_panic(pi);
+    }));
 }
 
-// formats and logs panic information
+// Formats and logs panic information
 fn handle_panic(panic_info: &PanicInfo<'_>) {
     // The Display formatter for a PanicInfo contains the message, payload and location.
     let details = format!("{}", panic_info);
@@ -39,9 +35,9 @@ fn handle_panic(panic_info: &PanicInfo<'_>) {
     let info = CrashInfo { details, backtrace };
     crit!("{}", toml::to_string_pretty(&info).unwrap());
 
-    // allow to save on disk
+    // Provide some time to save the log to disk
     thread::sleep(time::Duration::from_millis(100));
 
-    // kill the process
+    // Kill the process
     process::exit(12);
 }
