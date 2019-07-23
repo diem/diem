@@ -82,6 +82,9 @@ pub struct Opt {
     /// Number of epochs to measure the TXN throughput, each time with newly created Benchmarker.
     #[structopt(short = "e", long = "num_epochs", default_value = "10")]
     pub num_epochs: u64,
+    /// Submit constant number of TXN requests per second; otherwise TXNs are flood to Libra.
+    #[structopt(short = "k", long = "submit_rate")]
+    pub submit_rate: Option<u64>,
     /// Choices of how to generate TXNs/load.
     #[structopt(
         short = "t",
@@ -165,6 +168,10 @@ impl Opt {
                 parse_swarm_config_from_dir(swarm_config_dir).expect("invalid arguments");
             self.validator_addresses = validator_addresses;
         }
+    }
+
+    pub fn parse_submit_rate(&self) -> u64 {
+        self.submit_rate.unwrap_or(std::u64::MAX)
     }
 }
 

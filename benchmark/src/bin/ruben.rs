@@ -46,12 +46,10 @@ pub(crate) fn measure_throughput<T: LoadGenerator + ?Sized>(
     bm: &mut Benchmarker,
     txn_generator: &mut T,
     faucet_account: &mut AccountData,
-    num_accounts: u64,
-    num_rounds: u64,
-    num_epochs: u64,
+    args: &Opt,
 ) {
     // Generate testing accounts.
-    let mut accounts: Vec<AccountData> = txn_generator.gen_accounts(num_accounts);
+    let mut accounts: Vec<AccountData> = txn_generator.gen_accounts(args.num_accounts);
     bm.register_accounts(&accounts);
 
     // Submit setup/minting TXN requests.
@@ -61,14 +59,14 @@ pub(crate) fn measure_throughput<T: LoadGenerator + ?Sized>(
 
     // Submit TXN load and measure throughput.
     let mut txn_throughput_seq = vec![];
-    for _ in 0..num_epochs {
-        let repeated_tx_reqs = gen_repeated_txn_load(txn_generator, &mut accounts, num_rounds);
+    for _ in 0..args.num_epochs {
+        let repeated_tx_reqs = gen_repeated_txn_load(txn_generator, &mut accounts, args.num_rounds);
         let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs, &mut accounts);
         txn_throughput_seq.push(txn_throughput);
     }
     info!(
-        "{} epoch(s) of TXN throughput = {:?}",
-        num_epochs, txn_throughput_seq
+        "{} epoch(s) of REQ/TXN throughput = {:?}",
+        args.num_epochs, txn_throughput_seq
     );
 }
 
@@ -95,8 +93,9 @@ fn create_ac_clients(
 pub(crate) fn create_benchmarker_from_opt(args: &Opt) -> Benchmarker {
     // Create AdmissionControlClient instances.
     let clients = create_ac_clients(args.num_clients, &args.validator_addresses);
+    let submit_rate = args.parse_submit_rate();
     // Ready to instantiate Benchmarker.
-    Benchmarker::new(clients, args.stagger_range_ms)
+    Benchmarker::new(clients, args.stagger_range_ms, submit_rate)
 }
 
 /// Benchmarker is not a long-lived job, so starting a server and expecting it to be polled
@@ -123,14 +122,7 @@ fn main() {
         TransactionPattern::Ring => Box::new(RingTransferTxnGenerator::new()),
         TransactionPattern::Pairwise => Box::new(PairwiseTransferTxnGenerator::new()),
     };
-    measure_throughput(
-        &mut bm,
-        generator.deref_mut(),
-        &mut faucet_account,
-        args.num_accounts,
-        args.num_rounds,
-        args.num_epochs,
-    );
+    measure_throughput(&mut bm, generator.deref_mut(), &mut faucet_account, &args);
 }
 
 #[cfg(test)]
@@ -172,6 +164,7 @@ mod tests {
                 num_rounds: 4,
                 num_epochs: 2,
                 txn_pattern: TransactionPattern::Ring,
+                submit_rate: None,
             };
             args.try_parse_validator_addresses();
             let mut bm = create_benchmarker_from_opt(&args);
@@ -181,9 +174,7 @@ mod tests {
                 &mut bm,
                 &mut ring_generator,
                 &mut faucet_account,
-                args.num_accounts,
-                args.num_rounds,
-                args.num_epochs,
+                &args
             );
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
             let created_txns = OP_COUNTER.counter("created_txns").get();

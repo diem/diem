@@ -24,7 +24,7 @@ use types::{
     get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
 };
 
-use crate::OP_COUNTER;
+use crate::{submit_rate::ConstantRate, OP_COUNTER};
 
 /// Timeout duration for grpc call option.
 const GRPC_TIMEOUT_MS: u64 = 8_000;
@@ -87,16 +87,18 @@ fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
     }
 }
 
-/// Send TXN requests to AC async, wait for and check the responses from AC.
-/// Return the responses of only accepted TXN requests.
+/// Send TXN requests using specified rate to AC async, wait for and check the responses.
+/// Return only the responses of accepted TXN requests.
 /// Ignore but count both gRPC-failed submissions and AC-rejected TXNs.
 pub fn submit_and_wait_txn_requests(
     client: &AdmissionControlClient,
-    txn_requests: &[SubmitTransactionRequest],
+    txn_requests: Vec<SubmitTransactionRequest>,
+    submit_rate: u64,
 ) -> Vec<ProtoSubmitTransactionResponse> {
-    let futures: Vec<_> = txn_requests
-        .iter()
+    let const_rate_iter = ConstantRate::new(submit_rate, txn_requests.into_iter());
+    let futures: Vec<_> = const_rate_iter
         .filter_map(|req| {
+            OP_COUNTER.inc("submit_txns"); // This counter doesn't care if submit succeed or not.
             match client.submit_transaction_async_opt(&req, get_default_grpc_call_option()) {
                 Ok(future) => Some(future),
                 Err(e) => {
