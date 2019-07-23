@@ -17,6 +17,7 @@ use csv;
 use language_e2e_tests::data_store::FakeDataStore;
 use move_ir_natives::hash;
 use std::{collections::HashMap, convert::TryFrom, path::Path, time::Instant, u64};
+use structopt::StructOpt;
 use vm::{
     errors::VMErrorKind,
     file_format::{
@@ -33,8 +34,20 @@ use vm_runtime::{
     txn_executor::TransactionExecutor,
 };
 
-const MAX_STACK_SIZE: u64 = 100;
-const NUM_ITERS: u16 = 10000;
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "Instruction Cost Synthesis",
+    about = "Cost synthesis parameter settings"
+)]
+struct Opt {
+    /// The number of iterations each instruction should be run for.
+    #[structopt(short = "i", long = "num-iters", default_value = "10000")]
+    num_iters: u16,
+
+    /// The maximum stack size generated.
+    #[structopt(short = "ms", long = "max-stack-size", default_value = "100")]
+    max_stack_size: u64,
+}
 
 fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
     let mut writer = csv::Writer::from_path(path).unwrap();
@@ -52,7 +65,7 @@ fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
 // The only instruction that we don't implement here is `EmitEvent`. This is on purpose -- the emit
 // event instruction will be changing soon, so it's not worth implementing at the moment until we
 // have decided the semantics of the instruction.
-fn stack_instructions() {
+fn stack_instructions(options: &Opt) {
     use Bytecode::*;
     let stack_opcodes: Vec<Bytecode> = vec![
         ReadRef,
@@ -109,7 +122,7 @@ fn stack_instructions() {
         GetTxnPublicKey,
     ];
 
-    let mod_gen: ModuleGenerator = ModuleGenerator::new(NUM_ITERS as u16, 3);
+    let mod_gen: ModuleGenerator = ModuleGenerator::new(options.num_iters as u16, 3);
     let mut account = Account::new();
     with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
@@ -121,8 +134,8 @@ fn stack_instructions() {
                 &loaded_module,
                 &module_cache,
                 &instruction,
-                MAX_STACK_SIZE,
-                NUM_ITERS,
+                options.max_stack_size,
+                options.num_iters,
             );
             let instr_costs: Vec<u64> = stack_gen
                 .map(|stack_state| {
@@ -164,51 +177,56 @@ fn stack_instructions() {
 }
 
 macro_rules! bench_native {
-    ($name:expr, $function:path, $table:ident) => {
+    ($name:expr, $function:path, $table:ident, $iters:expr) => {
         let mut stack_access = StackAccessorMocker::new();
         let per_byte_costs: Vec<u64> = (1..512)
             .map(|i| {
                 stack_access.set_hash_length(i);
-                let time = (0..NUM_ITERS).fold(0, |acc, _| {
+                let time = (0..$iters).fold(0, |acc, _| {
                     stack_access.next_bytearray();
                     let before = Instant::now();
                     let _ = $function(&mut stack_access).unwrap();
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.
-                u64::try_from(time).unwrap() / (u64::from(NUM_ITERS) * (i as u64))
+                u64::try_from(time).unwrap() / (u64::from($iters) * (i as u64))
             })
             .collect();
         $table.insert($name, per_byte_costs);
     };
 }
 
-fn natives() {
+fn natives(options: &Opt) {
     let mut cost_table = HashMap::new();
     bench_native!(
         "keccak_256".to_string(),
         hash::native_keccak_256,
-        cost_table
+        cost_table,
+        options.num_iters
     );
     bench_native!(
         "ripemd_160".to_string(),
         hash::native_ripemd_160,
-        cost_table
+        cost_table,
+        options.num_iters
     );
     bench_native!(
         "native_sha2_256".to_string(),
         hash::native_sha2_256,
-        cost_table
+        cost_table,
+        options.num_iters
     );
     bench_native!(
         "native_sha3_256".to_string(),
         hash::native_sha3_256,
-        cost_table
+        cost_table,
+        options.num_iters
     );
     output_to_csv(Path::new("data/native_function_costs.csv"), cost_table);
 }
 
 pub fn main() {
-    stack_instructions();
-    natives();
+    let opt = Opt::from_args();
+    stack_instructions(&opt);
+    natives(&opt);
 }
