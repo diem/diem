@@ -3,11 +3,11 @@
 
 use codespan::{ByteIndex, Span};
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, HashSet, VecDeque},
     fmt,
     ops::Deref,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 
 /// Generic wrapper that keeps file locations for any ast-node
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
@@ -503,6 +503,16 @@ pub type Exp_ = Spanned<Exp>;
 // impls
 //**************************************************************************************************
 
+fn get_external_deps(imports: &[ImportDefinition]) -> Vec<ModuleId> {
+    let mut deps = HashSet::new();
+    for dep in imports.iter() {
+        if let ModuleIdent::Qualified(id) = &dep.ident {
+            deps.insert(ModuleId::new(id.address, id.name.name()));
+        }
+    }
+    deps.into_iter().collect()
+}
+
 impl Program {
     /// Create a new `Program` from modules and transaction script
     pub fn new(modules: Vec<ModuleDefinition>, script: Script) -> Self {
@@ -522,6 +532,11 @@ impl Script {
             FunctionBody::Move { ref code, .. } => &code,
             FunctionBody::Native => panic!("main() can't be native"),
         }
+    }
+
+    /// Return a vector of `ModuleId` for the external dependencies.
+    pub fn get_external_deps(&self) -> Vec<ModuleId> {
+        get_external_deps(self.imports.as_slice())
     }
 }
 
@@ -599,6 +614,11 @@ impl ModuleDefinition {
             structs,
             functions,
         }
+    }
+
+    /// Return a vector of `ModuleId` for the external dependencies.
+    pub fn get_external_deps(&self) -> Vec<ModuleId> {
+        get_external_deps(self.imports.as_slice())
     }
 }
 
