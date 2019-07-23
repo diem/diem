@@ -12,7 +12,7 @@ use vm::{
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
         FunctionHandleIndex, FunctionSignatureIndex, LocalsSignatureIndex, ModuleHandleIndex,
-        StringPoolIndex, StructHandleIndex, TableIndex, TypeSignatureIndex,
+        StringPoolIndex, StructFieldInformation, StructHandleIndex, TableIndex, TypeSignatureIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -237,7 +237,7 @@ impl ApplyOutOfBoundsContext {
         mutations
             .iter()
             .zip(to_mutate)
-            .map(move |(mutation, src_idx)| {
+            .filter_map(move |(mutation, src_idx)| {
                 self.set_index(
                     src_kind,
                     src_idx,
@@ -262,7 +262,7 @@ impl ApplyOutOfBoundsContext {
         dst_kind: IndexKind,
         dst_count: usize,
         new_idx: TableIndex,
-    ) -> VerificationError {
+    ) -> Option<VerificationError> {
         use IndexKind::*;
 
         // These are default values, but some of the match arms below mutate them.
@@ -301,6 +301,12 @@ impl ApplyOutOfBoundsContext {
                 self.module.struct_defs[src_idx].struct_handle = StructHandleIndex::new(new_idx)
             }
             (StructDefinition, FieldDefinition) => {
+                let field_count = match self.module.struct_defs[src_idx].field_information {
+                    // There is no way to set an invalid index for a native struct definition
+                    StructFieldInformation::Native => return None,
+                    StructFieldInformation::Declared { field_count, .. } => field_count,
+                };
+
                 // Consider a situation with 3 fields, and with first field = 1 and count = 2.
                 // A graphical representation of that might be:
                 //
@@ -314,8 +320,12 @@ impl ApplyOutOfBoundsContext {
                 // (first field + count) at least 4, or (new_idx + 1). This means that the first
                 // field would be new_idx + 1 - count.
                 let end_idx = new_idx + 1;
-                let first_new_idx = end_idx - self.module.struct_defs[src_idx].field_count;
-                self.module.struct_defs[src_idx].fields = FieldDefinitionIndex::new(first_new_idx);
+                let first_new_idx = end_idx - field_count;
+                let field_information = StructFieldInformation::Declared {
+                    field_count,
+                    fields: FieldDefinitionIndex::new(first_new_idx),
+                };
+                self.module.struct_defs[src_idx].field_information = field_information;
                 err = VMStaticViolation::RangeOutOfBounds(
                     dst_kind,
                     dst_count,
@@ -367,11 +377,11 @@ impl ApplyOutOfBoundsContext {
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }
 
-        VerificationError {
+        Some(VerificationError {
             kind: src_kind,
             idx: src_idx,
             err,
-        }
+        })
     }
 
     /// Returns the indexes of type signatures that contain struct handles inside them.

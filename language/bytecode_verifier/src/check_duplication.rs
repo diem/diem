@@ -14,7 +14,7 @@ use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
-        StructHandleIndex, TableIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -139,11 +139,18 @@ impl<'a> DuplicationChecker<'a> {
         let mut start_field_index: usize = 0;
         let mut idx_opt = None;
         for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
-            if FieldDefinitionIndex::new(start_field_index as u16) != struct_def.fields {
+            let (field_count, fields) = match struct_def.field_information {
+                StructFieldInformation::Native => continue,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => (field_count, fields),
+            };
+            if FieldDefinitionIndex::new(start_field_index as u16) != fields {
                 idx_opt = Some(idx);
                 break;
             }
-            let next_start_field_index = start_field_index + struct_def.field_count as usize;
+            let next_start_field_index = start_field_index + field_count as usize;
             let all_fields_match = (start_field_index..next_start_field_index).all(|i| {
                 struct_def.struct_handle
                     == self

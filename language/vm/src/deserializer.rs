@@ -720,12 +720,35 @@ fn load_struct_defs(
     let mut cursor = Cursor::new(&binary[start..end]);
     while cursor.position() < u64::from(table.count) {
         let struct_handle = read_uleb_u16_internal(&mut cursor)?;
-        let field_count = read_uleb_u16_internal(&mut cursor)?;
-        let fields = read_uleb_u16_internal(&mut cursor)?;
+        let field_information_flag = match cursor.read_u8() {
+            Ok(byte) => SerializedNativeStructFlag::from_u8(byte)?,
+            Err(_) => return Err(BinaryError::Malformed),
+        };
+        let field_information = match field_information_flag {
+            SerializedNativeStructFlag::NATIVE => {
+                let field_count = read_uleb_u16_internal(&mut cursor)?;
+                if field_count != 0 {
+                    return Err(BinaryError::Malformed);
+                }
+                let fields_u16 = read_uleb_u16_internal(&mut cursor)?;
+                if fields_u16 != 0 {
+                    return Err(BinaryError::Malformed);
+                }
+                StructFieldInformation::Native
+            }
+            SerializedNativeStructFlag::DECLARED => {
+                let field_count = read_uleb_u16_internal(&mut cursor)?;
+                let fields_u16 = read_uleb_u16_internal(&mut cursor)?;
+                let fields = FieldDefinitionIndex(fields_u16);
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                }
+            }
+        };
         struct_defs.push(StructDefinition {
             struct_handle: StructHandleIndex(struct_handle),
-            field_count,
-            fields: FieldDefinitionIndex(fields),
+            field_information,
         });
     }
     Ok(())
@@ -1011,6 +1034,16 @@ impl SerializedKind {
         match value {
             0x1 => Ok(SerializedKind::RESOURCE),
             0x2 => Ok(SerializedKind::COPYABLE),
+            _ => Err(BinaryError::UnknownSerializedType),
+        }
+    }
+}
+
+impl SerializedNativeStructFlag {
+    fn from_u8(value: u8) -> BinaryLoaderResult<SerializedNativeStructFlag> {
+        match value {
+            0x1 => Ok(SerializedNativeStructFlag::NATIVE),
+            0x2 => Ok(SerializedNativeStructFlag::DECLARED),
             _ => Err(BinaryError::UnknownSerializedType),
         }
     }

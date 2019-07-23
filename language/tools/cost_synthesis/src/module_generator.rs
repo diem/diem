@@ -19,8 +19,8 @@ use vm::{
         FieldDefinitionIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
         FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature, LocalsSignatureIndex,
         MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
-        StructDefinition, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-        TypeSignatureIndex,
+        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
+        TypeSignature, TypeSignatureIndex,
     },
     internals::ModuleIndex,
 };
@@ -158,10 +158,13 @@ impl ModuleBuilder {
             // Generate the struct def. This generates pointers into the module's `field_defs` that
             // are not generated just yet -- we do this beforehand so that we can grab the starting
             // index into the module's `field_defs` table before we generate the struct's fields.
-            let struct_def = StructDefinition {
-                struct_handle: StructHandleIndex(struct_idx),
+            let field_information = StructFieldInformation::Declared {
                 field_count: num_fields as MemberCount,
                 fields: FieldDefinitionIndex::new(self.module.field_defs.len() as TableIndex),
+            };
+            let struct_def = StructDefinition {
+                struct_handle: StructHandleIndex(struct_idx),
+                field_information,
             };
             self.module.struct_defs.push(struct_def);
 

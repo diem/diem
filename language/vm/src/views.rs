@@ -17,8 +17,8 @@ use crate::{
     access::ModuleAccess,
     file_format::{
         CodeUnit, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionSignature, Kind,
-        LocalIndex, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition, StructHandle,
-        StructHandleIndex, TypeSignature,
+        LocalIndex, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
+        StructFieldInformation, StructHandle, StructHandleIndex, TypeSignature,
     },
     SignatureTokenKind,
 };
@@ -259,12 +259,22 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         self.struct_handle_view.is_resource()
     }
 
-    pub fn fields(&self) -> impl DoubleEndedIterator<Item = FieldDefinitionView<'a, T>> + Send {
+    pub fn fields(
+        &self,
+    ) -> Option<impl DoubleEndedIterator<Item = FieldDefinitionView<'a, T>> + Send> {
         let module = self.module;
-        module
-            .field_def_range(self.struct_def.field_count, self.struct_def.fields)
-            .iter()
-            .map(move |field_def| FieldDefinitionView::new(module, field_def))
+        match self.struct_def.field_information {
+            StructFieldInformation::Native => None,
+            StructFieldInformation::Declared {
+                field_count,
+                fields,
+            } => Some(
+                module
+                    .field_def_range(field_count, fields)
+                    .iter()
+                    .map(move |field_def| FieldDefinitionView::new(module, field_def)),
+            ),
+        }
     }
 
     pub fn name(&self) -> &'a str {

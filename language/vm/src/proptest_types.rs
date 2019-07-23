@@ -6,11 +6,12 @@
 use crate::file_format::{
     AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
     FunctionHandle, FunctionSignatureIndex, Kind, MemberCount, ModuleHandle, ModuleHandleIndex,
-    SignatureToken, StringPoolIndex, StructDefinition, StructHandle, StructHandleIndex, TableIndex,
-    TypeSignature, TypeSignatureIndex,
+    SignatureToken, StringPoolIndex, StructDefinition, StructFieldInformation, StructHandle,
+    StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
 };
 use proptest::{
     collection::{vec, SizeRange},
+    option,
     prelude::*,
     sample::Index as PropIndex,
 };
@@ -404,7 +405,7 @@ struct StructDefinitionGen {
     kind: KindGen,
     kind_constraints: Vec<KindGen>,
     is_public: bool,
-    field_defs: Vec<FieldDefinitionGen>,
+    field_defs: Option<Vec<FieldDefinitionGen>>,
 }
 
 impl StructDefinitionGen {
@@ -417,7 +418,7 @@ impl StructDefinitionGen {
             any::<bool>(),
             // XXX 0..4 is the default member_count in CompiledModule -- is 0 (structs without
             // fields) possible?
-            vec(FieldDefinitionGen::strategy(), member_count),
+            option::of(vec(FieldDefinitionGen::strategy(), member_count)),
         )
             .prop_map(
                 |(name_idx, kind, kind_constraints, is_public, field_defs)| Self {
@@ -433,47 +434,80 @@ impl StructDefinitionGen {
     fn materialize(self, state: &mut StDefnMaterializeState) -> StructDefinition {
         let sh_idx = state.next_struct_handle();
         state.owned_type_indexes.advance_to(&Some(sh_idx));
+        let struct_handle = sh_idx;
 
-        // Each struct defines one or more fields. The collect() is to work around the borrow
-        // checker -- it's annoying.
-        let field_defs: Vec<_> = self
-            .field_defs
-            .into_iter()
-            .map(|field| field.materialize(sh_idx, state))
-            .collect();
-        let kind = match self.kind.materialize() {
-            Kind::Resource => Kind::Resource,
-            Kind::Copyable => {
-                if field_defs
-                    .iter()
-                    .any(|x| state.is_resource(&state.type_signatures[x.signature.0 as usize].0))
-                {
-                    Kind::Resource
-                } else {
-                    Kind::Copyable
+        match self.field_defs {
+            None => {
+                let kind = match self.kind.materialize() {
+                    Kind::Resource => Kind::Resource,
+                    Kind::Copyable => Kind::Copyable,
+                };
+                let handle = StructHandle {
+                    // 0 represents the current module
+                    module: ModuleHandleIndex::new(0),
+                    name: StringPoolIndex::new(
+                        self.name_idx.index(state.string_pool_len) as TableIndex
+                    ),
+                    kind,
+                    kind_constraints: self
+                        .kind_constraints
+                        .into_iter()
+                        .map(|kind| kind.materialize())
+                        .collect(),
+                };
+                state.add_struct_handle(handle);
+                let field_information = StructFieldInformation::Native;
+                StructDefinition {
+                    struct_handle,
+                    field_information,
                 }
             }
-        };
+            Some(field_defs_gen) => {
+                // Each struct defines one or more fields. The collect() is to work around the
+                // borrow checker -- it's annoying.
+                let field_defs: Vec<_> = field_defs_gen
+                    .into_iter()
+                    .map(|field| field.materialize(sh_idx, state))
+                    .collect();
+                let kind = match self.kind.materialize() {
+                    Kind::Resource => Kind::Resource,
+                    Kind::Copyable => {
+                        let any_field_resource = field_defs.iter().any(|field| {
+                            let field_sig = &state.type_signatures[field.signature.0 as usize].0;
+                            state.is_resource(field_sig)
+                        });
+                        if any_field_resource {
+                            Kind::Resource
+                        } else {
+                            Kind::Copyable
+                        }
+                    }
+                };
+                let (field_count, fields) = state.add_field_defs(field_defs);
 
-        let (field_count, fields) = state.add_field_defs(field_defs);
-
-        let handle = StructHandle {
-            // 0 represents the current module
-            module: ModuleHandleIndex::new(0),
-            name: StringPoolIndex::new(self.name_idx.index(state.string_pool_len) as TableIndex),
-            kind,
-            kind_constraints: self
-                .kind_constraints
-                .into_iter()
-                .map(|kind| kind.materialize())
-                .collect(),
-        };
-        state.add_struct_handle(handle);
-
-        StructDefinition {
-            struct_handle: sh_idx,
-            field_count,
-            fields,
+                let handle = StructHandle {
+                    // 0 represents the current module
+                    module: ModuleHandleIndex::new(0),
+                    name: StringPoolIndex::new(
+                        self.name_idx.index(state.string_pool_len) as TableIndex
+                    ),
+                    kind,
+                    kind_constraints: self
+                        .kind_constraints
+                        .into_iter()
+                        .map(|kind| kind.materialize())
+                        .collect(),
+                };
+                state.add_struct_handle(handle);
+                let field_information = StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                };
+                StructDefinition {
+                    struct_handle,
+                    field_information,
+                }
+            }
         }
     }
 }

@@ -92,6 +92,15 @@ pub enum SerializedKind {
     COPYABLE                = 0x2,
 }
 
+#[rustfmt::skip]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum SerializedNativeStructFlag {
+    NATIVE                  = 0x1,
+    DECLARED                = 0x2,
+}
+
 /// List of opcodes constants.
 #[rustfmt::skip]
 #[allow(non_camel_case_types)]

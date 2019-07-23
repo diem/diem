@@ -97,7 +97,9 @@ impl<'a> StructDefGraphBuilder<'a> {
     ) -> impl Iterator<Item = StructDefinitionIndex> + 'a {
         let struct_def = self.module.struct_def_at(idx);
         let struct_def = StructDefinitionView::new(self.module, struct_def);
-        let fields = struct_def.fields();
+        // The fields iterator is an option in the case of native structs. Flatten makes an empty
+        // iterator for that case
+        let fields = struct_def.fields().into_iter().flatten();
         let handle_to_def = &self.handle_to_def;
 
         fields.filter_map(move |field| {
