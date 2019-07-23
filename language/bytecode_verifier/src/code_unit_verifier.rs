@@ -51,7 +51,7 @@ impl<'a> CodeUnitVerifier<'a> {
 
         // Check to make sure that the bytecode vector ends with a branching instruction.
         if let Some(bytecode) = code.last() {
-            if !bytecode.is_branch() {
+            if !bytecode.is_unconditional_branch() {
                 return vec![VMStaticViolation::InvalidFallThrough];
             }
         } else {
