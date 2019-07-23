@@ -1,0 +1,15 @@
+[package]
+name = "anchor"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+edition = "2018"
+publish = false
+
+# Do not add any dependencies from Libra Core
+[dependencies]
+failure = "0.1.5"
+structopt = "0.2.15"
+
+# Create a workspace separate from Libra Core
+[workspace]
