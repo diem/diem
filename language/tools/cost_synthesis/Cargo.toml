@@ -22,6 +22,7 @@ vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
 move_ir_natives = { path = "../../stdlib/natives" }
 crypto = { path = "../../../crypto/legacy_crypto" }
 state_view = { path = "../../../storage/state_view" }
+structopt = "0.2.15"
 
 [features]
 default = ["vm_runtime/instruction_synthesis"]
