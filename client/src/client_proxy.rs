@@ -15,15 +15,14 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
-use proto_conv::{FromProtoBytes, IntoProto};
+use proto_conv::IntoProto;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
     collections::HashMap,
     convert::TryFrom,
-    fmt,
-    fs::{self, File},
-    io::{stdout, Read, Write},
+    fmt, fs,
+    io::{stdout, Write},
     path::Path,
     process::Command,
     str::FromStr,
@@ -41,9 +40,7 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{
-        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
-    },
+    transaction::{parse_as_transaction_argument, Program, SignedTransaction, Version},
     transaction_helpers::{create_signed_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
@@ -515,76 +512,6 @@ impl ClientProxy {
             space_delim_strings,
             Program::new(script, modules, arguments),
         )
-    }
-
-    /// Submit a transaction to the network.
-    pub fn submit_transaction_from_disk(
-        &mut self,
-        space_delim_strings: &[&str],
-        is_blocking: bool,
-    ) -> Result<IndexAndSequence> {
-        let signer_account_address =
-            self.get_account_address_from_parameter(space_delim_strings[1])?;
-
-        let txn = {
-            let mut file = File::open(space_delim_strings[2]).map_err(|_| {
-                format_err!("Cannot open file located at {}", space_delim_strings[2])
-            })?;
-            let mut buf = vec![];
-            file.read_to_end(&mut buf).map_err(|_| {
-                format_err!("Cannot read file located at {}", space_delim_strings[2])
-            })?;
-            RawTransaction::from_proto_bytes(&buf).map_err(|_| {
-                format_err!(
-                    "Cannot deserialize file located at {} as RawTransaction",
-                    space_delim_strings[2]
-                )
-            })?
-        };
-        self.submit_custom_transaction(signer_account_address, txn, is_blocking)
-    }
-
-    fn submit_custom_transaction(
-        &mut self,
-        signer_address: AccountAddress,
-        txn: RawTransaction,
-        is_blocking: bool,
-    ) -> Result<IndexAndSequence> {
-        let sender_address;
-        let sender_sequence;
-        {
-            let signer_account_ref_id = self.get_account_ref_id(&signer_address)?;
-            let signer_account = self.accounts.get(signer_account_ref_id).ok_or_else(|| {
-                format_err!("Unable to find sender account: {}", signer_account_ref_id)
-            })?;
-            let signer: Box<&dyn TransactionSigner> = match &signer_account.key_pair {
-                Some(key_pair) => Box::new(key_pair),
-                None => Box::new(&self.wallet),
-            };
-            let mut req = SubmitTransactionRequest::new();
-            let txn = signer.sign_txn(txn).map_err(|_| {
-                format_err!(
-                    "Account #{} failed to sign transaction",
-                    signer_account_ref_id
-                )
-            })?;
-            sender_address = txn.sender();
-            sender_sequence = txn.sequence_number();
-
-            req.set_signed_txn(txn.into_proto());
-            self.client.submit_transaction(None, &req)?;
-        }
-
-        if is_blocking {
-            self.wait_for_transaction(sender_address, sender_sequence);
-        }
-
-        Ok(IndexAndSequence {
-            account_index: AccountEntry::Address(sender_address),
-            // The signer has nothing to do with the sequence here. The sequence number that we are
-            // looking for should just be the sequence number in the sent transaction.
-            sequence_number: sender_sequence,
-        })
     }
 
     /// Get the latest account state from validator.
