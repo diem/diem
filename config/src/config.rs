@@ -11,11 +11,9 @@ use std::{
     string::ToString,
 };
 
-use crypto::{
-    signing,
-    x25519::{self, X25519PrivateKey, X25519PublicKey},
-};
+use crypto::x25519::{self, X25519PrivateKey, X25519PublicKey};
 use logger::LoggerType;
+use nextgen_crypto::ed25519::*;
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 use toml;
@@ -28,8 +26,9 @@ use crate::{
     config::ConsensusProposerType::{FixedProposer, RotatingProposer},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{
-        deserialize_key, serialize_key, TrustedPeerPrivateKeys, TrustedPeersConfig,
-        TrustedPeersConfigHelpers,
+        deserialize_key, deserialize_nextgen_key, deserialize_nextgen_opt_key, serialize_key,
+        serialize_nextgen_key, serialize_nextgen_opt_key, TrustedPeerPrivateKeys,
+        TrustedPeersConfig, TrustedPeersConfigHelpers,
     },
     utils::get_available_port,
 };
@@ -47,7 +46,8 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
     pub base: BaseConfig,
@@ -99,14 +99,15 @@ pub struct BaseConfig {
 
 // KeyPairs is used to store all of a node's private keys.
 // It is filled via a config file at the moment.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct KeyPairs {
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    network_signing_private_key: signing::PrivateKey,
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    network_signing_public_key: signing::PublicKey,
+    #[serde(serialize_with = "serialize_nextgen_opt_key")]
+    #[serde(deserialize_with = "deserialize_nextgen_opt_key")]
+    network_signing_private_key: Option<Ed25519PrivateKey>,
+    #[serde(serialize_with = "serialize_nextgen_key")]
+    #[serde(deserialize_with = "deserialize_nextgen_key")]
+    network_signing_public_key: Ed25519PublicKey,
 
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
@@ -115,26 +116,27 @@ pub struct KeyPairs {
     #[serde(deserialize_with = "deserialize_key")]
     network_identity_public_key: X25519PublicKey,
 
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    consensus_private_key: signing::PrivateKey,
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    consensus_public_key: signing::PublicKey,
+    #[serde(serialize_with = "serialize_nextgen_opt_key")]
+    #[serde(deserialize_with = "deserialize_nextgen_opt_key")]
+    consensus_private_key: Option<Ed25519PrivateKey>,
+    #[serde(serialize_with = "serialize_nextgen_key")]
+    #[serde(deserialize_with = "deserialize_nextgen_key")]
+    consensus_public_key: Ed25519PublicKey,
 }
 
 // required for serialization
 impl Default for KeyPairs {
     fn default() -> Self {
-        let (private_sig, public_sig) = signing::generate_keypair();
+        let (net_private_sig, net_public_sig) = compat::generate_keypair(None);
+        let (consensus_private_sig, consensus_public_sig) = compat::generate_keypair(None);
         let (private_kex, public_kex) = x25519::generate_keypair();
         Self {
-            network_signing_private_key: private_sig.clone(),
-            network_signing_public_key: public_sig,
-            network_identity_private_key: private_kex.clone(),
+            network_signing_private_key: Some(net_private_sig),
+            network_signing_public_key: net_public_sig,
+            network_identity_private_key: private_kex,
             network_identity_public_key: public_kex,
-            consensus_private_key: private_sig.clone(),
-            consensus_public_key: public_sig,
+            consensus_private_key: Some(consensus_private_sig),
+            consensus_public_key: consensus_public_sig,
         }
     }
 }
@@ -162,61 +164,96 @@ impl KeyPairs {
 
         file.write_all(&contents).expect("Error writing file");
     }
+
     // used in testing to fill the structure with test keypairs
-    pub fn load(private_keys: &TrustedPeerPrivateKeys) -> Self {
-        let network_signing_private_key = private_keys.get_network_signing_private();
+    pub fn load(private_keys: TrustedPeerPrivateKeys) -> Self {
+        let (network_signing_private_key, network_identity_private_key, consensus_private_key) =
+            private_keys.get_key_triplet();
         let network_signing_public_key = (&network_signing_private_key).into();
-        let network_identity_private_key = private_keys.get_network_identity_private();
         let network_identity_public_key = (&network_identity_private_key).into();
-        let consensus_private_key = private_keys.get_consensus_private();
         let consensus_public_key = (&consensus_private_key).into();
         Self {
-            network_signing_private_key,
+            network_signing_private_key: Some(network_signing_private_key),
             network_signing_public_key,
             network_identity_private_key,
             network_identity_public_key,
-            consensus_private_key,
+            consensus_private_key: Some(consensus_private_key),
             consensus_public_key,
         }
     }
     // getters for private keys
-    pub fn get_network_signing_private(&self) -> signing::PrivateKey {
-        self.network_signing_private_key.clone()
+    /// Beware, this destroys the private key from this NodeConfig
+    pub fn network_signing_private(&mut self) -> Option<Ed25519PrivateKey> {
+        std::mem::replace(&mut self.network_signing_private_key, None)
+    }
+    pub fn get_network_signing_private(&self) -> &Option<Ed25519PrivateKey> {
+        &self.network_signing_private_key
     }
     pub fn get_network_identity_private(&self) -> X25519PrivateKey {
         self.network_identity_private_key.clone()
     }
-    pub fn get_consensus_private(&self) -> signing::PrivateKey {
-        self.consensus_private_key.clone()
+    pub fn get_consensus_private(&self) -> &Option<Ed25519PrivateKey> {
+        &self.consensus_private_key
+    }
+
+    /// Beware, this destroys the private key from this NodeConfig
+    pub fn consensus_private(&mut self) -> Option<Ed25519PrivateKey> {
+        std::mem::replace(&mut self.consensus_private_key, None)
     }
     // getters for public keys
-    pub fn get_network_signing_public(&self) -> signing::PublicKey {
-        self.network_signing_public_key
+    pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
+        &self.network_signing_public_key
     }
     pub fn get_network_identity_public(&self) -> X25519PublicKey {
         self.network_identity_public_key
     }
-    pub fn get_consensus_public(&self) -> signing::PublicKey {
-        self.consensus_public_key
+    pub fn get_consensus_public(&self) -> &Ed25519PublicKey {
+        &self.consensus_public_key
     }
     // getters for keypairs
-    pub fn get_network_signing_keypair(&self) -> (signing::PrivateKey, signing::PublicKey) {
-        (
-            self.get_network_signing_private(),
-            self.get_network_signing_public(),
-        )
-    }
     pub fn get_network_identity_keypair(&self) -> (X25519PrivateKey, X25519PublicKey) {
         (
             self.get_network_identity_private(),
             self.get_network_identity_public(),
         )
     }
-    pub fn get_consensus_keypair(&self) -> (signing::PrivateKey, signing::PublicKey) {
-        (self.get_consensus_private(), self.get_consensus_public())
+}
+
+impl BaseConfig {
+    /// Constructs a new BaseConfig with an empty temp directory
+    pub fn new(
+        peer_id: String,
+        peer_keypairs: KeyPairs,
+        peer_keypairs_file: PathBuf,
+        data_dir_path: PathBuf,
+        trusted_peers_file: String,
+        trusted_peers: TrustedPeersConfig,
+
+        node_sync_batch_size: u64,
+
+        node_sync_retries: usize,
+
+        node_sync_channel_buffer_size: u64,
+
+        node_async_log_chan_size: usize,
+    ) -> Self {
+        BaseConfig {
+            peer_id,
+            peer_keypairs,
+            peer_keypairs_file,
+            data_dir_path,
+            temp_data_dir: None,
+            trusted_peers_file,
+            trusted_peers,
+            node_sync_batch_size,
+            node_sync_retries,
+            node_sync_channel_buffer_size,
+            node_async_log_chan_size,
+        }
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
@@ -522,12 +559,12 @@ impl NodeConfigHelpers {
             config.vm_config.publishing_options = vm_publishing_option;
         }
 
-        let (peers_private_keys, trusted_peers_test) =
+        let (mut peers_private_keys, trusted_peers_test) =
             TrustedPeersConfigHelpers::get_test_config(1, None);
         let peer_id = trusted_peers_test.peers.keys().collect::<Vec<_>>()[0];
         config.base.peer_id = peer_id.clone();
         // load node's keypairs
-        let private_keys = peers_private_keys.get(peer_id.as_str()).unwrap();
+        let private_keys = peers_private_keys.remove_entry(peer_id.as_str()).unwrap().1;
         config.base.peer_keypairs = KeyPairs::load(private_keys);
         config.base.trusted_peers = trusted_peers_test;
         config.network.seed_peers = SeedPeersConfigHelpers::get_test_config(
