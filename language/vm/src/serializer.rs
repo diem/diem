@@ -347,8 +347,21 @@ fn serialize_struct_definition(
     struct_definition: &StructDefinition,
 ) -> Result<()> {
     write_u16_as_uleb128(binary, struct_definition.struct_handle.0)?;
-    write_u16_as_uleb128(binary, struct_definition.field_count)?;
-    write_u16_as_uleb128(binary, struct_definition.fields.0)?;
+    match &struct_definition.field_information {
+        StructFieldInformation::Native => {
+            binary.push(SerializedNativeStructFlag::NATIVE as u8)?;
+            write_u16_as_uleb128(binary, 0)?;
+            write_u16_as_uleb128(binary, 0)?;
+        }
+        StructFieldInformation::Declared {
+            field_count,
+            fields,
+        } => {
+            binary.push(SerializedNativeStructFlag::DECLARED as u8)?;
+            write_u16_as_uleb128(binary, *field_count)?;
+            write_u16_as_uleb128(binary, fields.0)?;
+        }
+    };
     Ok(())
 }
 

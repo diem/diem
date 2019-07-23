@@ -19,7 +19,7 @@ use vm::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, MemberCount,
         ModuleHandle, SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
-        StructHandleIndex, TableIndex, NO_TYPE_ACTUALS,
+        StructFieldInformation, StructHandleIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
@@ -506,8 +506,15 @@ where
                 let struct_definition = self
                     .root_module
                     .struct_def_at(self.resolve_struct_handle(*struct_handle_idx).2);
-                let num_fields = struct_definition.field_count as usize;
-                let index = struct_definition.fields;
+                let (num_fields, index) = match struct_definition.field_information {
+                    StructFieldInformation::Native => {
+                        panic!("[Struct Generation] Unexpected native struct")
+                    }
+                    StructFieldInformation::Declared {
+                        field_count,
+                        fields,
+                    } => (field_count, fields),
+                };
                 let fields = self
                     .root_module
                     .field_def_range(num_fields as MemberCount, index);
@@ -645,8 +652,15 @@ where
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_definition = self.root_module.struct_def_at(random_struct_idx);
-                let num_fields = struct_definition.field_count as usize;
-                let index = struct_definition.fields;
+                let (num_fields, index) = match struct_definition.field_information {
+                    StructFieldInformation::Native => {
+                        panic!("[Struct Pack] Unexpected native struct")
+                    }
+                    StructFieldInformation::Declared {
+                        field_count,
+                        fields,
+                    } => (field_count as usize, fields),
+                };
                 let fields = self
                     .root_module
                     .field_def_range(num_fields as MemberCount, index);
@@ -697,7 +711,7 @@ where
                 let random_struct_idx =
                     StructDefinitionIndex::new(self.next_bounded_index(struct_def_bound));
                 let struct_definition = self.root_module.struct_def_at(random_struct_idx);
-                let num_fields = struct_definition.field_count;
+                let num_fields = struct_definition.declared_field_count().unwrap();
                 // Grab a random field within that struct to borrow
                 let field_index = self.gen.gen_range(0, num_fields);
                 let struct_stack = self.resolve_to_value(

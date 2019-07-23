@@ -18,7 +18,10 @@ use types::language_storage::ModuleId;
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{FunctionHandleIndex, SignatureToken, StructDefinitionIndex, StructHandleIndex},
+    file_format::{
+        FunctionHandleIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex,
+    },
     views::{FunctionHandleView, StructHandleView},
 };
 use vm_cache_map::{Arena, CacheRefMap};
@@ -284,21 +287,30 @@ impl<'alloc> VMModuleCache<'alloc> {
         }
         let def = {
             let struct_def = module.struct_def_at(idx);
-            let mut field_types = vec![];
-            for field in module.field_def_range(struct_def.field_count, struct_def.fields) {
-                let ty = try_runtime!(self.resolve_signature_token_with_fetcher(
-                    module,
-                    &module.type_signature_at(field.signature).0,
-                    gas_meter,
-                    fetcher
-                ));
-                if let Some(t) = ty {
-                    field_types.push(t);
-                } else {
-                    return Ok(Ok(None));
+            match &struct_def.field_information {
+                // TODO we might want a more informative error here
+                StructFieldInformation::Native => return Err(VMInvariantViolation::LinkerError),
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => {
+                    let mut field_types = vec![];
+                    for field in module.field_def_range(*field_count, *fields) {
+                        let ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                            module,
+                            &module.type_signature_at(field.signature).0,
+                            gas_meter,
+                            fetcher
+                        ));
+                        if let Some(t) = ty {
+                            field_types.push(t);
+                        } else {
+                            return Ok(Ok(None));
+                        }
+                    }
+                    StructDef::new(field_types)
                 }
             }
-            StructDef::new(field_types)
         };
         // If multiple writers write to def at the same time, the last one will win. It's possible
         // to have multiple copies of a struct def floating around, but that probably isn't going

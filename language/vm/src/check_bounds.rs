@@ -6,7 +6,7 @@ use crate::{
     file_format::{
         Bytecode, CompiledModuleMut, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionSignature, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
-        StructHandle, TypeSignature,
+        StructFieldInformation, StructHandle, TypeSignature,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -184,7 +184,13 @@ impl BoundsCheck for &StructDefinition {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_handle),
-            module.check_field_range(self.field_count, self.fields),
+            match &self.field_information {
+                StructFieldInformation::Native => None,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => module.check_field_range(*field_count, *fields),
+            },
         ]
         .into_iter()
         .flatten()

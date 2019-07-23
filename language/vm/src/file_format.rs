@@ -27,8 +27,11 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::ModuleAccess, check_bounds::BoundsChecker, errors::VerificationError,
-    internals::ModuleIndex, IndexKind, SignatureTokenKind,
+    access::ModuleAccess,
+    check_bounds::BoundsChecker,
+    errors::{VMInvariantViolation, VerificationError},
+    internals::ModuleIndex,
+    IndexKind, SignatureTokenKind,
 };
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use proptest_derive::Arbitrary;
@@ -251,20 +254,43 @@ pub struct FunctionHandle {
 // DEFINITIONS:
 // Definitions are the module code. So the set of types and functions in the module.
 
-/// A `StructDefinition` is a user type definition. It defines all the fields declared on the type.
+/// `StructFieldInformation` indicates whether a struct is native or has user-specified fields
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[proptest(no_params)]
+pub enum StructFieldInformation {
+    Native,
+    Declared {
+        /// The number of fields in this type.
+        field_count: MemberCount,
+        /// The starting index for the fields of this type. `FieldDefinition`s for each type must
+        /// be consecutively stored in the `FieldDefinition` table.
+        fields: FieldDefinitionIndex,
+    },
+}
+
+/// A `StructDefinition` is a type definition. It either indicates it is native or
+// defines all the user-specified fields declared on the type.
 #[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 #[proptest(no_params)]
 pub struct StructDefinition {
     /// The `StructHandle` for this `StructDefinition`. This has the name and the resource flag
     /// for the type.
     pub struct_handle: StructHandleIndex,
-    /// The number of fields in this type.
-    pub field_count: MemberCount,
-    /// The starting index for the fields of this type. `FieldDefinition`s for each type must
-    /// be consecutively stored in the `FieldDefinition` table.
-    pub fields: FieldDefinitionIndex,
+    /// Contains either
+    /// - Information indicating the struct is native and has no accessible fields
+    /// - Information indicating the number of fields and the start `FieldDefinitionIndex`
+    pub field_information: StructFieldInformation,
 }
 
+impl StructDefinition {
+    pub fn declared_field_count(&self) -> Result<MemberCount, VMInvariantViolation> {
+        match &self.field_information {
+            // TODO we might want a more informative error here
+            StructFieldInformation::Native => Err(VMInvariantViolation::LinkerError),
+            StructFieldInformation::Declared { field_count, .. } => Ok(*field_count),
+        }
+    }
+}
 /// A `FieldDefinition` is the definition of a field: the type the field is defined on,
 /// its name and the field type.
 #[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]

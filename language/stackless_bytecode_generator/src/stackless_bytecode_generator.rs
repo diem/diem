@@ -379,7 +379,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
                 let mut field_temp_indices = vec![];
                 let struct_temp_index = self.temp_count;
-                for _ in struct_definition_view.fields() {
+                for _ in struct_definition_view.fields().unwrap() {
                     let field_temp_index = self.temp_stack.pop().unwrap();
                     field_temp_indices.push(field_temp_index);
                 }
@@ -402,7 +402,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     StructDefinitionView::new(self.module, struct_definition);
                 let mut field_temp_indices = vec![];
                 let struct_temp_index = self.temp_stack.pop().unwrap();
-                for field_definition_view in struct_definition_view.fields() {
+                for field_definition_view in struct_definition_view.fields().unwrap() {
                     let field_signature_view = field_definition_view.type_signature();
                     let field_temp_index = self.temp_count;
                     field_temp_indices.push(field_temp_index);

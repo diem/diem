@@ -26,14 +26,19 @@ impl<'a> ResourceTransitiveChecker<'a> {
         for (idx, struct_def) in self.module_view.structs().enumerate() {
             let def_is_resource = struct_def.is_resource();
             if !def_is_resource {
-                let mut fields = struct_def.fields();
-                let any_resource_field = fields.any(|field| field.type_signature().is_resource());
-                if any_resource_field {
-                    errors.push(VerificationError {
-                        kind: IndexKind::StructDefinition,
-                        idx,
-                        err: VMStaticViolation::InvalidResourceField,
-                    });
+                match struct_def.fields() {
+                    None => (),
+                    Some(mut fields) => {
+                        let any_resource_field =
+                            fields.any(|field| field.type_signature().is_resource());
+                        if any_resource_field {
+                            errors.push(VerificationError {
+                                kind: IndexKind::StructDefinition,
+                                idx,
+                                err: VMStaticViolation::InvalidResourceField,
+                            });
+                        }
+                    }
                 }
             }
         }

@@ -330,9 +330,10 @@ where
                 Bytecode::Pack(sd_idx, _) => {
                     let self_module = self.execution_stack.top_frame()?.module();
                     let struct_def = self_module.struct_def_at(sd_idx);
+                    let field_count = struct_def.declared_field_count()?;
                     let args = self
                         .execution_stack
-                        .popn(struct_def.field_count)?
+                        .popn(field_count)?
                         .into_iter()
                         .map(Local::value)
                         .collect();

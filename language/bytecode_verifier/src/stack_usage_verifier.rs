@@ -12,7 +12,7 @@ use crate::control_flow_graph::{BasicBlock, VMControlFlowGraph};
 use vm::{
     access::ModuleAccess,
     errors::VMStaticViolation,
-    file_format::{Bytecode, CompiledModule, FunctionDefinition},
+    file_format::{Bytecode, CompiledModule, FunctionDefinition, StructFieldInformation},
     views::FunctionDefinitionView,
 };
 
@@ -94,13 +94,23 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
-                let num_fields = i32::from(struct_definition.field_count);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = i32::from(field_count);
                 1 - num_fields
             }
 
             Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
-                let num_fields = i32::from(struct_definition.field_count);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = i32::from(field_count);
                 num_fields - 1
             }
 

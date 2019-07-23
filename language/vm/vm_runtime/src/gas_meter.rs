@@ -209,7 +209,9 @@ impl GasMeter {
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
                 // the struct.
-                let arg_count = AbstractMemorySize::new(u64::from(struct_def.field_count));
+                let member_count = struct_def.declared_field_count()?;
+                let arg_count = AbstractMemorySize::new(u64::from(member_count));
+
                 let total_size = arg_count.add(*STRUCT_SIZE);
                 let new_gas = static_cost_instr(instr, total_size);
                 Self::gas_of(new_gas)
