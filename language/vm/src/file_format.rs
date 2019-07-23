@@ -1423,3 +1423,48 @@ impl CompiledModule {
         })
     }
 }
+
+/// Return the simplest module that will pass the bounds checker
+pub fn empty_module() -> CompiledModuleMut {
+    CompiledModuleMut {
+        module_handles: vec![ModuleHandle {
+            address: AddressPoolIndex::new(0),
+            name: StringPoolIndex::new(0),
+        }],
+        address_pool: vec![AccountAddress::default()],
+        string_pool: vec![SELF_MODULE_NAME.to_string()],
+        function_defs: vec![],
+        struct_defs: vec![],
+        field_defs: vec![],
+        struct_handles: vec![],
+        function_handles: vec![],
+        type_signatures: vec![],
+        function_signatures: vec![],
+        locals_signatures: vec![LocalsSignature(vec![])],
+        byte_array_pool: vec![],
+    }
+}
+
+/// Create a dummy module to wrap the bytecode program in local@code
+pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
+    let mut module = empty_module();
+    let mut code_unit = CodeUnit::default();
+    code_unit.code = code;
+    let mut fun_def = FunctionDefinition::default();
+    fun_def.code = code_unit;
+
+    module.function_signatures.push(FunctionSignature {
+        arg_types: vec![],
+        return_types: vec![],
+        kind_constraints: vec![],
+    });
+    let fun_handle = FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: StringPoolIndex(0),
+        signature: FunctionSignatureIndex(0),
+    };
+
+    module.function_handles.push(fun_handle);
+    module.function_defs.push(fun_def);
+    module.freeze().unwrap()
+}
