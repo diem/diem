@@ -17,7 +17,15 @@ tempfile = "3.1.0"
 toml = "0.4"
 
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 proto_conv = { path = "../common/proto_conv" }
 logger = { path = "../common/logger" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 types = { path = "../types" }
+
+[dev-dependencies]
+nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+
+[features]
+default = []
+testing = ["nextgen_crypto/testing", "types/testing"]

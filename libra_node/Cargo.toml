@@ -25,6 +25,7 @@ execution_proto = { path = "../execution/execution_proto" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 execution_service = { path = "../execution/execution_service" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 network = { path = "../network" }
