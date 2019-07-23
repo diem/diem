@@ -18,7 +18,7 @@ use logger::prelude::*;
 use metrics::OpMetrics;
 use proto_conv::IntoProto;
 use rand::Rng;
-use std::{convert::TryFrom, slice::Chunks, sync::Arc, thread, time};
+use std::{collections::HashMap, convert::TryInto, sync::Arc, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::association_address,
@@ -29,10 +29,10 @@ use types::{
 pub mod grpc_helpers;
 pub mod ruben_opt;
 
-use grpc_helpers::{divide_items, get_account_states, submit_and_wait_txn_requests};
+use grpc_helpers::{
+    divide_items, get_account_states, submit_and_wait_txn_requests, sync_account_sequence_number,
+};
 
-/// Number of iteration to query storage counter when waiting for TXNs to become committed.
-pub const MAX_WAIT_COMMIT_ITERATIONS: u64 = 10_000;
 /// Placehodler values used to generate offline TXNs.
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
@@ -77,6 +77,9 @@ pub struct Benchmarker {
     debug_client: NodeDebugClient,
     /// Upper bound duration to stagger the clients before submitting TXNs.
     stagger_range_ms: u16,
+    /// Persisted sequence numbers for generated accounts and faucet account
+    /// BEFORE playing new round of TXNs.
+    prev_sequence_numbers: HashMap<AccountAddress, u64>,
 }
 
 impl Benchmarker {
@@ -91,11 +94,13 @@ impl Benchmarker {
         }
         let wallet = WalletLibrary::new();
         let arc_clients = clients.into_iter().map(Arc::new).collect();
+        let prev_sequence_numbers = HashMap::new();
         Benchmarker {
             clients: arc_clients,
             wallet,
             debug_client,
             stagger_range_ms,
+            prev_sequence_numbers,
         }
     }
 
@@ -133,20 +138,22 @@ impl Benchmarker {
             .expect("no available AdmissionControlClient");
         let states = get_account_states(client, &[address]);
         let (sequence_number, status) = states
-            .expect("failed to get faucet account from validator")
-            .pop()
-            .expect("faucet account not found");
+            .get(&address)
+            .expect("failed to get faucet account from validator");
+        assert_eq!(status, &AccountStatus::Persisted);
         AccountData {
             address,
             key_pair: Some(faucet_account_keypair),
-            sequence_number,
-            status,
+            sequence_number: *sequence_number,
+            status: status.clone(),
         }
     }
 
     /// Generate a number of random accounts and minting these accounts using self's AC client(s).
     /// Mint TXNs must be 100% successful in order to continue benchmark.
     /// Caller is responsible for terminating the benchmark with expect().
+    /// Known issue: Minting opereations from two different Benchmarker instances
+    /// will fail because they are sharing the same faucet account.
     pub fn gen_and_mint_accounts(
         &mut self,
         mint_key_file_path: &str,
@@ -155,9 +162,12 @@ impl Benchmarker {
         let mut results = vec![];
         let mut mint_requests = vec![];
         let mut faucet_account = self.load_faucet_account(mint_key_file_path);
+        self.prev_sequence_numbers
+            .insert(faucet_account.address, faucet_account.sequence_number);
         for _i in 0..num_accounts {
             let account = self.gen_next_account();
             let mint_txn_req = self.gen_mint_txn_request(&mut faucet_account, &account.address)?;
+            self.prev_sequence_numbers.insert(account.address, 0);
             results.push(account);
             mint_requests.push(mint_txn_req);
         }
@@ -165,7 +175,7 @@ impl Benchmarker {
         let stagger_range_ms = self.stagger_range_ms;
         self.stagger_range_ms = 1;
         let (num_accepted, num_committed, _, _) =
-            self.submit_and_wait_txn_committed(&mint_requests);
+            self.submit_and_wait_txn_committed(&mint_requests, &mut [faucet_account]);
         self.stagger_range_ms = stagger_range_ms;
         // We stop immediately if any minting fails.
         if num_accepted != mint_requests.len() || num_accepted - num_committed > 0 {
@@ -306,10 +316,8 @@ impl Benchmarker {
 
     /// Send requests to AC async, wait for responses from AC.
     /// Return #accepted TXNs and submission duration.
-    pub fn submit_txns(
-        &mut self,
-        txn_req_chunks: Chunks<SubmitTransactionRequest>,
-    ) -> (usize, u128) {
+    pub fn submit_txns(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> (usize, u128) {
+        let txn_req_chunks = divide_items(txn_reqs, self.clients.len());
         let init_storage_cntr = self.get_committed_txns_counter();
         let now = time::Instant::now();
         // Zip txn_req_chunks with clients: when first iter returns none,
@@ -373,49 +381,95 @@ impl Benchmarker {
             .expect("Failed to query TXN status from debug interface")
     }
 
-    /// Wait for #committed TXNs reaching target with fixed number of query iterations.
-    fn wait_for_commit(&self, target: i64) -> u128 {
-        let mut max_iterations = MAX_WAIT_COMMIT_ITERATIONS;
+    /// Wait for accepted TXNs to commit or time out: for any account, if its sequence number
+    /// (bumpped during TXN generation) equals the one synchronized from validator,
+    /// denoted as sync sequence number, then all its TXNs are committed.
+    /// Return senders' most up-to-date sync sequence numbers and how long we have waited.
+    pub fn wait_txns(&self, senders: &[AccountData]) -> (HashMap<AccountAddress, u64>, u128) {
+        let account_chunks = divide_items(senders, self.clients.len());
         let now = time::Instant::now();
-        while max_iterations > 0 {
-            max_iterations -= 1;
-            if self.get_committed_txns_counter() == target {
-                return now.elapsed().as_millis();
-            }
-            thread::sleep(time::Duration::from_micros(500));
+        let children: Vec<thread::JoinHandle<HashMap<_, _>>> = account_chunks
+            .zip(self.clients.iter().cycle())
+            .map(|(chunk, client)| {
+                let local_chunk = Vec::from(chunk);
+                let local_client = Arc::clone(client);
+                info!(
+                    "Dispatch a chunk of {} accounts to client.",
+                    local_chunk.len()
+                );
+                thread::spawn(move || -> HashMap<AccountAddress, u64> {
+                    sync_account_sequence_number(&local_client, &local_chunk)
+                })
+            })
+            .collect();
+        let mut sequence_numbers: HashMap<AccountAddress, u64> = HashMap::new();
+        for child in children {
+            let sequence_number_chunk = child.join().expect("failed to join a wait thread");
+            sequence_numbers.extend(sequence_number_chunk);
         }
         let wait_duration_ms = now.elapsed().as_millis();
-        warn!("wait_for_commit() timeout after {} ms", wait_duration_ms);
-        wait_duration_ms
-    }
-
-    /// Wait for accepted TXNs to commit or time out.
-    /// Return #committed txn during the waiting, and how long we have waited.
-    pub fn wait_txns(&self, init_storage_cntr: i64, num_to_wait: usize) -> (usize, u128) {
-        // We're waiting and then reportig about n transactions
-        // at the same time, other txns might be in progress of getting committed.
-        // We'll fail to verify that our transactions got committed
-        // and we can underflow unsigned number
-        let num_to_wait_i64 = i64::try_from(num_to_wait).expect("Unable to convert usize to i64");
-        let wait_duration_ms = self.wait_for_commit(init_storage_cntr + num_to_wait_i64);
-        let curr_storage_cntr = self.get_committed_txns_counter(); //i64
-
-        // this counter never goes down as long as the server is up
-        let num_committed = (curr_storage_cntr - init_storage_cntr) as usize;
-        info!(
-            "Waited {} TXNs committed for {} ms",
-            num_committed, wait_duration_ms
-        );
-        OP_COUNTER.inc_by("committed_txns", num_committed);
-        if num_to_wait >= num_committed {
-            OP_COUNTER.inc_by("timedout_txns", num_to_wait - num_committed);
-        }
-        (num_committed, wait_duration_ms)
+        info!("Waited for TXNs for {} ms", wait_duration_ms);
+        (sequence_numbers, wait_duration_ms)
     }
 
     /// -------------------------------------------------- ///
     ///  Transaction playing, throughput measureing APIs.  ///
     /// -------------------------------------------------- ///
+
+    /// With the previous stored sequence number (e.g. self.prev_sequence_numbers)
+    /// and the synchronized sequence number from validator, calculate how many TXNs are committed.
+    /// Update both senders sequence numbers and self.prev_sequence_numbers to the just-queried
+    /// synchrnized sequence numbers. Return (#committed, #uncommitted) TXNs.
+    /// Reason to backtrace sender's sequence number:
+    /// If some of sender's TXNs are not committed because they are rejected by AC,
+    /// we should use the synchronized sequence number in future TXN generation.
+    /// On the other hand, if sender's TXNs are accepted but just waiting to be committed,
+    /// part of the newly generated TXNs will be rejected by AC due to old sequence number,
+    /// but eventually local account's sequence number will be new enough to get accepted.
+    fn check_txn_results(
+        &mut self,
+        senders: &mut [AccountData],
+        sync_sequence_numbers: &HashMap<AccountAddress, u64>,
+    ) -> (usize, usize) {
+        let mut committed_txns = 0;
+        let mut uncommitted_txns = 0;
+        // Invariant for any account X in Benchmarker:
+        // 1) X's current persisted sequence number (X.sequence_number) >=
+        //    X's synchronized sequence number (sync_sequence_number[X])
+        // 2) X's current persisted sequence number (X.sequence_number) >=
+        //    X's previous persisted sequence number (self.prev_sequence_numbers[X])
+        for sender in senders.iter_mut() {
+            let prev_sequence_number = self
+                .prev_sequence_numbers
+                .get_mut(&sender.address)
+                .expect("Sender doesn't exist in Benchmark environment");
+            let sync_sequence_number = sync_sequence_numbers
+                .get(&sender.address)
+                .expect("Sender doesn't exist in validators");
+            assert!(sender.sequence_number >= *sync_sequence_number);
+            assert!(*sync_sequence_number >= *prev_sequence_number);
+            if sender.sequence_number > *sync_sequence_number {
+                error!("Account {:?} has uncommitted TXNs", sender.address);
+            }
+            committed_txns += *sync_sequence_number - *prev_sequence_number;
+            uncommitted_txns += sender.sequence_number - *sync_sequence_number;
+            *prev_sequence_number = *sync_sequence_number;
+            sender.sequence_number = *sync_sequence_number;
+        }
+        info!(
+            "#committed TXNs = {}, #uncommitted TXNs = {}",
+            committed_txns, uncommitted_txns
+        );
+        let committed_txns_usize = committed_txns
+            .try_into()
+            .expect("Unable to convert u64 to usize");
+        let uncommitted_txns_usize = uncommitted_txns
+            .try_into()
+            .expect("Unable to convert u64 to usize");
+        OP_COUNTER.inc_by("committed_txns", committed_txns_usize);
+        OP_COUNTER.inc_by("timedout_txns", uncommitted_txns_usize);
+        (committed_txns_usize, uncommitted_txns_usize)
+    }
 
     /// Implement the general way to submit TXNs to Libra and then
     /// wait for all accepted ones to become committed.
@@ -423,12 +477,11 @@ impl Benchmarker {
     pub fn submit_and_wait_txn_committed(
         &mut self,
         txn_reqs: &[SubmitTransactionRequest],
+        senders: &mut [AccountData],
     ) -> (usize, usize, u128, u128) {
-        let txn_req_chunks = divide_items(txn_reqs, self.clients.len());
-        let init_storage_cntr = self.get_committed_txns_counter();
-        let (num_txns_accepted, submit_duration_ms) = self.submit_txns(txn_req_chunks);
-        let (num_committed, wait_duration_ms) =
-            self.wait_txns(init_storage_cntr, num_txns_accepted);
+        let (num_txns_accepted, submit_duration_ms) = self.submit_txns(txn_reqs);
+        let (sync_sequence_numbers, wait_duration_ms) = self.wait_txns(senders);
+        let (num_committed, _) = self.check_txn_results(senders, &sync_sequence_numbers);
         (
             num_txns_accepted,
             num_committed,
@@ -461,9 +514,13 @@ impl Benchmarker {
     /// Estimated request throughput = #TXN / t_submit.
     /// Estimated TXN throughput internal to libra = #TXN / t_commit, not measured by this API.
     /// Return request througnhput and TXN throughput.
-    pub fn measure_txn_throughput(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> (f64, f64) {
+    pub fn measure_txn_throughput(
+        &mut self,
+        txn_reqs: &[SubmitTransactionRequest],
+        senders: &mut [AccountData],
+    ) -> (f64, f64) {
         let (_, num_committed, submit_duration_ms, wait_duration_ms) =
-            self.submit_and_wait_txn_committed(txn_reqs);
+            self.submit_and_wait_txn_committed(txn_reqs, senders);
         let request_throughput =
             Self::calculate_throughput(txn_reqs.len(), submit_duration_ms, "REQ");
         let running_duration_ms = submit_duration_ms + wait_duration_ms;
