@@ -51,7 +51,7 @@ pub struct ChainedBftProvider {
 
 impl ChainedBftProvider {
     pub fn new(
-        node_config: &NodeConfig,
+        node_config: &mut NodeConfig,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
@@ -109,15 +109,21 @@ impl ChainedBftProvider {
 
     /// Retrieve the initial "state" for consensus. This function is synchronous and returns after
     /// reading the local persistent store and retrieving the initial state from the executor.
-    fn initialize_setup(node_config: &NodeConfig) -> InitialSetup {
+    fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup {
         // Keeping the initial set of validators in a node config is embarrassing and we should
         // all feel bad about it.
         let peer_id_str = node_config.base.peer_id.clone();
         let author =
             AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
-        let private_key = node_config.base.peer_keypairs.get_consensus_private();
-        let _public_key = node_config.base.peer_keypairs.get_consensus_public();
-        let signer = ValidatorSigner::new(author, private_key.into());
+        let private_key = node_config
+            .base
+            .peer_keypairs
+            .take_consensus_private()
+            .expect(
+            "Failed to move a Consensus private key from a NodeConfig, key absent or already read",
+        );
+
+        let signer = ValidatorSigner::new(author, private_key);
         let peers_with_public_keys = node_config.base.trusted_peers.get_trusted_consensus_peers();
         let peers_with_nextgen_public_keys = peers_with_public_keys
             .clone()

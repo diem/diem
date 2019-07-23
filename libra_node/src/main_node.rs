@@ -24,6 +24,7 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use nextgen_crypto::ed25519::*;
 use std::{
     cmp::max,
     convert::{TryFrom, TryInto},
@@ -136,7 +137,7 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
 }
 
 pub fn setup_network(
-    config: &NodeConfig,
+    config: &mut NodeConfig,
 ) -> (
     (MempoolNetworkSender, MempoolNetworkEvents),
     (ConsensusNetworkSender, ConsensusNetworkEvents),
@@ -173,8 +174,10 @@ pub fn setup_network(
         .into_iter()
         .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
         .collect();
-    let network_signing_keypair = config.base.peer_keypairs.get_network_signing_keypair();
-    let (private_key, public_key) = network_signing_keypair;
+    let network_signing_private = config.base.peer_keypairs.take_network_signing_private()
+        .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
+
+    let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
     let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
     let (
         (mempool_network_sender, mempool_network_events),
@@ -188,7 +191,7 @@ pub fn setup_network(
         })
         .advertised_address(advertised_addr)
         .seed_peers(seed_peers)
-        .signing_keys((private_key.into(), public_key.into()))
+        .signing_keys((network_signing_private, network_signing_public))
         .identity_keys(network_identity_keypair)
         .trusted_peers(trusted_peers)
         .discovery_interval_ms(config.network.discovery_interval_ms)
@@ -212,7 +215,7 @@ pub fn setup_network(
     )
 }
 
-pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, LibraHandle) {
+pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
     crash_handler::setup_panic_handler();
 
     let mut instant = Instant::now();
@@ -234,7 +237,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, L
         (mempool_network_sender, mempool_network_events),
         (consensus_network_sender, consensus_network_events),
         network_runtime,
-    ) = setup_network(&node_config);
+    ) = setup_network(node_config);
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 
     instant = Instant::now();
@@ -255,7 +258,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, L
 
     instant = Instant::now();
     let mut consensus_provider = make_consensus_provider(
-        &node_config,
+        node_config,
         consensus_network_sender,
         consensus_network_events,
     );

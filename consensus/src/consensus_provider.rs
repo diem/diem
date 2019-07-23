@@ -27,7 +27,7 @@ pub trait ConsensusProvider {
 
 /// Helper function to create a ConsensusProvider based on configuration
 pub fn make_consensus_provider(
-    node_config: &NodeConfig,
+    node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_receiver: ConsensusNetworkEvents,
 ) -> Box<dyn ConsensusProvider> {

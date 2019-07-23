@@ -38,6 +38,7 @@ members = [
     "language/e2e_tests",
     "language/tools/cost_synthesis",
     "language/tools/repl",
+    "language/tools/test_generation",
     "language/stackless_bytecode_generator",
     "language/stdlib/natives",
     "language/vm",
