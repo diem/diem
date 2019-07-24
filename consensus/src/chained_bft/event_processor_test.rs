@@ -258,7 +258,11 @@ fn basic_new_rank_event_test() {
         let vote_msg = VoteMsg::new(
             VoteData::new(
                 a1.id(),
-                node.block_store.get_state_for_block(a1.id()).unwrap(),
+                node.block_store
+                    .get_compute_result(a1.id())
+                    .unwrap()
+                    .executed_state
+                    .state_id,
                 a1.round(),
                 a1.quorum_cert().parent_block_id(),
                 a1.quorum_cert().parent_block_round(),
@@ -646,7 +650,11 @@ fn process_votes_basic_test() {
         inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
     let vote_data = VoteData::new(
         a1.id(),
-        node.block_store.get_state_for_block(a1.id()).unwrap(),
+        node.block_store
+            .get_compute_result(a1.id())
+            .unwrap()
+            .executed_state
+            .state_id,
         a1.round(),
         a1.quorum_cert().parent_block_id(),
         a1.quorum_cert().parent_block_round(),

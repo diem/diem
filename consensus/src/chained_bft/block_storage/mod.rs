@@ -13,7 +13,7 @@ mod block_tree;
 
 use crate::{
     chained_bft::consensus_types::vote_msg::VoteMsgVerificationError,
-    state_replication::{ExecutedState, StateComputeResult},
+    state_replication::StateComputeResult,
 };
 pub use block_store::{BlockStore, NeedFetchResult};
 use network::protocols::rpc::error::RpcError;
@@ -83,9 +83,6 @@ pub enum InsertError {
     /// Block's parent is not certified with the QC carried by the block.
     #[fail(display = "ParentNotCertified")]
     ParentNotCertified,
-    /// State version corresponding to block's parent not found.
-    #[fail(display = "ParentVersionNotFound")]
-    ParentVersionNotFound,
     /// Some of the block's ancestors could not be retrieved.
     #[fail(display = "AncestorRetrievalError")]
     AncestorRetrievalError,
@@ -157,10 +154,10 @@ pub trait BlockReader: Send + Sync {
     /// Try to get a block with the block_id, return an Arc of it if found.
     fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>>;
 
-    /// Try to get a state id (HashValue) of the system corresponding to block execution.
-    fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState>;
-
-    /// Try to get an execution result given the specified block id.
+    /// Try to get a compute result given the specified block id.
+    ///
+    /// Returns an option since all blocks should have a compute result or None for root block
+    /// since it has already been committed.
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
 
     /// Get the current root block of the BlockTree.

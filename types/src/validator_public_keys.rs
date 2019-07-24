@@ -15,6 +15,7 @@ use failure::Result;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 /// After executing a special transaction that sets the validators that should be used for the
@@ -22,7 +23,7 @@ use std::convert::TryFrom;
 /// public key to validate signed messages and networking will have a TBD public key for
 /// creating secure channels of communication between validators.  The validators and their
 /// public keys may or may not change between epochs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ValidatorPublicKeys {
     // Hash value of the current public key of the account address

@@ -163,7 +163,7 @@ pub fn placeholder_certificate_for_block(
     let certified_block_state = ExecutedState::state_for_genesis();
     let consensus_data_hash = VoteData::vote_digest(
         certified_block_id,
-        certified_block_state,
+        certified_block_state.state_id,
         certified_block_round,
         certified_parent_block_id,
         certified_parent_block_round,
@@ -187,7 +187,7 @@ pub fn placeholder_certificate_for_block(
     QuorumCert::new(
         VoteData::new(
             certified_block_id,
-            certified_block_state,
+            certified_block_state.state_id,
             certified_block_round,
             certified_parent_block_id,
             certified_parent_block_round,

@@ -9,7 +9,7 @@ use crate::{
         },
     },
     counters,
-    state_replication::{ExecutedState, StateComputeResult},
+    state_replication::StateComputeResult,
     util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
@@ -39,8 +39,6 @@ pub struct BlockTree<T> {
     /// have multiple child links.  There should be id_to_blocks.len() - 1 total
     /// id_to_child entries.
     id_to_child: HashMap<HashValue, Vec<Arc<Block<T>>>>,
-    /// Mapping between proposals(Block) to execution results.
-    id_to_state: HashMap<HashValue, ExecutedState>,
     /// Keeps the state compute results of the executed blocks.
     /// The state compute results is calculated for all the pending blocks prior to insertion to
     /// the tree (the initial root node might not have it, because it's been already
@@ -102,15 +100,11 @@ where
             Arc::clone(&root_quorum_cert),
         );
 
-        let mut id_to_state = HashMap::new();
-        id_to_state.insert(root.id(), root_quorum_cert.certified_state());
-
         let pruned_block_ids = VecDeque::with_capacity(max_pruned_blocks_in_mem);
 
         BlockTree {
             id_to_block,
             id_to_child: HashMap::new(),
-            id_to_state,
             id_to_compute_result: HashMap::new(),
             root: Arc::clone(&root),
             highest_certified_block: Arc::clone(&root),
@@ -128,7 +122,6 @@ where
         self.id_to_child.remove(&block_id);
         // Remove the block from the store
         self.id_to_block.remove(&block_id);
-        self.id_to_state.remove(&block_id);
         self.id_to_compute_result.remove(&block_id);
         self.id_to_votes.remove(&block_id);
         self.id_to_quorum_cert.remove(&block_id);
@@ -142,15 +135,18 @@ where
         self.id_to_block.get(&block_id).cloned()
     }
 
-    pub(super) fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState> {
-        self.id_to_state.get(&block_id).cloned()
-    }
-
     pub(super) fn get_compute_result(
         &self,
         block_id: HashValue,
     ) -> Option<Arc<StateComputeResult>> {
-        self.id_to_compute_result.get(&block_id).cloned()
+        if self.root.id() == block_id {
+            None
+        } else {
+            match self.id_to_compute_result.get(&block_id) {
+                Some(executed_state) => Some(executed_state.clone()),
+                None => panic!("Impossible that a block {} that is not the root block does not have a compute result", &block_id),
+            }
+        }
     }
 
     pub(super) fn root(&self) -> Arc<Block<T>> {
@@ -176,7 +172,6 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: Block<T>,
-        state: ExecutedState,
         compute_result: StateComputeResult,
     ) -> Result<Arc<Block<T>>, BlockTreeError> {
         if !self.block_exists(block.parent_id()) {
@@ -192,7 +187,10 @@ where
                        previous_block,
                        block.id(),
                        block);
-                checked_verify_eq!(*self.id_to_state.get(&block.id()).unwrap(), state);
+                if let Some(previous_compute_result) = self.get_compute_result(block.id()) {
+                    checked_verify_eq!(previous_compute_result.as_ref(), &compute_result);
+                }
+
                 Ok(previous_block.clone())
             }
             _ => {
@@ -203,7 +201,6 @@ where
                 children.push(block.clone());
                 counters::NUM_BLOCKS_IN_TREE.inc();
                 self.id_to_block.insert(block.id(), block.clone());
-                self.id_to_state.insert(block.id(), state);
                 self.id_to_compute_result
                     .insert(block.id(), Arc::new(compute_result));
                 Ok(block)
@@ -282,7 +279,7 @@ where
             let quorum_cert = QuorumCert::new(
                 VoteData::new(
                     block_id,
-                    vote_msg.executed_state(),
+                    vote_msg.executed_state_id(),
                     vote_msg.block_round(),
                     vote_msg.parent_block_id(),
                     vote_msg.parent_block_round(),

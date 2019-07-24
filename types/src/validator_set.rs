@@ -14,6 +14,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 
 pub const VALIDATOR_SET_MODULE_NAME: &str = "ValidatorSet";
 pub const VALIDATOR_SET_STRUCT_NAME: &str = "T";
@@ -31,7 +32,7 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
     AccessPath::resource_access_vec(&validator_set_tag(), &Accesses::empty())
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
 

@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::QuorumCert,
     counters,
-    state_replication::{StateComputeResult, StateComputer},
+    state_replication::{ExecutedState, StateComputeResult, StateComputer},
 };
 use crypto::HashValue;
 use execution_proto::proto::{
@@ -65,23 +65,21 @@ impl ExecutionProxy {
             }
         }
         let mut compute_status = vec![];
-        let mut num_successful_txns = 0;
         for vm_status in execution_block_response.status() {
             let status = match vm_status {
-                TransactionStatus::Keep(_) => {
-                    num_successful_txns += 1;
-                    true
-                }
+                TransactionStatus::Keep(_) => true,
                 TransactionStatus::Discard(_) => false,
             };
             compute_status.push(status);
         }
 
         StateComputeResult {
-            new_state_id: execution_block_response.root_hash(),
+            executed_state: ExecutedState {
+                state_id: execution_block_response.root_hash(),
+                version: execution_block_response.version(),
+                validators: execution_block_response.validators().clone(),
+            },
             compute_status,
-            num_successful_txns,
-            validators: execution_block_response.validators().clone(),
         }
     }
 }

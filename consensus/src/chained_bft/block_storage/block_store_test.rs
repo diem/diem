@@ -67,7 +67,11 @@ fn test_block_store_create_block() {
     let vote_msg = VoteMsg::new(
         VoteData::new(
             a1_ref.id(),
-            block_store.get_state_for_block(a1_ref.id()).unwrap(),
+            block_store
+                .get_compute_result(a1_ref.id())
+                .unwrap()
+                .executed_state
+                .state_id,
             a1_ref.round(),
             a1_ref.quorum_cert().parent_block_id(),
             a1_ref.quorum_cert().parent_block_round(),
@@ -335,7 +339,11 @@ fn test_insert_vote() {
         let vote_msg = VoteMsg::new(
             VoteData::new(
                 block.id(),
-                block_store.get_state_for_block(block.id()).unwrap(),
+                block_store
+                    .get_compute_result(block.id())
+                    .unwrap()
+                    .executed_state
+                    .state_id,
                 block.round(),
                 block.quorum_cert().parent_block_id(),
                 block.quorum_cert().parent_block_round(),
@@ -364,7 +372,11 @@ fn test_insert_vote() {
     let vote_msg = VoteMsg::new(
         VoteData::new(
             block.id(),
-            block_store.get_state_for_block(block.id()).unwrap(),
+            block_store
+                .get_compute_result(block.id())
+                .unwrap()
+                .executed_state
+                .state_id,
             block.round(),
             block.quorum_cert().parent_block_id(),
             block.quorum_cert().parent_block_round(),
@@ -407,7 +419,11 @@ fn test_vote_aggregation() {
     let li1 = placeholder_ledger_info();
     let vote_data = VoteData::new(
         block.id(),
-        block_store.get_state_for_block(block.id()).unwrap(),
+        block_store
+            .get_compute_result(block.id())
+            .unwrap()
+            .executed_state
+            .state_id,
         block.round(),
         block.quorum_cert().parent_block_id(),
         block.quorum_cert().parent_block_round(),

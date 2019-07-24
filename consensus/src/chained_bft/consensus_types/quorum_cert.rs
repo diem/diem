@@ -1,12 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::Round,
-        consensus_types::{vote_data::VoteData, vote_msg::VoteMsgVerificationError},
-    },
-    state_replication::ExecutedState,
+use crate::chained_bft::{
+    common::Round,
+    consensus_types::{vote_data::VoteData, vote_msg::VoteMsgVerificationError},
 };
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
@@ -55,8 +52,8 @@ impl QuorumCert {
         self.vote_data.block_id()
     }
 
-    pub fn certified_state(&self) -> ExecutedState {
-        self.vote_data.executed_state()
+    pub fn certified_state_id(&self) -> HashValue {
+        self.vote_data.executed_state_id()
     }
 
     pub fn certified_block_round(&self) -> Round {
@@ -99,7 +96,7 @@ impl QuorumCert {
     pub fn certificate_for_genesis() -> QuorumCert {
         let genesis_digest = VoteData::vote_digest(
             *GENESIS_BLOCK_ID,
-            ExecutedState::state_for_genesis(),
+            *ACCUMULATOR_PLACEHOLDER_HASH,
             0,
             *GENESIS_BLOCK_ID,
             0,
@@ -123,7 +120,7 @@ impl QuorumCert {
         QuorumCert::new(
             VoteData::new(
                 *GENESIS_BLOCK_ID,
-                ExecutedState::state_for_genesis(),
+                *ACCUMULATOR_PLACEHOLDER_HASH,
                 0,
                 *GENESIS_BLOCK_ID,
                 0,
@@ -145,7 +142,7 @@ impl QuorumCert {
         // Genesis is implicitly agreed upon, it doesn't have real signatures.
         if self.vote_data.block_round() == 0
             && self.vote_data.block_id() == *GENESIS_BLOCK_ID
-            && self.vote_data.executed_state() == ExecutedState::state_for_genesis()
+            && self.vote_data.executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
         {
             return Ok(());
         }
