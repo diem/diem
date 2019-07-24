@@ -626,10 +626,12 @@ impl<T: Payload> EventProcessor<T> {
             })?;
 
         let proposal_id = vote_info.proposal_id();
-        let executed_state = self
+        let executed_state_id = self
             .block_store
-            .get_state_for_block(proposal_id)
-            .expect("Block proposed_block: no execution state found for inserted block.");
+            .get_compute_result(proposal_id)
+            .expect("Block proposed_block: no execution state found for inserted block.")
+            .executed_state
+            .state_id;
 
         let ledger_info_placeholder = self
             .block_store
@@ -637,7 +639,7 @@ impl<T: Payload> EventProcessor<T> {
         Ok(VoteMsg::new(
             VoteData::new(
                 proposal_id,
-                executed_state,
+                executed_state_id,
                 block.round(),
                 vote_info.parent_block_id(),
                 vote_info.parent_block_round(),

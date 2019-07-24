@@ -8,7 +8,7 @@ use crate::{
         consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
         persistent_storage::PersistentStorage,
     },
-    state_replication::{ExecutedState, StateComputer},
+    state_replication::StateComputer,
 };
 use crypto::HashValue;
 use logger::prelude::*;
@@ -107,25 +107,16 @@ impl<T: Payload> BlockStore<T> {
                 .compute(block.parent_id(), block.id(), block.get_payload())
                 .await
                 .expect("fail to rebuild scratchpad");
-            let version = tree
-                .get_state_for_block(block.parent_id())
-                .expect("parent state does not exist")
-                .version
-                + compute_res.num_successful_txns;
-            let executed_state = ExecutedState {
-                state_id: compute_res.new_state_id,
-                version,
-            };
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(
-                    qc.certified_state(),
-                    executed_state,
+                    qc.certified_state_id(),
+                    compute_res.executed_state.state_id,
                     "We have inconsistent executed state with Quorum Cert for block {}",
                     block.id()
                 );
             }
-            tree.insert_block(block, executed_state, compute_res)
+            tree.insert_block(block, compute_res)
                 .expect("Block insertion failed while build the tree");
         }
         quorum_certs.into_iter().for_each(|(_, qc)| {
@@ -176,7 +167,7 @@ impl<T: Payload> BlockStore<T> {
         if let Some(existing_block) = self.inner.read().unwrap().get_block(block.id()) {
             return Ok(existing_block);
         }
-        let (parent_id, parent_exec_version) = match self.verify_and_get_parent_info(&block) {
+        let parent_id = match self.verify_and_get_parent_id(&block) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidBlock)
@@ -195,19 +186,13 @@ impl<T: Payload> BlockStore<T> {
                 InsertError::StateComputerError
             })?;
 
-        let version = parent_exec_version + compute_res.num_successful_txns;
-
-        let state = ExecutedState {
-            state_id: compute_res.new_state_id,
-            version,
-        };
         self.storage
             .save_tree(vec![block.clone()], vec![])
             .map_err(|_| InsertError::StorageFailure)?;
         self.inner
             .write()
             .unwrap()
-            .insert_block(block, state, compute_res)
+            .insert_block(block, compute_res)
             .map_err(|e| e.into())
     }
 
@@ -251,19 +236,23 @@ impl<T: Payload> BlockStore<T> {
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
     pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> Result<(), InsertError> {
-        // Ensure executed state is consistent with Quorum Cert, otherwise persist the quorum's
-        // state and hopefully we restart and agree with it.
-        let executed_state = self
-            .get_state_for_block(qc.certified_block_id())
-            .ok_or_else(|| InsertError::MissingParentBlock(qc.certified_block_id()))?;
-        assert_eq!(
-            executed_state,
-            qc.certified_state(),
-            "We have inconsistent executed state with the executed state from the quorum \
-             certificate for block {}, will kill this validator and rely on state synchronization \
-             to try to achieve consistent state with the quorum certificate.",
-            qc.certified_block_id(),
-        );
+        // If the parent block is not the root block (i.e not None), ensure the executed state
+        // of a block is consistent with its QuorumCert, otherwise persist the QuorumCert's
+        // state and on restart, a new execution will agree with it.  A new execution will match
+        // the QuorumCert's state on the next restart will work if there is a memory
+        // corruption, for example.
+        if let Some(compute_result) = self.get_compute_result(qc.certified_block_id()) {
+            assert_eq!(
+                compute_result.executed_state.state_id,
+                qc.certified_state_id(),
+                "We have inconsistent executed state with the executed state from the quorum \
+                 certificate for block {}, will kill this validator and rely on state \
+                 synchronization to try to achieve consistent state with the quorum \
+                 certificate.",
+                qc.certified_block_id(),
+            );
+        }
+
         self.storage
             .save_tree(vec![], vec![qc.clone()])
             .map_err(|_| InsertError::StorageFailure)?;
@@ -336,8 +325,11 @@ impl<T: Payload> BlockStore<T> {
                 return Self::zero_ledger_info_placeholder();
             }
         };
-        let (state_id, version) = match self.get_state_for_block(block_id) {
-            Some(state) => (state.state_id, state.version),
+        let (state_id, version) = match self.get_compute_result(block_id) {
+            Some(compute_state) => (
+                compute_state.executed_state.state_id,
+                compute_state.executed_state.version,
+            ),
             None => {
                 return Self::zero_ledger_info_placeholder();
             }
@@ -366,10 +358,7 @@ impl<T: Payload> BlockStore<T> {
         )
     }
 
-    fn verify_and_get_parent_info(
-        &self,
-        block: &Block<T>,
-    ) -> Result<(HashValue, u64), InsertError> {
+    fn verify_and_get_parent_id(&self, block: &Block<T>) -> Result<HashValue, InsertError> {
         if block.round() <= self.inner.read().unwrap().root().round() {
             return Err(InsertError::OldBlock);
         }
@@ -399,11 +388,8 @@ impl<T: Payload> BlockStore<T> {
         {
             return Err(InsertError::NonIncreasingTimestamp);
         }
-        let parent_id = parent.id();
-        match self.inner.read().unwrap().get_state_for_block(parent_id) {
-            Some(ExecutedState { version, .. }) => Ok((parent.id(), version)),
-            None => Err(InsertError::ParentVersionNotFound),
-        }
+
+        Ok(parent.id())
     }
 }
 
@@ -416,10 +402,6 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>> {
         self.inner.read().unwrap().get_block(block_id)
-    }
-
-    fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState> {
-        self.inner.read().unwrap().get_state_for_block(block_id)
     }
 
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {

@@ -1,12 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Author, Round},
-        consensus_types::vote_data::VoteData,
-    },
-    state_replication::ExecutedState,
+use crate::chained_bft::{
+    common::{Author, Round},
+    consensus_types::vote_data::VoteData,
 };
 use crypto::hash::{CryptoHash, HashValue};
 use failure::Result as ProtoResult;
@@ -86,8 +83,8 @@ impl VoteMsg {
         self.vote_data.block_id()
     }
 
-    pub fn executed_state(&self) -> ExecutedState {
-        self.vote_data.executed_state()
+    pub fn executed_state_id(&self) -> HashValue {
+        self.vote_data.executed_state_id()
     }
 
     pub fn block_round(&self) -> Round {

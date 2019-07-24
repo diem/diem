@@ -355,7 +355,7 @@ fn test_network_api() {
     let vote = VoteMsg::new(
         VoteData::new(
             HashValue::random(),
-            ExecutedState::state_for_genesis(),
+            ExecutedState::state_for_genesis().state_id,
             1,
             HashValue::random(),
             0,

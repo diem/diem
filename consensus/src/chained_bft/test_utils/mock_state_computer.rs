@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{consensus_types::quorum_cert::QuorumCert, test_utils::TestPayload},
-    state_replication::{StateComputeResult, StateComputer},
+    state_replication::{ExecutedState, StateComputeResult, StateComputer},
 };
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
@@ -32,10 +32,12 @@ impl StateComputer for MockStateComputer {
         _transactions: &Self::Payload,
     ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
         future::ok(StateComputeResult {
-            new_state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+            executed_state: ExecutedState {
+                state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+                version: 0,
+                validators: None,
+            },
             compute_status: vec![],
-            num_successful_txns: 0,
-            validators: None,
         })
         .boxed()
     }
@@ -75,10 +77,12 @@ impl StateComputer for EmptyStateComputer {
         _transactions: &Self::Payload,
     ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
         future::ok(StateComputeResult {
-            new_state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+            executed_state: ExecutedState {
+                state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+                version: 0,
+                validators: None,
+            },
             compute_status: vec![],
-            num_successful_txns: 0,
-            validators: None,
         })
         .boxed()
     }

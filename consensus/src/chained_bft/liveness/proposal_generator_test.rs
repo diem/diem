@@ -77,7 +77,11 @@ fn test_proposal_generation_parent() {
     let vote_msg_a1 = VoteMsg::new(
         VoteData::new(
             a1.id(),
-            block_store.get_state_for_block(a1.id()).unwrap(),
+            block_store
+                .get_compute_result(a1.id())
+                .unwrap()
+                .executed_state
+                .state_id,
             a1.round(),
             a1.quorum_cert().parent_block_id(),
             a1.quorum_cert().parent_block_round(),
@@ -100,7 +104,11 @@ fn test_proposal_generation_parent() {
     let vote_msg_b1 = VoteMsg::new(
         VoteData::new(
             b1.id(),
-            block_store.get_state_for_block(b1.id()).unwrap(),
+            block_store
+                .get_compute_result(b1.id())
+                .unwrap()
+                .executed_state
+                .state_id,
             b1.round(),
             b1.quorum_cert().parent_block_id(),
             b1.quorum_cert().parent_block_round(),
@@ -137,7 +145,11 @@ fn test_old_proposal_generation() {
     let vote_msg_a1 = VoteMsg::new(
         VoteData::new(
             a1.id(),
-            block_store.get_state_for_block(a1.id()).unwrap(),
+            block_store
+                .get_compute_result(a1.id())
+                .unwrap()
+                .executed_state
+                .state_id,
             a1.round(),
             a1.quorum_cert().parent_block_id(),
             a1.quorum_cert().parent_block_round(),

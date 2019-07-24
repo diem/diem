@@ -129,20 +129,13 @@ where
     pub fn make_genesis_block() -> Self {
         let ancestor_id = HashValue::zero();
         let genesis_validator_signer = ValidatorSigner::genesis();
-        let state = ExecutedState::state_for_genesis();
+        let state_id = ExecutedState::state_for_genesis().state_id;
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
         let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor_id, state, 0, ancestor_id, 0, ancestor_id, 0),
+            VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0, ancestor_id, 0),
             LedgerInfoWithSignatures::new(
-                LedgerInfo::new(
-                    0,
-                    state.state_id,
-                    HashValue::zero(),
-                    HashValue::zero(),
-                    0,
-                    0,
-                ),
+                LedgerInfo::new(0, state_id, HashValue::zero(), HashValue::zero(), 0, 0),
                 HashMap::new(),
             ),
         );

@@ -98,19 +98,18 @@ message QuorumCert {
 message VoteData {
   // The id of the block being vote for.
   bytes block_id = 1;
-  // The round of the block being voted for
-  uint64 round = 2;
   // The id and the version of the state after executing the block.
-  bytes executed_state_id = 3;
-  uint64 version = 4;
+  bytes executed_state_id = 2;
+  // The round of the block being voted for
+  uint64 round = 3;
   // The id of the parent block
-  bytes parent_block_id = 5;
+  bytes parent_block_id = 4;
   // The round of the parent block
-  uint64 parent_block_round = 6;
+  uint64 parent_block_round = 5;
   // The id of the grandparent block
-  bytes grandparent_block_id = 7;
+  bytes grandparent_block_id = 6;
   // The round of the grandparent block
-  uint64 grandparent_block_round = 8;
+  uint64 grandparent_block_round = 7;
 }
 
 message Vote {
