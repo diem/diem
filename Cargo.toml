@@ -11,6 +11,7 @@ members = [
     "common/debug_interface",
     "common/executable_helpers",
     "common/failure_ext",
+    "common/futures-semaphore",
     "common/grpcio-client",
     "common/jemalloc",
     "common/logger",
