@@ -11,9 +11,10 @@ const ED25519_COST: u64 = 35;
 pub fn native_ed25519_signature_verification<T: StackAccessor>(
     mut accessor: T,
 ) -> Result<CostedReturnType> {
-    let signature = accessor.get_byte_array()?;
-    let pubkey = accessor.get_byte_array()?;
     let msg = accessor.get_byte_array()?;
+    let pubkey = accessor.get_byte_array()?;
+    let signature = accessor.get_byte_array()?;
+
 
     let native_cost = ED25519_COST * msg.len() as u64;
 

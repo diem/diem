@@ -1,9 +1,9 @@
 import 0x0.Signature;
 
 main() {
-    let signature: bytearray;
-    let public_key: bytearray;
     let message: bytearray;
+    let public_key: bytearray;
+    let signature: bytearray;
 
     let output: bool;
     let expected_output: bool;
@@ -12,13 +12,10 @@ main() {
     public_key = b"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     message = b"0000000000000000000000000000000000000000000000000000000000000000";
 
-    output = Signature.ed25519_verify(copy(signature), copy(public_key), copy(message));
+    output = Signature.ed25519_verify(move(signature), move(public_key), move(message));
     expected_output = true;
 
     assert(move(output) == move(expected_output), 42);
 
     return;
 }
-
-// check: LinkerError
-// TODO: fix it
