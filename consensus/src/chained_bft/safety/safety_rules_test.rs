@@ -6,7 +6,10 @@ use crate::chained_bft::{
     common::Round,
     consensus_types::block::{block_test, Block},
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
-    test_utils::{build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
+    test_utils::{
+        build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
+        TreeInserter,
+    },
 };
 use cached::{cached_key, SizedCache};
 use crypto::HashValue;
@@ -306,6 +309,36 @@ fn test_voting() {
         safety_rules.voting_rule(b4.clone()),
         Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
+        })
+    );
+
+    // Verify that the voting rules return ParentNotFound for cases the parent is not there.
+    let dummy_parent = Arc::new(Block::make_block(
+        a1.as_ref(),
+        vec![100],
+        100,
+        123,
+        placeholder_certificate_for_block(vec![block_tree.signer()], a1.id(), a1.round()),
+        block_tree.signer(),
+    ));
+    let dummy_block = Arc::new(Block::make_block(
+        dummy_parent.as_ref(),
+        vec![100],
+        dummy_parent.round() + 1,
+        123,
+        placeholder_certificate_for_block(
+            vec![block_tree.signer()],
+            dummy_parent.id(),
+            dummy_parent.round(),
+        ),
+        block_tree.signer(),
+    ));
+    assert_eq!(
+        safety_rules.voting_rule(dummy_block.clone()),
+        Err(ProposalReject::ParentNotFound {
+            proposal_id: dummy_block.id(),
+            proposal_round: dummy_block.round(),
+            parent_id: dummy_parent.id(),
         })
     );
 }
