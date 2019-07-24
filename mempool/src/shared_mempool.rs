@@ -3,7 +3,6 @@
 
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use config::config::{MempoolConfig, NodeConfig};
@@ -210,17 +209,31 @@ async fn process_incoming_transactions<V>(
 ) where
     V: TransactionValidation,
 {
-    let validations = join_all(
-        transactions
-            .iter()
-            .map(|t| smp.validator.validate_transaction(t.clone()).compat()),
-    )
-    .await;
-
     let account_states = join_all(
         transactions
             .iter()
             .map(|t| get_account_state(smp.storage_read_client.clone(), t.sender())),
+    )
+    .await;
+
+    // eagerly filter out transactions that were already committed
+    let transactions: Vec<_> = transactions
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, t)| {
+            if let Ok((sequence_number, balance)) = account_states[idx] {
+                if t.sequence_number() >= sequence_number {
+                    return Some((t, sequence_number, balance));
+                }
+            }
+            None
+        })
+        .collect();
+
+    let validations = join_all(
+        transactions
+            .iter()
+            .map(|t| smp.validator.validate_transaction(t.0.clone()).compat()),
     )
     .await;
 
@@ -230,21 +243,25 @@ async fn process_incoming_transactions<V>(
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock");
 
-        for (idx, transaction) in transactions.into_iter().enumerate() {
+        for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
             if let Ok(None) = validations[idx] {
-                if let Ok((sequence_number, balance)) = account_states[idx] {
-                    let gas_cost = transaction.max_gas_amount();
-                    let insertion_result = mempool.add_txn(
-                        transaction,
-                        gas_cost,
-                        sequence_number,
-                        balance,
-                        TimelineState::NonQualified,
-                    );
-                    if insertion_result.code == MempoolAddTransactionStatusCode::Valid {
-                        OP_COUNTERS.inc(&format!("smp.transactions.success.{:?}", peer_id));
-                    }
-                }
+                let gas_cost = transaction.max_gas_amount();
+                let insertion_result = mempool.add_txn(
+                    transaction,
+                    gas_cost,
+                    sequence_number,
+                    balance,
+                    TimelineState::NonQualified,
+                );
+                OP_COUNTERS.inc(&format!(
+                    "smp.transactions.status.{:?}.{:?}",
+                    insertion_result.code, peer_id
+                ));
+            } else {
+                OP_COUNTERS.inc(&format!(
+                    "smp.transactions.status.validation_failed.{:?}",
+                    peer_id
+                ));
             }
         }
     }
