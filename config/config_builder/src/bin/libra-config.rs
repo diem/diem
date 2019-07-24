@@ -61,13 +61,13 @@ fn main() {
                 .takes_value(true),
         )
         .get_matches();
-    let base_path = value_t!(args, BASE_ARG, String).expect("Path to base config");
-    let nodes_count = value_t!(args, NODES_ARG, usize).unwrap();
+    let base_path = value_t!(args, BASE_ARG, String).expect("Missing path to base config.");
+    let nodes_count = value_t!(args, NODES_ARG, usize).expect("Missing node count.");
     let output_dir = if args.is_present(OUTPUT_DIR_ARG) {
-        let dir = value_t!(args, OUTPUT_DIR_ARG, String).unwrap();
+        let dir = value_t!(args, OUTPUT_DIR_ARG, String).expect("Missing output directory.");
         dir.into()
     } else {
-        ::std::env::current_dir().unwrap()
+        ::std::env::current_dir().expect("Failed to access current directory.")
     };
     let faucet_account_file_path = value_t!(args, FAUCET_ACCOUNT_FILE_ARG, String)
         .expect("Must provide faucet account file path");
@@ -85,8 +85,12 @@ fn main() {
     }
     if args.is_present(KEY_SEED_ARG) {
         let seed_hex = value_t!(args, KEY_SEED_ARG, String).expect("Missing Seed");
-        let seed = hex::decode(seed_hex).unwrap();
-        config_builder.with_key_seed(seed[..32].try_into().unwrap());
+        let seed = hex::decode(seed_hex).expect("Invalid hex in seed.");
+        config_builder.with_key_seed(
+            seed[..32]
+                .try_into()
+                .expect("Seed should be 32 bytes long."),
+        );
     }
     let generated_configs = config_builder.build().expect("Unable to generate configs");
 
