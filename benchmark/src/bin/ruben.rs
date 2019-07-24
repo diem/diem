@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
+use admission_control_proto::proto::{
+    admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
+};
 use benchmark::{
-    ruben_opt::{Executable, Opt},
+    ruben_opt::{Executable, Opt, TransactionPattern},
     Benchmarker,
 };
 use client::AccountData;
@@ -13,22 +15,37 @@ use logger::{self, prelude::*};
 use metrics::metric_server::start_server;
 use std::sync::Arc;
 
+/// Utilize Benchmarker to generate TXNs of different patterns.
+fn generate_txns(
+    bm: &mut Benchmarker,
+    accounts: &mut [AccountData],
+    pattern: &TransactionPattern,
+    num_rounds: u64,
+) -> Vec<SubmitTransactionRequest> {
+    let mut repeated_txn_reqs = vec![];
+    for _ in 0..num_rounds {
+        let txn_reqs = match pattern {
+            TransactionPattern::Ring => bm.gen_ring_txn_requests(accounts),
+            TransactionPattern::Pairwise => bm.gen_pairwise_txn_requests(accounts),
+        };
+        repeated_txn_reqs.extend(txn_reqs.into_iter());
+    }
+    repeated_txn_reqs
+}
+
 /// Simply submit some TXNs to test the liveness of the network. Here we use ring TXN pattern
 /// to generate request, which scales linear with the number of accounts.
 /// In one epoch, we play the sequence of ring TXN requests repeatedly for num_rounds times.
 fn test_liveness(
     bm: &mut Benchmarker,
     accounts: &mut [AccountData],
+    pattern: TransactionPattern,
     num_rounds: u64,
     num_epochs: u64,
 ) {
     for _ in 0..num_epochs {
-        let mut repeated_tx_reqs = vec![];
-        for _ in 0..num_rounds {
-            let tx_reqs = bm.gen_ring_txn_requests(accounts);
-            repeated_tx_reqs.extend(tx_reqs.into_iter());
-        }
-        bm.submit_and_wait_txn_committed(&repeated_tx_reqs);
+        let repeated_txn_reqs = generate_txns(bm, accounts, &pattern, num_rounds);
+        bm.submit_and_wait_txn_committed(&repeated_txn_reqs);
     }
 }
 
@@ -43,17 +60,14 @@ fn test_liveness(
 pub(crate) fn measure_throughput(
     bm: &mut Benchmarker,
     accounts: &mut [AccountData],
+    pattern: TransactionPattern,
     num_rounds: u64,
     num_epochs: u64,
 ) {
     let mut txn_throughput_seq = vec![];
     for _ in 0..num_epochs {
-        let mut repeated_tx_reqs = vec![];
-        for _ in 0..num_rounds {
-            let tx_reqs = bm.gen_pairwise_txn_requests(accounts);
-            repeated_tx_reqs.extend(tx_reqs.into_iter());
-        }
-        let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs);
+        let repeated_txn_reqs = generate_txns(bm, accounts, &pattern, num_rounds);
+        let txn_throughput = bm.measure_txn_throughput(&repeated_txn_reqs);
         txn_throughput_seq.push(txn_throughput);
     }
     info!(
@@ -120,10 +134,22 @@ fn main() {
         .expect("failed to generate and mint all accounts");
     match args.executable {
         Executable::TestLiveness => {
-            test_liveness(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            test_liveness(
+                &mut bm,
+                &mut accounts,
+                args.txn_pattern,
+                args.num_rounds,
+                args.num_epochs,
+            );
         }
         Executable::MeasureThroughput => {
-            measure_throughput(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            measure_throughput(
+                &mut bm,
+                &mut accounts,
+                args.txn_pattern,
+                args.num_rounds,
+                args.num_epochs,
+            );
         }
     };
 }
@@ -132,7 +158,7 @@ fn main() {
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
-        ruben_opt::{Executable, Opt},
+        ruben_opt::{Executable, Opt, TransactionPattern},
         OP_COUNTER,
     };
     use libra_swarm::swarm::LibraSwarm;
@@ -164,6 +190,7 @@ mod tests {
                 num_clients: 4,
                 num_rounds: 4,
                 num_epochs: 2,
+                txn_pattern: TransactionPattern::Ring,
                 executable: Executable::MeasureThroughput,
             };
             args.try_parse_validator_addresses();
@@ -171,7 +198,7 @@ mod tests {
             let mut accounts = bm
                 .gen_and_mint_accounts(&args.faucet_key_file_path, args.num_accounts)
                 .expect("failed to generate and mint all accounts");
-            measure_throughput(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            measure_throughput(&mut bm, &mut accounts, args.txn_pattern, args.num_rounds, args.num_epochs);
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
             let created_txns = OP_COUNTER.counter("created_txns").get();
             let sign_failed_txns = OP_COUNTER.counter("sign_failed_txns").get();

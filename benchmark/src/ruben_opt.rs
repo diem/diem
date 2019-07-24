@@ -17,6 +17,14 @@ arg_enum! {
     }
 }
 
+arg_enum! {
+    #[derive(Debug)]
+    pub enum TransactionPattern {
+        Ring,
+        Pairwise,
+    }
+}
+
 /// CLI options for RuBen.
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -78,6 +86,15 @@ pub struct Opt {
     /// Number of epochs to measure the TXN throughput, each time with newly created Benchmarker.
     #[structopt(short = "e", long = "num_epochs", default_value = "10")]
     pub num_epochs: u64,
+    /// Supported TXN pattern in Benchmarker: `Ring` or `Pairwise`.
+    #[structopt(
+        short = "t",
+        long = "txn_pattern",
+        raw(possible_values = "&TransactionPattern::variants()"),
+        case_insensitive = true,
+        default_value = "Ring"
+    )]
+    pub txn_pattern: TransactionPattern,
     /// Supported application of Benchmarker: `TestLiveness` or `MeasureThroughput`.
     #[structopt(
         short = "x",
