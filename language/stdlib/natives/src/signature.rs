@@ -15,7 +15,6 @@ pub fn native_ed25519_signature_verification<T: StackAccessor>(
     let pubkey = accessor.get_byte_array()?;
     let signature = accessor.get_byte_array()?;
 
-
     let native_cost = ED25519_COST * msg.len() as u64;
 
     let sig = ed25519::Ed25519Signature::try_from(signature.as_bytes())?;
