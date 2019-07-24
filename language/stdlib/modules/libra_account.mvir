@@ -1,7 +1,7 @@
 // The module for the account resource that governs every Libra account
 module LibraAccount {
     import 0x0.LibraCoin;
-    import 0x00.Hash;
+    import 0x0.Hash;
     import 0x0.Event;
     import 0x0.U64Util;
     import 0x0.AddressUtil;

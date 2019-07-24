@@ -32,6 +32,7 @@ members = [
     "crypto/crypto",
     "crypto/crypto-derive",
     "executor",
+    "language/move-lang",
     "language/benchmarks",
     "language/bytecode-verifier",
     "language/bytecode-verifier/invalid-mutations",
