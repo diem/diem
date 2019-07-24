@@ -183,7 +183,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         while let Some(proposal_info) = receiver.next().await {
             let guard = event_processor.read().compat().await.unwrap();
             match guard.process_proposal(proposal_info).await {
-                ProcessProposalResult::Done => (),
+                ProcessProposalResult::Done(_) => (),
                 // Spawn a new task that would start retrieving the missing
                 // blocks in the background.
                 ProcessProposalResult::NeedFetch(deadline, proposal) => executor.spawn(
