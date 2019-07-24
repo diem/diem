@@ -43,10 +43,11 @@ use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;
 
 /// Result of initial proposal processing
-/// NeedFetch means separate task mast be spawned for fetching block
-/// Caller should call fetch_and_process_proposal in separate task when NeedFetch is returned
+/// - Done(true) indicates that the proposal was sent to the proposer election
+/// - NeedFetch means separate task mast be spawned for fetching block
+/// - Caller should call fetch_and_process_proposal in separate task when NeedFetch is returned
 pub enum ProcessProposalResult<T, P> {
-    Done,
+    Done(bool),
     NeedFetch(Instant, ProposalInfo<T, P>),
     NeedSync(Instant, ProposalInfo<T, P>),
 }
@@ -205,7 +206,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.round(),
                 current_round
             );
-            return ProcessProposalResult::Done;
+            return ProcessProposalResult::Done(false);
         }
         if self
             .proposer_election
@@ -217,7 +218,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.author(),
                 proposal.proposal
             );
-            return ProcessProposalResult::Done;
+            return ProcessProposalResult::Done(false);
         }
 
         let deadline = self.pacemaker.current_round_deadline();
@@ -234,7 +235,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             }
         } else {
             warn!("Highest ledger info {} has no committed block", proposal);
-            return ProcessProposalResult::Done;
+            return ProcessProposalResult::Done(false);
         }
 
         match self
@@ -246,7 +247,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             }
             NeedFetchResult::QCRoundBeforeRoot => {
                 warn!("Proposal {} has a highest quorum certificate with round older than root round {}", proposal, self.block_store.root().round());
-                return ProcessProposalResult::Done;
+                return ProcessProposalResult::Done(false);
             }
             NeedFetchResult::QCBlockExist => {
                 if let Err(e) = self
@@ -258,21 +259,23 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                         "Quorum certificate for proposal {} could not be inserted to the block store: {:?}",
                         proposal, e
                     );
-                    return ProcessProposalResult::Done;
+                    return ProcessProposalResult::Done(false);
                 }
             }
             NeedFetchResult::QCAlreadyExist => (),
         }
 
-        self.finish_proposal_processing(proposal).await;
-        ProcessProposalResult::Done
+        self.finish_proposal_processing(proposal).await
     }
 
     /// Finish proposal processing: note that multiple tasks can execute this function in parallel
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
     /// This function is invoked when all the dependencies for the given proposal are ready.
-    async fn finish_proposal_processing(&self, proposal: ProposalInfo<T, P>) {
+    async fn finish_proposal_processing(
+        &self,
+        proposal: ProposalInfo<T, P>,
+    ) -> ProcessProposalResult<T, P> {
         let qc = proposal.proposal.quorum_cert();
         self.pacemaker
             .process_certificates(
@@ -289,10 +292,11 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.round(),
                 current_round
             );
-            return;
+            return ProcessProposalResult::Done(false);
         }
 
         self.proposer_election.process_proposal(proposal).await;
+        ProcessProposalResult::Done(true)
     }
 
     /// Fetches and completes processing proposal in dedicated task
