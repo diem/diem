@@ -23,7 +23,7 @@ commands:
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
 
-jobs:  
+jobs:
   build:
     docker:
       - image: circleci/rust:stretch
@@ -60,11 +60,26 @@ jobs:
             cargo install --force cargo-audit
             cargo generate-lockfile
             cargo audit
+  terraform:
+    docker:
+      - image: hashicorp/terraform
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Terraform init
+          command: terraform init
+          working_directory: terraform/
+      - run:
+          name: Terraform validate
+          command: terraform validate
+          working_directory: terraform/
 
 workflows:
   commit-workflow:
     jobs:
       - build
+      - terraform
 
   scheduled-workflow:
     triggers:
