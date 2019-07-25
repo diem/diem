@@ -15,7 +15,7 @@ COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
 COPY . /libra
-RUN cargo build --release -p libra_node
+RUN cargo build --release -p libra_node -p client
 
 ### Production Image ###
 FROM debian:stretch
