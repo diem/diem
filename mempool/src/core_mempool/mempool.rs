@@ -34,7 +34,7 @@ pub struct Mempool {
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
-    metrics_cache: TtlCache<(AccountAddress, u64), i64>,
+    pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), i64>,
     pub system_transaction_timeout: Duration,
 }
 
@@ -146,11 +146,13 @@ impl Mempool {
             .duration_since(UNIX_EPOCH)
             .expect("init timestamp failure")
             + self.system_transaction_timeout;
-        self.metrics_cache.insert(
-            (txn.sender(), txn.sequence_number()),
-            Utc::now().timestamp_millis(),
-            Duration::from_secs(100),
-        );
+        if timeline_state != TimelineState::NonQualified {
+            self.metrics_cache.insert(
+                (txn.sender(), txn.sequence_number()),
+                Utc::now().timestamp_millis(),
+                Duration::from_secs(100),
+            );
+        }
 
         let txn_info = MempoolTransaction::new(txn, expiration_time, gas_amount, timeline_state);
 
