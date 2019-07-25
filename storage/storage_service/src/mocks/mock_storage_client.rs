@@ -170,6 +170,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     types::byte_array::ByteArray::new(vec![]),
                     0,
                     0,
+                    false,
                 );
                 version_data.insert(
                     types::account_config::account_resource_path(),

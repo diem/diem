@@ -19,6 +19,7 @@ fn account_type() {
     let mut coin_fields: Vec<MutVal> = Vec::new();
     coin_fields.push(MutVal::u64(balance));
     account_fields.push(MutVal::struct_(coin_fields.clone()));
+    account_fields.push(MutVal::bool(false));
     account_fields.push(MutVal::u64(received_events_count));
     account_fields.push(MutVal::u64(sent_events_count));
     account_fields.push(MutVal::u64(sequence_number));
