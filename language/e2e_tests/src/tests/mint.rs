@@ -5,6 +5,7 @@ use crate::{
     account::{Account, AccountData, AccountResource},
     common_transactions::mint_txn,
     executor::FakeExecutor,
+    gas_costs::TXN_RESERVED,
 };
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
@@ -64,10 +65,10 @@ fn mint_to_new_account() {
     let mut executor = FakeExecutor::from_genesis_file();
     let genesis_account = Account::new_association();
 
-    // create and publish a sender with 1_000_000 coins
+    // create and publish a sender with TXN_RESERVED coins
     let new_account = Account::new();
 
-    let mint_amount = 100_000;
+    let mint_amount = TXN_RESERVED;
     let txn = mint_txn(&genesis_account, &new_account, 0, mint_amount);
 
     // execute transaction

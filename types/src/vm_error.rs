@@ -137,6 +137,7 @@ pub enum VMInvariantViolationError {
     LocalReferenceError,
     StorageError,
     InternalTypeError,
+    EventKeyMismatch,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -837,6 +838,7 @@ impl IntoProto for VMInvariantViolationError {
             VMInvariantViolationError::LocalReferenceError => ProtoStatus::LocalReferenceError,
             VMInvariantViolationError::StorageError => ProtoStatus::StorageError,
             VMInvariantViolationError::InternalTypeError => ProtoStatus::InternalTypeError,
+            VMInvariantViolationError::EventKeyMismatch => ProtoStatus::EventKeyMismatch,
         }
     }
 }
@@ -856,6 +858,7 @@ impl FromProto for VMInvariantViolationError {
             ProtoError::LocalReferenceError => Ok(VMInvariantViolationError::LocalReferenceError),
             ProtoError::StorageError => Ok(VMInvariantViolationError::StorageError),
             ProtoError::InternalTypeError => Ok(VMInvariantViolationError::InternalTypeError),
+            ProtoError::EventKeyMismatch => Ok(VMInvariantViolationError::EventKeyMismatch),
             ProtoError::UnknownInvariantViolationError => {
                 bail_err!(DecodingError::UnknownInvariantViolationErrorEncountered)
             }

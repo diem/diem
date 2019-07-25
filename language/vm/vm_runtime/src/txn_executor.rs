@@ -14,7 +14,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use std::collections::VecDeque;
+use std::{collections::VecDeque, convert::TryFrom};
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -51,12 +51,17 @@ lazy_static! {
     /// The ModuleId for where LibraCoin module is being stored.
     pub static ref COIN_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), "LibraCoin".to_string()) };
+    /// The ModuleId for where Event module is being stored.
+    pub static ref EVENT_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "Event".to_string()) };
+
 }
 
 const PROLOGUE_NAME: &str = "prologue";
 const EPILOGUE_NAME: &str = "epilogue";
 const CREATE_ACCOUNT_NAME: &str = "make";
 const ACCOUNT_STRUCT_NAME: &str = "T";
+const EMIT_EVENT_NAME: &str = "write_to_event_store";
 
 fn make_access_path(
     module: &impl ModuleAccess,
@@ -260,41 +265,61 @@ where
                                 None => return Err(VMInvariantViolation::LinkerError),
                                 Some(native_function) => native_function,
                             };
-                        let mut arguments = VecDeque::new();
-                        let expected_args = native_function.num_args();
-                        if callee_function_ref.arg_count() != expected_args {
-                            // Should not be possible due to bytecode verifier but this assertion is
-                            // here to make sure the view the type checker had lines up with the
-                            // execution of the native function
-                            return Err(VMInvariantViolation::LinkerError);
-                        }
-                        for _ in 0..expected_args {
-                            arguments.push_front(self.execution_stack.pop()?);
-                        }
-                        let (cost, return_values) = match (native_function.dispatch)(arguments) {
-                            NativeReturnStatus::InvalidArguments => {
-                                // TODO: better error
+                        if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME {
+                            let msg = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
+                            let count = try_runtime!(self.execution_stack.pop_as::<u64>());
+                            let key = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
+                            let guid = AccountAddress::try_from(key.as_bytes())
+                                .map_err(|_| VMInvariantViolation::EventKeyMismatch)?;
+
+                            // TODO:
+                            // 1. Rename the AccessPath here to a new type that represents such
+                            //    globally unique id for event streams.
+                            // 2. Charge gas for the msg emitted.
+                            self.event_data.push(ContractEvent::new(
+                                AccessPath::new(guid, vec![]),
+                                count,
+                                msg.into_inner(),
+                            ))
+                        } else {
+                            let mut arguments = VecDeque::new();
+                            let expected_args = native_function.num_args();
+                            if callee_function_ref.arg_count() != expected_args {
+                                // Should not be possible due to bytecode verifier but this
+                                // assertion is here to make sure
+                                // the view the type checker had lines up with the
+                                // execution of the native function
                                 return Err(VMInvariantViolation::LinkerError);
                             }
-                            NativeReturnStatus::Aborted { cost, error_code } => {
-                                try_runtime!(self
-                                    .gas_meter
-                                    .consume_gas(GasUnits::new(cost), &self.execution_stack));
-                                return Ok(Err(VMRuntimeError {
-                                    loc: self.execution_stack.location()?,
-                                    err: VMErrorKind::Aborted(error_code),
-                                }));
+                            for _ in 0..expected_args {
+                                arguments.push_front(self.execution_stack.pop()?);
                             }
-                            NativeReturnStatus::Success {
-                                cost,
-                                return_values,
-                            } => (cost, return_values),
-                        };
-                        try_runtime!(self
-                            .gas_meter
-                            .consume_gas(GasUnits::new(cost), &self.execution_stack));
-                        for value in return_values {
-                            self.execution_stack.push(value);
+                            let (cost, return_values) = match (native_function.dispatch)(arguments)
+                            {
+                                NativeReturnStatus::InvalidArguments => {
+                                    // TODO: better error
+                                    return Err(VMInvariantViolation::LinkerError);
+                                }
+                                NativeReturnStatus::Aborted { cost, error_code } => {
+                                    try_runtime!(self
+                                        .gas_meter
+                                        .consume_gas(GasUnits::new(cost), &self.execution_stack));
+                                    return Ok(Err(VMRuntimeError {
+                                        loc: self.execution_stack.location()?,
+                                        err: VMErrorKind::Aborted(error_code),
+                                    }));
+                                }
+                                NativeReturnStatus::Success {
+                                    cost,
+                                    return_values,
+                                } => (cost, return_values),
+                            };
+                            try_runtime!(self
+                                .gas_meter
+                                .consume_gas(GasUnits::new(cost), &self.execution_stack));
+                            for value in return_values {
+                                self.execution_stack.push(value);
+                            }
                         }
                     // Call stack is not reconstructed for a native call, so we just
                     // proceed on to next instruction.
@@ -587,21 +612,10 @@ where
                     self.execution_stack.push(Local::bool(!top));
                 }
                 Bytecode::EmitEvent => {
-                    let data = match self.execution_stack.pop()?.value() {
-                        Some(value) => value,
-                        None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
-                        }
-                    };
-                    let byte_array = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
-
-                    let reference = self.execution_stack.pop()?;
-                    if let Some(event_data) = reference.emit_event_data(byte_array, data) {
-                        self.event_data.push(event_data);
-                    }
+                    // EmitEvent is deprecated. Keep the popping here just to pass type check.
+                    self.execution_stack.pop()?;
+                    self.execution_stack.pop()?;
+                    self.execution_stack.pop()?;
                 }
                 Bytecode::GetGasRemaining => {
                     self.execution_stack
@@ -641,12 +655,17 @@ where
             .get_loaded_module(&ACCOUNT_MODULE))
         .ok_or(VMInvariantViolation::LinkerError)?;
 
+        // TODO: Currently the event counter will cause the gas cost for create account be flexible.
+        //       We either need to fix the gas stability test cases in tests or we need to come up
+        //       with some better ideas for the event counter creation.
+        self.gas_meter.disable_metering();
         // Address will be used as the initial authentication key.
         try_runtime!(self.execute_function(
             &ACCOUNT_MODULE,
             CREATE_ACCOUNT_NAME,
             vec![Local::bytearray(ByteArray::new(addr.to_vec()))],
         ));
+        self.gas_meter.enable_metering();
 
         let account_resource = self
             .execution_stack

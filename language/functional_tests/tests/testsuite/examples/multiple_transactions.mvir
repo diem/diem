@@ -1,5 +1,5 @@
-//! account: alice, 50000
-//! account: bob, 50000
+//! account: alice, 90000
+//! account: bob, 90000
 
 // Alice sends 200 Libra Coins to Bob
 //! sender: alice
@@ -38,7 +38,7 @@ main() {
 
 
 
-// Bob checks that he has 50200 Libra Coins
+// Bob checks that he has 90200 Libra Coins
 //! new-transaction
 //! sender: bob
 import 0x0.LibraAccount;
@@ -49,7 +49,7 @@ main() {
 
     sender = get_txn_sender();
     balance = LibraAccount.balance(move(sender));
-    assert(move(balance) == 50200, 42);
+    assert(move(balance) == 90200, 42);
 
     return;
 }

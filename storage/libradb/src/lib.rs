@@ -48,12 +48,12 @@ use logger::prelude::*;
 use metrics::OpMetrics;
 use nextgen_crypto::ed25519::*;
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
-use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
+use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::ExecutorStartupInfo;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
+    account_config::{get_account_resource_or_default, AccountResource},
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::EventWithProof,
     get_with_proof::{RequestItem, ResponseItem},
@@ -191,20 +191,30 @@ impl LibraDB {
     /// `limit` events in the reverse order. Both cases are inclusive.
     fn get_events_by_event_access_path(
         &self,
-        access_path: &AccessPath,
+        query_path: &AccessPath,
         start_seq_num: u64,
         ascending: bool,
         limit: u64,
         ledger_version: Version,
-    ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
+    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
         error_if_too_many_requested(limit, MAX_LIMIT)?;
 
         let get_latest = !ascending && start_seq_num == u64::max_value();
+        let account_state =
+            self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
+        let account_resource = if let Some(account_blob) = &account_state.blob {
+            AccountResource::make_from(&(&account_blob.try_into()?))?
+        } else {
+            bail!("Nothing stored under address: {}", query_path.address);
+        };
+        let event_key = account_resource
+            .get_event_handle_by_query_path(query_path)?
+            .as_access_path()?;
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
             // In the case of no events on that path, use 0 and expect empty result below.
             self.event_store
-                .get_latest_sequence_number(ledger_version, access_path)?
+                .get_latest_sequence_number(ledger_version, &event_key)?
                 .unwrap_or(0)
         } else {
             start_seq_num
@@ -215,7 +225,7 @@ impl LibraDB {
 
         // Query the index.
         let mut event_keys = self.event_store.lookup_events_by_access_path(
-            access_path,
+            &event_key,
             first_seq,
             real_limit,
             ledger_version,
@@ -258,27 +268,9 @@ impl LibraDB {
             events_with_proof.reverse();
         }
 
-        // There are two cases where we need to return proof_of_latest_event to let the caller know
-        // the latest sequence number:
-        //   1. The user asks for the latest event by using u64::max() as the cursor, apparently
-        // he doesn't know the latest sequence number.
-        //   2. We are going to return less than `real_limit` items. (Two cases can lead to that:
-        // a. the cursor is beyond the latest sequence number; b. in ascending order we don't have
-        // enough items to return because the latest sequence number is hit). In this case we
-        // need to return the proof to convince the caller we didn't hide any item from him. Note
-        // that we use `real_limit` instead of `limit` here because it takes into account the case
-        // of hitting 0 in descending order, which is valid and doesn't require the proof.
-        let proof_of_latest_event = if get_latest || events_with_proof.len() < real_limit as usize {
-            Some(self.get_account_state_with_proof(
-                access_path.address,
-                ledger_version,
-                ledger_version,
-            )?)
-        } else {
-            None
-        };
-
-        Ok((events_with_proof, proof_of_latest_event))
+        // We always need to return the account blob to prove that this is indeed the event that was
+        // being queried.
+        Ok((events_with_proof, account_state))
     }
 
     /// Returns a signed transaction that is the `seq_num`-th one associated with the given account.

@@ -28,16 +28,18 @@ lazy_static! {
         make_module_definition!("../modules/u64_util.mvir");
     static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/bytearray_util.mvir");
+    static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
     static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
         vec![
             &*COIN_MODULE,
             &*NATIVE_HASH_MODULE,
-            &*ACCOUNT_MODULE,
             &*SIGNATURE_MODULE,
-            &*VALIDATOR_SET_MODULE,
             &*ADDRESS_UTIL_MODULE,
             &*U64_UTIL_MODULE,
             &*BYTEARRAY_UTIL_MODULE,
+            &*EVENT_MODULE,
+            &*ACCOUNT_MODULE,
+            &*VALIDATOR_SET_MODULE,
         ]
     };
 }
@@ -72,6 +74,10 @@ pub fn u64_util_module() -> ModuleDefinition {
 
 pub fn bytearray_util_module() -> ModuleDefinition {
     BYTEARRAY_UTIL_MODULE.clone()
+}
+
+pub fn event_module() -> ModuleDefinition {
+    EVENT_MODULE.clone()
 }
 
 pub fn module_defs() -> &'static [&'static ModuleDefinition] {

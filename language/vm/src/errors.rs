@@ -333,6 +333,8 @@ pub enum VMInvariantViolation {
     StorageError,
     #[fail(display = "Internal runtime type error due to incorrect bytecode verification")]
     InternalTypeError,
+    #[fail(display = "Event key is not 32 byte")]
+    EventKeyMismatch,
 }
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
@@ -514,6 +516,7 @@ impl From<&VMInvariantViolation> for VMStatus {
             }
             VMInvariantViolation::StorageError => VMInvariantViolationError::StorageError,
             VMInvariantViolation::InternalTypeError => VMInvariantViolationError::InternalTypeError,
+            VMInvariantViolation::EventKeyMismatch => VMInvariantViolationError::EventKeyMismatch,
         };
         VMStatus::InvariantViolation(err)
     }

@@ -10,7 +10,7 @@ use std::{convert::TryInto, time::Duration};
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{self, EventHandle},
     byte_array::ByteArray,
     transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
 };
@@ -225,9 +225,13 @@ pub struct AccountData {
     account: Account,
     balance: u64,
     sequence_number: u64,
-    sent_events_count: u64,
-    received_events_count: u64,
     delegated_withdrawal_capability: bool,
+    sent_events: EventHandle,
+    received_events: EventHandle,
+}
+
+fn new_event_handle(count: u64) -> EventHandle {
+    EventHandle::random_handle(count)
 }
 
 impl AccountData {
@@ -256,9 +260,9 @@ impl AccountData {
             account,
             balance,
             sequence_number,
-            sent_events_count,
-            received_events_count,
             delegated_withdrawal_capability,
+            sent_events: new_event_handle(sent_events_count),
+            received_events: new_event_handle(received_events_count),
         }
     }
 
@@ -277,8 +281,18 @@ impl AccountData {
             ))),
             MutVal::new(coin),
             MutVal::new(Value::Bool(self.delegated_withdrawal_capability)),
-            MutVal::new(Value::U64(self.received_events_count)),
-            MutVal::new(Value::U64(self.sent_events_count)),
+            MutVal::new(Value::Struct(vec![
+                MutVal::new(Value::U64(self.received_events.count())),
+                MutVal::new(Value::ByteArray(ByteArray::new(
+                    self.received_events.key().to_vec(),
+                ))),
+            ])),
+            MutVal::new(Value::Struct(vec![
+                MutVal::new(Value::U64(self.sent_events.count())),
+                MutVal::new(Value::ByteArray(ByteArray::new(
+                    self.sent_events.key().to_vec(),
+                ))),
+            ])),
             MutVal::new(Value::U64(self.sequence_number)),
         ])
     }
@@ -319,14 +333,24 @@ impl AccountData {
         self.sequence_number
     }
 
+    /// Returns the unique key for this sent events stream.
+    pub fn sent_events_key(&self) -> &[u8] {
+        self.sent_events.key()
+    }
+
     /// Returns the initial sent events count.
     pub fn sent_events_count(&self) -> u64 {
-        self.sent_events_count
+        self.sent_events.count()
+    }
+
+    /// Returns the unique key for this received events stream.
+    pub fn received_events_key(&self) -> &[u8] {
+        self.received_events.key()
     }
 
     /// Returns the initial received events count.
     pub fn received_events_count(&self) -> u64 {
-        self.received_events_count
+        self.received_events.count()
     }
 }
 
@@ -382,10 +406,19 @@ impl AccountResource {
             Value::Struct(fields) => {
                 let received_events_count = fields
                     .get(3)
-                    .expect("received_events_count must be field 2 in Account");
+                    .expect("received_events must be field 2 in Account");
                 match &*received_events_count.peek() {
-                    Value::U64(val) => *val,
-                    _ => panic!("sequence number field must exist"),
+                    Value::Struct(fields) => {
+                        match &*fields
+                            .get(0)
+                            .expect("received_events_count must be field 0 in Event Handle")
+                            .peek()
+                        {
+                            Value::U64(count) => *count,
+                            _ => panic!("Expected a count"),
+                        }
+                    }
+                    _ => panic!("received_event field must exist"),
                 }
             }
             _ => panic!("Account must be a Value::Struct"),
@@ -398,10 +431,19 @@ impl AccountResource {
             Value::Struct(fields) => {
                 let sent_events_count = fields
                     .get(4)
-                    .expect("sent_events_count must be field 3 in Account");
+                    .expect("sent_events must be field 3 in Account");
                 match &*sent_events_count.peek() {
-                    Value::U64(val) => *val,
-                    _ => panic!("sequence number field must exist"),
+                    Value::Struct(fields) => {
+                        match &*fields
+                            .get(0)
+                            .expect("sent_events_count must be field 0 in Event Handle")
+                            .peek()
+                        {
+                            Value::U64(count) => *count,
+                            _ => panic!("Expected a count"),
+                        }
+                    }
+                    _ => panic!("sent event field must exist"),
                 }
             }
             _ => panic!("Account must be a Value::Struct"),
