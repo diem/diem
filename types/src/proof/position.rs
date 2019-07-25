@@ -207,10 +207,10 @@ impl Iterator for FrozenSubTreeIterator {
         }
 
         // Find the remaining biggest full subtree.
-        // The MSB of the bitmap represents it. For example for a tree of 0x1010=10 leaves, the
-        // biggest and leftmost full subtree has 0x1000=8 leaves, which can be got by smearing all
-        // bits after MSB with 1-bits (got 0x1111), right shift once (got 0x0111) and add 1 (got
-        // 0x1000=8). At the same time, we also observe that the in-order numbering of a full
+        // The MSB of the bitmap represents it. For example for a tree of 0b1010=10 leaves, the
+        // biggest and leftmost full subtree has 0b1000=8 leaves, which can be got by smearing all
+        // bits after MSB with 1-bits (got 0b1111), right shift once (got 0b0111) and add 1 (got
+        // 0b1000=8). At the same time, we also observe that the in-order numbering of a full
         // subtree root is (num_leaves - 1) greater than that of the leftmost leaf, and also
         // (num_leaves - 1) less than that of the rightmost leaf.
         let root_offset = treebits::smear_ones_for_u64(self.bitmap) >> 1;
