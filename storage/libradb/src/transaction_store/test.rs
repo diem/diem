@@ -17,11 +17,11 @@ proptest! {
 
         prop_assert!(store.get_transaction(0).is_err());
 
-        let mut batch = SchemaBatch::new();
+        let mut cs = ChangeSet::new();
         for (i, txn) in txns.iter().enumerate() {
-            store.put_transaction(i as u64, &txn, &mut batch).unwrap();
+            store.put_transaction(i as u64, &txn, &mut cs).unwrap();
         }
-        db.commit(batch).unwrap();
+        store.db.write_schemas(cs.batch).unwrap();
 
         for (i, txn) in txns.iter().enumerate() {
             prop_assert_eq!(store.get_transaction(i as u64).unwrap(), txn.clone());

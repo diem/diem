@@ -1,0 +1,7 @@
+// u64 arg to main(u64) is good
+
+//! args: 42
+
+main(x: u64) {
+    return;
+}

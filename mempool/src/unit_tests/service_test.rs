@@ -72,9 +72,12 @@ fn test_add_transaction() {
     // create request
     let mut req = create_add_transaction_request(0);
     req.set_account_balance(100);
-    let response = client.add_transaction_with_validation(&req).unwrap();
+    let mut response = client.add_transaction_with_validation(&req).unwrap();
     // check status
-    assert_eq!(response.get_status(), MempoolAddTransactionStatus::Valid);
+    assert_eq!(
+        response.take_status().get_code(),
+        MempoolAddTransactionStatusCode::Valid
+    );
 }
 
 #[test]

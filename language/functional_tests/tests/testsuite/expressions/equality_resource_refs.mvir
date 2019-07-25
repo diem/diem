@@ -1,0 +1,22 @@
+module Token {
+    resource T { }
+
+    public test() {
+        let t: R#Self.T;
+        let t_ref: &R#Self.T;
+        t = T{};
+        t_ref = &t;
+        assert(copy(t_ref) == move(t_ref), 42);
+        T{} = move(t);
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.Token;
+
+main() {
+    Token.test();
+    return;
+}

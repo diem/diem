@@ -5,18 +5,17 @@ use crate::{
     chained_bft::{
         common::Round,
         liveness::{
-            new_round_msg::PacemakerTimeoutCertificate,
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker, PacemakerEvent},
+            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         },
         persistent_storage::PersistentLivenessStorage,
     },
     counters,
-    stream_utils::EventBasedActor,
-    time_service::{SendTask, TimeService},
+    util::time_service::{SendTask, TimeService},
 };
 use channel;
-use futures::{channel::mpsc, Future, FutureExt, SinkExt};
+use futures::{Future, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use logger::prelude::*;
 use std::{
     cmp::{self, max},
@@ -25,6 +24,7 @@ use std::{
     time::{Duration, Instant},
 };
 use termion::color::*;
+use tokio::runtime::TaskExecutor;
 
 /// Determines the maximum round duration based on the round difference between the current
 /// round and the committed round
@@ -110,7 +110,7 @@ impl PacemakerTimeInterval for ExponentialTimeInterval {
 /// QC to f+1 other replicas for instance.
 struct LocalPacemakerInner {
     // Determines the time interval for a round interval
-    time_interval: Box<PacemakerTimeInterval>,
+    time_interval: Box<dyn PacemakerTimeInterval>,
     // Highest round that a block was committed
     highest_committed_round: Round,
     // Highest round known certified by QC.
@@ -121,15 +121,15 @@ struct LocalPacemakerInner {
     // it changes
     current_round: Round,
     // Approximate deadline when current round ends
-    current_round_deadline: Option<Instant>,
+    current_round_deadline: Instant,
     // Service for timer
     time_service: Arc<dyn TimeService>,
+    // To send new round events.
+    new_round_events_sender: channel::Sender<NewRoundEvent>,
     // To send timeout events to itself.
-    timeout_sender: Option<mpsc::Sender<PacemakerEvent>>,
-    // To send new round events to the client.
-    new_round_sender: Option<mpsc::Sender<NewRoundEvent>>,
+    local_timeout_sender: channel::Sender<Round>,
     // To send timeout events to other pacemakers
-    pacemaker_timeout_sender: channel::Sender<Round>,
+    external_timeout_sender: channel::Sender<Round>,
     // Manages the PacemakerTimeout and PacemakerTimeoutCertificate structs
     pacemaker_timeout_manager: PacemakerTimeoutManager,
 }
@@ -137,11 +137,13 @@ struct LocalPacemakerInner {
 impl LocalPacemakerInner {
     pub fn new(
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
-        pacemaker_timeout_sender: channel::Sender<Round>,
+        new_round_events_sender: channel::Sender<NewRoundEvent>,
+        local_timeout_sender: channel::Sender<Round>,
+        external_timeout_sender: channel::Sender<Round>,
         pacemaker_timeout_quorum_size: usize,
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Self {
@@ -164,16 +166,17 @@ impl LocalPacemakerInner {
         counters::QC_ROUNDS_COUNT.get();
         counters::TIMEOUT_ROUNDS_COUNT.get();
         counters::TIMEOUT_COUNT.get();
+
         Self {
             time_interval,
             highest_committed_round,
             highest_qc_round,
             current_round,
-            current_round_deadline: None,
+            current_round_deadline: Instant::now(),
             time_service,
-            timeout_sender: None,
-            new_round_sender: None,
-            pacemaker_timeout_sender,
+            new_round_events_sender,
+            local_timeout_sender,
+            external_timeout_sender,
             pacemaker_timeout_manager: PacemakerTimeoutManager::new(
                 pacemaker_timeout_quorum_size,
                 highest_timeout_certificates,
@@ -188,7 +191,7 @@ impl LocalPacemakerInner {
     fn create_new_round_task(&mut self, reason: NewRoundReason) -> impl Future<Output = ()> + Send {
         let round = self.current_round;
         let timeout = self.setup_timeout();
-        let mut sender = self.new_round_sender.as_ref().unwrap().clone();
+        let mut sender = self.new_round_events_sender.clone();
         async move {
             if let Err(e) = sender
                 .send(NewRoundEvent {
@@ -203,42 +206,34 @@ impl LocalPacemakerInner {
         }
     }
 
-    /// Broadcasts timeout messages to validators
-    /// This task will also re-schedule a new timeout task for the same round, in order to ensure
-    /// that machines that are down will eventually get the timeouts and be able to form a timeout
-    /// certificate.
-    fn broadcast_timeout_task(&mut self) -> impl Future<Output = ()> + Send {
-        self.setup_timeout();
-        counters::TIMEOUT_COUNT.inc();
-        let mut sender = self.pacemaker_timeout_sender.clone();
-        let current_round = self.current_round;
-        async move {
-            if let Err(e) = sender.send(current_round).await {
-                warn!("Can't send pacemaker timeout message: {:?}", e)
-            }
+    /// Process local timeout for a given round: in case a new timeout message should be sent
+    /// return a channel for sending the timeout message.
+    fn process_local_timeout(&mut self, round: Round) -> Option<channel::Sender<Round>> {
+        if round != self.current_round {
+            return None;
         }
+        warn!(
+            "Round {} has timed out, broadcasting new round message to all replicas",
+            round
+        );
+        counters::TIMEOUT_COUNT.inc();
+        self.setup_timeout();
+        Some(self.external_timeout_sender.clone())
     }
 
     /// Setup the timeout task and return the duration of the current timeout
     fn setup_timeout(&mut self) -> Duration {
-        let timeout_sender = self.timeout_sender.as_ref().unwrap().clone();
+        let timeout_sender = self.local_timeout_sender.clone();
         let timeout = self.setup_deadline();
         // Note that the timeout should not be driven sequentially with any other events as it can
         // become the head of the line blocker.
         trace!(
-            "Scheduling to {} for round {}",
+            "Scheduling timeout of {} ms for round {}",
             timeout.as_millis(),
             self.current_round
         );
-        self.time_service.run_after(
-            timeout,
-            SendTask::make(
-                timeout_sender,
-                PacemakerEvent::Timeout {
-                    round: self.current_round,
-                },
-            ),
-        );
+        self.time_service
+            .run_after(timeout, SendTask::make(timeout_sender, self.current_round));
         timeout
     }
 
@@ -262,7 +257,7 @@ impl LocalPacemakerInner {
         let timeout = self
             .time_interval
             .get_round_duration(round_index_after_committed_round);
-        self.current_round_deadline = Some(Instant::now() + timeout);
+        self.current_round_deadline = Instant::now() + timeout;
         timeout
     }
 
@@ -335,109 +330,76 @@ impl LocalPacemakerInner {
 
 /// `LocalPacemaker` is a wrapper to make the `LocalPacemakerInner` thread-safe.
 pub struct LocalPacemaker {
-    inner: RwLock<LocalPacemakerInner>,
+    inner: Arc<RwLock<LocalPacemakerInner>>,
 }
 
 impl LocalPacemaker {
     pub fn new(
+        executor: TaskExecutor,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        time_interval: Box<PacemakerTimeInterval>,
+        time_interval: Box<dyn PacemakerTimeInterval>,
         highest_committed_round: Round,
         highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
-        pacemaker_timeout_sender: channel::Sender<Round>,
+        new_round_events_sender: channel::Sender<NewRoundEvent>,
+        external_timeout_sender: channel::Sender<Round>,
         pacemaker_timeout_quorum_size: usize,
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Self {
-        LocalPacemaker {
-            inner: RwLock::new(LocalPacemakerInner::new(
-                persistent_liveness_storage,
-                time_interval,
-                highest_committed_round,
-                highest_qc_round,
-                time_service,
-                pacemaker_timeout_sender,
-                pacemaker_timeout_quorum_size,
-                highest_timeout_certificates,
-            )),
-        }
-    }
-}
+        let (local_timeouts_sender, mut local_timeouts_receiver) =
+            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+        let inner = Arc::new(RwLock::new(LocalPacemakerInner::new(
+            persistent_liveness_storage,
+            time_interval,
+            highest_committed_round,
+            highest_qc_round,
+            time_service,
+            new_round_events_sender,
+            local_timeouts_sender,
+            external_timeout_sender,
+            pacemaker_timeout_quorum_size,
+            highest_timeout_certificates,
+        )));
 
-impl EventBasedActor for LocalPacemaker {
-    type InputEvent = PacemakerEvent;
-    type OutputEvent = NewRoundEvent;
+        let inner_ref = Arc::clone(&inner);
+        let timeout_processing_loop = async move {
+            // To jump start the execution return the new round event for the current round.
+            inner_ref
+                .write()
+                .unwrap()
+                .create_new_round_task(NewRoundReason::QCReady)
+                .await;
 
-    fn init(
-        &mut self,
-        input_stream_sender: mpsc::Sender<Self::InputEvent>,
-        output_stream_sender: mpsc::Sender<Self::OutputEvent>,
-    ) {
-        let mut guard = self.inner.write().unwrap();
-        guard.timeout_sender = Some(input_stream_sender);
-        guard.new_round_sender = Some(output_stream_sender);
-        guard.setup_deadline();
-    }
-
-    fn on_startup(&self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        // To jump start the execution return the new round event for the current round.
-        self.inner
-            .write()
-            .unwrap()
-            .create_new_round_task(NewRoundReason::QCReady)
-            .boxed()
-    }
-
-    fn process_event(&self, event: Self::InputEvent) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        let mut guard = self.inner.write().unwrap();
-        match event {
-            // Upon learning about a new quorum certificate, the pacemaker
-            // should advance to round r+1 if it's current round < r+1
-            PacemakerEvent::QuorumCertified { round } => {
-                if guard.update_highest_qc_round(round) {
-                    return guard.update_current_round();
-                }
+            // Start the loop of processing local timeouts
+            while let Some(round) = local_timeouts_receiver.next().await {
+                Self::process_local_timeout(Arc::clone(&inner_ref), round).await;
             }
-            // Upon receiving a notification that a round has timed out, broadcast this event
-            // as a NewRoundMsg to all replicas.
-            PacemakerEvent::Timeout { round } => {
-                if round == guard.current_round {
-                    warn!(
-                        "Round {} has timed out, broadcasting new round message to all replicas",
-                        round
-                    );
-                    return guard.broadcast_timeout_task().boxed();
-                }
-            }
-            // Upon receiving a pacemaker timeout from another replica, check to see if a
-            // timeout certificate is formed and the round should be advanced.
-            PacemakerEvent::RemoteTimeout { pacemaker_timeout } => {
-                if guard
-                    .pacemaker_timeout_manager
-                    .update_received_timeout(pacemaker_timeout)
-                {
-                    return guard.update_current_round();
-                }
+        };
+        executor.spawn(timeout_processing_loop.boxed().unit_error().compat());
+
+        Self { inner }
+    }
+
+    async fn process_local_timeout(inner: Arc<RwLock<LocalPacemakerInner>>, round: Round) {
+        let timeout_processing_res = { inner.write().unwrap().process_local_timeout(round) };
+        if let Some(mut sender) = timeout_processing_res {
+            if let Err(e) = sender.send(round).await {
+                warn!("Can't send pacemaker timeout message: {:?}", e)
             }
         }
-        async {}.boxed()
     }
 }
 
 impl Pacemaker for LocalPacemaker {
     fn current_round_deadline(&self) -> Instant {
-        self.inner
-            .read()
-            .unwrap()
-            .current_round_deadline
-            .expect("Round deadline was not set")
+        self.inner.read().unwrap().current_round_deadline
     }
 
     fn current_round(&self) -> Round {
         self.inner.read().unwrap().current_round
     }
 
-    fn process_certificates_from_proposal(
+    fn process_certificates(
         &self,
         qc_round: Round,
         timeout_certificate: Option<&PacemakerTimeoutCertificate>,
@@ -446,6 +408,21 @@ impl Pacemaker for LocalPacemaker {
         let tc_round_updated = guard.check_and_update_highest_received_tc(timeout_certificate);
         let qc_round_updated = guard.update_highest_qc_round(qc_round);
         if tc_round_updated || qc_round_updated {
+            return guard.update_current_round();
+        }
+        async {}.boxed()
+    }
+
+    /// The function is invoked upon receiving a remote timeout message from another validator.
+    fn process_remote_timeout(
+        &self,
+        pacemaker_timeout: PacemakerTimeout,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        let mut guard = self.inner.write().unwrap();
+        if guard
+            .pacemaker_timeout_manager
+            .update_received_timeout(pacemaker_timeout)
+        {
             return guard.update_current_round();
         }
         async {}.boxed()

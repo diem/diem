@@ -5,12 +5,8 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     marker::Sized,
-    result::Result,
 };
-use vm::{
-    errors::VMStaticViolation,
-    file_format::{Bytecode, CodeOffset},
-};
+use vm::file_format::{Bytecode, CodeOffset};
 
 // BTree/Hash agnostic type wrappers
 type Map<K, V> = BTreeMap<K, V>;
@@ -21,9 +17,7 @@ pub type BlockId = CodeOffset;
 /// A trait that specifies the basic requirements for a CFG
 pub trait ControlFlowGraph: Sized {
     /// Given a vector of bytecodes, constructs the control flow graph for it.
-    /// Return a VMStaticViolation if we were unable to construct a control flow graph, or
-    /// if we encounter an invalid jump instruction.
-    fn new(code: &[Bytecode]) -> Result<Self, VMStaticViolation>;
+    fn new(code: &[Bytecode]) -> Self;
 
     /// Given a block ID, return the reachable blocks from that block
     /// including the block itself.
@@ -39,6 +33,10 @@ pub trait ControlFlowGraph: Sized {
 
     /// Return the number of blocks (vertices) in the control flow graph
     fn num_blocks(&self) -> u16;
+
+    /// Return the id of the entry block.
+    /// Note: even a CFG with no instructions has an (empty) entry block.
+    fn entry_block_id(&self) -> BlockId;
 }
 
 /// A basic block
@@ -50,7 +48,7 @@ pub struct BasicBlock {
     pub exit: CodeOffset,
 
     /// Flows-to
-    pub successors: Set<BlockId>,
+    pub successors: Vec<BlockId>,
 }
 
 /// The control flow graph that we build from the bytecode.
@@ -85,69 +83,20 @@ impl VMControlFlowGraph {
     fn record_block_ids(pc: CodeOffset, code: &[Bytecode], block_ids: &mut Set<BlockId>) {
         let bytecode = &code[pc as usize];
 
-        if let Some(offset) = VMControlFlowGraph::offset(bytecode) {
+        if let Some(offset) = bytecode.offset() {
             block_ids.insert(*offset);
         }
 
-        if VMControlFlowGraph::is_branch(bytecode) && pc + 1 < (code.len() as CodeOffset) {
+        if bytecode.is_branch() && pc + 1 < (code.len() as CodeOffset) {
             block_ids.insert(pc + 1);
         }
-    }
-
-    fn is_unconditional_branch(bytecode: &Bytecode) -> bool {
-        match bytecode {
-            Bytecode::Ret | Bytecode::Branch(_) => true,
-            _ => false,
-        }
-    }
-
-    fn is_conditional_branch(bytecode: &Bytecode) -> bool {
-        match bytecode {
-            Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => true,
-            _ => false,
-        }
-    }
-
-    fn is_branch(bytecode: &Bytecode) -> bool {
-        VMControlFlowGraph::is_conditional_branch(bytecode)
-            || VMControlFlowGraph::is_unconditional_branch(bytecode)
-    }
-
-    fn offset(bytecode: &Bytecode) -> Option<&CodeOffset> {
-        match bytecode {
-            Bytecode::BrFalse(offset) | Bytecode::BrTrue(offset) | Bytecode::Branch(offset) => {
-                Some(offset)
-            }
-            _ => None,
-        }
-    }
-
-    fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Set<CodeOffset> {
-        let bytecode = &code[pc as usize];
-        let mut v = Set::new();
-
-        if let Some(offset) = VMControlFlowGraph::offset(bytecode) {
-            v.insert(*offset);
-        }
-
-        if pc + 1 >= code.len() as CodeOffset {
-            return v;
-        }
-
-        if !VMControlFlowGraph::is_branch(bytecode)
-            || VMControlFlowGraph::is_conditional_branch(bytecode)
-        {
-            v.insert(pc + 1);
-        }
-
-        v
     }
 
     /// A utility function that implements BFS-reachability from block_id with
     /// respect to get_targets function
     fn traverse_by(
         &self,
-        get_targets: fn(&BasicBlock) -> &Set<BlockId>,
+        get_targets: fn(&BasicBlock) -> &Vec<BlockId>,
         block_id: BlockId,
     ) -> Vec<&BasicBlock> {
         let mut ret = Vec::new();
@@ -175,6 +124,8 @@ impl VMControlFlowGraph {
         ret
     }
 }
+
+const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl ControlFlowGraph for VMControlFlowGraph {
     fn num_blocks(&self) -> u16 {
@@ -205,44 +156,39 @@ impl ControlFlowGraph for VMControlFlowGraph {
         self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
     }
 
-    fn new(code: &[Bytecode]) -> Result<Self, VMStaticViolation> {
-        // Check to make sure that the bytecode vector ends with a branching instruction.
-        if let Some(bytecode) = code.last() {
-            if !VMControlFlowGraph::is_branch(bytecode) {
-                return Err(VMStaticViolation::InvalidFallThrough);
-            }
-        } else {
-            return Err(VMStaticViolation::InvalidFallThrough);
-        }
+    fn entry_block_id(&self) -> BlockId {
+        ENTRY_BLOCK_ID
+    }
 
+    fn new(code: &[Bytecode]) -> Self {
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
-        block_ids.insert(0);
+        block_ids.insert(ENTRY_BLOCK_ID);
         for pc in 0..code.len() {
             VMControlFlowGraph::record_block_ids(pc as CodeOffset, code, &mut block_ids);
         }
 
         // Create basic blocks
-        let mut ret = VMControlFlowGraph { blocks: Map::new() };
+        let mut cfg = VMControlFlowGraph { blocks: Map::new() };
         let mut entry = 0;
         for pc in 0..code.len() {
             let co_pc: CodeOffset = pc as CodeOffset;
 
             // Create a basic block
             if VMControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = VMControlFlowGraph::get_successors(co_pc, code);
+                let successors = Bytecode::get_successors(co_pc, code);
                 let bb = BasicBlock {
                     entry,
                     exit: co_pc,
                     successors,
                 };
-                ret.blocks.insert(entry, bb);
+                cfg.blocks.insert(entry, bb);
                 entry = co_pc + 1;
             }
         }
 
         assert!(entry == code.len() as CodeOffset);
-        Ok(ret)
+        cfg
     }
 }

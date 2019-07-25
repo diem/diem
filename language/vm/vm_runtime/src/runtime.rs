@@ -8,7 +8,7 @@ use crate::{
         module_cache::{BlockModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters,
+    counters::report_verification_status,
     data_cache::BlockDataCache,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
@@ -18,7 +18,7 @@ use logger::prelude::*;
 use state_view::StateView;
 use types::{
     transaction::{SignedTransaction, TransactionOutput},
-    vm_error::VMStatus,
+    vm_error::{VMStatus, VMValidationStatus},
 };
 use vm_cache_map::Arena;
 
@@ -73,7 +73,13 @@ impl<'alloc> VMRuntime<'alloc> {
         let data_cache = BlockDataCache::new(data_view);
 
         let arena = Arena::new();
-        let process_txn = ProcessTransaction::new(txn, module_cache, &data_cache, &arena);
+        let signature_verified_txn = match txn.check_signature() {
+            Ok(t) => t,
+            Err(_) => return Some(VMStatus::Validation(VMValidationStatus::InvalidSignature)),
+        };
+
+        let process_txn =
+            ProcessTransaction::new(signature_verified_txn, module_cache, &data_cache, &arena);
         let mode = if data_view.is_genesis() {
             ValidationMode::Genesis
         } else {
@@ -83,20 +89,17 @@ impl<'alloc> VMRuntime<'alloc> {
         let validated_txn = match process_txn.validate(mode, &self.publishing_option) {
             Ok(validated_txn) => validated_txn,
             Err(vm_status) => {
-                counters::UNVERIFIED_TRANSACTION.inc();
-                return Some(vm_status);
+                let res = Some(vm_status);
+                report_verification_status(&res);
+                return res;
             }
         };
-        match validated_txn.verify() {
-            Ok(_) => {
-                counters::VERIFIED_TRANSACTION.inc();
-                None
-            }
-            Err(vm_status) => {
-                counters::UNVERIFIED_TRANSACTION.inc();
-                Some(vm_status)
-            }
-        }
+        let res = match validated_txn.verify(&self.script_cache) {
+            Ok(_) => None,
+            Err(vm_status) => Some(vm_status),
+        };
+        report_verification_status(&res);
+        res
     }
 
     /// Execute a block of transactions. The output vector will have the exact same length as the

@@ -4,15 +4,13 @@
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction;
 use config::{
-    config::{KeyPairs, NodeConfig, NodeConfigHelpers},
+    config::{KeyPairs, NodeConfig, NodeConfigHelpers, VMPublishingOption},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
 use crypto::signing::KeyPair;
 use failure::prelude::*;
 use std::path::{Path, PathBuf};
-use tempfile;
-use vm_genesis::default_config;
 
 pub struct SwarmConfig {
     configs: Vec<(PathBuf, NodeConfig)>,
@@ -31,9 +29,9 @@ impl SwarmConfig {
         key_seed: Option<[u8; 32]>,
         output_dir: &Path,
         static_ports: bool,
-        storage_dir: Option<PathBuf>,
     ) -> Result<Self> {
         // Generate trusted peer configs + their private keys.
+        template.base.data_dir_path = output_dir.into();
         let (peers_private_keys, trusted_peers_config) =
             TrustedPeersConfigHelpers::get_test_config(num_nodes, key_seed);
         trusted_peers_config.save_config(&output_dir.join(&template.base.trusted_peers_file));
@@ -42,11 +40,6 @@ impl SwarmConfig {
             None,
             is_ipv4,
         );
-
-        template.storage.dir = storage_dir.unwrap_or_else(|| {
-            let dir = tempfile::tempdir().expect("error creating tempdir");
-            dir.path().to_path_buf()
-        });
 
         gen_genesis_transaction(
             &output_dir.join(&template.execution.genesis_file_location),
@@ -79,7 +72,7 @@ impl SwarmConfig {
             config.network.listen_address = addrs[0].clone();
             config.network.advertised_address = addrs[0].clone();
 
-            config.vm_config = default_config();
+            config.vm_config.publishing_options = VMPublishingOption::Open;
             configs.push(config);
         }
         if prune_seed_peers_for_discovery {
@@ -140,7 +133,6 @@ pub struct SwarmConfigBuilder {
     key_seed: Option<[u8; 32]>,
     faucet_account_keypair_filepath: Option<PathBuf>,
     faucet_account_keypair: Option<KeyPair>,
-    storage_dir: Option<PathBuf>,
 }
 impl Default for SwarmConfigBuilder {
     fn default() -> Self {
@@ -154,7 +146,6 @@ impl Default for SwarmConfigBuilder {
             key_seed: None,
             faucet_account_keypair_filepath: None,
             faucet_account_keypair: None,
-            storage_dir: None,
         }
     }
 }
@@ -270,7 +261,6 @@ impl SwarmConfigBuilder {
             self.key_seed,
             &self.output_dir,
             self.static_ports,
-            self.storage_dir.clone(),
         )
     }
 }

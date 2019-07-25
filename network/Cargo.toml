@@ -9,28 +9,35 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.12"
-futures = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 lazy_static = "1.3.0"
 parity-multiaddr = "0.4.0"
 pin-utils = "=0.1.0-alpha.4"
-protobuf = { version = "2.6", features = ["with-bytes"] }
+protobuf = { version = "2.7", features = ["with-bytes"] }
 rand = "0.6.5"
-tokio = "0.1.16"
+tokio = "0.1.22"
 tokio-timer = "0.2.10"
+tokio-retry = "0.2.0"
 unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
 channel = { path = "../common/channel" }
 crypto = { path = "../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
+socket_bench_server = { path = "socket_bench_server" }
 types = { path = "../types" }
 
 [dev-dependencies]
-criterion = { version = "0.2.11", features = ["real_blackbox"] }
+criterion = "0.2.11"
+
+[dev-dependencies.nextgen_crypto]
+features = ["testing"]
+path = "../crypto/nextgen_crypto"
 
 [build-dependencies]
 protoc-rust = "2.5.0"

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
@@ -7,16 +7,9 @@ set -e
 
 # Allowed Features
 allowed_features=(
-  "--and" "--not" "-e" "futures_api"
   "--and" "--not" "-e" "async_await"
-  "--and" "--not" "-e" "await_macro"
-  "--and" "--not" "-e" "box_patterns"
-  "--and" "--not" "-e" "panic_info_message"
-  "--and" "--not" "-e" "try_trait"
-  "--and" "--not" "-e" "test"
-  "--and" "--not" "-e" "specialization"
-  "--and" "--not" "-e" "wait_timeout_until"
-  "--and" "--not" "-e" "vec_remove_item"
+  "--and" "--not" "-e" "custom_test_frameworks"
+  "--and" "--not" "-e" "set_stdio"
 )
 
 # Search for nightly features

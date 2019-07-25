@@ -4,6 +4,7 @@
 /// Contains helpers for build.rs files.  Includes helpers for proto compilation
 use std::path::{Path, PathBuf};
 
+use std::env;
 use walkdir::WalkDir;
 
 // Compiles all proto files under proto root and dependent roots.
@@ -11,6 +12,7 @@ use walkdir::WalkDir;
 // `src/a/b/c_grpc.rs`.
 pub fn compile_proto(proto_root: &str, dependent_roots: Vec<&str>, generate_client_code: bool) {
     let mut additional_includes = vec![];
+    env::remove_var("GO111MODULE");
     for dependent_root in dependent_roots {
         // First compile dependent directories
         compile_dir(

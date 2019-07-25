@@ -6,7 +6,7 @@ pipeline, and check the output of each stage using inline directives.
 
 ## How to run functional tests
 
-Run `cargo test` inside this crate, or `cargo test -p fuctional_tests` anywhere 
+Run `cargo test` inside this crate, or `cargo test -p functional_tests` anywhere
 in the repo. `cargo test` also accepts a filter: `cargo test foo` runs only
 the tests with `foo` in the name.
 

@@ -1,7 +1,6 @@
 // NOTE: this module appears in the "Getting Started With Move" guide on the Libra website.
 // Any changes to this code should also be reflected there.
 
-modules:
 // A module for earmarking a coin for a specific recipient
 module EarmarkedLibraCoin {
   import 0x0.LibraCoin;
@@ -19,7 +18,7 @@ module EarmarkedLibraCoin {
     let t: R#Self.T;
 
     // Construct or "pack" a new resource of type T. Only procedures of the
-    // `EarmarkedCoin` module can create an `EarmarkedCoin.T`.
+    // `EarmarkedLibraCoin` module can create an `EarmarkedLibraCoin.T`.
     t = T {
       coin: move(coin),
       recipient: move(recipient),
@@ -39,7 +38,7 @@ module EarmarkedLibraCoin {
     let sender: address;
 
     // Remove the earmarked coin resource published under `earmarked_coin_address`.
-    // If there is resource of type T published under the address, this will fail.
+    // If there is no resource of type T published under the address, this will fail.
     t = move_from<T>(move(earmarked_coin_address));
 
     t_ref = &t;
@@ -57,8 +56,6 @@ module EarmarkedLibraCoin {
   // Allow the creator of the earmarked coin to reclaim it.
   public claim_for_creator(): R#Self.T {
     let t: R#Self.T;
-    let coin: R#LibraCoin.T;
-    let recipient: address;
     let sender: address;
 
     sender = get_txn_sender();
@@ -83,10 +80,12 @@ module EarmarkedLibraCoin {
 
 // TODO: lines below this are tests
 
-script:
+//! new-transaction
+
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
-import Transaction.EarmarkedLibraCoin;
+import {{default}}.EarmarkedLibraCoin;
+
 main() {
   let recipient_address: address;
   let coin: R#LibraCoin.T;

@@ -1,4 +1,3 @@
-modules:
 module MoneyHolder {
         import 0x0.LibraCoin;
 
@@ -25,9 +24,11 @@ module MoneyHolder {
         }
 }
 
-script:
-import Transaction.MoneyHolder;
+//! new-transaction
+
+import {{default}}.MoneyHolder;
 import 0x0.LibraCoin;
+
 main() {
     let coin: R#LibraCoin.T;
     let money_holder: R#MoneyHolder.T;

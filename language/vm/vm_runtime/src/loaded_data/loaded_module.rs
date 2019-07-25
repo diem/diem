@@ -3,14 +3,14 @@
 //! Loaded representation for Move modules.
 
 use crate::loaded_data::{function::FunctionDef, struct_def::StructDef};
+use bytecode_verifier::VerifiedModule;
 use std::{collections::HashMap, sync::RwLock};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VMInvariantViolation,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, FieldDefinitionIndex,
-        FunctionDefinitionIndex, MemberCount, StringPoolIndex, StructDefinitionIndex, TableIndex,
+        CompiledModule, FieldDefinitionIndex, FunctionDefinitionIndex, MemberCount,
+        StructDefinitionIndex, TableIndex,
     },
     internals::ModuleIndex,
 };
@@ -19,7 +19,7 @@ use vm::{
 /// reverse mapping that allows querying definition of struct/function by name.
 #[derive(Debug, Eq, PartialEq)]
 pub struct LoadedModule {
-    pub module: CompiledModule,
+    module: VerifiedModule,
     #[allow(dead_code)]
     pub struct_defs_table: HashMap<String, StructDefinitionIndex>,
     #[allow(dead_code)]
@@ -32,6 +32,12 @@ pub struct LoadedModule {
     pub field_offsets: Vec<TableIndex>,
 
     cache: LoadedModuleCache,
+}
+
+impl ModuleAccess for LoadedModule {
+    fn as_module(&self) -> &CompiledModule {
+        &self.module.as_inner()
+    }
 }
 
 #[derive(Debug)]
@@ -51,17 +57,21 @@ impl PartialEq for LoadedModuleCache {
 impl Eq for LoadedModuleCache {}
 
 impl LoadedModule {
-    pub fn new(module: CompiledModule) -> Result<Self, VMInvariantViolation> {
+    pub fn new(module: VerifiedModule) -> Self {
         let mut struct_defs_table = HashMap::new();
         let mut field_defs_table = HashMap::new();
         let mut function_defs_table = HashMap::new();
         let mut function_defs = vec![];
-        let struct_defs = module.struct_defs().map(|_| RwLock::new(None)).collect();
+        let struct_defs = module
+            .struct_defs()
+            .iter()
+            .map(|_| RwLock::new(None))
+            .collect();
         let cache = LoadedModuleCache { struct_defs };
 
-        let mut field_offsets: Vec<TableIndex> = module.field_defs().map(|_| 0).collect();
+        let mut field_offsets: Vec<TableIndex> = module.field_defs().iter().map(|_| 0).collect();
 
-        for (idx, struct_def) in module.struct_defs().enumerate() {
+        for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let name = module
                 .string_at(module.struct_handle_at(struct_def.struct_handle).name)
                 .to_string();
@@ -72,12 +82,12 @@ impl LoadedModule {
                 field_offsets[struct_def.fields.into_index() + i as usize] = i;
             }
         }
-        for (idx, field_def) in module.field_defs().enumerate() {
+        for (idx, field_def) in module.field_defs().iter().enumerate() {
             let name = module.string_at(field_def.name).to_string();
             let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
             field_defs_table.insert(name, fd_idx);
         }
-        for (idx, function_def) in module.function_defs().enumerate() {
+        for (idx, function_def) in module.function_defs().iter().enumerate() {
             let name = module
                 .string_at(module.function_handle_at(function_def.function).name)
                 .to_string();
@@ -85,7 +95,7 @@ impl LoadedModule {
             function_defs_table.insert(name, fd_idx);
             function_defs.push(FunctionDef::new(&module, fd_idx));
         }
-        Ok(LoadedModule {
+        LoadedModule {
             module,
             struct_defs_table,
             field_defs_table,
@@ -93,23 +103,11 @@ impl LoadedModule {
             function_defs,
             field_offsets,
             cache,
-        })
-    }
-
-    pub fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
-        self.module.address_at(idx)
-    }
-
-    pub fn string_at(&self, idx: StringPoolIndex) -> &str {
-        self.module.string_at(idx)
-    }
-
-    pub fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> ByteArray {
-        self.module.byte_array_at(idx).clone()
+        }
     }
 
     pub fn field_count_at(&self, idx: StructDefinitionIndex) -> MemberCount {
-        self.module.struct_def_at(idx).field_count
+        self.struct_def_at(idx).field_count
     }
 
     /// Return a cached copy of the struct def at this index, if available.

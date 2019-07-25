@@ -549,7 +549,12 @@ impl NodeConfigHelpers {
             config.base.data_dir_path = dir.path().to_owned();
             config.base.temp_data_dir = Some(dir);
         }
-        config.metrics.dir = config.base.data_dir_path.join(&config.metrics.dir);
+
+        if !config.metrics.dir.as_os_str().is_empty() {
+            // do not set the directory if metrics.dir is empty to honor the check done
+            // in setup_metrics
+            config.metrics.dir = config.base.data_dir_path.join(&config.metrics.dir);
+        }
         config.storage.dir = config.base.data_dir_path.join(config.storage.get_dir());
         if config.execution.genesis_file_location == DISPOSABLE_DIR_MARKER {
             config.execution.genesis_file_location = config

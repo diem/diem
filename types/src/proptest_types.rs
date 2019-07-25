@@ -11,9 +11,9 @@ use crate::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorProof,
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionInfo,
-        TransactionListWithProof, TransactionPayload, TransactionStatus, TransactionToCommit,
-        Version,
+        Program, RawTransaction, SignatureCheckedTransaction, SignedTransaction,
+        TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
+        TransactionStatus, TransactionToCommit, Version,
     },
     validator_change::ValidatorChangeEventWithProof,
     vm_error::VMStatus,
@@ -150,7 +150,7 @@ impl Arbitrary for RawTransaction {
     }
 }
 
-impl SignedTransaction {
+impl SignatureCheckedTransaction {
     // This isn't an Arbitrary impl because this doesn't generate *any* possible SignedTransaction,
     // just one kind of them.
     pub fn program_strategy(
@@ -159,13 +159,13 @@ impl SignedTransaction {
         Self::strategy_impl(keypair_strategy, TransactionPayload::program_strategy())
     }
 
-    pub fn write_set_stratedy(
+    pub fn write_set_strategy(
         keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::write_set_strategy())
     }
 
-    pub fn genesis_stratedy(
+    pub fn genesis_strategy(
         keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::genesis_strategy())
@@ -191,12 +191,24 @@ impl SignedTransaction {
     }
 }
 
-impl Arbitrary for SignedTransaction {
+impl Arbitrary for SignatureCheckedTransaction {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::strategy_impl(gen_keypair_strategy(), any::<TransactionPayload>()).boxed()
+    }
+}
+
+/// This `Arbitrary` impl only generates valid signed transactions. TODO: maybe add invalid ones?
+impl Arbitrary for SignedTransaction {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        any::<SignatureCheckedTransaction>()
+            .prop_map(|txn| txn.into_inner())
+            .boxed()
     }
 }
 
@@ -416,8 +428,10 @@ impl TransactionToCommit {
         event_path_strategy: impl Strategy<Value = Vec<u8>>,
     ) -> impl Strategy<Value = Self> {
         // signed_txn
-        let signed_txn_strategy =
-            SignedTransaction::strategy_impl(keypair_strategy.clone(), any::<TransactionPayload>());
+        let txn_strategy = SignatureCheckedTransaction::strategy_impl(
+            keypair_strategy.clone(),
+            any::<TransactionPayload>(),
+        );
 
         // acccount_states
         let address_strategy = keypair_strategy
@@ -436,12 +450,13 @@ impl TransactionToCommit {
 
         // Combine the above into result.
         (
-            signed_txn_strategy,
+            txn_strategy,
             account_states_strategy,
             events_strategy,
             gas_used_strategy,
         )
-            .prop_map(|(signed_txn, account_states, events, gas_used)| {
+            .prop_map(|(txn, account_states, events, gas_used)| {
+                let signed_txn = txn.into_inner();
                 Self::new(signed_txn, account_states, events, gas_used)
             })
     }

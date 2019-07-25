@@ -7,13 +7,16 @@ use crate::chained_bft::{
     test_utils::placeholder_certificate_for_block,
 };
 
-use crypto::{HashValue, PrivateKey, PublicKey};
+use crypto::HashValue;
+use nextgen_crypto::ed25519::Ed25519PrivateKey;
 use proptest::prelude::*;
 use std::{
     panic,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use types::validator_signer::{self, ValidatorSigner};
+#[cfg(test)]
+use types::validator_signer::proptests;
+use types::validator_signer::ValidatorSigner;
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
 
@@ -27,7 +30,7 @@ prop_compose! {
         parent_id_strategy: impl Strategy<Value = HashValue>,
         round_strategy: impl Strategy<Value = Round>,
         height: Height,
-        signer_strategy: impl Strategy<Value = ValidatorSigner>,
+        signer_strategy: impl Strategy<Value = ValidatorSigner<Ed25519PrivateKey>>,
     )(
         parent_id in parent_id_strategy,
         round in round_strategy,
@@ -62,7 +65,7 @@ prop_compose! {
             HashValue::arbitrary(),
             Round::arbitrary(),
             123,
-            validator_signer::arb_signer(),
+            proptests::arb_signer(),
         )
     ) -> Block<Vec<usize>> {
         block
@@ -89,7 +92,7 @@ prop_compose! {
                 parent_id: block.parent_id(),
                 quorum_cert: block.quorum_cert().clone(),
                 author: block.author(),
-                signature: *block.signature(),
+                signature: block.signature().clone(),
             }
         }
 }
@@ -117,7 +120,7 @@ prop_compose! {
     /// of the parent. This, depending on branching, does not require the
     /// QC to always be an ancestor or the parent to always be the highest QC
     fn child(
-        signer_strategy: impl Strategy<Value = ValidatorSigner>,
+        signer_strategy: impl Strategy<Value = ValidatorSigner<Ed25519PrivateKey>>,
         block_forest_strategy: impl Strategy<Value = LinearizedBlockForest<Vec<usize>>>,
     )(
         signer in signer_strategy,
@@ -151,17 +154,14 @@ prop_compose! {
 /// vector
 fn block_forest_from_keys(
     depth: u32,
-    key_pairs: Vec<(PrivateKey, PublicKey)>,
+    keypairs: Vec<Ed25519PrivateKey>,
 ) -> impl Strategy<Value = LinearizedBlockForest<Vec<usize>>> {
     let leaf = leaf_strategy().prop_map(|block| vec![block]);
     // Note that having `expected_branch_size` of 1 seems to generate significantly larger trees
     // than desired (this is my understanding after reading the documentation:
     // https://docs.rs/proptest/0.3.0/proptest/strategy/trait.Strategy.html#method.prop_recursive)
     leaf.prop_recursive(depth, depth, 2, move |inner| {
-        child(
-            validator_signer::mostly_in_keypair_pool(key_pairs.clone()),
-            inner,
-        )
+        child(proptests::mostly_in_keypair_pool(keypairs.clone()), inner)
     })
 }
 
@@ -169,17 +169,12 @@ fn block_forest_from_keys(
 pub fn block_forest_and_its_keys(
     quorum_size: usize,
     depth: u32,
-) -> impl Strategy<
-    Value = (
-        Vec<(PrivateKey, PublicKey)>,
-        LinearizedBlockForest<Vec<usize>>,
-    ),
-> {
-    proptest::collection::vec(validator_signer::arb_keypair(), quorum_size).prop_flat_map(
-        move |key_pairs| {
+) -> impl Strategy<Value = (Vec<Ed25519PrivateKey>, LinearizedBlockForest<Vec<usize>>)> {
+    proptest::collection::vec(proptests::arb_signing_key(), quorum_size).prop_flat_map(
+        move |private_key| {
             (
-                Just(key_pairs.clone()),
-                block_forest_from_keys(depth, key_pairs),
+                Just(private_key.clone()),
+                block_forest_from_keys(depth, private_key),
             )
         },
     )
@@ -197,7 +192,7 @@ fn test_genesis() {
 
 #[test]
 fn test_block_relation() {
-    let signer = ValidatorSigner::random();
+    let signer = ValidatorSigner::random(None);
     // Test genesis and the next block
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
@@ -226,7 +221,7 @@ fn test_block_relation() {
 #[test]
 fn test_block_qc() {
     // Verify that it's impossible to create a block with QC that doesn't point to a parent.
-    let signer = ValidatorSigner::random();
+    let signer = ValidatorSigner::random(None);
     // Test genesis and the next block
     let genesis_block = Block::make_genesis_block();
     let genesis_qc = QuorumCert::certificate_for_genesis();
@@ -240,7 +235,7 @@ fn test_block_qc() {
         genesis_qc.clone(),
         &signer,
     );
-    let a1_qc = placeholder_certificate_for_block(vec![signer.clone()], a1.id(), a1.round());
+    let a1_qc = placeholder_certificate_for_block(vec![&signer], a1.id(), a1.round());
 
     let result = panic::catch_unwind(|| {
         // should panic because qc does not point to parent

@@ -5,6 +5,7 @@ use cli::client_proxy::ClientProxy;
 use libra_swarm::swarm::LibraSwarm;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
+use std::str::FromStr;
 
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
@@ -15,7 +16,13 @@ fn setup_swarm_and_client_proxy(
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
 
-    let swarm = LibraSwarm::launch_swarm(num_nodes, false, faucet_account_keypair, true);
+    let swarm = LibraSwarm::launch_swarm(
+        num_nodes,
+        false, /* disable_logging */
+        faucet_account_keypair,
+        true, /* tee_logs */
+        None, /* config_dir */
+    );
     let port = *swarm
         .get_validators_public_ports()
         .get(client_port_index)
@@ -26,6 +33,7 @@ fn setup_swarm_and_client_proxy(
         port.to_string().as_str(),
         &swarm.get_trusted_peers_config_path(),
         &faucet_key_file_path,
+        false,
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
@@ -42,34 +50,34 @@ fn setup_swarm_and_client_proxy(
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "10"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "3"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(7.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(4.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "2", "15"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(15.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "2"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "2"]).unwrap()).ok()
     );
 }
 
@@ -88,11 +96,11 @@ fn smoke_test_multi_node() {
 #[test]
 fn test_concurrent_transfers_single_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "100"], true)
         .unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
     for _ in 0..20 {
         client_proxy
             .transfer_coins(&["t", "0", "1", "1"], false)
@@ -103,11 +111,11 @@ fn test_concurrent_transfers_single_node() {
         .unwrap();
     assert_eq!(
         Decimal::from_f64(79.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(21.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
@@ -126,19 +134,19 @@ fn test_basic_fault_tolerance() {
 #[test]
 fn test_basic_restartability() {
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
-    client_proxy.create_next_account().unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
     let peer_to_restart = swarm.get_validators_ids()[0].clone();
     // restart node
@@ -146,22 +154,22 @@ fn test_basic_restartability() {
     assert!(swarm.add_node(peer_to_restart, false).is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(80.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(20.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
@@ -174,19 +182,19 @@ fn test_basic_state_synchronization() {
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
-    client_proxy.create_next_account().unwrap();
-    client_proxy.create_next_account().unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
         .transfer_coins(&["tb", "0", "1", "10"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
     let node_to_restart = swarm.get_validators_ids().get(0).unwrap().clone();
 
@@ -194,11 +202,11 @@ fn test_basic_state_synchronization() {
     // All these are executed while one node is down
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_f64(client_proxy.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
     for _ in 0..5 {
         client_proxy
@@ -220,6 +228,7 @@ fn test_basic_state_synchronization() {
         ac_port.to_string().as_str(),
         &swarm.get_trusted_peers_config_path(),
         "",
+        false,
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
@@ -235,10 +244,10 @@ fn test_basic_state_synchronization() {
     client_proxy2.set_accounts(client_proxy.copy_all_accounts());
     assert_eq!(
         Decimal::from_f64(85.0),
-        Decimal::from_f64(client_proxy2.get_balance(&["b", "0"]).unwrap())
+        Decimal::from_str(&client_proxy2.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(15.0),
-        Decimal::from_f64(client_proxy2.get_balance(&["b", "1"]).unwrap())
+        Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }

@@ -323,7 +323,7 @@ where
             let time = std::time::Instant::now();
             let out = V::execute_block(transactions.clone(), &self.vm_config, &state_view);
             OP_COUNTERS.observe(
-                "vm_execute_block_time_us",
+                "vm_execute_chunk_time_us",
                 time.elapsed().as_micros() as f64,
             );
             out
@@ -531,16 +531,16 @@ where
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let time = std::time::Instant::now();
+            let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
+            OP_COUNTERS.observe(
+                "storage_save_transactions.count",
+                txns_to_commit.len() as f64,
+            );
             self.storage_write_client.save_transactions(
                 txns_to_commit,
                 version + 1 - num_txns_to_commit, /* first_version */
                 Some(ledger_info_with_sigs.clone()),
             )?;
-            OP_COUNTERS.observe(
-                "storage_save_transactions_time_us",
-                time.elapsed().as_micros() as f64,
-            );
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", num_accounts_created);
@@ -604,11 +604,19 @@ where
             db_root_hash,
             &previous_state_tree,
         );
-        let vm_outputs = V::execute_block(
-            block_to_execute.transactions().to_vec(),
-            &self.vm_config,
-            &state_view,
-        );
+        let vm_outputs = {
+            let time = std::time::Instant::now();
+            let out = V::execute_block(
+                block_to_execute.transactions().to_vec(),
+                &self.vm_config,
+                &state_view,
+            );
+            OP_COUNTERS.observe(
+                "vm_execute_block_time_us",
+                time.elapsed().as_micros() as f64,
+            );
+            out
+        };
 
         let status: Vec<_> = vm_outputs
             .iter()

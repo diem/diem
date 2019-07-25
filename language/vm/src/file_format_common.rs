@@ -12,10 +12,7 @@
 //! It's used to compress mostly indexes into the main binary tables.
 use byteorder::ReadBytesExt;
 use failure::*;
-use std::{
-    io::Cursor,
-    mem::{size_of, transmute},
-};
+use std::{io::Cursor, mem::size_of};
 
 /// Constant values for the binary format header.
 ///
@@ -83,6 +80,16 @@ pub enum SerializedType {
     MUTABLE_REFERENCE       = 0x6,
     STRUCT                  = 0x7,
     BYTEARRAY               = 0x8,
+    TYPE_PARAMETER          = 0x9,
+}
+
+#[rustfmt::skip]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum SerializedKind {
+    RESOURCE                = 0x1,
+    COPYABLE                = 0x2,
 }
 
 /// List of opcodes constants.
@@ -129,7 +136,7 @@ pub enum Opcodes {
     GT                      = 0x24,
     LE                      = 0x25,
     GE                      = 0x26,
-    ASSERT                  = 0x27,
+    ABORT                   = 0x27,
     GET_TXN_GAS_UNIT_PRICE  = 0x28,
     GET_TXN_MAX_GAS_UNITS   = 0x29,
     GET_GAS_REMAINING       = 0x2A,
@@ -146,50 +153,117 @@ pub enum Opcodes {
     FREEZE_REF              = 0x35,
 }
 
+/// Upper limit on the binary size
+pub const BINARY_SIZE_LIMIT: usize = usize::max_value();
+
+/// A wrapper for the binary vector
+pub struct BinaryData {
+    _binary: Vec<u8>,
+}
+
+/// The wrapper mirrors Vector operations but provides additional checks against overflow
+impl BinaryData {
+    pub fn new() -> Self {
+        BinaryData {
+            _binary: Vec::new(),
+        }
+    }
+
+    pub fn as_inner(&self) -> &[u8] {
+        &self._binary
+    }
+
+    pub fn into_inner(self) -> Vec<u8> {
+        self._binary
+    }
+
+    pub fn push(&mut self, item: u8) -> Result<()> {
+        if self.len().checked_add(1).is_some() {
+            // This assumption tells MIRAI the implication of the success of the check
+            assume!(self._binary.len() < usize::max_value());
+            self._binary.push(item);
+        } else {
+            bail!(
+                "binary size ({}) + 1 is greater than limit ({})",
+                self.len(),
+                BINARY_SIZE_LIMIT,
+            );
+        }
+        Ok(())
+    }
+
+    pub fn extend(&mut self, vec: &[u8]) -> Result<()> {
+        let vec_len: usize = vec.len();
+        if self.len().checked_add(vec_len).is_some() {
+            // This assumption tells MIRAI the implication of the success of the check
+            assume!(self._binary.len() <= usize::max_value() - vec_len);
+            self._binary.extend(vec);
+        } else {
+            bail!(
+                "binary size ({}) + {} is greater than limit ({})",
+                self.len(),
+                vec.len(),
+                BINARY_SIZE_LIMIT,
+            );
+        }
+        Ok(())
+    }
+
+    pub fn len(&self) -> usize {
+        self._binary.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self._binary.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self._binary.clear();
+    }
+}
+
+impl From<Vec<u8>> for BinaryData {
+    fn from(vec: Vec<u8>) -> Self {
+        BinaryData { _binary: vec }
+    }
+}
+
 /// Take a `Vec<u8>` and a value to write to that vector and applies LEB128 logic to
 /// compress the u16.
-pub fn write_u16_as_uleb128(binary: &mut Vec<u8>, value: u16) {
-    write_u32_as_uleb128(binary, u32::from(value));
+pub fn write_u16_as_uleb128(binary: &mut BinaryData, value: u16) -> Result<()> {
+    write_u32_as_uleb128(binary, u32::from(value))
 }
 
 /// Take a `Vec<u8>` and a value to write to that vector and applies LEB128 logic to
 /// compress the u32.
-pub fn write_u32_as_uleb128(binary: &mut Vec<u8>, value: u32) {
+pub fn write_u32_as_uleb128(binary: &mut BinaryData, value: u32) -> Result<()> {
     let mut val = value;
     loop {
         let v: u8 = (val & 0x7f) as u8;
         if u32::from(v) != val {
-            binary.push(v | 0x80);
+            binary.push(v | 0x80)?;
             val >>= 7;
         } else {
-            binary.push(v);
+            binary.push(v)?;
             break;
         }
     }
+    Ok(())
 }
 
 /// Write a `u16` in Little Endian format.
-pub fn write_u16(binary: &mut Vec<u8>, value: u16) {
-    let bytes: [u8; 2] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+pub fn write_u16(binary: &mut BinaryData, value: u16) -> Result<()> {
+    binary.extend(&value.to_le_bytes())
 }
 
 /// Write a `u32` in Little Endian format.
-pub fn write_u32(binary: &mut Vec<u8>, value: u32) {
-    let bytes: [u8; 4] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+pub fn write_u32(binary: &mut BinaryData, value: u32) -> Result<()> {
+    binary.extend(&value.to_le_bytes())
 }
 
 /// Write a `u64` in Little Endian format.
-pub fn write_u64(binary: &mut Vec<u8>, value: u64) {
-    let bytes: [u8; 8] = unsafe { transmute(value.to_le()) };
-    for byte in &bytes {
-        binary.push(*byte);
-    }
+pub fn write_u64(binary: &mut BinaryData, value: u64) -> Result<()> {
+    binary.extend(&value.to_le_bytes())
 }
 
 /// Reads a `u16` in ULEB128 format from a `binary`.

@@ -16,6 +16,7 @@ use crate::chained_bft::{
 };
 use crypto::HashValue;
 use futures::executor::block_on;
+use nextgen_crypto::{ed25519::*, *};
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
 use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
@@ -162,16 +163,16 @@ proptest! {
 
     #[test]
     fn test_block_store_insert(
-        (keypairs, blocks) in block_test::block_forest_and_its_keys(
+        (mut private_keys, blocks) in block_test::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
             50)
     ){
-        let authors: HashSet<Author> = keypairs.iter().map(|(_, public_key)| AccountAddress::from(*public_key)).collect();
-        let (priv_key, pub_key) = keypairs.first().expect("several keypairs generated");
-        let signer = ValidatorSigner::new(AccountAddress::from(*pub_key), *pub_key, priv_key.clone());
-        let block_store = build_empty_tree_with_custom_signing(signer.clone());
+        let authors: HashSet<Author> = private_keys.iter().map(|private_key| AccountAddress::from_public_key(&private_key.public_key())).collect();
+        let priv_key = private_keys.pop().expect("several keypairs generated");
+        let signer = ValidatorSigner::new(None, priv_key);
+        let block_store = build_empty_tree_with_custom_signing(signer);
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author()) {
                 let known_parent = block_store.block_exists(block.parent_id());
@@ -312,17 +313,18 @@ fn test_insert_vote() {
     let qc_size = 10;
     let mut signers = vec![];
     let mut author_public_keys = vec![];
-    for _ in 0..qc_size {
-        let signer = ValidatorSigner::random();
+
+    for i in 0..qc_size {
+        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([i as u8; 32]);
         author_public_keys.push((
-            AccountAddress::from(signer.public_key()),
+            AccountAddress::from_public_key(&signer.public_key()),
             signer.public_key(),
         ));
         signers.push(signer);
     }
-    let my_signer = ValidatorSigner::random();
+    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
     author_public_keys.push((
-        AccountAddress::from(my_signer.public_key()),
+        AccountAddress::from_public_key(&my_signer.public_key()),
         my_signer.public_key(),
     ));
     let block_store = build_empty_tree_with_custom_signing(my_signer);
@@ -425,13 +427,13 @@ fn test_need_fetch_for_qc() {
     let a3 = inserter.insert_block(a2.as_ref(), 3);
     block_on(block_tree.prune_tree(a2.id()));
     let need_fetch_qc = placeholder_certificate_for_block(
-        vec![block_tree.signer().clone()],
+        vec![block_tree.signer()],
         HashValue::zero(),
         a3.round() + 1,
     );
     let too_old_qc = QuorumCert::certificate_for_genesis();
     let can_insert_qc =
-        placeholder_certificate_for_block(vec![block_tree.signer().clone()], a3.id(), a3.round());
+        placeholder_certificate_for_block(vec![block_tree.signer()], a3.id(), a3.round());
     let duplicate_qc = block_tree.get_quorum_cert_for_block(a2.id()).unwrap();
     assert_eq!(
         block_tree.need_fetch_for_quorum_cert(&need_fetch_qc),
@@ -464,7 +466,7 @@ fn test_need_sync_for_qc() {
     let a3 = inserter.insert_block(a2.as_ref(), 3);
     block_on(block_tree.prune_tree(a3.id()));
     let qc = placeholder_certificate_for_block(
-        vec![block_tree.signer().clone()],
+        vec![block_tree.signer()],
         HashValue::zero(),
         a3.round() + 3,
     );
@@ -473,7 +475,7 @@ fn test_need_sync_for_qc() {
         true
     );
     let qc = placeholder_certificate_for_block(
-        vec![block_tree.signer().clone()],
+        vec![block_tree.signer()],
         HashValue::zero(),
         a3.round() + 2,
     );

@@ -12,6 +12,7 @@ use crypto::{
 };
 use failure::Result as ProtoResult;
 use network::proto::Vote as ProtoVote;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -106,7 +107,7 @@ impl VoteMsg {
         round: Round,
         author: Author,
         mut ledger_info_placeholder: LedgerInfo,
-        validator_signer: &ValidatorSigner,
+        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(Self::vote_digest(
             proposed_block_id,
@@ -122,7 +123,7 @@ impl VoteMsg {
             round,
             author,
             ledger_info: ledger_info_placeholder,
-            signature: li_sig,
+            signature: li_sig.into(),
         }
     }
 
@@ -158,12 +159,19 @@ impl VoteMsg {
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
     /// and then verifies the signature.
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), VoteMsgVerificationError> {
+    pub fn verify(
+        &self,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
+    ) -> Result<(), VoteMsgVerificationError> {
         if self.ledger_info.consensus_data_hash() != self.vote_hash() {
             return Err(VoteMsgVerificationError::ConsensusDataMismatch);
         }
         validator
-            .verify_signature(self.author(), self.ledger_info.hash(), self.signature())
+            .verify_signature(
+                self.author(),
+                self.ledger_info.hash(),
+                &(self.signature().clone().into()),
+            )
             .map_err(VoteMsgVerificationError::SigVerifyError)
     }
 

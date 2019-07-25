@@ -115,7 +115,7 @@ impl SigningKey for BLS12381PrivateKey {
 impl Uniform for BLS12381PrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng,
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
         let mut fr_repr: [u64; 4usize] = rng.gen();
         // Since field modulus is 381-bit prime, drop the 3 highest-order bits
@@ -142,8 +142,8 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
         // first we deserialize raw bytes, which may or may not work
         let key_res = deserialize::<BLS12381PrivateKey>(bytes);
         // Note that the underlying implementation of SerdeSecret checks for validation during
-        // deserialisation. Also, we don't need to check for validity of the derived PublicKey, as a
-        // correct SerdeSecret (checked during desrialisation that is in field) will always produce
+        // deserialization. Also, we don't need to check for validity of the derived PublicKey, as a
+        // correct SerdeSecret (checked during deserialization that is in field) will always produce
         // a valid PublicKey.
         key_res.or(Err(CryptoMaterialError::DeserializationError))
     }
@@ -217,6 +217,7 @@ impl ValidKey for BLS12381PublicKey {
 
 impl Signature for BLS12381Signature {
     type VerifyingKeyMaterial = BLS12381PublicKey;
+    type SigningKeyMaterial = BLS12381PrivateKey;
 
     /// Checks that `signature` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &BLS12381PublicKey) -> Result<()> {

@@ -5,7 +5,7 @@
 //! persist anything, but realizes the logic of R/W only. The write path will produce all the
 //! intermediate results in a batch for storage layer to commit and the read path will return
 //! results directly. The public APIs are only [`new`](SparseMerkleTree::new),
-//! [`put_keyed_blob_sets`](SparseMerkleTree::put_keyed_blob_sets),
+//! [`put_blob_sets`](SparseMerkleTree::put_blob_sets),
 //! [`put_keyed_blob_set`](SparseMerkleTree::put_keyed_blob_set) and
 //! [`get_with_proof`](SparseMerkleTree::get_with_proof). After each put with a `keyed_blob_set`
 //! based on a known root, the tree will return a new root hash with a [`TreeUpdateBatch`]
@@ -15,7 +15,9 @@
 //! that any subtree containing 0 or 1 leaf node will be replaced by that leaf node or a placeholder
 //! node with default hash value. With this optimization we can save CPU by avoiding hashing on
 //! many sparse levels in the tree. Physically, the tree is structurally similar to the modified
-//! Pactricia Merkle tree of Ethereum, with some modifications. Please read the code for details.
+//! Patricia Merkle tree of Ethereum, with some modifications. Please read the code for details.
+
+#![allow(clippy::unit_arg)]
 
 #[cfg(test)]
 mod mock_tree_store;
@@ -33,9 +35,14 @@ use crypto::{
 use failure::prelude::*;
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{BranchNode, ExtensionNode, LeafNode, Node};
-use std::collections::HashMap;
+use num_derive::{FromPrimitive, ToPrimitive};
+use proptest_derive::Arbitrary;
+use std::collections::{HashMap, HashSet};
 use tree_cache::TreeCache;
-use types::{account_state_blob::AccountStateBlob, proof::definition::SparseMerkleProof};
+use types::{
+    account_state_blob::AccountStateBlob, proof::definition::SparseMerkleProof,
+    transaction::Version,
+};
 
 /// The hardcoded maximum height of a [`SparseMerkleTree`] in nibbles.
 const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;
@@ -53,6 +60,35 @@ pub trait TreeReader {
 pub type NodeBatch = HashMap<HashValue, Node>;
 /// Blob batch that will be written into db atomically with other batches.
 pub type BlobBatch = HashMap<HashValue, AccountStateBlob>;
+/// RetireLog batch that will be written into db atomically with other batches.
+pub type RetireLogBatch = HashSet<RetiredStateRecord>;
+
+/// Indicates a record becomes outdated on `version_retired`.
+#[derive(Arbitrary, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct RetiredStateRecord {
+    /// The version after which a record becomes outdated.
+    pub version_retired: Version,
+    /// Indicates data set that the outdated record is stored in.
+    pub record_type: RetiredRecordType,
+    /// The version at which the outdated record was created.
+    pub version_created: Version,
+    /// Hash of the outdated record, which is the key in the data set storing the record.
+    pub hash: HashValue,
+}
+
+/// Types of data sets a retired record can come from.
+#[derive(
+    Arbitrary, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive,
+)]
+pub enum RetiredRecordType {
+    /// The Sparse Merkle nodes data set.
+    Node = 0,
+    /// The account state blob data set.
+    Blob = 1,
+}
+
+// TODO: remove once version_created is for real part of the key.
+const DUMMY_VERSION_CREATED: Version = 0;
 
 /// This is a wrapper of [`NodeBatch`] and [`BlobBatch`] that represents the incremental
 /// updates of tree after applying a write set, which is a vector of account_address and
@@ -61,12 +97,17 @@ pub type BlobBatch = HashMap<HashValue, AccountStateBlob>;
 pub struct TreeUpdateBatch {
     node_batch: NodeBatch,
     blob_batch: BlobBatch,
+    retired_record_batch: RetireLogBatch,
 }
 
 /// Conversion between tuple type and `TreeUpdateBatch`.
-impl From<TreeUpdateBatch> for (NodeBatch, BlobBatch) {
+impl From<TreeUpdateBatch> for (NodeBatch, BlobBatch, RetireLogBatch) {
     fn from(batch: TreeUpdateBatch) -> Self {
-        (batch.node_batch, batch.blob_batch)
+        (
+            batch.node_batch,
+            batch.blob_batch,
+            batch.retired_record_batch,
+        )
     }
 }
 
@@ -84,7 +125,7 @@ where
         Self { reader }
     }
 
-    /// Returns new nodes and account state blobs in a batch after applying `keyed_blob_set`. For
+    /// Returns new nodes and account state blobs in a batch after applying `blob_set`. For
     /// example, if after transaction `T_i` the committed state of the tree in persistent storage
     /// looks like the following structure:
     ///
@@ -101,7 +142,7 @@ where
     /// ```
     ///
     /// where `A` and `B` denote the states of two adjacent accounts, and `x` is a sibling on the
-    /// path from root to A and B in the tree. Then a `keyed_blob_set` produced by the next
+    /// path from root to A and B in the tree. Then a `blob_set` produced by the next
     /// transaction `T_{i+1}` modifies other accounts `C` and `D` that lives in
     /// the subtree under `x`, a new partial tree will be constructed in memory and the
     /// structure will be:
@@ -120,19 +161,20 @@ where
     /// ```
     ///
     /// With this design, we are able to query the global state in persistent storage and
-    /// generate the proposed tree delta based on a specific root hash and `keyed_blob_set`. For
+    /// generate the proposed tree delta based on a specific root hash and `blob_set`. For
     /// example, if we want to execute another transaction `T_{i+1}'`, we can use the tree `S_i` in
-    /// storage and apply the `keyed_blob_set` of transaction `T_{i+1}`. Then if the storage commits
+    /// storage and apply the `blob_set` of transaction `T_{i+1}`. Then if the storage commits
     /// the returned batch, the state `S_{i+1}` is ready to be read from the tree by calling
     /// [`get_with_proof`](SparseMerkleTree::get_with_proof). Anything inside the batch is not
     /// reachable from public interfaces before being committed.
-    pub fn put_keyed_blob_set(
+    pub fn put_blob_set(
         &self,
-        keyed_blob_set: Vec<(HashValue, AccountStateBlob)>,
+        blob_set: Vec<(HashValue, AccountStateBlob)>,
+        version: Version,
         root_hash: HashValue,
     ) -> Result<(HashValue, TreeUpdateBatch)> {
         let (mut root_hashes, tree_update_batch) =
-            self.put_keyed_blob_sets(vec![keyed_blob_set], root_hash)?;
+            self.put_blob_sets(vec![blob_set], version, root_hash)?;
         let root_hash = root_hashes.pop().expect("root hash must exist");
         assert!(
             root_hashes.is_empty(),
@@ -145,20 +187,22 @@ where
     /// [`put_keyed_blob_set`](SparseMerkleTree::put_keyed_blob_set) with a series of
     /// `keyed_blob_set`.
     #[inline]
-    pub fn put_keyed_blob_sets(
+    pub fn put_blob_sets(
         &self,
-        keyed_blob_sets: Vec<Vec<(HashValue, AccountStateBlob)>>,
+        blob_sets: Vec<Vec<(HashValue, AccountStateBlob)>>,
+        first_version: Version,
         root_hash: HashValue,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, root_hash);
-        for keyed_blob_set in keyed_blob_sets {
+        let mut tree_cache = TreeCache::new(self.reader, root_hash, first_version);
+        for (idx, blob_set) in blob_sets.into_iter().enumerate() {
             assert!(
-                !keyed_blob_set.is_empty(),
+                !blob_set.is_empty(),
                 "Transactions that output empty write set should not be included.",
             );
-            keyed_blob_set
+            let version = first_version + idx as u64;
+            blob_set
                 .into_iter()
-                .map(|(key, value)| Self::put(key, value, &mut tree_cache))
+                .map(|(hash, value)| Self::put(hash, value, version, &mut tree_cache))
                 .collect::<Result<_>>()?;
             // Freeze the current cache to make all contents in current cache immutable
             tree_cache.freeze();
@@ -167,7 +211,12 @@ where
         Ok(tree_cache.into())
     }
 
-    fn put(key: HashValue, blob: AccountStateBlob, tree_cache: &mut TreeCache<R>) -> Result<()> {
+    fn put(
+        key: HashValue,
+        blob: AccountStateBlob,
+        _version: Version,
+        tree_cache: &mut TreeCache<R>,
+    ) -> Result<()> {
         let nibble_path = NibblePath::new(key.to_vec());
 
         // Get the root node. If this is the first operation, it would get the root node from the
@@ -260,8 +309,8 @@ where
         value_hash: HashValue,
         tree_cache: &mut TreeCache<R>,
     ) -> Result<(HashValue, bool)> {
-        // We are on a extension node but are trying to insert another node, so we may need
-        // to add a new path.
+        // We are on an extension node but are trying to insert another node, so we may need to add
+        // a new path.
 
         // Delete the current extension node from tree_cache if it exists; Otherwise it is a
         // noop.

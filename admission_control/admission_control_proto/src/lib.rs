@@ -3,7 +3,6 @@
 
 pub mod proto;
 
-use crate::proto::admission_control::AdmissionControlStatus as ProtoAdmissionControlStatus;
 use failure::prelude::*;
 use logger::prelude::*;
 use mempool::MempoolAddTransactionStatus;
@@ -14,33 +13,51 @@ use types::vm_error::VMStatus;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AdmissionControlStatus {
     /// Validator accepted the transaction.
-    Accepted = 0,
+    Accepted,
     /// The sender is blacklisted.
-    Blacklisted = 1,
+    Blacklisted(String),
     /// The transaction is rejected, e.g. due to incorrect signature.
-    Rejected = 2,
+    Rejected(String),
 }
 
 impl IntoProto for AdmissionControlStatus {
     type ProtoType = crate::proto::admission_control::AdmissionControlStatus;
 
     fn into_proto(self) -> Self::ProtoType {
+        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
+        let mut admission_control_status = Self::ProtoType::new();
         match self {
-            AdmissionControlStatus::Accepted => ProtoAdmissionControlStatus::Accepted,
-            AdmissionControlStatus::Blacklisted => ProtoAdmissionControlStatus::Blacklisted,
-            AdmissionControlStatus::Rejected => ProtoAdmissionControlStatus::Rejected,
+            AdmissionControlStatus::Accepted => {
+                admission_control_status.set_code(ProtoStatusCode::Accepted)
+            }
+            AdmissionControlStatus::Blacklisted(msg) => {
+                admission_control_status.set_message(msg);
+                admission_control_status.set_code(ProtoStatusCode::Blacklisted)
+            }
+            AdmissionControlStatus::Rejected(msg) => {
+                admission_control_status.set_message(msg);
+                admission_control_status.set_code(ProtoStatusCode::Rejected)
+            }
         }
+        admission_control_status
     }
 }
 
 impl FromProto for AdmissionControlStatus {
     type ProtoType = crate::proto::admission_control::AdmissionControlStatus;
 
-    fn from_proto(object: Self::ProtoType) -> Result<Self> {
-        let ret = match object {
-            ProtoAdmissionControlStatus::Accepted => AdmissionControlStatus::Accepted,
-            ProtoAdmissionControlStatus::Blacklisted => AdmissionControlStatus::Blacklisted,
-            ProtoAdmissionControlStatus::Rejected => AdmissionControlStatus::Rejected,
+    fn from_proto(mut proto_admission_control_status: Self::ProtoType) -> Result<Self> {
+        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
+        let ret = match proto_admission_control_status.get_code() {
+            ProtoStatusCode::Accepted => AdmissionControlStatus::Accepted,
+            ProtoStatusCode::Blacklisted => {
+                let msg = proto_admission_control_status.take_message();
+                AdmissionControlStatus::Blacklisted(msg)
+            }
+            ProtoStatusCode::Rejected => {
+                let msg = proto_admission_control_status.take_message();
+                AdmissionControlStatus::Rejected(msg)
+            }
         };
         Ok(ret)
     }
@@ -49,7 +66,7 @@ impl FromProto for AdmissionControlStatus {
 /// Rust structure for SubmitTransactionResponse protobuf definition.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SubmitTransactionResponse {
-    /// AC status returned to client if any, it includes can be either error or accepted status.
+    /// AC status returned to client if any - it can be one of: accepted, blacklisted, or rejected.
     pub ac_status: Option<AdmissionControlStatus>,
     /// Mempool error status if any.
     pub mempool_error: Option<MempoolAddTransactionStatus>,
@@ -83,13 +100,13 @@ impl FromProto for SubmitTransactionResponse {
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let ac_status = if object.has_ac_status() {
-            Some(AdmissionControlStatus::from_proto(object.get_ac_status())?)
+            Some(AdmissionControlStatus::from_proto(object.take_ac_status())?)
         } else {
             None
         };
         let mempool_error = if object.has_mempool_status() {
             Some(MempoolAddTransactionStatus::from_proto(
-                object.get_mempool_status(),
+                object.take_mempool_status(),
             )?)
         } else {
             None

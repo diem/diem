@@ -12,8 +12,8 @@ get_if_addrs = "0.5.3"
 hex = "0.3.2"
 parity-multiaddr = "0.4.0"
 rand = "0.6.5"
-serde = { version = "1.0.89", features = ["derive"] }
-tempfile = "3.0.6"
+serde = { version = "1.0.96", features = ["derive"] }
+tempfile = "3.1.0"
 toml = "0.4"
 
 crypto = { path = "../crypto/legacy_crypto" }

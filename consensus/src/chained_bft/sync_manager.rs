@@ -12,13 +12,16 @@ use crate::{
     counters,
     state_replication::StateComputer,
     state_synchronizer::SyncStatus,
+    util::mutex_map::MutexMap,
 };
-use failure::{Fail, Result};
+use crypto::HashValue;
+use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
 use std::{
     clone::Clone,
+    result::Result,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -31,6 +34,7 @@ pub struct SyncManager<T> {
     storage: Arc<dyn PersistentStorage<T>>,
     network: ConsensusNetworkImpl,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
+    block_mutex_map: MutexMap<HashValue>,
 }
 
 /// This struct describes where do we sync to
@@ -61,18 +65,20 @@ where
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
         counters::STATE_SYNC_TXN_REPLAYED.get();
+        let block_mutex_map = MutexMap::new();
         SyncManager {
             block_store,
             storage,
             network,
             state_computer,
+            block_mutex_map,
         }
     }
 
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_ledger_info
     /// Inserts sync_info.quorum_cert into block store as the last step
-    pub async fn sync_to(&mut self, deadline: Instant, sync_info: SyncInfo) -> Result<()> {
+    pub async fn sync_to(&mut self, deadline: Instant, sync_info: SyncInfo) -> failure::Result<()> {
         let highest_ledger_info = sync_info.highest_ledger_info.clone();
 
         self.process_highest_ledger_info(highest_ledger_info, sync_info.peer, deadline)
@@ -93,10 +99,19 @@ where
         start_version: u64,
         target_version: u64,
         batch_size: u64,
-    ) -> Result<TransactionListWithProof> {
+    ) -> failure::Result<TransactionListWithProof> {
         self.state_computer
             .get_chunk(start_version, target_version, batch_size)
             .await
+    }
+
+    pub async fn execute_and_insert_block(
+        &self,
+        block: Block<T>,
+    ) -> Result<Arc<Block<T>>, InsertError> {
+        let _guard = self.block_mutex_map.lock(block.id());
+        // execute_and_insert_block has shortcut to return block if it exists
+        self.block_store.execute_and_insert_block(block).await
     }
 
     /// Insert the quorum certificate separately from the block, used to split the processing of
@@ -108,7 +123,8 @@ where
         qc: QuorumCert,
         preferred_peer: Author,
         deadline: Instant,
-    ) -> std::result::Result<(), InsertError> {
+    ) -> Result<(), InsertError> {
+        let mut lock_set = self.block_mutex_map.new_lock_set();
         let mut pending = vec![];
         let network = self.network.clone();
         let mut retriever = BlockRetriever {
@@ -117,10 +133,25 @@ where
             preferred_peer,
         };
         let mut retrieve_qc = qc.clone();
-        while !self
-            .block_store
-            .block_exists(retrieve_qc.certified_block_id())
-        {
+        loop {
+            if lock_set
+                .lock(retrieve_qc.certified_block_id())
+                .await
+                .is_err()
+            {
+                // This should not be possible because that would mean we have circular
+                // dependency between signed blocks
+                panic!(
+                    "Can not re-acquire lock for block {} during fetch_quorum_cert",
+                    retrieve_qc.certified_block_id()
+                );
+            }
+            if self
+                .block_store
+                .block_exists(retrieve_qc.certified_block_id())
+            {
+                break;
+            }
             let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1).await?;
             // retrieve_block_for_qc guarantees that blocks has exactly 1 element
             let block = blocks.remove(0);
@@ -149,7 +180,7 @@ where
         highest_ledger_info: QuorumCert,
         peer: Author,
         deadline: Instant,
-    ) -> Result<()> {
+    ) -> failure::Result<()> {
         let committed_block_id = highest_ledger_info
             .committed_block_id()
             .ok_or_else(|| format_err!("highest ledger info has no committed block"))?;
@@ -259,7 +290,7 @@ impl BlockRetriever {
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> std::result::Result<Vec<Block<T>>, BlockRetrieverError>
+    ) -> Result<Vec<Block<T>>, BlockRetrieverError>
     where
         T: Payload,
     {
@@ -348,10 +379,11 @@ fn retrieval_timeout(deadline: &Instant, attempt: u32) -> Option<Duration> {
     assert!(attempt > 0, "retrieval_timeout attempt can't be 0");
     let exp = RETRIEVAL_MAX_EXP.min(attempt - 1); // [0..RETRIEVAL_MAX_EXP]
     let request_timeout = RETRIEVAL_INITIAL_TIMEOUT * 2_u32.pow(exp);
-    let deadline_timeout = deadline.checked_duration_since(Instant::now());
-    if let Some(deadline_timeout) = deadline_timeout {
-        Some(request_timeout.min(deadline_timeout))
+    let now = Instant::now();
+    let deadline_timeout = if *deadline >= now {
+        Some(deadline.duration_since(now))
     } else {
         None
-    }
+    };
+    deadline_timeout.map(|delay| request_timeout.min(delay))
 }

@@ -542,8 +542,8 @@ define_hasher! {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of a NewRoundMsgHasher object.
-    (NewRoundMsgHasher, NEW_ROUND_MSG_HASHER, b"NewRoundMsg")
+    /// The hasher used to compute the hash of a TimeoutMsgHasher object.
+    (TimeoutMsgHasher, TIMEOUT_MSG_HASHER, b"TimeoutMsg")
 }
 
 define_hasher! {

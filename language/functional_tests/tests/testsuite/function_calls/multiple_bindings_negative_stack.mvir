@@ -1,0 +1,11 @@
+//check: VerificationError
+//check: NegativeStackSizeInsideBlock(0, 4)
+
+main() {
+    let x: u64;
+    let y: u64;
+    let z: u64;
+    x, y, z = (1, 2);
+    return;
+}
+

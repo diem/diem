@@ -13,7 +13,7 @@ fn test_sig_token_structure() {
     // Valid cases.
     let bool_token = SignatureToken::Bool;
     assert_eq!(check_structure(&bool_token), None);
-    let struct_token = SignatureToken::Struct(StructHandleIndex::new(0));
+    let struct_token = SignatureToken::Struct(StructHandleIndex::new(0), vec![]);
     assert_eq!(check_structure(&struct_token), None);
     let ref_token = SignatureToken::Reference(Box::new(struct_token.clone()));
     assert_eq!(check_structure(&ref_token), None);

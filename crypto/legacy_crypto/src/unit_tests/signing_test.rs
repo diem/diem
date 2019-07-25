@@ -6,7 +6,6 @@ use bincode::{deserialize, serialize};
 use core::ops::{Index, IndexMut};
 use proptest::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
-use test::Bencher;
 
 #[test]
 fn test_generate_and_encode_keypair() {
@@ -48,7 +47,7 @@ fn test_hkdf_key_pair() {
     let (private_key, public_key) = derive_keypair_from_seed(salt, &seed, info);
     let hash = HashValue::zero();
     let signature = sign_message(hash, &private_key).unwrap();
-    assert!(verify_message(hash, &signature, &public_key).is_ok());
+    assert!(verify_signature(hash, &signature, &public_key).is_ok());
 
     // HKDF with salt and info.
     let raw_bytes = [2u8; 10];
@@ -62,7 +61,7 @@ fn test_hkdf_key_pair() {
 
     let hash = HashValue::zero();
     let signature = sign_message(hash, &private_key1).unwrap();
-    assert!(verify_message(hash, &signature, &public_key1).is_ok());
+    assert!(verify_signature(hash, &signature, &public_key1).is_ok());
 }
 
 #[test]
@@ -79,27 +78,6 @@ fn test_generate_key_pair_with_seed() {
     let (_, public_key3) = derive_keypair_from_seed(Some(salt), &seed, Some(info));
     assert_ne!(public_key3, public_key1);
     assert_ne!(public_key3, public_key2);
-}
-
-#[bench]
-pub fn bench_sign(bh: &mut Bencher) {
-    let (private_key, _) = generate_keypair();
-    let hash = HashValue::zero();
-
-    bh.iter(|| {
-        let _ = sign_message(hash, &private_key);
-    });
-}
-
-#[bench]
-pub fn bench_verify(bh: &mut Bencher) {
-    let (private_key, public_key) = generate_keypair();
-    let hash = HashValue::zero();
-    let signature = sign_message(hash, &private_key).unwrap();
-
-    bh.iter(|| {
-        verify_message(hash, &signature, &public_key).unwrap();
-    });
 }
 
 proptest! {
@@ -150,7 +128,7 @@ proptest! {
         (private_key, public_key) in keypair_strategy()
     ) {
         let signature = sign_message(hash, &private_key).unwrap();
-        prop_assert!(verify_message(hash, &signature, &public_key).is_ok());
+        prop_assert!(verify_signature(hash, &signature, &public_key).is_ok());
     }
 
     // Check for canonical s and malleable signatures.
@@ -162,7 +140,7 @@ proptest! {
         // ed25519-dalek signing ensures a canonical s value.
         let signature = sign_message(hash, &private_key).unwrap();
         // Canonical signatures can be verified as expected.
-        prop_assert!(verify_message(hash, &signature, &public_key).is_ok());
+        prop_assert!(verify_signature(hash, &signature, &public_key).is_ok());
 
         let mut serialized = signature.to_compact();
 
@@ -195,7 +173,7 @@ proptest! {
 
         // Malleable signatures will fail to verify in our implementation, even if for some reason
         // we received one. We detect non canonical signatures.
-        prop_assert!(verify_message(hash, &non_canonical_sig, &public_key).is_err());
+        prop_assert!(verify_signature(hash, &non_canonical_sig, &public_key).is_err());
     }
 }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::LibraDB;
+use crate::{change_set::ChangeSet, LibraDB};
 use proptest::{collection::vec, prelude::*};
 use tempfile::tempdir;
 use types::ledger_info::LedgerInfo;
@@ -55,13 +55,13 @@ proptest! {
         let store = &db.ledger_store;
         let start_version = ledger_infos_with_sigs.first().unwrap().ledger_info().version();
 
-        let mut batch = SchemaBatch::new();
+        let mut cs = ChangeSet::new();
         ledger_infos_with_sigs
             .iter()
-            .map(|info| store.put_ledger_info(info, &mut batch))
+            .map(|info| store.put_ledger_info(info, &mut cs))
             .collect::<Result<Vec<_>>>()
             .unwrap();
-        db.commit(batch).unwrap();
+        store.db.write_schemas(cs.batch).unwrap();
         prop_assert_eq!(db.ledger_store.get_ledger_infos(start_version).unwrap(), ledger_infos_with_sigs);
     }
 }

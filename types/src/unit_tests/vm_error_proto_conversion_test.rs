@@ -7,7 +7,10 @@ use crate::vm_error::{
     VMVerificationStatus,
 };
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
+use proptest_helpers::with_stack_size;
+use proto_conv::test_helper::{
+    assert_protobuf_encode_decode, assert_protobuf_encode_decode_non_message,
+};
 
 proptest! {
     #[test]
@@ -17,7 +20,7 @@ proptest! {
 
     #[test]
     fn vm_verification_error_roundtrip(verification_error in any::<VMVerificationError>()) {
-        assert_protobuf_encode_decode(&verification_error);
+        assert_protobuf_encode_decode_non_message(&verification_error);
     }
 
     #[test]
@@ -27,31 +30,36 @@ proptest! {
 
     #[test]
     fn vm_invariant_violation_roundtrip(invariant_violation in any::<VMInvariantViolationError>()) {
-        assert_protobuf_encode_decode(&invariant_violation);
+        assert_protobuf_encode_decode_non_message(&invariant_violation);
     }
 
     #[test]
     fn binary_error_roundtrip(binary_error in any::<BinaryError>()) {
-        assert_protobuf_encode_decode(&binary_error);
+        assert_protobuf_encode_decode_non_message(&binary_error);
     }
 
     #[test]
     fn dynamic_reference_error_roundtrip(dynamic_reference in any::<DynamicReferenceErrorType>()) {
-        assert_protobuf_encode_decode(&dynamic_reference);
+        assert_protobuf_encode_decode_non_message(&dynamic_reference);
     }
 
     #[test]
     fn arithmetic_error_roundtrip(arithmetic_error in any::<ArithmeticErrorType>()) {
-        assert_protobuf_encode_decode(&arithmetic_error);
+        assert_protobuf_encode_decode_non_message(&arithmetic_error);
     }
 
     #[test]
     fn execution_status_roundtrip(execution_status in any::<ExecutionStatus>()) {
         assert_protobuf_encode_decode(&execution_status);
     }
+}
 
-    #[test]
-    fn test_vm_status(vm_status in any::<VMStatus>()) {
-        assert_protobuf_encode_decode(&vm_status);
-    }
+#[test]
+fn test_vm_status_roundtrip() {
+    with_stack_size(4 * 1024 * 1024, || {
+        proptest!(|(vm_status in any::<VMStatus>())| {
+            assert_protobuf_encode_decode(&vm_status);
+        })
+    })
+    .unwrap();
 }

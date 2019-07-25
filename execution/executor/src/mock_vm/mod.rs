@@ -39,7 +39,7 @@ pub const KEEP_STATUS: TransactionStatus =
 
 // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
 pub const DISCARD_STATUS: TransactionStatus =
-    TransactionStatus::Discard(VMStatus::Execution(ExecutionStatus::AssertionFailure(10)));
+    TransactionStatus::Discard(VMStatus::Execution(ExecutionStatus::Aborted(10)));
 
 pub struct MockVM;
 
@@ -271,6 +271,7 @@ fn encode_transaction(sender: AccountAddress, program: Program) -> SignedTransac
     raw_transaction
         .sign(&privkey, pubkey)
         .expect("Failed to sign raw transaction.")
+        .into_inner()
 }
 
 fn decode_transaction(txn: &SignedTransaction) -> Transaction {

@@ -4,40 +4,25 @@
 use crate::{FromProto, FromProtoBytes, IntoProto, IntoProtoBytes};
 use std::fmt::Debug;
 
+/// Assert that protobuf encoding and decoding roundtrips correctly.
+///
+/// This is meant to be used for `protobuf::Message` instances. For non-message instances, see
+/// `assert_protobuf_encode_decode_non_message`.
 pub fn assert_protobuf_encode_decode<P, T>(object: &T)
 where
     T: FromProto<ProtoType = P> + IntoProto<ProtoType = P> + Clone + Debug + Eq,
-{
-    object.assert_protobuf_encode_decode()
-}
-
-trait ProtobufEncodeDecodeTest<P>:
-    FromProto<ProtoType = P> + IntoProto<ProtoType = P> + Clone + Debug + Eq
-{
-    /// The default implementation tests conversion roundtrip via `{Into/From}Proto`. If the type
-    /// implements `protobuf::Message`, also tests conversion roundtrip via
-    /// `{Into/From}ProtoBytes`.
-    fn assert_protobuf_encode_decode(&self);
-}
-
-impl<P, T> ProtobufEncodeDecodeTest<P> for T
-where
-    T: FromProto<ProtoType = P> + IntoProto<ProtoType = P> + Clone + Debug + Eq,
-{
-    default fn assert_protobuf_encode_decode(&self) {
-        test_into_from_proto(self);
-    }
-}
-
-impl<P, T> ProtobufEncodeDecodeTest<P> for T
-where
     P: protobuf::Message,
+{
+    test_into_from_proto(object);
+    test_into_from_proto_bytes(object);
+}
+
+/// Assert that protobuf encoding and decoding roundtrips correctly (non-message version).
+pub fn assert_protobuf_encode_decode_non_message<P, T>(object: &T)
+where
     T: FromProto<ProtoType = P> + IntoProto<ProtoType = P> + Clone + Debug + Eq,
 {
-    fn assert_protobuf_encode_decode(&self) {
-        test_into_from_proto(self);
-        test_into_from_proto_bytes(self);
-    }
+    test_into_from_proto(object);
 }
 
 /// Tests conversion roundtrip via `{Into/From}Proto`.

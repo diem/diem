@@ -8,14 +8,14 @@ use rand::{thread_rng, Rng};
 use schemadb::schema::assert_encode_decode;
 use types::transaction::Version;
 
-fn row_with_arbitrary_validator(version: Version) -> (Key, Value) {
+fn row_with_arbitrary_validator(version: Version) -> (Key, ()) {
     let (_private_key, public_key) = generate_keypair();
     (
         Key {
             version,
             public_key,
         },
-        Value,
+        (),
     )
 }
 

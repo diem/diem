@@ -1,4 +1,3 @@
-modules:
 module Tester {
     struct T{v: u64}
 
@@ -28,8 +27,10 @@ module Tester {
 
 }
 
-script:
-import Transaction.Tester;
+//! new-transaction
+
+import {{default}}.Tester;
+
 main() {
     let t: V#Tester.T;
     let ref_t: &mut V#Tester.T;

@@ -7,7 +7,7 @@ use mempool::proto::{
         HealthCheckRequest, HealthCheckResponse,
     },
     mempool_client::MempoolClientTrait,
-    shared::mempool_status::MempoolAddTransactionStatus,
+    shared::mempool_status::{MempoolAddTransactionStatus, MempoolAddTransactionStatusCode},
 };
 use proto_conv::FromProto;
 use std::time::SystemTime;
@@ -33,6 +33,7 @@ impl MempoolClientTrait for LocalMockMempool {
         req: &AddTransactionWithValidationRequest,
     ) -> ::grpcio::Result<AddTransactionWithValidationResponse> {
         let mut resp = AddTransactionWithValidationResponse::new();
+        let mut status = MempoolAddTransactionStatus::new();
         let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
         let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
         let sys_error_add = [102_u8; ADDRESS_LENGTH];
@@ -41,16 +42,17 @@ impl MempoolClientTrait for LocalMockMempool {
         let signed_txn = SignedTransaction::from_proto(req.get_signed_txn().clone()).unwrap();
         let sender = signed_txn.sender();
         if sender.as_ref() == insufficient_balance_add {
-            resp.set_status(MempoolAddTransactionStatus::InsufficientBalance);
+            status.set_code(MempoolAddTransactionStatusCode::InsufficientBalance);
         } else if sender.as_ref() == invalid_seq_add {
-            resp.set_status(MempoolAddTransactionStatus::InvalidSeqNumber);
+            status.set_code(MempoolAddTransactionStatusCode::InvalidSeqNumber);
         } else if sender.as_ref() == sys_error_add {
-            resp.set_status(MempoolAddTransactionStatus::InvalidUpdate);
+            status.set_code(MempoolAddTransactionStatusCode::InvalidUpdate);
         } else if sender.as_ref() == accepted_add {
-            resp.set_status(MempoolAddTransactionStatus::Valid);
+            status.set_code(MempoolAddTransactionStatusCode::Valid);
         } else if sender.as_ref() == mempool_full {
-            resp.set_status(MempoolAddTransactionStatus::MempoolIsFull);
+            status.set_code(MempoolAddTransactionStatusCode::MempoolIsFull);
         }
+        resp.set_status(status);
         Ok(resp)
     }
     fn health_check(&self, _req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {

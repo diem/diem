@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package types;
 
+import "language_storage.proto";
+
 // The statuses and errors produced by the VM can be categorized into a
 // couple different types:
 // 1. Validation Statuses: all the errors that can (/should) be
@@ -83,12 +85,15 @@ message VMVerificationStatus {
     enum StatusKind {
         SCRIPT = 0;
         MODULE = 1;
+        DEPENDENCY = 2;
     }
     StatusKind status_kind = 1;
-    // For StatusKind::SCRIPT this is ignored.
+    // For StatusKind::SCRIPT and DEPENDENCY this is ignored.
     uint32 module_idx = 2;
     VMVerificationErrorKind error_kind = 3;
     string message = 4;
+    // For StatusKind::SCRIPT and MODULE this is ignored.
+    ModuleId dependency_id = 5;
 }
 
 // When a code module/script is published it is verified. These are the
@@ -121,7 +126,7 @@ enum VMVerificationErrorKind {
     PopResourceError = 23;
     ReleaseRefTypeMismatchError = 24;
     BrTypeMismatchError = 25;
-    AssertTypeMismatchError = 26;
+    AbortTypeMismatchError = 26;
     StLocTypeMismatchError = 27;
     StLocUnsafeToDestroyError = 28;
     RetUnsafeToDestroyError = 29;
@@ -179,6 +184,7 @@ enum VMInvariantViolationError {
     LinkerError = 6;
     LocalReferenceError = 7;
     StorageError = 8;
+    InternalTypeError = 9;
 }
 
 // Errors that can arise from binary decoding (deserialization)
@@ -227,9 +233,9 @@ enum RuntimeStatus {
     DuplicateModuleName = 15;
 }
 
-// user-defined assertion error code number
-message AssertionFailure {
-    uint64 assertion_error_code = 1;
+// user-defined abort error code number
+message Aborted {
+    uint64 aborted_error_code = 1;
 }
 
 message ArithmeticError {
@@ -258,7 +264,7 @@ message DynamicReferenceError {
 message ExecutionStatus {
     oneof execution_status {
         RuntimeStatus runtime_status = 1;
-        AssertionFailure assertion_failure = 2;
+        Aborted aborted = 2;
         ArithmeticError arithmetic_error = 3;
         DynamicReferenceError reference_error = 4;
     }

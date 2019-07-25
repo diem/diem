@@ -13,7 +13,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use ed25519_dalek::{PublicKey, SecretKey};
 use hmac::{Hmac, Mac};
-use regex::Regex;
 use sha2::Sha512;
 
 /// Extended private key that includes additional child_path and chain-code.
@@ -115,32 +114,24 @@ impl Slip0010 {
     ) -> Result<ExtendedPrivKey, Slip0010Error> {
         parent_key.child_key(child_number)
     }
+
     /// Match a valid path of the form "m/A/B.."; each sub-path after m is smaller than 2147483648.
     pub fn is_valid_path(path: &str) -> bool {
-        // match path where each node is [0..2147483647]
-        if !Regex::new(
-            r"^m(/([0-9]|[1-8][0-9]|9[0-9]|[1-8][0-9]{2}|9[0-8][0-9]|99[0-9]|[1-8]
-[0-9]{3}|9[0-8][0-9]{2}|99[0-8][0-9]|999[0-9]|[1-8][0-9]{4}|9[0-8][0-9]{3}|99[0-8][0-9]{2}|999[0-8]
-[0-9]|9999[0-9]|[1-8][0-9]{5}|9[0-8][0-9]{4}|99[0-8][0-9]{3}|999[0-8][0-9]{2}|9999[0-8][0-9]|99999
-[0-9]|[1-8][0-9]{6}|9[0-8][0-9]{5}|99[0-8][0-9]{4}|999[0-8][0-9]{3}|9999[0-8][0-9]{2}|99999[0-8]
-[0-9]|999999[0-9]|[1-8][0-9]{7}|9[0-8][0-9]{6}|99[0-8][0-9]{5}|999[0-8][0-9]{4}|9999[0-8][0-9]{3}
-|99999[0-8][0-9]{2}|999999[0-8][0-9]|9999999[0-9]|[1-8][0-9]{8}|9[0-8][0-9]{7}|99[0-8][0-9]{6}|999
-[0-8][0-9]{5}|9999[0-8][0-9]{4}|99999[0-8][0-9]{3}|999999[0-8][0-9]{2}|9999999[0-8][0-9]|99999999
-[0-9]|1[0-9]{9}|20[0-9]{8}|21[0-3][0-9]{7}|214[0-6][0-9]{6}|2147[0-3][0-9]{5}|21474[0-7][0-9]{4}|
-214748[0-2][0-9]{3}|2147483[0-5][0-9]{2}|21474836[0-3][0-9]|214748364[0-7]))*$",
-        )
-        .unwrap() // The expression is valid, so this will never fail.
-        .is_match(path)
-        {
+        let mut segments = path.split('/');
+        if segments.next() != Some("m") {
             return false;
         }
-
-        let segments: Vec<&str> = path.split('/').collect();
-        segments
-            .iter()
-            .skip(1)
-            .map(|s| s.replace("'", ""))
-            .all(|s| s.parse::<u32>().is_ok())
+        segments.all(|s| {
+            if !s.starts_with('+') {
+                if let Ok(num) = s.parse::<u32>() {
+                    num < 2_147_483_648
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
     }
 
     /// Derive a key from a path and a seed.

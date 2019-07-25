@@ -19,9 +19,9 @@ const TEST_VECTOR_1: &str = "ffffffffffffffff060000006463584d4237640000000000000
 
 // Why do we need test vectors?
 //
-// 1. Sometimes it help to catch common bugs between serialization and
+// 1. Sometimes it helps to catch common bugs between serialization and
 // deserialization functions that would have been missed by a simple round trip test.
-// For example, if there's a bug in a shared procedure that serialize and
+// For example, if there's a bug in a shared procedure that serializes and
 // deserialize both calls then roundtrip might miss it.
 //
 // 2. It helps to catch code changes that inadvertently introduce breaking changes

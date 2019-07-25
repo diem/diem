@@ -13,6 +13,7 @@ use crate::{
 use crypto::{hash::CryptoHash, HashValue};
 use futures::{channel::mpsc, executor::block_on};
 use logger::{set_simple_logger, set_simple_logger_prefix};
+use nextgen_crypto::ed25519::*;
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 use tokio::runtime;
@@ -33,12 +34,12 @@ pub use mock_txn_manager::MockTransactionManager;
 pub type TestPayload = Vec<usize>;
 
 pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
-    let signer = ValidatorSigner::random();
-    build_empty_tree_with_custom_signing(signer.clone())
+    let signer = ValidatorSigner::random(None);
+    build_empty_tree_with_custom_signing(signer)
 }
 
 pub fn build_empty_tree_with_custom_signing(
-    my_signer: ValidatorSigner,
+    my_signer: ValidatorSigner<Ed25519PrivateKey>,
 ) -> Arc<BlockStore<Vec<usize>>> {
     let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
@@ -75,7 +76,7 @@ impl TreeInserter {
     ) -> Arc<Block<Vec<usize>>> {
         // Node must carry a QC to its parent
         let parent_qc = placeholder_certificate_for_block(
-            vec![self.block_store.signer().clone()],
+            vec![self.block_store.signer()],
             parent.id(),
             parent.round(),
         );
@@ -104,8 +105,8 @@ impl TreeInserter {
     pub fn insert_pre_made_block(
         &mut self,
         block: Block<Vec<usize>>,
-        block_signer: &ValidatorSigner,
-        qc_signers: Vec<ValidatorSigner>,
+        block_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        qc_signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
     ) -> Arc<Block<Vec<usize>>> {
         self.payload_val += 1;
         let new_round = if block.round() > 0 {
@@ -139,7 +140,7 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
 }
 
 pub fn placeholder_certificate_for_block(
-    signers: Vec<ValidatorSigner>,
+    signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
     certified_block_id: HashValue,
     certified_block_round: u64,
 ) -> QuorumCert {
@@ -161,7 +162,7 @@ pub fn placeholder_certificate_for_block(
         let li_sig = signer
             .sign_message(ledger_info_placeholder.hash())
             .expect("Failed to sign LedgerInfo");
-        signatures.insert(signer.author(), li_sig);
+        signatures.insert(signer.author(), li_sig.into());
     }
 
     QuorumCert::new(

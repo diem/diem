@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(duration_float)]
 #![deny(missing_docs)]
 //! Libra Client
 //!
@@ -16,6 +15,7 @@ pub(crate) mod account_commands;
 pub mod client_proxy;
 /// Command struct to interact with client.
 pub mod commands;
+pub(crate) mod dev_commands;
 /// gRPC client wrapper to connect to validator.
 pub(crate) mod grpc_client;
 pub(crate) mod query_commands;
@@ -27,7 +27,7 @@ pub(crate) mod transfer_commands;
 pub struct AccountData {
     /// Address of the account.
     pub address: AccountAddress,
-    /// (private_key, public_key) pair if the account is not managed by wallet
+    /// (private_key, public_key) pair if the account is not managed by wallet.
     pub key_pair: Option<KeyPair>,
     /// Latest sequence number maintained by client, it can be different from validator.
     pub sequence_number: u64,

@@ -5,6 +5,7 @@ mod access_path_test;
 mod address_test;
 mod contract_event_proto_conversion_test;
 mod get_with_proof_proto_conversion_test;
+mod language_storage_test;
 mod ledger_info_proto_conversion_test;
 mod transaction_proto_conversion_test;
 mod transaction_test;

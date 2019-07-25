@@ -15,7 +15,7 @@
 //!
 //! An extremely simple implementation of CanonicalSerializer is also provided, the encoding
 //! rules are:
-//! (All unsigned integers are encoded in little endian representation unless specified otherwise)
+//! (All unsigned integers are encoded in little-endian representation unless specified otherwise)
 //!
 //! 1. The encoding of an unsigned 64-bit integer is defined as its little endian representation
 //!    in 8 bytes
@@ -29,7 +29,7 @@
 //!    [No. of items in the list, represented as 4-byte integer] || encoding(item_0) || ....
 //!
 //! 4. The encoding of an ordered map where the keys are ordered by lexicographic order.
-//!    Currently we only support key and value of type Vec<u8>. The encoding is defined as:
+//!    Currently, we only support key and value of type Vec<u8>. The encoding is defined as:
 //!    [No. of key value pairs in the map, represented as 4-byte integer] || encode(key1) ||
 //!    encode(value1) || encode(key2) || encode(value2)...
 //!    where the pairs are appended following the lexicographic order of the key
@@ -79,6 +79,8 @@ pub trait CanonicalSerializer {
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self>;
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
+
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self>;
 
     fn encode_u8(&mut self, v: u8) -> Result<&mut Self>;
 
@@ -154,6 +156,11 @@ where
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self> {
         self.output.write_u32::<Endianness>(v)?;
+        Ok(self)
+    }
+
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self> {
+        self.output.write_u16::<Endianness>(v)?;
         Ok(self)
     }
 
@@ -249,6 +256,8 @@ pub trait CanonicalDeserializer {
 
     fn decode_u32(&mut self) -> Result<u32>;
 
+    fn decode_u16(&mut self) -> Result<u16>;
+
     fn decode_u8(&mut self) -> Result<u8>;
 
     fn decode_bool(&mut self) -> Result<bool>;
@@ -303,6 +312,11 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
 
     fn decode_u32(&mut self) -> Result<u32> {
         let num = self.raw_bytes.read_u32::<Endianness>()?;
+        Ok(num)
+    }
+
+    fn decode_u16(&mut self) -> Result<u16> {
+        let num = self.raw_bytes.read_u16::<Endianness>()?;
         Ok(num)
     }
 
@@ -412,6 +426,19 @@ where
         Self: Sized,
     {
         deserializer.decode_vec()
+    }
+}
+
+impl CanonicalSerialize for u16 {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_u16(*self)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for u16 {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        deserializer.decode_u16()
     }
 }
 

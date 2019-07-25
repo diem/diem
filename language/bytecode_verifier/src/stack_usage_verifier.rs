@@ -8,12 +8,9 @@
 //! the stack height by the number of values returned by the function as indicated in its
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
-use crate::{
-    code_unit_verifier::VerificationPass,
-    control_flow_graph::{BasicBlock, VMControlFlowGraph},
-};
+use crate::control_flow_graph::{BasicBlock, VMControlFlowGraph};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{Bytecode, CompiledModule, FunctionDefinition},
     views::FunctionDefinitionView,
@@ -25,30 +22,26 @@ pub struct StackUsageVerifier<'a> {
     cfg: &'a VMControlFlowGraph,
 }
 
-impl<'a> VerificationPass<'a> for StackUsageVerifier<'a> {
-    fn new(
+impl<'a> StackUsageVerifier<'a> {
+    pub fn verify(
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Self {
+    ) -> Vec<VMStaticViolation> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-        Self {
+        let verifier = Self {
             module,
             function_definition_view,
             cfg,
-        }
-    }
+        };
 
-    fn verify(self) -> Vec<VMStaticViolation> {
         let mut errors = vec![];
-        for (_, block) in self.cfg.blocks.iter() {
-            errors.append(&mut self.verify_block(&block));
+        for (_, block) in verifier.cfg.blocks.iter() {
+            errors.append(&mut verifier.verify_block(&block));
         }
         errors
     }
-}
 
-impl<'a> StackUsageVerifier<'a> {
     fn verify_block(&self, block: &BasicBlock) -> Vec<VMStaticViolation> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
@@ -91,7 +84,7 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::MoveLoc(_)
             | Bytecode::BorrowLoc(_) => 1,
 
-            Bytecode::Call(idx) => {
+            Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);
                 let signature = self.module.function_signature_at(function_handle.signature);
                 let arg_count = signature.arg_types.len() as i32;
@@ -99,13 +92,13 @@ impl<'a> StackUsageVerifier<'a> {
                 return_count - arg_count
             }
 
-            Bytecode::Pack(idx) => {
+            Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let num_fields = i32::from(struct_definition.field_count);
                 1 - num_fields
             }
 
-            Bytecode::Unpack(idx) => {
+            Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
                 let num_fields = i32::from(struct_definition.field_count);
                 num_fields - 1
@@ -113,7 +106,7 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::ReadRef => 0,
 
-            Bytecode::WriteRef | Bytecode::Assert => -2,
+            Bytecode::WriteRef => -2,
 
             Bytecode::Add
             | Bytecode::Sub
@@ -130,16 +123,17 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::Lt
             | Bytecode::Gt
             | Bytecode::Le
-            | Bytecode::Ge => -1,
+            | Bytecode::Ge
+            | Bytecode::Abort => -1,
 
             Bytecode::Not => 0,
 
             Bytecode::FreezeRef => 0,
-            Bytecode::Exists(_) => 0,
-            Bytecode::BorrowGlobal(_) => 0,
+            Bytecode::Exists(_, _) => 0,
+            Bytecode::BorrowGlobal(_, _) => 0,
             Bytecode::ReleaseRef => -1,
-            Bytecode::MoveFrom(_) => 0,
-            Bytecode::MoveToSender(_) => -1,
+            Bytecode::MoveFrom(_, _) => 0,
+            Bytecode::MoveToSender(_, _) => -1,
 
             Bytecode::GetTxnGasUnitPrice
             | Bytecode::GetTxnMaxGasUnits

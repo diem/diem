@@ -7,8 +7,8 @@ use crate::{
         common::{Author, Payload},
         consensus_types::{block::Block, quorum_cert::QuorumCert},
         liveness::{
-            new_round_msg::NewRoundMsg,
             proposer_election::{ProposalInfo, ProposerInfo},
+            timeout_msg::TimeoutMsg,
         },
         safety::vote_msg::VoteMsg,
     },
@@ -27,6 +27,7 @@ use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock, RespondChunk},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::{
@@ -36,7 +37,7 @@ use std::{
 use tokio::runtime::TaskExecutor;
 use types::{transaction::TransactionListWithProof, validator_verifier::ValidatorVerifier};
 
-/// The response sent back from event_processor for the BlockRetrievalRequest.
+/// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
 pub struct BlockRetrievalResponse<T> {
     pub status: BlockRetrievalStatus,
@@ -94,7 +95,7 @@ pub struct NetworkReceivers<T, P> {
     pub proposals: channel::Receiver<ProposalInfo<T, P>>,
     pub votes: channel::Receiver<VoteMsg>,
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
-    pub new_rounds: channel::Receiver<NewRoundMsg>,
+    pub timeout_msgs: channel::Receiver<TimeoutMsg>,
     pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
 }
 
@@ -109,7 +110,7 @@ pub struct ConsensusNetworkImpl {
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
 impl Clone for ConsensusNetworkImpl {
@@ -132,7 +133,7 @@ impl ConsensusNetworkImpl {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier>,
+        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -176,7 +177,7 @@ impl ConsensusNetworkImpl {
                 vote_tx,
                 block_request_tx,
                 chunk_request_tx,
-                new_round_tx,
+                timeout_msg_tx: new_round_tx,
                 all_events,
                 validator,
             }
@@ -189,7 +190,7 @@ impl ConsensusNetworkImpl {
             proposals: proposal_rx,
             votes: vote_rx,
             block_retrieval: block_request_rx,
-            new_rounds: new_round_rx,
+            timeout_msgs: new_round_rx,
             chunk_retrieval: chunk_request_rx,
         }
     }
@@ -302,10 +303,10 @@ impl ConsensusNetworkImpl {
         }
     }
 
-    /// Broadcasts new round (including timeout) messages to all validators
-    pub async fn broadcast_new_round(&mut self, new_round_msg: NewRoundMsg) {
+    /// Broadcasts timeout message to all validators
+    pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
         let mut msg = ConsensusMsg::new();
-        msg.set_new_round(new_round_msg.into_proto());
+        msg.set_timeout_msg(timeout_msg.into_proto());
         self.broadcast(msg).await
     }
 }
@@ -315,9 +316,9 @@ struct NetworkTask<T, P, S> {
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
-    new_round_tx: channel::Sender<NewRoundMsg>,
+    timeout_msg_tx: channel::Sender<TimeoutMsg>,
     all_events: S,
-    validator: Arc<ValidatorVerifier>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
 impl<T, P, S> NetworkTask<T, P, S>
@@ -334,8 +335,8 @@ where
                         self.process_proposal(&mut msg).await
                     } else if msg.has_vote() {
                         self.process_vote(&mut msg).await
-                    } else if msg.has_new_round() {
-                        self.process_new_round(&mut msg).await
+                    } else if msg.has_timeout_msg() {
+                        self.process_timeout_msg(&mut msg).await
                     } else {
                         warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
@@ -395,16 +396,19 @@ where
         Ok(())
     }
 
-    async fn process_new_round<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let new_round = NewRoundMsg::from_proto(msg.take_new_round())?;
-        new_round.verify(self.validator.as_ref()).map_err(|e| {
+    async fn process_timeout_msg<'a>(
+        &'a mut self,
+        msg: &'a mut ConsensusMsg,
+    ) -> failure::Result<()> {
+        let timeout_msg = TimeoutMsg::from_proto(msg.take_timeout_msg())?;
+        timeout_msg.verify(self.validator.as_ref()).map_err(|e| {
             security_log(SecurityEvent::InvalidConsensusRound)
                 .error(&e)
-                .data(&new_round)
+                .data(&timeout_msg)
                 .log();
             e
         })?;
-        self.new_round_tx.send(new_round).await?;
+        self.timeout_msg_tx.send(timeout_msg).await?;
         Ok(())
     }
 

@@ -1,17 +1,13 @@
 // Attempting to publish two modules with the same name should fail
-modules:
 
 module Duplicate {
   resource T1 { f: u64 }
 }
 
+//! new-transaction
+
 module Duplicate {
   resource T2 { f: bool }
-}
-
-script:
-main() {
-    return;
 }
 
 // check: VMExecutionFailure

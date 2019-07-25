@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod testutils;
-use super::*;
-use testutils::compile_module_string;
+use crate::unit_tests::testutils::compile_module_string;
 
 #[test]
 fn compile_script_with_functions() {

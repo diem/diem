@@ -82,7 +82,7 @@ impl std::ops::Deref for TestValidator {
 // errors are not exercised:
 // * Sequence number too old -- We can't test sequence number too old here without running execution
 //   first in order to bump the account's sequence number. This needs to (and is) tested in the
-//   vm_runtime_tests in: libra/language/vm/vm_runtime/vm_runtime_tests/src/tests/verify_txn.rs ->
+//   language e2e tests in: libra/language/e2e_tests/src/tests/verify_txn.rs ->
 //   verify_simple_payment.
 // * Errors arising from deserializing the code -- these are tested in
 //   - libra/language/vm/src/unit_tests/deserializer_tests.rs
@@ -90,7 +90,7 @@ impl std::ops::Deref for TestValidator {
 // * Errors arising from calls to `static_verify_program` -- this is tested separately in tests for
 //   the bytecode verifier.
 // * Testing for invalid genesis write sets -- this is tested in
-//   libra/language/vm/vm_runtime/vm_runtime_tests/src/tests/genesis.rs
+//   libra/language/e2e_tests/src/tests/genesis.rs
 
 #[test]
 fn test_validate_transaction() {
@@ -119,12 +119,12 @@ fn test_validate_invalid_signature() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
     let program = encode_transfer_program(&address, 100);
-    let signed_txn = transaction_test_helpers::get_unverified_test_signed_txn(
+    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         address,
         0,
         other_keypair.private_key().clone(),
@@ -336,7 +336,7 @@ fn test_validate_invalid_auth_key() {
     let vm_validator = TestValidator::new(&config);
 
     let (other_private_key, _) = ::crypto::signing::generate_keypair();
-    // Submit with an account wusing an different private/public keypair
+    // Submit with an account using an different private/public keypair
     let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
@@ -477,7 +477,8 @@ fn test_validate_non_genesis_write_set() {
         keypair.private_key().clone(),
         keypair.public_key(),
         None,
-    );
+    )
+    .into_inner();
     let ret = vm_validator
         .validate_transaction(signed_txn)
         .wait()

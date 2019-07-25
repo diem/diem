@@ -14,6 +14,7 @@ use crypto::{
 };
 use failure::Result;
 use network::proto::QuorumCert as ProtoQuorumCert;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -97,7 +98,7 @@ impl QuorumCert {
     pub fn certificate_for_genesis() -> QuorumCert {
         let genesis_digest =
             VoteMsg::vote_digest(*GENESIS_BLOCK_ID, ExecutedState::state_for_genesis(), 0);
-        let signer = ValidatorSigner::genesis();
+        let signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
         let li = LedgerInfo::new(
             0,
             *ACCUMULATOR_PLACEHOLDER_HASH,
@@ -110,7 +111,7 @@ impl QuorumCert {
             .sign_message(li.hash())
             .expect("Fail to sign genesis ledger info");
         let mut signatures = HashMap::new();
-        signatures.insert(signer.author(), signature);
+        signatures.insert(signer.author(), signature.into());
         QuorumCert::new(
             *GENESIS_BLOCK_ID,
             ExecutedState::state_for_genesis(),
@@ -121,7 +122,7 @@ impl QuorumCert {
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> ::std::result::Result<(), VoteMsgVerificationError> {
         let vote_hash = VoteMsg::vote_digest(
             self.certified_block_id,

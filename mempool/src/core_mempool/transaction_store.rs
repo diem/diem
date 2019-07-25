@@ -9,6 +9,7 @@ use crate::{
         },
         transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
     },
+    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use config::config::MempoolConfig;
@@ -88,7 +89,14 @@ impl TransactionStore {
             return status;
         }
         if self.check_if_full() {
-            return MempoolAddTransactionStatus::MempoolIsFull;
+            return MempoolAddTransactionStatus::new(
+                MempoolAddTransactionStatusCode::MempoolIsFull,
+                format!(
+                    "mempool size: {}, capacity: {}",
+                    self.system_ttl_index.size(),
+                    self.capacity,
+                ),
+            );
         }
 
         let address = txn.get_sender();
@@ -101,7 +109,14 @@ impl TransactionStore {
         if let Some(txns) = self.transactions.get_mut(&address) {
             // capacity check
             if txns.len() >= self.capacity_per_user {
-                return MempoolAddTransactionStatus::TooManyTransactions;
+                return MempoolAddTransactionStatus::new(
+                    MempoolAddTransactionStatusCode::TooManyTransactions,
+                    format!(
+                        "txns length: {} capacity per user: {}",
+                        txns.len(),
+                        self.capacity_per_user,
+                    ),
+                );
             }
 
             // insert into storage and other indexes
@@ -111,12 +126,12 @@ impl TransactionStore {
             OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
         }
         self.process_ready_transactions(&address, current_sequence_number);
-        MempoolAddTransactionStatus::Valid
+        MempoolAddTransactionStatus::new(MempoolAddTransactionStatusCode::Valid, "".to_string())
     }
 
-    /// Check whether the queue size >= threshold in config.
+    /// Check if mempool can handle new insertion requests
     pub(crate) fn health_check(&self) -> bool {
-        self.system_ttl_index.size() <= self.capacity
+        self.system_ttl_index.size() < self.capacity || self.parking_lot_index.size() > 0
     }
 
     /// checks if Mempool is full
@@ -143,14 +158,24 @@ impl TransactionStore {
         txn: &MempoolTransaction,
     ) -> (bool, MempoolAddTransactionStatus) {
         let mut is_update = false;
-        let mut status = MempoolAddTransactionStatus::Valid;
+        let mut status = MempoolAddTransactionStatus::new(
+            MempoolAddTransactionStatusCode::Valid,
+            "".to_string(),
+        );
 
         if let Some(txns) = self.transactions.get_mut(&txn.get_sender()) {
             if let Some(current_version) = txns.get_mut(&txn.get_sequence_number()) {
                 is_update = true;
                 // TODO: do we need to ensure the rest of content hasn't changed
                 if txn.get_gas_price() <= current_version.get_gas_price() {
-                    status = MempoolAddTransactionStatus::InvalidUpdate;
+                    status = MempoolAddTransactionStatus::new(
+                        MempoolAddTransactionStatusCode::InvalidUpdate,
+                        format!(
+                            "txn gas price: {}, current_version gas price: {}",
+                            txn.get_gas_price(),
+                            current_version.get_gas_price(),
+                        ),
+                    );
                 } else {
                     self.priority_index.remove(&current_version);
                     current_version.txn = txn.txn.clone();

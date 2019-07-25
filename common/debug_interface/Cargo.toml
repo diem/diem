@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 grpcio = "0.4.3"
-futures = "0.1.23"
-protobuf = "2.6"
+futures = "0.1.28"
+protobuf = "2.7"
 
 failure = { package = "failure_ext", path = "../failure_ext" }
 jemalloc = { path = "../jemalloc" }

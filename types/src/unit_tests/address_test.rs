@@ -7,9 +7,7 @@ use crypto::{hash::CryptoHash, HashValue};
 use hex::FromHex;
 use proptest::prelude::*;
 use proto_conv::{FromProto, IntoProto};
-use rand::{thread_rng, Rng};
 use std::convert::{AsRef, TryFrom};
-use test::Bencher;
 
 #[test]
 fn test_address_bytes() {
@@ -92,22 +90,6 @@ fn test_bech32() {
         bech32_address.as_ref().to_vec(),
         "The two addresses do not match",
     );
-}
-
-#[bench]
-fn test_n_bech32(bh: &mut Bencher) {
-    bh.iter(|| {
-        let mut rng = thread_rng();
-        let random_bytes: [u8; ADDRESS_LENGTH] = rng.gen();
-        let address = AccountAddress::new(random_bytes);
-        let bech32 = Bech32::try_from(address).unwrap();
-        let address_from_bech32 = AccountAddress::try_from(bech32)
-            .expect("The provided input string is not valid bech32 format");
-        assert_eq!(
-            address.as_ref().to_vec(),
-            address_from_bech32.as_ref().to_vec()
-        );
-    });
 }
 
 #[test]

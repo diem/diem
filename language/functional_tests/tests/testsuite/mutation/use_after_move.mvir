@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefExistsBorrowError(10) }
 
-modules:
 module B {
     struct T{g: u64}
 
@@ -8,6 +7,8 @@ module B {
         return T { g: move(g) };
     }
 }
+
+//! new-transaction
 
 module A {
     import Transaction.B;
@@ -32,9 +33,11 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
-import Transaction.B;
+//! new-transaction
+
+import {{default}}.A;
+import {{default}}.B;
+
 main() {
     let b: V#B.T;
     let a: V#A.T;

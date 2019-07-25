@@ -1,33 +1,33 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::Author,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::{
-            proposer_election::{ProposalInfo, ProposerElection},
-            rotating_proposer_election::RotatingProposer,
-        },
-        test_utils::consensus_runtime,
+use crate::chained_bft::{
+    common::Author,
+    consensus_types::{block::Block, quorum_cert::QuorumCert},
+    liveness::{
+        proposer_election::{ProposalInfo, ProposerElection},
+        rotating_proposer_election::RotatingProposer,
     },
-    stream_utils::start_event_processing_loop,
 };
-use futures::{executor::block_on, SinkExt, StreamExt};
+use channel;
+use futures::{executor::block_on, StreamExt};
+use nextgen_crypto::ed25519::*;
 use std::sync::Arc;
 use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 1));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
+    let pe = Arc::new(RotatingProposer::<u32, Author>::new(
+        proposers,
+        1,
+        winning_proposals_sender,
+    ));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -76,12 +76,12 @@ fn test_rotating_proposer() {
         highest_ledger_info: quorum_cert.clone(),
     };
     block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
+        pe.process_proposal(good_proposal.clone()).await;
+        pe.process_proposal(bad_proposal.clone()).await;
+        pe.process_proposal(next_good_proposal.clone()).await;
 
         assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
+            winning_proposals_receiver.take(2).collect::<Vec<_>>().await,
             vec![good_proposal, next_good_proposal],
         );
         assert_eq!(pe.is_valid_proposer(chosen_author, 1), None);
@@ -98,15 +98,17 @@ fn test_rotating_proposer() {
 
 #[test]
 fn test_rotating_proposer_with_three_contiguous_rounds() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 3));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
+    let pe = Arc::new(RotatingProposer::<u32, Author>::new(
+        proposers,
+        3,
+        winning_proposals_sender,
+    ));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -155,12 +157,12 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
         highest_ledger_info: quorum_cert.clone(),
     };
     block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
+        pe.process_proposal(good_proposal.clone()).await;
+        pe.process_proposal(bad_proposal.clone()).await;
+        pe.process_proposal(next_good_proposal.clone()).await;
 
         assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
+            winning_proposals_receiver.take(2).collect::<Vec<_>>().await,
             vec![good_proposal, next_good_proposal],
         );
         assert_eq!(pe.is_valid_proposer(another_author, 1), None);
@@ -174,14 +176,16 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
 
 #[test]
 fn test_fixed_proposer() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(vec![chosen_author], 1));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
+    let pe = Arc::new(RotatingProposer::<u32, Author>::new(
+        vec![chosen_author],
+        1,
+        winning_proposals_sender,
+    ));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is
     // from the chosen author.
@@ -230,12 +234,12 @@ fn test_fixed_proposer() {
         highest_ledger_info: quorum_cert.clone(),
     };
     block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
+        pe.process_proposal(good_proposal.clone()).await;
+        pe.process_proposal(bad_proposal.clone()).await;
+        pe.process_proposal(next_good_proposal.clone()).await;
 
         assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
+            winning_proposals_receiver.take(2).collect::<Vec<_>>().await,
             vec![good_proposal, next_good_proposal],
         );
         assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));

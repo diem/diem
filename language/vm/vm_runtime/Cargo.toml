@@ -7,9 +7,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
-rental = "0.5.3"
-tiny-keccak = "1.4.2"
+rental = "0.5.4"
+tiny-keccak = "1.5.0"
 proptest = "0.9"
+rayon = "1.1"
 
 bytecode_verifier = { path = "../../bytecode_verifier" }
 canonical_serialization = { path = "../../../common/canonical_serialization" }
@@ -26,13 +27,14 @@ hex = "0.3.2"
 config = { path = "../../../config"}
 logger = { path = "../../../common/logger" }
 
-[dev-dependencies]
-compiler = { path = "../../compiler"}
-
 [dependencies.prometheus]
 version  = "0.4.2"
 default-features = false
-features = ["nightly", "push"]
+features = ["push"]
+
+[dev-dependencies]
+assert_matches = "1.3.0"
+compiler = { path = "../../compiler"}
 
 [features]
 instruction_synthesis = []

@@ -42,10 +42,10 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
     future::ok(resp)
 }
 
-pub fn start_server(host: String, port: u16) {
-    let addr: SocketAddr = (host.as_str(), port)
+pub fn start_server<T: ToSocketAddrs>(to_addr: T) {
+    let addr: SocketAddr = to_addr
         .to_socket_addrs()
-        .unwrap_or_else(|_| panic!("Failed to parse {}:{} as address", host, port))
+        .unwrap_or_else(|_| panic!("Failed to parse address"))
         .next()
         .unwrap();
 

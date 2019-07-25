@@ -74,6 +74,17 @@ pub enum ProposalReject {
         last_vote_round: Round,
         proposal_round: Round,
     },
+
+    /// Did not find a parent for the proposed block
+    #[fail(
+        display = "Proposal for {} at round {} error: parent {} not found",
+        proposal_id, proposal_round, parent_id
+    )]
+    ParentNotFound {
+        proposal_id: HashValue,
+        proposal_round: Round,
+        parent_id: HashValue,
+    },
 }
 
 /// The state required to guarantee safety of the protocol.
@@ -279,10 +290,17 @@ impl<T: Payload> SafetyRules<T> {
             });
         }
 
-        let parent_block = self
-            .block_tree
-            .get_block(proposed_block.parent_id())
-            .expect("Parent block not found");
+        let parent_block = match self.block_tree.get_block(proposed_block.parent_id()) {
+            Some(b) => b,
+            None => {
+                return Err(ProposalReject::ParentNotFound {
+                    proposal_id: proposed_block.id(),
+                    proposal_round: proposed_block.round(),
+                    parent_id: proposed_block.parent_id(),
+                });
+            }
+        };
+
         let parent_block_round = parent_block.round();
         let respects_preferred_block = parent_block_round >= self.state.preferred_block_round();
         if respects_preferred_block {

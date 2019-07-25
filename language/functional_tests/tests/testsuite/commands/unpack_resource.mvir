@@ -1,4 +1,3 @@
-modules:
 module Test {
     resource X { }
     resource T { i: u64, x: R#Self.X, b: bool }
@@ -26,8 +25,9 @@ module Test {
 
 }
 
-script:
-import Transaction.Test;
+//! new-transaction
+
+import {{default}}.Test;
 
 main() {
     let x: R#Test.X;
