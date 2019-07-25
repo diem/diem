@@ -7,9 +7,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
+arc-swap = "0.4.0-pre.1"
 backtrace = { version = "0.3.33", features = ["serialize-serde"] }
 chrono = "0.4.7"
-crossbeam = "^0.4.1"
 futures = "0.1.28"
 hyper = "0.12.33"
 itertools = "0.8.0"
