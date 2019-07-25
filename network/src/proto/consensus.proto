@@ -42,16 +42,21 @@ message PacemakerTimeout {
 }
 
 message TimeoutMsg {
-  // Highest quorum certificate known after a timeout ouf a round.
-  QuorumCert highest_quorum_cert = 1;
+  // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
+  SyncInfo sync_info = 1;
   // Timeout
   PacemakerTimeout pacemaker_timeout = 2;
-  // Author of new round message
-  bytes author = 3;
   // Signature that this timeout was authored by owner
-  bytes signature = 4;
-  // The highest ledger info
-  QuorumCert highest_ledger_info = 5;
+  bytes signature = 3;
+}
+
+message SyncInfo {
+  // Highest quorum certificate
+  QuorumCert highest_quorum_cert = 1;
+  // Highest ledger info
+  QuorumCert highest_ledger_info = 2;
+  // Optional highest timeout certificate if available
+  PacemakerTimeoutCertificate highest_timeout_cert = 3;
 }
 
 message PacemakerTimeoutCertificate {

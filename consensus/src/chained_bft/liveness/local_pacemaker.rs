@@ -4,10 +4,10 @@
 use crate::{
     chained_bft::{
         common::Round,
+        consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
-            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         },
         persistent_storage::PersistentLivenessStorage,
     },

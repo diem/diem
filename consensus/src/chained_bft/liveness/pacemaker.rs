@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::Round,
-    liveness::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
 };
 use futures::Future;
 use std::{

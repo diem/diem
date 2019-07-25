@@ -3,11 +3,11 @@
 
 use crate::{
     chained_bft::{
+        consensus_types::timeout_msg::PacemakerTimeout,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker, PacemakerTimeInterval},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
-            timeout_msg::PacemakerTimeout,
         },
         persistent_storage::PersistentStorage,
         test_utils::{consensus_runtime, MockStorage, TestPayload},

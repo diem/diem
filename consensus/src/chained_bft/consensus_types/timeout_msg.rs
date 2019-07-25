@@ -3,8 +3,9 @@
 
 use crate::chained_bft::{
     common::{Author, Round},
-    consensus_types::quorum_cert::QuorumCert,
-    liveness::timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
+    consensus_types::{
+        sync_info::SyncInfo, timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
+    },
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
@@ -136,13 +137,11 @@ impl FromProto for PacemakerTimeout {
 // Internal use only. Contains all the fields in TimeoutMsg that contributes to the computation of
 // its hash.
 struct TimeoutMsgSerializer {
-    highest_quorum_certificate_block_id: HashValue,
     pacemaker_timeout_digest: HashValue,
 }
 
 impl CanonicalSerialize for TimeoutMsgSerializer {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> failure::Result<()> {
-        serializer.encode_raw_bytes(self.highest_quorum_certificate_block_id.as_ref())?;
         serializer.encode_raw_bytes(self.pacemaker_timeout_digest.as_ref())?;
         Ok(())
     }
@@ -170,45 +169,31 @@ impl CryptoHash for TimeoutMsgSerializer {
 /// by this quorum certificate.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct TimeoutMsg {
-    highest_quorum_certificate: QuorumCert,
-    // Used for fast state synchronization.
-    highest_ledger_info: QuorumCert,
+    sync_info: SyncInfo,
     pacemaker_timeout: PacemakerTimeout,
-    author: Author,
     signature: Ed25519Signature,
 }
 
 impl TimeoutMsg {
     /// Creates new TimeoutMsg
     pub fn new(
-        highest_quorum_certificate: QuorumCert,
-        highest_ledger_info: QuorumCert,
+        sync_info: SyncInfo,
         pacemaker_timeout: PacemakerTimeout,
         validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
     ) -> TimeoutMsg {
-        let author = validator_signer.author();
-        let digest = Self::new_round_digest(
-            highest_quorum_certificate.certified_block_id(),
-            pacemaker_timeout.digest(),
-        );
+        let digest = Self::new_round_digest(pacemaker_timeout.digest());
         let signature = validator_signer
             .sign_message(digest)
             .expect("Failed to sign PacemakerTimeoutMsg");
         TimeoutMsg {
-            highest_quorum_certificate,
-            highest_ledger_info,
+            sync_info,
             pacemaker_timeout,
-            author,
             signature,
         }
     }
 
-    fn new_round_digest(
-        highest_quorum_certificate_block_id: HashValue,
-        pacemaker_timeout_digest: HashValue,
-    ) -> HashValue {
+    fn new_round_digest(pacemaker_timeout_digest: HashValue) -> HashValue {
         TimeoutMsgSerializer {
-            highest_quorum_certificate_block_id,
             pacemaker_timeout_digest,
         }
         .hash()
@@ -216,20 +201,12 @@ impl TimeoutMsg {
 
     /// Calculates digest for this message
     pub fn digest(&self) -> HashValue {
-        Self::new_round_digest(
-            self.highest_quorum_certificate.certified_block_id(),
-            self.pacemaker_timeout.digest(),
-        )
+        Self::new_round_digest(self.pacemaker_timeout.digest())
     }
 
-    /// Highest QC carried by the new round message.
-    pub fn highest_quorum_certificate(&self) -> &QuorumCert {
-        &self.highest_quorum_certificate
-    }
-
-    /// Returns a reference to a QuorumCert that has the highest round LedgerInfo
-    pub fn highest_ledger_info(&self) -> &QuorumCert {
-        &self.highest_ledger_info
+    /// SyncInfo of the given timeout message
+    pub fn sync_info(&self) -> &SyncInfo {
+        &self.sync_info
     }
 
     /// Returns a reference to the included PacemakerTimeout
@@ -242,13 +219,13 @@ impl TimeoutMsg {
         &self,
         validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> Result<(), VerifyError> {
-        validator.verify_signature(self.author, self.digest(), &self.signature)?;
+        validator.verify_signature(self.author(), self.digest(), &self.signature)?;
         self.pacemaker_timeout.verify(validator)
     }
 
     /// Returns the author of the TimeoutMsg
     pub fn author(&self) -> Author {
-        self.author
+        self.pacemaker_timeout.author()
     }
 
     /// Returns a reference to the signature of the author
@@ -258,36 +235,30 @@ impl TimeoutMsg {
     }
 }
 
+impl FromProto for TimeoutMsg {
+    type ProtoType = network::proto::TimeoutMsg;
+
+    fn from_proto(mut object: network::proto::TimeoutMsg) -> failure::Result<Self> {
+        let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
+        let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
+        let signature = Ed25519Signature::try_from(object.get_signature())?;
+        Ok(TimeoutMsg {
+            sync_info,
+            pacemaker_timeout,
+            signature,
+        })
+    }
+}
+
 impl IntoProto for TimeoutMsg {
     type ProtoType = network::proto::TimeoutMsg;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
-        proto.set_highest_quorum_cert(self.highest_quorum_certificate.into_proto());
-        proto.set_highest_ledger_info(self.highest_ledger_info.into_proto());
+        proto.set_sync_info(self.sync_info.into_proto());
         proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
-        proto.set_author(self.author.into());
         proto.set_signature(self.signature.to_bytes().as_ref().into());
         proto
-    }
-}
-
-impl FromProto for TimeoutMsg {
-    type ProtoType = network::proto::TimeoutMsg;
-
-    fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
-        let highest_quorum_certificate = QuorumCert::from_proto(object.take_highest_quorum_cert())?;
-        let highest_ledger_info = QuorumCert::from_proto(object.take_highest_ledger_info())?;
-        let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
-        let author = Author::try_from(object.take_author())?;
-        let signature = Ed25519Signature::try_from(object.get_signature())?;
-        Ok(TimeoutMsg {
-            highest_quorum_certificate,
-            highest_ledger_info,
-            pacemaker_timeout,
-            author,
-            signature,
-        })
     }
 }
 

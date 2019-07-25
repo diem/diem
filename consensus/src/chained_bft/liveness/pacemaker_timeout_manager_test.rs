@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    liveness::{
-        pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
-        timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
-    },
+    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+    liveness::pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
     persistent_storage::PersistentStorage,
     test_utils::{MockStorage, TestPayload},
 };

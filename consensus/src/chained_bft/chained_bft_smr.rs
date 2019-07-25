@@ -5,6 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
         common::{Payload, Round},
+        consensus_types::timeout_msg::TimeoutMsg,
         event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
@@ -13,7 +14,6 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
-            timeout_msg::TimeoutMsg,
         },
         network::{
             BlockRetrievalRequest, ChunkRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers,
