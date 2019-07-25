@@ -7,15 +7,13 @@ use std::{
 
 #[derive(Clone)]
 pub struct Instance {
+    short_hash: String,
     ip: String,
 }
 
 impl Instance {
-    pub fn new<I>(ip: I) -> Instance
-    where
-        I: Into<String>,
-    {
-        Instance { ip: ip.into() }
+    pub fn new(short_hash: String, ip: String) -> Instance {
+        Instance { short_hash, ip }
     }
 
     pub fn run_cmd<I, S>(&self, args: I) -> failure::Result<()>
@@ -45,10 +43,14 @@ impl Instance {
             Ok(exit_status) => exit_status.success(),
         }
     }
+
+    pub fn short_hash(&self) -> &String {
+        &self.short_hash
+    }
 }
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.ip)
+        write!(f, "{}({})", self.short_hash, self.ip)
     }
 }

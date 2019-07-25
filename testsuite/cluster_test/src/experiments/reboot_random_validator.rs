@@ -5,7 +5,7 @@ use crate::{
     instance::Instance,
 };
 use failure;
-use std::{thread, time::Duration};
+use std::{collections::HashSet, fmt, thread, time::Duration};
 
 pub struct RebootRandomValidator {
     instance: Instance,
@@ -20,6 +20,12 @@ impl RebootRandomValidator {
 }
 
 impl Experiment for RebootRandomValidator {
+    fn affected_validators(&self) -> HashSet<String> {
+        let mut r = HashSet::new();
+        r.insert(self.instance.short_hash().clone());
+        r
+    }
+
     fn run(&self) -> failure::Result<()> {
         let reboot = Reboot::new(self.instance.clone());
         reboot.apply()?;
@@ -27,5 +33,11 @@ impl Experiment for RebootRandomValidator {
             thread::sleep(Duration::from_secs(5));
         }
         Ok(())
+    }
+}
+
+impl fmt::Display for RebootRandomValidator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Reboot {}", self.instance)
     }
 }
