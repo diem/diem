@@ -6,11 +6,12 @@ use bytecode_verifier::{
     VerifiedModule,
 };
 use compiler::{util, Compiler};
+use ir_to_bytecode::parser::{parse_module, parse_script};
 use serde_json;
 use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
-use types::{account_address::AccountAddress, transaction::Program};
+use types::{access_path::AccessPath, account_address::AccountAddress, transaction::Program};
 use vm::{errors::VerificationError, file_format::CompiledModule};
 
 #[derive(Debug, StructOpt)]
@@ -38,6 +39,9 @@ struct Args {
     /// Path to the Move IR source to compile
     #[structopt(parse(from_os_str))]
     pub source_path: PathBuf,
+    /// Instead of compiling the source, emit a dependency list of the compiled source
+    #[structopt(short = "-l", long = "list_dependencies")]
+    pub list_dependencies: bool,
 }
 
 fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
@@ -74,6 +78,32 @@ fn main() {
         .address
         .map(|a| AccountAddress::try_from(a).unwrap())
         .unwrap_or_else(AccountAddress::default);
+
+    if args.list_dependencies {
+        let source = fs::read_to_string(args.source_path).expect("Unable to read file");
+        let dependency_list: Vec<AccessPath> = if args.module_input {
+            let module = parse_module(&source).expect("Unable to parse module");
+            module.get_external_deps()
+        } else {
+            let script = parse_script(&source).expect("Unable to parse module");
+            script.get_external_deps()
+        }
+        .into_iter()
+        .map(|m| AccessPath::code_access_path(&m))
+        .collect();
+        match args.output_path {
+            Some(path) => {
+                let deps_bytes =
+                    serde_json::to_vec(&dependency_list).expect("Unable to serialize dependencies");
+                write_output(&path, &deps_bytes);
+            }
+            None => println!(
+                "{}",
+                serde_json::to_string(&dependency_list).expect("Unable to serialize dependencies")
+            ),
+        }
+        return;
+    }
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path).expect("Unable to read file");
