@@ -37,17 +37,14 @@ pub struct SyncManager<T> {
     block_mutex_map: MutexMap<HashValue>,
 }
 
-/// This struct describes where do we sync to
-pub struct SyncInfo {
-    /// Highest ledger info to invoke state sync for
-    /// This is optional for now, because vote does not have it
+/// Keeps the necessary context for `SyncMgr` to bring the missing information.
+pub struct SyncMgrContext {
     pub highest_ledger_info: QuorumCert,
-    /// Quorum certificate to be inserted into block tree
     pub highest_quorum_cert: QuorumCert,
-    /// Author of messages that triggered this sync.
-    /// For now we sync from this peer. In future we going to use peers from quorum certs,
-    /// and this field going to be mostly informational
-    pub peer: Author,
+    /// Preferred peer: this is typically the peer that delivered the original QC and
+    /// thus has higher chances to be able to return the information than the other
+    /// peers that signed the QC.
+    pub preferred_peer: Author,
 }
 
 impl<T> SyncManager<T>
@@ -78,15 +75,21 @@ where
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_ledger_info
     /// Inserts sync_info.quorum_cert into block store as the last step
-    pub async fn sync_to(&mut self, deadline: Instant, sync_info: SyncInfo) -> failure::Result<()> {
-        let highest_ledger_info = sync_info.highest_ledger_info.clone();
-
-        self.process_highest_ledger_info(highest_ledger_info, sync_info.peer, deadline)
-            .await?;
+    pub async fn sync_to(
+        &mut self,
+        deadline: Instant,
+        sync_context: SyncMgrContext,
+    ) -> failure::Result<()> {
+        self.process_highest_ledger_info(
+            sync_context.highest_ledger_info.clone(),
+            sync_context.preferred_peer,
+            deadline,
+        )
+        .await?;
 
         self.fetch_quorum_cert(
-            sync_info.highest_quorum_cert.clone(),
-            sync_info.peer,
+            sync_context.highest_quorum_cert.clone(),
+            sync_context.preferred_peer,
             deadline,
         )
         .await?;

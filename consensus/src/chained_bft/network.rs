@@ -5,11 +5,8 @@ use crate::{
     chained_bft::{
         block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::{
-            proposer_election::{ProposalInfo, ProposerInfo},
-            timeout_msg::TimeoutMsg,
-        },
+        consensus_types::{block::Block, quorum_cert::QuorumCert, timeout_msg::TimeoutMsg},
+        liveness::proposer_election::{ProposalInfo, ProposerInfo},
         safety::vote_msg::VoteMsg,
     },
     counters,

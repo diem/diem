@@ -7,7 +7,6 @@ pub(crate) mod pacemaker_timeout_manager;
 pub(crate) mod proposal_generator;
 pub(crate) mod proposer_election;
 pub(crate) mod rotating_proposer_election;
-pub(crate) mod timeout_msg;
 
 #[cfg(test)]
 mod local_pacemaker_test;

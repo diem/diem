@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::Author,
-    liveness::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     persistent_storage::PersistentLivenessStorage,
 };
 use logger::prelude::*;

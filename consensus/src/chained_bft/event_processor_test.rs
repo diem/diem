@@ -5,7 +5,12 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
         common::Author,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
+        consensus_types::{
+            block::Block,
+            quorum_cert::QuorumCert,
+            sync_info::SyncInfo,
+            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+        },
         event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
@@ -14,7 +19,6 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
             rotating_proposer_election::RotatingProposer,
-            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -575,8 +579,11 @@ fn process_new_round_msg_test() {
         static_proposer
             .event_processor
             .process_timeout_msg(TimeoutMsg::new(
-                block_0_quorum_cert,
-                QuorumCert::certificate_for_genesis(),
+                SyncInfo::new(
+                    block_0_quorum_cert,
+                    QuorumCert::certificate_for_genesis(),
+                    None,
+                ),
                 PacemakerTimeout::new(2, &non_proposer.signer),
                 &non_proposer.signer,
             )),
