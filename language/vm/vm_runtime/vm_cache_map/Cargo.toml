@@ -11,6 +11,6 @@ chashmap = "2.2.2"
 typed-arena = "1.4.1"
 
 [dev-dependencies]
-crossbeam = "0.7"
+crossbeam = "0.7.2"
 proptest = "0.9"
 rand = "0.6.5"
