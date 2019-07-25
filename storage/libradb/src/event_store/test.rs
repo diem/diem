@@ -160,36 +160,31 @@ fn traverse_events_by_access_path(
 }
 
 fn arb_event_batches() -> impl Strategy<Value = (Vec<AccessPath>, Vec<Vec<ContractEvent>>)> {
-    (
-        vec(any::<AccountAddress>(), 3),
-        hash_set(any::<Vec<u8>>(), 3),
-        (0..100usize),
-    )
-        .prop_flat_map(|(addresses, event_paths, num_batches)| {
-            let all_possible_access_paths = addresses
-                .iter()
-                .cartesian_product(event_paths.iter())
-                .map(|(address, event_path)| AccessPath::new(*address, event_path.clone()))
-                .collect::<Vec<_>>();
-            let access_path_strategy =
-                Union::new(all_possible_access_paths.clone().into_iter().map(Just));
+    // TODO: Get rid of the unnecessary prop_flat_map here.
+    (vec(any::<AccountAddress>(), 3), (0..100usize))
+        .prop_flat_map(|(raw_event_keys, num_batches)| {
+            let event_key_strategy = Union::new(raw_event_keys.clone().into_iter().map(Just));
 
+            let event_key_vec = raw_event_keys
+                .iter()
+                .map(|address| AccessPath::new(*address, vec![]))
+                .collect::<Vec<_>>();
             (
-                Just(all_possible_access_paths),
+                Just(event_key_vec),
                 vec(
-                    vec(ContractEvent::strategy_impl(access_path_strategy), 0..10),
+                    vec(ContractEvent::strategy_impl(event_key_strategy), 0..10),
                     num_batches,
                 ),
             )
         })
-        .prop_map(|(all_possible_access_paths, event_batches)| {
-            let mut seq_num_by_access_path = HashMap::new();
+        .prop_map(|(all_possible_event_keys, event_batches)| {
+            let mut seq_num_by_event_key = HashMap::new();
             let numbered_event_batches = event_batches
                 .into_iter()
-                .map(|events| renumber_events(&events, &mut seq_num_by_access_path))
+                .map(|events| renumber_events(&events, &mut seq_num_by_event_key))
                 .collect::<Vec<_>>();
 
-            (all_possible_access_paths, numbered_event_batches)
+            (all_possible_event_keys, numbered_event_batches)
         })
 }
 

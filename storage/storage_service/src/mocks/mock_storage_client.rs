@@ -18,6 +18,7 @@ use storage_client::StorageRead;
 use storage_proto::ExecutorStartupInfo;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_config::EventHandle,
     account_state_blob::AccountStateBlob,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
@@ -173,9 +174,9 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     100,
                     0,
                     types::byte_array::ByteArray::new(vec![]),
-                    0,
-                    0,
                     false,
+                    EventHandle::random_handle(0),
+                    EventHandle::random_handle(0),
                 );
                 version_data.insert(
                     types::account_config::account_resource_path(),

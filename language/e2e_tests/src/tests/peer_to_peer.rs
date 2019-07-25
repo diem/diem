@@ -9,7 +9,7 @@ use crate::{
 use canonical_serialization::SimpleDeserializer;
 use std::time::Instant;
 use types::{
-    account_config::{account_received_event_path, account_sent_event_path, AccountEvent},
+    account_config::AccountEvent,
     transaction::{SignedTransaction, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
 };
@@ -37,13 +37,7 @@ fn single_peer_to_peer_with_event() {
         output[0].status(),
         &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
     );
-    let rec_ev_path = account_sent_event_path();
-    let sent_ev_path = account_received_event_path();
-    for event in txn_output.events() {
-        assert!(
-            rec_ev_path == event.access_path().path || sent_ev_path == event.access_path().path
-        );
-    }
+
     executor.apply_write_set(txn_output.write_set());
 
     // check that numbers in stored DB are correct
@@ -78,6 +72,15 @@ fn single_peer_to_peer_with_event() {
         0,
         AccountResource::read_sent_events_count(&updated_receiver)
     );
+
+    let rec_ev_path = receiver.received_events_key().to_vec();
+    let sent_ev_path = sender.sent_events_key().to_vec();
+    for event in txn_output.events() {
+        assert!(
+            rec_ev_path == event.access_path().address.to_vec()
+                || sent_ev_path == event.access_path().address.to_vec()
+        );
+    }
 }
 
 #[test]
@@ -486,9 +489,9 @@ fn one_to_many_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
 
-    // create and publish accounts with 2_000_000 coins
+    // create and publish accounts with 4_000_000 coins
     let account_size = 100usize;
-    let initial_balance = 2_000_000u64;
+    let initial_balance = 4_000_000u64;
     let initial_seq_num = 10u64;
     let accounts = executor.create_accounts(account_size, initial_balance, initial_seq_num);
 

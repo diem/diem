@@ -79,6 +79,18 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl From<AccountResource> for AccountStateBlob {
+    fn from(account_resource: AccountResource) -> Self {
+        let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
+        account_state.insert(
+            account_resource_path(),
+            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
+        );
+        AccountStateBlob::try_from(&account_state).unwrap()
+    }
+}
+
 impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
     type Error = failure::Error;
 
@@ -100,12 +112,7 @@ impl CryptoHash for AccountStateBlob {
 #[cfg(any(test, feature = "testing"))]
 prop_compose! {
     pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
-        let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
-        account_state.insert(
-            account_resource_path(),
-            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
-        );
-        AccountStateBlob::try_from(&account_state).unwrap()
+        AccountStateBlob::from(account_resource)
     }
 }
 

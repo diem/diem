@@ -154,6 +154,12 @@ lazy_static! {
             vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![])))],
             vec![U64]
         );
+        // Event
+        add!(m, addr, "Event", "write_to_event_store",
+            |_| { NativeReturnStatus::InvalidArguments },
+            vec![ByteArray, U64, ByteArray],
+            vec![]
+        );
         m
     };
 }

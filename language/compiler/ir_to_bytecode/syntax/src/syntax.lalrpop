@@ -211,7 +211,6 @@ Builtin: Builtin = {
     "get_txn_public_key" => Builtin::GetTxnPublicKey,
     "get_txn_sender" => Builtin::GetTxnSender,
     "get_txn_sequence_number" => Builtin::GetTxnSequenceNumber,
-    "emit_event" => Builtin::EmitEvent,
     "move_from<" <t: StructName> ">" => Builtin::MoveFrom(t),
     "move_to_sender<" <t: StructName> ">" => Builtin::MoveToSender(t),
     "get_gas_remaining" => Builtin::GetGasRemaining,

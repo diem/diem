@@ -277,7 +277,7 @@ impl GRPCClient {
         start_event_seq_num: u64,
         ascending: bool,
         limit: u64,
-    ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
+    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
         let req_item = RequestItem::GetEventsByEventAccessPath {
             access_path,
             start_event_seq_num,

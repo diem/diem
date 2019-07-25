@@ -188,6 +188,7 @@ enum VMInvariantViolationError {
     LocalReferenceError = 7;
     StorageError = 8;
     InternalTypeError = 9;
+    EventKeyMismatch = 10;
 }
 
 // Errors that can arise from binary decoding (deserialization)

@@ -148,12 +148,17 @@ impl FakeExecutor {
         let int_type = Type::U64;
         let byte_array_type = Type::ByteArray;
         let coin = Type::Struct(StructDef::new(vec![int_type.clone()]));
+        let event_handle = Type::Struct(StructDef::new(vec![
+            int_type.clone(),
+            byte_array_type.clone(),
+        ]));
+
         StructDef::new(vec![
             byte_array_type,
             coin,
             Type::Bool,
-            int_type.clone(),
-            int_type.clone(),
+            event_handle.clone(),
+            event_handle.clone(),
             int_type.clone(),
         ])
     }
