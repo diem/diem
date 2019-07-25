@@ -419,8 +419,8 @@ where
         Ok(())
     }
 
-    /// Verifies the proofs using provided ledger info. Also verifies that the version of the first
-    /// transaction matches the lastest committed transaction. If the first few transaction happens
+    /// Verifies proofs using provided ledger info. Also verifies that the version of the first
+    /// transaction matches the latest committed transaction. If the first few transaction happens
     /// to be older, returns how many need to be skipped and the first version to be committed.
     fn verify_chunk(
         &self,
