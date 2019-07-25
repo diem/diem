@@ -219,6 +219,7 @@ pub struct AccountData {
     sequence_number: u64,
     sent_events_count: u64,
     received_events_count: u64,
+    delegated_withdrawal_capability: bool,
 }
 
 impl AccountData {
@@ -231,7 +232,7 @@ impl AccountData {
 
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(account: Account, balance: u64, sequence_number: u64) -> Self {
-        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0)
+        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false)
     }
 
     /// Creates a new `AccountData` with custom parameters.
@@ -241,6 +242,7 @@ impl AccountData {
         sequence_number: u64,
         sent_events_count: u64,
         received_events_count: u64,
+        delegated_withdrawal_capability: bool,
     ) -> Self {
         Self {
             account,
@@ -248,6 +250,7 @@ impl AccountData {
             sequence_number,
             sent_events_count,
             received_events_count,
+            delegated_withdrawal_capability,
         }
     }
 
@@ -268,6 +271,7 @@ impl AccountData {
             MutVal::new(Value::U64(self.received_events_count)),
             MutVal::new(Value::U64(self.sent_events_count)),
             MutVal::new(Value::U64(self.sequence_number)),
+            MutVal::new(Value::Bool(self.delegated_withdrawal_capability)),
         ])
     }
 
@@ -369,7 +373,7 @@ impl AccountResource {
         match account {
             Value::Struct(fields) => {
                 let received_events_count = fields
-                    .get(2)
+                    .get(3)
                     .expect("received_events_count must be field 2 in Account");
                 match &*received_events_count.peek() {
                     Value::U64(val) => *val,
@@ -385,7 +389,7 @@ impl AccountResource {
         match account {
             Value::Struct(fields) => {
                 let sent_events_count = fields
-                    .get(3)
+                    .get(4)
                     .expect("sent_events_count must be field 3 in Account");
                 match &*sent_events_count.peek() {
                     Value::U64(val) => *val,
@@ -401,7 +405,7 @@ impl AccountResource {
         match account {
             Value::Struct(fields) => {
                 let sequence_number = fields
-                    .get(4)
+                    .get(5)
                     .expect("sequence number must be the fifth field in Account");
                 match &*sequence_number.peek() {
                     Value::U64(val) => *val,

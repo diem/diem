@@ -18,7 +18,12 @@ module LibraAccount {
         sent_events_count: u64,
         // TEMPORARY the current count for the number of received events for this account
         // The events system is being overhauled and this will be replaced
-        received_events_count: u64
+        received_events_count: u64,
+        // If false, the account holder can withdraw using withdraw_from_sender
+        // If true, the account holder has delegated the permission to withdraw from this account
+        // using a WithdrawalCapability.
+        // When an account is initially created, this is false.
+        delegated_withdrawal_capability: bool,
     }
 
     // Message for sent events
@@ -48,6 +53,7 @@ module LibraAccount {
             sequence_number: 0,
             sent_events_count: 0,
             received_events_count: 0,
+            delegated_withdrawal_capability: false,
         };
     }
 
