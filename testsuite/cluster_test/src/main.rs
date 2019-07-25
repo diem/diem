@@ -11,6 +11,9 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use termion::{color, style};
+
+const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 pub fn main() {
     let matches = arg_matches();
@@ -20,10 +23,9 @@ pub fn main() {
         .expect("workplace should be set");
     let aws = Aws::new(workplace.into());
     let logs = AwsLogTail::spawn_new(aws.clone()).expect("Failed to start aws log tail");
-    let cluster = Cluster::discover().expect("Failed to discover cluster");
-    println!("Waiting little bit before starting...");
-    thread::sleep(Duration::from_secs(10));
-    println!("Done");
+    println!("Aws log thread started");
+    let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+    println!("Discovered {} peers", cluster.instances().len());
 
     if matches.is_present(ARG_RUN) {
         let mut health_check_runner = HealthCheckRunner::new_all(cluster.clone());
@@ -33,8 +35,15 @@ pub fn main() {
         }
 
         let experiment = RebootRandomValidator::new(&cluster);
-        println!("Starting experiment {}", experiment);
-        let mut affected_validators = experiment.affected_validators();
+        println!(
+            "{}Starting experiment {}{}{}{}",
+            style::Bold,
+            color::Fg(color::Blue),
+            experiment,
+            color::Fg(color::Reset),
+            style::Reset
+        );
+        let affected_validators = experiment.affected_validators();
         let (exp_result_sender, exp_result_recv) = mpsc::channel();
         thread::spawn(move || {
             let result = experiment.run();
@@ -42,8 +51,15 @@ pub fn main() {
                 .send(result)
                 .expect("Failed to send experiment result");
         });
+
+        // We expect experiments completes and cluster go into healthy state within 2 minutes
+        let experiment_deadline = Instant::now() + Duration::from_secs(2 * 60);
+
         loop {
-            let deadline = Instant::now() + Duration::from_secs(1);
+            if Instant::now() > experiment_deadline {
+                panic!("Experiment did not complete in time");
+            }
+            let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
             // Receive all events that arrived to aws log tail within next 1 second
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
@@ -71,12 +87,17 @@ pub fn main() {
             }
         }
 
-        println!();
-        println!("**Experiment finished, waiting until all affected validators recover**");
-        println!();
+        println!(
+            "{}Experiment finished, waiting until all affected validators recover{}",
+            style::Bold,
+            style::Reset
+        );
 
         loop {
-            let deadline = Instant::now() + Duration::from_secs(1);
+            if Instant::now() > experiment_deadline {
+                panic!("Cluster did not become healthy in time");
+            }
+            let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
             // Receive all events that arrived to aws log tail within next 1 second
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
@@ -95,7 +116,6 @@ pub fn main() {
             if still_affected_validator.is_empty() {
                 break;
             }
-            affected_validators = still_affected_validator;
         }
 
         println!("Experiment completed");
@@ -106,8 +126,6 @@ pub fn main() {
         }
     } else if matches.is_present(HEALTH_CHECK) {
         let mut health_check_runner = HealthCheckRunner::new_all(cluster.clone());
-        // Initial sleep to collect events
-        // Otherwise liveness check will fail because it did not yet receive events from validators
         loop {
             let deadline = Instant::now() + Duration::from_secs(1);
             // Receive all events that arrived to aws log tail within next 1 second
