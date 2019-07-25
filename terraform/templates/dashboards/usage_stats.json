@@ -80,7 +80,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(executor{op=\"num_accounts\"})",
+          "expr": "max(storage_gauge{op=\"state_blobs_created\"}) - max(storage_gauge{op=\"state_blobs_retired\"})",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
