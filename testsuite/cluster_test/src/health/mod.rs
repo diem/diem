@@ -103,7 +103,7 @@ impl HealthCheckRunner {
                 print!("{}* {}{}\t", Fg(Red), node, Fg(Reset));
                 failed.push(node);
             }
-            if i % 5 == 0 {
+            if (i + 1) % 5 == 0 {
                 println!();
             }
         }

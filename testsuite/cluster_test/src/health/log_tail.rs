@@ -8,11 +8,11 @@ use regex::Regex;
 use rusoto_kinesis::{GetRecordsInput, GetShardIteratorInput, Kinesis, Record};
 use serde_json::{self, value as json};
 use std::{
+    env,
     sync::mpsc,
     thread::{self, JoinHandle},
     time::{Duration, Instant, SystemTime},
 };
-//use lazy_static::lazy_static;
 
 pub struct AwsLogTail {
     pub event_receiver: mpsc::Receiver<ValidatorEvent>,
@@ -24,6 +24,7 @@ struct AwsLogThread {
     aws: Aws,
     kinesis_iterator: String,
     event_sender: mpsc::Sender<ValidatorEvent>,
+    startup_sender: Option<mpsc::Sender<()>>,
 
     re_commit: Regex,
     re_validator: Regex,
@@ -40,10 +41,13 @@ impl AwsLogTail {
     pub fn spawn_new(aws: Aws) -> failure::Result<Self> {
         let kinesis_iterator = Self::make_kinesis_iterator(&aws)?;
         let (event_sender, event_receiver) = mpsc::channel();
+        // We block this method until first request to kinesis completed
+        let (startup_sender, startup_receiver) = mpsc::channel();
         let aws_log_thread = AwsLogThread {
             aws,
             kinesis_iterator,
             event_sender,
+            startup_sender: Some(startup_sender),
 
             re_commit: Regex::new(
                 r"Committed.+\[id: ([a-z0-9]+), round: ([a-z0-9]+), parent_id: ([a-z0-9]+)]",
@@ -57,6 +61,9 @@ impl AwsLogTail {
             .name("aws-log-tail".into())
             .spawn(move || aws_log_thread.run())
             .unwrap();
+        startup_receiver
+            .recv()
+            .expect("Aws log tail thread died after first request");
         Ok(AwsLogTail {
             thread,
             event_receiver,
@@ -82,15 +89,27 @@ impl AwsLogTail {
         events
     }
 
+    fn log_start_offset_sec() -> u64 {
+        let default = 8;
+        match env::var("LOG_START_OFFSET") {
+            Ok(s) => s.parse().expect("LOG_START_OFFSET env is not a number"),
+            Err(..) => default,
+        }
+    }
+
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("now < UNIX_EPOCH");
+        let timestamp = timestamp - Duration::from_secs(Self::log_start_offset_sec());
         let response = aws
             .kc()
             .get_shard_iterator(GetShardIteratorInput {
                 shard_id: "0".into(),
-                shard_iterator_type: "LATEST".into(),
+                shard_iterator_type: "AT_TIMESTAMP".into(),
                 stream_name: format!("{}-RecipientStream", aws.workplace()),
                 starting_sequence_number: None,
-                timestamp: None,
+                timestamp: Some(timestamp.as_secs() as f64),
             })
             .sync()?;
         if let Some(shard_iterator) = response.shard_iterator {
@@ -106,31 +125,34 @@ impl AwsLogTail {
 impl AwsLogThread {
     fn run(mut self) {
         loop {
-            let r = self.aws_poll_iterator().expect("Failed to poll kinesis");
-            self.kinesis_iterator = r.0;
-            let records = r.1;
+            let response = self
+                .aws
+                .kc()
+                .get_records(GetRecordsInput {
+                    shard_iterator: self.kinesis_iterator.clone(),
+                    limit: Some(10000),
+                })
+                .sync()
+                .expect("Request to kinesis failed");
+            let next_iterator = response
+                .next_shard_iterator
+                .expect("Next iterator is expected for kinesis stream");
+            let records = response.records;
+            let millis_behind = response
+                .millis_behind_latest
+                .expect("no millis_behind_latest in kinesis response");
+            self.kinesis_iterator = next_iterator;
             for record in records {
                 self.handle_kinesis_record(record)
                     .expect("Failed to process aws record");
             }
+            if millis_behind == 0 {
+                if let Some(startup_sender) = self.startup_sender.take() {
+                    startup_sender.send(()).expect("Startup receiver dropped");
+                }
+            }
             thread::sleep(Duration::from_millis(500))
         }
-    }
-
-    fn aws_poll_iterator(&self) -> failure::Result<(String, Vec<Record>)> {
-        let response = self
-            .aws
-            .kc()
-            .get_records(GetRecordsInput {
-                shard_iterator: self.kinesis_iterator.clone(),
-                limit: Some(10000),
-            })
-            .sync()?;
-        let next_iterator = response
-            .next_shard_iterator
-            .expect("Next iterator is expected for kinesis stream");
-        let records = response.records;
-        Ok((next_iterator, records))
     }
 
     fn handle_kinesis_record(&mut self, record: Record) -> failure::Result<()> {
@@ -186,7 +208,7 @@ impl AwsLogThread {
             };
             self.handle_log_entry(log_entry);
         }
-        if behind_max > 10_000 {
+        if behind_max > 15_000 {
             println!(
                 "Logs behind avg={} ms, max={} ms; {} entries",
                 behind_sum / count,
