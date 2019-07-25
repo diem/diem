@@ -268,10 +268,10 @@ impl AccountData {
                 AccountAddress::from(self.account.pubkey).to_vec(),
             ))),
             MutVal::new(coin),
+            MutVal::new(Value::Bool(self.delegated_withdrawal_capability)),
             MutVal::new(Value::U64(self.received_events_count)),
             MutVal::new(Value::U64(self.sent_events_count)),
             MutVal::new(Value::U64(self.sequence_number)),
-            MutVal::new(Value::Bool(self.delegated_withdrawal_capability)),
         ])
     }
 

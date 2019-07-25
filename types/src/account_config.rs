@@ -140,8 +140,8 @@ impl CanonicalSerialize for AccountResource {
         // implementation details in the VM.
         serializer
             .encode_struct(&self.authentication_key)?
-            .encode_bool(self.delegated_withdrawal_capability)?
             .encode_u64(self.balance)?
+            .encode_bool(self.delegated_withdrawal_capability)?
             .encode_u64(self.received_events_count)?
             .encode_u64(self.sent_events_count)?
             .encode_u64(self.sequence_number)?;
@@ -152,8 +152,8 @@ impl CanonicalSerialize for AccountResource {
 impl CanonicalDeserialize for AccountResource {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let authentication_key = deserializer.decode_struct()?;
-        let delegated_withdrawal_capability = deserializer.decode_bool()?;
         let balance = deserializer.decode_u64()?;
+        let delegated_withdrawal_capability = deserializer.decode_bool()?;
         let received_events_count = deserializer.decode_u64()?;
         let sent_events_count = deserializer.decode_u64()?;
         let sequence_number = deserializer.decode_u64()?;
