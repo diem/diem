@@ -881,7 +881,8 @@ impl ClientProxy {
         )
         .parse::<hyper::Uri>()?;
 
-        let response = runtime.block_on(client.get(url))?;
+        let request = hyper::Request::post(url).body(hyper::Body::empty())?;
+        let response = runtime.block_on(client.request(request))?;
         let status_code = response.status();
         let body = response.into_body().concat2().wait()?;
         let raw_data = std::str::from_utf8(&body)?;
