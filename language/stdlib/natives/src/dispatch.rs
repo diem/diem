@@ -58,6 +58,9 @@ pub fn dispatch_native_call<T: StackAccessor>(
         },
         "Signature" => match function_name {
             "ed25519_verify" => signature::native_ed25519_signature_verification(accessor),
+            "ed25519_threshold_verify" => {
+                signature::native_ed25519_threshold_signature_verification(accessor)
+            }
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,
