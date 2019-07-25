@@ -144,6 +144,17 @@ impl SharedMempoolNetwork {
             _ => panic!("peer {:?} didn't broadcast transaction", peer),
         }
     }
+
+    fn exist_in_metrics_cache(&self, peer_id: &PeerId, txn: &TestTransaction) -> bool {
+        let mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
+        mempool
+            .metrics_cache
+            .get(&(
+                TestTransaction::get_address(txn.address),
+                txn.sequence_number,
+            ))
+            .is_some()
+    }
 }
 
 #[test]
@@ -167,6 +178,35 @@ fn test_basic_flow() {
         // A attempts to send message
         let transaction = smp.deliver_message(&peer_a).0;
         assert_eq!(transaction.sequence_number(), seq);
+    }
+}
+
+#[test]
+fn test_metric_cache_ignore_shared_txns() {
+    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
+
+    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+    let txns = vec![
+        TestTransaction::new(1, 0, 1),
+        TestTransaction::new(1, 1, 1),
+        TestTransaction::new(1, 2, 1),
+    ];
+    smp.add_txns(
+        &peer_a,
+        vec![txns[0].clone(), txns[1].clone(), txns[2].clone()],
+    );
+    // Check if txns's creation timestamp exist in peer_a's metrics_cache.
+    assert_eq!(smp.exist_in_metrics_cache(&peer_a, &txns[0]), true);
+    assert_eq!(smp.exist_in_metrics_cache(&peer_a, &txns[1]), true);
+    assert_eq!(smp.exist_in_metrics_cache(&peer_a, &txns[2]), true);
+
+    // Let peer_a discover new peer_b.
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    for txn in txns.iter().take(3) {
+        // Let peer_a share txns with peer_b
+        let (_transaction, rx_peer) = smp.deliver_message(&peer_a);
+        // Check if txns's creation timestamp exist in peer_b's metrics_cache.
+        assert_eq!(smp.exist_in_metrics_cache(&rx_peer, txn), false);
     }
 }
 

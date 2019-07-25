@@ -3,7 +3,9 @@
 
 use crate::{
     core_mempool::{
-        unit_tests::common::{add_txn, add_txns_to_mempool, setup_mempool, TestTransaction},
+        unit_tests::common::{
+            add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool, TestTransaction,
+        },
         CoreMempool, TimelineState,
     },
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
@@ -60,6 +62,18 @@ fn test_transaction_ordering() {
             vec![transaction.clone()]
         );
     }
+}
+
+#[test]
+fn test_metric_cache_add_local_txns() {
+    let (mut mempool, _) = setup_mempool();
+    let txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![TestTransaction::new(0, 0, 1), TestTransaction::new(1, 0, 2)],
+    );
+    // Check txns' timestamps exist in metrics_cache.
+    assert_eq!(exist_in_metrics_cache(&mempool, &txns[0]), true);
+    assert_eq!(exist_in_metrics_cache(&mempool, &txns[1]), true);
 }
 
 #[test]

@@ -30,8 +30,8 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct TestTransaction {
-    address: usize,
-    sequence_number: u64,
+    pub(crate) address: usize,
+    pub(crate) sequence_number: u64,
     gas_price: u64,
 }
 
@@ -141,4 +141,11 @@ impl ConsensusMock {
             .collect();
         block
     }
+}
+
+pub(crate) fn exist_in_metrics_cache(mempool: &CoreMempool, txn: &SignedTransaction) -> bool {
+    mempool
+        .metrics_cache
+        .get(&(txn.sender(), txn.sequence_number()))
+        .is_some()
 }
