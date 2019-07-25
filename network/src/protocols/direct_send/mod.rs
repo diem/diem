@@ -292,8 +292,12 @@ where
             }
         };
 
-        substream_queue_tx.send(msg.mdata).await.map_err(|e| {
-            self.message_queues.remove(&(peer_id, protocol));
+        substream_queue_tx.try_send(msg.mdata).map_err(|e| {
+            // If the channel is full, simply drop the message on the floor;
+            // If the channel is disconnected, remove the message queue from the collection.
+            if e.is_disconnected() {
+                self.message_queues.remove(&(peer_id, protocol));
+            }
             e.into()
         })
     }
