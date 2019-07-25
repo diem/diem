@@ -247,16 +247,18 @@ fn transform_code_with_easy_branching() {
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
         LdTrue(0),
-        BrFalse(10, 0),
-        Branch(3),
+        BrFalse(4, 0),
+        Branch(6),
+        Branch(5),
+        Branch(0),
+        Branch(0),
         LdFalse(1),
         Not(2, 1),
         Not(3, 2),
-        BrFalse(9, 3),
+        BrFalse(12, 3),
         LdConst(4, 42),
         Abort(4),
         Ret(vec![]),
-        Branch(0),
     ];
     let expected_types = vec![
         SignatureToken::Bool,
