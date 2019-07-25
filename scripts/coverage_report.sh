@@ -3,7 +3,7 @@
 # Check that the test directory and report path arguments are provided
 if [ $# -ne 2 ]
 then
-	echo "Usage: coverage_report.sh path/to/tests path/to/report/destination"
+	echo "Usage: $0 <testdir> <outdir>"
 	echo "/path/to/tests should be '.' for coverage to be computed for all modules"
 	echo "To get coverage for a subset of modules set /path/to/tests to the appropriate subdirectory"
 	exit 1
@@ -84,7 +84,7 @@ fi
 
 # Generate lcov report
 echo "Generating lcov report at ${COVERAGE_DIR}/lcov.info..."
-grcov target -t lcov --ignore-dir "/*" -o $COVERAGE_DIR/lcov.info
+grcov target -t lcov  --llvm --branch --ignore-dir "/*" -o $COVERAGE_DIR/lcov.info
 
 # Generate HTML report
 echo "Generating report at ${COVERAGE_DIR}..."
