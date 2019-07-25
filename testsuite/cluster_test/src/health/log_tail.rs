@@ -10,8 +10,9 @@ use serde_json::{self, value as json};
 use std::{
     sync::mpsc,
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant, SystemTime},
 };
+//use lazy_static::lazy_static;
 
 pub struct AwsLogTail {
     pub event_receiver: mpsc::Receiver<ValidatorEvent>,
@@ -22,24 +23,34 @@ pub struct AwsLogTail {
 struct AwsLogThread {
     aws: Aws,
     kinesis_iterator: String,
-    event_sender: mpsc::SyncSender<ValidatorEvent>,
+    event_sender: mpsc::Sender<ValidatorEvent>,
+
+    re_commit: Regex,
+    re_validator: Regex,
+    re_started: Regex,
 }
 
 struct LogEntry<'a> {
     validator: String,
     message: &'a str,
-    #[allow(dead_code)]
-    timestamp: u64,
+    timestamp: Duration,
 }
 
 impl AwsLogTail {
     pub fn spawn_new(aws: Aws) -> failure::Result<Self> {
         let kinesis_iterator = Self::make_kinesis_iterator(&aws)?;
-        let (event_sender, event_receiver) = mpsc::sync_channel(10_000);
+        let (event_sender, event_receiver) = mpsc::channel();
         let aws_log_thread = AwsLogThread {
             aws,
             kinesis_iterator,
             event_sender,
+
+            re_commit: Regex::new(
+                r"Committed.+\[id: ([a-z0-9]+), round: ([a-z0-9]+), parent_id: ([a-z0-9]+)]",
+            )
+            .unwrap(),
+            re_validator: Regex::new(r"^validator-([0-9a-z]+)/").unwrap(),
+            re_started: Regex::new(r"Chained BFT SMR started.$").unwrap(),
         };
         let builder = thread::Builder::new();
         let thread = builder
@@ -50,6 +61,25 @@ impl AwsLogTail {
             thread,
             event_receiver,
         })
+    }
+
+    pub fn recv_all_until_deadline(&self, deadline: Instant) -> Vec<ValidatorEvent> {
+        let mut events = vec![];
+        while Instant::now() < deadline {
+            match self.event_receiver.try_recv() {
+                Ok(event) => events.push(event),
+                Err(..) => thread::sleep(Duration::from_millis(1)),
+            }
+        }
+        events
+    }
+
+    pub fn recv_all(&self) -> Vec<ValidatorEvent> {
+        let mut events = vec![];
+        while let Ok(event) = self.event_receiver.try_recv() {
+            events.push(event);
+        }
+        events
     }
 
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
@@ -83,7 +113,7 @@ impl AwsLogThread {
                 self.handle_kinesis_record(record)
                     .expect("Failed to process aws record");
             }
-            thread::sleep(Duration::from_millis(100))
+            thread::sleep(Duration::from_millis(500))
         }
     }
 
@@ -111,13 +141,24 @@ impl AwsLogThread {
             .expect("No logStream in kinesis event")
             .as_str()
             .expect("logStream in kinesis event is not a string");
-        let validator = Self::log_stream_to_validator_short_str(log_stream);
+        let validator = self.log_stream_to_validator_short_str(log_stream);
+        let validator = if let Some(validator) = validator {
+            validator
+        } else {
+            return Ok(());
+        };
         let events = json
             .get("logEvents")
             .expect("No logEvents in kinesis event");
         let events = events
             .as_array()
             .expect("logEvents in kinesis event is not array");
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("Now is behind UNIX_EPOCH");
+        let mut behind_max = 0u128;
+        let mut behind_sum = 0u128;
+        let mut count = 0u128;
         for event in events {
             let message = event.get("message").expect("No message in kinesis event");
             let message = message
@@ -129,6 +170,15 @@ impl AwsLogThread {
             let timestamp = timestamp
                 .as_u64()
                 .expect("timestamp in kinesis event is not a u64");
+            let timestamp = Duration::from_millis(timestamp);
+            if now > timestamp {
+                let behind_millis = (now - timestamp).as_millis();
+                if behind_millis > behind_max {
+                    behind_max = behind_millis;
+                }
+                behind_sum += behind_millis;
+            }
+            count += 1;
             let log_entry = LogEntry {
                 validator: validator.clone(),
                 message,
@@ -136,31 +186,51 @@ impl AwsLogThread {
             };
             self.handle_log_entry(log_entry);
         }
+        if behind_max > 10_000 {
+            println!(
+                "Logs behind avg={} ms, max={} ms; {} entries",
+                behind_sum / count,
+                behind_max,
+                count
+            );
+        }
         Ok(())
     }
 
     fn handle_log_entry(&mut self, e: LogEntry) {
-        let commit = Self::parse_commit_log_entry(&e);
-        if let Some(commit) = commit {
+        let event = self.parse_log_entry(&e);
+        if let Some(event) = event {
             let _ignore = self.event_sender.send(ValidatorEvent {
                 validator: e.validator,
-                event: Event::Commit(commit),
+                timestamp: e.timestamp,
+                event,
             });
         }
     }
 
-    fn log_stream_to_validator_short_str(s: &str) -> String {
-        let re = Regex::new(r"^validator-([0-9a-z]+)/").unwrap();
-        let cap = re.captures(s).expect("can not parse log stream name");
-        cap[1].into()
+    fn parse_log_entry(&self, e: &LogEntry) -> Option<Event> {
+        let commit = self.parse_commit_log_entry(&e);
+        if let Some(commit) = commit {
+            return Some(Event::Commit(commit));
+        }
+        let consensus_started = self.parse_consensus_started_log_entry(&e);
+        if consensus_started.is_some() {
+            return Some(Event::ConsensusStarted);
+        }
+        None
     }
 
-    fn parse_commit_log_entry(e: &LogEntry) -> Option<Commit> {
-        let re = Regex::new(
-            r"Committed.+\[id: ([a-z0-9]+), round: ([a-z0-9]+), parent_id: ([a-z0-9]+)]",
-        )
-        .unwrap();
-        let cap = match re.captures(e.message) {
+    fn log_stream_to_validator_short_str(&self, s: &str) -> Option<String> {
+        let cap = self.re_validator.captures(s);
+        if let Some(cap) = cap {
+            Some(cap[1].into())
+        } else {
+            None
+        }
+    }
+
+    fn parse_commit_log_entry(&self, e: &LogEntry) -> Option<Commit> {
+        let cap = match self.re_commit.captures(e.message) {
             Some(cap) => cap,
             None => return None,
         };
@@ -176,5 +246,13 @@ impl AwsLogThread {
             round,
             parent: parent.into(),
         })
+    }
+
+    fn parse_consensus_started_log_entry(&self, e: &LogEntry) -> Option<()> {
+        if self.re_started.is_match(e.message) {
+            Some(())
+        } else {
+            None
+        }
     }
 }

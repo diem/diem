@@ -15,3 +15,5 @@ flate2 = { version = "1.0", features = ["rust_backend"], default-features = fals
 serde_json = "1.0"
 regex = "1.1.9"
 clap = "2.32"
+termion = "1.5.3"
+itertools = "0.8.0"
