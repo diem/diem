@@ -38,7 +38,7 @@ pub struct AccountData {
 /// Enum used to represent account status.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum AccountStatus {
-    /// Account exists only in loacal cache, it is not persisted on chain.
+    /// Account exists only in local cache, it is not persisted on chain.
     Local,
     /// Account is persisted on chain.
     Persisted,
