@@ -1,13 +1,8 @@
 use crate::stackless_bytecode::StacklessBytecode;
-use bytecode_verifier::control_flow_graph::{
-    BasicBlock, BlockId, ControlFlowGraph, VMControlFlowGraph,
-};
-use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CodeOffset, CompiledModule, FieldDefinitionIndex, FunctionDefinition,
-        SignatureToken,
+        Bytecode, CompiledModule, FieldDefinitionIndex, FunctionDefinition, SignatureToken,
     },
     views::{
         FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView,
@@ -24,12 +19,8 @@ struct StacklessBytecodeGenerator<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
     locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
-    cfg: &'a VMControlFlowGraph,
     temp_count: usize,
     temp_stack: Vec<usize>,
-    visited_blocks: BTreeSet<BlockId>,
-    work_list: Vec<BlockId>,
-    offset_mapping: BTreeMap<CodeOffset, CodeOffset>,
     local_types: Vec<SignatureToken>,
     code: Vec<StacklessBytecode>,
 }
@@ -48,8 +39,7 @@ impl<'a> StacklessModuleGenerator<'a> {
             .function_defs()
             .iter()
             .map(move |function_definition| {
-                let cfg = VMControlFlowGraph::new(&function_definition.code.code);
-                StacklessBytecodeGenerator::new(self.module, function_definition, &cfg)
+                StacklessBytecodeGenerator::new(self.module, function_definition)
                     .generate_function()
             })
             .collect()
@@ -57,11 +47,7 @@ impl<'a> StacklessModuleGenerator<'a> {
 }
 
 impl<'a> StacklessBytecodeGenerator<'a> {
-    pub fn new(
-        module: &'a CompiledModule,
-        function_definition: &'a FunctionDefinition,
-        cfg: &'a VMControlFlowGraph,
-    ) -> Self {
+    pub fn new(module: &'a CompiledModule, function_definition: &'a FunctionDefinition) -> Self {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         let mut local_types = vec![];
@@ -71,12 +57,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         StacklessBytecodeGenerator {
             module,
             function_definition_view,
-            cfg: &cfg,
             temp_count: locals_signature_view.len(),
             temp_stack: vec![],
-            visited_blocks: BTreeSet::new(),
-            work_list: vec![],
-            offset_mapping: BTreeMap::new(),
             local_types,
             locals_signature_view,
             code: vec![],
@@ -84,61 +66,15 @@ impl<'a> StacklessBytecodeGenerator<'a> {
     }
 
     pub fn generate_function(mut self) -> StacklessFunction {
-        self.work_list = vec![0];
-        self.visited_blocks.insert(0);
-        while !self.work_list.is_empty() {
-            let block_id = self.work_list.pop().unwrap();
-            let block = &self.cfg.block_of_id(block_id).unwrap();
-            self.compute(block);
-            for next_block_id in block.successors.iter().rev() {
-                if !self.visited_blocks.contains(next_block_id) {
-                    self.work_list.push(*next_block_id);
-                    self.visited_blocks.insert(*next_block_id);
-                }
-            }
+        let original_code = &self.function_definition_view.code().code;
+        for bytecode in original_code {
+            self.generate_bytecode(bytecode);
         }
-
-        // map original code offset to new offset
-        let code = self
-            .code
-            .clone()
-            .into_iter()
-            .map(|code| match code {
-                StacklessBytecode::Branch(o) => {
-                    StacklessBytecode::Branch(*self.offset_mapping.get(&o).unwrap())
-                }
-                StacklessBytecode::BrTrue(o, t) => {
-                    StacklessBytecode::BrTrue(*self.offset_mapping.get(&o).unwrap(), t)
-                }
-                StacklessBytecode::BrFalse(o, t) => {
-                    StacklessBytecode::BrFalse(*self.offset_mapping.get(&o).unwrap(), t)
-                }
-                _ => code,
-            })
-            .collect();
 
         StacklessFunction {
-            code,
+            code: self.code,
             local_types: self.local_types,
         }
-    }
-
-    fn compute(&mut self, block: &BasicBlock) {
-        let mut offset = block.entry;
-        while offset <= block.exit {
-            self.generate_bytecode(
-                &self.function_definition_view.code().code[offset as usize],
-                offset as usize,
-            );
-            offset += 1;
-        }
-    }
-
-    fn insert_stackless_bytecode(&mut self, bytecode: StacklessBytecode, original_offset: usize) {
-        let new_offset = self.code.len();
-        self.code.push(bytecode);
-        self.offset_mapping
-            .insert(original_offset as CodeOffset, new_offset as CodeOffset);
     }
 
     fn get_field_signature(&self, field_definition_index: FieldDefinitionIndex) -> SignatureToken {
@@ -152,7 +88,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
     }
 
     #[allow(clippy::cognitive_complexity)]
-    pub fn generate_bytecode(&mut self, bytecode: &Bytecode, offset: usize) {
+    pub fn generate_bytecode(&mut self, bytecode: &Bytecode) {
         match bytecode {
             Bytecode::Pop => {
                 self.temp_stack.pop();
@@ -160,36 +96,30 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
             Bytecode::ReleaseRef => {
                 let temp_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(StacklessBytecode::ReleaseRef(temp_index), offset);
+                self.code.push(StacklessBytecode::ReleaseRef(temp_index));
             }
 
             Bytecode::BrTrue(code_offset) => {
                 let temp_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::BrTrue(*code_offset, temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::BrTrue(*code_offset, temp_index));
             }
 
             Bytecode::BrFalse(code_offset) => {
                 let temp_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::BrFalse(*code_offset, temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::BrFalse(*code_offset, temp_index));
             }
 
             Bytecode::Abort => {
                 let error_code_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(StacklessBytecode::Abort(error_code_index), offset);
+                self.code.push(StacklessBytecode::Abort(error_code_index));
             }
 
             Bytecode::StLoc(idx) => {
                 let operand_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::StLoc(*idx, operand_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::StLoc(*idx, operand_index));
             }
 
             Bytecode::Ret => {
@@ -199,11 +129,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     return_temps.push(return_temp_index);
                 }
                 return_temps.reverse();
-                self.insert_stackless_bytecode(StacklessBytecode::Ret(return_temps), offset);
+                self.code.push(StacklessBytecode::Ret(return_temps));
             }
 
             Bytecode::Branch(code_offset) => {
-                self.insert_stackless_bytecode(StacklessBytecode::Branch(*code_offset), offset);
+                self.code.push(StacklessBytecode::Branch(*code_offset));
             }
 
             Bytecode::FreezeRef => {
@@ -213,10 +143,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     let immutable_ref_index = self.temp_count;
                     self.temp_stack.push(immutable_ref_index);
                     self.local_types.push(SignatureToken::Reference(signature));
-                    self.insert_stackless_bytecode(
-                        StacklessBytecode::FreezeRef(immutable_ref_index, mutable_ref_index),
-                        offset,
-                    );
+                    self.code.push(StacklessBytecode::FreezeRef(
+                        immutable_ref_index,
+                        mutable_ref_index,
+                    ));
                     self.temp_count += 1;
                 }
             }
@@ -229,14 +159,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let field_ref_index = self.temp_count;
                 self.temp_stack.push(field_ref_index);
 
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::BorrowField(
-                        field_ref_index,
-                        struct_ref_index,
-                        *field_definition_index,
-                    ),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::BorrowField(
+                    field_ref_index,
+                    struct_ref_index,
+                    *field_definition_index,
+                ));
                 self.temp_count += 1;
                 if struct_ref_sig.is_mutable_reference() {
                     self.local_types
@@ -251,10 +178,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::LdConst(temp_index, *number),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::LdConst(temp_index, *number));
                 self.temp_count += 1;
             }
 
@@ -262,10 +187,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::Address);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::LdAddr(temp_index, *address_pool_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::LdAddr(temp_index, *address_pool_index));
                 self.temp_count += 1;
             }
 
@@ -273,10 +196,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::String);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::LdStr(temp_index, *string_pool_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::LdStr(temp_index, *string_pool_index));
                 self.temp_count += 1;
             }
 
@@ -284,10 +205,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::ByteArray);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::LdByteArray(temp_index, *byte_array_pool_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::LdByteArray(
+                    temp_index,
+                    *byte_array_pool_index,
+                ));
                 self.temp_count += 1;
             }
 
@@ -295,7 +216,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::Bool);
-                self.insert_stackless_bytecode(StacklessBytecode::LdTrue(temp_index), offset);
+                self.code.push(StacklessBytecode::LdTrue(temp_index));
                 self.temp_count += 1;
             }
 
@@ -303,7 +224,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::Bool);
-                self.insert_stackless_bytecode(StacklessBytecode::LdFalse(temp_index), offset);
+                self.code.push(StacklessBytecode::LdFalse(temp_index));
                 self.temp_count += 1;
             }
 
@@ -312,10 +233,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::CopyLoc(temp_index, *idx),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::CopyLoc(temp_index, *idx));
                 self.temp_count += 1;
             }
 
@@ -324,10 +242,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::MoveLoc(temp_index, *idx),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::MoveLoc(temp_index, *idx));
                 self.temp_count += 1;
             }
 
@@ -337,10 +252,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_stack.push(temp_index);
                 self.local_types
                     .push(SignatureToken::MutableReference(Box::new(signature)));
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::BorrowLoc(temp_index, *idx),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx));
                 self.temp_count += 1;
             }
 
@@ -366,10 +279,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 }
                 arg_temp_indices.reverse();
                 return_temp_indices.reverse();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Call(return_temp_indices, *idx, arg_temp_indices),
-                    offset,
-                )
+                self.code.push(StacklessBytecode::Call(
+                    return_temp_indices,
+                    *idx,
+                    arg_temp_indices,
+                ))
             }
 
             Bytecode::Pack(idx, _) => {
@@ -389,10 +303,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 ));
                 self.temp_stack.push(struct_temp_index);
                 field_temp_indices.reverse();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Pack(struct_temp_index, *idx, field_temp_indices),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Pack(
+                    struct_temp_index,
+                    *idx,
+                    field_temp_indices,
+                ));
                 self.temp_count += 1;
             }
 
@@ -411,10 +326,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                         .push(field_signature_view.token().as_inner().clone());
                     self.temp_count += 1;
                 }
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Unpack(field_temp_indices, *idx, struct_temp_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Unpack(
+                    field_temp_indices,
+                    *idx,
+                    struct_temp_index,
+                ));
             }
             Bytecode::ReadRef => {
                 let operand_index = self.temp_stack.pop().unwrap();
@@ -429,19 +345,17 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 }
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::ReadRef(temp_index, operand_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::ReadRef(temp_index, operand_index));
             }
 
             Bytecode::WriteRef => {
                 let ref_operand_index = self.temp_stack.pop().unwrap();
                 let val_operand_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::WriteRef(ref_operand_index, val_operand_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::WriteRef(
+                    ref_operand_index,
+                    val_operand_index,
+                ));
             }
 
             Bytecode::Add
@@ -460,52 +374,60 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
                 match bytecode {
                     Bytecode::Add => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Add(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Add(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Sub => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Sub(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Sub(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Mul => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Mul(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Mul(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Mod => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Mod(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Mod(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Div => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Div(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Div(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::BitOr => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::BitOr(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::BitOr(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::BitAnd => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::BitAnd(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::BitAnd(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Xor => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Xor(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Xor(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     _ => {}
                 }
@@ -517,10 +439,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Or(temp_index, operand1_index, operand2_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Or(
+                    temp_index,
+                    operand1_index,
+                    operand2_index,
+                ));
             }
 
             Bytecode::And => {
@@ -530,10 +453,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::And(temp_index, operand1_index, operand2_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::And(
+                    temp_index,
+                    operand1_index,
+                    operand2_index,
+                ));
             }
 
             Bytecode::Not => {
@@ -542,10 +466,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Not(temp_index, operand_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::Not(temp_index, operand_index));
             }
             Bytecode::Eq => {
                 let operand2_index = self.temp_stack.pop().unwrap();
@@ -554,10 +476,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Eq(temp_index, operand1_index, operand2_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Eq(
+                    temp_index,
+                    operand1_index,
+                    operand2_index,
+                ));
             }
             Bytecode::Neq => {
                 let operand2_index = self.temp_stack.pop().unwrap();
@@ -566,10 +489,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Neq(temp_index, operand1_index, operand2_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Neq(
+                    temp_index,
+                    operand1_index,
+                    operand2_index,
+                ));
             }
             Bytecode::Lt | Bytecode::Gt | Bytecode::Le | Bytecode::Ge => {
                 let operand2_index = self.temp_stack.pop().unwrap();
@@ -580,28 +504,32 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_stack.push(temp_index);
                 match bytecode {
                     Bytecode::Lt => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Lt(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Lt(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Gt => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Gt(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Gt(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Le => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Le(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Le(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     Bytecode::Ge => {
-                        self.insert_stackless_bytecode(
-                            StacklessBytecode::Ge(temp_index, operand1_index, operand2_index),
-                            offset,
-                        );
+                        self.code.push(StacklessBytecode::Ge(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
                     }
                     _ => {}
                 }
@@ -612,10 +540,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(SignatureToken::Bool);
                 self.temp_count += 1;
                 self.temp_stack.push(temp_index);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::Exists(temp_index, operand_index, *struct_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::Exists(
+                    temp_index,
+                    operand_index,
+                    *struct_index,
+                ));
             }
             Bytecode::BorrowGlobal(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
@@ -628,10 +557,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     )));
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::BorrowGlobal(temp_index, operand_index, *idx),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::BorrowGlobal(
+                    temp_index,
+                    operand_index,
+                    *idx,
+                ));
             }
             Bytecode::MoveFrom(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
@@ -643,56 +573,44 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     vec![],
                 ));
                 self.temp_count += 1;
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::MoveFrom(temp_index, operand_index, *idx),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::MoveFrom(temp_index, operand_index, *idx));
             }
             Bytecode::MoveToSender(idx, _) => {
                 let value_operand_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::MoveToSender(value_operand_index, *idx),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::MoveToSender(value_operand_index, *idx));
             }
             Bytecode::GetTxnGasUnitPrice => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetTxnGasUnitPrice(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetTxnGasUnitPrice(temp_index));
                 self.temp_count += 1;
             }
             Bytecode::GetTxnMaxGasUnits => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetTxnMaxGasUnits(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetTxnMaxGasUnits(temp_index));
                 self.temp_count += 1;
             }
             Bytecode::GetGasRemaining => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetGasRemaining(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetGasRemaining(temp_index));
                 self.temp_count += 1;
             }
             Bytecode::GetTxnSequenceNumber => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetTxnSequenceNumber(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetTxnSequenceNumber(temp_index));
                 self.temp_count += 1;
             }
 
@@ -700,10 +618,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::Address);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetTxnSenderAddress(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetTxnSenderAddress(temp_index));
                 self.temp_count += 1;
             }
 
@@ -711,18 +627,13 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::ByteArray);
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::GetTxnPublicKey(temp_index),
-                    offset,
-                );
+                self.code
+                    .push(StacklessBytecode::GetTxnPublicKey(temp_index));
                 self.temp_count += 1;
             }
             Bytecode::CreateAccount => {
                 let temp_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::CreateAccount(temp_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::CreateAccount(temp_index));
             }
 
             Bytecode::EmitEvent => {
@@ -730,10 +641,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let operand3_index = self.temp_stack.pop().unwrap();
                 let operand2_index = self.temp_stack.pop().unwrap();
                 let operand1_index = self.temp_stack.pop().unwrap();
-                self.insert_stackless_bytecode(
-                    StacklessBytecode::EmitEvent(operand1_index, operand2_index, operand3_index),
-                    offset,
-                );
+                self.code.push(StacklessBytecode::EmitEvent(
+                    operand1_index,
+                    operand2_index,
+                    operand3_index,
+                ));
             }
         }
     }
