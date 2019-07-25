@@ -65,3 +65,46 @@ fn test_send_backpressure_multi_senders() {
     assert_eq!(task.poll_unpin(&mut cx), Poll::Ready(Ok(())));
 }
 }
+
+// Fork the unit tests into separate processes to avoid the conflict that these tests executed in
+// multiple threads may manipulate TEST_COUNTER at the same time.
+rusty_fork_test! {
+#[test]
+fn test_try_send() {
+    let (mut tx, mut rx) = new_test(1);
+    assert_eq!(TEST_COUNTER.get(), 0);
+    let item = 42;
+    tx.try_send(item).unwrap();
+    assert_eq!(TEST_COUNTER.get(), 1);
+    let received_item = block_on(rx.next()).unwrap();
+    assert_eq!(received_item, item);
+    assert_eq!(TEST_COUNTER.get(), 0);
+}
+}
+
+// Fork the unit tests into separate processes to avoid the conflict that these tests executed in
+// multiple threads may manipulate TEST_COUNTER at the same time.
+rusty_fork_test! {
+#[test]
+fn test_try_send_full() {
+    let (mut tx, mut rx) = new_test(1);
+    assert_eq!(TEST_COUNTER.get(), 0);
+    let item = 42;
+    tx.try_send(item).unwrap();
+    assert_eq!(TEST_COUNTER.get(), 1);
+    tx.try_send(item).unwrap();
+    assert_eq!(TEST_COUNTER.get(), 2);
+    if let Err(e) = tx.try_send(item) {
+        assert!(e.is_full());
+    } else {
+        panic!("Expect try_send return channel being full error");
+    }
+
+    let received_item = block_on(rx.next()).unwrap();
+    assert_eq!(received_item, item);
+    assert_eq!(TEST_COUNTER.get(), 1);
+    let received_item = block_on(rx.next()).unwrap();
+    assert_eq!(received_item, item);
+    assert_eq!(TEST_COUNTER.get(), 0);
+}
+}

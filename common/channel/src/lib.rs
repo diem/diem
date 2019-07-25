@@ -56,6 +56,16 @@ impl<T> Sink<T> for Sender<T> {
     }
 }
 
+impl<T> Sender<T> {
+    pub fn try_send(&mut self, msg: T) -> Result<(), mpsc::SendError> {
+        self.gauge.inc();
+        (*self).value.try_send(msg).map_err(|e| {
+            self.gauge.dec();
+            e.into_send_error()
+        })
+    }
+}
+
 impl<T> FusedStream for Receiver<T> {
     fn is_terminated(&self) -> bool {
         self.value.is_terminated()
