@@ -151,6 +151,7 @@ impl FakeExecutor {
         StructDef::new(vec![
             byte_array_type,
             coin,
+            Type::Bool,
             int_type.clone(),
             int_type.clone(),
             int_type.clone(),
