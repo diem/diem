@@ -717,7 +717,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_network_requests\"}",
+          "expr": "network_gauge{op=\"pending_network_requests\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -803,7 +803,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_direct_send_requests\"}",
+          "expr": "network_gauge{op=\"pending_direct_send_requests\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -889,10 +889,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_direct_send_outbound_messages\"}",
+          "expr": "network_peer_gauge{op=\"pending_direct_send_outbound_messages\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} -> {{remote_peer_id}}",
           "refId": "A"
         }
       ],
@@ -988,7 +988,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_peer_manager_direct_send_notifications\"}",
+          "expr": "network_gauge{op=\"pending_peer_manager_direct_send_notifications\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1074,7 +1074,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_direct_send_notifications\"}",
+          "expr": "network_gauge{op=\"pending_direct_send_notifications\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1160,7 +1160,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_consensus_network_events\"}",
+          "expr": "network_gauge{op=\"pending_consensus_network_events\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1246,7 +1246,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_mempool_network_events\"}",
+          "expr": "network_gauge{op=\"pending_mempool_network_events\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1345,7 +1345,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_network_requests\"}",
+          "expr": "network_gauge{op=\"pending_network_requests\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1431,7 +1431,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_rpc_requests\"}",
+          "expr": "network_gauge{op=\"pending_rpc_requests\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1530,7 +1530,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_peer_manager_rpc_notifications\"}",
+          "expr": "network_gauge{op=\"pending_peer_manager_rpc_notifications\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1616,7 +1616,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_rpc_notifications\"}",
+          "expr": "network_gauge{op=\"pending_rpc_notifications\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1702,7 +1702,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "network_gauge{op=\"pending_consensus_network_events\"}",
+          "expr": "network_gauge{op=\"pending_consensus_network_events\"} > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1790,5 +1790,5 @@
   "timezone": "",
   "title": "Network",
   "uid": "5uI7S17Wk",
-  "version": 1
+  "version": 2
 }
