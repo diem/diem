@@ -10,7 +10,7 @@ edition = "2018"
 bytecode_verifier = { path = "../bytecode_verifier" }
 vm = { path = "../vm" }
 types = { path = "../../types" }
-ir_to_bytecode = { path = "../compiler/ir_to_bytecode"}
+ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 #
 [dev-dependencies]
 # invalid_mutations = { path = "invalid_mutations" }
