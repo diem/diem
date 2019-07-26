@@ -75,8 +75,7 @@ pub fn get_commands() -> (
 
 /// Parse a cmd string, the first element in the returned vector is the command to run
 pub fn parse_cmd(cmd_str: &str) -> Vec<&str> {
-    let input = &cmd_str[..];
-    input.trim().split(' ').map(str::trim).collect()
+    cmd_str.split_ascii_whitespace().collect()
 }
 
 /// Print the help message for all sub commands.
