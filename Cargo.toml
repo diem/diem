@@ -6,6 +6,7 @@ members = [
     "benchmark",
     "client",
     "client/libra_wallet",
+    "common/bounded-executor",
     "common/canonical_serialization",
     "common/crash_handler",
     "common/debug_interface",
