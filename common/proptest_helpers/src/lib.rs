@@ -9,8 +9,11 @@ mod unit_tests;
 
 mod growing_subset;
 mod repeat_vec;
+mod value_generator;
 
-pub use crate::{growing_subset::GrowingSubset, repeat_vec::RepeatVec};
+pub use crate::{
+    growing_subset::GrowingSubset, repeat_vec::RepeatVec, value_generator::ValueGenerator,
+};
 
 use crossbeam::thread;
 use proptest::sample::Index as PropIndex;

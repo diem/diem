@@ -1,0 +1,19 @@
+[package]
+name = "language_benchmarks"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+criterion = "0.2.11"
+proptest = "0.9.4"
+
+language_e2e_tests = { path = "../e2e_tests" }
+proptest_helpers = { path = "../../common/proptest_helpers" }
+types = { path = "../../types" }
+
+[[bench]]
+name = "transactions"
+harness = false

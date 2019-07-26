@@ -28,6 +28,7 @@ members = [
     "execution/execution_proto",
     "execution/execution_service",
     "execution/executor",
+    "language/benchmarks",
     "language/bytecode_verifier",
     "language/bytecode_verifier/invalid_mutations",
     "language/functional_tests",
