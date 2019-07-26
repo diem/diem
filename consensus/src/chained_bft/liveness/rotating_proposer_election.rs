@@ -3,7 +3,8 @@
 
 use crate::chained_bft::{
     common::{Payload, Round},
-    liveness::proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
+    consensus_types::proposal_info::{ProposalInfo, ProposerInfo},
+    liveness::proposer_election::ProposerElection,
 };
 use channel;
 use futures::{Future, FutureExt, SinkExt};

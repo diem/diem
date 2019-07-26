@@ -5,14 +5,17 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
         common::{Payload, Round},
-        consensus_types::timeout_msg::TimeoutMsg,
+        consensus_types::{
+            proposal_info::{ProposalInfo, ProposerInfo},
+            timeout_msg::TimeoutMsg,
+        },
         event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
             pacemaker::{NewRoundEvent, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
-            proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
+            proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
         network::{

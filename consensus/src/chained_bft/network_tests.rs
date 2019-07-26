@@ -4,8 +4,9 @@
 use crate::{
     chained_bft::{
         common::Author,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::proposer_election::ProposalInfo,
+        consensus_types::{
+            block::Block, proposal_info::ProposalInfo, quorum_cert::QuorumCert, sync_info::SyncInfo,
+        },
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
         safety::vote_msg::VoteMsg,
         test_utils::{consensus_runtime, placeholder_ledger_info},
@@ -367,8 +368,7 @@ fn test_network_api() {
     let proposal = ProposalInfo {
         proposal: Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
         proposer_info: signers[0].author(),
-        timeout_certificate: None,
-        highest_ledger_info: previous_qc,
+        sync_info: SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
     };
     block_on(async move {
         nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;

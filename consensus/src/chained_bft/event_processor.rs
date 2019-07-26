@@ -9,13 +9,14 @@ use crate::{
         common::{Author, Payload, Round},
         consensus_types::{
             block::Block,
+            proposal_info::{ProposalInfo, ProposerInfo},
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, TimeoutMsg},
         },
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
-            proposer_election::{ProposalInfo, ProposerElection, ProposerInfo},
+            proposer_election::ProposerElection,
         },
         network::{
             BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
@@ -164,13 +165,16 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             NewRoundReason::Timeout { cert } => Some(cert),
             _ => None,
         };
-        let highest_ledger_info = (*self.block_store.highest_ledger_info()).clone();
+        let sync_info = SyncInfo::new(
+            (*proposal.quorum_cert()).clone(),
+            (*self.block_store.highest_ledger_info()).clone(),
+            timeout_certificate,
+        );
         network
             .broadcast_proposal(ProposalInfo {
                 proposal,
                 proposer_info,
-                timeout_certificate,
-                highest_ledger_info,
+                sync_info,
             })
             .await;
         counters::PROPOSALS_COUNT.inc();
@@ -217,11 +221,15 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         }
 
         let deadline = self.pacemaker.current_round_deadline();
-        if let Some(committed_block_id) = proposal.highest_ledger_info.committed_block_id() {
-            if self
-                .block_store
-                .need_sync_for_quorum_cert(committed_block_id, &proposal.highest_ledger_info)
-            {
+        if let Some(committed_block_id) = proposal
+            .sync_info
+            .highest_ledger_info()
+            .committed_block_id()
+        {
+            if self.block_store.need_sync_for_quorum_cert(
+                committed_block_id,
+                proposal.sync_info.highest_ledger_info(),
+            ) {
                 return ProcessProposalResult::NeedSync(deadline, proposal);
             }
         } else {
@@ -269,7 +277,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         self.pacemaker
             .process_certificates(
                 qc.certified_block_round(),
-                proposal.timeout_certificate.as_ref(),
+                proposal.sync_info.highest_timeout_certificate(),
             )
             .await;
 
@@ -323,11 +331,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             .sync_manager
             .sync_to(
                 deadline,
-                SyncMgrContext {
-                    highest_quorum_cert: proposal.proposal.quorum_cert().clone(),
-                    highest_ledger_info: proposal.highest_ledger_info.clone(),
-                    preferred_peer: proposal.proposer_info.get_author(),
-                },
+                SyncMgrContext::new(&proposal.sync_info, proposal.proposer_info.get_author()),
             )
             .await
         {
@@ -368,11 +372,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 .sync_manager
                 .sync_to(
                     deadline,
-                    SyncMgrContext {
-                        highest_quorum_cert: timeout_msg.sync_info().highest_quorum_cert().clone(),
-                        highest_ledger_info: timeout_msg.sync_info().highest_ledger_info().clone(),
-                        preferred_peer: timeout_msg.author(),
-                    },
+                    SyncMgrContext::new(
+                        timeout_msg.sync_info(),
+                        timeout_msg.author(),
+                    ),
                 )
                 .await
                 {
