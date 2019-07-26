@@ -71,7 +71,7 @@ module LibraAccount {
         sent_event = SentPaymentEvent { payee: copy(payee), amount: copy(deposit_value) };
         // TEMPORARY The events system is being overhauled and this will be replaced by something
         // more principled in the future
-        emit_event(&mut move(sender_account_ref).sent_events_count, b"73656E745F6576656E74735F636F756E74", move(sent_event));
+        emit_event(&mut move(sender_account_ref).sent_events_count, h"73656E745F6576656E74735F636F756E74", move(sent_event));
 
         // Load the payee's account
         payee_account_ref = borrow_global<T>(move(payee));
@@ -81,7 +81,7 @@ module LibraAccount {
         received_event = ReceivedPaymentEvent { payer: move(sender), amount: move(deposit_value) };
         // TEMPORARY The events system is being overhauled and this will be replaced by something
         // more principled in the future
-        emit_event(&mut move(payee_account_ref).received_events_count, b"72656365697665645F6576656E74735F636F756E74", move(received_event));
+        emit_event(&mut move(payee_account_ref).received_events_count, h"72656365697665645F6576656E74735F636F756E74", move(received_event));
         return;
     }
 

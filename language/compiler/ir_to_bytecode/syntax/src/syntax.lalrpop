@@ -21,7 +21,7 @@ Name: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*"> => s.to_string();
 DotName: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*\.[a-zA-Z$_][a-zA-Z0-9$_]*"> => s.to_string();
 
 ByteArray: ByteArray = {
-    <s:r#"b"[0-9a-fA-F]*""#> => {
+    <s:r#"h"[0-9a-fA-F]*""#> => {
         ByteArray::new(hex::decode(&s[2..s.len()-1]).unwrap_or_else(|_| panic!("The string {:?} is not a valid hex-encoded byte array", s)))
     }
 };

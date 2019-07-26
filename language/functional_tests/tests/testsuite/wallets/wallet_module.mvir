@@ -185,7 +185,7 @@ module ColdWallet {
         // TODO: consider moving into resource
         // TODO: move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
-        constant = b"636F6C6477616C6C65742E7472616E73616374696F6E";
+        constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
         payer_bytes = AddressUtil.address_to_bytes(move(payer));
         prefix = BytearrayUtil.bytearray_concat(move(payer_bytes), move(constant));
         
@@ -214,9 +214,9 @@ main() {
     let pk3: bytearray;
     let wallet : R#ColdWallet.T;
 
-    pk1 = b"1234";
-    pk2 = b"5678";
-    pk3 = b"abc123";
+    pk1 = h"1234";
+    pk2 = h"5678";
+    pk3 = h"abc123";
 
     genesis_group = ApprovalGroup.create(move(pk1), move(pk2), move(pk3));
     ColdWallet.create(move(genesis_group));
