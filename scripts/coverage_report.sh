@@ -4,8 +4,8 @@
 if [ $# -ne 2 ]
 then
 	echo "Usage: $0 <testdir> <outdir>"
-	echo "/path/to/tests should be '.' for coverage to be computed for all modules"
-	echo "To get coverage for a subset of modules set /path/to/tests to the appropriate subdirectory"
+	echo "All tests in <testdir> and its subdirectories will be run to measure coverage."
+	echo "The resulting coverage report will be stored in <outdir>."
 	exit 1
 fi
 
@@ -16,9 +16,10 @@ TEST_DIR=$1
 COVERAGE_DIR=$2
 
 # This needs to run in libra
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-if [ ! $(echo $DIR | grep -Ee ".*/scripts") ]; then
-	echo "This needs to run in libra, not in $(pwd)"
+SCRIPT_DIR="$( dirname "${BASH_SOURCE[0]}" )"
+if [ ! $SCRIPT_DIR == "./scripts" ]
+then
+	echo "This needs to run from libra/, not in $(pwd)"
 	exit 1
 fi
 
@@ -39,14 +40,8 @@ fi
 # Check that lcov is installed
 if ! [ -x "$(command -v lcov)" ]; then
 	echo "Error: lcov is not installed." >&2
-	echo "Assuming macOS and homebrew"
-	read -p "Install lcov? [yY/*] " -n 1 -r
-	echo ""
-	if [[ ! $REPLY =~ ^[Yy]$ ]]
-	then
-		[[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
-	fi
-	brew install lcov
+	echo "Documentation for lcov can be found at http://ltp.sourceforge.net/coverage/lcov.php"
+	echo "If on macOS and using homebrew, run 'brew install lcov'"
 fi
 
 # Warn that cargo clean will happen
@@ -57,24 +52,32 @@ then
 	[[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
 fi
 
+export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads"
+export CARGO_INCREMENTAL=0
+
 # Clean the project
 echo "Cleaning project..."
 (cd $TEST_DIR; cargo clean)
 
 # Build with flags necessary for coverage output
 echo "Building with coverage instrumentation..."
-(cd $TEST_DIR; CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads" cargo build)
+(cd $TEST_DIR; cargo build)
 
 # Remove existing coverage output
 echo "Cleaning existing coverage info..."
-find target -type f -name "*.gcda" -delete
-find target -type f -name "*.gcno" -delete
+if [ -d "./target" ]
+then
+	find target -type f -name "*.gcda" -delete
+	find target -type f -name "*.gcno" -delete
+else
+	echo "Error: target directory does not exist. Did cargo build fail?"
+fi
 
 # Run tests
 echo "Running tests..."
 while read line; do
 	dirline=$(realpath $(dirname $line));
-	(cd $dirline; CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads" cargo test)
+	(cd $dirline; cargo test)
 done < <(find $TEST_DIR -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
