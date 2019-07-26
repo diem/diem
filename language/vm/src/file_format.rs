@@ -984,6 +984,11 @@ pub enum Bytecode {
     GetTxnPublicKey,
 }
 
+/// The number of bytecode instructions.
+/// This is necessary for checking that all instructions are covered since Rust
+/// does not provide a way of determining the number of variants of an enum.
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
+
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match self {
