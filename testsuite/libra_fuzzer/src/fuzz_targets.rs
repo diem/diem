@@ -4,11 +4,7 @@
 use crate::{FuzzTarget, FuzzTargetImpl};
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use proptest::{
-    strategy::{Strategy, ValueTree},
-    test_runner::TestRunner,
-};
-use std::{collections::BTreeMap, env, fmt};
+use std::{collections::BTreeMap, env};
 
 /// Convenience macro to return the module name.
 macro_rules! module_name {
@@ -35,11 +31,10 @@ macro_rules! proto_fuzz_target {
                 concat!(stringify!($ty), " (protobuf)")
             }
 
-            fn generate(&self, runner: &mut ::proptest::test_runner::TestRunner) -> Vec<u8> {
+            fn generate(&self, gen: &mut ::proptest_helpers::ValueGenerator) -> Vec<u8> {
                 use proto_conv::IntoProtoBytes;
 
-                let value =
-                    $crate::fuzz_targets::new_value(runner, ::proptest::arbitrary::any::<$ty>());
+                let value = gen.generate(::proptest::arbitrary::any::<$ty>());
                 value
                     .into_proto_bytes()
                     .expect("failed to convert to bytes")
@@ -96,12 +91,4 @@ impl FuzzTarget {
     pub fn all_targets() -> impl Iterator<Item = Self> {
         ALL_TARGETS.values().map(|target| FuzzTarget(&**target))
     }
-}
-
-/// Produce a value from this strategy.
-fn new_value<T: fmt::Debug>(runner: &mut TestRunner, strategy: impl Strategy<Value = T>) -> T {
-    let value_tree = strategy
-        .new_tree(runner)
-        .expect("failed to create value tree");
-    value_tree.current()
 }

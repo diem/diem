@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{fuzz_targets::new_value, FuzzTargetImpl};
+use crate::FuzzTargetImpl;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use canonical_serialization::*;
 use failure::prelude::*;
-use proptest::test_runner::TestRunner;
+use proptest_helpers::ValueGenerator;
 use std::io::Cursor;
 use vm_runtime::{loaded_data::struct_def::StructDef, value::Value};
 
@@ -21,8 +21,8 @@ impl FuzzTargetImpl for ValueTarget {
         "VM values + types (custom deserializer)"
     }
 
-    fn generate(&self, runner: &mut TestRunner) -> Vec<u8> {
-        let value = new_value(runner, Value::struct_strategy());
+    fn generate(&self, gen: &mut ValueGenerator) -> Vec<u8> {
+        let value = gen.generate(Value::struct_strategy());
         let struct_def = value.to_struct_def_FOR_TESTING();
 
         // Values as currently serialized are not self-describing, so store a serialized form of the

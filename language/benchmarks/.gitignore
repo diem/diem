@@ -1,0 +1,2 @@
+# Criterion puts its benchmark results under the target directory in here, not at the top (workspace) level.
+/target/
