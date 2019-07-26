@@ -5,7 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, InsertError},
         common::{Author, Payload},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
+        consensus_types::{block::Block, quorum_cert::QuorumCert, sync_info::SyncInfo},
         network::ConsensusNetworkImpl,
         persistent_storage::PersistentStorage,
     },
@@ -45,6 +45,16 @@ pub struct SyncMgrContext {
     /// thus has higher chances to be able to return the information than the other
     /// peers that signed the QC.
     pub preferred_peer: Author,
+}
+
+impl SyncMgrContext {
+    pub fn new(sync_info: &SyncInfo, preferred_peer: Author) -> Self {
+        Self {
+            highest_ledger_info: sync_info.highest_ledger_info().clone(),
+            highest_quorum_cert: sync_info.highest_quorum_cert().clone(),
+            preferred_peer,
+        }
+    }
 }
 
 impl<T> SyncManager<T>

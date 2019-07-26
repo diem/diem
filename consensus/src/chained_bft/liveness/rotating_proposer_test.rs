@@ -3,11 +3,10 @@
 
 use crate::chained_bft::{
     common::Author,
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
-    liveness::{
-        proposer_election::{ProposalInfo, ProposerElection},
-        rotating_proposer_election::RotatingProposer,
+    consensus_types::{
+        block::Block, proposal_info::ProposalInfo, quorum_cert::QuorumCert, sync_info::SyncInfo,
     },
+    liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
 };
 use channel;
 use futures::{executor::block_on, StreamExt};
@@ -46,8 +45,7 @@ fn test_rotating_proposer() {
             &another_validator_signer,
         ),
         proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let bad_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -59,8 +57,7 @@ fn test_rotating_proposer() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let next_good_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -72,8 +69,7 @@ fn test_rotating_proposer() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     block_on(async move {
         pe.process_proposal(good_proposal.clone()).await;
@@ -127,8 +123,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let bad_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -140,8 +135,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             &another_validator_signer,
         ),
         proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let next_good_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -153,8 +147,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     block_on(async move {
         pe.process_proposal(good_proposal.clone()).await;
@@ -204,8 +197,7 @@ fn test_fixed_proposer() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let bad_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -217,8 +209,7 @@ fn test_fixed_proposer() {
             &another_validator_signer,
         ),
         proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     let next_good_proposal = ProposalInfo {
         proposal: Block::make_block(
@@ -230,8 +221,7 @@ fn test_fixed_proposer() {
             &chosen_validator_signer,
         ),
         proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     block_on(async move {
         pe.process_proposal(good_proposal.clone()).await;

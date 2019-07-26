@@ -6,7 +6,7 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
         common::Author,
-        liveness::proposer_election::ProposalInfo,
+        consensus_types::proposal_info::ProposalInfo,
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         safety::vote_msg::VoteMsg,

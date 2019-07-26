@@ -3,8 +3,9 @@
 
 use crate::{
     chained_bft::{
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::proposer_election::ProposalInfo,
+        consensus_types::{
+            block::Block, proposal_info::ProposalInfo, quorum_cert::QuorumCert, sync_info::SyncInfo,
+        },
         safety::vote_msg::VoteMsg,
         test_utils::placeholder_ledger_info,
     },
@@ -24,11 +25,11 @@ fn test_proto_convert_block() {
 #[test]
 fn test_proto_convert_proposal() {
     let author = ValidatorSigner::<Ed25519PrivateKey>::random(None).author();
+    let genesis_qc = QuorumCert::certificate_for_genesis();
     let proposal = ProposalInfo {
         proposal: Block::<u64>::make_genesis_block(),
         proposer_info: author,
-        timeout_certificate: None,
-        highest_ledger_info: QuorumCert::certificate_for_genesis(),
+        sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
     };
     assert_protobuf_encode_decode(&proposal);
 }
