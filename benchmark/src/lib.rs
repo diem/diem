@@ -359,12 +359,15 @@ impl Benchmarker {
         if delay_duration_ms < self.stagger_range_ms {
             request_duration_ms -= u128::from(delay_duration_ms);
         }
-        let comitted_during_submit = self.get_committed_txns_counter() - init_storage_cntr;
+        if let Some(init) = init_storage_cntr {
+            if let Some(curr) = self.get_committed_txns_counter() {
+                info!("During submission, {} TXNs already committed.", curr - init);
+            }
+        }
         info!(
-            "Submitted and accepted {} TXNs within {} ms, during which {} already committed",
+            "Submitted and accepted {} TXNs within {} ms.",
             txn_resps.len(),
             request_duration_ms,
-            comitted_during_submit
         );
         (txn_resps.len(), request_duration_ms)
     }
@@ -373,12 +376,13 @@ impl Benchmarker {
     /// If it is not available, though we cannot know the status of any submitted TXNs,
     /// waiting can still timeout, and we continue in the hope that debug interface will be
     /// available later.
-    fn get_committed_txns_counter(&self) -> i64 {
+    fn get_committed_txns_counter(&self) -> Option<i64> {
         let name = String::from("storage{op=committed_txns}");
-        self.debug_client
-            .get_node_metric(name)
-            .expect("Failed to query TXN status from debug interface")
-            .expect("Failed to query TXN status from debug interface")
+        self.debug_client.get_node_metric(name).unwrap_or_else(|e| {
+            // Failing to query is an OK-to-ignore error.
+            error!("Failed to query TXN status from debug interface: {:?}", e);
+            None
+        })
     }
 
     /// Wait for accepted TXNs to commit or time out: for any account, if its sequence number
