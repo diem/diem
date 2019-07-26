@@ -1,17 +1,40 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
+use admission_control_proto::proto::{
+    admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
+};
 use benchmark::{
     ruben_opt::{Executable, Opt},
+    txn_generator::{
+        gen_accounts, gen_pairwise_transfer_txn_requests, gen_ring_transfer_txn_requests,
+    },
     Benchmarker,
 };
 use client::AccountData;
 use debug_interface::NodeDebugClient;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use libra_wallet::wallet_library::WalletLibrary;
 use logger::{self, prelude::*};
 use metrics::metric_server::start_server;
 use std::sync::Arc;
+
+/// Helper method to generate repeated TXNs from a function object, which is soon to be
+/// replaced by generic struct that implements TxnGenerator trait.
+#[allow(bare_trait_objects)]
+fn gen_txn_load(
+    txn_generator: &Fn(&WalletLibrary, &mut [AccountData]) -> Vec<SubmitTransactionRequest>,
+    wallet: &WalletLibrary,
+    accounts: &mut [AccountData],
+    num_rounds: u64,
+) -> Vec<SubmitTransactionRequest> {
+    let mut repeated_tx_reqs = vec![];
+    for _ in 0..num_rounds {
+        let tx_reqs = txn_generator(wallet, accounts);
+        repeated_tx_reqs.extend(tx_reqs.into_iter());
+    }
+    repeated_tx_reqs
+}
 
 /// Simply submit some TXNs to test the liveness of the network. Here we use ring TXN pattern
 /// to generate request, which scales linear with the number of accounts.
@@ -19,15 +42,17 @@ use std::sync::Arc;
 fn test_liveness(
     bm: &mut Benchmarker,
     accounts: &mut [AccountData],
+    wallet: WalletLibrary,
     num_rounds: u64,
     num_epochs: u64,
 ) {
     for _ in 0..num_epochs {
-        let mut repeated_tx_reqs = vec![];
-        for _ in 0..num_rounds {
-            let tx_reqs = bm.gen_ring_txn_requests(accounts);
-            repeated_tx_reqs.extend(tx_reqs.into_iter());
-        }
+        let repeated_tx_reqs = gen_txn_load(
+            &gen_ring_transfer_txn_requests,
+            &wallet,
+            accounts,
+            num_rounds,
+        );
         bm.submit_and_wait_txn_committed(&repeated_tx_reqs, accounts);
     }
 }
@@ -43,16 +68,18 @@ fn test_liveness(
 pub(crate) fn measure_throughput(
     bm: &mut Benchmarker,
     accounts: &mut [AccountData],
+    wallet: WalletLibrary,
     num_rounds: u64,
     num_epochs: u64,
 ) {
     let mut txn_throughput_seq = vec![];
     for _ in 0..num_epochs {
-        let mut repeated_tx_reqs = vec![];
-        for _ in 0..num_rounds {
-            let tx_reqs = bm.gen_pairwise_txn_requests(accounts);
-            repeated_tx_reqs.extend(tx_reqs.into_iter());
-        }
+        let repeated_tx_reqs = gen_txn_load(
+            &gen_pairwise_transfer_txn_requests,
+            &wallet,
+            accounts,
+            num_rounds,
+        );
         let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs, accounts);
         txn_throughput_seq.push(txn_throughput);
     }
@@ -115,15 +142,27 @@ fn main() {
 
     try_start_metrics_server(&args);
     let mut bm = create_benchmarker_from_opt(&args);
-    let mut accounts = bm
-        .gen_and_mint_accounts(&args.faucet_key_file_path, args.num_accounts)
-        .expect("failed to generate and mint all accounts");
+    let mut wallet = WalletLibrary::new();
+    let mut accounts = gen_accounts(&mut wallet, args.num_accounts);
+    bm.mint_accounts(&args.faucet_key_file_path, &accounts);
     match args.executable {
         Executable::TestLiveness => {
-            test_liveness(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            test_liveness(
+                &mut bm,
+                &mut accounts,
+                wallet,
+                args.num_rounds,
+                args.num_epochs,
+            );
         }
         Executable::MeasureThroughput => {
-            measure_throughput(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            measure_throughput(
+                &mut bm,
+                &mut accounts,
+                wallet,
+                args.num_rounds,
+                args.num_epochs,
+            );
         }
     };
 }
@@ -133,9 +172,11 @@ mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
         ruben_opt::{Executable, Opt},
+        txn_generator::gen_accounts,
         OP_COUNTER,
     };
     use libra_swarm::swarm::LibraSwarm;
+    use libra_wallet::wallet_library::WalletLibrary;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 
     rusty_fork_test! {
@@ -169,10 +210,10 @@ mod tests {
             };
             args.try_parse_validator_addresses();
             let mut bm = create_benchmarker_from_opt(&args);
-            let mut accounts = bm
-                .gen_and_mint_accounts(&args.faucet_key_file_path, args.num_accounts)
-                .expect("failed to generate and mint all accounts");
-            measure_throughput(&mut bm, &mut accounts, args.num_rounds, args.num_epochs);
+            let mut wallet = WalletLibrary::new();
+            let mut accounts = gen_accounts(&mut wallet, args.num_accounts);
+            bm.mint_accounts(&args.faucet_key_file_path, &accounts);
+            measure_throughput(&mut bm, &mut accounts, wallet, args.num_rounds, args.num_epochs);
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
             let created_txns = OP_COUNTER.counter("created_txns").get();
             let sign_failed_txns = OP_COUNTER.counter("sign_failed_txns").get();
