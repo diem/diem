@@ -16,7 +16,7 @@ use crate::{
 };
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use schemadb::{ReadOptions, DB};
+use schemadb::DB;
 use sparse_merkle::{node_type::Node, RetiredRecordType, SparseMerkleTree, TreeReader};
 use std::{collections::HashMap, sync::Arc};
 use types::{
@@ -100,46 +100,6 @@ impl StateStore {
             })
             .collect::<Result<Vec<()>>>()?;
         Ok(new_root_hash_vec)
-    }
-
-    /// Purges retired account state blobs and sparse Merkle tree nodes. Yields up to `limit`
-    /// deletions to `batch` while keeps account states readable at `least readable version` and
-    /// beyond.
-    #[allow(dead_code)] // TODO: remove
-    pub fn purge_retired_records(
-        &self,
-        least_readable_version: Version,
-        limit: usize,
-        cs: &mut ChangeSet,
-    ) -> Result<usize> {
-        let mut num_purged = 0;
-
-        let mut iter = self
-            .db
-            .iter::<RetiredStateRecordSchema>(ReadOptions::default())?;
-        iter.seek_to_first();
-        let mut iter = iter.take(limit);
-
-        while let Some((record, _)) = iter.next().transpose()? {
-            // Only records that have retired before or at version `least_readable_version` can be
-            // pruned in order to keep that version still readable after pruning.
-            if record.version_retired > least_readable_version {
-                break;
-            }
-            match record.record_type {
-                RetiredRecordType::Node => {
-                    cs.batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
-                }
-                RetiredRecordType::Blob => {
-                    // TODO: prune state blobs after its key is changed to
-                    // (version_created, address_hash)
-                }
-            }
-            cs.batch.delete::<RetiredStateRecordSchema>(&record)?;
-            num_purged += 1;
-        }
-
-        Ok(num_purged)
     }
 }
 

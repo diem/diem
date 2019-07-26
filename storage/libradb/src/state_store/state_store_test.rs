@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::LibraDB;
+use crate::{pruner, LibraDB};
 use crypto::hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use tempfile::tempdir;
 use types::{
@@ -51,18 +51,15 @@ fn put_account_state_set(
     root
 }
 
-fn purge_retired_records(
+fn prune_retired_records(
     store: &StateStore,
     least_readable_version: Version,
     limit: usize,
     expected_num_purged: usize,
 ) {
-    let mut cs = ChangeSet::new();
-    let num_purged = store
-        .purge_retired_records(least_readable_version, limit, &mut cs)
-        .unwrap();
+    let (num_purged, _last_seen_version) =
+        pruner::prune_state(Arc::clone(&store.db), least_readable_version, limit).unwrap();
     assert_eq!(num_purged, expected_num_purged);
-    store.db.write_schemas(cs.batch).unwrap();
 }
 
 fn verify_state_in_store(
@@ -146,7 +143,7 @@ fn test_state_store_reader_writer() {
 }
 
 #[test]
-fn test_purge_retired_records() {
+fn test_retired_records() {
     let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
     let address2 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
     let address3 = AccountAddress::new([3u8; ADDRESS_LENGTH]);
@@ -202,7 +199,7 @@ fn test_purge_retired_records() {
     // Verify.
     // Purge with limit=0, nothing is gone.
     {
-        purge_retired_records(
+        prune_retired_records(
             store, 1, /* least_readable_version */
             0, /* limit */
             0, /* expected_num_purged */
@@ -211,7 +208,7 @@ fn test_purge_retired_records() {
     }
     // Purge till version=1.
     {
-        purge_retired_records(
+        prune_retired_records(
             store, 1,   /* least_readable_version */
             100, /* limit */
             3,   /* expected_num_purged */
@@ -227,7 +224,7 @@ fn test_purge_retired_records() {
     }
     // Purge till version=2.
     {
-        purge_retired_records(
+        prune_retired_records(
             store, 2,   /* least_readable_version */
             100, /* limit */
             3,   /* expected_num_purged */
