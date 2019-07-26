@@ -17,6 +17,7 @@ message ConsensusMsg {
     TimeoutMsg timeout_msg = 5;
     RequestChunk request_chunk = 6;
     RespondChunk respond_chunk = 7;
+    SyncInfo sync_info = 8;
   }
 }
 
