@@ -18,6 +18,7 @@ protobuf = "~2.7"
 tokio = "0.1.22"
 ttl_cache = "0.4.2"
 
+bounded-executor = { path = "../common/bounded-executor" }
 config = { path = "../config" }
 crypto = { path = "../crypto/legacy_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }

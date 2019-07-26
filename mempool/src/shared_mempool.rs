@@ -5,14 +5,14 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState},
     OP_COUNTERS,
 };
+use bounded_executor::BoundedExecutor;
 use config::config::{MempoolConfig, NodeConfig};
 use failure::prelude::*;
 use futures::sync::mpsc::UnboundedSender;
 use futures_preview::{
-    channel::mpsc,
     compat::{Future01CompatExt, Stream01CompatExt},
     future::join_all,
-    FutureExt, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+    FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use logger::prelude::*;
 use network::{
@@ -205,7 +205,6 @@ async fn process_incoming_transactions<V>(
     smp: SharedMempool<V>,
     peer_id: PeerId,
     transactions: Vec<SignedTransaction>,
-    mut completion_channel: mpsc::Sender<()>,
 ) where
     V: TransactionValidation,
 {
@@ -266,9 +265,6 @@ async fn process_incoming_transactions<V>(
         }
     }
     notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
-    if let Err(e) = completion_channel.send(()).await {
-        error!("[smp] error in sync task completion {:?}", e);
-    }
 }
 
 /// This task handles [`SyncEvent`], which is periodically emitted for us to
@@ -310,8 +306,11 @@ async fn inbound_network_task<V>(
 {
     let peer_info = smp.peer_info.clone();
     let subscribers = smp.subscribers.clone();
-    let mut workers_available = smp.config.shared_mempool_max_concurrent_inbound_syncs;
-    let (sender, mut receiver) = mpsc::channel(workers_available);
+
+    // Use a BoundedExecutor to restrict only `workers_available` concurrent
+    // worker tasks that can process incoming transactions.
+    let workers_available = smp.config.shared_mempool_max_concurrent_inbound_syncs;
+    let bounded_executor = BoundedExecutor::new(workers_available, executor);
 
     while let Some(event) = network_events.next().await {
         trace!("SharedMempoolEvent::NetworkEvent::{:?}", event);
@@ -328,11 +327,6 @@ async fn inbound_network_task<V>(
                     notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
                 Event::Message((peer_id, mut msg)) => {
-                    if workers_available == 0 {
-                        receiver.next().await;
-                    } else {
-                        workers_available -= 1;
-                    }
                     OP_COUNTERS.inc("smp.event.message");
                     let transactions: Vec<_> = msg
                         .take_transactions()
@@ -352,13 +346,13 @@ async fn inbound_network_task<V>(
                         &format!("smp.transactions.received.{:?}", peer_id),
                         transactions.len(),
                     );
-                    let future = process_incoming_transactions(
-                        smp.clone(),
-                        peer_id,
-                        transactions,
-                        sender.clone(),
-                    );
-                    executor.spawn(future.boxed().unit_error().compat());
+                    bounded_executor
+                        .spawn(process_incoming_transactions(
+                            smp.clone(),
+                            peer_id,
+                            transactions,
+                        ))
+                        .await;
                 }
                 _ => {
                     security_log(SecurityEvent::InvalidNetworkEventMP)
