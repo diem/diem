@@ -74,7 +74,7 @@ fn ed25519_threshold_signature_verification(
 ) -> Result<u64> {
     let bitvec = BitVec::from_bytes(bitmap.as_bytes());
 
-    let num_of_sigs = sanity_check(&bitvec, &signatures, &public_keys).unwrap();
+    let num_of_sigs = sanity_check(&bitvec, &signatures, &public_keys)?;
 
     let sig_chunks: ::std::result::Result<Vec<_>, _> = signatures
         .as_bytes()
@@ -96,7 +96,7 @@ fn ed25519_threshold_signature_verification(
                         matching_keys_and_signatures(num_of_sigs, bitvec, signatures, keys);
 
                     match Ed25519Signature::batch_verify_signatures(
-                        &(HashValue::from_slice(message.as_bytes()).unwrap()),
+                        &(HashValue::from_slice(message.as_bytes())?),
                         keys_and_signatures,
                     ) {
                         Ok(()) => Ok(num_of_sigs),
