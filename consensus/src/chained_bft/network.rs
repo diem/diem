@@ -9,6 +9,7 @@ use crate::{
             block::Block,
             proposal_info::{ProposalInfo, ProposerInfo},
             quorum_cert::QuorumCert,
+            sync_info::SyncInfo,
             timeout_msg::TimeoutMsg,
         },
         safety::vote_msg::VoteMsg,
@@ -87,10 +88,6 @@ pub struct ChunkRetrievalRequest {
 }
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
-/// 1. proposals
-/// 2. votes
-/// 3. block retrieval requests (the request carries a oneshot sender for returning the Block)
-/// 4. pacemaker timeouts
 /// Will be returned by the networking trait upon startup.
 pub struct NetworkReceivers<T, P> {
     pub proposals: channel::Receiver<ProposalInfo<T, P>>,
@@ -98,6 +95,7 @@ pub struct NetworkReceivers<T, P> {
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
     pub timeout_msgs: channel::Receiver<TimeoutMsg>,
     pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
+    pub sync_info_msgs: channel::Receiver<SyncInfo>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -159,8 +157,9 @@ impl ConsensusNetworkImpl {
             channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
         let (chunk_request_tx, chunk_request_rx) =
             channel::new(1_024, &counters::PENDING_CHUNK_REQUESTS);
-        let (new_round_tx, new_round_rx) =
+        let (timeout_msg_tx, timeout_msg_rx) =
             channel::new(1_024, &counters::PENDING_NEW_ROUND_MESSAGES);
+        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
         let network_events = self
             .network_events
             .take()
@@ -178,7 +177,8 @@ impl ConsensusNetworkImpl {
                 vote_tx,
                 block_request_tx,
                 chunk_request_tx,
-                timeout_msg_tx: new_round_tx,
+                timeout_msg_tx,
+                sync_info_tx,
                 all_events,
                 validator,
             }
@@ -191,8 +191,9 @@ impl ConsensusNetworkImpl {
             proposals: proposal_rx,
             votes: vote_rx,
             block_retrieval: block_request_rx,
-            timeout_msgs: new_round_rx,
+            timeout_msgs: timeout_msg_rx,
             chunk_retrieval: chunk_request_rx,
+            sync_info_msgs: sync_info_rx,
         }
     }
 
@@ -318,6 +319,7 @@ struct NetworkTask<T, P, S> {
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
     timeout_msg_tx: channel::Sender<TimeoutMsg>,
+    sync_info_tx: channel::Sender<SyncInfo>,
     all_events: S,
     validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
@@ -338,6 +340,8 @@ where
                         self.process_vote(&mut msg).await
                     } else if msg.has_timeout_msg() {
                         self.process_timeout_msg(&mut msg).await
+                    } else if msg.has_sync_info() {
+                        self.process_sync_info(&mut msg).await
                     } else {
                         warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
@@ -410,6 +414,12 @@ where
             e
         })?;
         self.timeout_msg_tx.send(timeout_msg).await?;
+        Ok(())
+    }
+
+    async fn process_sync_info<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
+        let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
+        self.sync_info_tx.send(sync_info).await?;
         Ok(())
     }
 

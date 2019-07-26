@@ -396,6 +396,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             .await;
     }
 
+    pub async fn process_sync_info_msg(&mut self, sync_info: SyncInfo) {
+        debug!("Received a sync info msg: {}", sync_info);
+    }
+
     /// The replica stops voting for this round and saves its consensus state.  Voting is halted
     /// to ensure that the next proposer can make a proposal that can be voted on by all replicas.
     /// Saving the consensus state ensures that on restart, the replicas will not waste time

@@ -4,6 +4,7 @@ use crate::chained_bft::consensus_types::{
 use network;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 /// This struct describes basic synchronization metadata.
@@ -14,6 +15,20 @@ pub struct SyncInfo {
     highest_ledger_info: QuorumCert,
     /// Optional highest timeout certificate if available.
     highest_timeout_cert: Option<PacemakerTimeoutCertificate>,
+}
+
+impl Display for SyncInfo {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        let htc_repr = match self.highest_timeout_certificate() {
+            Some(tc) => format!("TC for round {}", tc.round()),
+            None => "None".to_string(),
+        };
+        write!(
+            f,
+            "HQC: {}, HLI: {}, HTC: {}",
+            self.highest_quorum_cert, self.highest_ledger_info, htc_repr,
+        )
+    }
 }
 
 impl SyncInfo {

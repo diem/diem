@@ -40,6 +40,7 @@ use futures::{
 use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
+use crate::chained_bft::consensus_types::sync_info::SyncInfo;
 use config::config::ConsensusConfig;
 use logger::prelude::*;
 use std::{
@@ -264,6 +265,16 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         }
     }
 
+    async fn process_sync_info_msgs(
+        mut receiver: channel::Receiver<SyncInfo>,
+        event_processor: ConcurrentEventProcessor<T, P>,
+    ) {
+        while let Some(sync_info) = receiver.next().await {
+            let mut guard = event_processor.write().compat().await.unwrap();
+            guard.process_sync_info_msg(sync_info).await;
+        }
+    }
+
     async fn process_outgoing_pacemaker_timeouts(
         mut receiver: channel::Receiver<Round>,
         event_processor: ConcurrentEventProcessor<T, P>,
@@ -385,6 +396,13 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
             .boxed()
             .unit_error()
             .compat(),
+        );
+
+        executor.spawn(
+            Self::process_sync_info_msgs(network_receivers.sync_info_msgs, event_processor.clone())
+                .boxed()
+                .unit_error()
+                .compat(),
         );
     }
 }
