@@ -12,7 +12,6 @@ use benchmark::{
     Benchmarker,
 };
 use client::AccountData;
-use debug_interface::NodeDebugClient;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::{self, prelude::*};
@@ -112,14 +111,8 @@ fn create_ac_clients(
 pub(crate) fn create_benchmarker_from_opt(args: &Opt) -> Benchmarker {
     // Create AdmissionControlClient instances.
     let clients = create_ac_clients(args.num_clients, &args.validator_addresses);
-    // Create NodeDebugClient instance.
-    let debug_client = NodeDebugClient::from_socket_addr_str(
-        args.debug_address
-            .as_ref()
-            .expect("failed to parse debug_address"),
-    );
     // Ready to instantiate Benchmarker.
-    Benchmarker::new(clients, debug_client, args.stagger_range_ms)
+    Benchmarker::new(clients, args.stagger_range_ms)
 }
 
 /// Benchmarker is not a long-lived job, so starting a server and expecting it to be polled

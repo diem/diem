@@ -9,7 +9,6 @@ use admission_control_proto::proto::{
 };
 use client::{AccountData, AccountStatus};
 use crypto::signing::KeyPair;
-use debug_interface::NodeDebugClient;
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
 use logger::prelude::*;
@@ -51,8 +50,6 @@ lazy_static! {
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,
-    /// Interface to metric counters in validator nodes, e.g., #commited_txns in storage.
-    debug_client: NodeDebugClient,
     /// Upper bound duration to stagger the clients before submitting TXNs.
     stagger_range_ms: u16,
     /// Persisted sequence numbers for generated accounts and faucet account
@@ -62,11 +59,7 @@ pub struct Benchmarker {
 
 impl Benchmarker {
     /// Construct Benchmarker with a vector of AC clients and a NodeDebugClient.
-    pub fn new(
-        clients: Vec<AdmissionControlClient>,
-        debug_client: NodeDebugClient,
-        stagger_range_ms: u16,
-    ) -> Self {
+    pub fn new(clients: Vec<AdmissionControlClient>, stagger_range_ms: u16) -> Self {
         if clients.is_empty() {
             panic!("failed to create benchmarker without any AdmissionControlClient");
         }
@@ -74,7 +67,6 @@ impl Benchmarker {
         let prev_sequence_numbers = HashMap::new();
         Benchmarker {
             clients: arc_clients,
-            debug_client,
             stagger_range_ms,
             prev_sequence_numbers,
         }
@@ -161,7 +153,6 @@ impl Benchmarker {
     /// Return #accepted TXNs and submission duration.
     pub fn submit_txns(&mut self, txn_reqs: &[SubmitTransactionRequest]) -> (usize, u128) {
         let txn_req_chunks = divide_items(txn_reqs, self.clients.len());
-        let init_storage_cntr = self.get_committed_txns_counter();
         let now = time::Instant::now();
         // Zip txn_req_chunks with clients: when first iter returns none,
         // zip will short-circuit and next will not be called on the second iter.
@@ -202,26 +193,12 @@ impl Benchmarker {
         if delay_duration_ms < self.stagger_range_ms {
             request_duration_ms -= u128::from(delay_duration_ms);
         }
-        let comitted_during_submit = self.get_committed_txns_counter() - init_storage_cntr;
         info!(
-            "Submitted and accepted {} TXNs within {} ms, during which {} already committed",
+            "Submitted and accepted {} TXNs within {} ms.",
             txn_resps.len(),
             request_duration_ms,
-            comitted_during_submit
         );
         (txn_resps.len(), request_duration_ms)
-    }
-
-    /// Use debug client interface to query #commited TXNs in validator's storage.
-    /// If it is not available, though we cannot know the status of any submitted TXNs,
-    /// waiting can still timeout, and we continue in the hope that debug interface will be
-    /// available later.
-    fn get_committed_txns_counter(&self) -> i64 {
-        let name = String::from("storage{op=committed_txns}");
-        self.debug_client
-            .get_node_metric(name)
-            .expect("Failed to query TXN status from debug interface")
-            .expect("Failed to query TXN status from debug interface")
     }
 
     /// Wait for accepted TXNs to commit or time out: for any account, if its sequence number
