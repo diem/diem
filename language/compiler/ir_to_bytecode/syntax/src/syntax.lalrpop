@@ -489,8 +489,10 @@ StructDecl: StructDefinition = {
         for (field, type_) in data.into_iter() {
             fields.insert(field, type_);
         }
-        StructDefinition::new(kind, n, fields)
-    }
+        StructDefinition::move_declared(kind, n, fields)
+    },
+    <native: NativeTag> <kind: StructKind> <n: Name> ";" =>
+        StructDefinition::native(kind, n),
 }
 
 QualifiedModuleIdent: QualifiedModuleIdent = {
