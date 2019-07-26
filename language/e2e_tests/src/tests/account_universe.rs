@@ -8,8 +8,8 @@ mod rotate_key;
 use crate::{
     account::AccountResource,
     account_universe::{
-        log_balance_strategy, num_accounts, num_transactions, AUTransactionGen, AccountCurrent,
-        AccountPairGen, AccountUniverse, AccountUniverseGen, RotateKeyGen,
+        default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
+        AccountCurrent, AccountPairGen, AccountUniverse, AccountUniverseGen, RotateKeyGen,
     },
     executor::FakeExecutor,
 };
@@ -22,8 +22,8 @@ proptest! {
     /// Ensure that account pair generators return the correct indexes.
     #[test]
     fn account_pair_gen(
-        universe in AccountUniverseGen::strategy(2..num_accounts(), 0u64..10000),
-        pairs in vec(any::<AccountPairGen>(), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(2..default_num_accounts(), 0u64..10000),
+        pairs in vec(any::<AccountPairGen>(), 0..default_num_transactions()),
     ) {
         let mut executor = FakeExecutor::from_genesis_file();
         let mut universe = universe.setup(&mut executor);
@@ -54,8 +54,11 @@ proptest! {
 
     #[test]
     fn all_transactions(
-        universe in AccountUniverseGen::strategy(2..num_accounts(), log_balance_strategy(10_000_000)),
-        transactions in vec(all_transactions_strategy(1, 1_000_000), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(
+            2..default_num_accounts(),
+            log_balance_strategy(10_000_000),
+        ),
+        transactions in vec(all_transactions_strategy(1, 1_000_000), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transactions)?;
     }
