@@ -24,7 +24,6 @@ pub mod txn_generator;
 use grpc_helpers::{
     divide_items, get_account_states, submit_and_wait_txn_requests, sync_account_sequence_number,
 };
-use txn_generator::gen_mint_txn_requests;
 
 lazy_static! {
     pub static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("benchmark");
@@ -80,7 +79,7 @@ impl Benchmarker {
     /// then try to sync with a validator to get up-to-date faucet account's sequence number.
     /// Why restore faucet account: Benchmarker as a client can be stopped/restarted repeatedly
     /// while the libra swarm as a server keeping running.
-    fn load_faucet_account(&self, faucet_account_path: &str) -> AccountData {
+    pub fn load_faucet_account(&mut self, faucet_account_path: &str) -> AccountData {
         let faucet_account_keypair: KeyPair =
             load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
         let address = association_address();
@@ -95,6 +94,7 @@ impl Benchmarker {
             .get(&address)
             .expect("failed to get faucet account from validator");
         assert_eq!(status, &AccountStatus::Persisted);
+        self.prev_sequence_numbers.insert(address, *sequence_number);
         AccountData {
             address,
             key_pair: Some(faucet_account_keypair),
@@ -103,26 +103,29 @@ impl Benchmarker {
         }
     }
 
+    /// Initialize the sequence numbers for testing accounts.
+    pub fn register_accounts(&mut self, accounts: &[AccountData]) {
+        for account in accounts.iter() {
+            self.prev_sequence_numbers
+                .insert(account.address, account.sequence_number);
+        }
+    }
+
     /// Minting given accounts using self's AC client(s).
     /// Mint TXNs must be 100% successful in order to continue benchmark.
     /// Therefore mint_accounts() will panic when any mint TXN is not accepted or fails.
     /// Known issue: Minting opereations from two different Benchmarker instances
     /// will fail because they are sharing the same faucet account.
-    pub fn mint_accounts(&mut self, mint_key_file_path: &str, accounts: &[AccountData]) {
-        let mut faucet_account = self.load_faucet_account(mint_key_file_path);
-        self.prev_sequence_numbers
-            .insert(faucet_account.address, faucet_account.sequence_number);
-        for account in accounts.iter() {
-            self.prev_sequence_numbers
-                .insert(account.address, account.sequence_number);
-        }
-
-        let mint_requests = gen_mint_txn_requests(&mut faucet_account, accounts);
+    pub fn mint_accounts(
+        &mut self,
+        mint_requests: &[SubmitTransactionRequest],
+        faucet_account: &mut AccountData,
+    ) {
         // Disable client staggering for mint operations.
         let stagger_range_ms = self.stagger_range_ms;
         self.stagger_range_ms = 1;
         let (num_accepted, num_committed, _, _) =
-            self.submit_and_wait_txn_committed(&mint_requests, &mut [faucet_account]);
+            self.submit_and_wait_txn_committed(mint_requests, std::slice::from_mut(faucet_account));
         self.stagger_range_ms = stagger_range_ms;
         // We stop immediately if any minting fails.
         if num_accepted != mint_requests.len() || num_accepted - num_committed > 0 {
