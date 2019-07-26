@@ -17,7 +17,7 @@ use crypto::{
     HashValue,
 };
 use failure::Result;
-use mirai_annotations::{checked_precondition, checked_precondition_eq};
+use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
 use network::proto::Block as ProtoBlock;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
@@ -225,6 +225,7 @@ where
         // A block must carry a QC to its parent.
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
+        checked_precondition!(parent_block.height() < std::u64::MAX);
         Block::new_internal(
             payload,
             parent_block.id(),
@@ -242,6 +243,7 @@ where
     pub fn make_nil_block(parent_block: &Block<T>, round: Round, quorum_cert: QuorumCert) -> Self {
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
+        checked_precondition!(parent_block.height() < std::u64::MAX - 1);
 
         let payload = T::default();
         // We want all the NIL blocks to agree on the timestamps even though they're generated
@@ -320,10 +322,14 @@ where
     }
 
     pub fn height(&self) -> Height {
+        assumed_postcondition!(self.height < std::u64::MAX - 1);
         self.height
     }
 
     pub fn round(&self) -> Round {
+        // It is safe to assume that round numbers will not reach
+        // a value close to u64::MAX as they are reset to 0 periodically.
+        assumed_postcondition!(self.round < std::u64::MAX - 1);
         self.round
     }
 

@@ -13,6 +13,7 @@ use crypto::{
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue,
 };
+use mirai_annotations::assumed_postcondition;
 use network;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
@@ -365,6 +366,9 @@ impl PacemakerTimeoutCertificate {
 
     /// Returns the round of the timeout
     pub fn round(&self) -> Round {
+        // It is safe to assume that round numbers will not reach
+        // a value close to u64::MAX as they are reset to 0 periodically.
+        assumed_postcondition!(self.round < std::u64::MAX - 1);
         self.round
     }
 
