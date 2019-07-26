@@ -9,7 +9,7 @@
 use crate::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StringPoolIndex, StructDefinitionIndex, NO_TYPE_ACTUALS,
+        StringPoolIndex, StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
     },
     serializer::serialize_instruction,
 };
@@ -214,11 +214,19 @@ impl CostTable {
     pub fn new(instrs: Vec<(Bytecode, u64, u64)>) -> Self {
         let mut compute_table = HashMap::new();
         let mut memory_table = HashMap::new();
+        let mut instructions_covered = 0;
         for (instr, comp_cost, mem_cost) in instrs.into_iter() {
             let code = InstructionKey::new(&instr);
+            if cfg!(debug_assertions) && compute_table.get(&code).is_none() {
+                instructions_covered += 1;
+            }
             compute_table.insert(code, GasUnits::new(comp_cost));
             memory_table.insert(code, GasUnits::new(mem_cost));
         }
+        debug_assert!(
+            instructions_covered == NUMBER_OF_BYTECODE_INSTRUCTIONS,
+            "all instructions must be in the cost table"
+        );
         Self {
             compute_table,
             memory_table,
@@ -231,10 +239,10 @@ impl CostTable {
         size_provider: AbstractMemorySize<GasCarrier>,
     ) -> GasUnits<GasCarrier> {
         let code = InstructionKey::new(instr);
-        self.memory_table
-            .get(&code)
-            .unwrap()
-            .map2(size_provider, Mul::mul)
+        let memory_cost = self.memory_table.get(&code);
+        // CostTable initialization checks that every instruction is included in the memory_table
+        assume!(memory_cost.is_some());
+        memory_cost.unwrap().map2(size_provider, Mul::mul)
     }
 
     pub fn comp_gas(
@@ -243,10 +251,10 @@ impl CostTable {
         size_provider: AbstractMemorySize<GasCarrier>,
     ) -> GasUnits<GasCarrier> {
         let code = InstructionKey::new(instr);
-        self.compute_table
-            .get(&code)
-            .unwrap()
-            .map2(size_provider, Mul::mul)
+        let compute_cost = self.compute_table.get(&code);
+        // CostTable initialization checks that every instruction is included in the compute_table
+        assume!(compute_cost.is_some());
+        compute_cost.unwrap().map2(size_provider, Mul::mul)
     }
 }
 
