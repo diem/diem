@@ -70,7 +70,7 @@ lazy_static! {
 /// Larger values will provide greater testing but will take longer to run and shrink. Release mode
 /// is recommended for values above 100.
 #[inline]
-pub(crate) fn num_accounts() -> usize {
+pub(crate) fn default_num_accounts() -> usize {
     *UNIVERSE_SIZE
 }
 
@@ -80,7 +80,7 @@ pub(crate) fn num_accounts() -> usize {
 /// Larger values will provide greater testing but will take longer to run and shrink. Release mode
 /// is recommended for values above 100.
 #[inline]
-pub(crate) fn num_transactions() -> usize {
+pub(crate) fn default_num_transactions() -> usize {
     *UNIVERSE_SIZE * 2
 }
 
@@ -152,9 +152,12 @@ impl AccountUniverseGen {
     pub fn success_strategy(min_accounts: usize) -> impl Strategy<Value = Self> {
         // Set the minimum balance to be 5x possible transfers out to handle potential gas cost
         // issues.
-        let min_balance = (100_000 * (num_transactions()) * 5) as u64;
+        let min_balance = (100_000 * (default_num_transactions()) * 5) as u64;
         let max_balance = min_balance * 10;
-        Self::strategy(min_accounts..num_accounts(), min_balance..max_balance)
+        Self::strategy(
+            min_accounts..default_num_accounts(),
+            min_balance..max_balance,
+        )
     }
 
     /// Returns an [`AccountUniverse`] with the initial state generated in this universe.

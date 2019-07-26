@@ -3,8 +3,8 @@
 
 use crate::{
     account_universe::{
-        log_balance_strategy, num_accounts, num_transactions, AUTransactionGen, AccountUniverseGen,
-        P2PNewReceiverGen, P2PTransferGen,
+        default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
+        AccountUniverseGen, P2PNewReceiverGen, P2PTransferGen,
     },
     gas_costs,
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
@@ -20,15 +20,18 @@ proptest! {
     #[test]
     fn p2p_gas_cost_stability(
         universe in AccountUniverseGen::success_strategy(2),
-        transfers in vec(any_with::<P2PTransferGen>((1, 10_000)), 0..num_transactions()),
+        transfers in vec(any_with::<P2PTransferGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_gas_cost_stability(universe, transfers, *gas_costs::PEER_TO_PEER)?;
     }
 
     #[test]
     fn p2p_high_balance(
-        universe in AccountUniverseGen::strategy(2..num_accounts(), 1_000_000u64..10_000_000),
-        transfers in vec(any_with::<P2PTransferGen>((1, 10_000)), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(
+            2..default_num_accounts(),
+            1_000_000u64..10_000_000,
+        ),
+        transfers in vec(any_with::<P2PTransferGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
@@ -36,8 +39,8 @@ proptest! {
     /// Test with balances small enough to possibly trigger failures.
     #[test]
     fn p2p_low_balance(
-        universe in AccountUniverseGen::strategy(2..num_accounts(), 0u64..100_000),
-        transfers in vec(any_with::<P2PTransferGen>((1, 50_000)), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(2..default_num_accounts(), 0u64..100_000),
+        transfers in vec(any_with::<P2PTransferGen>((1, 50_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
@@ -47,7 +50,7 @@ proptest! {
     #[test]
     fn p2p_new_receiver_gas_cost_stability(
         universe in AccountUniverseGen::success_strategy(1),
-        transfers in vec(any_with::<P2PNewReceiverGen>((1, 10_000)), 0..num_transactions()),
+        transfers in vec(any_with::<P2PNewReceiverGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_gas_cost_stability(
             universe,
@@ -59,8 +62,11 @@ proptest! {
     /// Test that p2p transfers can be done to new accounts.
     #[test]
     fn p2p_new_receiver_high_balance(
-        universe in AccountUniverseGen::strategy(1..num_accounts(), 1_000_000u64..10_000_000),
-        transfers in vec(any_with::<P2PNewReceiverGen>((1, 10_000)), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(
+            1..default_num_accounts(),
+            1_000_000u64..10_000_000,
+        ),
+        transfers in vec(any_with::<P2PNewReceiverGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
@@ -68,8 +74,8 @@ proptest! {
     /// Test with balances small enough to possibly trigger failures.
     #[test]
     fn p2p_new_receiver_low_balance(
-        universe in AccountUniverseGen::strategy(1..num_accounts(), 0u64..100_000),
-        transfers in vec(any_with::<P2PNewReceiverGen>((1, 50_000)), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(1..default_num_accounts(), 0u64..100_000),
+        transfers in vec(any_with::<P2PNewReceiverGen>((1, 50_000)), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
@@ -78,8 +84,11 @@ proptest! {
     /// variety of balances.
     #[test]
     fn p2p_mixed(
-        universe in AccountUniverseGen::strategy(2..num_accounts(), log_balance_strategy(10_000_000)),
-        transfers in vec(p2p_strategy(1, 1_000_000), 0..num_transactions()),
+        universe in AccountUniverseGen::strategy(
+            2..default_num_accounts(),
+            log_balance_strategy(10_000_000),
+        ),
+        transfers in vec(p2p_strategy(1, 1_000_000), 0..default_num_transactions()),
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
