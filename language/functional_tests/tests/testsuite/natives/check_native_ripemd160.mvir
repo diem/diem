@@ -5,9 +5,9 @@ main() {
     let output: bytearray;
     let expected_output: bytearray;
 
-    input = b"616263";
+    input = h"616263";
     output = Hash.ripemd160(copy(input));
-    expected_output = b"bb1be98c142444d7a56aa3981c3942a978e4dc33";
+    expected_output = h"bb1be98c142444d7a56aa3981c3942a978e4dc33";
 
     assert(move(output) == move(expected_output), 42);
 

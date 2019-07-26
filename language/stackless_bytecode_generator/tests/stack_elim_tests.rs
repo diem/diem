@@ -190,7 +190,7 @@ fn transform_code_with_ld_instrs() {
                 let a: bytearray;
                 let b: bool;
                 let c: address;
-                a = b\"deadbeef\";
+                a = h\"deadbeef\";
                 b = true;
                 b = false;
                 c = 0xdeadbeef;

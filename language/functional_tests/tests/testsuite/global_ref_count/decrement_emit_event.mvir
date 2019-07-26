@@ -16,7 +16,7 @@ module Test {
         t_ref = borrow_global<T>(copy(sender));
         i_ref = &mut copy(t_ref).i;
         event = Event { };
-        event_id = b"69";
+        event_id = h"69";
         emit_event(move(i_ref), move(event_id), move(event));
         release(move(t_ref));
 
