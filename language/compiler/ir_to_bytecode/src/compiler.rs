@@ -4,10 +4,11 @@
 use crate::{
     errors::*,
     parser::ast::{
-        self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Fields, Function, FunctionBody,
+        self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Function, FunctionBody,
         FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Loop,
         ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
-        StructDefinition as MoveStruct, Tag, Type, UnaryOp, Var, Var_, While,
+        StructDefinition as MoveStruct, StructDefinitionFields, Tag, Type, UnaryOp, Var, Var_,
+        While,
     },
 };
 
@@ -1206,29 +1207,35 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn define_fields(
         &mut self,
-        sh_idx: StructHandleIndex,
-        fields: &Fields<Type>,
+        struct_handle: StructHandleIndex,
+        definition_fields: &StructDefinitionFields,
     ) -> Result<StructDefinition> {
-        let field_count = fields.len();
-        let field_information = StructFieldInformation::Declared {
-            field_count: (field_count as MemberCount),
-            fields: self.scope.get_next_field_definition_index()?,
+        let field_information = match definition_fields {
+            StructDefinitionFields::Native => StructFieldInformation::Native,
+            StructDefinitionFields::Move { fields } => {
+                let field_count = fields.len();
+                let field_information = StructFieldInformation::Declared {
+                    field_count: (field_count as MemberCount),
+                    fields: self.scope.get_next_field_definition_index()?,
+                };
+
+                if field_count > FIELDS_MAX_SIZE {
+                    bail!("too many fields {}", struct_handle)
+                }
+
+                for field in fields {
+                    let field_name = field.0.name();
+                    let field_type = field.1;
+                    self.publish_field(struct_handle, field_name, field_type)?;
+                }
+                field_information
+            }
         };
-        let struct_def = StructDefinition {
-            struct_handle: sh_idx,
+
+        Ok(StructDefinition {
+            struct_handle,
             field_information,
-        };
-
-        if field_count > FIELDS_MAX_SIZE {
-            bail!("too many fields {}", struct_def.struct_handle)
-        }
-
-        for field in fields {
-            let field_name = field.0.name();
-            let field_type = field.1;
-            self.publish_field(struct_def.struct_handle, field_name, field_type)?;
-        }
-        Ok(struct_def)
+        })
     }
 
     // Compile a main function in a Script.

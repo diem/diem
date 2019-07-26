@@ -123,7 +123,16 @@ pub struct StructDefinition {
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
     /// the fields each instance has
-    pub fields: Fields<Type>,
+    pub fields: StructDefinitionFields,
+}
+
+/// The fields of a Move struct definition
+#[derive(Clone, Debug, PartialEq)]
+pub enum StructDefinitionFields {
+    /// The fields are declared
+    Move { fields: Fields<Type> },
+    /// The struct is a type provided by the VM
+    Native,
 }
 
 //**************************************************************************************************
@@ -714,14 +723,26 @@ impl StructName {
 
 impl StructDefinition {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
-    /// representation of the name, and the field names with their types
+    /// representation of the name, and the user specified fields, a map from their names to their
+    /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn new(resource_kind: bool, name: String, fields: Fields<Type>) -> Self {
+    pub fn move_declared(resource_kind: bool, name: String, fields: Fields<Type>) -> Self {
         StructDefinition {
             resource_kind,
             name: StructName::new(name),
-            fields,
+            fields: StructDefinitionFields::Move { fields },
+        }
+    }
+
+    /// Creates a new StructDefinition from the resource kind (true if resource), the string
+    /// representation of the name, and the user specified fields, a map from their names to their
+    /// types
+    pub fn native(resource_kind: bool, name: String) -> Self {
+        StructDefinition {
+            resource_kind,
+            name: StructName::new(name),
+            fields: StructDefinitionFields::Native,
         }
     }
 }
@@ -1048,7 +1069,10 @@ impl fmt::Display for ModuleDefinition {
 impl fmt::Display for StructDefinition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Struct({}, ", self.name)?;
-        writeln!(f, "{}", format_fields(&self.fields))?;
+        match &self.fields {
+            StructDefinitionFields::Move { fields } => writeln!(f, "{}", format_fields(fields))?,
+            StructDefinitionFields::Native => writeln!(f, "{{native}}")?,
+        }
         write!(f, ")")
     }
 }

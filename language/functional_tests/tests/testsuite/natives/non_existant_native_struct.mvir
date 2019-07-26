@@ -1,0 +1,12 @@
+module M {
+    native struct T;
+    native resource T2;
+}
+
+// check: VerificationError
+// check: StructHandle
+// check: MissingDependency
+
+// check: VerificationError
+// check: StructHandle
+// check: MissingDependency
