@@ -16,6 +16,7 @@ use crate::{
 use channel;
 use futures::{executor::block_on, future, Future, FutureExt, SinkExt};
 use logger::prelude::*;
+use mirai_annotations::assume;
 use std::{
     cmp, fmt,
     pin::Pin,
@@ -180,6 +181,11 @@ impl Pacemaker {
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Self {
         assert!(pacemaker_timeout_quorum_size > 0);
+        // It is safe to assume that highest_qc_round will not reach
+        // a value close to u64::MAX as the round numbers are
+        // periodically reset to 0 in all validators and highest_qc_round
+        // is equal to the highest of these round numbers.
+        assume!(highest_qc_round < std::u64::MAX - 1);
         // The starting round is maximum(highest quorum certificate,
         // highest timeout certificate round) + 1.  Note that it is possible this
         // replica already voted at this round and will until a round timeout

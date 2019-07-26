@@ -225,6 +225,7 @@ impl<T: Payload> BlockStore<T> {
         // the 3-chain safety rules specify that the round of the committed block must be
         // certified_block_round() - 2. In case root().round() is greater than that the committed
         // block carried by LI is older than my current commit.
+        checked_precondition!(self.root().round() < std::u64::MAX - 1);
         !(self.block_exists(committed_block_id)
             || self.root().round() + 2 >= qc.certified_block_round())
     }
