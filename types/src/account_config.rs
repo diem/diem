@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::unit_arg)]
+
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
@@ -13,6 +15,7 @@ use canonical_serialization::{
     SimpleDeserializer,
 };
 use failure::prelude::*;
+use proptest_derive::Arbitrary;
 use std::{collections::BTreeMap, convert::TryInto};
 
 /// An account object. This is the top-level entry in global storage. We'll never need to create an
@@ -64,7 +67,7 @@ pub fn account_struct_tag() -> StructTag {
 
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
-#[derive(Debug, Default)]
+#[derive(Arbitrary, Debug, Default)]
 pub struct AccountResource {
     balance: u64,
     sequence_number: u64,

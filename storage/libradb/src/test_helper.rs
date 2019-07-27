@@ -96,7 +96,7 @@ pub fn arb_blocks_to_commit(
             let total_batches = batch_sizes.len();
             (
                 Just(batch_sizes),
-                arb_txn_to_commit_batch(3, 3, total_txns),
+                arb_txn_to_commit_batch(3, total_txns),
                 vec(
                     any_with::<LedgerInfoWithSignatures>((1..3).into()),
                     total_batches,
