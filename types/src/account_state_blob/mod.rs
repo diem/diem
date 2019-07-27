@@ -5,7 +5,7 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
+    account_config::{account_resource_path, get_account_resource_or_default, AccountResource},
     ledger_info::LedgerInfo,
     proof::{verify_account_state, AccountStateProof},
     transaction::Version,
@@ -16,11 +16,12 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+use proptest::{arbitrary::Arbitrary, prelude::*};
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::{collections::BTreeMap, convert::TryFrom, fmt};
 
-#[derive(Arbitrary, Clone, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Eq, PartialEq, FromProto, IntoProto)]
 #[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
@@ -87,6 +88,26 @@ impl CryptoHash for AccountStateBlob {
         let mut hasher = Self::Hasher::default();
         hasher.write(&self.blob);
         hasher.finish()
+    }
+}
+
+prop_compose! {
+    pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
+        let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
+        account_state.insert(
+            account_resource_path(),
+            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
+        );
+        AccountStateBlob::try_from(&account_state).unwrap()
+    }
+}
+
+impl Arbitrary for AccountStateBlob {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        account_state_blob_strategy().boxed()
     }
 }
 

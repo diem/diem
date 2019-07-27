@@ -4,6 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::{account_received_event_path, account_sent_event_path},
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     contract_event::ContractEvent,
@@ -26,7 +27,7 @@ use crypto::{
     HashValue, Signature,
 };
 use proptest::{
-    collection::{hash_map, hash_set, vec, SizeRange},
+    collection::{hash_map, vec, SizeRange},
     option,
     prelude::*,
     strategy::Union,
@@ -367,19 +368,16 @@ pub fn renumber_events(
 
 pub fn arb_txn_to_commit_batch(
     num_accounts: usize,
-    num_event_paths: usize,
     num_transactions: usize,
 ) -> impl Strategy<Value = Vec<TransactionToCommit>> {
     (
         vec(gen_keypair_strategy(), num_accounts),
-        hash_set(any::<Vec<u8>>(), num_event_paths),
         Just(num_transactions),
     )
-        .prop_flat_map(|(keypairs, event_paths, num_transactions)| {
+        .prop_flat_map(|(keypairs, num_transactions)| {
             let keypair_strategy = Union::new(keypairs.into_iter().map(Just)).boxed();
-            let event_path_strategy = Union::new(event_paths.into_iter().map(Just));
             vec(
-                TransactionToCommit::strategy_impl(keypair_strategy, event_path_strategy),
+                TransactionToCommit::strategy_impl(keypair_strategy),
                 num_transactions,
             )
         })
@@ -425,7 +423,6 @@ impl Arbitrary for ContractEvent {
 impl TransactionToCommit {
     fn strategy_impl(
         keypair_strategy: BoxedStrategy<(OldPrivateKey, OldPublicKey)>,
-        event_path_strategy: impl Strategy<Value = Vec<u8>>,
     ) -> impl Strategy<Value = Self> {
         // signed_txn
         let txn_strategy = SignatureCheckedTransaction::strategy_impl(
@@ -441,6 +438,10 @@ impl TransactionToCommit {
             hash_map(address_strategy.clone(), any::<AccountStateBlob>(), 1..10);
 
         // events
+        let event_path_strategy = prop_oneof![
+            Just(account_sent_event_path()),
+            Just(account_received_event_path()),
+        ];
         let access_path_strategy = (address_strategy, event_path_strategy)
             .prop_map(|(address, path)| AccessPath::new(address, path));
         let events_strategy = vec(ContractEvent::strategy_impl(access_path_strategy), 0..10);
@@ -467,7 +468,7 @@ impl Arbitrary for TransactionToCommit {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        TransactionToCommit::strategy_impl(gen_keypair_strategy().boxed(), any::<Vec<u8>>()).boxed()
+        TransactionToCommit::strategy_impl(gen_keypair_strategy().boxed()).boxed()
     }
 }
 
