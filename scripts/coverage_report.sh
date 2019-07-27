@@ -23,8 +23,8 @@ TEST_DIR=$1
 COVERAGE_DIR=$2
 
 # This needs to run in libra
-SCRIPT_DIR="$( dirname "${BASH_SOURCE[0]}" )"
-if [ ! $SCRIPT_DIR == "./scripts" ]
+LIBRA_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd)"
+if [ $(pwd) != $LIBRA_DIR  ]
 then
 	echo "This needs to run from libra/, not in $(pwd)"
 	exit 1
