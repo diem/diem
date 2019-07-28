@@ -17,6 +17,7 @@ rand = "0.7.0"
 regex = "1.1.9"
 structopt = "0.2.15"
 tempdir = "0.3.7"
+num_cpus = "1.10.1"
 
 admission_control_proto = { path = "../admission_control/admission_control_proto" }
 client = { path = "../client" }
