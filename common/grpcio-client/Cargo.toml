@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 mktemp = "0.3"
-protobuf = "2.7"
+protobuf = "~2.7"
 protobuf-codegen = "2.*"
 protoc = "2.*"
 protoc-grpcio = "1.0.1"

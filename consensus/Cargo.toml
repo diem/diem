@@ -16,7 +16,7 @@ mirai-annotations = "^1.2.2"
 num-traits = "0.2"
 num-derive = "0.2"
 proptest = "0.9"
-protobuf = "2.7"
+protobuf = "~2.7"
 rand = "0.6.5"
 serde = { version = "1.0.96", features = ["derive"] }
 tokio = "0.1.22"

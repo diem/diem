@@ -10,7 +10,7 @@ edition = "2018"
 futures = "0.1.28"
 futures03 = { version = "=0.3.0-alpha.17", package = "futures-preview" }
 grpcio = "0.4.3"
-protobuf = "2.7"
+protobuf = "~2.7"
 
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 logger = { path = "../../common/logger" }
