@@ -370,9 +370,10 @@ impl Benchmarker {
         &mut self,
         txn_reqs: &[SubmitTransactionRequest],
         senders: &mut [AccountData],
-    ) -> (f64, f64) {
+        submit_rate: Option<u64>,
+    ) -> (usize, usize, f64, f64) {
         let (num_accepted, num_committed, submit_duration_ms, wait_duration_ms) =
-            self.submit_and_wait_txn_committed(txn_reqs, senders, None);
+            self.submit_and_wait_txn_committed(txn_reqs, senders, submit_rate);
         let request_throughput =
             Self::calculate_throughput(num_accepted, submit_duration_ms, "REQ");
         let running_duration_ms = submit_duration_ms + wait_duration_ms;
@@ -384,6 +385,11 @@ impl Benchmarker {
         OP_COUNTER.set("request_throughput", request_throughput as usize);
         OP_COUNTER.set("txn_throughput", txn_throughput as usize);
 
-        (request_throughput, txn_throughput)
+        (
+            num_accepted,
+            num_committed,
+            request_throughput,
+            txn_throughput,
+        )
     }
 }

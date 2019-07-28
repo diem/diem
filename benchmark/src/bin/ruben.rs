@@ -36,6 +36,7 @@ fn main() {
     info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     let args = RubenOpt::new_from_args();
     info!("Parsed arguments: {:#?}", args);
+
     try_start_metrics_server(&args);
     let mut bm = create_benchmarker_from_opt(&args);
     let mut faucet_account = bm.load_faucet_account(&args.faucet_key_file_path);
