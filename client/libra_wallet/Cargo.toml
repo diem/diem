@@ -15,7 +15,7 @@ hex = "0.3"
 byteorder = "1.3.2"
 serde = "1.0.96"
 tiny-keccak = "1.5.0"
-protobuf = "2.7"
+protobuf = "~2.7"
 sha3 = "0.8.2"
 
 [dependencies.ed25519-dalek]
