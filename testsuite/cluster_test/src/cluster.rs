@@ -19,6 +19,10 @@ impl Cluster {
                 name: Some("tag:Role".into()),
                 values: Some(vec!["validator".into()]),
             },
+            Filter {
+                name: Some("instance-state-name".into()),
+                values: Some(vec!["running".into()]),
+            },
         ];
         let result = aws
             .ec2()
