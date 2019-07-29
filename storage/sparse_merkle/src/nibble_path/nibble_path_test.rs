@@ -202,6 +202,16 @@ proptest! {
     }
 
     #[test]
+    fn test_pop(mut nibble_path in arb_nibble_path()) {
+        let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
+        let nibble_from_nibbles = nibbles.pop();
+        let nibble_from_nibble_path = nibble_path.pop();
+        let nibble_path2 = nibbles.into_iter().collect();
+        prop_assert_eq!(nibble_path, nibble_path2);
+        prop_assert_eq!(nibble_from_nibbles, nibble_from_nibble_path);
+    }
+
+    #[test]
     fn test_nibble_iter_roundtrip(nibble_path in arb_nibble_path()) {
         let nibbles = nibble_path.nibbles();
         let nibble_path2 = nibbles.collect();
