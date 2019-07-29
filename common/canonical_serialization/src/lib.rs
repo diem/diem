@@ -134,9 +134,9 @@ where
 
     /// Create a SimpleSerializer on the fly and serialize `object`
     pub fn serialize(object: &impl CanonicalSerialize) -> Result<W> {
-        let mut serialzier = Self::default();
-        object.serialize(&mut serialzier)?;
-        Ok(serialzier.get_output())
+        let mut serializer = Self::default();
+        object.serialize(&mut serializer)?;
+        Ok(serializer.get_output())
     }
 
     /// Consume the SimpleSerializer and return the output

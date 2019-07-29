@@ -126,7 +126,7 @@ impl CanonicalSerialize for ValidatorPublicKeys {
 impl CanonicalDeserialize for ValidatorPublicKeys {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let account_address = deserializer.decode_struct::<AccountAddress>()?;
-        let concensus_public_key =
+        let consensus_public_key =
             Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
         let network_identity_public_key =
             X25519PublicKey::from_slice(&deserializer.decode_variable_length_bytes()?)?;
@@ -134,7 +134,7 @@ impl CanonicalDeserialize for ValidatorPublicKeys {
             Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
         Ok(ValidatorPublicKeys::new(
             account_address,
-            concensus_public_key,
+            consensus_public_key,
             network_signing_public_key,
             network_identity_public_key,
         ))
