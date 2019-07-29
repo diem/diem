@@ -6,9 +6,9 @@ use crate::{
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
 };
 use config::config::NodeConfigHelpers;
-use crypto::signing::generate_keypair_for_testing;
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use nextgen_crypto::ed25519::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashSet, iter::FromIterator};
 use types::{
@@ -81,7 +81,7 @@ impl TestTransaction {
         let mut seed: [u8; 32] = [0u8; 32];
         seed[..4].copy_from_slice(&[1, 2, 3, 4]);
         let mut rng: StdRng = StdRng::from_seed(seed);
-        let (privkey, pubkey) = generate_keypair_for_testing(&mut rng);
+        let (privkey, pubkey) = compat::generate_keypair(&mut rng);
         raw_txn
             .sign(&privkey, pubkey)
             .expect("Failed to sign raw transaction.")

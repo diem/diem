@@ -24,7 +24,8 @@ failure = { path = "../common/failure_ext", package = "failure_ext" }
 types = { path = "../types" }
 
 [dev-dependencies]
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+types = { path = "../types", features = ["testing"] }
+nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
 
 [features]
 default = []

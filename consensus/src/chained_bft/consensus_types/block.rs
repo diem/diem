@@ -143,7 +143,7 @@ where
             timestamp_usecs: 0, // The beginning of UNIX TIME
             quorum_cert: genesis_quorum_cert,
             author: genesis_validator_signer.author(),
-            signature: signature.into(),
+            signature,
         }
     }
 

@@ -14,7 +14,7 @@ use crate::{
     state_replication::ExecutedState,
 };
 use channel;
-use crypto::{signing::generate_keypair, HashValue};
+use crypto::HashValue;
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -471,7 +471,7 @@ fn test_rpc() {
     let mut chunk_retrieval = receiver_1.chunk_retrieval;
     let on_request_chunk = async move {
         while let Some(request) = chunk_retrieval.next().await {
-            let keypair = generate_keypair();
+            let keypair = compat::generate_keypair(None);
             let proto_txn =
                 get_test_signed_txn(AccountAddress::random(), 0, keypair.0, keypair.1, None);
             let txn = SignedTransaction::from_proto(proto_txn).unwrap();

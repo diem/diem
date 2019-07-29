@@ -212,12 +212,8 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Returns a ordered list of account addresses from smallest to largest.
     pub fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
-        let mut account_addresses: Vec<AccountAddress> = self
-            .author_to_public_keys
-            .keys()
-            .into_iter()
-            .cloned()
-            .collect();
+        let mut account_addresses: Vec<AccountAddress> =
+            self.author_to_public_keys.keys().cloned().collect();
         account_addresses.sort();
         account_addresses
     }

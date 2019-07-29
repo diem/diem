@@ -3,15 +3,14 @@
 
 use crate::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
 use config_builder::util::get_test_config;
-use crypto::{
-    hash::GENESIS_BLOCK_ID,
-    signing::{generate_keypair, PrivateKey, PublicKey},
-};
+use crypto::hash::GENESIS_BLOCK_ID;
 use execution_client::ExecutionClient;
 use execution_proto::ExecuteBlockRequest;
 use failure::prelude::*;
 use grpcio::EnvBuilder;
+use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED};
 use proto_conv::FromProto;
+use rand::SeedableRng;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use types::{
@@ -31,8 +30,8 @@ use vm_genesis::{encode_create_account_program, encode_transfer_program};
 fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     program: Option<Program>,
 ) -> SignedTransaction {
     SignedTransaction::from_proto(get_test_signed_txn_proto(
@@ -62,20 +61,21 @@ fn test_execution_with_storage() {
         config.execution.port,
     );
 
-    let (privkey1, pubkey1) = generate_keypair();
-    let account1 = AccountAddress::from(pubkey1);
-    let (privkey2, pubkey2) = generate_keypair();
-    let account2 = AccountAddress::from(pubkey2);
-    let (_privkey3, pubkey3) = generate_keypair();
-    let account3 = AccountAddress::from(pubkey3);
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
+    let account1 = AccountAddress::from_public_key(&pubkey1);
+    let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
+    let account2 = AccountAddress::from_public_key(&pubkey2);
+    let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
+    let account3 = AccountAddress::from_public_key(&pubkey3);
     let genesis_account = association_address();
 
     // Create account1 with 2M coins.
     let txn1 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 0,
-        genesis_keypair.private_key().clone(),
-        genesis_keypair.public_key(),
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account1, 2_000_000)),
     );
 
@@ -83,8 +83,8 @@ fn test_execution_with_storage() {
     let txn2 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
-        genesis_keypair.private_key().clone(),
-        genesis_keypair.public_key(),
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account2, 200_000)),
     );
 
@@ -92,8 +92,8 @@ fn test_execution_with_storage() {
     let txn3 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 2,
-        genesis_keypair.private_key().clone(),
-        genesis_keypair.public_key(),
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account3, 100_000)),
     );
 
@@ -103,7 +103,7 @@ fn test_execution_with_storage() {
         account1,
         /* sequence_number = */ 0,
         privkey1.clone(),
-        pubkey1,
+        pubkey1.clone(),
         Some(encode_transfer_program(&account2, 20_000)),
     );
 
@@ -113,7 +113,7 @@ fn test_execution_with_storage() {
         account2,
         /* sequence_number = */ 0,
         privkey2.clone(),
-        pubkey2,
+        pubkey2.clone(),
         Some(encode_transfer_program(&account3, 10_000)),
     );
 
@@ -123,7 +123,7 @@ fn test_execution_with_storage() {
         account1,
         /* sequence_number = */ 1,
         privkey1.clone(),
-        pubkey1,
+        pubkey1.clone(),
         Some(encode_transfer_program(&account3, 70_000)),
     );
 
@@ -139,7 +139,7 @@ fn test_execution_with_storage() {
             account1,
             /* sequence_number = */ i,
             privkey1.clone(),
-            pubkey1,
+            pubkey1.clone(),
             Some(encode_transfer_program(&account3, 10_000)),
         ));
     }

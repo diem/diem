@@ -20,3 +20,6 @@ proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
 types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }

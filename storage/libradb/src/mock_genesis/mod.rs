@@ -36,7 +36,7 @@ fn gen_mock_genesis() -> (
         /* expiration_time = */ std::time::Duration::new(0, 0),
     );
     let signed_txn = raw_txn
-        .sign(&privkey, pubkey)
+        .sign(&privkey.into(), pubkey.into())
         .expect("Signing failed.")
         .into_inner();
     let signed_txn_hash = signed_txn.hash();

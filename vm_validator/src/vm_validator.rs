@@ -76,8 +76,7 @@ impl TransactionValidation for VMValidator {
                     return Box::new(err(format_err!(
                         "Unexpected number of items ({}).",
                         items.len()
-                    )
-                    .into()));
+                    )));
                 }
 
                 match items.remove(0) {
@@ -97,7 +96,7 @@ impl TransactionValidation for VMValidator {
                     _ => panic!("Unexpected item in response."),
                 }
             }
-            Err(e) => Box::new(err(e.into())),
+            Err(e) => Box::new(err(e)),
         }
     }
 }

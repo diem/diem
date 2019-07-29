@@ -5,7 +5,7 @@
 mod mock_vm_test;
 
 use config::config::VMConfig;
-use crypto::signing::generate_keypair;
+use nextgen_crypto::ed25519::compat;
 use state_view::StateView;
 use std::collections::HashMap;
 use types::{
@@ -267,7 +267,7 @@ fn encode_transaction(sender: AccountAddress, program: Program) -> SignedTransac
     let raw_transaction =
         RawTransaction::new(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
 
-    let (privkey, pubkey) = generate_keypair();
+    let (privkey, pubkey) = compat::generate_keypair(None);
     raw_transaction
         .sign(&privkey, pubkey)
         .expect("Failed to sign raw transaction.")

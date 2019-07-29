@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{VMConfig, VMPublishingOption};
-use crypto::{signing, PrivateKey, PublicKey};
+use crypto::{PrivateKey, PublicKey};
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
+use nextgen_crypto::ed25519::*;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};
@@ -44,15 +45,15 @@ use vm_runtime_types::value::Local;
 const GENESIS_SEED: [u8; 32] = [42; 32];
 
 lazy_static! {
-    pub static ref GENESIS_KEYPAIR: (PrivateKey, PublicKey) = {
-        let mut rng: StdRng = SeedableRng::from_seed(GENESIS_SEED);
-        signing::generate_keypair_for_testing(&mut rng)
+    pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
+        let mut rng = ::rand::rngs::StdRng::from_seed(GENESIS_SEED);
+        compat::generate_keypair(&mut rng)
     };
 }
 
 pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureCheckedTransaction> {
     let (private_key, public_key) = &*GENESIS_KEYPAIR;
-    raw_txn.sign(private_key, *public_key)
+    raw_txn.sign(private_key, public_key.clone())
 }
 
 #[derive(Debug, Clone)]
@@ -142,7 +143,7 @@ impl Accounts {
             gas_unit_price,
             Duration::from_secs(u64::max_value()),
         )
-        .sign(&sender_account.privkey, sender_account.pubkey)
+        .sign(&sender_account.privkey.into(), sender_account.pubkey.into())
         .unwrap()
     }
 
@@ -292,15 +293,15 @@ impl StateView for FakeStateView {
 }
 
 pub fn encode_genesis_transaction(
-    private_key: &PrivateKey,
-    public_key: PublicKey,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
 ) -> SignatureCheckedTransaction {
     encode_genesis_transaction_with_validator(private_key, public_key, vec![])
 }
 
 pub fn encode_genesis_transaction_with_validator(
-    private_key: &PrivateKey,
-    public_key: PublicKey,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
     // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
@@ -314,7 +315,7 @@ pub fn encode_genesis_transaction_with_validator(
     let state_view = FakeStateView;
     let vm_cache = VMModuleCache::new(&arena);
     let genesis_addr = account_config::association_address();
-    let genesis_auth_key = ByteArray::new(AccountAddress::from(public_key).to_vec());
+    let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(&public_key).to_vec());
 
     let genesis_write_set = {
         let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());

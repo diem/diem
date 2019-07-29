@@ -15,3 +15,4 @@ tempdir = "0.3.7"
 
 crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto/"}

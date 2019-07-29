@@ -3,7 +3,7 @@
 
 use crate::{assert_prologue_parity, executor::FakeExecutor};
 use assert_matches::assert_matches;
-use crypto::signing::KeyPair;
+use nextgen_crypto::ed25519::*;
 use types::{
     access_path::AccessPath,
     account_config,
@@ -20,12 +20,12 @@ fn invalid_genesis_write_set() {
     let write_op = (AccessPath::default(), WriteOp::Deletion);
     let write_set = WriteSetMut::new(vec![write_op]).freeze().unwrap();
     let address = account_config::association_address();
-    let keypair = KeyPair::new(::crypto::signing::generate_keypair().0);
+    let (private_key, public_key) = compat::generate_keypair(None);
     let signed_txn = transaction_test_helpers::get_write_set_txn(
         address,
         0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        private_key,
+        public_key,
         Some(write_set),
     )
     .into_inner();

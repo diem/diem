@@ -15,5 +15,8 @@ lalrpop-util = "0.16.3"
 regex = "1.1.9"
 types = { path = "../../../../types" }
 
+[dev-dependencies]
+types = { path = "../../../../types", features = ["testing"] }
+
 [build-dependencies]
 lalrpop = "0.16.3"

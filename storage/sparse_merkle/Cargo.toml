@@ -22,3 +22,5 @@ types = { path = "../../types" }
 proptest = "0.9"
 rand = "0.6.5"
 serde_test = "1.0.96"
+
+types = { path = "../../types", features = ["testing"]}

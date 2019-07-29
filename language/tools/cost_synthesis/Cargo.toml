@@ -24,5 +24,8 @@ crypto = { path = "../../../crypto/legacy_crypto" }
 state_view = { path = "../../../storage/state_view" }
 structopt = "0.2.15"
 
+[dev-dependencies]
+types = { path = "../../../types", features = ["testing"] }
+
 [features]
 default = ["vm_runtime/instruction_synthesis"]

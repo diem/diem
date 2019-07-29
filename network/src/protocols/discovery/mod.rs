@@ -477,10 +477,7 @@ fn verify_signatures(
             .unwrap()
             .iter()
             .map(|(peer_id, network_public_keys)| {
-                (
-                    *peer_id,
-                    network_public_keys.signing_public_key.clone().into(),
-                )
+                (*peer_id, network_public_keys.signing_public_key.clone())
             })
             .collect(),
         1, /* quorum size */

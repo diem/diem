@@ -18,6 +18,7 @@ execution_proto = { path = "../execution_proto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 scratchpad = { path = "../../storage/scratchpad" }
 state_view = { path = "../../storage/state_view" }
@@ -30,6 +31,8 @@ vm_genesis = { path = "../../language/vm/vm_genesis" }
 grpcio = "0.4.4"
 proptest = "0.9.2"
 rusty-fork = "0.2.1"
+
+types = { path = "../../types", features = ["testing"]}
 
 storage_proto = { path = "../../storage/storage_proto" }
 storage_service = { path = "../../storage/storage_service" }

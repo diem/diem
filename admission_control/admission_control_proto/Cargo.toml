@@ -18,5 +18,8 @@ mempool = { path = "../../mempool" }
 proto_conv = { path = "../../common/proto_conv" }
 types = { path = "../../types" }
 
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}
+
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }

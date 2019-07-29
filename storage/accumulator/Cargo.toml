@@ -15,3 +15,4 @@ types = { path = "../../types" }
 
 [dev-dependencies]
 rand = "0.6.5"
+types = { path = "../../types", features = ["testing"] }

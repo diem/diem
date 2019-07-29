@@ -4,13 +4,12 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::trusted_peers::TrustedPeersConfig;
-use crypto::signing::KeyPair;
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::Ed25519PublicKey;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
@@ -124,7 +123,7 @@ impl ClientProxy {
         // If < 4 validators, all validators have to agree.
         let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
             .into_iter()
-            .map(|(key, value)| (key, value.into()))
+            .map(|(key, value)| (key, value))
             .collect();
         let validator_verifier = Arc::new(ValidatorVerifier::new(validator_pubkeys));
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
@@ -135,13 +134,15 @@ impl ClientProxy {
         let faucet_account = if faucet_account_file.is_empty() {
             None
         } else {
-            let faucet_account_keypair: KeyPair =
+            let faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
                 ClientProxy::load_faucet_account_file(faucet_account_file);
             let faucet_account_data = Self::get_account_data_from_address(
                 &client,
                 association_address(),
                 true,
-                Some(KeyPair::new(faucet_account_keypair.private_key().clone())),
+                Some(KeyPair::<Ed25519PrivateKey, _>::from(
+                    faucet_account_keypair.private_key,
+                )),
             )?;
             // Load the keypair from file
             Some(faucet_account_data)
@@ -220,6 +221,7 @@ impl ClientProxy {
     }
 
     /// Clone all accounts held in the client.
+    #[cfg(any(test, feature = "testing"))]
     pub fn copy_all_accounts(&self) -> Vec<AccountData> {
         self.accounts.clone()
     }
@@ -797,7 +799,7 @@ impl ClientProxy {
         client: &GRPCClient,
         address: AccountAddress,
         sync_with_validator: bool,
-        key_pair: Option<KeyPair>,
+        key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
     ) -> Result<AccountData> {
         let (sequence_number, status) = match sync_with_validator {
             true => match client.get_account_blob(address) {
@@ -848,7 +850,9 @@ impl ClientProxy {
         self.wallet = wallet;
     }
 
-    fn load_faucet_account_file(faucet_account_file: &str) -> KeyPair {
+    fn load_faucet_account_file(
+        faucet_account_file: &str,
+    ) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
         match fs::read(faucet_account_file) {
             Ok(data) => {
                 bincode::deserialize(&data[..]).expect("Unable to deserialize faucet account file")

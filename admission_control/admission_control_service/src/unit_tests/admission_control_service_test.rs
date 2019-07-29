@@ -11,13 +11,12 @@ use crate::{
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
 use assert_matches::assert_matches;
-use crypto::{
-    hash::CryptoHash,
-    signing::{generate_keypair, sign_message},
-};
+use crypto::hash::CryptoHash;
 use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
+use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, SigningKey};
 use proto_conv::FromProto;
 use protobuf::{Message, UnknownFields};
+use rand::SeedableRng;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use types::{
@@ -52,16 +51,17 @@ fn assert_status(response: ProtoSubmitTransactionResponse, status: VMStatus) {
 
 #[test]
 fn test_submit_txn_inner_vm() {
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let ac_service = create_ac_service_for_ut();
     // create request
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    let keypair = generate_keypair();
+    let keypair = compat::generate_keypair(&mut rng);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -76,7 +76,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -89,7 +89,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -102,7 +102,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -115,7 +115,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -128,7 +128,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -141,7 +141,7 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -154,19 +154,19 @@ fn test_submit_txn_inner_vm() {
         sender,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::Execution(ExecutionStatus::Executed));
 
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
-    let test_key = generate_keypair();
+    let test_key = compat::generate_keypair(&mut rng);
     req.set_signed_txn(get_test_signed_txn(
         sender,
         0,
         keypair.0.clone(),
-        test_key.1,
+        test_key.1.clone(),
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
@@ -180,7 +180,7 @@ fn test_submit_txn_inner_vm() {
 fn test_reject_unknown_fields() {
     let ac_service = create_ac_service_for_ut();
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
-    let keypair = generate_keypair();
+    let keypair = compat::generate_keypair(None);
     let sender = AccountAddress::random();
     let mut signed_txn = get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1, None);
     let mut raw_txn = protobuf::parse_from_bytes::<::types::proto::transaction::RawTransaction>(
@@ -193,10 +193,10 @@ fn test_reject_unknown_fields() {
 
     let bytes = raw_txn.write_to_bytes().unwrap();
     let hash = RawTransactionBytes(&bytes).hash();
-    let signature = sign_message(hash, &keypair.0).unwrap();
+    let signature = keypair.0.sign_message(&hash);
 
     signed_txn.set_raw_txn_bytes(bytes);
-    signed_txn.set_sender_signature(signature.to_compact().to_vec());
+    signed_txn.set_sender_signature(signature.to_bytes().to_vec());
     req.set_signed_txn(signed_txn);
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
@@ -212,13 +212,13 @@ fn test_reject_unknown_fields() {
 fn test_submit_txn_inner_mempool() {
     let ac_service = create_ac_service_for_ut();
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
-    let keypair = generate_keypair();
+    let keypair = compat::generate_keypair(None);
     let insufficient_balance_add = AccountAddress::new([100; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         insufficient_balance_add,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = SubmitTransactionResponse::from_proto(
@@ -234,7 +234,7 @@ fn test_submit_txn_inner_mempool() {
         invalid_seq_add,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = SubmitTransactionResponse::from_proto(
@@ -250,7 +250,7 @@ fn test_submit_txn_inner_mempool() {
         sys_error_add,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = SubmitTransactionResponse::from_proto(
@@ -266,7 +266,7 @@ fn test_submit_txn_inner_mempool() {
         accepted_add,
         0,
         keypair.0.clone(),
-        keypair.1,
+        keypair.1.clone(),
         None,
     ));
     let response = SubmitTransactionResponse::from_proto(

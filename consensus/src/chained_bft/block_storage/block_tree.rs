@@ -293,7 +293,7 @@ where
         if li_with_sig.signatures().contains_key(&author) {
             return VoteReceptionResult::DuplicateVote;
         }
-        li_with_sig.add_signature(author, vote_msg.signature().clone().into());
+        li_with_sig.add_signature(author, vote_msg.signature().clone());
 
         let num_votes = li_with_sig.signatures().len();
         if num_votes >= min_votes_for_qc {
