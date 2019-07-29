@@ -75,6 +75,7 @@ impl<T: Payload> BlockRetrievalResponse<T> {
 
 /// BlockRetrievalRequest carries a block id for the requested block as well as the
 /// oneshot sender to deliver the response.
+#[derive(Debug)]
 pub struct BlockRetrievalRequest<T> {
     pub block_id: HashValue,
     pub num_blocks: u64,
@@ -83,6 +84,7 @@ pub struct BlockRetrievalRequest<T> {
 
 /// Represents a request to get up to batch_size transactions starting from start_version
 /// with the oneshot sender to deliver the response.
+#[derive(Debug)]
 pub struct ChunkRetrievalRequest {
     pub start_version: u64,
     pub target: QuorumCert,

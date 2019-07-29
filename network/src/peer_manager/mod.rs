@@ -492,6 +492,7 @@ where
     }
 }
 
+#[derive(Debug)]
 enum ConnectionHandlerRequest {
     DialPeer(
         PeerId,

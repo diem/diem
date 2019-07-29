@@ -53,6 +53,8 @@ pub const PING_FAILURES_TOLERATED: u64 = 10;
 pub const MAX_CONCURRENT_NETWORK_REQS: u32 = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: u32 = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
+pub const CONSENSUS_INBOUND_MSG_TIMOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const MEMPOOL_INBOUND_MSG_TIMOUT_MS: u64 = 60 * 1000; // 1 minute
 
 /// The type of the transport layer, i.e., running on memory or TCP stream,
 /// with or without Noise encryption
@@ -88,6 +90,8 @@ pub struct NetworkBuilder {
     ping_failures_tolerated: u64,
     connectivity_check_interval_ms: u64,
     inbound_rpc_timeout_ms: u64,
+    consensus_inbound_msg_timout_ms: u64,
+    mempool_inbound_msg_timout_ms: u64,
     max_concurrent_outbound_rpcs: u32,
     max_concurrent_inbound_rpcs: u32,
     max_concurrent_network_reqs: u32,
@@ -120,6 +124,8 @@ impl NetworkBuilder {
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
             inbound_rpc_timeout_ms: INBOUND_RPC_TIMEOUT_MS,
+            consensus_inbound_msg_timout_ms: CONSENSUS_INBOUND_MSG_TIMOUT_MS,
+            mempool_inbound_msg_timout_ms: MEMPOOL_INBOUND_MSG_TIMOUT_MS,
             max_concurrent_outbound_rpcs: MAX_CONCURRENT_OUTBOUND_RPCS,
             max_concurrent_inbound_rpcs: MAX_CONCURRENT_INBOUND_RPCS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
@@ -349,11 +355,15 @@ impl NetworkBuilder {
         // Construct Mempool and Consensus network interfaces
         let (network_reqs_tx, network_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
-        let (mempool_tx, mempool_rx) =
-            channel::new(self.channel_size, &counters::PENDING_MEMPOOL_NETWORK_EVENTS);
-        let (consensus_tx, consensus_rx) = channel::new(
+        let (mempool_tx, mempool_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_MEMPOOL_NETWORK_EVENTS,
+            Duration::from_millis(self.consensus_inbound_msg_timout_ms),
+        );
+        let (consensus_tx, consensus_rx) = channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
+            Duration::from_millis(self.mempool_inbound_msg_timout_ms),
         );
 
         let mempool_network_sender = MempoolNetworkSender::new(network_reqs_tx.clone());

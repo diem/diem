@@ -79,7 +79,9 @@ async fn expect_disconnect_request<'a, TSubstream>(
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
-) {
+) where
+    TSubstream: Debug,
+{
     let success = result.is_ok();
     match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DisconnectPeer(p, error_tx) => {
@@ -105,7 +107,9 @@ async fn expect_dial_request<'a, TSubstream>(
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
-) {
+) where
+    TSubstream: Debug,
+{
     let success = result.is_ok();
     match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DialPeer(p, addr, error_tx) => {
