@@ -8,7 +8,7 @@ use crate::loaded_data::{
 };
 use bytecode_verifier::VerifiedScript;
 use logger::prelude::*;
-use tiny_keccak::Keccak;
+use sha3::{Digest, Sha3_256};
 use types::transaction::SCRIPT_HASH_LENGTH;
 use vm::{
     errors::{Location, VMErrorKind, VMResult, VMRuntimeError, VerificationStatus},
@@ -33,12 +33,7 @@ impl<'alloc> ScriptCache<'alloc> {
     /// Compiles, verifies, caches and resolves `raw_bytes` into a `FunctionRef` that can be
     /// executed.
     pub fn cache_script(&self, raw_bytes: &[u8]) -> VMResult<FunctionRef<'alloc>> {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(raw_bytes);
-        keccak.finalize(&mut hash);
-
+        let hash: [u8; SCRIPT_HASH_LENGTH] = Sha3_256::digest(raw_bytes).into();
         // XXX We may want to put in some negative caching for scripts that fail verification.
         if let Some(f) = self.map.get(&hash) {
             trace!("[VM] Script cache hit");

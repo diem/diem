@@ -6,11 +6,11 @@
 //!
 //! https://github.com/rust-bitcoin/rust-wallet/blob/master/wallet/src/mnemonic.rs
 use crate::error::*;
-use crypto::{digest::Digest, sha2::Sha256};
 #[cfg(test)]
 use rand::rngs::EntropyRng;
 #[cfg(test)]
 use rand_core::RngCore;
+use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
     io::Write,
@@ -58,11 +58,7 @@ impl Mnemonic {
                 "Data for mnemonic should have a length divisible by 4".to_string(),
             ));
         }
-        let mut check = [0u8; 32];
-
-        let mut sha2 = Sha256::new();
-        sha2.input(data);
-        sha2.result(&mut check);
+        let check: [u8; 32] = Sha256::digest(data).into();
 
         let mut bits = vec![false; data.len() * 8 + data.len() / 4];
         for i in 0..data.len() {

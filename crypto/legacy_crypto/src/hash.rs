@@ -77,8 +77,8 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
 use serde::{Deserialize, Serialize};
+use sha3::{Digest, Sha3_256};
 use std::{self, convert::AsRef, fmt};
-use tiny_keccak::Keccak;
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 
@@ -164,9 +164,7 @@ impl HashValue {
 
     // Intentionally not public.
     fn from_sha3(buffer: &[u8]) -> Self {
-        let mut sha3 = Keccak::new_sha3_256();
-        sha3.update(buffer);
-        HashValue::from_keccak(sha3)
+        HashValue::from_hash_state(Sha3_256::new().chain(buffer))
     }
 
     #[cfg(test)]
@@ -174,21 +172,17 @@ impl HashValue {
     where
         I: IntoIterator<Item = &'a [u8]>,
     {
-        let mut sha3 = Keccak::new_sha3_256();
+        let mut d = Sha3_256::new();
         for buffer in buffers {
-            sha3.update(buffer);
+            d.input(buffer);
         }
-        HashValue::from_keccak(sha3)
+        HashValue::from_hash_state(d)
     }
 
-    fn as_ref_mut(&mut self) -> &mut [u8] {
-        &mut self.hash[..]
-    }
-
-    fn from_keccak(state: Keccak) -> Self {
-        let mut hash = Self::zero();
-        state.finalize(hash.as_ref_mut());
-        hash
+    fn from_hash_state(state: Sha3_256) -> Self {
+        Self {
+            hash: state.result().into(),
+        }
     }
 
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
@@ -363,39 +357,30 @@ pub trait CryptoHasher: Default {
 /// or that the serialization carries enough type information to avoid
 /// ambiguities within a same domain.
 /// * Only used internally within this crate
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct DefaultHasher {
-    state: Keccak,
+    state: Sha3_256,
 }
 
 impl CryptoHasher for DefaultHasher {
     fn finish(self) -> HashValue {
-        let mut hasher = HashValue::default();
-        self.state.finalize(hasher.as_ref_mut());
-        hasher
+        let hash = self.state.result().into();
+        HashValue { hash }
     }
 
     fn write(&mut self, bytes: &[u8]) -> &mut Self {
-        self.state.update(bytes);
+        self.state.input(bytes);
         self
-    }
-}
-
-impl Default for DefaultHasher {
-    fn default() -> Self {
-        DefaultHasher {
-            state: Keccak::new_sha3_256(),
-        }
     }
 }
 
 impl DefaultHasher {
     fn new_with_salt(typename: &[u8]) -> Self {
-        let mut state = Keccak::new_sha3_256();
+        let mut state = Sha3_256::new();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
             salt.extend_from_slice(LIBRA_HASH_SUFFIX);
-            state.update(HashValue::from_sha3(&salt[..]).as_ref());
+            state.input(HashValue::from_sha3(&salt[..]).as_ref());
         }
         DefaultHasher { state }
     }

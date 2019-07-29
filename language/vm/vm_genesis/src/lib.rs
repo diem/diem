@@ -7,6 +7,7 @@ use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
+use sha3::{Digest, Sha3_256};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};
 use stdlib::{
@@ -16,7 +17,6 @@ use stdlib::{
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
 };
-use tiny_keccak::Keccak;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -256,14 +256,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         CREATE_ACCOUNT_TXN.clone(),
     ]
     .into_iter()
-    .map(|s| {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(&s);
-        keccak.finalize(&mut hash);
-        hash
-    })
+    .map(|s| Sha3_256::digest(&s).into())
     .collect()
 }
 

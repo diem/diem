@@ -10,7 +10,7 @@ edition = "2018"
 bitcoin_hashes = "0.3.0"
 nextgen_crypto = { path = "../../../crypto/nextgen_crypto" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
-tiny-keccak = "1.5.0"
+sha3 = "0.8"
 types = { path = "../../../types" }
 byteorder = "1.3.2"
 bit-vec = "0.6.1"

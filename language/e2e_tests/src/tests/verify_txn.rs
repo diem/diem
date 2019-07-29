@@ -13,8 +13,8 @@ use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::signing::KeyPair;
+use sha3::{Digest, Sha3_256};
 use std::collections::HashSet;
-use tiny_keccak::Keccak;
 use types::{
     account_address::AccountAddress,
     test_helpers::transaction_test_helpers,
@@ -77,21 +77,14 @@ fn verify_whitelist() {
     // Making sure the whitelist's hash matches the current compiled script. If this fails, please
     // try run `cargo run` under vm_genesis and update the vm_config in node.config.toml and in
     // config.rs in libra/config crate.
-    let programs: HashSet<_> = vec![
+    let programs: HashSet<[u8; SCRIPT_HASH_LENGTH]> = [
         PEER_TO_PEER.clone(),
         MINT.clone(),
         ROTATE_KEY.clone(),
         CREATE_ACCOUNT.clone(),
     ]
-    .into_iter()
-    .map(|s| {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(&s);
-        keccak.finalize(&mut hash);
-        hash
-    })
+    .iter()
+    .map(|s| Sha3_256::digest(s).into())
     .collect();
 
     let config = NodeConfigHelpers::get_single_node_test_config(false);

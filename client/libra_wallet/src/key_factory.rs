@@ -16,13 +16,11 @@
 //! Private Keys adheres to [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869).
 
 use byteorder::{ByteOrder, LittleEndian};
-use crypto::{hmac::Hmac as CryptoHmac, pbkdf2::pbkdf2, sha3::Sha3};
 use ed25519_dalek;
 use libra_crypto::{hash::HashValue, hkdf::Hkdf};
 use serde::{Deserialize, Serialize};
-use sha3::Sha3_256;
+use sha3::{Digest, Sha3_256};
 use std::{convert::TryFrom, ops::AddAssign};
-use tiny_keccak::Keccak;
 use types::account_address::AccountAddress;
 
 use crate::{error::Result, mnemonic::Mnemonic};
@@ -95,11 +93,8 @@ impl ExtendedPrivKey {
     /// from the raw bytes of the pubkey hash
     pub fn get_address(&self) -> Result<AccountAddress> {
         let public_key = self.get_public();
-        let mut keccak = Keccak::new_sha3_256();
-        let mut hash = [0u8; 32];
-        keccak.update(&public_key.to_bytes());
-        keccak.finalize(&mut hash);
-        let addr = AccountAddress::try_from(&hash[..])?;
+        let hash = Sha3_256::digest(&public_key.to_bytes());
+        let addr = AccountAddress::try_from(hash.as_ref())?;
         Ok(addr)
     }
 
@@ -174,13 +169,12 @@ impl Seed {
     /// particular Mnemonic and salt. WalletLibrary implements a fixed salt, but a user could
     /// choose a user-defined salt instead of the hardcoded one.
     pub fn new(mnemonic: &Mnemonic, salt: &str) -> Seed {
-        let mut mac = CryptoHmac::new(Sha3::sha3_256(), mnemonic.to_string().as_bytes());
-        let mut output = [0u8; 32];
-
         let mut msalt = KeyFactory::MNEMONIC_SALT_PREFIX.to_vec();
         msalt.extend_from_slice(salt.as_bytes());
 
-        pbkdf2(&mut mac, &msalt, 2048, &mut output);
+        let m = mnemonic.to_string();
+        let mut output = [0u8; 32];
+        pbkdf2::pbkdf2::<hmac::Hmac<Sha3_256>>(m.as_bytes(), &msalt, 2048, &mut output);
         Seed(output)
     }
 }

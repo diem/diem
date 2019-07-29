@@ -21,7 +21,6 @@ proptest-derive = "0.1.0"
 rand = "0.6.5"
 serde = { version = "1.0.96", features = ["derive"] }
 threshold_crypto = "0.3"
-tiny-keccak = "1.5.0"
 x25519-dalek = "0.5.2"
 digest = "0.8.1"
 hmac = "0.7.1"
