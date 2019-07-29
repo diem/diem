@@ -3,9 +3,10 @@
 # Check that the test directory and report path arguments are provided
 if [ $# -lt 2 ]
 then
-	echo "Usage: $0 <testdir> <outdir>"
+	echo "Usage: $0 <testdir> <outdir> [--batch]"
 	echo "All tests in <testdir> and its subdirectories will be run to measure coverage."
 	echo "The resulting coverage report will be stored in <outdir>."
+	echo "--batch will skip all prompts."
 	exit 1
 fi
 
