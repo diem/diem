@@ -8,11 +8,11 @@ use admission_control_proto::proto::{
     admission_control_grpc::AdmissionControlClient,
 };
 use client::{AccountData, AccountStatus};
-use crypto::signing::KeyPair;
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
 use logger::prelude::*;
 use metrics::OpMetrics;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto, sync::Arc, thread, time};
 use types::{account_address::AccountAddress, account_config::association_address};
@@ -80,7 +80,7 @@ impl Benchmarker {
     /// Why restore faucet account: Benchmarker as a client can be stopped/restarted repeatedly
     /// while the libra swarm as a server keeping running.
     pub fn load_faucet_account(&mut self, faucet_account_path: &str) -> AccountData {
-        let faucet_account_keypair: KeyPair =
+        let faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
             load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
         let address = association_address();
         // Request and wait for account's (sequence_number, account_status) from a validator.
@@ -214,7 +214,10 @@ impl Benchmarker {
         let children: Vec<thread::JoinHandle<HashMap<_, _>>> = account_chunks
             .zip(self.clients.iter().cycle())
             .map(|(chunk, client)| {
-                let local_chunk = Vec::from(chunk);
+                let local_chunk: Vec<(AccountAddress, u64)> = chunk
+                    .iter()
+                    .map(|sender| (sender.address, sender.sequence_number))
+                    .collect();
                 let local_client = Arc::clone(client);
                 info!(
                     "Dispatch a chunk of {} accounts to client.",

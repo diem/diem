@@ -6,7 +6,7 @@
 //!
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
-use crypto::signing::KeyPair;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
 use serde::{Deserialize, Serialize};
 use types::account_address::AccountAddress;
 
@@ -23,12 +23,13 @@ pub(crate) mod transfer_commands;
 
 /// Struct used to store data for each created account.  We track the sequence number
 /// so we can create new transactions easily
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct AccountData {
     /// Address of the account.
     pub address: AccountAddress,
     /// (private_key, public_key) pair if the account is not managed by wallet.
-    pub key_pair: Option<KeyPair>,
+    pub key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
     /// Latest sequence number maintained by client, it can be different from validator.
     pub sequence_number: u64,
     /// Whether the account is initialized on chain, cached local only, or status unknown.
@@ -51,10 +52,17 @@ impl AccountData {
     /// Serialize account keypair if exists.
     pub fn keypair_as_string(&self) -> Option<(String, String)> {
         match &self.key_pair {
-            Some(key_pair) => Some((
-                crypto::utils::encode_to_string(&key_pair.private_key()),
-                crypto::utils::encode_to_string(&key_pair.public_key()),
-            )),
+            Some(key_pair) => {
+                let private_key_string = key_pair
+                    .private_key
+                    .to_encoded_string()
+                    .expect("Account private key to convertible to string!");
+                let public_key_string = key_pair
+                    .public_key
+                    .to_encoded_string()
+                    .expect("Account public Key not convertible to string!");
+                Some((private_key_string, public_key_string))
+            }
             None => None,
         }
     }

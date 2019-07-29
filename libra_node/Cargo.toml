@@ -38,3 +38,4 @@ vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 config_builder = { path = "../config/config_builder" }
+types = { path = "../types", features = ["testing"]}

@@ -128,7 +128,7 @@ impl ChainedBftProvider {
         let peers_with_nextgen_public_keys = peers_with_public_keys
             .clone()
             .into_iter()
-            .map(|(k, v)| (AccountAddress::clone(&k), v.into()))
+            .map(|(k, v)| (AccountAddress::clone(&k), v))
             .collect();
         let peers = Arc::new(
             peers_with_public_keys

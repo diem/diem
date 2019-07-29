@@ -11,6 +11,7 @@ config = { path = "../../../config" }
 crypto = { path = "../../../crypto/legacy_crypto" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+nextgen_crypto = { path = "../../../crypto/nextgen_crypto" }
 stdlib = { path = "../../stdlib" }
 proto_conv = { path = "../../../common/proto_conv", features = ["derive"] }
 state_view = { path = "../../../storage/state_view" }
@@ -27,6 +28,7 @@ toml = "0.4"
 
 [dev-dependencies]
 canonical_serialization = { path = "../../../common/canonical_serialization" }
+nextgen_crypto = { path = "../../../crypto/nextgen_crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../../common/proptest_helpers" }

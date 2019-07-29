@@ -6,6 +6,7 @@ use crate::{
     common_transactions::{create_account_txn, rotate_key_txn},
     executor::FakeExecutor,
 };
+use nextgen_crypto::ed25519::compat;
 use types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,
@@ -20,8 +21,8 @@ fn rotate_key() {
     let mut sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
-    let (privkey, pubkey) = crypto::signing::generate_keypair();
-    let new_key_hash = AccountAddress::from(pubkey);
+    let (privkey, pubkey) = compat::generate_keypair(None);
+    let new_key_hash = AccountAddress::from_public_key(&pubkey);
     let txn = rotate_key_txn(sender.account(), new_key_hash, 10);
 
     // execute transaction

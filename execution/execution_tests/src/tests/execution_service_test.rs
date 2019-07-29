@@ -3,14 +3,12 @@
 
 use crate::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
 use config_builder::util::get_test_config;
-use crypto::{
-    hash::GENESIS_BLOCK_ID,
-    signing::{generate_keypair, KeyPair},
-};
+use crypto::hash::GENESIS_BLOCK_ID;
 use execution_client::ExecutionClient;
 use execution_proto::ExecuteBlockRequest;
 use futures01::future::Future;
 use grpcio::EnvBuilder;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::sync::Arc;
 use types::{
     account_address::AccountAddress,
@@ -19,10 +17,13 @@ use types::{
 };
 use vm_genesis::encode_mint_program;
 
-fn encode_mint_transaction(seqnum: u64, sender_keypair: &KeyPair) -> SignedTransaction {
-    let (_privkey, pubkey) = generate_keypair();
+fn encode_mint_transaction(
+    seqnum: u64,
+    sender_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+) -> SignedTransaction {
+    let (_privkey, pubkey) = compat::generate_keypair(None);
     let sender = account_config::association_address();
-    let receiver = AccountAddress::from(pubkey);
+    let receiver = AccountAddress::from_public_key(&pubkey);
     let program = encode_mint_program(&receiver, 100);
     let raw_txn = RawTransaction::new(
         sender,
@@ -33,7 +34,10 @@ fn encode_mint_transaction(seqnum: u64, sender_keypair: &KeyPair) -> SignedTrans
         std::time::Duration::from_secs(u64::max_value()),
     );
     raw_txn
-        .sign(&sender_keypair.private_key(), sender_keypair.public_key())
+        .sign(
+            &sender_keypair.private_key,
+            sender_keypair.public_key.clone(),
+        )
         .expect("Signing should work.")
         .into_inner()
 }

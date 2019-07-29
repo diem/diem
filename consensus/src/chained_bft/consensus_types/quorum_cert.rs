@@ -150,7 +150,7 @@ impl QuorumCert {
             .sign_message(li.hash())
             .expect("Fail to sign genesis ledger info");
         let mut signatures = HashMap::new();
-        signatures.insert(signer.author(), signature.into());
+        signatures.insert(signer.author(), signature);
         QuorumCert::new(
             *GENESIS_BLOCK_ID,
             ExecutedState::state_for_genesis(),

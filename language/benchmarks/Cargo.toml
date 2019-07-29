@@ -14,6 +14,9 @@ language_e2e_tests = { path = "../e2e_tests" }
 proptest_helpers = { path = "../../common/proptest_helpers" }
 types = { path = "../../types" }
 
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }
+
 [[bench]]
 name = "transactions"
 harness = false

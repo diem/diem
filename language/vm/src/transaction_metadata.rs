@@ -18,7 +18,7 @@ impl TransactionMetadata {
     pub fn new(txn: &SignedTransaction) -> Self {
         Self {
             sender: txn.sender(),
-            public_key: txn.public_key(),
+            public_key: txn.public_key().into(),
             sequence_number: txn.sequence_number(),
             max_gas_amount: GasUnits::new(txn.max_gas_amount()),
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),

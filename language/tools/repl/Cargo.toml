@@ -16,3 +16,6 @@ stdlib = { path = "../../stdlib" }
 types = { path = "../../../types" }
 vm_runtime = { path = "../../vm/vm_runtime" }
 hex = "0.3.2"
+
+[dev-dependencies]
+types = { path = "../../../types", features = ["testing"] }

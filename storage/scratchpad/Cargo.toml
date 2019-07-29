@@ -14,3 +14,4 @@ types = { path = "../../types" }
 
 [dev-dependencies]
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+types = { path = "../../types", features = ["testing"] }

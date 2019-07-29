@@ -25,6 +25,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
@@ -34,8 +35,8 @@ vm_validator = { path = "../vm_validator" }
 rand = "0.6.5"
 tempfile = "3.1.0"
 channel = { path = "../common/channel" }
-
 storage_service = { path = "../storage/storage_service" }
+types = { path = "../types", features = ["testing"] }
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }

@@ -17,12 +17,10 @@ serde = "1.0.96"
 tiny-keccak = "1.5.0"
 protobuf = "~2.7"
 sha3 = "0.8.2"
+types = { path = "../../types" }
 
 [dependencies.ed25519-dalek]
 version = "1.0.0-pre.1"
-
-[dependencies.types]
-path = "../../types"
 
 [dependencies.libra_crypto]
 path = "../../crypto/legacy_crypto"
@@ -37,3 +35,4 @@ package = "failure_ext"
 
 [dev-dependencies]
 tempfile = "3.1.0"
+types = { path = "../../types", features = ["testing"]}

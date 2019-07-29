@@ -40,14 +40,14 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 }
 
 pub fn gen_txn_list(sequence_number: u64) -> TransactionListWithProof {
-    let sender = AccountAddress::from(GENESIS_KEYPAIR.1);
+    let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
     let receiver = AccountAddress::new([0xff; 32]);
     let program = encode_transfer_program(&receiver, 1);
     let transaction = get_test_signed_txn(
         sender.into(),
         sequence_number,
         GENESIS_KEYPAIR.0.clone(),
-        GENESIS_KEYPAIR.1,
+        GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
 

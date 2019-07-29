@@ -131,7 +131,7 @@ fn run_transaction(
         1,
         Duration::from_secs(u64::max_value()),
     )
-    .sign(&account.privkey, account.pubkey)?
+    .sign(&account.privkey, account.pubkey.clone())?
     .into_inner();
 
     let mut outputs = exec.execute_block(vec![transaction]);

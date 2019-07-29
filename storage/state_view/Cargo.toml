@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 types = { path = "../../types" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}

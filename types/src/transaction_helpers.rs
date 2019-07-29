@@ -9,10 +9,10 @@ use crate::{
 use chrono::Utc;
 use crypto::{
     hash::{CryptoHash, TestOnlyHash},
-    signing::{sign_message, KeyPair},
     HashValue,
 };
 use failure::prelude::*;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair, traits::SigningKey};
 use proto_conv::IntoProto;
 use protobuf::Message;
 
@@ -51,14 +51,14 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
     signer.sign_txn(raw_txn)
 }
 
-impl TransactionSigner for KeyPair {
+impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
         let bytes = raw_txn.clone().into_proto().write_to_bytes()?;
         let hash = RawTransactionBytes(&bytes).hash();
-        let signature = sign_message(hash, self.private_key())?;
+        let signature = self.private_key.sign_message(&hash);
         Ok(SignedTransaction::craft_signed_transaction_for_client(
             raw_txn,
-            self.public_key(),
+            self.public_key.clone(),
             signature,
         ))
     }

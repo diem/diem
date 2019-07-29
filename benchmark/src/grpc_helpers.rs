@@ -8,7 +8,7 @@ use admission_control_proto::proto::{
     },
     admission_control_grpc::AdmissionControlClient,
 };
-use client::{AccountData, AccountStatus};
+use client::AccountStatus;
 use failure::prelude::*;
 use futures::{
     stream::{self, Stream},
@@ -219,16 +219,16 @@ pub fn get_account_states(
 /// Return sender accounts' most recent persisted sequence numbers.
 pub fn sync_account_sequence_number(
     client: &AdmissionControlClient,
-    senders: &[AccountData],
+    senders_and_sequence_numbers: &[(AccountAddress, u64)],
 ) -> HashMap<AccountAddress, u64> {
     // Invariants for the keys in targets (T), unfinished (U) and finished (F):
     // (1) T = U union F, and (2) U and F are disjoint.
-    let targets: HashMap<AccountAddress, u64> = senders
+    let targets: HashMap<AccountAddress, u64> =
+        senders_and_sequence_numbers.iter().cloned().collect();
+    let mut unfinished: HashMap<AccountAddress, u64> = senders_and_sequence_numbers
         .iter()
-        .map(|sender| (sender.address, sender.sequence_number))
+        .map(|(sender, _)| (*sender, 0))
         .collect();
-    let mut unfinished: HashMap<AccountAddress, u64> =
-        senders.iter().map(|sender| (sender.address, 0)).collect();
     let mut finished = HashMap::new();
 
     let mut num_iters = 0;
@@ -251,7 +251,7 @@ pub fn sync_account_sequence_number(
                 }
             }
         }
-        if finished.len() == senders.len() {
+        if finished.len() == senders_and_sequence_numbers.len() {
             break;
         }
         thread::sleep(time::Duration::from_micros(

@@ -12,7 +12,7 @@ use assert_matches::assert_matches;
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
-use crypto::signing::KeyPair;
+use nextgen_crypto::ed25519::*;
 use std::collections::HashSet;
 use tiny_keccak::Keccak;
 use types::{
@@ -34,13 +34,13 @@ fn verify_signature() {
     let sender = AccountData::new(900_000, 10);
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
-    let other_keypair = KeyPair::new(::crypto::signing::generate_keypair().0);
+    let (private_key, _public_key) = compat::generate_keypair(None);
     let program = encode_transfer_program(sender.address(), 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
-        other_keypair.private_key().clone(),
-        sender.account().pubkey,
+        private_key,
+        sender.account().pubkey.clone(),
         Some(program),
     );
 
@@ -60,7 +60,7 @@ fn verify_rejected_write_set() {
         *sender.address(),
         0,
         sender.account().privkey.clone(),
-        sender.account().pubkey,
+        sender.account().pubkey.clone(),
         None,
     )
     .into_inner();

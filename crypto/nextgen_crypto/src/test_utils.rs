@@ -5,13 +5,14 @@
 
 use crate::traits::Uniform;
 use bincode::serialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// A deterministic seed for PRNGs related to keys
 pub const TEST_SEED: [u8; 32] = [0u8; 32];
 
 /// A keypair consisting of a private and public key
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyPair<S, P>
 where
     for<'a> P: From<&'a S>,

@@ -16,6 +16,6 @@ rust_decimal = "1.0.1"
 # should have their crates listed as dev-dependencies.
 cli = { path = "../client", package="client" }
 generate_keypair = { path = "../config/generate_keypair" }
-libra_swarm = { path = "../libra_swarm" }
+libra_swarm = { path = "../libra_swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 tempfile = "3.1.0"

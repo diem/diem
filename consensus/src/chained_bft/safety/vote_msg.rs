@@ -157,7 +157,7 @@ impl VoteMsg {
             grandparent_block_round,
             author,
             ledger_info: ledger_info_placeholder,
-            signature: li_sig.into(),
+            signature: li_sig,
         }
     }
 

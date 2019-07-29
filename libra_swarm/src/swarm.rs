@@ -7,10 +7,10 @@ use crate::{
 };
 use config::config::NodeConfig;
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
-use crypto::signing::KeyPair;
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use logger::prelude::*;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::{
     collections::HashMap,
     env,
@@ -252,7 +252,7 @@ impl LibraSwarm {
     pub fn launch_swarm(
         num_nodes: usize,
         disable_logging: bool,
-        faucet_account_keypair: KeyPair,
+        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
         config_dir: Option<String>,
     ) -> Self {
@@ -278,7 +278,7 @@ impl LibraSwarm {
     fn launch_swarm_attempt(
         num_nodes: usize,
         disable_logging: bool,
-        faucet_account_keypair: KeyPair,
+        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
         config_dir: &Option<String>,
     ) -> std::result::Result<Self, SwarmLaunchFailure> {

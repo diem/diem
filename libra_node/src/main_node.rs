@@ -161,7 +161,7 @@ pub fn setup_network(
             (
                 peer_id,
                 NetworkPublicKeys {
-                    signing_public_key: signing_public_key.into(),
+                    signing_public_key,
                     identity_public_key,
                 },
             )

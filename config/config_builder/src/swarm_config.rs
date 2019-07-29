@@ -8,8 +8,8 @@ use config::{
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
-use crypto::signing::KeyPair;
 use failure::prelude::*;
+use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::path::{Path, PathBuf};
 
 pub struct SwarmConfig {
@@ -23,7 +23,7 @@ impl SwarmConfig {
     pub fn new(
         mut template: NodeConfig,
         num_nodes: usize,
-        faucet_key: KeyPair,
+        faucet_key: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         prune_seed_peers_for_discovery: bool,
         is_ipv4: bool,
         key_seed: Option<[u8; 32]>,
@@ -164,7 +164,7 @@ pub struct SwarmConfigBuilder {
     is_ipv4: bool,
     key_seed: Option<[u8; 32]>,
     faucet_account_keypair_filepath: Option<PathBuf>,
-    faucet_account_keypair: Option<KeyPair>,
+    faucet_account_keypair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
 }
 impl Default for SwarmConfigBuilder {
     fn default() -> Self {
@@ -212,7 +212,10 @@ impl SwarmConfigBuilder {
         self
     }
 
-    pub fn with_faucet_keypair(&mut self, keypair: KeyPair) -> &mut Self {
+    pub fn with_faucet_keypair(
+        &mut self,
+        keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    ) -> &mut Self {
         self.faucet_account_keypair = Some(keypair);
         self
     }
@@ -242,11 +245,10 @@ impl SwarmConfigBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<SwarmConfig> {
+    pub fn build(&mut self) -> Result<SwarmConfig> {
         // verify required fields
         let faucet_key_path = self.faucet_account_keypair_filepath.clone();
-        let faucet_key_option = self.faucet_account_keypair.clone();
-        let faucet_key = faucet_key_option.unwrap_or_else(|| {
+        let faucet_key = self.faucet_account_keypair.take().unwrap_or_else(|| {
             generate_keypair::load_key_from_file(
                 faucet_key_path.expect("Must provide faucet key file"),
             )

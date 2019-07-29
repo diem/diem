@@ -23,6 +23,7 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 logger = { path = "../../common/logger" }
 mempool = { path = "../../mempool" }
 metrics = { path = "../../common/metrics" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
 types = { path = "../../types" }
@@ -30,7 +31,9 @@ vm_validator = { path = "../../vm_validator" }
 
 [dev-dependencies]
 assert_matches = "1.3.0"
+rand = "0.6.5"
 storage_service = { path = "../../storage/storage_service" }
+types = { path = "../../types", features = ["testing"] }
 
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }

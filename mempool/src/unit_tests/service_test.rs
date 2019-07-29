@@ -11,9 +11,9 @@ use crate::{
     },
 };
 use config::config::NodeConfigHelpers;
-use crypto::signing::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use nextgen_crypto::ed25519::compat::generate_keypair;
 use proto_conv::FromProto;
 use std::{
     sync::{Arc, Mutex},
@@ -47,7 +47,7 @@ fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
 fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithValidationRequest {
     let mut req = AddTransactionWithValidationRequest::new();
     let sender = AccountAddress::random();
-    let (private_key, public_key) = generate_keypair();
+    let (private_key, public_key) = generate_keypair(None);
 
     let transaction = get_test_signed_transaction(
         sender,

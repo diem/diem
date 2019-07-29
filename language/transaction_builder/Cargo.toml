@@ -14,6 +14,9 @@ structopt = { version = "0.2.15", optional = true }
 serde_json = { version = "1.0.40", optional = true }
 proto_conv = { path = "../../common/proto_conv", optional = true }
 
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}
+
 [features]
 build-binary = ["structopt", "serde_json", "proto_conv"]
 

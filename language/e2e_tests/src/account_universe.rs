@@ -27,8 +27,8 @@ use crate::{
     account::{Account, AccountData},
     gas_costs,
 };
-use crypto::{PrivateKey, PublicKey};
 use lazy_static::lazy_static;
+use nextgen_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use proptest::{prelude::*, strategy::Union};
 use std::fmt;
 use types::{
@@ -132,7 +132,7 @@ impl AccountCurrent {
     }
 
     /// Rotates the key in this account.
-    pub fn rotate_key(&mut self, privkey: PrivateKey, pubkey: PublicKey) {
+    pub fn rotate_key(&mut self, privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) {
         self.initial_data.rotate_key(privkey, pubkey);
     }
 
