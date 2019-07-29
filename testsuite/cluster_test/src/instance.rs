@@ -22,7 +22,12 @@ impl Instance {
         S: AsRef<OsStr>,
     {
         let ssh_dest = format!("ec2-user@{}", self.ip);
-        let ssh_args = vec!["-i", "/libra_rsa", ssh_dest.as_str()];
+        let ssh_args = vec![
+            "-i",
+            "/libra_rsa",
+            "-oStrictHostKeyChecking=no",
+            ssh_dest.as_str(),
+        ];
         let mut ssh_cmd = Command::new("ssh");
         ssh_cmd.args(ssh_args).args(args).stderr(Stdio::null());
         let status = ssh_cmd.status()?;
