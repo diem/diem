@@ -109,5 +109,6 @@ and `B`.
             └── execution_client   # A Rust wrapper on top of GRPC clients.
             └── execution_proto    # All interfaces provided by the execution component.
             └── execution_service  # Execution component as a GRPC service.
+            └── execution_tests    # Tests for the execution service.
             └── executor           # The main implementation of execution component.
 ```
