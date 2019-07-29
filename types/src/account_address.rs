@@ -58,7 +58,6 @@ impl AccountAddress {
     pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
         // TODO: using Sha3_256 directly instead of crypto::hash because we have to make sure we use
         // the same hash function that the Move transaction prologue is using.
-        // TODO: Sha3_256 is just a placeholder, make a principled choice for the hash function
         let hash = Sha3_256::digest(&public_key.to_bytes()).into();
         AccountAddress::new(hash)
     }
