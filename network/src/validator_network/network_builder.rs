@@ -492,6 +492,7 @@ impl NetworkBuilder {
 
         // Initialize and start RPC actor.
         let rpc = Rpc::new(
+            self.executor.clone(),
             rpc_reqs_rx,
             pm_rpc_notifs_rx,
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),

@@ -64,6 +64,7 @@ use crate::{
     sink::NetworkSinkExt,
     ProtocolId,
 };
+use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
 use channel;
 use error::RpcError;
@@ -73,12 +74,12 @@ use futures::{
     future::{self, FutureExt, TryFutureExt},
     io::{AsyncRead, AsyncReadExt, AsyncWrite},
     sink::SinkExt,
-    stream::{select, StreamExt},
+    stream::StreamExt,
     task::Context,
 };
 use logger::prelude::*;
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{codec::Framed, prelude::FutureExt as Future01Ext};
+use tokio::{codec::Framed, prelude::FutureExt as Future01Ext, runtime::TaskExecutor};
 use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
@@ -150,6 +151,8 @@ pub enum RpcNotification {
 
 /// The rpc actor.
 pub struct Rpc<TSubstream> {
+    /// Executor to spawn inbound and outbound handler tasks.
+    executor: TaskExecutor,
     /// Channel to receive requests from other upstream actors.
     requests_rx: channel::Receiver<RpcRequest>,
     /// Channel to receive notifications from [`PeerManager`](crate::peer_manager::PeerManager).
@@ -176,6 +179,7 @@ where
 {
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
+        executor: TaskExecutor,
         requests_rx: channel::Receiver<RpcRequest>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
@@ -185,6 +189,7 @@ where
         max_concurrent_inbound_rpcs: u32,
     ) -> Self {
         Self {
+            executor,
             requests_rx,
             peer_mgr_notifs_rx,
             peer_mgr_reqs_tx,
@@ -198,6 +203,7 @@ where
     /// Start the [`Rpc`] actor's event loop.
     pub async fn start(self) {
         // unpack self to satisfy borrow checker
+        let executor = self.executor;
         let requests_rx = self.requests_rx;
         let peer_mgr_notifs_rx = self.peer_mgr_notifs_rx;
         let peer_mgr_reqs_tx = self.peer_mgr_reqs_tx;
@@ -206,23 +212,62 @@ where
         let max_concurrent_outbound_rpcs = self.max_concurrent_outbound_rpcs;
         let max_concurrent_inbound_rpcs = self.max_concurrent_inbound_rpcs;
 
-        // inbound and outbound requests are buffered separately
+        // inbound and outbound requests use separate bounded executors to ensure
+        // backpressure propagates independently and doesn't starve the other
+        // handler.
 
-        let outbound_reqs = requests_rx
-            .map(move |req| handle_outbound_rpc(peer_mgr_reqs_tx.clone(), req))
-            .buffer_unordered(max_concurrent_outbound_rpcs as usize);
+        let outbound_handler = handle_outbounds(
+            BoundedExecutor::new(max_concurrent_outbound_rpcs as usize, executor.clone()),
+            requests_rx,
+            peer_mgr_reqs_tx,
+        );
 
-        let inbound_notifs = peer_mgr_notifs_rx
-            .map(move |notif| {
-                handle_inbound_substream(rpc_handler_tx.clone(), notif, inbound_rpc_timeout)
-            })
-            .buffer_unordered(max_concurrent_inbound_rpcs as usize);
+        let inbound_handler = handle_inbounds(
+            BoundedExecutor::new(max_concurrent_inbound_rpcs as usize, executor),
+            peer_mgr_notifs_rx,
+            rpc_handler_tx,
+            inbound_rpc_timeout,
+        );
 
-        // drive all inbound and outbound futures to completion
-        let mut rpc_futures = select(outbound_reqs, inbound_notifs);
-        while let Some(_) = rpc_futures.next().await {}
+        // drive inbound and outbound handlers to completion
+        future::join(outbound_handler, inbound_handler).await;
 
         crit!("Rpc actor terminated");
+    }
+}
+
+/// Handle all outbound rpcs.
+async fn handle_outbounds<TSubstream>(
+    executor: BoundedExecutor,
+    mut requests_rx: channel::Receiver<RpcRequest>,
+    peer_mgr_tx: PeerManagerRequestSender<TSubstream>,
+) where
+    TSubstream: AsyncRead + AsyncWrite + Send + Unpin + 'static,
+{
+    while let Some(req) = requests_rx.next().await {
+        executor
+            .spawn(handle_outbound_rpc(peer_mgr_tx.clone(), req))
+            .await;
+    }
+}
+
+/// Handle all inbound rpcs.
+async fn handle_inbounds<TSubstream>(
+    executor: BoundedExecutor,
+    mut peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    rpc_handler_tx: channel::Sender<RpcNotification>,
+    inbound_rpc_timeout: Duration,
+) where
+    TSubstream: AsyncRead + AsyncWrite + Debug + Send + Unpin + 'static,
+{
+    while let Some(notif) = peer_mgr_notifs_rx.next().await {
+        executor
+            .spawn(handle_inbound_substream(
+                rpc_handler_tx.clone(),
+                notif,
+                inbound_rpc_timeout,
+            ))
+            .await;
     }
 }
 

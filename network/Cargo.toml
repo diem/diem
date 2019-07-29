@@ -20,6 +20,7 @@ tokio-timer = "0.2.10"
 tokio-retry = "0.2.0"
 unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
+bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
 crypto = { path = "../crypto/legacy_crypto" }
 nextgen_crypto = { path = "../crypto/nextgen_crypto" }
