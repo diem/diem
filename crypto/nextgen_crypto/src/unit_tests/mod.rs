@@ -5,6 +5,7 @@ mod bls12381_test;
 mod cross_test;
 mod ed25519_test;
 mod slip0010_test;
+mod x25519_test;
 
 use crate::{test_utils::KeyPair, traits::Uniform};
 use proptest::prelude::*;
