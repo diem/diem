@@ -26,7 +26,7 @@ COVERAGE_DIR=$2
 LIBRA_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd)"
 if [ $(pwd) != $LIBRA_DIR  ]
 then
-	echo "This needs to run from libra/, not in $(pwd)"
+	echo "Error: This needs to run from libra/, not in $(pwd)" >&2
 	exit 1
 fi
 
@@ -35,13 +35,18 @@ set -e
 # Check that grcov is installed
 if ! [ -x "$(command -v grcov)" ]; then
 	echo "Error: grcov is not installed." >&2
-	read -p "Install grcov? [yY/*] " -n 1 -r
-	echo ""
-	if [[ ! $REPLY =~ ^[Yy]$ ]]
+	if [ $SKIP_PROMPTS -eq 0 ]
 	then
-		[[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
+		read -p "Install grcov? [yY/*] " -n 1 -r
+		echo ""
+		if [[ ! $REPLY =~ ^[Yy]$ ]]
+		then
+			[[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
+		fi
+		cargo install grcov
+	else
+		exit 1
 	fi
-	cargo install grcov
 fi
 
 # Check that lcov is installed
@@ -49,6 +54,7 @@ if ! [ -x "$(command -v lcov)" ]; then
 	echo "Error: lcov is not installed." >&2
 	echo "Documentation for lcov can be found at http://ltp.sourceforge.net/coverage/lcov.php"
 	echo "If on macOS and using homebrew, run 'brew install lcov'"
+	exit 1
 fi
 
 # Warn that cargo clean will happen
@@ -80,7 +86,8 @@ then
 	find target -type f -name "*.gcda" -delete
 	find target -type f -name "*.gcno" -delete
 else
-	echo "Error: target directory does not exist. Did cargo build fail?"
+	echo "Error: target directory does not exist. Did cargo build fail?" >&2
+	exit 1
 fi
 
 # Run tests
