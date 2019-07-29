@@ -5,11 +5,9 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     frame::Frame,
     loaded_data::function::{FunctionRef, FunctionReference},
-    value::{Local, MutVal, Value},
+    value::{Local, MutVal},
 };
-use move_ir_natives::dispatch::{Result as NativeResult, StackAccessor};
 use std::{fmt, marker::PhantomData};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::errors::*;
 
 pub struct ExecutionStack<'alloc, 'txn, P>
@@ -107,7 +105,7 @@ where
     where
         Option<T>: From<MutVal>,
     {
-        let top = self.pop()?.value().and_then(std::convert::Into::into);
+        let top = self.pop()?.value_as();
         Ok(top.ok_or(VMRuntimeError {
             loc: self.location()?,
             err: VMErrorKind::TypeError,
@@ -149,44 +147,5 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Stack: {:?}", self.stack)?;
         writeln!(f, "Current Frames: {:?}", self.function_stack)
-    }
-}
-
-impl<'alloc, 'txn, P> StackAccessor for &mut ExecutionStack<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    fn get_byte_array(&mut self) -> NativeResult<ByteArray> {
-        match self.pop()?.value() {
-            Some(v) => match MutVal::try_own(v) {
-                Ok(Value::ByteArray(arr)) => Ok(arr),
-                Err(err) => Err(err.into()),
-                _ => Err(VMStaticViolation::TypeMismatch.into()),
-            },
-            None => Err(VMStaticViolation::TypeMismatch.into()),
-        }
-    }
-
-    fn get_u64(&mut self) -> NativeResult<u64> {
-        match self.pop()?.value() {
-            Some(v) => match MutVal::try_own(v) {
-                Ok(Value::U64(i)) => Ok(i),
-                Err(err) => Err(err.into()),
-                _ => Err(VMStaticViolation::TypeMismatch.into()),
-            },
-            None => Err(VMStaticViolation::TypeMismatch.into()),
-        }
-    }
-
-    fn get_address(&mut self) -> NativeResult<AccountAddress> {
-        match self.pop()?.value() {
-            Some(v) => match MutVal::try_own(v) {
-                Ok(Value::Address(addr)) => Ok(addr),
-                Err(err) => Err(err.into()),
-                _ => Err(VMStaticViolation::TypeMismatch.into()),
-            },
-            None => Err(VMStaticViolation::TypeMismatch.into()),
-        }
     }
 }

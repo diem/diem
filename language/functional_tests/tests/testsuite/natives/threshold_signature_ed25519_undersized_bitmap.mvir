@@ -24,4 +24,4 @@ main() {
     return;
 }
 
-// check: LinkerError
+// check: Aborted(248665374)

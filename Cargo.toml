@@ -41,7 +41,6 @@ members = [
     "language/tools/cost_synthesis",
     "language/tools/repl",
     "language/stackless_bytecode_generator",
-    "language/stdlib/natives",
     "language/vm",
     "language/vm/vm_runtime",
     "language/vm/vm_runtime/vm_cache_map",
