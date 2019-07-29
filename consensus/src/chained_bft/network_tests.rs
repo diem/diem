@@ -364,6 +364,10 @@ fn test_network_api() {
         HashValue::random(),
         ExecutedState::state_for_genesis(),
         1,
+        HashValue::random(),
+        0,
+        HashValue::random(),
+        0,
         peers[0],
         placeholder_ledger_info(),
         &signers[0],
@@ -501,6 +505,10 @@ fn test_rpc() {
                     version: 0,
                 },
                 0,
+                HashValue::zero(),
+                0,
+                HashValue::zero(),
+                0,
             )
             .to_vec(),
         );
@@ -511,6 +519,10 @@ fn test_rpc() {
         target.set_state_id(HashValue::zero().into());
         target.set_round(0);
         target.set_signed_ledger_info(ledger_info_with_sigs);
+        target.set_parent_block_id(HashValue::zero().into());
+        target.set_parent_block_round(0);
+        target.set_grandparent_block_id(HashValue::zero().into());
+        target.set_grandparent_block_round(0);
         let mut req = RequestChunk::new();
         req.set_start_version(0);
         req.set_batch_size(1);

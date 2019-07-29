@@ -79,6 +79,10 @@ impl TreeInserter {
             vec![self.block_store.signer()],
             parent.id(),
             parent.round(),
+            parent.quorum_cert().certified_block_id(),
+            parent.quorum_cert().certified_block_round(),
+            parent.quorum_cert().certified_parent_block_id(),
+            parent.quorum_cert().certified_parent_block_round(),
         );
 
         self.insert_block_with_qc(parent_qc, parent, round)
@@ -114,7 +118,17 @@ impl TreeInserter {
         } else {
             0
         };
-        let parent_qc = placeholder_certificate_for_block(qc_signers, block.parent_id(), new_round);
+
+        let parent_qc = placeholder_certificate_for_block(
+            qc_signers,
+            block.parent_id(),
+            new_round,
+            block.quorum_cert().certified_parent_block_id(),
+            block.quorum_cert().certified_parent_block_round(),
+            block.quorum_cert().certified_grandparent_block_id(),
+            block.quorum_cert().certified_grandparent_block_round(),
+        );
+
         let new_block = Block::new_internal(
             block.get_payload().clone(),
             block.parent_id(),
@@ -143,6 +157,10 @@ pub fn placeholder_certificate_for_block(
     signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
     certified_block_id: HashValue,
     certified_block_round: u64,
+    certified_parent_block_id: HashValue,
+    certified_parent_block_round: u64,
+    certified_grandparent_block_id: HashValue,
+    certified_grandparent_block_round: u64,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
@@ -150,6 +168,10 @@ pub fn placeholder_certificate_for_block(
         certified_block_id,
         certified_block_state,
         certified_block_round,
+        certified_parent_block_id,
+        certified_parent_block_round,
+        certified_grandparent_block_id,
+        certified_grandparent_block_round,
     );
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
@@ -170,6 +192,10 @@ pub fn placeholder_certificate_for_block(
         certified_block_state,
         certified_block_round,
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+        certified_parent_block_id,
+        certified_parent_block_round,
+        certified_grandparent_block_id,
+        certified_grandparent_block_round,
     )
 }
 

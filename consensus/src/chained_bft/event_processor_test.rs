@@ -314,6 +314,10 @@ fn basic_new_rank_event_test() {
             a1.id(),
             node.block_store.get_state_for_block(a1.id()).unwrap(),
             a1.round(),
+            a1.quorum_cert().certified_parent_block_id(),
+            a1.quorum_cert().certified_parent_block_round(),
+            a1.quorum_cert().certified_grandparent_block_id(),
+            a1.quorum_cert().certified_grandparent_block_round(),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
             node.block_store.signer(),
@@ -538,7 +542,7 @@ fn process_new_round_msg_test() {
     block_on(
         static_proposer
             .block_store
-            .execute_and_insert_block(block_0),
+            .execute_and_insert_block(block_0.clone()),
     )
     .unwrap();
 
@@ -547,6 +551,10 @@ fn process_new_round_msg_test() {
         vec![&static_proposer.signer, &non_proposer.signer],
         block_0_id,
         1,
+        block_0.quorum_cert().certified_block_id(),
+        block_0.quorum_cert().certified_block_round(),
+        block_0.quorum_cert().certified_parent_block_id(),
+        block_0.quorum_cert().certified_parent_block_round(),
     );
     block_on(
         non_proposer
@@ -721,6 +729,10 @@ fn process_votes_basic_test() {
         a1.id(),
         node.block_store.get_state_for_block(a1.id()).unwrap(),
         a1.round(),
+        a1.quorum_cert().certified_parent_block_id(),
+        a1.quorum_cert().certified_parent_block_round(),
+        a1.quorum_cert().certified_grandparent_block_id(),
+        a1.quorum_cert().certified_parent_block_round(),
         node.block_store.signer().author(),
         placeholder_ledger_info(),
         node.block_store.signer(),
@@ -777,6 +789,10 @@ fn process_chunk_retrieval() {
             ExecutedState::state_for_genesis(),
             0,
             LedgerInfoWithSignatures::new(ledger_info, HashMap::new()),
+            block.id(),
+            0,
+            block.id(),
+            0,
         );
         let req = ChunkRetrievalRequest {
             start_version: 0,
