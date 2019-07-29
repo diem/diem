@@ -19,9 +19,10 @@ use failure::prelude::*;
 use proptest::{arbitrary::Arbitrary, prelude::*};
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryFrom, fmt};
 
-#[derive(Clone, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Eq, PartialEq, FromProto, IntoProto, Serialize, Deserialize)]
 #[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,

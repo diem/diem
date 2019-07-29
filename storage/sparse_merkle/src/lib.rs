@@ -21,7 +21,7 @@
 
 #[cfg(test)]
 mod mock_tree_store;
-mod nibble_path;
+pub mod nibble_path;
 mod node_serde;
 pub mod node_type;
 #[cfg(test)]

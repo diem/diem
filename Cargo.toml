@@ -55,6 +55,7 @@ members = [
     "mempool",
     "storage/accumulator",
     "storage/libradb",
+    "storage/jellyfish_merkle",
     "storage/schemadb",
     "storage/scratchpad",
     "storage/sparse_merkle",
