@@ -2,9 +2,16 @@ use crate::chained_bft::consensus_types::{
     quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
 };
 use network;
+use nextgen_crypto::ed25519::*;
+
+use crate::chained_bft::{
+    consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,
+    safety::vote_msg::VoteMsgVerificationError,
+};
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use types::validator_verifier::ValidatorVerifier;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 /// This struct describes basic synchronization metadata.
@@ -28,6 +35,27 @@ impl Display for SyncInfo {
             "HQC: {}, HLI: {}, HTC: {}",
             self.highest_quorum_cert, self.highest_ledger_info, htc_repr,
         )
+    }
+}
+
+#[derive(Debug, PartialEq, Fail)]
+/// Sync info verification error cases.
+pub enum SyncInfoVerificationError {
+    #[fail(display = "QuorumCertificateError: {}", _0)]
+    QuorumCertificateError(VoteMsgVerificationError),
+    #[fail(display = "TimeoutCertificateError: {}", _0)]
+    TimeoutCertificateError(PacemakerTimeoutCertificateVerificationError),
+}
+
+impl From<VoteMsgVerificationError> for SyncInfoVerificationError {
+    fn from(source: VoteMsgVerificationError) -> Self {
+        SyncInfoVerificationError::QuorumCertificateError(source)
+    }
+}
+
+impl From<PacemakerTimeoutCertificateVerificationError> for SyncInfoVerificationError {
+    fn from(source: PacemakerTimeoutCertificateVerificationError) -> Self {
+        SyncInfoVerificationError::TimeoutCertificateError(source)
     }
 }
 
@@ -55,9 +83,20 @@ impl SyncInfo {
     }
 
     /// Highest timeout certificate if available
-    #[allow(dead_code)]
     pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
         self.highest_timeout_cert.as_ref()
+    }
+
+    pub fn verify(
+        &self,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
+    ) -> Result<(), SyncInfoVerificationError> {
+        self.highest_quorum_cert.verify(validator)?;
+        self.highest_ledger_info.verify(validator)?;
+        if let Some(tc) = &self.highest_timeout_cert {
+            tc.verify(validator)?;
+        }
+        Ok(())
     }
 }
 

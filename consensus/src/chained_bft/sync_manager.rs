@@ -44,11 +44,12 @@ pub struct SyncMgrContext {
     /// Preferred peer: this is typically the peer that delivered the original QC and
     /// thus has higher chances to be able to return the information than the other
     /// peers that signed the QC.
-    pub preferred_peer: Author,
+    /// If no preferred peer provided, random peers from the given QC are going to be queried.
+    pub preferred_peer: Option<Author>,
 }
 
 impl SyncMgrContext {
-    pub fn new(sync_info: &SyncInfo, preferred_peer: Author) -> Self {
+    pub fn new(sync_info: &SyncInfo, preferred_peer: Option<Author>) -> Self {
         Self {
             highest_ledger_info: sync_info.highest_ledger_info().clone(),
             highest_quorum_cert: sync_info.highest_quorum_cert().clone(),
@@ -134,7 +135,7 @@ where
     pub async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        preferred_peer: Author,
+        preferred_peer: Option<Author>,
         deadline: Instant,
     ) -> Result<(), InsertError> {
         let mut lock_set = self.block_mutex_map.new_lock_set();
@@ -191,7 +192,7 @@ where
     async fn process_highest_ledger_info(
         &self,
         highest_ledger_info: QuorumCert,
-        peer: Author,
+        peer: Option<Author>,
         deadline: Instant,
     ) -> failure::Result<()> {
         let committed_block_id = highest_ledger_info
@@ -205,7 +206,7 @@ where
         }
         debug!(
             "Start state sync with peer: {}, to block: {}, round: {} from {}",
-            peer.short_str(),
+            peer.map_or_else(|| "[no preferred peer]".to_string(), |x| x.short_str()),
             committed_block_id,
             highest_ledger_info.certified_block_round() - 2,
             self.block_store.root()
@@ -269,7 +270,7 @@ where
 struct BlockRetriever {
     network: ConsensusNetworkImpl,
     deadline: Instant,
-    preferred_peer: Author,
+    preferred_peer: Option<Author>,
 }
 
 #[derive(Debug, Fail)]
@@ -366,17 +367,20 @@ impl BlockRetriever {
     fn pick_peer(&self, attempt: u32, peers: &mut Vec<&AccountAddress>) -> AccountAddress {
         assert!(!peers.is_empty(), "pick_peer on empty peer list");
 
-        if attempt == 0 {
-            // remove preferred_peer if its in list of peers
-            // (strictly speaking it is not required to be there)
-            for i in 0..peers.len() {
-                if *peers[i] == self.preferred_peer {
-                    peers.remove(i);
-                    break;
+        if let Some(preferred_peer) = self.preferred_peer {
+            if attempt == 0 {
+                // remove preferred_peer if its in list of peers
+                // (strictly speaking it is not required to be there)
+                for i in 0..peers.len() {
+                    if *peers[i] == preferred_peer {
+                        peers.remove(i);
+                        break;
+                    }
                 }
+                return preferred_peer;
             }
-            return self.preferred_peer;
         }
+
         let peer_idx = thread_rng().gen_range(0, peers.len());
         *peers.remove(peer_idx)
     }

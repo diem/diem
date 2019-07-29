@@ -64,6 +64,10 @@ pub trait Pacemaker: Send + Sync {
     /// Synchronous function to return the current round.
     fn current_round(&self) -> Round;
 
+    /// Return a optional reference to the highest timeout certificate (locally generated or
+    /// remotely received)
+    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate>;
+
     /// Function to update current round based on received certificates.
     /// Both round of latest received QC and timeout certificates are taken into account.
     /// This function guarantees to update pacemaker state when promise that it returns is fulfilled
