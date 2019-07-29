@@ -22,9 +22,13 @@ use crate::{
 };
 use crypto::{
     hash::CryptoHash,
-    signing::{sign_message, PrivateKey as OldPrivateKey, PublicKey as OldPublicKey},
-    utils::{keypair_strategy as gen_keypair_strategy, keypair_strategy},
-    HashValue, Signature,
+    signing::{PrivateKey as OldPrivateKey, PublicKey as OldPublicKey},
+    utils::keypair_strategy as legacy_keypair_strategy,
+    HashValue,
+};
+use nextgen_crypto::{
+    ed25519::{compat::keypair_strategy, Ed25519Signature},
+    SigningKey,
 };
 use proptest::{
     collection::{hash_map, vec, SizeRange},
@@ -197,7 +201,7 @@ impl Arbitrary for SignatureCheckedTransaction {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: ()) -> Self::Strategy {
-        Self::strategy_impl(gen_keypair_strategy(), any::<TransactionPayload>()).boxed()
+        Self::strategy_impl(legacy_keypair_strategy(), any::<TransactionPayload>()).boxed()
     }
 }
 
@@ -296,9 +300,9 @@ prop_compose! {
     fn arb_validator_signature_for_hash(hash: HashValue)(
         hash in Just(hash),
         (private_key, public_key) in keypair_strategy(),
-    ) -> (AccountAddress, Signature) {
-        let signature = sign_message(hash, &private_key).unwrap();
-        (AccountAddress::from(public_key), signature)
+    ) -> (AccountAddress, Ed25519Signature) {
+        let signature = private_key.sign_message(&hash);
+        (AccountAddress::from_public_key(&public_key), signature)
     }
 }
 
@@ -371,7 +375,7 @@ pub fn arb_txn_to_commit_batch(
     num_transactions: usize,
 ) -> impl Strategy<Value = Vec<TransactionToCommit>> {
     (
-        vec(gen_keypair_strategy(), num_accounts),
+        vec(legacy_keypair_strategy(), num_accounts),
         Just(num_transactions),
     )
         .prop_flat_map(|(keypairs, num_transactions)| {
@@ -468,7 +472,7 @@ impl Arbitrary for TransactionToCommit {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        TransactionToCommit::strategy_impl(gen_keypair_strategy().boxed()).boxed()
+        TransactionToCommit::strategy_impl(legacy_keypair_strategy().boxed()).boxed()
     }
 }
 

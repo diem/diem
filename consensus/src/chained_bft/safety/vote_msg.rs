@@ -8,7 +8,7 @@ use crate::{
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{CryptoHash, CryptoHasher, VoteMsgHasher},
-    HashValue, Signature,
+    HashValue,
 };
 use failure::Result as ProtoResult;
 use network::proto::Vote as ProtoVote;
@@ -84,7 +84,7 @@ pub struct VoteMsg {
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
-    signature: Signature,
+    signature: Ed25519Signature,
 }
 
 impl Display for VoteMsg {
@@ -153,7 +153,7 @@ impl VoteMsg {
     }
 
     /// Return the signature of the vote
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Ed25519Signature {
         &self.signature
     }
 
@@ -206,7 +206,7 @@ impl IntoProto for VoteMsg {
         proto.set_round(self.round);
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
-        proto.set_signature(self.signature.to_compact().as_ref().into());
+        proto.set_signature(self.signature.to_bytes().as_ref().into());
         proto
     }
 }
@@ -221,7 +221,7 @@ impl FromProto for VoteMsg {
         let round = object.get_round();
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
-        let signature = Signature::from_compact(object.get_signature())?;
+        let signature = Ed25519Signature::try_from(object.get_signature())?;
         Ok(VoteMsg {
             proposed_block_id,
             executed_state: ExecutedState { state_id, version },

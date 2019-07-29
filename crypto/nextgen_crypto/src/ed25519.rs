@@ -393,10 +393,8 @@ pub mod compat {
         PrivateKey as LegacyPrivateKey, PublicKey as LegacyPublicKey, Signature as LegacySignature,
     };
     #[cfg(any(test, feature = "testing"))]
-    use proptest::{
-        prelude::{Arbitrary, BoxedStrategy},
-        strategy::{LazyJust, Strategy},
-    };
+    use proptest::strategy::LazyJust;
+    use proptest::{prelude::*, strategy::Strategy};
 
     impl From<Ed25519PublicKey> for LegacyPublicKey {
         fn from(public_key: Ed25519PublicKey) -> Self {
@@ -479,6 +477,19 @@ pub mod compat {
             let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
             <(Ed25519PrivateKey, Ed25519PublicKey)>::generate_for_testing(&mut rng)
         }
+    }
+
+    /// Used to produce keypairs from a seed for testing purposes
+    pub fn keypair_strategy() -> impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)> {
+        // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
+        // keypair to be generated, which appears to not be very useful.
+        any::<[u8; 32]>()
+            .prop_map(|seed| {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let (private_key, public_key) = generate_keypair(&mut rng);
+                (private_key, public_key)
+            })
+            .no_shrink()
     }
 
     #[cfg(any(test, feature = "testing"))]

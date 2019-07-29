@@ -13,7 +13,7 @@ use crate::{
 use bytes::Bytes;
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
-use crypto::{signing, x25519, HashValue};
+use crypto::{x25519, HashValue};
 use failure::prelude::*;
 use futures::{
     executor::block_on,
@@ -30,7 +30,7 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED};
+use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, SigningKey};
 use parity_multiaddr::Multiaddr;
 use proto_conv::IntoProto;
 use protobuf::Message;
@@ -180,8 +180,8 @@ impl SynchronizerEnv {
             0,
         );
         let mut signatures = HashMap::new();
-        let private_key = signing::generate_genesis_keypair().0;
-        let signature = signing::sign_message(HashValue::zero(), &private_key).unwrap();
+        let private_key = Ed25519PrivateKey::genesis();
+        let signature = private_key.sign_message(&HashValue::zero());
         signatures.insert(self.peers[1], signature);
         QuorumCert::new(
             HashValue::zero(),
