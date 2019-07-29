@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod test_helper;
-
-use crate::test_helper::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
+use crate::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
 use config_builder::util::get_test_config;
 use crypto::{
     hash::GENESIS_BLOCK_ID,

@@ -1,6 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! End-to-end tests for the execution service.
+//!
+//! The non-test code in this crate is helper code and can be used by test code outside of
+//! execution.
+
+#[cfg(test)]
+mod tests;
+
 use config::config::NodeConfig;
 use crypto::HashValue;
 use execution_proto::proto::execution_grpc::create_execution;
