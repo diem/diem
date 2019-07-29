@@ -15,19 +15,16 @@ variable "ssh_priv_key_file" {
 variable "ssh_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow SSH access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "ssh_sources_ipv6" {
   type        = list(string)
   description = "List of IPv6 CIDR blocks from which to allow SSH access"
-  default     = ["::/0"]
 }
 
 variable "api_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow API access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "image_repo" {
