@@ -270,13 +270,16 @@ pub struct PacemakerTimeoutCertificate {
 }
 
 /// PacemakerTimeoutCertificate verification errors.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Fail)]
 pub enum PacemakerTimeoutCertificateVerificationError {
     /// Number of signed timeouts is less then required quorum size
+    #[fail(display = "NoQuorum")]
     NoQuorum,
     /// Round in message does not match calculated rounds based on signed timeouts
+    #[fail(display = "RoundMismatch {}", expected)]
     RoundMismatch { expected: Round },
     /// The signature on one of timeouts doesn't pass verification
+    #[fail(display = "SigVerifyError for {}: {}", _0, _1)]
     SigVerifyError(Author, VerifyError),
 }
 

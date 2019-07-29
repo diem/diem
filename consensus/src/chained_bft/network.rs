@@ -37,7 +37,10 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::{transaction::TransactionListWithProof, validator_verifier::ValidatorVerifier};
+use types::{
+    account_address::AccountAddress, transaction::TransactionListWithProof,
+    validator_verifier::ValidatorVerifier,
+};
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
@@ -95,7 +98,7 @@ pub struct NetworkReceivers<T, P> {
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
     pub timeout_msgs: channel::Receiver<TimeoutMsg>,
     pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
-    pub sync_info_msgs: channel::Receiver<SyncInfo>,
+    pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -311,6 +314,25 @@ impl ConsensusNetworkImpl {
         msg.set_timeout_msg(timeout_msg.into_proto());
         self.broadcast(msg).await
     }
+
+    /// Sends the given sync info to the given author.
+    /// The future is fulfilled as soon as the message is added to the internal network channel
+    /// (does not indicate whether the message is delivered or sent out).
+    pub async fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
+        if recipient == self.author {
+            error!("An attempt to deliver sync info msg to itself: ignore.");
+            return;
+        }
+        let mut msg = ConsensusMsg::new();
+        msg.set_sync_info(sync_info.into_proto());
+        let mut network_sender = self.network_sender.clone();
+        if let Err(e) = network_sender.send_to(recipient, msg).await {
+            warn!(
+                "Failed to send a sync info msg to peer {:?}: {:?}",
+                recipient, e
+            );
+        }
+    }
 }
 
 struct NetworkTask<T, P, S> {
@@ -319,7 +341,7 @@ struct NetworkTask<T, P, S> {
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
     timeout_msg_tx: channel::Sender<TimeoutMsg>,
-    sync_info_tx: channel::Sender<SyncInfo>,
+    sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
     validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
@@ -341,7 +363,7 @@ where
                     } else if msg.has_timeout_msg() {
                         self.process_timeout_msg(&mut msg).await
                     } else if msg.has_sync_info() {
-                        self.process_sync_info(&mut msg).await
+                        self.process_sync_info(&mut msg, peer_id).await
                     } else {
                         warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
@@ -417,9 +439,20 @@ where
         Ok(())
     }
 
-    async fn process_sync_info<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
+    async fn process_sync_info<'a>(
+        &'a mut self,
+        msg: &'a mut ConsensusMsg,
+        peer: AccountAddress,
+    ) -> failure::Result<()> {
         let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
-        self.sync_info_tx.send(sync_info).await?;
+        sync_info.verify(self.validator.as_ref()).map_err(|e| {
+            security_log(SecurityEvent::InvalidSyncInfoMsg)
+                .error(&e)
+                .data(&sync_info)
+                .log();
+            e
+        })?;
+        self.sync_info_tx.send((sync_info, peer)).await?;
         Ok(())
     }
 

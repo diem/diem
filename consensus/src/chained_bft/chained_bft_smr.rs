@@ -40,13 +40,13 @@ use futures::{
 use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
-use crate::chained_bft::consensus_types::sync_info::SyncInfo;
+use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};
 use config::config::ConsensusConfig;
 use logger::prelude::*;
 use std::{
     sync::{Arc, RwLock},
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 use tokio::runtime::{Runtime, TaskExecutor};
 
@@ -188,50 +188,24 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
             let guard = event_processor.read().compat().await.unwrap();
             match guard.process_proposal(proposal_info).await {
                 ProcessProposalResult::Done(_) => (),
-                // Spawn a new task that would start retrieving the missing
-                // blocks in the background.
-                ProcessProposalResult::NeedFetch(deadline, proposal) => executor.spawn(
-                    Self::fetch_and_process_proposal(
-                        Arc::clone(&event_processor),
-                        deadline,
-                        proposal,
-                    )
-                    .boxed()
-                    .unit_error()
-                    .compat(),
-                ),
                 // Spawn a new task that would start state synchronization
                 // in the background.
-                ProcessProposalResult::NeedSync(deadline, proposal) => executor.spawn(
-                    Self::sync_and_process_proposal(
-                        Arc::clone(&event_processor),
-                        deadline,
-                        proposal,
-                    )
-                    .boxed()
-                    .unit_error()
-                    .compat(),
+                ProcessProposalResult::NeedSync(proposal) => executor.spawn(
+                    Self::sync_and_process_proposal(Arc::clone(&event_processor), proposal)
+                        .boxed()
+                        .unit_error()
+                        .compat(),
                 ),
             }
         }
     }
 
-    async fn fetch_and_process_proposal(
-        event_processor: ConcurrentEventProcessor<T, P>,
-        deadline: Instant,
-        proposal: ProposalInfo<T, P>,
-    ) {
-        let guard = event_processor.read().compat().await.unwrap();
-        guard.fetch_and_process_proposal(deadline, proposal).await
-    }
-
     async fn sync_and_process_proposal(
         event_processor: ConcurrentEventProcessor<T, P>,
-        deadline: Instant,
         proposal: ProposalInfo<T, P>,
     ) {
         let mut guard = event_processor.write().compat().await.unwrap();
-        guard.sync_and_process_proposal(deadline, proposal).await
+        guard.sync_and_process_proposal(proposal).await
     }
 
     async fn process_winning_proposals(
@@ -266,12 +240,12 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     async fn process_sync_info_msgs(
-        mut receiver: channel::Receiver<SyncInfo>,
+        mut receiver: channel::Receiver<(SyncInfo, Author)>,
         event_processor: ConcurrentEventProcessor<T, P>,
     ) {
-        while let Some(sync_info) = receiver.next().await {
+        while let Some((sync_info, author)) = receiver.next().await {
             let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_sync_info_msg(sync_info).await;
+            guard.process_sync_info_msg(sync_info, author).await;
         }
     }
 

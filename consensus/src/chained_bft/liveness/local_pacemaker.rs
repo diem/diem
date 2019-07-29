@@ -434,4 +434,12 @@ impl Pacemaker for LocalPacemaker {
             guard.highest_committed_round = highest_committed_round;
         }
     }
+
+    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate> {
+        let guard = self.inner.read().unwrap();
+        guard
+            .pacemaker_timeout_manager
+            .highest_timeout_certificate()
+            .cloned()
+    }
 }

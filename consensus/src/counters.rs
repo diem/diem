@@ -81,6 +81,12 @@ pub static ref BLOCK_RETRIEVAL_DURATION_MS: Histogram = OP_COUNTERS.histogram("b
 /// Histogram of state sync duration.
 pub static ref STATE_SYNC_DURATION_MS: Histogram = OP_COUNTERS.histogram("state_sync_duration_ms");
 
+/// Counts the number of times the sync info message has been set since last restart.
+pub static ref SYNC_INFO_MSGS_SENT_COUNT: IntCounter = OP_COUNTERS.counter("sync_info_msg_sent_count");
+
+/// Counts the number of times the sync info message has been received since last restart.
+pub static ref SYNC_INFO_MSGS_RECEIVED_COUNT: IntCounter = OP_COUNTERS.counter("sync_info_msg_received_count");
+
 //////////////////////
 // RECONFIGURATION COUNTERS
 //////////////////////

@@ -262,9 +262,14 @@ impl NetworkPlayground {
         msg_copy.1.has_vote()
     }
 
-    /// Returns true for new round messages only.
-    pub fn new_round_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+    /// Returns true for timeout messages only.
+    pub fn timeout_msg_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
         msg_copy.1.has_timeout_msg()
+    }
+
+    /// Returns true for sync info messages only.
+    pub fn sync_info_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        msg_copy.1.has_sync_info()
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
