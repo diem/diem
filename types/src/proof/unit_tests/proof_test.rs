@@ -6,11 +6,13 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        verify_account_state, verify_event, verify_signed_transaction,
-        verify_sparse_merkle_element, verify_test_accumulator_element, AccountStateProof,
-        AccumulatorProof, EventAccumulatorInternalNode, EventProof, MerkleTreeInternalNode,
-        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
-        TestAccumulatorInternalNode, TransactionAccumulatorInternalNode,
+        get_accumulator_root_hash_by_frozen_subtrees_and_siblings,
+        get_num_siblings_for_frozen_subtrees, verify_account_state, verify_event,
+        verify_signed_transaction, verify_sparse_merkle_element, verify_test_accumulator_element,
+        AccountStateProof, AccumulatorProof, EventAccumulatorInternalNode, EventProof,
+        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode,
+        TransactionAccumulatorInternalNode,
     },
     transaction::{
         Program, RawTransaction, SignedTransaction, TransactionInfo, TransactionListWithProof,
@@ -18,8 +20,8 @@ use crate::{
 };
 use crypto::{
     hash::{
-        CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
-        GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        CryptoHash, CryptoHasher, TestOnlyHash, TestOnlyHasher, TransactionAccumulatorHasher,
+        ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     signing::generate_keypair,
     HashValue,
@@ -504,6 +506,37 @@ fn arb_signed_txn_list_and_range(
     })
 }
 
+#[test]
+fn test_get_num_siblings_for_frozen_subtrees() {
+    assert_eq!(get_num_siblings_for_frozen_subtrees(0), 0);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(1), 0);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(2), 0);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(3), 1);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(4), 0);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(5), 2);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(6), 1);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(7), 1);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(8), 0);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(9), 3);
+    assert_eq!(get_num_siblings_for_frozen_subtrees(10), 2);
+}
+
+prop_compose! {
+    fn arb_subtrees_and_siblings()(
+        num_leaves in 0..10000u64,
+        hashes in vec(any::<HashValue>(), 64),
+    ) -> (Vec<HashValue>, u64, Vec<HashValue>) {
+        let real_num_leaves = num_leaves >> num_leaves.trailing_zeros();
+        let num_subtrees = real_num_leaves.count_ones() as usize;
+        let num_siblings = get_num_siblings_for_frozen_subtrees(real_num_leaves);
+
+        let mut subtrees = hashes;
+        subtrees.truncate(num_subtrees + num_siblings);
+        let siblings = subtrees.split_off(num_subtrees);
+        (subtrees, num_leaves, siblings)
+    }
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]
 
@@ -594,5 +627,71 @@ proptest! {
         );
         let first_version = if txn_and_infos.is_empty() { None } else { Some(first_version as u64) };
         prop_assert!(txn_list_with_proof.verify(&ledger_info,first_version).is_ok());
+    }
+
+    #[test]
+    fn test_get_accumulator_root_hash_by_frozen_subtrees_and_siblings(
+        (subtrees, num_leaves, siblings) in arb_subtrees_and_siblings()
+    ) {
+        let expected_root_hash = get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow::<
+            TestOnlyHasher,
+        >(&subtrees, num_leaves, &siblings);
+        let actual_root_hash = get_accumulator_root_hash_by_frozen_subtrees_and_siblings::<
+            TestOnlyHasher,
+        >(&subtrees, num_leaves, &siblings);
+        prop_assert_eq!(actual_root_hash, expected_root_hash);
+    }
+}
+
+fn get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow<H: CryptoHasher>(
+    frozen_subtree_roots: &[HashValue],
+    num_leaves: u64,
+    siblings: &[HashValue],
+) -> HashValue {
+    match frozen_subtree_roots.len() {
+        0 => return *ACCUMULATOR_PLACEHOLDER_HASH,
+        1 => return frozen_subtree_roots[0],
+        _ => (),
+    }
+
+    let num_leaves = num_leaves >> num_leaves.trailing_zeros();
+    get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow_impl::<H>(
+        frozen_subtree_roots,
+        num_leaves,
+        siblings,
+        num_leaves.next_power_of_two().trailing_zeros(),
+    )
+}
+
+fn get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow_impl<H: CryptoHasher>(
+    frozen_subtree_roots: &[HashValue],
+    num_leaves: u64,
+    siblings: &[HashValue],
+    current_level: u32,
+) -> HashValue {
+    if current_level == 1 {
+        assert_eq!(frozen_subtree_roots.len(), 1);
+        assert_eq!(siblings.len(), 1);
+        return MerkleTreeInternalNode::<H>::new(frozen_subtree_roots[0], siblings[0]).hash();
+    }
+
+    if num_leaves & (1 << (current_level - 1)) == 0 {
+        let left_hash = get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow_impl::<H>(
+            frozen_subtree_roots,
+            num_leaves,
+            &siblings[1..],
+            current_level - 1,
+        );
+        let right_hash = siblings[0];
+        MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash()
+    } else {
+        let left_hash = frozen_subtree_roots[0];
+        let right_hash = get_accumulator_root_hash_by_frozen_subtrees_and_siblings_slow_impl::<H>(
+            &frozen_subtree_roots[1..],
+            num_leaves - (num_leaves.next_power_of_two() >> 1),
+            siblings,
+            current_level - 1,
+        );
+        MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash()
     }
 }

@@ -486,6 +486,115 @@ pub fn verify_sparse_merkle_element(
     Ok(())
 }
 
+/// Computes the root hash of an accumulator using the root hashes of the frozen subtrees and their
+/// corresponding sibling nodes. As an example, given the following accumulator that has 10
+/// elements, the frozen subtree roots and the corresponding siblings are annotated below.
+///
+/// ```text
+///                                        root
+///                                      /      \
+///                                    /          \
+///                                  /              \
+///                                /                  \
+///                              /                      \
+///                            /                          \
+///                          /                              \
+///                        /                                  \
+/// frozen_subtree_roots[0]                                    o
+///                    /   \                                  / \
+///                   /     \                                /   \
+///                  o       o                              o     siblings[0]
+///                 / \     / \                            / \
+///                o   o   o   o    frozen_subtree_roots[1]   sibling[1]
+///               / \ / \ / \ / \                       / \
+///               o o o o o o o o                       o o
+/// ```
+///
+/// This function has at least two possible use cases:
+///   1) Given an accumulator represented by all of its frozen subtrees, we want to compute the
+///      root hash by combining the subtrees with placeholder nodes. In this case the caller can
+///      use a list of placeholder nodes as the `siblings` parameter.
+///   2) To prove that an accumulator A can be obtained by appending some elements to another
+///      accumulator B, the proof can provide a list of siblings and we can combine B's frozen
+///      subtrees with these siblings.
+pub fn get_accumulator_root_hash_by_frozen_subtrees_and_siblings<H: CryptoHasher>(
+    frozen_subtree_roots: &[HashValue],
+    num_leaves: u64,
+    siblings: &[HashValue],
+) -> HashValue {
+    // Special cases when there is zero or one subtree.
+    match frozen_subtree_roots.len() {
+        0 => return *ACCUMULATOR_PLACEHOLDER_HASH,
+        1 => return frozen_subtree_roots[0],
+        _ => (),
+    }
+
+    // For accumulators that have more than one frozen subtrees, the rightmost/smallest frozen
+    // subtree will always be combined with a sibling on the right.
+    let mut subtree_iter = frozen_subtree_roots.iter().rev();
+    let mut sibling_iter = siblings.iter().rev();
+    let mut current_hash = MerkleTreeInternalNode::<H>::new(
+        *subtree_iter.next().expect("Missing subtree hash."),
+        *sibling_iter.next().expect("Missing sibling hash."),
+    )
+    .hash();
+
+    // Remove the trailing zeros since they do not matter. Also remove one more bit since we have
+    // processed the lowest level.
+    let mut bitmap = num_leaves >> (num_leaves.trailing_zeros() + 1);
+    // Using the above example, now the bitmap becomes 0b10 (was 0b1010 originally). We check each
+    // bit from right to left.  If a bit is 0, it means there is no existing subtree on this level,
+    // so we combine current hash with a sibling.  Otherwise we combine it with the corresponding
+    // subtree.
+    while bitmap > 0 {
+        current_hash = if bitmap & 1 == 0 {
+            MerkleTreeInternalNode::<H>::new(
+                current_hash,
+                *sibling_iter.next().expect("Missing sibling hash."),
+            )
+        } else {
+            MerkleTreeInternalNode::<H>::new(
+                *subtree_iter.next().expect("Missing subtree hash."),
+                current_hash,
+            )
+        }
+        .hash();
+        bitmap >>= 1;
+    }
+
+    current_hash
+}
+
+/// For an accumulator that has `num_leaves` leaves, computes the total number of corresponding
+/// siblings that can be used to compute root hash. For example, the following accumulator with 5
+/// leaves requires 2 siblings to compute its root hash.
+/// ```text
+///            o
+///           / \
+///          /   \
+///         /     \
+///        o       o
+///       / \     / \
+///      o   o   o   siblings[0]
+///     / \ / \ / \
+///     o o o o o siblings[1]
+/// ```
+pub fn get_num_siblings_for_frozen_subtrees(num_leaves: u64) -> usize {
+    if num_leaves == 0 {
+        return 0;
+    }
+
+    // For any accumulator, if we add two children to every existing leaf, the positions of the
+    // frozen subtrees do no change, so the trailing zeros do not matter.
+    let num_leaves = num_leaves >> num_leaves.trailing_zeros();
+    // Because every time we combine two hashes to compute its parent, the tree can be made one
+    // level smaller. So the total number of hashes needed to compute the root hash is
+    // `num_levels`.
+    let num_levels = num_leaves.next_power_of_two().trailing_zeros() + 1;
+    let num_frozen_subtrees = num_leaves.count_ones();
+    (num_levels - num_frozen_subtrees) as usize
+}
+
 pub struct MerkleTreeInternalNode<H> {
     left_child: HashValue,
     right_child: HashValue,

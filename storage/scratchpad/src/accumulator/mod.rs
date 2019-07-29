@@ -18,7 +18,10 @@ use crypto::{
     HashValue,
 };
 use std::marker::PhantomData;
-use types::proof::{position::Position, treebits::NodeDirection, MerkleTreeInternalNode};
+use types::proof::{
+    get_accumulator_root_hash_by_frozen_subtrees_and_siblings,
+    get_num_siblings_for_frozen_subtrees, MerkleTreeInternalNode,
+};
 
 /// The Accumulator implementation.
 pub struct Accumulator<H> {
@@ -135,42 +138,13 @@ where
             return *ACCUMULATOR_PLACEHOLDER_HASH;
         }
 
-        // First, start from the rightmost leaf position and move it to the rightmost frozen root.
-        let max_leaf_index = num_elements - 1;
-        let mut current_position = Position::from_leaf_index(max_leaf_index);
-        // Move current position up until it reaches the corresponding frozen subtree root.
-        while current_position.get_parent().is_freezable(max_leaf_index) {
-            current_position = current_position.get_parent();
-        }
-
-        let mut roots = frozen_subtree_roots.iter().rev();
-        let mut current_hash = *roots
-            .next()
-            .expect("We have checked frozen_subtree_roots is not empty.");
-
-        // While current position is not root, find current sibling and compute parent hash.
-        let root_position = Position::get_root_position(max_leaf_index);
-        while current_position != root_position {
-            current_hash = match current_position.get_direction_for_self() {
-                NodeDirection::Left => {
-                    // If a frozen node is the left child of its parent, its sibling must be
-                    // a placeholder node.
-                    MerkleTreeInternalNode::<H>::new(current_hash, *ACCUMULATOR_PLACEHOLDER_HASH)
-                        .hash()
-                }
-                NodeDirection::Right => {
-                    // Otherwise the left sibling must have been frozen.
-                    MerkleTreeInternalNode::<H>::new(
-                        *roots.next().expect("Ran out of subtree roots."),
-                        current_hash,
-                    )
-                    .hash()
-                }
-            };
-            current_position = current_position.get_parent();
-        }
-
-        current_hash
+        let num_siblings = get_num_siblings_for_frozen_subtrees(num_elements);
+        let siblings = vec![*ACCUMULATOR_PLACEHOLDER_HASH; num_siblings];
+        get_accumulator_root_hash_by_frozen_subtrees_and_siblings::<H>(
+            frozen_subtree_roots,
+            num_elements,
+            &siblings,
+        )
     }
 
     /// Returns the total number of elements in this accumulator.
