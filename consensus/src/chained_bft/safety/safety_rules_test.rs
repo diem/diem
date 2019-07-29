@@ -318,7 +318,15 @@ fn test_voting() {
         vec![100],
         100,
         123,
-        placeholder_certificate_for_block(vec![block_tree.signer()], a1.id(), a1.round()),
+        placeholder_certificate_for_block(
+            vec![block_tree.signer()],
+            a1.id(),
+            a1.round(),
+            a1.quorum_cert().certified_block_id(),
+            a1.quorum_cert().certified_block_round(),
+            a1.quorum_cert().certified_parent_block_id(),
+            a1.quorum_cert().certified_parent_block_round(),
+        ),
         block_tree.signer(),
     ));
     let dummy_block = Arc::new(Block::make_block(
@@ -330,6 +338,10 @@ fn test_voting() {
             vec![block_tree.signer()],
             dummy_parent.id(),
             dummy_parent.round(),
+            dummy_parent.quorum_cert().certified_block_id(),
+            dummy_parent.quorum_cert().certified_block_round(),
+            dummy_parent.quorum_cert().certified_parent_block_id(),
+            dummy_parent.quorum_cert().certified_parent_block_round(),
         ),
         block_tree.signer(),
     ));

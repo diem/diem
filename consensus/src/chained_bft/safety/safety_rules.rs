@@ -38,6 +38,15 @@ pub struct VoteInfo {
     /// The block that should be committed in case this vote gathers QC.
     /// If no block is committed in case the vote gathers QC, return None.
     potential_commit_id: Option<HashValue>,
+
+    /// The id of the parent block of the proposal
+    parent_block_id: HashValue,
+    /// The round of the parent block of the proposal
+    parent_block_round: Round,
+    /// The id of the grandparent block of the proposal
+    grandparent_block_id: HashValue,
+    /// The round of the grandparent block of the proposal
+    grandparent_block_round: Round,
 }
 
 impl VoteInfo {
@@ -51,6 +60,22 @@ impl VoteInfo {
 
     pub fn potential_commit_id(&self) -> Option<HashValue> {
         self.potential_commit_id
+    }
+
+    pub fn parent_block_id(&self) -> HashValue {
+        self.proposal_id
+    }
+
+    pub fn parent_block_round(&self) -> Round {
+        self.parent_block_round
+    }
+
+    pub fn grandparent_block_id(&self) -> HashValue {
+        self.grandparent_block_id
+    }
+
+    pub fn grandparent_block_round(&self) -> Round {
+        self.grandparent_block_round
     }
 }
 
@@ -198,6 +223,7 @@ impl<T: Payload> SafetyRules<T> {
     /// committed block, might panic otherwise.
     /// The update function is invoked whenever a system learns about a potentially high QC.
     pub fn update(&mut self, qc: &QuorumCert) -> Option<Arc<Block<T>>> {
+        //TODO: remove
         // Preferred block rule: choose the highest 2-chain head.
         if let Some(one_chain_head) = self.block_tree.get_block(qc.certified_block_id()) {
             if let Some(two_chain_head) = self.block_tree.get_block(one_chain_head.parent_id()) {
@@ -206,6 +232,7 @@ impl<T: Payload> SafetyRules<T> {
                 }
             }
         }
+
         self.process_ledger_info(qc.ledger_info())
     }
 
@@ -302,6 +329,12 @@ impl<T: Payload> SafetyRules<T> {
         };
 
         let parent_block_round = parent_block.round();
+        //TODO: remove after hashtree is removed.
+        assert_eq!(
+            parent_block_round,
+            proposed_block.quorum_cert().certified_block_round()
+        );
+
         let respects_preferred_block = parent_block_round >= self.state.preferred_block_round();
         if respects_preferred_block {
             self.state.set_last_vote_round(proposed_block.round());
@@ -321,6 +354,12 @@ impl<T: Payload> SafetyRules<T> {
                 proposal_round: proposed_block.round(),
                 consensus_state: self.state.clone(),
                 potential_commit_id,
+                parent_block_id: proposed_block.quorum_cert().certified_block_id(),
+                parent_block_round: proposed_block.quorum_cert().certified_block_round(),
+                grandparent_block_id: proposed_block.quorum_cert().certified_parent_block_id(),
+                grandparent_block_round: proposed_block
+                    .quorum_cert()
+                    .certified_parent_block_round(),
             })
         } else {
             Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {

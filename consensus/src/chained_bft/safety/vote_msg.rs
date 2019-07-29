@@ -42,13 +42,22 @@ struct VoteMsgSerializer {
     proposed_block_id: HashValue,
     executed_state: ExecutedState,
     round: Round,
+    parent_block_id: HashValue,
+    parent_block_round: Round,
+    grandparent_block_id: HashValue,
+    grandparent_block_round: Round,
 }
 
 impl CanonicalSerialize for VoteMsgSerializer {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> failure::Result<()> {
-        serializer.encode_raw_bytes(self.proposed_block_id.as_ref())?;
-        serializer.encode_struct(&self.executed_state)?;
-        serializer.encode_u64(self.round)?;
+        serializer
+            .encode_raw_bytes(self.proposed_block_id.as_ref())?
+            .encode_struct(&self.executed_state)?
+            .encode_u64(self.round)?
+            .encode_raw_bytes(self.parent_block_id.as_ref())?
+            .encode_u64(self.parent_block_round)?
+            .encode_raw_bytes(self.grandparent_block_id.as_ref())?
+            .encode_u64(self.grandparent_block_round)?;
         Ok(())
     }
 }
@@ -79,6 +88,14 @@ pub struct VoteMsg {
     executed_state: ExecutedState,
     /// The round of the block.
     round: Round,
+    /// The id of the parent block of the proposal
+    parent_block_id: HashValue,
+    /// The round of the parent block of the proposal
+    parent_block_round: Round,
+    /// The id of the grandparent block of the proposal
+    grandparent_block_id: HashValue,
+    /// The round of the grandparent block of the proposal
+    grandparent_block_round: Round,
     /// The identity of the voter.
     author: Author,
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
@@ -91,9 +108,14 @@ impl Display for VoteMsg {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Vote: [block id: {}, round: {:02}, author: {}, {}]",
+            "Vote: [block id: {}, round: {:02}, parent_block_id: {}, \
+             parent_block_round: {:02}, grandparent_block_id: {}, grandparent_block_round: {:02},  author: {}, {}]",
             self.proposed_block_id,
             self.round,
+            self.parent_block_id,
+            self.parent_block_round,
+            self.grandparent_block_id,
+            self.grandparent_block_round,
             self.author.short_str(),
             self.ledger_info
         )
@@ -105,6 +127,10 @@ impl VoteMsg {
         proposed_block_id: HashValue,
         executed_state: ExecutedState,
         round: Round,
+        parent_block_id: HashValue,
+        parent_block_round: Round,
+        grandparent_block_id: HashValue,
+        grandparent_block_round: Round,
         author: Author,
         mut ledger_info_placeholder: LedgerInfo,
         validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
@@ -113,6 +139,10 @@ impl VoteMsg {
             proposed_block_id,
             executed_state,
             round,
+            parent_block_id,
+            parent_block_round,
+            grandparent_block_id,
+            grandparent_block_round,
         ));
         let li_sig = validator_signer
             .sign_message(ledger_info_placeholder.hash())
@@ -121,6 +151,10 @@ impl VoteMsg {
             proposed_block_id,
             executed_state,
             round,
+            parent_block_id,
+            parent_block_round,
+            grandparent_block_id,
+            grandparent_block_round,
             author,
             ledger_info: ledger_info_placeholder,
             signature: li_sig.into(),
@@ -140,6 +174,26 @@ impl VoteMsg {
     /// Return the round of the block
     pub fn round(&self) -> Round {
         self.round
+    }
+
+    /// Return the id of the parent of the proposed block
+    pub fn parent_block_id(&self) -> HashValue {
+        self.parent_block_id
+    }
+
+    /// Return the round of the parent block of the proposed block
+    pub fn parent_block_round(&self) -> Round {
+        self.parent_block_round
+    }
+
+    /// Return the id of the grandparent block of the proposed block
+    pub fn grandparent_block_id(&self) -> HashValue {
+        self.grandparent_block_id
+    }
+
+    /// Return the round of the grandparent block of the proposed block
+    pub fn grandparent_block_round(&self) -> Round {
+        self.grandparent_block_round
     }
 
     /// Return the author of the vote
@@ -177,7 +231,15 @@ impl VoteMsg {
 
     /// Return the hash of this struct
     pub fn vote_hash(&self) -> HashValue {
-        Self::vote_digest(self.proposed_block_id, self.executed_state, self.round)
+        Self::vote_digest(
+            self.proposed_block_id,
+            self.executed_state,
+            self.round,
+            self.parent_block_id,
+            self.parent_block_round,
+            self.grandparent_block_id,
+            self.grandparent_block_round,
+        )
     }
 
     /// Return a digest of the vote
@@ -185,11 +247,19 @@ impl VoteMsg {
         proposed_block_id: HashValue,
         executed_state: ExecutedState,
         round: Round,
+        parent_block_id: HashValue,
+        parent_block_round: Round,
+        grandparent_block_id: HashValue,
+        grandparent_block_round: Round,
     ) -> HashValue {
         VoteMsgSerializer {
             proposed_block_id,
             executed_state,
             round,
+            parent_block_id,
+            parent_block_round,
+            grandparent_block_id,
+            grandparent_block_round,
         }
         .hash()
     }
@@ -204,6 +274,10 @@ impl IntoProto for VoteMsg {
         proto.set_executed_state_id(self.executed_state().state_id.into());
         proto.set_version(self.executed_state().version);
         proto.set_round(self.round);
+        proto.set_parent_block_id(self.parent_block_id.into());
+        proto.set_parent_block_round(self.parent_block_round);
+        proto.set_grandparent_block_id(self.grandparent_block_id.into());
+        proto.set_grandparent_block_round(self.grandparent_block_round);
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
         proto.set_signature(self.signature.to_bytes().as_ref().into());
@@ -219,6 +293,10 @@ impl FromProto for VoteMsg {
         let state_id = HashValue::from_slice(object.get_executed_state_id())?;
         let version = object.get_version();
         let round = object.get_round();
+        let parent_block_id = HashValue::from_slice(object.get_parent_block_id())?;
+        let parent_block_round = object.get_parent_block_round();
+        let grandparent_block_id = HashValue::from_slice(object.get_grandparent_block_id())?;
+        let grandparent_block_round = object.get_grandparent_block_round();
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
         let signature = Ed25519Signature::try_from(object.get_signature())?;
@@ -226,6 +304,10 @@ impl FromProto for VoteMsg {
             proposed_block_id,
             executed_state: ExecutedState { state_id, version },
             round,
+            parent_block_id,
+            parent_block_round,
+            grandparent_block_id,
+            grandparent_block_round,
             author,
             ledger_info,
             signature,

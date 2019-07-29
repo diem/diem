@@ -302,6 +302,10 @@ where
                 vote_msg.executed_state(),
                 vote_msg.round(),
                 li_with_sig.clone(),
+                vote_msg.parent_block_id(),
+                vote_msg.parent_block_round(),
+                vote_msg.grandparent_block_id(),
+                vote_msg.grandparent_block_round(),
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc

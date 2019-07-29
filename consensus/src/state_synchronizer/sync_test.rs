@@ -188,6 +188,10 @@ impl SynchronizerEnv {
             ExecutedState::state_for_genesis(),
             0,
             LedgerInfoWithSignatures::new(ledger_info, signatures),
+            HashValue::zero(),
+            0,
+            HashValue::zero(),
+            0,
         )
     }
 }

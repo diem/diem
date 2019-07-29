@@ -37,6 +37,14 @@ pub struct QuorumCert {
     certified_block_round: Round,
     /// The signed LedgerInfo of a committed block that carries the data about the certified block.
     signed_ledger_info: LedgerInfoWithSignatures,
+    /// The id of the parent block of the certified block
+    certified_parent_block_id: HashValue,
+    /// The round of the parent block of the certified block
+    certified_parent_block_round: Round,
+    /// The id of the grandparent block of the certified block
+    certified_grandparent_block_id: HashValue,
+    /// The round of the grandparent block of the certified block
+    certified_grandparent_block_round: Round,
 }
 
 impl Display for QuorumCert {
@@ -56,12 +64,20 @@ impl QuorumCert {
         state: ExecutedState,
         round: Round,
         signed_ledger_info: LedgerInfoWithSignatures,
+        certified_parent_block_id: HashValue,
+        certified_parent_block_round: Round,
+        certified_grandparent_block_id: HashValue,
+        certified_grandparent_block_round: Round,
     ) -> Self {
         QuorumCert {
             certified_block_id: block_id,
             certified_state: state,
             certified_block_round: round,
             signed_ledger_info,
+            certified_parent_block_id,
+            certified_parent_block_round,
+            certified_grandparent_block_id,
+            certified_grandparent_block_round,
         }
     }
 
@@ -81,6 +97,22 @@ impl QuorumCert {
         &self.signed_ledger_info
     }
 
+    pub fn certified_parent_block_id(&self) -> HashValue {
+        self.certified_parent_block_id
+    }
+
+    pub fn certified_parent_block_round(&self) -> Round {
+        self.certified_parent_block_round
+    }
+
+    pub fn certified_grandparent_block_id(&self) -> HashValue {
+        self.certified_grandparent_block_id
+    }
+
+    pub fn certified_grandparent_block_round(&self) -> Round {
+        self.certified_grandparent_block_round
+    }
+
     pub fn committed_block_id(&self) -> Option<HashValue> {
         let id = self.ledger_info().ledger_info().consensus_block_id();
         if id.is_zero() {
@@ -96,8 +128,15 @@ impl QuorumCert {
     ///   constant.
     /// - the map of signatures is empty because genesis block is implicitly agreed.
     pub fn certificate_for_genesis() -> QuorumCert {
-        let genesis_digest =
-            VoteMsg::vote_digest(*GENESIS_BLOCK_ID, ExecutedState::state_for_genesis(), 0);
+        let genesis_digest = VoteMsg::vote_digest(
+            *GENESIS_BLOCK_ID,
+            ExecutedState::state_for_genesis(),
+            0,
+            *GENESIS_BLOCK_ID,
+            0,
+            *GENESIS_BLOCK_ID,
+            0,
+        );
         let signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
         let li = LedgerInfo::new(
             0,
@@ -117,6 +156,10 @@ impl QuorumCert {
             ExecutedState::state_for_genesis(),
             0,
             LedgerInfoWithSignatures::new(li, signatures),
+            *GENESIS_BLOCK_ID,
+            0,
+            *GENESIS_BLOCK_ID,
+            0,
         )
     }
 
@@ -128,6 +171,10 @@ impl QuorumCert {
             self.certified_block_id,
             self.certified_state,
             self.certified_block_round,
+            self.certified_parent_block_id,
+            self.certified_parent_block_round,
+            self.certified_grandparent_block_id,
+            self.certified_grandparent_block_round,
         );
         if self.ledger_info().ledger_info().consensus_data_hash() != vote_hash {
             return Err(VoteMsgVerificationError::ConsensusDataMismatch);
@@ -155,6 +202,10 @@ impl IntoProto for QuorumCert {
         proto.set_version(self.certified_state.version);
         proto.set_round(self.certified_block_round);
         proto.set_signed_ledger_info(self.signed_ledger_info.into_proto());
+        proto.set_parent_block_id(self.certified_parent_block_id.into());
+        proto.set_parent_block_round(self.certified_parent_block_round);
+        proto.set_grandparent_block_id(self.certified_grandparent_block_id.into());
+        proto.set_grandparent_block_round(self.certified_grandparent_block_round);
         proto
     }
 }
@@ -169,11 +220,21 @@ impl FromProto for QuorumCert {
         let certified_block_round = object.get_round();
         let signed_ledger_info =
             LedgerInfoWithSignatures::from_proto(object.get_signed_ledger_info().clone())?;
+        let certified_parent_block_id = HashValue::from_slice(object.get_parent_block_id())?;
+        let certified_parent_block_round = object.get_parent_block_round();
+        let certified_grandparent_block_id =
+            HashValue::from_slice(object.get_grandparent_block_id())?;
+        let certified_grandparent_block_round = object.get_grandparent_block_round();
+
         Ok(QuorumCert {
             certified_block_id,
             certified_state: ExecutedState { state_id, version },
             certified_block_round,
             signed_ledger_info,
+            certified_parent_block_id,
+            certified_parent_block_round,
+            certified_grandparent_block_id,
+            certified_grandparent_block_round,
         })
     }
 }

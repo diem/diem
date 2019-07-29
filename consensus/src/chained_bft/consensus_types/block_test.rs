@@ -235,7 +235,15 @@ fn test_block_qc() {
         genesis_qc.clone(),
         &signer,
     );
-    let a1_qc = placeholder_certificate_for_block(vec![&signer], a1.id(), a1.round());
+    let a1_qc = placeholder_certificate_for_block(
+        vec![&signer],
+        a1.id(),
+        a1.round(),
+        a1.quorum_cert().certified_block_id(),
+        a1.quorum_cert().certified_block_round(),
+        a1.quorum_cert().certified_parent_block_id(),
+        a1.quorum_cert().certified_parent_block_round(),
+    );
 
     let result = panic::catch_unwind(|| {
         // should panic because qc does not point to parent

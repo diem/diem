@@ -124,6 +124,10 @@ where
                 ),
                 HashMap::new(),
             ),
+            ancestor_id,
+            0,
+            ancestor_id,
+            0,
         );
         let genesis_id = *GENESIS_BLOCK_ID;
         let signature = genesis_validator_signer

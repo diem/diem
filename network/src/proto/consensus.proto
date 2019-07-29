@@ -102,6 +102,14 @@ message QuorumCert {
   // LedgerInfo with at least 2f+1 signatures. The LedgerInfo's consensus data
   // hash is a digest that covers ancestor_id, state_id and round.
   types.LedgerInfoWithSignatures signed_ledger_info = 5;
+  // The id of the parent block of the certified block
+  bytes parent_block_id = 6;
+  // The round of the parent block of the certified block
+  uint64 parent_block_round = 7;
+  // The id of the grandparent block of the certified block
+  bytes grandparent_block_id = 8;
+  // The round of the grandparent block of the certified block
+  uint64 grandparent_block_round = 9;
 }
 
 message Vote {
@@ -119,6 +127,14 @@ message Vote {
   types.LedgerInfo ledger_info = 6;
   // Signature of the ledger info.
   bytes signature = 7;
+  // The id of the parent block of the proposed block
+  bytes parent_block_id = 8;
+  // The round of the parent block of the proposed block
+  uint64 parent_block_round = 9;
+  // The id of the grandparent block of the proposed block
+  bytes grandparent_block_id = 10;
+  // The round of the grandparent block of the proposed block
+  uint64 grandparent_block_round = 11;
 }
 
 message RequestBlock {
