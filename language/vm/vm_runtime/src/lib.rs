@@ -120,6 +120,7 @@ pub mod code_cache;
 pub mod data_cache;
 pub mod identifier;
 pub mod loaded_data;
+pub mod native_functions;
 pub mod txn_executor;
 pub mod value;
 

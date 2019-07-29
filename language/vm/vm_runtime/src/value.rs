@@ -369,6 +369,13 @@ impl Local {
         }
     }
 
+    pub fn value_as<T>(self) -> Option<T>
+    where
+        Option<T>: From<MutVal>,
+    {
+        self.value().and_then(std::convert::Into::into)
+    }
+
     pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
             Local::Ref(v) => v.size(),

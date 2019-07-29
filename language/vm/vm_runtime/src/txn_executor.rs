@@ -12,10 +12,11 @@ use crate::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
+    native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
     value::{Local, MutVal, Reference, Value},
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use move_ir_natives::dispatch::{dispatch_native_call, NativeReturnType};
+use std::collections::VecDeque;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -251,33 +252,42 @@ where
                     if callee_function_ref.is_native() {
                         let module_name: &str = callee_function_ref.module().name();
                         let function_name: &str = callee_function_ref.name();
-                        let native_return = dispatch_native_call(
-                            &mut self.execution_stack,
-                            module_name,
-                            function_name,
-                        )
-                        .map_err(|_| VMInvariantViolation::LinkerError)?;
-                        try_runtime!(self.gas_meter.consume_gas(
-                            GasUnits::new(native_return.cost()),
-                            &self.execution_stack
-                        ));
-                        match native_return.get_return_value() {
-                            NativeReturnType::ByteArray(value) => {
-                                self.execution_stack.push(Local::bytearray(value));
-                                // Call stack is not reconstructed for a native call, so we just
-                                // proceed on to next instruction.
-                            }
-                            NativeReturnType::Bool(value) => {
-                                self.execution_stack.push(Local::bool(value));
-                                // Call stack is not reconstructed for a native call, so we just
-                                // proceed on to next instruction.
-                            }
-                            NativeReturnType::U64(value) => {
-                                self.execution_stack.push(Local::u64(value));
-                                // Call stack is not reconstructed for a native call, so we just
-                                // proceed on to next instruction.
-                            }
+                        let native_function =
+                            match dispatch_native_function(module_name, function_name) {
+                                None => return Err(VMInvariantViolation::LinkerError),
+                                Some(native_function) => native_function,
+                            };
+                        let mut arguments = VecDeque::new();
+                        for _ in 0..native_function.num_args() {
+                            arguments.push_front(self.execution_stack.pop()?);
                         }
+                        let (cost, return_values) = match (native_function.dispatch)(arguments) {
+                            NativeReturnStatus::InvalidArguments => {
+                                // TODO: better error
+                                return Err(VMInvariantViolation::LinkerError);
+                            }
+                            NativeReturnStatus::Aborted { cost, error_code } => {
+                                try_runtime!(self
+                                    .gas_meter
+                                    .consume_gas(GasUnits::new(cost), &self.execution_stack));
+                                return Ok(Err(VMRuntimeError {
+                                    loc: self.execution_stack.location()?,
+                                    err: VMErrorKind::Aborted(error_code),
+                                }));
+                            }
+                            NativeReturnStatus::Success {
+                                cost,
+                                return_values,
+                            } => (cost, return_values),
+                        };
+                        try_runtime!(self
+                            .gas_meter
+                            .consume_gas(GasUnits::new(cost), &self.execution_stack));
+                        for value in return_values {
+                            self.execution_stack.push(value);
+                        }
+                    // Call stack is not reconstructed for a native call, so we just
+                    // proceed on to next instruction.
                     } else {
                         self.execution_stack.top_frame_mut()?.jump(pc);
                         try_runtime!(self.execution_stack.push_call(callee_function_ref));
