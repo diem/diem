@@ -100,8 +100,8 @@ resource "aws_instance" "validator" {
 
   root_block_device {
     volume_type = "io1"
-    volume_size = 100
-    iops        = 5000 # max 50iops/gb
+    volume_size = var.validator_ebs_size
+    iops        = var.validator_ebs_size * 50 # max 50iops/gb
   }
 
   tags = {
@@ -133,7 +133,7 @@ data "template_file" "seed_peers" {
   template = file("templates/seed_peers.config.toml")
 
   vars = {
-    validators = join(",", formatlist("%s:%s", var.peer_ids, aws_instance.validator.*.private_ip))
+    validators = join(",", formatlist("%s:%s", slice(var.peer_ids, 0, 3), slice(aws_instance.validator.*.private_ip, 0, 3)))
   }
 }
 
