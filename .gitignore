@@ -1,4 +1,6 @@
 # Rust specific ignores
+# Please follow https://help.github.com/en/articles/ignoring-files to create a global
+# .gitignore file locally for IDE/Emacs/Vim generated files.
 /target
 **/*.rs.bk
 # Cargo.lock is needed for deterministic testing and repeatable builds.
@@ -13,12 +15,6 @@ Cargo.lock
 !**/proto/mod.rs
 **/proto/*/*.rs
 !**/proto/*/mod.rs
-
-# IDE
-.idea
-.idea/*
-*.iml
-.vscode
 
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic
