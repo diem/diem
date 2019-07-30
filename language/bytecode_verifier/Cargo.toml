@@ -13,6 +13,8 @@ petgraph = "0.4"
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 vm = { path = "../vm" }
 types = { path = "../../types" }
+vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
+
 
 [dev-dependencies]
 invalid_mutations = { path = "invalid_mutations" }

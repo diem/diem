@@ -148,6 +148,10 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
     pub fn struct_definition(&self, name: &'a str) -> Option<&StructDefinitionView<'a, T>> {
         self.name_to_struct_definition_view.get(name)
     }
+
+    pub fn id(&self) -> ModuleId {
+        self.module.self_id()
+    }
 }
 
 pub struct ModuleHandleView<'a, T> {

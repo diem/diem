@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use codespan::{ByteIndex, Span};
 
 use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
@@ -27,24 +26,8 @@ ByteArray: ByteArray = {
 };
 AccountAddress: AccountAddress = {
     < s: r"0[xX][0-9a-fA-F]+" > => {
-        let mut hex_string = String::from(&s[2..]);
-        if hex_string.len() % 2 != 0 {
-            hex_string.insert(0, '0');
-        }
-
-        let mut result = hex::decode(hex_string.as_str()).unwrap();
-        let len = result.len();
-        if len < 32 {
-            result.reverse();
-            for i in len..32 {
-                result.push(0);
-            }
-            result.reverse();
-        }
-
-        assert!(result.len() >= 32);
-        AccountAddress::try_from(&result[..])
-            .unwrap_or_else(|_| panic!("The address {:?} is of invalid length. Addresses are at most 32-bytes long", result))
+        AccountAddress::from_hex_literal(&s)
+            .unwrap_or_else(|_| panic!("The address {:?} is of invalid length. Addresses are at most 32-bytes long", s))
     }
 };
 
