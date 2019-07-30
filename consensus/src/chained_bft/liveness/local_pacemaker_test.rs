@@ -88,7 +88,7 @@ fn test_timeout_certificate() {
         // accumulated into single timeout certificate
         for round in 1..rounds {
             let signer = &signers[round - 1];
-            let pacemaker_timeout = PacemakerTimeout::new(round as u64, signer);
+            let pacemaker_timeout = PacemakerTimeout::new(round as u64, signer, None);
             pm.process_remote_timeout(pacemaker_timeout).await;
         }
         // Then timeout quorum for previous round (1,2,3) generates new round event for round 2

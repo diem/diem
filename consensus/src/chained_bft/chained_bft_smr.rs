@@ -232,10 +232,11 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     async fn process_timeout_msg(
         mut receiver: channel::Receiver<TimeoutMsg>,
         event_processor: ConcurrentEventProcessor<T, P>,
+        quorum_size: usize,
     ) {
         while let Some(timeout_msg) = receiver.next().await {
             let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_timeout_msg(timeout_msg).await;
+            guard.process_timeout_msg(timeout_msg, quorum_size).await;
         }
     }
 
@@ -355,10 +356,14 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         );
 
         executor.spawn(
-            Self::process_timeout_msg(network_receivers.timeout_msgs, event_processor.clone())
-                .boxed()
-                .unit_error()
-                .compat(),
+            Self::process_timeout_msg(
+                network_receivers.timeout_msgs,
+                event_processor.clone(),
+                self.quorum_size,
+            )
+            .boxed()
+            .unit_error()
+            .compat(),
         );
 
         executor.spawn(

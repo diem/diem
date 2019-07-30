@@ -6,6 +6,7 @@ use crate::chained_bft::{
     consensus_types::{
         sync_info::SyncInfo, timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
     },
+    safety::vote_msg::{VoteMsg, VoteMsgVerificationError},
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
@@ -49,6 +50,17 @@ impl CryptoHash for PacemakerTimeoutSerializer {
     }
 }
 
+/// TimeoutMsg verification errors.
+#[derive(Debug, Fail, PartialEq)]
+pub enum TimeoutVerificationError {
+    /// The vote message carried by the timeout doesn't pass verification.
+    #[fail(display = "VoteMsgError: {}", _0)]
+    VoteMsgError(VoteMsgVerificationError),
+    /// The signature doesn't pass verification
+    #[fail(display = "SigVerifyError: {}", _0)]
+    SigVerifyError(VerifyError),
+}
+
 /// This message will be broadcast by a pacemaker as part of TimeoutMsg when its local
 /// timeout for a round is reached.  Once f+1 PacemakerTimeout structs
 /// from unique authors is gathered it forms a TimeoutCertificate.  A TimeoutCertificate is
@@ -58,11 +70,16 @@ pub struct PacemakerTimeout {
     round: Round,
     author: Author,
     signature: Ed25519Signature,
+    vote: Option<VoteMsg>,
 }
 
 impl PacemakerTimeout {
     /// Creates new PacemakerTimeout
-    pub fn new(round: Round, validator_signer: &ValidatorSigner<Ed25519PrivateKey>) -> Self {
+    pub fn new(
+        round: Round,
+        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        vote: Option<VoteMsg>,
+    ) -> Self {
         let author = validator_signer.author();
         let digest = PacemakerTimeoutSerializer { round, author }.hash();
         let signature = validator_signer
@@ -72,6 +89,7 @@ impl PacemakerTimeout {
             round,
             author,
             signature,
+            vote,
         }
     }
 
@@ -88,12 +106,23 @@ impl PacemakerTimeout {
         self.round
     }
 
+    pub fn vote_msg(&self) -> Option<&VoteMsg> {
+        self.vote.as_ref()
+    }
+
     /// Verifies that this message has valid signature
     pub fn verify(
         &self,
         validator: &ValidatorVerifier<Ed25519PublicKey>,
-    ) -> Result<(), VerifyError> {
-        validator.verify_signature(self.author, self.digest(), &self.signature)
+    ) -> Result<(), TimeoutVerificationError> {
+        validator
+            .verify_signature(self.author, self.digest(), &self.signature)
+            .map_err(TimeoutVerificationError::SigVerifyError)?;
+        if let Some(vote) = self.vote.as_ref() {
+            vote.verify(validator)
+                .map_err(TimeoutVerificationError::VoteMsgError)?;
+        }
+        Ok(())
     }
 
     /// Returns the author of the timeout
@@ -115,6 +144,9 @@ impl IntoProto for PacemakerTimeout {
         proto.set_round(self.round);
         proto.set_author(self.author.into());
         proto.set_signature(self.signature.to_bytes().as_ref().into());
+        if let Some(vote) = self.vote {
+            proto.set_vote(vote.into_proto());
+        }
         proto
     }
 }
@@ -126,10 +158,16 @@ impl FromProto for PacemakerTimeout {
         let round = object.get_round();
         let author = Author::try_from(object.take_author())?;
         let signature = Ed25519Signature::try_from(object.get_signature())?;
+        let vote = if let Some(vote_msg) = object.vote.into_option() {
+            Some(VoteMsg::from_proto(vote_msg)?)
+        } else {
+            None
+        };
         Ok(PacemakerTimeout {
             round,
             author,
             signature,
+            vote,
         })
     }
 }
@@ -199,11 +237,6 @@ impl TimeoutMsg {
         .hash()
     }
 
-    /// Calculates digest for this message
-    pub fn digest(&self) -> HashValue {
-        Self::new_round_digest(self.pacemaker_timeout.digest())
-    }
-
     /// SyncInfo of the given timeout message
     pub fn sync_info(&self) -> &SyncInfo {
         &self.sync_info
@@ -218,8 +251,7 @@ impl TimeoutMsg {
     pub fn verify(
         &self,
         validator: &ValidatorVerifier<Ed25519PublicKey>,
-    ) -> Result<(), VerifyError> {
-        validator.verify_signature(self.author(), self.digest(), &self.signature)?;
+    ) -> Result<(), TimeoutVerificationError> {
         self.pacemaker_timeout.verify(validator)
     }
 

@@ -37,6 +37,8 @@ message PacemakerTimeout {
   bytes author = 2;
   // Signature that this timeout was authored by owner
   bytes signature = 3;
+  // Optional vote for the given round
+  Vote vote = 4;
 }
 
 message TimeoutMsg {

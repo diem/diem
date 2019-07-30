@@ -23,13 +23,13 @@ fn test_basic() {
     let validator_signer2 = ValidatorSigner::random([1u8; 32]);
 
     // No timeout certificate generated on adding 2 timeouts from the same author
-    let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signer1);
+    let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signer1, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer1_round1),
         false
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
-    let timeout_signer1_round2 = PacemakerTimeout::new(2, &validator_signer1);
+    let timeout_signer1_round2 = PacemakerTimeout::new(2, &validator_signer1, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer1_round2),
         false
@@ -37,7 +37,7 @@ fn test_basic() {
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
 
     // Timeout certificate generated on adding a timeout from signer2
-    let timeout_signer2_round1 = PacemakerTimeout::new(1, &validator_signer2);
+    let timeout_signer2_round1 = PacemakerTimeout::new(1, &validator_signer2, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer2_round1),
         true
@@ -51,7 +51,7 @@ fn test_basic() {
     );
 
     // Timeout certificate increased when incrementing the round from signer 2
-    let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signer2);
+    let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signer2, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer2_round2),
         true
@@ -65,7 +65,7 @@ fn test_basic() {
     );
 
     // No timeout certificate generated since signer 1 is still on round 2
-    let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signer2);
+    let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signer2, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer2_round3),
         false
@@ -82,8 +82,8 @@ fn test_basic() {
     let received_timeout_certificate = PacemakerTimeoutCertificate::new(
         10,
         vec![
-            PacemakerTimeout::new(10, &validator_signer1),
-            PacemakerTimeout::new(11, &validator_signer2),
+            PacemakerTimeout::new(10, &validator_signer1, None),
+            PacemakerTimeout::new(11, &validator_signer2, None),
         ],
     );
     assert_eq!(
@@ -104,8 +104,8 @@ fn test_recovery_from_highest_timeout_certificate() {
     let validator_signer1 = ValidatorSigner::random([0u8; 32]);
     let validator_signer2 = ValidatorSigner::random([1u8; 32]);
 
-    let timeout1 = PacemakerTimeout::new(10, &validator_signer1);
-    let timeout2 = PacemakerTimeout::new(11, &validator_signer2);
+    let timeout1 = PacemakerTimeout::new(10, &validator_signer1, None);
+    let timeout2 = PacemakerTimeout::new(11, &validator_signer2, None);
     let tc = PacemakerTimeoutCertificate::new(10, vec![timeout1, timeout2]);
 
     let timeout_manager = PacemakerTimeoutManager::new(
