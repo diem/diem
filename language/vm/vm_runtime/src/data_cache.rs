@@ -3,6 +3,7 @@
 //! Scratchpad for on chain values during the execution.
 
 use crate::{
+    gas_meter::GasMeter,
     loaded_data::struct_def::StructDef,
     value::{GlobalRef, Local, MutVal, Reference, Value},
 };
@@ -105,10 +106,17 @@ impl<'txn> TransactionDataCache<'txn> {
     // TODO: this may not be the most efficient model because we always load data into the
     // cache even when that would not be strictly needed. Review once we have the whole story
     // working
-    fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef> {
+    fn load_data(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+        gas_meter: &mut GasMeter,
+    ) -> VMResult<&mut GlobalRef> {
         if !self.data_map.contains_key(ap) {
             match self.data_cache.get(ap)? {
                 Some(bytes) => {
+                    try_runtime!(gas_meter
+                        .charge_global_read(AbstractMemorySize::new(bytes.len() as GasCarrier)));
                     let res = try_runtime!(Ok(Value::simple_deserialize(&bytes, def)));
                     let new_root = GlobalRef::make_root(ap.clone(), MutVal::new(res));
                     self.data_map.insert(ap.clone(), new_root);
@@ -125,8 +133,13 @@ impl<'txn> TransactionDataCache<'txn> {
     }
 
     /// BorrowGlobal opcode cache implementation
-    pub fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
-        let root_ref = match self.load_data(ap, def) {
+    pub fn borrow_global(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+        gas_meter: &mut GasMeter,
+    ) -> VMResult<GlobalRef> {
+        let root_ref = match self.load_data(ap, def, gas_meter) {
             Ok(Ok(gref)) => gref,
             Ok(Err(e)) => {
                 warn!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
@@ -157,8 +170,9 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
+        gas_meter: &mut GasMeter,
     ) -> Result<(bool, AbstractMemorySize<GasCarrier>), VMInvariantViolation> {
-        Ok(match self.load_data(ap, def)? {
+        Ok(match self.load_data(ap, def, gas_meter)? {
             Ok(gref) => {
                 if gref.is_deleted() {
                     (false, AbstractMemorySize::new(0))
@@ -171,8 +185,13 @@ impl<'txn> TransactionDataCache<'txn> {
     }
 
     /// MoveFrom opcode cache implementation
-    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Local> {
-        let root_ref = match self.load_data(ap, def) {
+    pub fn move_resource_from(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+        gas_meter: &mut GasMeter,
+    ) -> VMResult<Local> {
+        let root_ref = match self.load_data(ap, def, gas_meter) {
             Ok(Ok(gref)) => gref,
             Ok(Err(e)) => {
                 warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
@@ -204,10 +223,11 @@ impl<'txn> TransactionDataCache<'txn> {
         ap: &AccessPath,
         def: StructDef,
         res: MutVal,
+        gas_meter: &mut GasMeter,
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)
-        let can_write = match self.load_data(ap, def)? {
+        let can_write = match self.load_data(ap, def, gas_meter)? {
             Ok(data) => data.is_deleted(),
             Err(e) => match e.err {
                 VMErrorKind::MissingData => true,

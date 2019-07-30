@@ -151,6 +151,10 @@ lazy_static! {
     /// TODO: Fill this in with a proper number once it's determined.
     pub static ref GLOBAL_MEMORY_PER_BYTE_WRITE_COST: GasUnits<GasCarrier> = GasUnits::new(8);
 
+    /// The cost per-byte read from storage.
+    /// TODO: Fill this in with a proper number once it's determined.
+    pub static ref GLOBAL_MEMORY_PER_BYTE_READ_COST: GasUnits<GasCarrier> = GasUnits::new(4);
+
     /// The maximum size representable by AbstractMemorySize
     pub static ref MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(std::u64::MAX);
 

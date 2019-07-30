@@ -46,7 +46,17 @@ impl GasMeter {
         P: ModuleCache<'alloc>,
     {
         let cost = calculate_intrinsic_gas(transaction_size);
-        self.consume_gas(cost, stk)
+        self.consume_gas(cost, stk.location().unwrap_or_default())
+    }
+
+    /// Charges gas for a read from global memory of size `amount`.
+    pub fn charge_global_read(&mut self, amount: AbstractMemorySize<GasCarrier>) -> VMResult<()> {
+        let cost = amount
+            // Charge for iops
+            .mul(*GLOBAL_MEMORY_PER_BYTE_COST)
+            // Charge for reading the memory
+            .mul(*GLOBAL_MEMORY_PER_BYTE_READ_COST);
+        self.consume_gas(cost.unitary_cast(), Location::default())
     }
 
     /// Queries the internal state of the gas meter to determine if it has at
@@ -87,7 +97,7 @@ impl GasMeter {
     {
         if self.meter_on {
             let instruction_gas = try_runtime!(self.gas_for_instruction(instr, stk, memory_size));
-            self.consume_gas(instruction_gas, stk)
+            self.consume_gas(instruction_gas, stk.location().unwrap_or_default())
         } else {
             Ok(Ok(()))
         }
@@ -301,15 +311,11 @@ impl GasMeter {
 
     /// Consume the amount of gas given by `gas_amount`. If there is not enough gas
     /// left in the internal state, an `OutOfGasError` is returned.
-    pub fn consume_gas<'alloc, 'txn, P>(
+    pub fn consume_gas(
         &mut self,
         gas_amount: GasUnits<GasCarrier>,
-        stk: &ExecutionStack<'alloc, 'txn, P>,
-    ) -> VMResult<()>
-    where
-        'alloc: 'txn,
-        P: ModuleCache<'alloc>,
-    {
+        location: Location,
+    ) -> VMResult<()> {
         if !self.meter_on {
             return Ok(Ok(()));
         }
@@ -322,7 +328,6 @@ impl GasMeter {
         } else {
             // Zero out the internal gas state
             self.current_gas_left = GasUnits::new(0);
-            let location = stk.location().unwrap_or_default();
             Ok(Err(VMRuntimeError {
                 loc: location,
                 err: VMErrorKind::OutOfGasError,

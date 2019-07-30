@@ -259,7 +259,7 @@ where
                         .map_err(|_| VMInvariantViolation::LinkerError)?;
                         try_runtime!(self.gas_meter.consume_gas(
                             GasUnits::new(native_return.cost()),
-                            &self.execution_stack
+                            self.execution_stack.location().unwrap_or_default()
                         ));
                         match native_return.get_return_value() {
                             NativeReturnType::ByteArray(value) => {
@@ -472,8 +472,11 @@ where
                         .module_cache
                         .resolve_struct_def(curr_module, idx, &self.gas_meter))
                     {
-                        let global_ref =
-                            try_runtime!(self.data_view.borrow_global(&ap, struct_def));
+                        let global_ref = try_runtime!(self.data_view.borrow_global(
+                            &ap,
+                            struct_def,
+                            &mut self.gas_meter
+                        ));
                         try_runtime!(self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
@@ -493,11 +496,13 @@ where
                         .module_cache
                         .resolve_struct_def(curr_module, idx, &self.gas_meter))
                     {
-                        let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
+                        let (exists, mem_size) =
+                            self.data_view
+                                .resource_exists(&ap, struct_def, &mut self.gas_meter)?;
                         try_runtime!(self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
-                            mem_size
+                            mem_size // Charged as in-cache
                         ));
                         self.execution_stack.push(Local::bool(exists));
                     } else {
@@ -513,8 +518,11 @@ where
                         .module_cache
                         .resolve_struct_def(curr_module, idx, &self.gas_meter))
                     {
-                        let resource =
-                            try_runtime!(self.data_view.move_resource_from(&ap, struct_def));
+                        let resource = try_runtime!(self.data_view.move_resource_from(
+                            &ap,
+                            struct_def,
+                            &mut self.gas_meter
+                        ));
                         try_runtime!(self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
@@ -539,11 +547,14 @@ where
                             try_runtime!(self.gas_meter.calculate_and_consume(
                                 &instruction,
                                 &self.execution_stack,
-                                resource.size()
+                                resource.size() // Charged as in-cache
                             ));
-                            try_runtime!(self
-                                .data_view
-                                .move_resource_to(&ap, struct_def, resource));
+                            try_runtime!(self.data_view.move_resource_to(
+                                &ap,
+                                struct_def,
+                                resource,
+                                &mut self.gas_meter
+                            ));
                         } else {
                             return Ok(Err(VMRuntimeError {
                                 loc: Location::new(),
@@ -645,8 +656,12 @@ where
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
         let account_path = make_access_path(account_module, *account_struct_id, addr);
-        self.data_view
-            .move_resource_to(&account_path, account_struct_def, account_resource)
+        self.data_view.move_resource_to(
+            &account_path,
+            account_struct_def,
+            account_resource,
+            &mut self.gas_meter,
+        )
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
