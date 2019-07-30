@@ -19,13 +19,13 @@ use proto_conv::IntoProto;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     fmt, fs,
-    io::{stdout, Write},
-    path::Path,
-    process::Command,
-    str::FromStr,
+    io::{stdout, Seek, SeekFrom, Write},
+    path::{Display, Path},
+    process::{Command, Stdio},
+    str::{self, FromStr},
     sync::Arc,
     thread, time,
 };
@@ -36,7 +36,7 @@ use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
         account_received_event_path, account_sent_event_path, association_address,
-        get_account_resource_or_default, AccountResource,
+        core_code_address, get_account_resource_or_default, AccountResource,
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
@@ -436,39 +436,40 @@ impl ClientProxy {
                 space_delim_strings[4].to_string()
             } else {
                 let tmp_path = NamedTempFile::new()?.into_temp_path();
-                let path = tmp_path.to_str().unwrap().to_string();
+                let path = tmp_path
+                    .to_str()
+                    .ok_or_else(|| format_err!("failed to create tmp file"))?
+                    .to_string();
                 self.temp_files.push(tmp_path);
                 path
             }
         };
+        let mut tmp_source_file = NamedTempFile::new()?;
+        let mut code = fs::read_to_string(file_path)?;
+        code = code.replace("{{default}}", &format!("0x{}", address));
+        writeln!(tmp_source_file, "{}", code)?;
+
+        let dependencies_file =
+            self.handle_dependencies(tmp_source_file.path().display(), is_module)?;
+
         // custom handler of old module format
         // TODO: eventually retire code after vm separation between modules and scripts
-        let tmp_source = if is_module {
-            let mut tmp_file = NamedTempFile::new()?;
-            let code = format!(
-                "\
-                 modules:\n\
-                 {}\n\
-                 script:\n\
-                 main(){{\n\
-                 return;\n\
-                 }}",
-                fs::read_to_string(file_path)?
-            );
-            writeln!(tmp_file, "{}", code)?;
-            Some(tmp_file)
-        } else {
-            None
-        };
+        if is_module {
+            code = format!("modules:\n{}\nscript:\nmain(){{\nreturn;\n}}", code);
+            tmp_source_file.seek(SeekFrom::Start(0))?;
+            writeln!(tmp_source_file, "{}", code)?;
+        }
 
-        let source_path = tmp_source
-            .as_ref()
-            .map(|f| f.path().to_str().unwrap())
-            .unwrap_or(file_path);
-        let args = format!(
+        let mut args = format!(
             "run -p compiler -- -a {} -o {} {}",
-            address, output_path, source_path
+            address,
+            output_path,
+            tmp_source_file.path().display(),
         );
+        if let Some(file) = &dependencies_file {
+            args.push_str(&format!(" --deps={}", file.path().display()));
+        }
+
         let status = Command::new("cargo")
             .args(args.split(' '))
             .spawn()?
@@ -477,6 +478,40 @@ impl ClientProxy {
             return Err(format_err!("compilation failed"));
         }
         Ok(output_path)
+    }
+
+    fn handle_dependencies(
+        &mut self,
+        source_path: Display,
+        is_module: bool,
+    ) -> Result<Option<NamedTempFile>> {
+        let mut args = format!("run -p compiler -- -l {}", source_path);
+        if is_module {
+            args.push_str(" -m");
+        }
+        let child = Command::new("cargo")
+            .args(args.split(' '))
+            .stdout(Stdio::piped())
+            .spawn()?;
+        let output = child.wait_with_output()?;
+        let paths: Vec<AccessPath> = serde_json::from_str(str::from_utf8(&output.stdout)?)?;
+        let mut dependencies = vec![];
+        for path in paths {
+            if path.address != core_code_address() {
+                if let (Some(blob), _) = self.client.get_account_blob(path.address)? {
+                    let map = BTreeMap::<Vec<u8>, Vec<u8>>::try_from(&blob)?;
+                    if let Some(code) = map.get(&path.path) {
+                        dependencies.push(code.clone());
+                    }
+                }
+            }
+        }
+        if dependencies.is_empty() {
+            return Ok(None);
+        }
+        let mut file = NamedTempFile::new()?;
+        file.write_all(&serde_json::to_vec(&dependencies)?)?;
+        Ok(Some(file))
     }
 
     fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
