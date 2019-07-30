@@ -51,18 +51,28 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
     pub base: BaseConfig,
+    #[serde(default)]
     pub metrics: MetricsConfig,
+    #[serde(default)]
     pub execution: ExecutionConfig,
+    #[serde(default)]
     pub admission_control: AdmissionControlConfig,
+    #[serde(default)]
     pub debug_interface: DebugInterfaceConfig,
 
+    #[serde(default)]
     pub storage: StorageConfig,
+    #[serde(default)]
     pub network: NetworkConfig,
+    #[serde(default)]
     pub consensus: ConsensusConfig,
+    #[serde(default)]
     pub mempool: MempoolConfig,
+    #[serde(default)]
     pub log_collector: LoggerConfig,
     pub vm_config: VMConfig,
 
+    #[serde(default)]
     pub secret_service: SecretServiceConfig,
 }
 
@@ -273,13 +283,25 @@ impl Clone for BaseConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct MetricsConfig {
     pub dir: PathBuf,
     pub collection_interval_ms: u64,
     pub push_server_addr: String,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+impl Default for MetricsConfig {
+    fn default() -> MetricsConfig {
+        MetricsConfig {
+            dir: PathBuf::from("metrics"),
+            collection_interval_ms: 1000,
+            push_server_addr: "".to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ExecutionConfig {
     pub address: String,
     pub port: u16,
@@ -288,6 +310,17 @@ pub struct ExecutionConfig {
     // account creation
     pub testnet_genesis: bool,
     pub genesis_file_location: String,
+}
+
+impl Default for ExecutionConfig {
+    fn default() -> ExecutionConfig {
+        ExecutionConfig {
+            address: "localhost".to_string(),
+            port: 55558,
+            testnet_genesis: false,
+            genesis_file_location: "<USE_TEMP_DIR>".to_string(),
+        }
+    }
 }
 
 impl ExecutionConfig {
@@ -300,11 +333,23 @@ impl ExecutionConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct LoggerConfig {
     pub http_endpoint: Option<String>,
     pub is_async: bool,
     pub chan_size: Option<usize>,
     pub use_std_output: bool,
+}
+
+impl Default for LoggerConfig {
+    fn default() -> LoggerConfig {
+        LoggerConfig {
+            http_endpoint: None,
+            is_async: true,
+            chan_size: None,
+            use_std_output: true,
+        }
+    }
 }
 
 impl LoggerConfig {
@@ -325,19 +370,41 @@ impl LoggerConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct SecretServiceConfig {
     pub address: String,
     pub secret_service_port: u16,
 }
 
+impl Default for SecretServiceConfig {
+    fn default() -> SecretServiceConfig {
+        SecretServiceConfig {
+            address: "localhost".to_string(),
+            secret_service_port: 30333,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
     pub need_to_check_mempool_before_validation: bool,
 }
 
+impl Default for AdmissionControlConfig {
+    fn default() -> AdmissionControlConfig {
+        AdmissionControlConfig {
+            address: "localhost".to_string(),
+            admission_control_service_port: 30307,
+            need_to_check_mempool_before_validation: false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct DebugInterfaceConfig {
     pub admission_control_node_debug_port: u16,
     pub secret_service_node_debug_port: u16,
@@ -347,7 +414,20 @@ pub struct DebugInterfaceConfig {
     pub address: String,
 }
 
+impl Default for DebugInterfaceConfig {
+    fn default() -> DebugInterfaceConfig {
+        DebugInterfaceConfig {
+            admission_control_node_debug_port: 50313,
+            storage_node_debug_port: 50315,
+            secret_service_node_debug_port: 50316,
+            metrics_server_port: 14297,
+            address: "localhost".to_string(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct StorageConfig {
     pub address: String,
     pub port: u16,
@@ -360,7 +440,18 @@ impl StorageConfig {
     }
 }
 
+impl Default for StorageConfig {
+    fn default() -> StorageConfig {
+        StorageConfig {
+            address: "localhost".to_string(),
+            port: 30305,
+            dir: PathBuf::from("libradb"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct NetworkConfig {
     pub seed_peers_file: String,
     #[serde(skip)]
@@ -375,13 +466,40 @@ pub struct NetworkConfig {
     pub enable_encryption_and_authentication: bool,
 }
 
+impl Default for NetworkConfig {
+    fn default() -> NetworkConfig {
+        NetworkConfig {
+            seed_peers_file: "".to_string(),
+            seed_peers: SeedPeersConfig::default(),
+            listen_address: "/ip4/0.0.0.0/tcp/30303".parse::<Multiaddr>().unwrap(),
+            advertised_address: "/ip4/127.0.0.1/tcp/30303".parse::<Multiaddr>().unwrap(),
+            discovery_interval_ms: 1000,
+            connectivity_check_interval_ms: 5000,
+            enable_encryption_and_authentication: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConsensusConfig {
     max_block_size: u64,
     proposer_type: String,
     contiguous_rounds: u32,
     max_pruned_blocks_in_mem: Option<u64>,
     pacemaker_initial_timeout_ms: Option<u64>,
+}
+
+impl Default for ConsensusConfig {
+    fn default() -> ConsensusConfig {
+        ConsensusConfig {
+            max_block_size: 100,
+            proposer_type: "rotating_proposer".to_string(),
+            contiguous_rounds: 2,
+            max_pruned_blocks_in_mem: None,
+            pacemaker_initial_timeout_ms: None,
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -419,6 +537,7 @@ impl ConsensusConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct MempoolConfig {
     pub broadcast_transactions: bool,
     pub shared_mempool_tick_interval_ms: u64,
@@ -432,6 +551,24 @@ pub struct MempoolConfig {
     pub system_transaction_gc_interval_ms: u64,
     pub mempool_service_port: u16,
     pub address: String,
+}
+
+impl Default for MempoolConfig {
+    fn default() -> MempoolConfig {
+        MempoolConfig {
+            broadcast_transactions: true,
+            shared_mempool_tick_interval_ms: 50,
+            shared_mempool_batch_size: 100,
+            shared_mempool_max_concurrent_inbound_syncs: 100,
+            capacity: 10_000_000,
+            capacity_per_user: 100,
+            sequence_cache_capacity: 1000,
+            system_transaction_timeout_secs: 86400,
+            address: "localhost".to_string(),
+            mempool_service_port: 55555,
+            system_transaction_gc_interval_ms: 180_000,
+        }
+    }
 }
 
 impl NodeConfig {
