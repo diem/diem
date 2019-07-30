@@ -3,7 +3,7 @@
 
 use crate::dispatch::{CostedReturnType, NativeReturnType, Result, StackAccessor};
 use bit_vec::BitVec;
-use failure::prelude::*;
+use failure::Fail;
 use nextgen_crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
     traits::*,
@@ -100,13 +100,13 @@ fn ed25519_threshold_signature_verification(
                         keys_and_signatures,
                     ) {
                         Ok(()) => Ok(num_of_sigs),
-                        Err(_) => bail!("Batch verification failed"),
+                        Err(_) => Err(ThresholdSignatureError::SignatureVerificationFailure.into()),
                     }
                 }
-                Err(_) => bail!("Key deserialization error"),
+                Err(_) => Err(ThresholdSignatureError::PublicKeyDeserializationFailure.into()),
             }
         }
-        Err(_) => bail!("Signature deserialization error"),
+        Err(_) => Err(ThresholdSignatureError::SignatureDeserializationFailure.into()),
     }
 }
 
@@ -144,7 +144,7 @@ fn sanity_check(bitmap: &BitVec<u32>, signatures: &ByteArray, pubkeys: &ByteArra
 
     // Ensure a BITMAP_SIZE bitmap.
     if bitmap_len != BITMAP_SIZE {
-        bail!("Invalid bitmap length");
+        return Err(ThresholdSignatureError::InvalidBitmapLengthFailure.into());
     }
 
     let mut bitmap_last_bit_set: usize = 0; // This is fine as we expect at least one set bit.
@@ -156,23 +156,46 @@ fn sanity_check(bitmap: &BitVec<u32>, signatures: &ByteArray, pubkeys: &ByteArra
         }
     }
     if bitmap_count_ones == 0 {
-        bail!("Bitmap is all zeros");
+        return Err(ThresholdSignatureError::ZeroBitmapFailure.into());
     }
     // Ensure we have as many signatures as the number of set bits in bitmap.
     if bitmap_count_ones * 64 != signatures_len {
-        bail!("Mismatch between Bitmap Hamming weight and number of signatures");
+        return Err(ThresholdSignatureError::SignatureSizeFailure.into());
     }
     // Ensure that we have at least as many keys as the index of the last set bit in bitmap.
-    if public_keys_len < 32 * bitmap_last_bit_set {
-        bail!("Bitmap points to a non-existent key");
+    if public_keys_len < 32 * (bitmap_last_bit_set + 1) {
+        return Err(ThresholdSignatureError::BitmapPublicKeyMismatchFailure.into());
     }
     // Ensure no more than BITMAP_SIZE keys.
     if public_keys_len > 32 * BITMAP_SIZE {
-        bail!("Length of bytes of concatenated keys exceeds the maximum allowed");
+        return Err(ThresholdSignatureError::OversizedPublicKeySizeFailure.into());
     }
     // Ensure ByteArray for keys is a multiple of 32 bytes.
     if public_keys_len % 32 != 0 {
-        bail!("Concatenated Ed25519 public keys should be a multiple of 32 bytes");
+        return Err(ThresholdSignatureError::InvalidPublicKeySizeFailure.into());
     }
     Ok(bitmap_count_ones as u64)
+}
+
+/// Errors related to threshold signature verification.
+#[derive(Clone, Debug, Fail)]
+pub enum ThresholdSignatureError {
+    #[fail(display = "Batch signature verification failed")]
+    SignatureVerificationFailure,
+    #[fail(display = "Public keys deserialization error")]
+    PublicKeyDeserializationFailure,
+    #[fail(display = "Signatures deserialization error")]
+    SignatureDeserializationFailure,
+    #[fail(display = "Bitmap is all zeros")]
+    ZeroBitmapFailure,
+    #[fail(display = "Invalid bitmap length")]
+    InvalidBitmapLengthFailure,
+    #[fail(display = "Mismatch between bitmap's Hamming weight and number or size of signatures")]
+    SignatureSizeFailure,
+    #[fail(display = "Bitmap points to a non-existent key")]
+    BitmapPublicKeyMismatchFailure,
+    #[fail(display = "Length of bytes of concatenated keys exceeds the maximum allowed")]
+    OversizedPublicKeySizeFailure,
+    #[fail(display = "Concatenated Ed25519 public keys should be a multiple of 32 bytes")]
+    InvalidPublicKeySizeFailure,
 }
