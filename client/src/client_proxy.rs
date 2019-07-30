@@ -426,10 +426,13 @@ impl ClientProxy {
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
         let address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
-        let is_module = if space_delim_strings.len() > 3 {
-            parse_bool(space_delim_strings[3])?
-        } else {
-            false
+        let is_module = match space_delim_strings[3] {
+            "module" => true,
+            "script" => false,
+            _ => bail!(
+                "Invalid program type: {}. Available options: module, script",
+                space_delim_strings[3]
+            ),
         };
         let output_path = {
             if space_delim_strings.len() == 5 {
@@ -446,7 +449,7 @@ impl ClientProxy {
         };
         let mut tmp_source_file = NamedTempFile::new()?;
         let mut code = fs::read_to_string(file_path)?;
-        code = code.replace("{{default}}", &format!("0x{}", address));
+        code = code.replace("{{sender}}", &format!("0x{}", address));
         writeln!(tmp_source_file, "{}", code)?;
 
         let dependencies_file =

@@ -52,10 +52,10 @@ struct Args {
 fn main() -> std::io::Result<()> {
     let _logger = set_default_global_logger(false /* async */, None);
     crash_handler::setup_panic_handler();
-
-    let (commands, alias_to_cmd) = get_commands();
-
     let args = Args::from_args();
+
+    let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
+
     let faucet_account_file = args.faucet_account_file.unwrap_or_else(|| "".to_string());
 
     let mut client_proxy = ClientProxy::new(
