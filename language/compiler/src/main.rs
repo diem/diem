@@ -42,6 +42,9 @@ struct Args {
     /// Instead of compiling the source, emit a dependency list of the compiled source
     #[structopt(short = "-l", long = "list_dependencies")]
     pub list_dependencies: bool,
+    /// Path to the list of modules that we want to link with
+    #[structopt(long = "deps")]
+    pub deps_path: Option<String>,
 }
 
 fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
@@ -105,12 +108,35 @@ fn main() {
         return;
     }
 
+    let deps = {
+        if let Some(path) = args.deps_path {
+            let deps = fs::read_to_string(path).expect("Unable to read dependency file");
+            let deps_list: Vec<Vec<u8>> =
+                serde_json::from_str(deps.as_str()).expect("Unable to parse dependency file");
+            deps_list
+                .into_iter()
+                .map(|module_bytes| {
+                    VerifiedModule::new(
+                        CompiledModule::deserialize(module_bytes.as_slice())
+                            .expect("Downloaded module blob can't be deserialized"),
+                    )
+                    .expect("Downloaded module blob failed verifier")
+                })
+                .collect()
+        } else if args.no_stdlib {
+            vec![]
+        } else {
+            stdlib_modules().to_vec()
+        }
+    };
+
     if !args.module_input {
         let source = fs::read_to_string(args.source_path).expect("Unable to read file");
         let compiler = Compiler {
             address,
             code: &source,
             skip_stdlib_deps: args.no_stdlib,
+            extra_deps: deps,
             ..Compiler::default()
         };
         let (compiled_program, dependencies) = compiler
@@ -148,14 +174,9 @@ fn main() {
             }
         }
     } else {
-        let dependencies = if args.no_stdlib {
-            vec![]
-        } else {
-            stdlib_modules().to_vec()
-        };
-        let compiled_module = util::do_compile_module(&args.source_path, &address, &dependencies);
+        let compiled_module = util::do_compile_module(&args.source_path, &address, &deps);
         let compiled_module = if !args.no_verify {
-            let verified_module = do_verify_module(compiled_module, &dependencies);
+            let verified_module = do_verify_module(compiled_module, &deps);
             verified_module.into_inner()
         } else {
             compiled_module
