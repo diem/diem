@@ -1,19 +1,11 @@
-[base]
-peer_id = ''
-peer_keypairs_file = ''
-data_dir_path = '<USE_TEMP_DIR>'
-trusted_peers_file = ''
-node_sync_batch_size = 1000
-node_sync_retries = 3
-node_sync_channel_buffer_size = 10
-node_async_log_chan_size = 256
+# Defaults are now set in config.rs
 
 [vm_config]
   [vm_config.publishing_options]
   type = "Locked"
   whitelist = [
-      "ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e",
-      "fb999f2d6f45efc9b991993e332f40760171de8a46db40ca93f1baff56842c44",
-      "6465374a3ecf6d1a3836bbab3bcd624244a0217530a601fa20de80d562f87d80",
-      "774b10985dd9bf17ddee899256942c1dc0ab2c1b07d99ec78f774651f01e04b8"
+    "ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e",
+    "fb999f2d6f45efc9b991993e332f40760171de8a46db40ca93f1baff56842c44",
+    "6465374a3ecf6d1a3836bbab3bcd624244a0217530a601fa20de80d562f87d80",
+    "774b10985dd9bf17ddee899256942c1dc0ab2c1b07d99ec78f774651f01e04b8"
   ]

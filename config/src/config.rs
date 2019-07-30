@@ -50,6 +50,7 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 #[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
+    #[serde(default)]
     pub base: BaseConfig,
     #[serde(default)]
     pub metrics: MetricsConfig,
@@ -70,6 +71,7 @@ pub struct NodeConfig {
     pub mempool: MempoolConfig,
     #[serde(default)]
     pub log_collector: LoggerConfig,
+    #[serde(default)]
     pub vm_config: VMConfig,
 
     #[serde(default)]
@@ -77,6 +79,7 @@ pub struct NodeConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct BaseConfig {
     pub peer_id: String,
     // peer_keypairs contains all the node's private keys,
@@ -105,6 +108,24 @@ pub struct BaseConfig {
 
     // chan_size of slog async drain for node logging.
     pub node_async_log_chan_size: usize,
+}
+
+impl Default for BaseConfig {
+    fn default() -> BaseConfig {
+        BaseConfig {
+            peer_id: "".to_string(),
+            peer_keypairs_file: PathBuf::from(""),
+            peer_keypairs: KeyPairs::default(),
+            data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
+            temp_data_dir: None,
+            trusted_peers_file: "".to_string(),
+            trusted_peers: TrustedPeersConfig::default(),
+            node_sync_batch_size: 1000,
+            node_sync_retries: 3,
+            node_sync_channel_buffer_size: 10,
+            node_async_log_chan_size: 256,
+        }
+    }
 }
 
 // KeyPairs is used to store all of a node's private keys.
@@ -767,8 +788,17 @@ impl NodeConfigHelpers {
 /// Holds the VM configuration, currently this is only the publishing options for scripts and
 /// modules, but in the future this may need to be expanded to hold more information.
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct VMConfig {
     pub publishing_options: VMPublishingOption,
+}
+
+impl Default for VMConfig {
+    fn default() -> VMConfig {
+        VMConfig {
+            publishing_options: VMPublishingOption::Open,
+        }
+    }
 }
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
