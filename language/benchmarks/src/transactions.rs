@@ -70,7 +70,15 @@ where
 
 struct TransactionBenchState {
     // Use the fake executor for now.
-    // XXX Hook up the real executor in the future?
+    // TODO: Hook up the real executor in the future. Here's what needs to be done:
+    // 1. Provide a way to construct a write set from the genesis write set + initial balances.
+    // 2. Provide a trait for an executor with the functionality required for account_universe.
+    // 3. Implement the trait for the fake executor.
+    // 4. Implement the trait for the real executor, using the genesis write set implemented in 1
+    //    and the helpers in the execution_tests crate.
+    // 5. Add a type parameter that implements the trait here and switch "executor" to use it.
+    // 6. Add an enum to TransactionBencher that lets callers choose between the fake and real
+    //    executors.
     executor: FakeExecutor,
     transactions: Vec<SignedTransaction>,
 }
