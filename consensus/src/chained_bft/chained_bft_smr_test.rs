@@ -685,3 +685,70 @@ fn sync_info_sent_if_remote_stale() {
         assert_eq!(found, true);
     });
 }
+
+#[test]
+/// Verify that a QC can be formed by aggregating the votes piggybacked by TimeoutMsgs
+fn aggregate_timeout_votes() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+
+    // The proposer node[0] sends its proposal to nodes 1 and 2, which cannot respond back,
+    // because their messages are dropped.
+    // Upon timeout nodes 1 and 2 are sending timeout messages with attached votes for the original
+    // proposal: both can then aggregate the QC for the first proposal.
+    let nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer);
+    block_on(async move {
+        playground.drop_message_for(&nodes[1].author, nodes[0].author);
+        playground.drop_message_for(&nodes[2].author, nodes[0].author);
+
+        // Node 0 sends proposals to nodes 1 and 2
+        let mut msg = playground
+            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .await;
+        let first_proposal =
+            ProposalInfo::<Vec<u64>, Author>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let proposal_id = first_proposal.proposal.id();
+        playground.drop_message_for(&nodes[0].author, nodes[1].author);
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+
+        // Wait for the timeout messages sent by 1 and 2 to each other
+        playground
+            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .await;
+
+        // Node 0 cannot form a QC
+        assert_eq!(
+            nodes[0]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_round(),
+            0
+        );
+        // Nodes 1 and 2 form a QC and move to the next round.
+        // Wait for the timeout messages from 1 and 2
+        playground
+            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .await;
+
+        assert_eq!(
+            nodes[1]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_id(),
+            proposal_id
+        );
+        assert_eq!(
+            nodes[2]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_id(),
+            proposal_id
+        );
+    });
+}

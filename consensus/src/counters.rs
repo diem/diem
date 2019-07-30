@@ -62,6 +62,9 @@ pub static ref TIMEOUT_COUNT: IntCounter = OP_COUNTERS.counter("timeout_count");
 /// The timeout of the current round.
 pub static ref ROUND_TIMEOUT_MS: IntGauge = OP_COUNTERS.gauge("round_timeout_ms");
 
+/// Count the number of cases, in which the vote carried by a timeout message helps to form a QC
+pub static ref TIMEOUT_VOTES_FORM_QC_COUNT: IntCounter = OP_COUNTERS.counter("timeout_votes_form_qc_count");
+
 ////////////////////////
 // SYNCMANAGER COUNTERS
 ////////////////////////

@@ -571,19 +571,18 @@ fn process_new_round_msg_test() {
 
     // As the static proposer processes the new round message it should learn about
     // block_0_quorum_cert at round 1.
-    block_on(
-        static_proposer
-            .event_processor
-            .process_timeout_msg(TimeoutMsg::new(
-                SyncInfo::new(
-                    block_0_quorum_cert,
-                    QuorumCert::certificate_for_genesis(),
-                    None,
-                ),
-                PacemakerTimeout::new(2, &non_proposer.signer),
-                &non_proposer.signer,
-            )),
-    );
+    block_on(static_proposer.event_processor.process_timeout_msg(
+        TimeoutMsg::new(
+            SyncInfo::new(
+                block_0_quorum_cert,
+                QuorumCert::certificate_for_genesis(),
+                None,
+            ),
+            PacemakerTimeout::new(2, &non_proposer.signer, None),
+            &non_proposer.signer,
+        ),
+        2,
+    ));
     assert_eq!(
         static_proposer
             .block_store
@@ -678,7 +677,8 @@ fn process_timeout_certificate_test() {
         node.block_store.signer(),
     );
     let block_skip_round_id = block_skip_round.id();
-    let tc = PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer)]);
+    let tc =
+        PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
     block_on(async move {
         node.event_processor
             .process_proposal(ProposalInfo::<TestPayload, Author> {
