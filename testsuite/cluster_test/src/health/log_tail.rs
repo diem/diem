@@ -9,6 +9,8 @@ use rusoto_kinesis::{GetRecordsInput, GetShardIteratorInput, Kinesis, Record};
 use serde_json::{self, value as json};
 use std::{
     env,
+    fs::File,
+    io::Write,
     sync::mpsc,
     thread::{self, JoinHandle},
     time::{Duration, Instant, SystemTime},
@@ -25,6 +27,7 @@ struct AwsLogThread {
     kinesis_iterator: String,
     event_sender: mpsc::Sender<ValidatorEvent>,
     startup_sender: Option<mpsc::Sender<()>>,
+    event_log_file: Option<File>,
 
     re_commit: Regex,
     re_validator: Regex,
@@ -43,11 +46,16 @@ impl AwsLogTail {
         let (event_sender, event_receiver) = mpsc::channel();
         // We block this method until first request to kinesis completed
         let (startup_sender, startup_receiver) = mpsc::channel();
+        let event_log_file = match env::var("EVENT_LOG") {
+            Ok(f) => Some(File::create(f).expect("Can't create EVENT_LOG file")),
+            Err(..) => None,
+        };
         let aws_log_thread = AwsLogThread {
             aws,
             kinesis_iterator,
             event_sender,
             startup_sender: Some(startup_sender),
+            event_log_file,
 
             re_commit: Regex::new(
                 r"Committed.+\[id: ([a-z0-9]+), round: ([a-z0-9]+), parent_id: ([a-z0-9]+)]",
@@ -98,9 +106,7 @@ impl AwsLogTail {
     }
 
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("now < UNIX_EPOCH");
+        let timestamp = unix_timestamp_now();
         let timestamp = timestamp - Duration::from_secs(Self::log_start_offset_sec());
         let response = aws
             .kc()
@@ -142,6 +148,10 @@ impl AwsLogThread {
                 .millis_behind_latest
                 .expect("no millis_behind_latest in kinesis response");
             self.kinesis_iterator = next_iterator;
+            self.write_event_log(format!(
+                "Kinesis response, millis behind: {}",
+                millis_behind
+            ));
             for record in records {
                 self.handle_kinesis_record(record)
                     .expect("Failed to process aws record");
@@ -169,15 +179,14 @@ impl AwsLogThread {
         } else {
             return Ok(());
         };
+        self.write_event_log(format!("Kinesis record for {}", validator));
         let events = json
             .get("logEvents")
             .expect("No logEvents in kinesis event");
         let events = events
             .as_array()
             .expect("logEvents in kinesis event is not array");
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("Now is behind UNIX_EPOCH");
+        let now = unix_timestamp_now();
         let mut behind_max = 0u128;
         let mut behind_sum = 0u128;
         let mut count = 0u128;
@@ -219,14 +228,27 @@ impl AwsLogThread {
         Ok(())
     }
 
+    fn write_event_log(&mut self, s: String) {
+        let event_log_file = if let Some(ref mut event_log_file) = self.event_log_file {
+            event_log_file
+        } else {
+            return;
+        };
+        let now = unix_timestamp_now().as_millis();
+        writeln!(event_log_file, "{} {}", now, s).expect("Can't write to EVENT_LOG file");
+        event_log_file.flush().expect("Can't flush EVENT_LOG file");
+    }
+
     fn handle_log_entry(&mut self, e: LogEntry) {
         let event = self.parse_log_entry(&e);
         if let Some(event) = event {
-            let _ignore = self.event_sender.send(ValidatorEvent {
+            let ve = ValidatorEvent {
                 validator: e.validator,
                 timestamp: e.timestamp,
                 event,
-            });
+            };
+            self.write_event_log(format!("{:?}", ve));
+            let _ignore = self.event_sender.send(ve);
         }
     }
 
@@ -277,4 +299,10 @@ impl AwsLogThread {
             None
         }
     }
+}
+
+fn unix_timestamp_now() -> Duration {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("now < UNIX_EPOCH")
 }
