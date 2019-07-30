@@ -6,9 +6,9 @@
 
 #[cfg(test)]
 mod nibble_path_test;
-use serde::{Deserialize, Serialize};
-
 use crate::ROOT_NIBBLE_HEIGHT;
+use proptest::{collection::vec, prelude::*};
+use serde::{Deserialize, Serialize};
 use std::{fmt, iter::FromIterator};
 
 /// NibblePath defines a path in Merkle tree in the unit of nibble (4 bits).
@@ -40,6 +40,28 @@ impl FromIterator<u8> for NibblePath {
             nibble_path.push(nibble);
         }
         nibble_path
+    }
+}
+
+impl Arbitrary for NibblePath {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        arb_nibble_path().boxed()
+    }
+}
+
+prop_compose! {
+    fn arb_nibble_path()(
+        mut bytes in vec(any::<u8>(), 0..ROOT_NIBBLE_HEIGHT/2), is_odd in any::<bool>()
+    ) -> NibblePath {
+        if let Some(last_byte) = bytes.last_mut() {
+            if is_odd {
+                *last_byte &= 0xf0;
+                return NibblePath::new_odd(bytes);
+            }
+        }
+        NibblePath::new(bytes)
     }
 }
 
