@@ -252,15 +252,23 @@ where
                     .ok_or(VMInvariantViolation::LinkerError)?;
 
                     if callee_function_ref.is_native() {
-                        let module_name: &str = callee_function_ref.module().name();
-                        let function_name: &str = callee_function_ref.name();
+                        let module = callee_function_ref.module();
+                        let module_id = module.self_id();
+                        let function_name = callee_function_ref.name();
                         let native_function =
-                            match dispatch_native_function(module_name, function_name) {
+                            match dispatch_native_function(&module_id, function_name) {
                                 None => return Err(VMInvariantViolation::LinkerError),
                                 Some(native_function) => native_function,
                             };
                         let mut arguments = VecDeque::new();
-                        for _ in 0..native_function.num_args() {
+                        let expected_args = native_function.num_args();
+                        if callee_function_ref.arg_count() != expected_args {
+                            // Should not be possible due to bytecode verifier but this assertion is
+                            // here to make sure the view the type checker had lines up with the
+                            // execution of the native function
+                            return Err(VMInvariantViolation::LinkerError);
+                        }
+                        for _ in 0..expected_args {
                             arguments.push_front(self.execution_stack.pop()?);
                         }
                         let (cost, return_values) = match (native_function.dispatch)(arguments) {

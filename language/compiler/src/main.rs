@@ -60,7 +60,7 @@ fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> 
         Ok(module) => module,
         Err((_, errors)) => print_errors_and_exit(&errors),
     };
-    let (verified_module, errors) = verify_module_dependencies(verified_module, dependencies);
+    let errors = verify_module_dependencies(&verified_module, dependencies);
     if !errors.is_empty() {
         print_errors_and_exit(&errors);
     }

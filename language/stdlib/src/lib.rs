@@ -35,8 +35,7 @@ pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
         let verified_module =
             VerifiedModule::new(compiled_module).expect("stdlib module failed to verify");
 
-        let (verified_module, verification_errors) =
-            verify_module_dependencies(verified_module, &stdlib_modules);
+        let verification_errors = verify_module_dependencies(&verified_module, &stdlib_modules);
         // Fail if the module doesn't verify
         for e in &verification_errors {
             println!("{:?}", e);

@@ -65,6 +65,26 @@ impl AccountAddress {
         keccak.finalize(&mut hash);
         AccountAddress::new(hash)
     }
+
+    pub fn from_hex_literal(literal: &str) -> Result<Self> {
+        let mut hex_string = String::from(&literal[2..]);
+        if hex_string.len() % 2 != 0 {
+            hex_string.insert(0, '0');
+        }
+
+        let mut result = hex::decode(hex_string.as_str())?;
+        let len = result.len();
+        if len < 32 {
+            result.reverse();
+            for _ in len..32 {
+                result.push(0);
+            }
+            result.reverse();
+        }
+
+        assert!(result.len() >= 32);
+        AccountAddress::try_from(result)
+    }
 }
 
 impl CryptoHash for AccountAddress {
