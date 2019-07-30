@@ -28,12 +28,15 @@ mod trusted_peers_test;
 pub struct TrustedPeer {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
+    #[serde(rename = "ns")]
     network_signing_pubkey: Ed25519PublicKey,
     #[serde(serialize_with = "serialize_legacy_key")]
     #[serde(deserialize_with = "deserialize_legacy_key")]
+    #[serde(rename = "ni")]
     network_identity_pubkey: X25519PublicKey,
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
+    #[serde(rename = "c")]
     consensus_pubkey: Ed25519PublicKey,
 }
 
@@ -132,6 +135,7 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrustedPeersConfig {
+    #[serde(flatten)]
     pub peers: HashMap<String, TrustedPeer>,
 }
 
