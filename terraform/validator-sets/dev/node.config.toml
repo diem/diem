@@ -1,82 +1,23 @@
-[base]
-peer_id = "<UNUSED>"
-data_dir_path = "<USE_TEMP_DIR>"
-trusted_peers_file = "/opt/libra/etc/trusted_peers.config.toml"
-peer_keypairs_file = "/opt/libra/etc/peer_keypairs.config.toml"
-node_sync_batch_size = 1000
-node_sync_retries = 3
-node_sync_channel_buffer_size = 10
-node_async_log_chan_size = 256
-
-[metrics]
-dir = ""
-collection_interval_ms = 1000
-push_server_addr = ""
-
-[execution]
-address = "localhost"
-port = 59622
-testnet_genesis = false
-genesis_file_location = "/opt/libra/etc/genesis.blob"
-
-[admission_control]
-address = "0.0.0.0"
-admission_control_service_port = 30307
-need_to_check_mempool_before_validation = false
+[network]
+advertised_address = "/ip4/SELF_IP/tcp/30303"
 
 [debug_interface]
-admission_control_node_debug_port = 30306
-storage_node_debug_port = 49125
-secret_service_node_debug_port = 50316
-metrics_server_port = 14297
 address = "0.0.0.0"
+admission_control_node_debug_port = 30306
 
 [storage]
-address = "localhost"
-port = 35647
 dir = "/opt/libra/data"
 grpc_max_receive_len = 100000000
 
-[network]
-seed_peers_file = "/opt/libra/etc/seed_peers.config.toml"
-listen_address = "/ip4/0.0.0.0/tcp/30303"
-advertised_address = "/ip4/SELF_IP/tcp/30303"
-discovery_interval_ms = 1000
-connectivity_check_interval_ms = 5000
-enable_encryption_and_authentication = true
-
-[consensus]
-max_block_size = 100
-proposer_type = "rotating_proposer"
-contiguous_rounds = 2
-
-[mempool]
-broadcast_transactions = true
-shared_mempool_tick_interval_ms = 50
-shared_mempool_batch_size = 100
-shared_mempool_max_concurrent_inbound_syncs = 100
-capacity = 10000000
-capacity_per_user = 100
-sequence_cache_capacity = 1000
-system_transaction_timeout_secs = 86400
-system_transaction_gc_interval_ms = 180000
-mempool_service_port = 59620
-address = "localhost"
-
-[log_collector]
-is_async = true
-use_std_output = true
+[metrics]
+dir = ""
 
 [vm_config]
   [vm_config.publishing_options]
   type = "Locked"
   whitelist = [
-      "ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e",
-      "fb999f2d6f45efc9b991993e332f40760171de8a46db40ca93f1baff56842c44",
-      "6465374a3ecf6d1a3836bbab3bcd624244a0217530a601fa20de80d562f87d80",
-      "774b10985dd9bf17ddee899256942c1dc0ab2c1b07d99ec78f774651f01e04b8"
+    "ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e",
+    "fb999f2d6f45efc9b991993e332f40760171de8a46db40ca93f1baff56842c44",
+    "6465374a3ecf6d1a3836bbab3bcd624244a0217530a601fa20de80d562f87d80",
+    "774b10985dd9bf17ddee899256942c1dc0ab2c1b07d99ec78f774651f01e04b8"
   ]
-
-[secret_service]
-address = "localhost"
-secret_service_port = 59618

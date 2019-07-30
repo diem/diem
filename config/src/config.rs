@@ -114,11 +114,11 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             peer_id: "".to_string(),
-            peer_keypairs_file: PathBuf::from(""),
+            peer_keypairs_file: PathBuf::from("peer_keypairs.config.toml"),
             peer_keypairs: KeyPairs::default(),
             data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
             temp_data_dir: None,
-            trusted_peers_file: "".to_string(),
+            trusted_peers_file: "trusted_peers.config.toml".to_string(),
             trusted_peers: TrustedPeersConfig::default(),
             node_sync_batch_size: 1000,
             node_sync_retries: 3,
@@ -339,7 +339,7 @@ impl Default for ExecutionConfig {
             address: "localhost".to_string(),
             port: 55558,
             testnet_genesis: false,
-            genesis_file_location: "<USE_TEMP_DIR>".to_string(),
+            genesis_file_location: "genesis.blob".to_string(),
         }
     }
 }
@@ -417,7 +417,7 @@ pub struct AdmissionControlConfig {
 impl Default for AdmissionControlConfig {
     fn default() -> AdmissionControlConfig {
         AdmissionControlConfig {
-            address: "localhost".to_string(),
+            address: "0.0.0.0".to_string(),
             admission_control_service_port: 30307,
             need_to_check_mempool_before_validation: false,
         }
@@ -492,7 +492,7 @@ pub struct NetworkConfig {
 impl Default for NetworkConfig {
     fn default() -> NetworkConfig {
         NetworkConfig {
-            seed_peers_file: "".to_string(),
+            seed_peers_file: "seed_peers.config.toml".to_string(),
             seed_peers: SeedPeersConfig::default(),
             listen_address: "/ip4/0.0.0.0/tcp/30303".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/30303".parse::<Multiaddr>().unwrap(),
