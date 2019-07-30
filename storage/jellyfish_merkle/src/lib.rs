@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod mock_tree_store;
-mod node_type;
+pub mod node_type;
 mod tree_cache;
 
 use crypto::HashValue;

@@ -1,11 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    nibble_path::{skip_common_prefix, NibblePath},
-    ROOT_NIBBLE_HEIGHT,
-};
-use proptest::{collection::vec, prelude::*};
+use crate::nibble_path::{skip_common_prefix, NibblePath};
+use proptest::prelude::*;
 
 #[test]
 fn test_nibble_path_fmt() {
@@ -160,28 +157,6 @@ fn test_skip_common_prefix() {
     }
 }
 
-impl Arbitrary for NibblePath {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        arb_nibble_path().boxed()
-    }
-}
-
-prop_compose! {
-    fn arb_nibble_path()(
-        mut bytes in vec(any::<u8>(), 0..ROOT_NIBBLE_HEIGHT/2), is_odd in any::<bool>()
-    ) -> NibblePath {
-        if let Some(last_byte) = bytes.last_mut() {
-            if is_odd {
-                *last_byte &= 0xf0;
-                return NibblePath::new_odd(bytes);
-            }
-        }
-        NibblePath::new(bytes)
-    }
-}
-
 prop_compose! {
     fn arb_nibble_path_and_current()(nibble_path in any::<NibblePath>())
         (current in 0..=nibble_path.num_nibbles(),
@@ -192,7 +167,7 @@ prop_compose! {
 
 proptest! {
     #[test]
-    fn test_push(nibble_path in arb_nibble_path(), nibble in (0..16u8)) {
+    fn test_push(nibble_path in any::<NibblePath>(), nibble in (0..16u8)) {
         let mut new_nibble_path = nibble_path.clone();
         new_nibble_path.push(nibble);
         let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
@@ -202,7 +177,7 @@ proptest! {
     }
 
     #[test]
-    fn test_pop(mut nibble_path in arb_nibble_path()) {
+    fn test_pop(mut nibble_path in any::<NibblePath>()) {
         let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
         let nibble_from_nibbles = nibbles.pop();
         let nibble_from_nibble_path = nibble_path.pop();
@@ -212,7 +187,7 @@ proptest! {
     }
 
     #[test]
-    fn test_nibble_iter_roundtrip(nibble_path in arb_nibble_path()) {
+    fn test_nibble_iter_roundtrip(nibble_path in any::<NibblePath>()) {
         let nibbles = nibble_path.nibbles();
         let nibble_path2 = nibbles.collect();
         prop_assert_eq!(nibble_path, nibble_path2);
