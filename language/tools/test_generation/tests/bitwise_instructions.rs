@@ -29,3 +29,16 @@ fn bytecode_bitor() {
         "stack type postcondition not met"
     );
 }
+
+#[test]
+fn bytecode_xor() {
+    let mut state1 = AbstractState::new(&Vec::new());
+    state1.stack_push(SignatureToken::U64);
+    state1.stack_push(SignatureToken::U64);
+    let state2 = common::run_instruction(Bytecode::Xor, state1);
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(SignatureToken::U64),
+        "stack type postcondition not met"
+    );
+}

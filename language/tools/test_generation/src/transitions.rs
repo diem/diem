@@ -13,6 +13,13 @@ pub fn stack_has(state: &AbstractState, index: usize, token: Option<SignatureTok
     }
 }
 
+pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
+    if stack_has(state, index2, None) {
+        return state.stack_peek(index1) == state.stack_peek(index2);
+    }
+    false
+}
+
 /// Pop from the top of the stack.
 pub fn stack_pop(state: &AbstractState) -> AbstractState {
     let mut state = state.clone();
@@ -86,6 +93,13 @@ pub fn stack_pop_local_insert(state: &AbstractState, index: u8) -> AbstractState
 macro_rules! state_stack_has {
     ($e1: expr, $e2: expr) => {
         Box::new(move |state| stack_has(state, $e1, $e2))
+    };
+}
+
+#[macro_export]
+macro_rules! state_stack_has_polymorphic_eq {
+    ($e1: expr, $e2: expr) => {
+        Box::new(move |state| stack_has_polymorphic_eq(state, $e1, $e2))
     };
 }
 

@@ -133,8 +133,7 @@ impl ModuleBuilder {
                             ),
                             None => {
                                 // Random nonsense to pad this out. We won't look at this at all,
-                                // just non-empty is all that
-                                // matters.
+                                // just non-empty is all that matters.
                                 vec![Bytecode::Sub, Bytecode::Sub, Bytecode::Add, Bytecode::Ret]
                             }
                         }

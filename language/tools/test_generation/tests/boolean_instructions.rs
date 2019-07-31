@@ -31,19 +31,6 @@ fn bytecode_or() {
 }
 
 #[test]
-fn bytecode_xor() {
-    let mut state1 = AbstractState::new(&Vec::new());
-    state1.stack_push(SignatureToken::Bool);
-    state1.stack_push(SignatureToken::Bool);
-    let state2 = common::run_instruction(Bytecode::Xor, state1);
-    assert_eq!(
-        state2.stack_peek(0),
-        Some(SignatureToken::Bool),
-        "stack type postcondition not met"
-    );
-}
-
-#[test]
 fn bytecode_not() {
     let mut state1 = AbstractState::new(&Vec::new());
     state1.stack_push(SignatureToken::Bool);
