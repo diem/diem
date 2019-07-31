@@ -44,6 +44,7 @@ use proptest::sample::Index;
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct RepeatVec<T> {
     // The first element of each tuple is the starting position for this item.
+    // An invariant is that this doesn't have any zero-length elements.
     items: Vec<(usize, T)>,
     len: usize,
 }
@@ -90,8 +91,11 @@ impl<T> RepeatVec<T> {
 
     /// Extends this `RepeatVec` by logically adding `size` copies of `item` to the end of it.
     pub fn extend(&mut self, item: T, size: usize) {
-        self.items.push((self.len, item));
-        self.len += size;
+        // Skip over zero-length elements to maintain the invariant on items.
+        if size > 0 {
+            self.items.push((self.len, item));
+            self.len += size;
+        }
     }
 
     /// Returns the item at location `at`. The return value is a reference to the stored item, plus

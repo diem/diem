@@ -73,7 +73,7 @@ proptest! {
 
     #[test]
     fn repeat_vec(
-        item_sizes in vec((Counter::strategy(), 0..1000usize), 1..100),
+        item_sizes in vec((Counter::strategy(), 0..1000usize), 0..100),
         queries in vec(any::<PropIndex>(), 1..5000),
     ) {
         let mut test_vec = RepeatVec::new();
