@@ -1,5 +1,5 @@
 [network]
-advertised_address = "/ip4/SELF_IP/tcp/30303"
+advertised_address = "/ip4/${self_ip}/tcp/30303"
 
 [debug_interface]
 address = "0.0.0.0"

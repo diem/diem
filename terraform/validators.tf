@@ -129,6 +129,15 @@ resource "aws_secretsmanager_secret_version" "validator" {
   secret_string = element(data.local_file.keys.*.content, count.index)
 }
 
+data "template_file" "node_config" {
+  count = length(var.peer_ids)
+  template = file("${var.validator_set}/node.config.toml")
+
+  vars = {
+    self_ip = element(aws_instance.validator.*.private_ip, count.index)
+  }
+}
+
 data "template_file" "seed_peers" {
   template = file("templates/seed_peers.config.toml")
 
@@ -146,7 +155,7 @@ data "template_file" "ecs_task_definition" {
     image_version = local.image_version
     cpu           = local.cpu_by_instance[var.validator_type]
     mem           = local.mem_by_instance[var.validator_type]
-    self_ip       = element(aws_instance.validator.*.private_ip, count.index)
+    node_config   = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
     seed_peers    = jsonencode(data.template_file.seed_peers.rendered)
     trusted_peers = jsonencode(file("${var.validator_set}/trusted_peers.config.toml"))
     genesis_blob  = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
