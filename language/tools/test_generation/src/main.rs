@@ -4,5 +4,5 @@
 use test_generation::run_generation;
 
 pub fn main() {
-    run_generation(1);
+    run_generation(1000);
 }

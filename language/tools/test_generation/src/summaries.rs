@@ -3,8 +3,9 @@
 
 use crate::{
     abstract_state::AbstractState, state_local_available, state_never, state_stack_has,
-    state_stack_pop, state_stack_pop_local_insert, state_stack_push, state_stack_push_local_borrow,
-    state_stack_push_local_copy, state_stack_push_local_move, transitions::*,
+    state_stack_has_polymorphic_eq, state_stack_pop, state_stack_pop_local_insert,
+    state_stack_push, state_stack_push_local_borrow, state_stack_push_local_copy,
+    state_stack_push_local_move, transitions::*,
 };
 use vm::file_format::{Bytecode, SignatureToken};
 
@@ -47,6 +48,10 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
         Bytecode::LdFalse => Summary {
             preconditions: vec![],
             effects: vec![state_stack_push!(SignatureToken::Bool)],
+        },
+        Bytecode::LdByteArray(_) => Summary {
+            preconditions: vec![],
+            effects: vec![state_stack_push!(SignatureToken::ByteArray)],
         },
         Bytecode::CopyLoc(i) => Summary {
             preconditions: vec![state_local_available!(i)],
@@ -144,13 +149,13 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
         },
         Bytecode::Xor => Summary {
             preconditions: vec![
-                state_stack_has!(0, Some(SignatureToken::Bool)),
-                state_stack_has!(1, Some(SignatureToken::Bool)),
+                state_stack_has!(0, Some(SignatureToken::U64)),
+                state_stack_has!(1, Some(SignatureToken::U64)),
             ],
             effects: vec![
                 state_stack_pop!(),
                 state_stack_pop!(),
-                state_stack_push!(SignatureToken::Bool),
+                state_stack_push!(SignatureToken::U64),
             ],
         },
         Bytecode::Or => Summary {
@@ -180,7 +185,11 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             effects: vec![state_stack_pop!(), state_stack_push!(SignatureToken::Bool)],
         },
         Bytecode::Eq => Summary {
-            preconditions: vec![state_stack_has!(0, None), state_stack_has!(1, None)],
+            preconditions: vec![
+                state_stack_has!(0, None),
+                state_stack_has!(1, None),
+                state_stack_has_polymorphic_eq!(0, 1),
+            ],
             effects: vec![
                 state_stack_pop!(),
                 state_stack_pop!(),
@@ -188,7 +197,11 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             ],
         },
         Bytecode::Neq => Summary {
-            preconditions: vec![state_stack_has!(0, None), state_stack_has!(1, None)],
+            preconditions: vec![
+                state_stack_has!(0, None),
+                state_stack_has!(1, None),
+                state_stack_has_polymorphic_eq!(0, 1),
+            ],
             effects: vec![
                 state_stack_pop!(),
                 state_stack_pop!(),
@@ -198,7 +211,7 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
         Bytecode::Lt => Summary {
             preconditions: vec![
                 state_stack_has!(0, Some(SignatureToken::U64)),
-                state_stack_has!(0, Some(SignatureToken::U64)),
+                state_stack_has!(1, Some(SignatureToken::U64)),
             ],
             effects: vec![
                 state_stack_pop!(),
