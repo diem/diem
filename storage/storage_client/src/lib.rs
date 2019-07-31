@@ -197,8 +197,17 @@ pub struct StorageWriteServiceClient {
 
 impl StorageWriteServiceClient {
     /// Constructs a `StorageWriteServiceClient` with given host and port.
-    pub fn new(env: Arc<Environment>, host: &str, port: u16) -> Self {
-        let channel = ChannelBuilder::new(env).connect(&format!("{}:{}", host, port));
+    pub fn new(
+        env: Arc<Environment>,
+        host: &str,
+        port: u16,
+        grpc_max_receive_len: Option<i32>,
+    ) -> Self {
+        let mut builder = ChannelBuilder::new(env);
+        if let Some(len) = grpc_max_receive_len {
+            builder = builder.max_receive_message_len(len);
+        }
+        let channel = builder.connect(&format!("{}:{}", host, port));
         let client = storage_grpc::StorageClient::new(channel);
         StorageWriteServiceClient { client }
     }

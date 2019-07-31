@@ -53,6 +53,7 @@ pub fn create_and_start_server(config: &NodeConfig) -> (ServerHandle, grpcio::Se
         Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
+        None,
     ));
 
     let execution_service = create_execution(ExecutionService::new(

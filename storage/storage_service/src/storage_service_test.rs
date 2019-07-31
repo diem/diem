@@ -44,6 +44,7 @@ fn start_test_storage_with_read_write_client(
         Arc::new(EnvBuilder::new().build()),
         &config.storage.address,
         config.storage.port,
+        None,
     );
     (tmp_dir, storage_server_handle, read_client, write_client)
 }

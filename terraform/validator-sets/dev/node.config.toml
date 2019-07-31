@@ -35,6 +35,7 @@ address = "0.0.0.0"
 address = "localhost"
 port = 35647
 dir = "/opt/libra/data"
+grpc_max_receive_len = 100000000
 
 [network]
 seed_peers_file = "/opt/libra/etc/seed_peers.config.toml"

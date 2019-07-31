@@ -110,6 +110,7 @@ fn setup_executor(config: &NodeConfig) -> ::grpcio::Server {
         Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
+        config.storage.grpc_max_receive_len,
     ));
 
     let handle = ExecutionService::new(storage_read_client, storage_write_client, config);

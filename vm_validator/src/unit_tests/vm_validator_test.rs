@@ -44,6 +44,7 @@ impl TestValidator {
             Arc::clone(&client_env),
             &config.storage.address,
             config.storage.port,
+            None,
         ));
 
         let handle = ExecutionService::new(
