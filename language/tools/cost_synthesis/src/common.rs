@@ -20,6 +20,9 @@ pub const MAX_NUM_LOCALS: usize = 10;
 /// The maximum number of arguments to generated function definitions.
 pub const MAX_FUNCTION_CALL_SIZE: usize = 8;
 
+/// The maximum number of return types of generated function definitions.
+pub const MAX_RETURN_TYPES_LENGTH: usize = 4;
+
 /// The default index to use when we need to have a frame on the execution stack.
 ///
 /// We are always guaranteed to have at least one function definition in a generated module. We can
@@ -28,3 +31,9 @@ pub const DEFAULT_FUNCTION_IDX: TableIndex = 0;
 
 /// The type of the value stack.
 pub type Stack = Vec<Local>;
+
+/// The minimum number of instructions to generate for function bodies
+pub const MIN_BYTECODE_INSTRUCTIONS: usize = 10;
+
+/// The maximum number of instructions to generate for function bodies
+pub const MAX_BYTECODE_INSTRUCTIONS: usize = 20;
