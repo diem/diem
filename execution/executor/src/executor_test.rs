@@ -74,6 +74,7 @@ fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
         Arc::clone(&client_env),
         "localhost",
         config.storage.port,
+        None,
     ));
     Executor::new(read_client, write_client, config)
 }

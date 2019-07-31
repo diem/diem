@@ -453,6 +453,7 @@ pub struct StorageConfig {
     pub address: String,
     pub port: u16,
     pub dir: PathBuf,
+    pub grpc_max_receive_len: Option<i32>,
 }
 
 impl StorageConfig {
@@ -467,6 +468,7 @@ impl Default for StorageConfig {
             address: "localhost".to_string(),
             port: 30305,
             dir: PathBuf::from("libradb"),
+            grpc_max_receive_len: Some(100_000_000),
         }
     }
 }
