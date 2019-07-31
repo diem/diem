@@ -35,4 +35,4 @@ vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", fea
 
 [features]
 default = ["testing"]
-testing = ["types/testing", "vm/testing", "vm_runtime/testing"]
+testing = ["types/testing", "vm/testing", "vm_runtime/testing", "vm_runtime_types/testing"]
