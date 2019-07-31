@@ -5,10 +5,10 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     frame::Frame,
     loaded_data::function::{FunctionRef, FunctionReference},
-    value::{Local, MutVal},
 };
 use std::{fmt, marker::PhantomData};
 use vm::errors::*;
+use vm_runtime_types::value::{Local, MutVal};
 
 pub struct ExecutionStack<'alloc, 'txn, P>
 where

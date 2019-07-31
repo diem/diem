@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
-use crate::{
-    loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Local, MutVal, Reference, Value},
-};
 use logger::prelude::*;
 use state_view::StateView;
 use std::{collections::btree_map::BTreeMap, mem::replace};
@@ -17,6 +13,10 @@ use types::{
 use vm::{
     errors::*,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+};
+use vm_runtime_types::{
+    loaded_data::struct_def::StructDef,
+    value::{GlobalRef, Local, MutVal, Reference, Value},
 };
 
 /// The wrapper around the StateVersionView for the block.

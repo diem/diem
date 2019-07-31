@@ -37,8 +37,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE},
-    value::Local,
 };
+use vm_runtime_types::value::Local;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];

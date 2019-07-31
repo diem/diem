@@ -25,8 +25,9 @@ use vm::{
 };
 use vm_runtime::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
-    loaded_data::loaded_module::LoadedModule, value::*,
+    loaded_data::loaded_module::LoadedModule,
 };
+use vm_runtime_types::value::*;
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
 ///

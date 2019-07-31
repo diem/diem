@@ -14,8 +14,8 @@ use types::{
     transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
 };
 use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::{
-    identifier::create_access_path,
+use vm_runtime::identifier::create_access_path;
+use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     value::{MutVal, Value},
 };

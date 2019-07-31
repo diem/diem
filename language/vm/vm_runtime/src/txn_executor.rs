@@ -12,8 +12,6 @@ use crate::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
-    native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
-    value::{Local, MutVal, Reference, Value},
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use std::collections::VecDeque;
@@ -36,6 +34,10 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
+use vm_runtime_types::{
+    native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
+    value::{Local, MutVal, Reference, Value},
+};
 
 #[cfg(test)]
 #[path = "unit_tests/runtime_tests.rs"]

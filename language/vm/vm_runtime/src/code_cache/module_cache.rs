@@ -8,8 +8,6 @@ use crate::{
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
-        struct_def::StructDef,
-        types::Type,
     },
 };
 use bytecode_verifier::VerifiedModule;
@@ -25,6 +23,7 @@ use vm::{
     views::{FunctionHandleView, StructHandleView},
 };
 use vm_cache_map::{Arena, CacheRefMap};
+use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
 
 #[cfg(test)]
 #[path = "../unit_tests/module_cache_tests.rs"]

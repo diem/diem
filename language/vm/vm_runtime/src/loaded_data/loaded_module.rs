@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Loaded representation for Move modules.
 
-use crate::loaded_data::{function::FunctionDef, struct_def::StructDef};
+use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
 use std::{collections::HashMap, sync::RwLock};
 use vm::{
@@ -14,6 +14,7 @@ use vm::{
     },
     internals::ModuleIndex,
 };
+use vm_runtime_types::loaded_data::struct_def::StructDef;
 
 /// Defines a loaded module in the memory. Currently we just store module itself with a bunch of
 /// reverse mapping that allows querying definition of struct/function by name.

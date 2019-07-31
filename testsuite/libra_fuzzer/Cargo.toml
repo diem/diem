@@ -21,6 +21,7 @@ canonical_serialization = { path = "../../common/canonical_serialization" }
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
+vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 
 [dev-dependencies]
 datatest = "0.3.5"
@@ -30,6 +31,7 @@ rusty-fork = "0.2.2"
 types = { path = "../../types", features = ["testing"] }
 vm = { path = "../../language/vm", features = ["testing"] }
 vm_runtime = { path = "../../language/vm/vm_runtime", features = ["testing"] }
+vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
 
 [features]
 default = ["testing"]

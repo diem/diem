@@ -9,10 +9,8 @@ use vm::{
     access::*,
     file_format::{SignatureToken, StructDefinitionIndex, TableIndex},
 };
-use vm_runtime::{
-    identifier::{create_access_path, resource_storage_key},
-    value::{MutVal, Value},
-};
+use vm_runtime::identifier::{create_access_path, resource_storage_key};
+use vm_runtime_types::value::{MutVal, Value};
 
 /// Details about an account.
 #[derive(Debug, Clone, Eq, PartialEq)]

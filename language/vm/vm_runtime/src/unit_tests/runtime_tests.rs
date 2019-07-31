@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::{
-    code_cache::module_cache::VMModuleCache, txn_executor::TransactionExecutor, value::Local,
-};
+use crate::{code_cache::module_cache::VMModuleCache, txn_executor::TransactionExecutor};
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
@@ -19,6 +17,7 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
+use vm_runtime_types::value::Local;
 
 // Trait for the data cache to build a TransactionProcessor
 struct FakeDataCache {
