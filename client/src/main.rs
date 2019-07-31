@@ -94,7 +94,10 @@ fn main() -> std::io::Result<()> {
         match readline {
             Ok(line) => {
                 let params = parse_cmd(&line);
-                match alias_to_cmd.get(params[0]) {
+                if params.is_empty() {
+                    continue;
+                }
+                match alias_to_cmd.get(&params[0]) {
                     Some(cmd) => cmd.execute(&mut client_proxy, &params),
                     None => match params[0] {
                         "quit" | "q!" => break,
