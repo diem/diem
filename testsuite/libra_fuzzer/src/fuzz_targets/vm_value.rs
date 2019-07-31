@@ -7,7 +7,7 @@ use canonical_serialization::*;
 use failure::prelude::*;
 use proptest_helpers::ValueGenerator;
 use std::io::Cursor;
-use vm_runtime::{loaded_data::struct_def::StructDef, value::Value};
+use vm_runtime_types::{loaded_data::struct_def::StructDef, value::Value};
 
 #[derive(Clone, Debug, Default)]
 pub struct ValueTarget;

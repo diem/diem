@@ -36,10 +36,9 @@ use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
-    native_functions::hash,
     txn_executor::TransactionExecutor,
-    value::Local,
 };
+use vm_runtime_types::{native_functions::hash, value::Local};
 
 #[derive(Debug, StructOpt)]
 #[structopt(

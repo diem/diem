@@ -3,7 +3,7 @@
 
 //! Defines constants and types that are used throughout cost synthesis.
 use vm::file_format::TableIndex;
-use vm_runtime::value::Local;
+use vm_runtime_types::value::Local;
 
 /// The maximum number of fields that will be generated for any struct.
 pub const MAX_FIELDS: usize = 10;

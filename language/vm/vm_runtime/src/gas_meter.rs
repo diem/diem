@@ -4,10 +4,11 @@
 //! Gas metering logic for the Move VM.
 use crate::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
-    loaded_data::function::FunctionReference, value::Local,
+    loaded_data::function::FunctionReference,
 };
 use types::account_address::ADDRESS_LENGTH;
 use vm::{access::ModuleAccess, errors::*, file_format::Bytecode, gas_schedule::*};
+use vm_runtime_types::value::Local;
 
 /// Holds the state of the gas meter.
 pub struct GasMeter {
