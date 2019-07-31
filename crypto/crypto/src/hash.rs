@@ -86,6 +86,8 @@ const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 #[path = "unit_tests/hash_test.rs"]
 mod hash_test;
 
+const SHORT_STRING_LENGTH: usize = 4;
+
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, PartialOrd, Ord, Arbitrary)]
 pub struct HashValue {
@@ -187,6 +189,11 @@ impl HashValue {
             .zip(other.iter_bits())
             .take_while(|(x, y)| x == y)
             .count()
+    }
+
+    /// Returns first SHORT_STRING_LENGTH bytes as String in hex
+    pub fn short_str(&self) -> String {
+        hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
     }
 }
 

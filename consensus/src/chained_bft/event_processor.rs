@@ -750,6 +750,11 @@ impl<T: Payload> EventProcessor<T> {
         }
         counters::LAST_COMMITTED_ROUND.set(committed_block.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *committed_block);
+        event!("committed",
+            "block_id": committed_block.id().short_str(),
+            "round": committed_block.round(),
+            "parent_id": committed_block.parent_id().short_str(),
+        );
         self.block_store.prune_tree(committed_block.id());
     }
 

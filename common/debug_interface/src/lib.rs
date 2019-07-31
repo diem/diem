@@ -14,6 +14,8 @@ pub mod proto;
 
 pub mod node_debug_helpers;
 pub mod node_debug_service;
+#[macro_use]
+pub mod json_log;
 
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {
