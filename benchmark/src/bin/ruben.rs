@@ -70,9 +70,20 @@ pub(crate) fn measure_throughput<T: LoadGenerator + ?Sized>(
     );
 }
 
-fn create_ac_client(conn_addr: &str) -> AdmissionControlClient {
+/// Creates a client for AC with a unique user-agent.
+///
+/// In a benchmark environment, we want to emulate multiple concurrent
+/// clients, even though all of them originate from the same benchmarker
+/// process. We add a unique user-agent to bypass some of gRPC default
+/// optimization that group connections from the same source onto
+/// a single completion queue (making requests sequntial).
+///
+/// index: unique identifier for the channel, to uniquify clients
+fn create_ac_client(index: usize, conn_addr: &str) -> AdmissionControlClient {
     let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
-    let ch = ChannelBuilder::new(env_builder).connect(&conn_addr);
+    let ch = ChannelBuilder::new(env_builder)
+        .primary_user_agent(&format!("grpc/benchmark-client-{}", index))
+        .connect(&conn_addr);
     AdmissionControlClient::new(ch)
 }
 
@@ -84,7 +95,7 @@ fn create_ac_clients(
     let mut clients: Vec<AdmissionControlClient> = vec![];
     for i in 0..num_clients {
         let index = i % validator_addresses.len();
-        let client = create_ac_client(&validator_addresses[index]);
+        let client = create_ac_client(i, &validator_addresses[index]);
         clients.push(client);
     }
     clients
