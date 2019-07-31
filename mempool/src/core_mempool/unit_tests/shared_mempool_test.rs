@@ -136,7 +136,7 @@ impl SharedMempoolNetwork {
                 self.wait_for_event(&peer_id, SharedMempoolNotification::NewTransactions);
 
                 // verify transaction was inserted into Mempool
-                let mempool = self.mempools.get(&peer).unwrap();
+                let mempool = self.mempools.get(&peer_id).unwrap();
                 let block = mempool.lock().unwrap().get_block(100, HashSet::new());
                 assert!(block.iter().any(|t| t == &transaction));
                 (transaction, peer_id)
@@ -319,4 +319,30 @@ fn test_broadcast_dependencies() {
     // now A can broadcast 2
     let txn = smp.deliver_message(&peer_a).0;
     assert_eq!(txn.sequence_number(), 2);
+}
+
+#[test]
+fn test_broadcast_updated_transaction() {
+    let (peer_a, peer_b) = (PeerId::random(), PeerId::random());
+    let mut smp = SharedMempoolNetwork::bootstrap(vec![peer_a, peer_b]);
+
+    // Peer A has a transaction with sequence number 0 and gas price 1
+    smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
+
+    // A and B discover each other
+    smp.send_event(&peer_a, NetworkNotification::NewPeer(peer_b));
+    smp.send_event(&peer_b, NetworkNotification::NewPeer(peer_a));
+
+    // B receives 0
+    let txn = smp.deliver_message(&peer_a).0;
+    assert_eq!(txn.sequence_number(), 0);
+    assert_eq!(txn.gas_unit_price(), 1);
+
+    // Update the gas price of the transaction with sequence 0 after B has already received 0
+    smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 5)]);
+
+    // trigger send from A to B and check B has updated gas price for sequence 0
+    let txn = smp.deliver_message(&peer_a).0;
+    assert_eq!(txn.sequence_number(), 0);
+    assert_eq!(txn.gas_unit_price(), 5);
 }
