@@ -16,7 +16,7 @@
         ],
         "environment": [
             {"name": "PEER_ID", "value": "${peer_id}"},
-            {"name": "SELF_IP", "value": "${self_ip}"},
+            {"name": "NODE_CONFIG", "value": ${node_config}},
             {"name": "SEED_PEERS", "value": ${seed_peers}},
             {"name": "TRUSTED_PEERS", "value": ${trusted_peers}},
             {"name": "GENESIS_BLOB", "value": ${genesis_blob}},

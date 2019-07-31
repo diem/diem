@@ -21,7 +21,6 @@ RUN cargo build --release -p libra_node -p client
 FROM debian:stretch
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY terraform/validator-sets/dev/node.config.toml /opt/libra/etc
 COPY docker/validator/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra_node /opt/libra/bin
 
@@ -35,8 +34,8 @@ EXPOSE 14297
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
 
-# Define SEED_PEERS, SELF_IP, PEER_KEYPAIRS, GENESIS_BLOB and PEER_ID environment variables when running
-CMD cd /opt/libra/etc && sed -i "s,SELF_IP,$SELF_IP," node.config.toml && echo "$SEED_PEERS" > seed_peers.config.toml && echo "$TRUSTED_PEERS" > trusted_peers.config.toml && echo "$PEER_KEYPAIRS" > peer_keypairs.config.toml && echo "$GENESIS_BLOB" | base64 -d > genesis.blob && exec /opt/libra/bin/libra_node -f node.config.toml --peer_id "$PEER_ID"
+# Define SEED_PEERS, NODE_CONFIG, PEER_KEYPAIRS, GENESIS_BLOB and PEER_ID environment variables when running
+CMD cd /opt/libra/etc && echo "$NODE_CONFIG" > node.config.toml && echo "$SEED_PEERS" > seed_peers.config.toml && echo "$TRUSTED_PEERS" > trusted_peers.config.toml && echo "$PEER_KEYPAIRS" > peer_keypairs.config.toml && echo "$GENESIS_BLOB" | base64 -d > genesis.blob && exec /opt/libra/bin/libra_node -f node.config.toml --peer_id "$PEER_ID"
 
 ARG BUILD_DATE
 ARG GIT_REV
