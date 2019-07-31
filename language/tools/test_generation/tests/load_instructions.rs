@@ -1,6 +1,6 @@
 extern crate test_generation;
 use test_generation::abstract_state::AbstractState;
-use vm::file_format::{Bytecode, SignatureToken, StringPoolIndex, AddressPoolIndex};
+use vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken, StringPoolIndex};
 
 mod common;
 

@@ -25,12 +25,8 @@ use vm::{
     internals::ModuleIndex,
 };
 
-type BytecodeGenerator = dyn Fn(
-    &[SignatureToken], 
-    &FunctionSignature, 
-    usize, 
-    usize
-) -> Vec<Bytecode>;
+type BytecodeGenerator =
+    dyn Fn(&[SignatureToken], &FunctionSignature, usize, usize) -> Vec<Bytecode>;
 
 /// A wrapper around a `CompiledModule` containing information needed for generation.
 ///
@@ -129,14 +125,13 @@ impl ModuleBuilder {
                     locals: LocalsSignatureIndex(i as u16),
                     code: {
                         match &self.bytecode_gen {
-                            Some(bytecode_gen) => {
-                                bytecode_gen(&sig.0, &sig.1, 10, 20)
-                            },
+                            Some(bytecode_gen) => bytecode_gen(&sig.0, &sig.1, 10, 20),
                             None => {
-                                // Random nonsense to pad this out. We won't look at this at all, just
-                                // non-empty is all that matters.
+                                // Random nonsense to pad this out. We won't look at this at all,
+                                // just non-empty is all that
+                                // matters.
                                 vec![Bytecode::Sub, Bytecode::Sub, Bytecode::Add, Bytecode::Ret]
-                            },
+                            }
                         }
                     },
                 },
@@ -266,7 +261,7 @@ impl ModuleBuilder {
                 // the unit type.
                 let function_sig = FunctionSignature {
                     arg_types: args,
-                    return_types: return_types,
+                    return_types,
                     kind_constraints: vec![],
                 };
 
@@ -379,7 +374,6 @@ impl ModuleBuilder {
         module
     }
 
-
     /// This method builds and then materializes the underlying module skeleton. It then swaps in a
     /// new module skeleton, adds the generated module to the `known_modules`, and returns
     /// the generated module as a Verified Module.
@@ -387,7 +381,6 @@ impl ModuleBuilder {
         let module = self.materialize_unverified();
         VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(module)
     }
-
 
     // This method generates a default (empty) `CompiledModuleMut` but with base types. This way we
     // can point to them when generating structs/functions etc.

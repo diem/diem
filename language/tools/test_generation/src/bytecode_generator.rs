@@ -3,7 +3,9 @@
 
 use crate::{abstract_state::AbstractState, summaries};
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use vm::file_format::{Bytecode, FunctionSignature, SignatureToken, StringPoolIndex, AddressPoolIndex};
+use vm::file_format::{
+    AddressPoolIndex, Bytecode, FunctionSignature, SignatureToken, StringPoolIndex,
+};
 
 /// This type represents bytecode instructions that take a `u8`
 type U8ToBytecode = fn(u8) -> Bytecode;
@@ -92,11 +94,7 @@ impl BytecodeGenerator {
     /// Given an `AbstractState`, `state`, and a the number of locals the function has,
     /// this function returns a list of instructions whose preconditions are satisfied for
     /// the state.
-    fn candidate_instructions(
-        &mut self,
-        state: AbstractState,
-        locals_len: usize,
-    ) -> Vec<Bytecode> {
+    fn candidate_instructions(&mut self, state: AbstractState, locals_len: usize) -> Vec<Bytecode> {
         let mut matches: Vec<Bytecode> = Vec::new();
         let instructions = &self.instructions;
         for instruction in instructions.iter() {
@@ -106,20 +104,20 @@ impl BytecodeGenerator {
                     // Generate a random index into the locals
                     let local_index: u8 = self.rng.gen_range(0, locals_len as u8);
                     instruction(local_index)
-                },
+                }
                 BytecodeType::U64(instruction) => {
                     // Generate a random u64 constant to load
                     let value = self.rng.gen_range(0, u64::max_value());
                     instruction(value)
-                },
+                }
                 BytecodeType::StringPoolIndex(instruction) => {
                     // TODO: Determine correct index
                     instruction(StringPoolIndex::new(0))
-                },
+                }
                 BytecodeType::AddressPoolIndex(instruction) => {
                     // TODO: Determine correct index
                     instruction(AddressPoolIndex::new(0))
-                },
+                }
             };
             let summary = summaries::instruction_summary(instruction.clone());
             let unsatisfied_preconditions = summary
@@ -179,8 +177,10 @@ impl BytecodeGenerator {
             println!("{:?}", return_type);
             match return_type {
                 SignatureToken::String => bytecode.push(Bytecode::LdStr(StringPoolIndex::new(0))),
-                SignatureToken::Address => bytecode.push(Bytecode::LdAddr(AddressPoolIndex::new(0))),
-                _ => panic!("Unsupported return type!")
+                SignatureToken::Address => {
+                    bytecode.push(Bytecode::LdAddr(AddressPoolIndex::new(0)))
+                }
+                _ => panic!("Unsupported return type!"),
             }
         }
         bytecode.push(Bytecode::Ret);
