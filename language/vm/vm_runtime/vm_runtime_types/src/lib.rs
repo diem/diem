@@ -13,4 +13,5 @@ mod proptest_types;
 
 pub mod loaded_data;
 pub mod native_functions;
+pub mod native_structs;
 pub mod value;
