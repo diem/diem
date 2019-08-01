@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{hash, primitive_helpers, signature, vector};
-use crate::value::Local;
+use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
 use std::collections::{HashMap, VecDeque};
 use types::{account_address::AccountAddress, language_storage::ModuleId};
-use vm::file_format::{FunctionSignature, SignatureToken, StructHandleIndex};
+use vm::file_format::{FunctionSignature, SignatureToken};
 
 /// Enum representing the result of running a native function
 pub enum NativeReturnStatus {
@@ -27,6 +27,7 @@ pub enum NativeReturnStatus {
     InvalidArguments,
 }
 
+/// Struct representing the expected definition for a native function
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function
     pub dispatch: fn(VecDeque<Local>) -> NativeReturnStatus,
@@ -43,6 +44,8 @@ impl NativeFunction {
     }
 }
 
+/// Looks up the expected native function definition from the module id (address and module) and
+/// function name where it was expected to be declared
 pub fn dispatch_native_function(
     module: &ModuleId,
     function_name: &str,
@@ -72,6 +75,22 @@ macro_rules! add {
             .insert($name.into(), f);
         assert!(old.is_none());
     }};
+}
+
+/// Helper for finding expected struct handle index
+fn tstruct(
+    addr_str: &str,
+    module_name: &str,
+    function_name: &str,
+    args: Vec<SignatureToken>,
+) -> SignatureToken {
+    let addr = AccountAddress::from_hex_literal(addr_str).unwrap();
+    let id = ModuleId::new(addr, module_name.into());
+    let native_struct = dispatch_native_struct(&id, function_name).unwrap();
+    let idx = native_struct.expected_index;
+    // TODO assert kinds match
+    assert!(args.len() == native_struct.expected_type_parameters.len());
+    SignatureToken::Struct(idx, args)
 }
 
 type NativeFunctionMap = HashMap<ModuleId, HashMap<String, NativeFunction>>;
@@ -130,10 +149,10 @@ lazy_static! {
             vec![ByteArray, ByteArray],
             vec![ByteArray]
         );
-        // BytearrayUtil
+        // Vector
         add!(m, "0x0", "Vector", "length",
             vector::native_length,
-            vec![Reference(Box::new(Struct(StructHandleIndex(0), vec![])))],
+            vec![Reference(Box::new(tstruct("0x0", "Vector", "T", vec![])))],
             vec![U64]
         );
         m

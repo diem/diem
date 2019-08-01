@@ -18,7 +18,10 @@ use vm::{
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
-use vm_runtime_types::native_functions::dispatch::dispatch_native_function;
+use vm_runtime_types::{
+    native_functions::dispatch::dispatch_native_function,
+    native_structs::dispatch::dispatch_native_struct,
+};
 
 /// A program that has been verified for internal consistency.
 ///
@@ -356,6 +359,7 @@ pub fn verify_module_dependencies<'a>(
         &dependency_map,
     ));
     errors.append(&mut verify_native_functions(&module_view));
+    errors.append(&mut verify_native_structs(&module_view));
     errors
 }
 
@@ -395,6 +399,48 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<Veri
                 if declared_function_signature != expected_function_signature {
                     errors.push(VerificationError {
                         kind: IndexKind::FunctionHandle,
+                        idx,
+                        err: VMStaticViolation::TypeMismatch,
+                    })
+                }
+            }
+        }
+    }
+    errors
+}
+
+fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VerificationError> {
+    let mut errors = vec![];
+
+    let module_id = module_view.id();
+    for (idx, native_struct_definition_view) in module_view
+        .structs()
+        .enumerate()
+        .filter(|sdv| sdv.1.is_native())
+    {
+        let struct_name = native_struct_definition_view.name();
+
+        match dispatch_native_struct(&module_id, struct_name) {
+            None => errors.push(VerificationError {
+                kind: IndexKind::StructHandle,
+                idx,
+                err: VMStaticViolation::MissingDependency,
+            }),
+            Some(vm_native_struct) => {
+                let declared_index = idx as u16;
+                let declared_kind = native_struct_definition_view.kind();
+                let declared_type_parameters =
+                    native_struct_definition_view.type_parameter_constraints();
+
+                let expected_index = vm_native_struct.expected_index.0;
+                let expected_kind = &vm_native_struct.expected_kind;
+                let expected_type_parameters = &vm_native_struct.expected_type_parameters;
+                if declared_index != expected_index
+                    || declared_kind != expected_kind
+                    || declared_type_parameters != expected_type_parameters
+                {
+                    errors.push(VerificationError {
+                        kind: IndexKind::StructHandle,
                         idx,
                         err: VMStaticViolation::TypeMismatch,
                     })

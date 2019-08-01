@@ -192,6 +192,14 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         }
     }
 
+    pub fn kind(&self) -> &Kind {
+        &self.struct_handle.kind
+    }
+
+    pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
+        &self.struct_handle.kind_constraints
+    }
+
     pub fn definition(&self) -> StructDefinitionView<'a, T> {
         unimplemented!("this requires linking")
     }
@@ -261,6 +269,21 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
 
     pub fn is_resource(&self) -> bool {
         self.struct_handle_view.is_resource()
+    }
+
+    pub fn is_native(&self) -> bool {
+        match &self.struct_def.field_information {
+            StructFieldInformation::Native => true,
+            StructFieldInformation::Declared { .. } => false,
+        }
+    }
+
+    pub fn kind(&self) -> &Kind {
+        self.struct_handle_view.kind()
+    }
+
+    pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
+        self.struct_handle_view.type_parameter_constraints()
     }
 
     pub fn fields(
