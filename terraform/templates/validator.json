@@ -22,6 +22,11 @@
             {"name": "GENESIS_BLOB", "value": ${genesis_blob}},
             {"name": "RUST_LOG", "value": "${log_level}"}
         ],
+        "linuxParameters": {
+            "capabilities": {
+                 "add": ${capabilities}
+             }
+        },
         "ulimits": [
             {"name": "nofile", "softLimit": 131072, "hardLimit": 131072}
         ],

@@ -208,6 +208,7 @@ data "template_file" "ecs_task_definition" {
     log_group     = aws_cloudwatch_log_group.testnet.name
     log_region    = var.region
     log_prefix    = "validator-${substr(var.peer_ids[count.index], 0, 8)}"
+    capabilities  = jsonencode(var.validator_linux_capabilities)
   }
 }
 
