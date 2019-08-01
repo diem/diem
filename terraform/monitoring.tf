@@ -32,6 +32,7 @@ resource "aws_instance" "prometheus" {
   ami                         = data.aws_ami.ecs.id
   instance_type               = "t3.medium"
   subnet_id                   = element(aws_subnet.testnet.*.id, 0)
+  depends_on                  = [aws_main_route_table_association.testnet]
   vpc_security_group_ids      = [aws_security_group.monitoring.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.libra.key_name

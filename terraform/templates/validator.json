@@ -9,16 +9,16 @@
             {"containerPort": 30307, "hostPort": 30307},
             {"containerPort": 30303, "hostPort": 30303},
             {"containerPort": 14297, "hostPort": 14297},
-	    {"containerPort": 30306, "hostPort": 30306}
+            {"containerPort": 30306, "hostPort": 30306}
         ],
         "mountPoints": [
-            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"},
+            {"sourceVolume": "trusted-peers", "containerPath": "/opt/libra/etc/trusted_peers.config.toml"}
         ],
         "environment": [
             {"name": "PEER_ID", "value": "${peer_id}"},
             {"name": "NODE_CONFIG", "value": ${node_config}},
             {"name": "SEED_PEERS", "value": ${seed_peers}},
-            {"name": "TRUSTED_PEERS", "value": ${trusted_peers}},
             {"name": "GENESIS_BLOB", "value": ${genesis_blob}},
             {"name": "RUST_LOG", "value": "${log_level}"}
         ],
