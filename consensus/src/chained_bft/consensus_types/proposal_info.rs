@@ -40,6 +40,9 @@ pub struct ProposalInfo<T, P> {
 
 impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
     pub fn verify(&self, validator: &ValidatorVerifier<Ed25519PublicKey>) -> Result<()> {
+        if self.proposal.is_nil_block() {
+            return Err(format_err!("Proposal {} for a NIL block", self.proposal));
+        }
         self.proposal
             .verify(validator)
             .map_err(|e| format_err!("{:?}", e))?;
@@ -77,9 +80,22 @@ impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
                 self.proposal.quorum_cert().certified_block_round(),
             );
         }
-        if self.proposal.author() != self.proposer_info.get_author() {
-            return Err(format_err!("Proposal for {} has mismatching author of block and proposer info: block={}, proposer={}", self.proposal,
-            self.proposal.author(), self.proposer_info.get_author()));
+        match self.proposal.author() {
+            Some(author) => {
+                if author != self.proposer_info.get_author() {
+                    return Err(format_err!(
+                        "Proposal {} mismatch author of block and proposer info: block={}, proposer={}",
+                        self.proposal,
+                        author,
+                        self.proposer_info.get_author()));
+                }
+            }
+            None => {
+                return Err(format_err!(
+                    "Proposal {} does not define an author",
+                    self.proposal
+                ));
+            }
         }
         self.sync_info
             .highest_ledger_info()
