@@ -104,7 +104,7 @@ fn parse_socket_address(address: &str, port: u16) -> String {
 
 /// Scan *.node.config.toml files under config_dir_name, parse them as node config
 /// and return libra_swarm's node addresses info as a vector.
-fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>> {
+pub fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>> {
     let mut validator_addresses: Vec<String> = Vec::new();
     let re = Regex::new(r"[[:alnum:]]{64}\.node\.config\.toml").expect("failed to build regex");
     let config_dir = PathBuf::from(config_dir_name);

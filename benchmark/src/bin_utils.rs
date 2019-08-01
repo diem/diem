@@ -31,7 +31,7 @@ fn create_ac_client(index: usize, conn_addr: &str) -> AdmissionControlClient {
 }
 
 /// Creat a vector of AdmissionControlClient and connect them to validators.
-fn create_ac_clients(
+pub fn create_ac_clients(
     num_clients: usize,
     validator_addresses: &[String],
 ) -> Vec<AdmissionControlClient> {
@@ -75,7 +75,7 @@ pub fn measure_throughput<T: LoadGenerator + ?Sized>(
     num_accounts: u64,
     num_rounds: u64,
     num_epochs: u64,
-) {
+) -> std::vec::Vec<(f64, f64)> {
     // Generate testing accounts.
     let mut accounts: Vec<AccountData> = txn_generator.gen_accounts(num_accounts);
     bm.register_accounts(&accounts);
@@ -96,4 +96,5 @@ pub fn measure_throughput<T: LoadGenerator + ?Sized>(
         "{} epoch(s) of REQ/TXN throughput = {:?}",
         num_epochs, txn_throughput_seq
     );
+    txn_throughput_seq
 }
