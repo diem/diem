@@ -69,11 +69,36 @@ resource "aws_cloudwatch_log_metric_filter" "log_metric_filter" {
   }
 }
 
+resource "random_id" "bucket" {
+  byte_length = 8
+}
+
+resource "aws_s3_bucket" "config" {
+  bucket = "libra-${terraform.workspace}-${random_id.bucket.hex}"
+  region = var.region
+}
+
+resource "aws_s3_bucket_public_access_block" "config" {
+  bucket                  = aws_s3_bucket.config.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_object" "trusted_peers" {
+  bucket = aws_s3_bucket.config.id
+  key    = "trusted_peers.config.toml"
+  source = "${var.validator_set}/trusted_peers.config.toml"
+  etag   = filemd5("${var.validator_set}/trusted_peers.config.toml")
+}
+
 data "template_file" "user_data" {
   template = file("templates/ec2_user_data.sh")
 
   vars = {
-    ecs_cluster = aws_ecs_cluster.testnet.name
+    ecs_cluster   = aws_ecs_cluster.testnet.name
+    trusted_peers = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.trusted_peers.id}"
   }
 }
 
@@ -92,6 +117,7 @@ resource "aws_instance" "validator" {
     aws_subnet.testnet.*.id,
     count.index % length(data.aws_availability_zones.available.names),
   )
+  depends_on                  = [aws_main_route_table_association.testnet]
   vpc_security_group_ids      = [aws_security_group.validator.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
@@ -110,6 +136,7 @@ resource "aws_instance" "validator" {
     Workspace = terraform.workspace
     PeerId    = var.peer_ids[count.index]
   }
+
 }
 
 data "local_file" "keys" {
@@ -130,7 +157,7 @@ resource "aws_secretsmanager_secret_version" "validator" {
 }
 
 data "template_file" "node_config" {
-  count = length(var.peer_ids)
+  count    = length(var.peer_ids)
   template = file("${var.validator_set}/node.config.toml")
 
   vars = {
@@ -157,7 +184,6 @@ data "template_file" "ecs_task_definition" {
     mem           = local.mem_by_instance[var.validator_type]
     node_config   = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
     seed_peers    = jsonencode(data.template_file.seed_peers.rendered)
-    trusted_peers = jsonencode(file("${var.validator_set}/trusted_peers.config.toml"))
     genesis_blob  = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
     peer_id       = var.peer_ids[count.index]
     secret        = element(aws_secretsmanager_secret.validator.*.arn, count.index)
@@ -181,6 +207,11 @@ resource "aws_ecs_task_definition" "validator" {
   volume {
     name      = "libra-data"
     host_path = "/data/libra"
+  }
+
+  volume {
+    name      = "trusted-peers"
+    host_path = "/opt/libra/trusted_peers.config.toml"
   }
 
   placement_constraints {
