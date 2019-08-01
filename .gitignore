@@ -13,12 +13,6 @@
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic
 
-# Generated Parser File by LALRPOP
-language/compiler/ir_to_bytecode/syntax/src/syntax.rs
-# Older locations for this file.
-language/compiler/ir_to_bytecode/src/parser/syntax.rs
-language/move_ir/
-
 # GDB related
 **/.gdb_history
 
