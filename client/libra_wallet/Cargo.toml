@@ -17,6 +17,7 @@ serde = "1.0.96"
 tiny-keccak = "1.5.0"
 protobuf = "~2.7"
 sha3 = "0.8.2"
+sha2 = "0.8.0"
 types = { path = "../../types" }
 
 [dependencies.ed25519-dalek]
