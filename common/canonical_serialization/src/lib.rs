@@ -76,6 +76,8 @@ pub trait CanonicalSerializer {
         Ok(self)
     }
 
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
+
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self>;
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
@@ -149,6 +151,19 @@ impl<W> CanonicalSerializer for SimpleSerializer<W>
 where
     W: std::io::Write,
 {
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self> {
+        match v.as_ref() {
+            Some(val) => {
+                self.encode_bool(true)?;
+                self.encode_struct(val)?;
+            }
+            None => {
+                self.encode_bool(false)?;
+            }
+        }
+        Ok(self)
+    }
+
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self> {
         self.output.write_u64::<Endianness>(v)?;
         Ok(self)
@@ -252,6 +267,8 @@ pub trait CanonicalDeserializer {
         T::deserialize(self)
     }
 
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>>;
+
     fn decode_u64(&mut self) -> Result<u64>;
 
     fn decode_u32(&mut self) -> Result<u32>;
@@ -305,6 +322,14 @@ impl<'a> SimpleDeserializer<'a> {
 }
 
 impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>> {
+        if self.decode_bool()? {
+            Ok(Some(T::deserialize(self)?))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn decode_u64(&mut self) -> Result<u64> {
         let num = self.raw_bytes.read_u64::<Endianness>()?;
         Ok(num)

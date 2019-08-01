@@ -178,7 +178,7 @@ proptest! {
         let signer = ValidatorSigner::new(None, priv_key);
         let block_store = build_empty_tree_with_custom_signing(signer);
         for block in blocks {
-            if block.round() > 0 && authors.contains(&block.author()) {
+            if block.round() > 0 && authors.contains(&block.author().unwrap()) {
                 let known_parent = block_store.block_exists(block.parent_id());
                 let certified_parent = block.quorum_cert().certified_block_id() == block.parent_id();
                 let res = block_on(block_store.execute_and_insert_block(block.clone()));

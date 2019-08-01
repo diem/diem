@@ -3,20 +3,24 @@
 
 use crate::chained_bft::{
     common::{Height, Round},
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
+    consensus_types::{
+        block::{Block, BlockSource},
+        quorum_cert::QuorumCert,
+    },
     test_utils::placeholder_certificate_for_block,
 };
 
 use crypto::HashValue;
-use nextgen_crypto::ed25519::Ed25519PrivateKey;
-use proptest::prelude::*;
+use nextgen_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use proptest::{prelude::*, std_facade::hash_map::HashMap};
 use std::{
     panic,
+    sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 #[cfg(test)]
 use types::validator_signer::proptests;
-use types::validator_signer::ValidatorSigner;
+use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
 
@@ -91,8 +95,10 @@ prop_compose! {
                 height: block.height(),
                 parent_id: block.parent_id(),
                 quorum_cert: block.quorum_cert().clone(),
-                author: block.author(),
-                signature: block.signature().clone(),
+                block_source: BlockSource::Proposal {
+                    author: block.author().unwrap(),
+                    signature: block.signature().unwrap().clone(),
+                },
             }
         }
 }
@@ -188,6 +194,48 @@ fn test_genesis() {
     assert_eq!(genesis_block.parent_id(), HashValue::zero());
     assert_ne!(genesis_block.id(), HashValue::zero());
     assert!(genesis_block.is_genesis_block());
+}
+
+#[test]
+fn test_nil_block() {
+    let genesis_block = Block::make_genesis_block();
+    let quorum_cert = QuorumCert::certificate_for_genesis();
+
+    let nil_block = Block::make_nil_block(&genesis_block, 1, quorum_cert);
+    assert_eq!(
+        nil_block.quorum_cert().certified_block_id(),
+        genesis_block.id()
+    );
+    assert_eq!(nil_block.round(), 1);
+    assert_eq!(nil_block.timestamp_usecs(), genesis_block.timestamp_usecs());
+    assert_eq!(nil_block.is_nil_block(), true);
+    assert!(nil_block.author().is_none());
+
+    let dummy_verifier = Arc::new(ValidatorVerifier::<Ed25519PublicKey>::new(HashMap::new()));
+    assert!(nil_block.verify(dummy_verifier.as_ref()).is_ok());
+
+    let signer = ValidatorSigner::random(None);
+    let payload = 101;
+    let nil_block_qc = placeholder_certificate_for_block(
+        vec![&signer],
+        nil_block.id(),
+        nil_block.round(),
+        nil_block.quorum_cert().certified_block_id(),
+        nil_block.quorum_cert().certified_block_round(),
+        nil_block.quorum_cert().certified_parent_block_id(),
+        nil_block.quorum_cert().certified_parent_block_round(),
+    );
+    let nil_block_child = Block::make_block(
+        &nil_block,
+        payload,
+        2,
+        get_current_timestamp().as_micros() as u64,
+        nil_block_qc.clone(),
+        &signer,
+    );
+    assert_eq!(nil_block_child.is_nil_block(), false);
+    assert_eq!(nil_block_child.round(), 2);
+    assert_eq!(nil_block_child.parent_id(), nil_block.id());
 }
 
 #[test]

@@ -5,7 +5,9 @@
 use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
+        block_storage::{
+            BlockReader, BlockStore, InsertError, NeedFetchResult, VoteReceptionResult,
+        },
         common::{Author, Payload, Round},
         consensus_types::{
             block::Block,
@@ -33,7 +35,6 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
-use crypto::HashValue;
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use std::{
@@ -199,6 +200,14 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         proposal: ProposalInfo<T, P>,
     ) -> ProcessProposalResult<T, P> {
         debug!("Receive proposal {}", proposal);
+        // Do not allow NIL block proposals
+        if proposal.proposal.is_nil_block() {
+            error!(
+                "Proposal {} is ignored because it's for a NIL block!",
+                proposal
+            );
+            return ProcessProposalResult::Done(None);
+        }
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
@@ -228,7 +237,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         {
             warn!(
                 "Proposer {} for block {} is not a valid proposer for this round",
-                proposal.proposal.author(),
+                proposal.proposer_info.get_author(),
                 proposal.proposal
             );
             return ProcessProposalResult::Done(None);
@@ -517,95 +526,26 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         {
             counters::CREATION_TO_RECEIVAL_MS.observe(time_to_receival.as_millis() as f64);
         }
-        let block = match self
-            .sync_manager
-            .execute_and_insert_block(proposal.proposal)
-            .await
-        {
-            Err(e) => {
-                debug!(
-                    "Block proposal could not be added to the block store: {:?}",
-                    e
-                );
+
+        let proposal_round = proposal.proposal.round();
+        let vote_msg = match self.execute_and_vote(proposal).await {
+            Err(_) => {
                 return;
             }
-            Ok(block) => block,
+            Ok(vote_msg) => vote_msg,
         };
-
-        // Checking pacemaker round again, because multiple proposal can now race
-        // during async block retrieval
-        if self.pacemaker.current_round() != block.round() {
-            debug!(
-                "Skip voting for winning proposal {} rejected because round is incorrect. Pacemaker: {}, proposal: {}",
-                block,
-                self.pacemaker.current_round(),
-                block.round()
-            );
-            return;
-        }
-        self.wait_before_vote_if_needed(block.timestamp_usecs())
-            .await;
-
-        let vote_info = match self
-            .safety_rules
-            .write()
-            .unwrap()
-            .voting_rule(Arc::clone(&block))
-        {
-            Err(e) => {
-                debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
-                return;
-            }
-            Ok(vote_info) => vote_info,
-        };
-        if let Err(e) = self
-            .storage
-            .save_consensus_state(vote_info.consensus_state().clone())
-        {
-            debug!("Fail to persist consensus state: {:?}", e);
-            return;
-        }
-        let proposal_id = vote_info.proposal_id();
-        let executed_state = self
-            .block_store
-            .get_state_for_block(proposal_id)
-            .expect("Block proposal: no execution state found for inserted block.");
-
-        let ledger_info_placeholder = self
-            .block_store
-            .ledger_info_placeholder(vote_info.potential_commit_id());
-        let vote_msg = VoteMsg::new(
-            proposal_id,
-            executed_state,
-            block.round(),
-            vote_info.parent_block_id(),
-            vote_info.parent_block_round(),
-            vote_info.grandparent_block_id(),
-            vote_info.grandparent_block_round(),
-            self.author.get_author(),
-            ledger_info_placeholder,
-            self.block_store.signer(),
-        );
 
         self.last_vote_sent
             .write()
             .unwrap()
-            .replace((vote_msg.clone(), block.round()));
+            .replace((vote_msg.clone(), proposal_round));
         let recipients: Vec<Author> = self
             .proposer_election
-            .get_valid_proposers(block.round() + 1)
+            .get_valid_proposers(proposal_round + 1)
             .iter()
             .map(ProposerInfo::get_author)
             .collect();
-        debug!(
-            "{}Voted for{} {}, potential commit {}",
-            Fg(Green),
-            Fg(Reset),
-            block,
-            vote_info
-                .potential_commit_id()
-                .unwrap_or_else(HashValue::zero)
-        );
+        debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote_msg);
         self.network.send_vote(vote_msg, recipients).await;
     }
 
@@ -663,6 +603,77 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 }
             }
         }
+    }
+
+    /// The function generates a VoteMsg for a given proposal:
+    /// * first execute the block and add it to the block store
+    /// * then verify the voting rules
+    /// * save the updated state to consensus DB
+    /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
+    ///
+    /// This function assumes that it might be called from different tasks concurrently.
+    async fn execute_and_vote(&self, proposal: ProposalInfo<T, P>) -> failure::Result<VoteMsg> {
+        let block = self
+            .sync_manager
+            .execute_and_insert_block(proposal.proposal)
+            .await
+            .map_err(|e| {
+                debug!("Failed to execute_and_insert the block: {:?}", e);
+                e
+            })?;
+
+        // Checking pacemaker round again, because multiple proposal can now race
+        // during async block retrieval
+        if self.pacemaker.current_round() != block.round() {
+            debug!(
+                "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposal: {}",
+                block,
+                self.pacemaker.current_round(),
+                block.round(),
+            );
+            return Err(InsertError::InvalidBlockRound.into());
+        }
+        self.wait_before_vote_if_needed(block.timestamp_usecs())
+            .await;
+
+        let vote_info = self
+            .safety_rules
+            .write()
+            .unwrap()
+            .voting_rule(Arc::clone(&block))
+            .map_err(|e| {
+                debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
+                e
+            })?;
+
+        self.storage
+            .save_consensus_state(vote_info.consensus_state().clone())
+            .map_err(|e| {
+                debug!("Fail to persist consensus state: {:?}", e);
+                e
+            })?;
+
+        let proposal_id = vote_info.proposal_id();
+        let executed_state = self
+            .block_store
+            .get_state_for_block(proposal_id)
+            .expect("Block proposal: no execution state found for inserted block.");
+
+        let ledger_info_placeholder = self
+            .block_store
+            .ledger_info_placeholder(vote_info.potential_commit_id());
+        Ok(VoteMsg::new(
+            proposal_id,
+            executed_state,
+            block.round(),
+            vote_info.parent_block_id(),
+            vote_info.parent_block_round(),
+            vote_info.grandparent_block_id(),
+            vote_info.grandparent_block_round(),
+            self.author.get_author(),
+            ledger_info_placeholder,
+            self.block_store.signer(),
+        ))
     }
 
     /// Upon new vote:

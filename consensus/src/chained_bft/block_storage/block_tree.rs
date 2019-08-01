@@ -72,7 +72,7 @@ pub struct BlockTree<T> {
 
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize,
+    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
     pub(super) fn new(
         root: Block<T>,
@@ -437,7 +437,7 @@ where
 #[cfg(test)]
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize,
+    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {
