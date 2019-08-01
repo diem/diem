@@ -3,7 +3,7 @@
 
 fn main() {
     lalrpop::Configuration::new()
-        .generate_in_source_tree()
+        .use_cargo_dir_conventions()
         .process()
         .unwrap();
 }
