@@ -384,7 +384,7 @@ impl LocalPacemaker {
         let timeout_processing_res = { inner.write().unwrap().process_local_timeout(round) };
         if let Some(mut sender) = timeout_processing_res {
             if let Err(e) = sender.send(round).await {
-                warn!("Can't send pacemaker timeout message: {:?}", e)
+                panic!("Error in sending pacemaker timeout message to local channel, uanble to recover: {:?}", e);
             }
         }
     }
