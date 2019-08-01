@@ -3,6 +3,7 @@
 
 use crate::pick_slice_idxs;
 use proptest::sample::Index;
+use std::iter;
 
 /// An efficient representation of a vector with repeated elements inserted.
 ///
@@ -98,13 +99,110 @@ impl<T> RepeatVec<T> {
         }
     }
 
+    /// Removes the item specified by the given *logical* index, shifting all elements after it to
+    /// the left by updating start positions.
+    ///
+    /// Out of bounds indexes have no effect.
+    pub fn remove(&mut self, index: usize) {
+        self.remove_all(iter::once(index))
+    }
+
+    /// Removes the items specified by the given *logical* indexes, shifting all elements after them
+    /// to the left by updating start positions.
+    ///
+    /// Ignores any out of bounds indexes.
+    pub fn remove_all(&mut self, logical_indexes: impl IntoIterator<Item = usize>) {
+        let mut logical_indexes: Vec<_> = logical_indexes.into_iter().collect();
+        logical_indexes.sort();
+        logical_indexes.dedup();
+        self.remove_all_impl(logical_indexes)
+    }
+
+    fn remove_all_impl(&mut self, logical_indexes: Vec<usize>) {
+        // # Notes
+        //
+        // * This looks pretty long and complicated, mostly because the logic is complex enough to
+        //   require manual loops and iteration.
+        // * This is unavoidably linear time in the number of physical elements. One way to make the
+        //   constant factors smaller would be to implement a ChunkedRepeatVec<T>, which can be done
+        //   by wrapping a RepeatVec<RepeatVec<T>> plus some glue logic. The idea would be similar
+        //   to skip-lists. 2 levels should be enough, but 3 or more would work as well.
+
+        // Separate function to minimize the amount of monomorphized code.
+        let first = match logical_indexes.first() {
+            Some(first) => *first,
+            None => {
+                // No indexes to remove, nothing to do.
+                return;
+            }
+        };
+        if first >= self.len() {
+            // First index is out of bounds, nothing to do.
+            return;
+        }
+
+        let first_idx = match self.binary_search(first) {
+            Ok(exact_idx) => {
+                // Logical copy 0 of the element at this position.
+                exact_idx
+            }
+            Err(start_idx) => {
+                // This is the physical index after the logical item. Start reasoning from the
+                // previous index to match the Ok branch above.
+                start_idx - 1
+            }
+        };
+
+        // This serves two purposes -- it represents the number of elements to decrease by and
+        // the current position in indexes.
+        let mut decrease = 0;
+
+        let new_items = {
+            let mut items = self.items.drain(first_idx..).peekable();
+            let mut new_items = vec![];
+
+            while let Some((current_logical_idx_old, current_elem)) = items.next() {
+                let current_logical_idx_new = current_logical_idx_old - decrease;
+
+                let next_logical_idx_old = match items.peek() {
+                    Some(&(idx, _)) => idx,
+                    None => self.len,
+                };
+
+                // Remove all indexes until the next logical index or sorted_indexes runs out.
+                while let Some(remove_idx) = logical_indexes.get(decrease) {
+                    if *remove_idx < next_logical_idx_old {
+                        decrease += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                let next_logical_idx_new = next_logical_idx_old - decrease;
+                assert!(
+                    next_logical_idx_new >= current_logical_idx_new,
+                    "too many items removed from next"
+                );
+
+                // Drop zero-length items to maintain invariant.
+                if next_logical_idx_new > current_logical_idx_new {
+                    new_items.push((current_logical_idx_new, current_elem));
+                }
+            }
+            new_items
+        };
+
+        self.items.extend(new_items);
+        self.len -= decrease;
+    }
+
     /// Returns the item at location `at`. The return value is a reference to the stored item, plus
     /// the offset from the start (logically, which copy of the item is being returned).
     pub fn get(&self, at: usize) -> Option<(&T, usize)> {
         if at >= self.len {
             return None;
         }
-        match self.items.binary_search_by_key(&at, |(start, _)| *start) {
+        match self.binary_search(at) {
             Ok(exact_idx) => Some((&self.items[exact_idx].1, 0)),
             Err(start_idx) => {
                 // start_idx can never be 0 because usize starts from 0 and items[0].0 is always 0.
@@ -114,6 +212,12 @@ impl<T> RepeatVec<T> {
                 Some((&start_val.1, offset))
             }
         }
+    }
+
+    /// Picks out indexes uniformly randomly from this `RepeatVec`, using the provided
+    /// [`Index`](proptest::sample::Index) instances as sources of randomness.
+    pub fn pick_uniform_indexes(&self, indexes: &[impl AsRef<Index>]) -> Vec<usize> {
+        pick_slice_idxs(self.len(), indexes)
     }
 
     /// Picks out elements uniformly randomly from this `RepeatVec`, using the provided
@@ -126,6 +230,34 @@ impl<T> RepeatVec<T> {
                     .expect("indexes picked should always be in range")
             })
             .collect()
+    }
+
+    #[inline]
+    fn binary_search(&self, at: usize) -> Result<usize, usize> {
+        self.items.binary_search_by_key(&at, |(start, _)| *start)
+    }
+
+    /// Check and assert the internal invariants for this RepeatVec.
+    #[cfg(test)]
+    pub(crate) fn assert_invariants(&self) {
+        for window in self.items.windows(2) {
+            let (idx1, idx2) = match window {
+                [(idx1, _), (idx2, _)] => (*idx1, *idx2),
+                _ => panic!("wrong window size"),
+            };
+            assert!(idx1 < idx2, "no zero-length elements");
+        }
+        match self.items.last() {
+            Some(&(idx, _)) => {
+                assert!(
+                    idx < self.len,
+                    "length must be greater than last element's start"
+                );
+            }
+            None => {
+                assert_eq!(self.len, 0, "empty RepeatVec");
+            }
+        }
     }
 }
 
