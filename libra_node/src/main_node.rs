@@ -26,7 +26,7 @@ use network::{
 };
 use nextgen_crypto::ed25519::*;
 use std::{
-    cmp::max,
+    cmp::min,
     convert::{TryFrom, TryInto},
     sync::Arc,
     thread,
@@ -58,7 +58,7 @@ fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
     let env = Arc::new(
         EnvBuilder::new()
             .name_prefix("grpc-ac-")
-            .cq_count(unsafe { max(grpcio_sys::gpr_cpu_num_cores() as usize / 2, 2) })
+            .cq_count(unsafe { min(grpcio_sys::gpr_cpu_num_cores() as usize * 2, 32) })
             .build(),
     );
     let port = config.admission_control.admission_control_service_port;
