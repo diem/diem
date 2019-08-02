@@ -44,8 +44,10 @@ pub const HASH_MODULE_NAME: &str = "Hash";
 pub fn core_code_address() -> AccountAddress {
     AccountAddress::default()
 }
+
 pub fn association_address() -> AccountAddress {
-    AccountAddress::default()
+    AccountAddress::from_hex_literal("0xA550C18")
+        .expect("Parsing valid hex literal should always succeed")
 }
 
 pub fn coin_struct_tag() -> StructTag {
