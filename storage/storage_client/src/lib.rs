@@ -17,6 +17,7 @@ use grpcio::{ChannelBuilder, Environment};
 use metrics::counters::SVC_COUNTERS;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
+use rand::Rng;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::{storage::GetExecutorStartupInfoRequest, storage_grpc},
@@ -38,6 +39,33 @@ use types::{
 
 pub use crate::state_view::VerifiedStateView;
 
+fn pick<T>(items: &[T]) -> &T {
+    let mut rng = rand::thread_rng();
+    let index = rng.gen_range(0, items.len());
+    &items[index]
+}
+
+fn make_clients(
+    env: Arc<Environment>,
+    host: &str,
+    port: u16,
+    client_type: &str,
+    max_receive_len: Option<i32>,
+) -> Vec<storage_grpc::StorageClient> {
+    let num_clients = env.completion_queues().len();
+    (0..num_clients)
+        .map(|i| {
+            let mut builder = ChannelBuilder::new(env.clone())
+                .primary_user_agent(format!("grpc/storage-{}-{}", client_type, i).as_str());
+            if let Some(m) = max_receive_len {
+                builder = builder.max_receive_message_len(m);
+            }
+            let channel = builder.connect(&format!("{}:{}", host, port));
+            storage_grpc::StorageClient::new(channel)
+        })
+        .collect::<Vec<storage_grpc::StorageClient>>()
+}
+
 fn convert_grpc_response<T>(
     response: grpcio::Result<impl Future01<Item = T, Error = grpcio::Error>>,
 ) -> impl Future<Output = Result<T>> {
@@ -55,15 +83,18 @@ fn log_and_convert<M: Message, P: IntoProto<ProtoType = M>>(message: P) -> M {
 /// This provides storage read interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageReadServiceClient {
-    client: storage_grpc::StorageClient,
+    clients: Vec<storage_grpc::StorageClient>,
 }
 
 impl StorageReadServiceClient {
     /// Constructs a `StorageReadServiceClient` with given host and port.
     pub fn new(env: Arc<Environment>, host: &str, port: u16) -> Self {
-        let channel = ChannelBuilder::new(env).connect(&format!("{}:{}", host, port));
-        let client = storage_grpc::StorageClient::new(channel);
-        StorageReadServiceClient { client }
+        let clients = make_clients(env, host, port, "read", None);
+        StorageReadServiceClient { clients }
+    }
+
+    fn client(&self) -> &storage_grpc::StorageClient {
+        pick(&self.clients)
     }
 }
 
@@ -100,7 +131,7 @@ impl StorageRead for StorageReadServiceClient {
             requested_items,
         };
         convert_grpc_response(
-            self.client
+            self.client()
                 .update_to_latest_ledger_async(&log_and_convert(req)),
         )
         .map(|resp| {
@@ -138,7 +169,7 @@ impl StorageRead for StorageReadServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let req =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
-        convert_grpc_response(self.client.get_transactions_async(&log_and_convert(req)))
+        convert_grpc_response(self.client().get_transactions_async(&log_and_convert(req)))
             .map(|resp| {
                 let rust_resp = GetTransactionsResponse::from_proto(resp?)?;
                 Ok(rust_resp.txn_list_with_proof)
@@ -162,7 +193,7 @@ impl StorageRead for StorageReadServiceClient {
     {
         let req = GetAccountStateWithProofByStateRootRequest::new(address, state_root_hash);
         convert_grpc_response(
-            self.client
+            self.client()
                 .get_account_state_with_proof_by_state_root_async(&log_and_convert(req)),
         )
         .map(|resp| {
@@ -180,7 +211,7 @@ impl StorageRead for StorageReadServiceClient {
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<ExecutorStartupInfo>>> + Send>> {
         let proto_req = GetExecutorStartupInfoRequest::new();
-        convert_grpc_response(self.client.get_executor_startup_info_async(&proto_req))
+        convert_grpc_response(self.client().get_executor_startup_info_async(&proto_req))
             .map(|resp| {
                 let resp = GetExecutorStartupInfoResponse::from_proto(resp?)?;
                 Ok(resp.info)
@@ -192,7 +223,7 @@ impl StorageRead for StorageReadServiceClient {
 /// This provides storage write interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageWriteServiceClient {
-    client: storage_grpc::StorageClient,
+    clients: Vec<storage_grpc::StorageClient>,
 }
 
 impl StorageWriteServiceClient {
@@ -203,13 +234,12 @@ impl StorageWriteServiceClient {
         port: u16,
         grpc_max_receive_len: Option<i32>,
     ) -> Self {
-        let mut builder = ChannelBuilder::new(env);
-        if let Some(len) = grpc_max_receive_len {
-            builder = builder.max_receive_message_len(len);
-        }
-        let channel = builder.connect(&format!("{}:{}", host, port));
-        let client = storage_grpc::StorageClient::new(channel);
-        StorageWriteServiceClient { client }
+        let clients = make_clients(env, host, port, "write", grpc_max_receive_len);
+        StorageWriteServiceClient { clients }
+    }
+
+    fn client(&self) -> &storage_grpc::StorageClient {
+        pick(&self.clients)
     }
 }
 
@@ -231,7 +261,7 @@ impl StorageWrite for StorageWriteServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
-        convert_grpc_response(self.client.save_transactions_async(&log_and_convert(req)))
+        convert_grpc_response(self.client().save_transactions_async(&log_and_convert(req)))
             .map_ok(|_| ())
             .boxed()
     }
