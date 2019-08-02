@@ -328,6 +328,10 @@ pub fn encode_genesis_transaction_with_validator(
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
             txn_executor.create_account(genesis_addr).unwrap().unwrap();
             txn_executor
+                .create_account(account_config::core_code_address())
+                .unwrap()
+                .unwrap();
+            txn_executor
                 .execute_function(&COIN_MODULE, "initialize", vec![])
                 .unwrap()
                 .unwrap();
