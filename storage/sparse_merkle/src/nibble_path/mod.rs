@@ -12,14 +12,16 @@ use crate::ROOT_NIBBLE_HEIGHT;
 use std::{fmt, iter::FromIterator};
 
 /// NibblePath defines a path in Merkle tree in the unit of nibble (4 bits).
-#[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct NibblePath {
+    /// Indicates the total number of nibbles in bytes. Either `bytes.len() * 2 - 1` or
+    /// `bytes.len() * 2`.
+    // Guarantees intended ordering based on the top-to-bottom declaration order of the struct's
+    // members.
+    num_nibbles: usize,
     /// The underlying bytes that stores the path, 2 nibbles per byte. If the number of nibbles is
     /// odd, the second half of the last byte must be 0.
     bytes: Vec<u8>,
-    /// Indicates the total number of nibbles in bytes. Either `bytes.len() * 2 - 1` or
-    /// `bytes.len() * 2`.
-    num_nibbles: usize,
 }
 
 /// Supports debug format by concatenating nibbles literally. For example, [0x12, 0xa0] with 3
