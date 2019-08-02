@@ -59,6 +59,14 @@ impl<T> RepeatVec<T> {
         }
     }
 
+    /// Creates a new, empty `RepeatVec` with the specified capacity to store physical elements.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            items: Vec::with_capacity(capacity),
+            len: 0,
+        }
+    }
+
     /// Returns the *logical* number of elements in this `RepeatVec`.
     #[inline]
     pub fn len(&self) -> usize {

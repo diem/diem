@@ -9,7 +9,8 @@ use crate::{
     account::AccountResource,
     account_universe::{
         default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
-        AccountCurrent, AccountPairGen, AccountUniverse, AccountUniverseGen, RotateKeyGen,
+        AccountCurrent, AccountPairGen, AccountPickStyle, AccountUniverse, AccountUniverseGen,
+        RotateKeyGen,
     },
     executor::FakeExecutor,
 };
@@ -55,6 +56,29 @@ proptest! {
         ),
         transactions in vec(all_transactions_strategy(1, 1_000_000), 0..default_num_transactions()),
     ) {
+        run_and_assert_universe(universe, transactions)?;
+    }
+
+    #[test]
+    fn all_transactions_limited(
+        mut universe in AccountUniverseGen::strategy(
+            4..default_num_accounts(),
+            log_balance_strategy(10_000_000),
+        ),
+        mut transactions in vec(
+            all_transactions_strategy(1, 1_000_000),
+            0..default_num_transactions(),
+        ),
+    ) {
+        universe.set_pick_style(AccountPickStyle::Limited(4));
+        // Each transaction consumes up to 2 slots, and there are (4 * universe.num_accounts())
+        // slots. Use only 3/4 of the slots to allow for some tolerance against edge cases. So
+        // the maximum number of transactions is (3 * universe.num_accounts()) / 2.
+        let max_transactions = (3 * universe.num_accounts()) / 2;
+        if transactions.len() >= max_transactions {
+            transactions.drain(max_transactions..);
+        }
+
         run_and_assert_universe(universe, transactions)?;
     }
 }
