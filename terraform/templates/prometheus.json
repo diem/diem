@@ -10,16 +10,13 @@
         ],
         "mountPoints": [
             {"sourceVolume": "prometheus-data", "containerPath": "/prometheus"},
-            {"sourceVolume": "prometheus-config", "containerPath": "/etc/prometheus/prometheus.yml"},
-            {"sourceVolume": "prometheus-alerting-rules", "containerPath": "/etc/prometheus/alerting_rules"},
-            {"sourceVolume": "prometheus-consoles", "containerPath": "/usr/share/prometheus/consoles"},
-            {"sourceVolume": "prometheus-console-libs", "containerPath": "/usr/share/prometheus/console_libs"}
+            {"sourceVolume": "prometheus-config", "containerPath": "/etc/prometheus"}
         ],
         "command": [
             "--config.file=/etc/prometheus/prometheus.yml",
             "--storage.tsdb.path=/prometheus",
-            "--web.console.libraries=/usr/share/prometheus/console_libs",
-            "--web.console.templates=/usr/share/prometheus/consoles",
+            "--web.console.libraries=/etc/prometheus/console_libs",
+            "--web.console.templates=/etc/prometheus/consoles",
             "--web.enable-lifecycle"
         ]
     },
@@ -34,11 +31,11 @@
         ],
         "mountPoints": [
             {"sourceVolume": "alertmanager-data", "containerPath": "/alertmanager"},
-            {"sourceVolume": "alertmanager-config", "containerPath": "/etc/alertmanager/alertmanager.yml"}
+            {"sourceVolume": "alertmanager-config", "containerPath": "/etc/alertmanager"}
         ],
         "command": [
             "--config.file=/etc/alertmanager/alertmanager.yml",
-	    "--storage.path=/alertmanager"
+            "--storage.path=/alertmanager"
         ]
     },
     {
