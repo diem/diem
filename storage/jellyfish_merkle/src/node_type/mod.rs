@@ -34,7 +34,7 @@ use types::{
 };
 
 /// The unique key of each node.
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct NodeKey {
     // The version at which the node is created.
     version: Version,
