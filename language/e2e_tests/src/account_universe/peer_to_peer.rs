@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     account_universe::{
-        txn_one_account_result, AUTransactionGen, AccountPairGen, AccountPairMut, AccountUniverse,
+        txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
     common_transactions::peer_to_peer_txn,
     gas_costs,
@@ -42,11 +42,11 @@ pub struct P2PNewReceiverGen {
 
 impl AUTransactionGen for P2PTransferGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let AccountPairMut {
+        let AccountPair {
             account_1: sender,
             account_2: receiver,
             ..
-        } = self.sender_receiver.pick_mut(universe);
+        } = self.sender_receiver.pick(universe);
 
         let txn = peer_to_peer_txn(
             sender.account(),
@@ -113,7 +113,7 @@ impl AUTransactionGen for P2PTransferGen {
 
 impl AUTransactionGen for P2PNewReceiverGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let sender = universe.pick_mut(&self.sender).1;
+        let sender = universe.pick(&self.sender).1;
 
         // Create a new, nonexistent account for the receiver.
         let txn = peer_to_peer_txn(

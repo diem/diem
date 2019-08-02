@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     account_universe::{
-        txn_one_account_result, AUTransactionGen, AccountPairGen, AccountPairMut, AccountUniverse,
+        txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
     common_transactions::create_account_txn,
     gas_costs,
@@ -31,7 +31,7 @@ pub struct CreateAccountGen {
 
 impl AUTransactionGen for CreateAccountGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let sender = universe.pick_mut(&self.sender).1;
+        let sender = universe.pick(&self.sender).1;
 
         let txn = create_account_txn(
             sender.account(),
@@ -72,11 +72,11 @@ pub struct CreateExistingAccountGen {
 
 impl AUTransactionGen for CreateExistingAccountGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let AccountPairMut {
+        let AccountPair {
             account_1: sender,
             account_2: receiver,
             ..
-        } = self.sender_receiver.pick_mut(universe);
+        } = self.sender_receiver.pick(universe);
 
         let txn = create_account_txn(
             sender.account(),
