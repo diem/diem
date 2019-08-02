@@ -77,4 +77,8 @@ impl HealthCheck for CommitHistoryHealthCheck {
             }
         }
     }
+
+    fn name(&self) -> &'static str {
+        "commit_check"
+    }
 }

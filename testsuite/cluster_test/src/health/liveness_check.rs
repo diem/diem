@@ -8,11 +8,11 @@ pub struct LivenessHealthCheck {
     last_committed: HashMap<String, LastCommitInfo>,
 }
 
-const MAX_BEHIND: Duration = Duration::from_secs(15);
+const MAX_BEHIND: Duration = Duration::from_secs(20);
 
 #[derive(Default)]
 struct LastCommitInfo {
-    _round: u64,
+    ve: Option<ValidatorEvent>,
     timestamp: Duration,
 }
 
@@ -29,11 +29,16 @@ impl LivenessHealthCheck {
 impl HealthCheck for LivenessHealthCheck {
     fn on_event(&mut self, ve: &ValidatorEvent, ctx: &mut HealthCheckContext) {
         match ve.event {
-            Event::Commit(ref commit) => {
+            Event::Commit(..) => {
+                if let Some(ref prev) = self.last_committed.get(&ve.validator) {
+                    if prev.timestamp > ve.timestamp {
+                        return;
+                    }
+                }
                 self.last_committed.insert(
                     ve.validator.clone(),
                     LastCommitInfo {
-                        _round: commit.round,
+                        ve: Some(ve.clone()),
                         timestamp: ve.timestamp,
                     },
                 );
@@ -51,11 +56,16 @@ impl HealthCheck for LivenessHealthCheck {
                 ctx.report_failure(
                     validator.clone(),
                     format!(
-                        "Last commit is {} ms behind",
-                        (min_timestamp - lci.timestamp).as_millis()
+                        "Last commit is {} ms behind: {:?}",
+                        (min_timestamp - lci.timestamp).as_millis(),
+                        lci.ve,
                     ),
                 );
             }
         }
+    }
+
+    fn name(&self) -> &'static str {
+        "liveness_check"
     }
 }

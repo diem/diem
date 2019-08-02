@@ -2,15 +2,15 @@ mod commit_check;
 mod liveness_check;
 mod log_tail;
 
-use crate::cluster::Cluster;
+use crate::{cluster::Cluster, util::unix_timestamp_now};
 pub use commit_check::CommitHistoryHealthCheck;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::AwsLogTail;
 use std::{
     collections::HashMap,
-    fmt,
-    time::{Duration, SystemTime},
+    env, fmt,
+    time::{Duration, Instant, SystemTime},
 };
 use termion::color::*;
 
@@ -21,15 +21,17 @@ pub struct Commit {
     parent: String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Event {
     Commit(Commit),
     ConsensusStarted,
 }
 
+#[derive(Clone)]
 pub struct ValidatorEvent {
     validator: String,
     timestamp: Duration,
+    received_timestamp: Duration,
     event: Event,
 }
 
@@ -37,7 +39,8 @@ impl fmt::Debug for ValidatorEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {} {:?}",
+            "recv: {}; {} {} {:?}",
+            self.received_timestamp.as_millis(),
             self.timestamp.as_millis(),
             self.validator,
             self.event
@@ -50,11 +53,14 @@ pub trait HealthCheck {
     fn on_event(&mut self, event: &ValidatorEvent, ctx: &mut HealthCheckContext);
     /// Periodic verification (happens even if when no events produced)
     fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
+
+    fn name(&self) -> &'static str;
 }
 
 pub struct HealthCheckRunner {
     cluster: Cluster,
     health_checks: Vec<Box<dyn HealthCheck>>,
+    debug: bool,
 }
 
 impl HealthCheckRunner {
@@ -62,6 +68,7 @@ impl HealthCheckRunner {
         Self {
             cluster,
             health_checks,
+            debug: env::var("HEALTH_CHECK_DEBUG").is_ok(),
         }
     }
 
@@ -85,25 +92,38 @@ impl HealthCheckRunner {
 
         let mut context = HealthCheckContext::new();
         for health_check in self.health_checks.iter_mut() {
+            let start = Instant::now();
             for event in events {
                 health_check.on_event(event, &mut context);
             }
+            let events_processed = Instant::now();
             health_check.verify(&mut context);
+            let verified = Instant::now();
+            if self.debug {
+                println!(
+                    "{} {}, on_event time: {}ms, verify time: {}ms, events: {}",
+                    unix_timestamp_now().as_millis(),
+                    health_check.name(),
+                    (events_processed - start).as_millis(),
+                    (verified - events_processed).as_millis(),
+                    events.len(),
+                );
+            }
         }
         for err in context.err_acc {
             node_health.insert(err.validator.clone(), false);
-            println!("{:?}", err);
+            println!("{} {:?}", unix_timestamp_now().as_millis(), err);
         }
 
         let mut failed = vec![];
         for (i, (node, healthy)) in node_health.into_iter().sorted().enumerate() {
             if healthy {
-                print!("{}* {}{}\t", Fg(Green), node, Fg(Reset));
+                print!("{}* {}{}   ", Fg(Green), node, Fg(Reset));
             } else {
-                print!("{}* {}{}\t", Fg(Red), node, Fg(Reset));
+                print!("{}* {}{}   ", Fg(Red), node, Fg(Reset));
                 failed.push(node);
             }
-            if (i + 1) % 5 == 0 {
+            if (i + 1) % 15 == 0 {
                 println!();
             }
         }

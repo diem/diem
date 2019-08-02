@@ -14,7 +14,7 @@ use std::{
 };
 use termion::{color, style};
 
-const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
+const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(1);
 
 pub fn main() {
     let matches = arg_matches();
@@ -44,10 +44,16 @@ impl ClusterTestRunner {
             .value_of(ARG_WORKPLACE)
             .expect("workplace should be set");
         let aws = Aws::new(workplace.into());
-        let logs = AwsLogTail::spawn_new(aws.clone()).expect("Failed to start aws log tail");
-        println!("Aws log thread started");
         let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
         println!("Discovered {} peers", cluster.instances().len());
+        let log_tail_started = Instant::now();
+        let logs =
+            AwsLogTail::spawn_new(aws.clone(), &cluster).expect("Failed to start aws log tail");
+        let log_tail_startup_time = Instant::now() - log_tail_started;
+        println!(
+            "Aws log thread started in {} ms",
+            log_tail_startup_time.as_millis()
+        );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
         Self {
             logs,

@@ -1,6 +1,8 @@
 use crate::{
     aws::Aws,
+    cluster::Cluster,
     health::{Commit, Event, ValidatorEvent},
+    util::unix_timestamp_now,
 };
 use failure::{self, prelude::*};
 use flate2::read::GzDecoder;
@@ -8,18 +10,21 @@ use regex::Regex;
 use rusoto_kinesis::{GetRecordsInput, GetShardIteratorInput, Kinesis, Record};
 use serde_json::{self, value as json};
 use std::{
+    collections::HashMap,
     env,
     fs::File,
     io::Write,
-    sync::mpsc,
-    thread::{self, JoinHandle},
-    time::{Duration, Instant, SystemTime},
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        mpsc, Arc,
+    },
+    thread,
+    time::{Duration, Instant},
 };
 
 pub struct AwsLogTail {
     pub event_receiver: mpsc::Receiver<ValidatorEvent>,
-    #[allow(dead_code)]
-    thread: JoinHandle<()>,
+    pending_messages: Arc<AtomicI64>,
 }
 
 struct AwsLogThread {
@@ -28,6 +33,9 @@ struct AwsLogThread {
     event_sender: mpsc::Sender<ValidatorEvent>,
     startup_sender: Option<mpsc::Sender<()>>,
     event_log_file: Option<File>,
+    last_seen_ts_by_validator: HashMap<String, Duration>,
+    expected_validators_count: usize,
+    pending_messages: Arc<AtomicI64>,
 
     re_commit: Regex,
     re_validator: Regex,
@@ -41,7 +49,7 @@ struct LogEntry<'a> {
 }
 
 impl AwsLogTail {
-    pub fn spawn_new(aws: Aws) -> failure::Result<Self> {
+    pub fn spawn_new(aws: Aws, cluster: &Cluster) -> failure::Result<Self> {
         let kinesis_iterator = Self::make_kinesis_iterator(&aws)?;
         let (event_sender, event_receiver) = mpsc::channel();
         // We block this method until first request to kinesis completed
@@ -50,12 +58,16 @@ impl AwsLogTail {
             Ok(f) => Some(File::create(f).expect("Can't create EVENT_LOG file")),
             Err(..) => None,
         };
+        let pending_messages = Arc::new(AtomicI64::new(0));
         let aws_log_thread = AwsLogThread {
             aws,
             kinesis_iterator,
             event_sender,
             startup_sender: Some(startup_sender),
             event_log_file,
+            last_seen_ts_by_validator: HashMap::new(),
+            expected_validators_count: cluster.instances().len(),
+            pending_messages: pending_messages.clone(),
 
             re_commit: Regex::new(
                 r"Committed.+\[id: ([a-z0-9]+), round: ([a-z0-9]+), parent_id: ([a-z0-9]+)]",
@@ -65,7 +77,7 @@ impl AwsLogTail {
             re_started: Regex::new(r"Chained BFT SMR started.$").unwrap(),
         };
         let builder = thread::Builder::new();
-        let thread = builder
+        builder
             .name("aws-log-tail".into())
             .spawn(move || aws_log_thread.run())
             .unwrap();
@@ -73,8 +85,8 @@ impl AwsLogTail {
             .recv()
             .expect("Aws log tail thread died after first request");
         Ok(AwsLogTail {
-            thread,
             event_receiver,
+            pending_messages: pending_messages.clone(),
         })
     }
 
@@ -86,12 +98,29 @@ impl AwsLogTail {
                 Err(..) => thread::sleep(Duration::from_millis(1)),
             }
         }
+        let events_count = events.len() as i64;
+        let prev = self
+            .pending_messages
+            .fetch_sub(events_count, Ordering::Relaxed);
+        let pending = prev - events_count;
+        let now = unix_timestamp_now();
+        if let Some(last) = events.last() {
+            println!(
+                "{} Last event delay: {}, pending {}",
+                now.as_millis(),
+                (now - last.received_timestamp).as_millis(),
+                pending
+            );
+        } else {
+            println!("{} No events", now.as_millis());
+        }
         events
     }
 
     pub fn recv_all(&self) -> Vec<ValidatorEvent> {
         let mut events = vec![];
         while let Ok(event) = self.event_receiver.try_recv() {
+            self.pending_messages.fetch_sub(1, Ordering::Relaxed);
             events.push(event);
         }
         events
@@ -108,12 +137,16 @@ impl AwsLogTail {
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
         let timestamp = unix_timestamp_now();
         let timestamp = timestamp - Duration::from_secs(Self::log_start_offset_sec());
+        let stream_name = match env::var("KINESIS_STREAM") {
+            Err(..) => format!("{}-RecipientStream", aws.workplace()),
+            Ok(s) => s,
+        };
         let response = aws
             .kc()
             .get_shard_iterator(GetShardIteratorInput {
                 shard_id: "0".into(),
                 shard_iterator_type: "AT_TIMESTAMP".into(),
-                stream_name: format!("{}-RecipientStream", aws.workplace()),
+                stream_name,
                 starting_sequence_number: None,
                 timestamp: Some(timestamp.as_secs() as f64),
             })
@@ -130,6 +163,11 @@ impl AwsLogTail {
 
 impl AwsLogThread {
     fn run(mut self) {
+        let startup_timeout_sec = match env::var("STARTUP_TIMEOUT") {
+            Err(..) => 5u64,
+            Ok(v) => v.parse().expect("Failed to parse STARTUP_TIMEOUT env"),
+        };
+        let startup_deadline = Instant::now() + Duration::from_secs(startup_timeout_sec);
         loop {
             let response = self
                 .aws
@@ -149,19 +187,32 @@ impl AwsLogThread {
                 .expect("no millis_behind_latest in kinesis response");
             self.kinesis_iterator = next_iterator;
             self.write_event_log(format!(
-                "Kinesis response, millis behind: {}",
-                millis_behind
+                "Kinesis response {} records, millis behind: {}",
+                records.len(),
+                millis_behind,
             ));
             for record in records {
                 self.handle_kinesis_record(record)
                     .expect("Failed to process aws record");
             }
-            if millis_behind == 0 {
-                if let Some(startup_sender) = self.startup_sender.take() {
-                    startup_sender.send(()).expect("Startup receiver dropped");
+            if self.startup_sender.is_some() && millis_behind == 0 {
+                if self.last_seen_ts_by_validator.len() >= self.expected_validators_count {
+                    println!("Received events from all validators");
+                    self.startup_sender
+                        .take()
+                        .unwrap()
+                        .send(())
+                        .expect("Startup receiver dropped");
+                } else if Instant::now() > startup_deadline {
+                    println!("Aws log startup deadline reached");
+                    self.startup_sender
+                        .take()
+                        .unwrap()
+                        .send(())
+                        .expect("Startup receiver dropped");
                 }
             }
-            thread::sleep(Duration::from_millis(500))
+            thread::sleep(Duration::from_millis(300))
         }
     }
 
@@ -179,13 +230,17 @@ impl AwsLogThread {
         } else {
             return Ok(());
         };
-        self.write_event_log(format!("Kinesis record for {}", validator));
         let events = json
             .get("logEvents")
             .expect("No logEvents in kinesis event");
         let events = events
             .as_array()
             .expect("logEvents in kinesis event is not array");
+        self.write_event_log(format!(
+            "Kinesis record for {}, {} events",
+            validator,
+            events.len()
+        ));
         let now = unix_timestamp_now();
         let mut behind_max = 0u128;
         let mut behind_sum = 0u128;
@@ -240,15 +295,30 @@ impl AwsLogThread {
     }
 
     fn handle_log_entry(&mut self, e: LogEntry) {
+        let received_timestamp = unix_timestamp_now();
         let event = self.parse_log_entry(&e);
         if let Some(event) = event {
             let ve = ValidatorEvent {
+                received_timestamp,
                 validator: e.validator,
                 timestamp: e.timestamp,
                 event,
             };
-            self.write_event_log(format!("{:?}", ve));
-            let _ignore = self.event_sender.send(ve);
+            // In rare cases Kinesis delivers messages out of order
+            // We are ignoring them so that invariant in CommitHistoryHealthCheck does not break
+            let skip = if let Some(last) = self.last_seen_ts_by_validator.get(&ve.validator) {
+                *last > ve.timestamp
+            } else {
+                false
+            };
+            let skip_msg = if skip { "; [OUT_OF_ORDER]" } else { "" };
+            self.write_event_log(format!("{:?}{}", ve, skip_msg));
+            if !skip {
+                self.last_seen_ts_by_validator
+                    .insert(ve.validator.clone(), ve.timestamp);
+                self.pending_messages.fetch_add(1, Ordering::Relaxed);
+                let _ignore = self.event_sender.send(ve);
+            }
         }
     }
 
@@ -299,10 +369,4 @@ impl AwsLogThread {
             None
         }
     }
-}
-
-fn unix_timestamp_now() -> Duration {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("now < UNIX_EPOCH")
 }
