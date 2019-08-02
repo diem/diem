@@ -46,7 +46,7 @@ variable "peer_ids" {
 
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
-  default     = "m5.large"
+  default     = "c5d.large"
 }
 
 variable "validator_ebs_size" {

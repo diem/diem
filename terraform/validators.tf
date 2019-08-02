@@ -15,40 +15,54 @@ data "aws_ami" "ecs" {
 }
 
 locals {
+  ebs_types = ["t2", "t3", "m5", "c5"]
+
   cpu_by_instance = {
-    "t2.large"    = 2048
-    "t2.medium"   = 2048
-    "t3.medium"   = 2048
-    "m5.large"    = 2048
-    "m5.xlarge"   = 4096
-    "m5.2xlarge"  = 8192
-    "m5.4xlarge"  = 16384
-    "m5.12xlarge" = 49152
-    "m5.24xlarge" = 98304
-    "c5.large"    = 2048
-    "c5.xlarge"   = 4096
-    "c5.2xlarge"  = 8192
-    "c5.4xlarge"  = 16384
-    "c5.9xlarge"  = 36864
-    "c5.18xlarge" = 73728
+    "t2.large"     = 2048
+    "t2.medium"    = 2048
+    "t3.medium"    = 2048
+    "m5.large"     = 2048
+    "m5.xlarge"    = 4096
+    "m5.2xlarge"   = 8192
+    "m5.4xlarge"   = 16384
+    "m5.12xlarge"  = 49152
+    "m5.24xlarge"  = 98304
+    "c5.large"     = 2048
+    "c5d.large"    = 2048
+    "c5.xlarge"    = 4096
+    "c5d.xlarge"   = 4096
+    "c5.2xlarge"   = 8192
+    "c5d.2xlarge"  = 8192
+    "c5.4xlarge"   = 16384
+    "c5d.4xlarge"  = 16384
+    "c5.9xlarge"   = 36864
+    "c5d.9xlarge"  = 36864
+    "c5.18xlarge"  = 73728
+    "c5d.18xlarge" = 73728
   }
 
   mem_by_instance = {
-    "t2.medium"   = 3943
-    "t2.large"    = 7975
-    "t3.medium"   = 3884
-    "m5.large"    = 7680
-    "m5.xlarge"   = 15576
-    "m5.2xlarge"  = 31368
-    "m5.4xlarge"  = 62950
-    "m5.12xlarge" = 189283
-    "m5.24xlarge" = 378652
-    "c5.large"    = 3704
-    "c5.xlarge"   = 7624
-    "c5.2xlarge"  = 15464
-    "c5.4xlarge"  = 31142
-    "c5.9xlarge"  = 70341
-    "c5.18xlarge" = 140768
+    "t2.medium"    = 3943
+    "t2.large"     = 7975
+    "t3.medium"    = 3884
+    "m5.large"     = 7680
+    "m5.xlarge"    = 15576
+    "m5.2xlarge"   = 31368
+    "m5.4xlarge"   = 62950
+    "m5.12xlarge"  = 189283
+    "m5.24xlarge"  = 378652
+    "c5.large"     = 3704
+    "c5d.large"    = 3704
+    "c5.xlarge"    = 7624
+    "c5d.xlarge"   = 7624
+    "c5.2xlarge"   = 15464
+    "c5d.2xlarge"  = 15464
+    "c5.4xlarge"   = 31142
+    "c5d.4xlarge"  = 31142
+    "c5.9xlarge"   = 70341
+    "c5d.9xlarge"  = 70341
+    "c5.18xlarge"  = 140768
+    "c5d.18xlarge" = 140768
   }
 }
 
@@ -124,10 +138,13 @@ resource "aws_instance" "validator" {
   iam_instance_profile        = aws_iam_instance_profile.ecsInstanceRole.name
   user_data                   = local.user_data
 
-  root_block_device {
-    volume_type = "io1"
-    volume_size = var.validator_ebs_size
-    iops        = var.validator_ebs_size * 50 # max 50iops/gb
+  dynamic "root_block_device" {
+    for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
+    content {
+      volume_type = "io1"
+      volume_size = var.validator_ebs_size
+      iops        = var.validator_ebs_size * 50 # max 50iops/gb
+    }
   }
 
   tags = {
