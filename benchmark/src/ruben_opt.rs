@@ -70,10 +70,10 @@ pub struct RubenOpt {
     /// Number of epochs to measure the TXN throughput, each time with newly created Benchmarker.
     #[structopt(short = "e", long = "num_epochs", default_value = "10")]
     pub num_epochs: u64,
-    /// Submit constant number of TXN requests per second; otherwise TXNs are flood to Libra.
+    /// Submit constant number of requests per second; otherwise requests are flood to Libra.
     #[structopt(short = "k", long = "submit_rate")]
     pub submit_rate: Option<u64>,
-    /// Choices of how to generate TXNs/load.
+    /// Choices of how to generate TXNs.
     #[structopt(
         short = "t",
         long = "txn_pattern",
