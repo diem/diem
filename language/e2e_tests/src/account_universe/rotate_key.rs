@@ -27,7 +27,7 @@ pub struct RotateKeyGen {
 
 impl AUTransactionGen for RotateKeyGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let sender = universe.pick_mut(&self.sender).1;
+        let sender = universe.pick(&self.sender).1;
 
         let new_key_hash = AccountAddress::from(self.new_key.1);
         let txn = rotate_key_txn(sender.account(), new_key_hash, sender.sequence_number);

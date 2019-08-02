@@ -30,13 +30,11 @@ proptest! {
 
         for pair in pairs {
             let (idx_1, idx_2, account_1, account_2) = {
-                let pick = pair.pick(&universe);
-                prop_assert_eq!(pick.account_1, &universe.accounts()[pick.idx_1]);
-                prop_assert_eq!(pick.account_2, &universe.accounts()[pick.idx_2]);
+                let pick = pair.pick(&mut universe);
                 (
                     pick.idx_1,
                     pick.idx_2,
-                    // Need to convert to raw pointers to avoid holding an immutable reference
+                    // Need to convert to raw pointers to avoid holding a mutable reference
                     // (pick_mut below borrows universe mutably, which would conflict.)
                     // This is safe as all we're doing is comparing pointer equality.
                     pick.account_1 as *const AccountCurrent,
@@ -44,11 +42,8 @@ proptest! {
                 )
             };
 
-            let pick_mut = pair.pick_mut(&mut universe);
-            prop_assert_eq!(pick_mut.idx_1, idx_1);
-            prop_assert_eq!(pick_mut.idx_2, idx_2);
-            prop_assert_eq!(pick_mut.account_1 as *const AccountCurrent, account_1);
-            prop_assert_eq!(pick_mut.account_2 as *const AccountCurrent, account_2);
+            prop_assert_eq!(account_1, &universe.accounts()[idx_1] as *const AccountCurrent);
+            prop_assert_eq!(account_2, &universe.accounts()[idx_2] as *const AccountCurrent);
         }
     }
 

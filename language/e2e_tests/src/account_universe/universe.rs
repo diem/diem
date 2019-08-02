@@ -128,7 +128,7 @@ impl AccountUniverse {
     }
 
     /// Picks an account using the provided `Index` as a source of randomness.
-    pub fn pick_mut(&mut self, index: &Index) -> (usize, &mut AccountCurrent) {
+    pub fn pick(&mut self, index: &Index) -> (usize, &mut AccountCurrent) {
         // TODO: allow alternate picking mechanisms.
         let idx = index.index(self.num_accounts());
         (idx, &mut self.accounts[idx])
@@ -136,34 +136,9 @@ impl AccountUniverse {
 }
 
 impl AccountPairGen {
-    /// Picks two accounts uniformly randomly from this universe and returns shared references to
-    /// them.
-    pub fn pick<'a>(&self, universe: &'a AccountUniverse) -> AccountPair<'a> {
-        let idxs = pick_slice_idxs(universe.num_accounts(), &self.pair);
-        assert_eq!(idxs.len(), 2, "universe should have at least two accounts");
-        let (low_idx, high_idx) = (idxs[0], idxs[1]);
-        assert_ne!(low_idx, high_idx, "accounts picked must be distinct");
-
-        if self.reverse {
-            AccountPair {
-                idx_1: high_idx,
-                idx_2: low_idx,
-                account_1: &universe.accounts[high_idx],
-                account_2: &universe.accounts[low_idx],
-            }
-        } else {
-            AccountPair {
-                idx_1: low_idx,
-                idx_2: high_idx,
-                account_1: &universe.accounts[low_idx],
-                account_2: &universe.accounts[high_idx],
-            }
-        }
-    }
-
     /// Picks two accounts uniformly randomly from this universe and returns mutable references to
     /// them.
-    pub fn pick_mut<'a>(&self, universe: &'a mut AccountUniverse) -> AccountPairMut<'a> {
+    pub fn pick<'a>(&self, universe: &'a mut AccountUniverse) -> AccountPair<'a> {
         let idxs = pick_slice_idxs(universe.num_accounts(), &self.pair);
         assert_eq!(idxs.len(), 2, "universe should have at least two accounts");
         let (low_idx, high_idx) = (idxs[0], idxs[1]);
@@ -174,14 +149,14 @@ impl AccountPairGen {
         let (low_account, high_account) = (&mut head[low_idx], &mut tail[high_idx - low_idx - 1]);
 
         if self.reverse {
-            AccountPairMut {
+            AccountPair {
                 idx_1: high_idx,
                 idx_2: low_idx,
                 account_1: high_account,
                 account_2: low_account,
             }
         } else {
-            AccountPairMut {
+            AccountPair {
                 idx_1: low_idx,
                 idx_2: high_idx,
                 account_1: low_account,
@@ -191,20 +166,8 @@ impl AccountPairGen {
     }
 }
 
-/// Shared references to a pair of distinct accounts picked from a universe.
-pub struct AccountPair<'a> {
-    /// The index of the first account picked.
-    pub idx_1: usize,
-    /// The index of the second account picked.
-    pub idx_2: usize,
-    /// A reference to the first account picked.
-    pub account_1: &'a AccountCurrent,
-    /// A reference to the second account picked.
-    pub account_2: &'a AccountCurrent,
-}
-
 /// Mutable references to a pair of distinct accounts picked from a universe.
-pub struct AccountPairMut<'a> {
+pub struct AccountPair<'a> {
     /// The index of the first account picked.
     pub idx_1: usize,
     /// The index of the second account picked.
