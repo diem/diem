@@ -31,8 +31,7 @@ pub struct CreateAccountGen {
 
 impl AUTransactionGen for CreateAccountGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let sender_idx = self.sender.index(universe.num_accounts());
-        let sender = &mut universe.accounts[sender_idx];
+        let sender = universe.pick_mut(&self.sender).1;
 
         let txn = create_account_txn(
             sender.account(),
