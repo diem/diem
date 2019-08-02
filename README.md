@@ -52,7 +52,6 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 * [Storage](https://developers.libra.org/docs/crates/storage)
 * [Virtual Machine](https://developers.libra.org/docs/crates/vm)
 
-
 ## Community
 
 * Join us on the [Libra Discourse](https://community.libra.org).
