@@ -3,8 +3,7 @@
 
 use admission_control_proto::proto::{
     admission_control::{
-        AdmissionControlStatusCode, SubmitTransactionRequest,
-        SubmitTransactionResponse as ProtoSubmitTransactionResponse,
+        AdmissionControlStatusCode, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
     },
     admission_control_grpc::AdmissionControlClient,
 };
@@ -24,7 +23,11 @@ use types::{
     get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
 };
 
-use crate::{submit_rate::ConstantRate, txn_generator::TXN_EXPIRATION, OP_COUNTER};
+use crate::{
+    load_generator::{Request, TXN_EXPIRATION},
+    submit_rate::ConstantRate,
+    OP_COUNTER,
+};
 
 /// Timeout duration for grpc call option.
 const GRPC_TIMEOUT_MS: u64 = 8_000;
@@ -84,28 +87,34 @@ fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
     }
 }
 
-/// Send TXN requests using specified rate to AC async, wait for and check the responses.
-/// Return only the responses of accepted TXN requests.
-/// Ignore but count both gRPC-failed submissions and AC-rejected TXNs.
-pub fn submit_and_wait_txn_requests(
+/// Send requests using specified rate to AC async,
+/// wait for and check the responses (currently only for write requests).
+/// Return only the responses of accepted TXNs.
+/// Ignore but count both gRPC-failed submissions and AC-rejected requests.
+pub fn submit_and_wait_requests(
     client: &AdmissionControlClient,
-    txn_requests: Vec<SubmitTransactionRequest>,
+    requests: Vec<Request>,
     submit_rate: u64,
 ) -> Vec<ProtoSubmitTransactionResponse> {
-    let const_rate_iter = ConstantRate::new(submit_rate, txn_requests.into_iter());
-    let futures: Vec<_> = const_rate_iter
-        .filter_map(|req| {
-            OP_COUNTER.inc("submit_txns"); // This counter doesn't care if submit succeed or not.
-            match client.submit_transaction_async_opt(&req, get_default_grpc_call_option()) {
-                Ok(future) => Some(future),
-                Err(e) => {
-                    OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
-                    error!("Failed to send gRPC request: {:?}", e);
-                    None
+    let mut futures = vec![];
+    for request in ConstantRate::new(submit_rate, requests.into_iter()) {
+        match request {
+            Request::WriteRequest(txn_req) => {
+                match client.submit_transaction_async_opt(&txn_req, get_default_grpc_call_option())
+                {
+                    Ok(future) => futures.push(future),
+                    Err(e) => {
+                        OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
+                        error!("Failed to send gRPC request: {:?}", e);
+                    }
                 }
+                OP_COUNTER.inc("submit_requests");
             }
-        })
-        .collect();
+            Request::ReadRequest(_read_req) => {
+                error!("ReadRequest is not supported yet.");
+            }
+        }
+    }
     // Wait all the futures unorderedly, then pick only accepted responses.
     stream::futures_unordered(futures)
         .wait()

@@ -2,31 +2,32 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// To run benchmarking experiment, RuBen creates two key required components:
-/// * An object that implements LoadGenerator trait, which generates accounts and offline TXNs
-///   that to be submitted during both setup stage and load-testing stage.
-/// * Benchmarker: responsible for playing given requests (submit and wait TXN committed).
+/// * An object that implements LoadGenerator trait, which generates accounts and offline
+///   requests that to be submitted during both setup stage and testing stage.
+/// * Benchmarker: responsible for playing given requests (submit requests and wait TXNs
+///   committed).
 ///
-/// then it drives TXN submission/waiting process in the following flow:
+/// then it drives requests submission/waiting process in the following flow:
 ///
 ///     // Generate accounts
 ///     faucet_account = bm.load_faucet_account();
-///     accounts = txn_generator.gen_accounts(num_accounts);
+///     accounts = generator.gen_accounts(num_accounts);
 ///     bm.register_accounts(accounts);
 ///
 ///     // Generate and run setup requests
-///     mint_txns = txn_generator.gen_setup_txn_requests(faucet_account, &mut accounts);
-///     bm.submit_and_wait_txn_committed(faucet_account, setup_requests);
+///     setup_requests = generator.gen_setup_requests(faucet_account, &mut accounts);
+///     bm.submit_requests_and_wait_txns_committed(faucet_account, setup_requests);
 ///
-///     // Generate and run load requests
-///     load_txns = txn_generator.gen_signed_txn_load(accounts);
-///     bm.submit_and_wait_txn_committed(accounts, load_txns);
+///     // Generate and run requests
+///     requests = generator.gen_requests(accounts);
+///     bm.submit_requests_and_wait_txns_committed(accounts, requests);
 ///
 /// By conforming to the LoadGenerator APIs,
 /// this flow is basically the same for different LoadGenerators/experiments.
 use benchmark::{
     bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
+    load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
     ruben_opt::{RubenOpt, TransactionPattern},
-    txn_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
 };
 use logger::{self, prelude::*};
 use std::ops::DerefMut;
@@ -57,8 +58,8 @@ fn main() {
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
+        load_generator::RingTransferTxnGenerator,
         ruben_opt::{RubenOpt, TransactionPattern},
-        txn_generator::RingTransferTxnGenerator,
         OP_COUNTER,
     };
     use libra_swarm::swarm::LibraSwarm;
@@ -67,8 +68,7 @@ mod tests {
     rusty_fork_test! {
         #[test]
         fn test_benchmarker_counters() {
-            let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-                generate_keypair::load_faucet_key_or_create_default(None);
+            let (faucet_account_keypair, faucet_key_file_path, _temp_dir) = generate_keypair::load_faucet_key_or_create_default(None);
             let swarm = LibraSwarm::launch_swarm(
                 4,      /* num_nodes */
                 true,   /* disable_logging */

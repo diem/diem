@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    load_generator::{gen_repeated_requests, LoadGenerator},
     ruben_opt::RubenOpt,
-    txn_generator::{convert_load_to_txn_requests, gen_repeated_txn_load, LoadGenerator},
     Benchmarker,
 };
 use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
@@ -64,32 +64,31 @@ pub fn try_start_metrics_server(args: &RubenOpt) {
     }
 }
 
-/// Play given TXN pattern with Benchmarker for several epochs and measure burst throughput,
+/// Play given TXNs with Benchmarker for several epochs and measure burst throughput,
 /// e.g., the average committed txns per second. Since time is counted from submission
 /// until all TXNs are committed, this measurement is in a sense the user-side throughput.
-/// Each epoch plays the given TXN request pattern sequence repeatedly for several rounds.
+/// Each epoch plays the given TXN pattern sequence repeatedly for several rounds.
 pub fn measure_throughput<T: LoadGenerator + ?Sized>(
     bm: &mut Benchmarker,
-    txn_generator: &mut T,
+    generator: &mut T,
     faucet_account: &mut AccountData,
     num_accounts: u64,
     num_rounds: u64,
     num_epochs: u64,
 ) -> std::vec::Vec<(f64, f64)> {
     // Generate testing accounts.
-    let mut accounts: Vec<AccountData> = txn_generator.gen_accounts(num_accounts);
+    let mut accounts: Vec<AccountData> = generator.gen_accounts(num_accounts);
     bm.register_accounts(&accounts);
 
-    // Submit setup/minting TXN requests.
-    let setup_requests = txn_generator.gen_setup_txn_requests(faucet_account, &mut accounts);
-    let mint_txns = convert_load_to_txn_requests(setup_requests);
+    // Submit minting TXNs.
+    let mint_txns = generator.gen_setup_requests(faucet_account, &mut accounts);
     bm.mint_accounts(&mint_txns, faucet_account);
 
-    // Submit TXN load and measure throughput.
+    // Submit testing TXNs and measure throughput.
     let mut txn_throughput_seq = vec![];
     for _ in 0..num_epochs {
-        let repeated_tx_reqs = gen_repeated_txn_load(txn_generator, &mut accounts, num_rounds);
-        let txn_throughput = bm.measure_txn_throughput(&repeated_tx_reqs, &mut accounts);
+        let repeated_txn_reqs = gen_repeated_requests(generator, &mut accounts, num_rounds);
+        let txn_throughput = bm.measure_txn_throughput(&repeated_txn_reqs, &mut accounts);
         txn_throughput_seq.push(txn_throughput);
     }
     info!(
