@@ -1,0 +1,10 @@
+//! no-stdlib
+
+import 0x0.LibraCoin;
+
+main() {
+}
+
+// check: can\'t find module
+// check: LibraCoin
+// check: in dependency list

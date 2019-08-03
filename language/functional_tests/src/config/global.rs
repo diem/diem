@@ -30,6 +30,7 @@ pub struct AccountDefinition {
 pub enum Entry {
     /// Defines an account that can be used in tests.
     AccountDefinition(AccountDefinition),
+    NoStdlib,
 }
 
 impl FromStr for Entry {
@@ -43,6 +44,9 @@ impl FromStr for Entry {
             );
         }
         let s2 = s1[3..].trim_start();
+        if s2 == "no-stdlib" {
+            return Ok(Entry::NoStdlib);
+        }
         if s2.starts_with("account:") {
             let v: Vec<_> = s2[8..]
                 .split(|c: char| c == ',' || c.is_whitespace())
@@ -77,11 +81,13 @@ impl FromStr for Entry {
 pub struct Config {
     /// A map from account names to account data
     pub accounts: BTreeMap<String, AccountData>,
+    pub no_stdlib: bool,
 }
 
 impl Config {
     pub fn build(entries: &[Entry]) -> Result<Self> {
         let mut accounts = BTreeMap::new();
+        let mut no_stdlib = false;
         for entry in entries {
             match entry {
                 Entry::AccountDefinition(def) => {
@@ -104,12 +110,18 @@ impl Config {
                         }
                     }
                 }
+                Entry::NoStdlib => {
+                    no_stdlib = true;
+                }
             }
         }
 
         if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
             entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
         }
-        Ok(Config { accounts })
+        Ok(Config {
+            accounts,
+            no_stdlib,
+        })
     }
 }

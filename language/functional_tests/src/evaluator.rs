@@ -10,6 +10,7 @@ use config::config::VMPublishingOption;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use language_e2e_tests::{
     account::{AccountData, AccountResource},
+    data_store::GENESIS_WRITE_SET,
     executor::FakeExecutor,
 };
 use std::{str::FromStr, time::Duration};
@@ -18,6 +19,7 @@ use transaction_builder::transaction::{make_transaction_program, serialize_progr
 use types::{
     transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
     vm_error::{ExecutionStatus, VMStatus},
+    write_set::WriteSetMut,
 };
 use vm::{
     access::ModuleAccess,
@@ -197,14 +199,24 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
     };
 
     // set up a fake executor with the genesis block and create the accounts
-    let mut exec = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut exec = if config.no_stdlib {
+        let empty_genesis_write_set = WriteSetMut::new(vec![]).freeze()?;
+        FakeExecutor::from_genesis(&empty_genesis_write_set, Some(VMPublishingOption::Open))
+    } else {
+        FakeExecutor::from_genesis(&GENESIS_WRITE_SET, Some(VMPublishingOption::Open))
+    };
+
     for data in config.accounts.values() {
         exec.add_account_data(&data);
     }
 
     // set up standard library
     // needed to compile transaction programs
-    let mut deps = stdlib_modules().to_vec();
+    let mut deps = if config.no_stdlib {
+        vec![]
+    } else {
+        stdlib_modules().to_vec()
+    };
 
     for transaction in transactions {
         // get the account data of the sender
