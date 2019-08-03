@@ -1,0 +1,64 @@
+module TestStruct {
+
+    resource B {
+        addr: address,
+        val: u64,
+    }
+
+    resource A {
+        val: u64,
+        b: R#Self.B,
+    }
+
+    resource C {
+        val: u64,
+        b: R#Self.A,
+    }
+
+		resource T {
+        x: u64,
+    }
+
+	public identity(a: R#Self.A, c: R#Self.C): R#Self.A*R#Self.C {
+	     return move(a), move(c);
+	}
+
+	public module_builtins(a: address):  &mut R#Self.T*bool {
+		let t: R#Self.T;
+		let t_ref1: &mut R#Self.T;
+		let t_ref2: &mut R#Self.T;
+		let b: bool;
+
+		b = exists<T>(copy(a));
+		t_ref1 = borrow_global<T>(copy(a));
+		release(move(t_ref1));
+		t_ref2 = borrow_global<T>(copy(a));
+		t = move_from<T>(copy(a));
+		move_to_sender<T>(move(t));
+		return move(t_ref2), move(b);
+    }
+
+	public nested_struct(a: address): R#Self.A
+	{
+		let var_a: R#Self.A;
+		let var_b: R#Self.B;
+
+		if (false) {
+			var_b = B { addr: copy(a), val: 1 };
+		} else {
+			var_b = B { addr: copy(a), val: 42 };
+		}
+
+		var_a = A { val: 2, b: move(var_b) };
+		return move(var_a);
+	}
+
+    public try_unpack(a: address): u64 {
+        let v: u64;
+        let b: R#Self.B;
+        let aa: address;
+        b = B { addr: copy(a), val: 42 };
+        B { aa, v } = move(b);
+        return move(v);
+    }
+}

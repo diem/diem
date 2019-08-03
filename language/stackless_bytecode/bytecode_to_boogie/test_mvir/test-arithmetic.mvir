@@ -1,0 +1,31 @@
+module TestArithmetic {
+	public add_two_number(x: u64, y: u64): u64*u64 {
+		let res: u64;
+		let z: u64;
+		res = move(x) + move(y);
+		z = 3;
+		return move(z),move(res);
+	}
+
+	public multiple_ops(x: u64, y: u64, z: u64): u64 {
+		let res: u64;
+		res = (move(x) + move(y)) * move(z);
+		return move(res);
+	}
+
+	public bool_ops(a: u64, b: u64) {
+      let c: bool;
+      let d: bool;
+      c = (copy(a) > copy(b)) && (copy(a) >= copy(b));
+      d = (copy(a) < copy(b)) || (copy(a) <= copy(b));
+      assert(!(move(c) != move(d)), 42);
+      return;
+  }
+
+
+	public arithmetic_ops(a: u64, b: u64): u64 * u64 {
+      let c: u64;
+      c = (copy(a) + move(b) - 1) * 2 / 3 % 4;
+      return move(c), move(a);
+  }
+}
