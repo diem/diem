@@ -1,0 +1,23 @@
+module TestFuncCall {
+
+
+	public f(x: u64) : u64 {
+		return move(x)+1;
+	}
+
+	public g(x: u64) : u64 {
+		return move(x)+2;
+	}
+
+	public h(b: bool) : u64 {
+		let x: u64;
+		let y: u64;
+		x = 3;
+		if (move(b)) {
+			y = Self.f(move(x));
+		} else {
+		    y = Self.g(move(x));
+		}
+		return move(y);
+	}
+}
