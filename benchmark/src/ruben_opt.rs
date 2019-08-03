@@ -31,28 +31,19 @@ pub struct Opt {
         short = "a",
         long = "validator_addresses",
         conflicts_with = "swarm_config_dir",
-        requires = "debug_address",
         required_unless = "swarm_config_dir"
     )]
     pub validator_addresses: Vec<String>,
     /// TODO: Discard this option. Debug interface address in the form of ip_address:port.
-    /// It is required unless (and hence conflict with) swarm_config_dir is present.
-    #[structopt(
-        short = "d",
-        long = "debug_address",
-        conflicts_with = "swarm_config_dir",
-        requires = "validator_addresses",
-        required_unless = "swarm_config_dir"
-    )]
+    #[structopt(short = "d", long = "debug_address")]
     pub debug_address: Option<String>,
     /// libra_swarm's config file directory, which holds libra_node's config .toml file(s).
-    /// It is required unless (and hence conflict with)
-    /// validator_addresses and debug_address are both present.
+    /// It is requried unless (and hence conflicts with) validator_addresses .
     #[structopt(
         short = "s",
         long = "swarm_config_dir",
-        raw(conflicts_with_all = r#"&["validator_addresses", "debug_address"]"#),
-        raw(required_unless_all = r#"&["validator_addresses", "debug_address"]"#)
+        conflicts_with = "validator_addresses",
+        required_unless = "validator_addresses"
     )]
     pub swarm_config_dir: Option<String>,
     /// Metrics server process's address.
@@ -161,7 +152,7 @@ impl Opt {
         args
     }
 
-    /// Override validator_addresses and debug_address if swarm_config_dir is provided.
+    /// Override validator_addresses if swarm_config_dir is provided.
     pub fn try_parse_validator_addresses(&mut self) {
         if let Some(swarm_config_dir) = &self.swarm_config_dir {
             let validator_addresses =

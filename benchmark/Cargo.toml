@@ -21,7 +21,6 @@ admission_control_proto = { path = "../admission_control/admission_control_proto
 client = { path = "../client" }
 config = { path = "../config" }
 crypto = { path = "../crypto/legacy_crypto" }
-debug_interface = { path = "../common/debug_interface" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
