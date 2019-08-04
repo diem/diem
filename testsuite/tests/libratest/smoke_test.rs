@@ -1,11 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
-use cli::client_proxy::ClientProxy;
+use cli::{
+    AccountAddress,
+    client_proxy::ClientProxy,
+    RawTransactionBytes,
+    IntoProtoBytes,
+    CryptoHash
+};
 use libra_swarm::swarm::LibraSwarm;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use rand::{rngs::StdRng, SeedableRng};
+use crypto::signing::{PublicKey, PrivateKey, Signature, sign_message, generate_keypair_for_testing};
+use hex;
 
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
@@ -249,5 +258,66 @@ fn test_basic_state_synchronization() {
     assert_eq!(
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_external_transaction_signer() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+
+    // generate key pair
+    let mut seed: [u8; 32] = [0u8; 32];
+    seed[..4].copy_from_slice(&[1, 2, 3, 4]);
+    let mut rng: StdRng = SeedableRng::from_seed(seed);
+    let (private_key, public_key) = generate_keypair_for_testing(&mut rng);
+
+    // create address from public key
+    let sender_address = AccountAddress::from(public_key).to_string();
+    let receiver_address = "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a";
+    let amount = "1";
+
+    // mint to the address
+    client_proxy
+        .mint_coins(&["mintb", &sender_address, "10"], true)
+        .unwrap();
+
+    let sequence_number = client_proxy
+        .get_sequence_number(&["sequence", &sender_address])
+        .unwrap();
+
+    // prepare transfer transaction
+    let unsigned_txn = client_proxy
+        .prepare_transfer_coins(&[
+            "prepare_transfer",
+            &sender_address,
+            &format!("{}", sequence_number),
+            &receiver_address,
+            &amount
+        ])
+        .unwrap();
+
+    // extract the hash to sign from the raw transaction
+    let raw_bytes = unsigned_txn.clone().into_proto_bytes().unwrap();
+    let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
+
+    // sign the transaction with the private key
+    let signature = sign_message(txn_hashvalue, &private_key).unwrap();
+
+    // submit the transaction
+    let address_and_sequence = client_proxy
+        .submit_signed_transaction(&[
+            &hex::encode(raw_bytes),
+            &hex::encode(public_key.to_slice()),
+            &hex::encode(signature.to_compact().to_vec().as_slice())
+        ])
+        .unwrap();
+
+    assert_eq!(
+        address_and_sequence.account_address.to_string(),
+        sender_address
+    );
+    assert_eq!(
+        address_and_sequence.sequence_number,
+        0
     );
 }
