@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// ------------------------------------------------------------------------------------ ///
-///  Definition of LoadGenerator trait and several example structs that implemented it.  ///
+///  Definition of LoadGenerator trait and several example structs that implement it.  ///
 /// ------------------------------------------------------------------------------------ ///
 use crate::OP_COUNTER;
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
@@ -18,7 +18,7 @@ use types::{
     transaction_helpers::{create_signed_txn, TransactionSigner},
 };
 
-/// Placehodler values used to generate offline TXNs.
+/// Placeholder values used to generate offline TXNs.
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
 const TXN_EXPIRATION: i64 = 100;
@@ -43,7 +43,7 @@ pub trait LoadGenerator {
     /// 1. Generate arbitrary number of accounts.
     fn gen_accounts(&mut self, num_accounts: u64) -> Vec<AccountData>;
     /// 2. Generate TXNs or read requests needed for benchmark environment setup with
-    ///    a sebset of accounts generated from step 1. For example, minting accounts.
+    ///    a subset of accounts generated from step 1. For example, minting accounts.
     ///    It is OK to return empty vector.
     fn gen_setup_txn_requests(
         &self,
