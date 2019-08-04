@@ -8,7 +8,12 @@
 //! It supposes all public APIs.
 use crypto::signing::KeyPair;
 use serde::{Deserialize, Serialize};
-use types::account_address::AccountAddress;
+pub use types::account_address::AccountAddress;
+pub use types::transaction::{RawTransaction, RawTransactionBytes, TransactionArgument, Program};
+pub use proto_conv::{IntoProtoBytes, FromProtoBytes};
+pub use crypto::hash::CryptoHash;
+pub use crypto::signing::{Signature, PublicKey};
+pub use vm_genesis;
 
 pub(crate) mod account_commands;
 /// Main instance of client holding corresponding information, e.g. account address.

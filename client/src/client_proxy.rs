@@ -4,7 +4,7 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::trusted_peers::TrustedPeersConfig;
-use crypto::signing::KeyPair;
+use crypto::signing::{KeyPair, Signature, PublicKey};
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
@@ -15,7 +15,7 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
-use proto_conv::IntoProto;
+use proto_conv::{FromProtoBytes, IntoProto};
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
@@ -40,8 +40,10 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{parse_as_transaction_argument, Program, SignedTransaction, Version},
-    transaction_helpers::{create_signed_txn, TransactionSigner},
+    transaction::{
+        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version
+    },
+    transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
 
@@ -79,6 +81,14 @@ pub enum AccountEntry {
 pub struct IndexAndSequence {
     /// Index/key of the account in TestClient::accounts vector.
     pub account_index: AccountEntry,
+    /// Sequence number of the account.
+    pub sequence_number: u64,
+}
+
+/// Used to return the sequence and sender address submitted for a transfer
+pub struct AddressAndSequence {
+    /// Address of the account.
+    pub account_address: AccountAddress,
     /// Sequence number of the account.
     pub sequence_number: u64,
 }
@@ -367,6 +377,28 @@ impl ClientProxy {
         })
     }
 
+    /// Prepare a transfer transaction: return the unsigned raw transaction
+    pub fn prepare_transfer_coins_int(
+        &mut self,
+        sender_address: AccountAddress,
+        sender_sequence_number: u64,
+        receiver_address: &AccountAddress,
+        num_coins: u64,
+        gas_unit_price: Option<u64>,
+        max_gas_amount: Option<u64>,
+    ) -> Result<RawTransaction> {
+        let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+        let unsigned_tx = self.create_unsigned_transaction(
+            program,
+            sender_address,
+            sender_sequence_number,
+            max_gas_amount, /* max_gas_amount */
+            gas_unit_price, /* gas_unit_price */
+        );
+
+        Ok(unsigned_tx)
+    }
+
     /// Transfers coins from sender to receiver.
     pub fn transfer_coins(
         &mut self,
@@ -419,6 +451,59 @@ impl ClientProxy {
             gas_unit_price,
             max_gas_amount,
             is_blocking,
+        )
+    }
+
+    /// Transfers coins from sender to receiver.
+    pub fn prepare_transfer_coins(
+        &mut self,
+        space_delim_strings: &[&str],
+    ) -> Result<RawTransaction> {
+        ensure!(
+            space_delim_strings.len() >= 5 && space_delim_strings.len() <= 7,
+            "Invalid number of arguments for transfer"
+        );
+
+        let sender_address =
+            self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let sender_sequence_number = space_delim_strings[2].parse::<u64>()?;
+        let receiver_address = self.get_account_address_from_parameter(space_delim_strings[3])?;
+
+        let num_coins = Self::convert_to_micro_libras(space_delim_strings[4])?;
+
+        let gas_unit_price = if space_delim_strings.len() > 5 {
+            Some(space_delim_strings[5].parse::<u64>().map_err(|error| {
+                format_parse_data_error(
+                    "gas_unit_price",
+                    InputType::UnsignedInt,
+                    space_delim_strings[5],
+                    error,
+                )
+            })?)
+        } else {
+            None
+        };
+
+        let max_gas_amount = if space_delim_strings.len() > 6 {
+            Some(space_delim_strings[6].parse::<u64>().map_err(|error| {
+                format_parse_data_error(
+                    "max_gas_amount",
+                    InputType::UnsignedInt,
+                    space_delim_strings[6],
+                    error,
+                )
+            })?)
+        } else {
+            None
+        };
+
+        self.prepare_transfer_coins_int(
+            sender_address,
+            sender_sequence_number,
+            &receiver_address,
+            num_coins,
+            gas_unit_price,
+            max_gas_amount,
         )
     }
 
@@ -477,6 +562,37 @@ impl ClientProxy {
             return Err(format_err!("compilation failed"));
         }
         Ok(output_path)
+    }
+
+    /// Submit a transaction to the network given raw bytes of the transaction, sender public key and signature
+    pub fn submit_signed_transaction(
+        &mut self,
+        space_delim_strings: &[&str],
+    ) -> Result<AddressAndSequence> {
+        let raw_txn_bytes = hex::decode(space_delim_strings[0])?;
+        let raw_txn = RawTransaction::from_proto_bytes(raw_txn_bytes.as_slice())?;
+
+        let pk_bytes = hex::decode(space_delim_strings[1])?;
+        let public_key = PublicKey::from_slice(pk_bytes.as_slice())?;
+
+        let signature_bytes = hex::decode(space_delim_strings[2])?;
+        let signature = Signature::from_compact(signature_bytes.as_slice())?;
+
+        let signed_txn = SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature);
+
+        let mut req = SubmitTransactionRequest::new();
+        let sender_address = signed_txn.sender();
+        let sender_sequence = signed_txn.sequence_number();
+
+        req.set_signed_txn(signed_txn.into_proto());
+        self.client.submit_transaction(None, &req)?;
+        // blocking by default (until transaction completion)
+        self.wait_for_transaction(sender_address, sender_sequence + 1);
+
+        Ok(AddressAndSequence {
+            account_address: AccountAddress::from(public_key),
+            sequence_number: sender_sequence
+        })
     }
 
     fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
@@ -949,6 +1065,25 @@ impl ClientProxy {
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         Ok(req)
+    }
+
+    /// Craft an unsigned transaction
+    pub fn create_unsigned_transaction(
+        &self,
+        program: Program,
+        sender_address: AccountAddress,
+        sender_sequence_number: u64,
+        max_gas_amount: Option<u64>,
+        gas_unit_price: Option<u64>,
+    ) -> RawTransaction {
+        create_unsigned_txn(
+            program,
+            sender_address,
+            sender_sequence_number,
+            max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+            gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
+            TX_EXPIRATION,
+        )
     }
 
     fn mut_account_from_parameter(&mut self, para: &str) -> Result<&mut AccountData> {
