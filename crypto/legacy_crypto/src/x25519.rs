@@ -48,7 +48,6 @@
 use crate::{hkdf::Hkdf, utils::*};
 use core::fmt;
 use crypto_derive::{SilentDebug, SilentDisplay};
-use derive_deref::Deref;
 use failure::prelude::*;
 use proptest::{
     arbitrary::any,
@@ -61,17 +60,20 @@ use rand::{
 };
 use serde::{de, export, ser};
 use sha2::Sha256;
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    ops::Deref,
+};
 use x25519_dalek;
 
 /// An x25519 private key.
-#[derive(Deref, SilentDisplay, SilentDebug)]
+#[derive(SilentDisplay, SilentDebug)]
 pub struct X25519PrivateKey {
     value: x25519_dalek::StaticSecret,
 }
 
 /// An x25519 public key.
-#[derive(Copy, Clone, Deref)]
+#[derive(Copy, Clone)]
 pub struct X25519PublicKey {
     value: x25519_dalek::PublicKey,
 }
@@ -86,6 +88,14 @@ impl Clone for X25519PrivateKey {
         X25519PrivateKey {
             value: x25519_dalek::StaticSecret::from(bytes),
         }
+    }
+}
+
+impl Deref for X25519PrivateKey {
+    type Target = x25519_dalek::StaticSecret;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
     }
 }
 
@@ -140,6 +150,14 @@ impl Display for X25519PublicKey {
 impl Debug for X25519PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         X25519PublicKey::fmt(self, f)
+    }
+}
+
+impl Deref for X25519PublicKey {
+    type Target = x25519_dalek::PublicKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
     }
 }
 

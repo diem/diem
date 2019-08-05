@@ -57,14 +57,12 @@
 //! ```
 
 use crate::traits::*;
-use core::ops::Deref;
 use crypto::hkdf::Hkdf;
 use crypto_derive::{SilentDebug, SilentDisplay};
-use derive_deref::Deref;
 use rand::{rngs::EntropyRng, RngCore};
 use serde::{de, export, ser};
 use sha2::Sha256;
-use std::{convert::TryFrom, fmt};
+use std::{convert::TryFrom, fmt, ops::Deref};
 use x25519_dalek;
 
 /// TODO: move traits to the right file (possibly traits.rs)
@@ -93,7 +91,7 @@ pub struct X25519PublicKey(x25519_dalek::PublicKey);
 
 /// An x25519 public key to match the X25519Static key type, which
 /// dereferences to an X2519PublicKey
-#[derive(Clone, Debug, Deref, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct X25519StaticPublicKey(X25519PublicKey);
 
 /// An x25519 shared key
@@ -242,6 +240,14 @@ impl<'a> From<&'a X25519ExchangeKey> for X25519PublicKey {
 impl<'a> From<&'a X25519StaticExchangeKey> for X25519StaticPublicKey {
     fn from(ephemeral: &'a X25519StaticExchangeKey) -> X25519StaticPublicKey {
         X25519StaticPublicKey(X25519PublicKey(x25519_dalek::PublicKey::from(&ephemeral.0)))
+    }
+}
+
+impl Deref for X25519StaticPublicKey {
+    type Target = X25519PublicKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
