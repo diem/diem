@@ -29,7 +29,7 @@ use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
     AdmissionControlService::new(
-        Arc::new(LocalMockMempool::new()),
+        Some(Arc::new(LocalMockMempool::new())),
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         false,

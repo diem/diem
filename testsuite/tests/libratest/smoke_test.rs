@@ -7,9 +7,10 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-fn setup_swarm_and_client_proxy(
+fn setup_env(
     num_nodes: usize,
     client_port_index: usize,
+    template_path: Option<String>,
 ) -> (LibraSwarm, ClientProxy) {
     ::logger::init_for_e2e_testing();
 
@@ -22,6 +23,7 @@ fn setup_swarm_and_client_proxy(
         faucet_account_keypair,
         true, /* tee_logs */
         None, /* config_dir */
+        template_path,
     );
     let port = *swarm
         .get_validators_public_ports()
@@ -47,6 +49,13 @@ fn setup_swarm_and_client_proxy(
     )
     .unwrap();
     (swarm, client_proxy)
+}
+
+fn setup_swarm_and_client_proxy(
+    num_nodes: usize,
+    client_port_index: usize,
+) -> (LibraSwarm, ClientProxy) {
+    setup_env(num_nodes, client_port_index, None)
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
@@ -250,4 +259,28 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
     );
+}
+
+#[test]
+fn test_full_node() {
+    let (mut _swarm, mut client_proxy) = setup_env(
+        1,
+        0,
+        Some("config/data/configs/full_node.config.toml".to_string()),
+    );
+    assert_eq!(
+        Decimal::from_f64(1000.0),
+        Decimal::from_str(
+            &client_proxy
+                .get_balance(&[
+                    "b",
+                    "0000000000000000000000000000000000000000000000000000000000000000"
+                ])
+                .unwrap()
+        )
+        .ok()
+    );
+    client_proxy.create_next_account(false).unwrap();
+    let response = client_proxy.mint_coins(&["mint", "0", "1"], false);
+    assert!(response.is_err());
 }

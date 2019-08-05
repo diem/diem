@@ -44,7 +44,7 @@ mod admission_control_service_test;
 #[derive(Clone)]
 pub struct AdmissionControlService<M, V> {
     /// gRPC client connecting Mempool.
-    mempool_client: Arc<M>,
+    mempool_client: Option<Arc<M>>,
     /// gRPC client to send read requests to Storage.
     storage_read_client: Arc<dyn StorageRead>,
     /// VM validator instance to validate transactions sent from wallets.
@@ -61,7 +61,7 @@ where
 {
     /// Constructs a new AdmissionControlService instance.
     pub fn new(
-        mempool_client: Arc<M>,
+        mempool_client: Option<Arc<M>>,
         storage_read_client: Arc<dyn StorageRead>,
         vm_validator: Arc<V>,
         need_to_check_mempool_before_validation: bool,
@@ -150,7 +150,10 @@ where
     fn can_send_txn_to_mempool(&self) -> Result<bool> {
         if self.need_to_check_mempool_before_validation {
             let req = HealthCheckRequest::new();
-            let is_mempool_healthy = self.mempool_client.health_check(&req)?.get_is_healthy();
+            let is_mempool_healthy = match &self.mempool_client {
+                Some(client) => client.health_check(&req)?.get_is_healthy(),
+                None => false,
+            };
             return Ok(is_mempool_healthy);
         }
         Ok(true)
@@ -161,25 +164,30 @@ where
         &self,
         add_transaction_request: AddTransactionWithValidationRequest,
     ) -> Result<SubmitTransactionResponse> {
-        let mut mempool_result = self
-            .mempool_client
-            .add_transaction_with_validation(&add_transaction_request)?;
+        match &self.mempool_client {
+            Some(mempool_client) => {
+                let mut mempool_result =
+                    mempool_client.add_transaction_with_validation(&add_transaction_request)?;
 
-        debug!("[GRPC] Done with transaction submission request");
-        let mut response = SubmitTransactionResponse::new();
-        if mempool_result.get_status().get_code() == MempoolAddTransactionStatusCode::Valid {
-            OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
-            response.set_ac_status(AdmissionControlStatus::Accepted.into_proto());
-        } else {
-            debug!(
-                "txn failed in mempool, status: {:?}, txn: {:?}",
-                mempool_result,
-                add_transaction_request.get_signed_txn()
-            );
-            OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
-            response.set_mempool_status(mempool_result.take_status());
+                debug!("[GRPC] Done with transaction submission request");
+                let mut response = SubmitTransactionResponse::new();
+                if mempool_result.get_status().get_code() == MempoolAddTransactionStatusCode::Valid
+                {
+                    OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
+                    response.set_ac_status(AdmissionControlStatus::Accepted.into_proto());
+                } else {
+                    debug!(
+                        "txn failed in mempool, status: {:?}, txn: {:?}",
+                        mempool_result,
+                        add_transaction_request.get_signed_txn()
+                    );
+                    OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
+                    response.set_mempool_status(mempool_result.take_status());
+                }
+                Ok(response)
+            }
+            None => Err(format_err!("Mempool is not initialized")),
         }
-        Ok(response)
     }
 
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.
@@ -216,7 +224,10 @@ where
     ) {
         debug!("[GRPC] AdmissionControl::submit_transaction");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.submit_transaction_inner(req);
+        let resp = match self.mempool_client {
+            None => Err(format_err!("Node doesn't accept write requests")),
+            Some(_) => self.submit_transaction_inner(req),
+        };
         provide_grpc_response(resp, ctx, sink);
     }
 

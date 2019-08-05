@@ -255,6 +255,7 @@ impl LibraSwarm {
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
         config_dir: Option<String>,
+        template_path: Option<String>,
     ) -> Self {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
@@ -265,6 +266,7 @@ impl LibraSwarm {
                 faucet_account_keypair.clone(),
                 tee_logs,
                 &config_dir,
+                &template_path,
             ) {
                 Ok(swarm) => {
                     return swarm;
@@ -281,6 +283,7 @@ impl LibraSwarm {
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
         config_dir: &Option<String>,
+        template_path: &Option<String>,
     ) -> std::result::Result<Self, SwarmLaunchFailure> {
         let dir = match config_dir {
             Some(dir_str) => {
@@ -296,7 +299,11 @@ impl LibraSwarm {
         let logs_dir_path = &dir.as_ref().join("logs");
         println!("Base directory containing logs and configs: {:?}", &dir);
         std::fs::create_dir(&logs_dir_path).unwrap();
-        let base = utils::workspace_root().join("config/data/configs/node.config.toml");
+        let base = utils::workspace_root().join(
+            template_path
+                .as_ref()
+                .unwrap_or(&"config/data/configs/node.config.toml".to_string()),
+        );
         let mut config_builder = SwarmConfigBuilder::new();
         config_builder
             .with_ipv4()
