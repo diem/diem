@@ -13,7 +13,7 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use rand::{rngs::StdRng, SeedableRng};
-use crypto::signing::{PublicKey, PrivateKey, Signature, sign_message, generate_keypair_for_testing};
+use crypto::signing::{sign_message, generate_keypair_for_testing};
 use hex;
 
 fn setup_swarm_and_client_proxy(
