@@ -185,19 +185,12 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         }
     }
 
-    pub fn is_resource(&self) -> bool {
-        match self.struct_handle.kind {
-            Kind::Resource => true,
-            Kind::Copyable => false,
-        }
-    }
-
-    pub fn kind(&self) -> &Kind {
-        &self.struct_handle.kind
+    pub fn is_nominal_resource(&self) -> bool {
+        self.struct_handle.is_nominal_resource
     }
 
     pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
-        &self.struct_handle.kind_constraints
+        &self.struct_handle.type_parameters
     }
 
     pub fn definition(&self) -> StructDefinitionView<'a, T> {
@@ -267,8 +260,8 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         }
     }
 
-    pub fn is_resource(&self) -> bool {
-        self.struct_handle_view.is_resource()
+    pub fn is_nominal_resource(&self) -> bool {
+        self.struct_handle_view.is_nominal_resource()
     }
 
     pub fn is_native(&self) -> bool {
@@ -276,10 +269,6 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
             StructFieldInformation::Native => true,
             StructFieldInformation::Declared { .. } => false,
         }
-    }
-
-    pub fn kind(&self) -> &Kind {
-        self.struct_handle_view.kind()
     }
 
     pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
@@ -406,8 +395,13 @@ impl<'a, T: ModuleAccess> TypeSignatureView<'a, T> {
     }
 
     #[inline]
-    pub fn is_resource(&self) -> bool {
-        self.token().is_resource()
+    pub fn kind(&self) -> Kind {
+        self.token().kind()
+    }
+
+    #[inline]
+    pub fn contains_nominal_resource(&self) -> bool {
+        self.token().contains_nominal_resource()
     }
 }
 
@@ -508,17 +502,35 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     }
 
     #[inline]
-    pub fn kind(&self) -> SignatureTokenKind {
-        self.token.kind()
+    pub fn signature_token_kind(&self) -> SignatureTokenKind {
+        self.token.signature_token_kind()
     }
 
     #[inline]
-    pub fn is_resource(&self) -> bool {
+    pub fn kind(&self) -> Kind {
         match self.token {
             // TODO: Type actuals are ignored, fix it (generics).
-            SignatureToken::Struct(sh_idx, _) => {
-                StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
-                    .is_resource()
+            SignatureToken::Struct(sh_idx, type_arguments) => {
+                let is_nominal_resource = StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
+                    .is_nominal_resource();
+                // Nominal resources are always of kind `Kind::Resource`
+                if is_nominal_resource {
+                    return Kind::Resource
+                }
+
+                // For other structs, their kind is dependent on their type arguments
+                // - If any type argument is `Kind::All`, returns `Kind:All`
+                // - Otherwise if any type argument is `Kind::Resource`, returns `Kind::Resource`
+                // - Otherwise returns `Kind::Unrestricted`
+                type_arguments.iter().map(
+                    |token| Self::new(self.module, token).kind()
+                ).fold(Kind::Unrestricted, |acc_kind, next_kind| {
+                    match (acc_kind, next_kind) {
+                        (Kind::All, _) | (_, Kind::All) => Kind::All,
+                        (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
+                        (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted
+                    }
+                })
             }
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
@@ -526,10 +538,31 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::U64
             | SignatureToken::String
             | SignatureToken::ByteArray
-            | SignatureToken::Address => false,
+            | SignatureToken::Address => Kind::Unrestricted,
             // TODO: To get the kind of a type parameter we need to look at the struct/function
             // that contains it. Change the API or remodel accesses/views with a tiered system.
             SignatureToken::TypeParameter(_) => panic!("cannot tell if a type parameter is a resource or not (feature not yet implemented)"),
+        }
+    }
+
+    pub fn contains_nominal_resource(&self) -> bool {
+        match self.token {
+            // TODO: Type actuals are ignored, fix it (generics).
+            SignatureToken::Struct(sh_idx, type_arguments) => {
+                StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
+                    .is_nominal_resource()
+                    || type_arguments
+                        .iter()
+                        .any(|token| Self::new(self.module, token).contains_nominal_resource())
+            }
+            SignatureToken::Reference(_)
+            | SignatureToken::MutableReference(_)
+            | SignatureToken::Bool
+            | SignatureToken::U64
+            | SignatureToken::String
+            | SignatureToken::ByteArray
+            | SignatureToken::Address
+            | SignatureToken::TypeParameter(_) => false,
         }
     }
 

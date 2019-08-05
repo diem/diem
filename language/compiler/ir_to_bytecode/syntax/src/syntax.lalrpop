@@ -470,15 +470,15 @@ pub Script : Script = {
 }
 
 StructDecl: StructDefinition = {
-    <kind: StructKind> <n: Name> "{" <data: (FieldDecl)*> "}" => {
+    <is_nominal_resource: StructKind> <n: Name> "{" <data: (FieldDecl)*> "}" => {
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
             fields.insert(field, type_);
         }
-        StructDefinition::move_declared(kind, n, fields)
+        StructDefinition::move_declared(is_nominal_resource, n, fields)
     },
-    <native: NativeTag> <kind: StructKind> <n: Name> ";" =>
-        StructDefinition::native(kind, n),
+    <native: NativeTag> <is_nominal_resource: StructKind> <n: Name> ";" =>
+        StructDefinition::native(is_nominal_resource, n),
 }
 
 QualifiedModuleIdent: QualifiedModuleIdent = {

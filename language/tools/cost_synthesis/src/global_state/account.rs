@@ -56,8 +56,10 @@ impl Account {
             ret_vec.extend(mod_ref.struct_defs().iter().enumerate().filter_map(
                 |(struct_idx, struct_def)| {
                     // Determine if the struct definition is a resource
-                    let kind = mod_ref.struct_handle_at(struct_def.struct_handle).kind;
-                    if kind.is_resource() {
+                    let is_nominal_resource = mod_ref
+                        .struct_handle_at(struct_def.struct_handle)
+                        .is_nominal_resource;
+                    if is_nominal_resource {
                         // Generate the type for the struct
                         let typ = SignatureToken::Struct(struct_def.struct_handle, vec![]);
                         // Generate a value of that type

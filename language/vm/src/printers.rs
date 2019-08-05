@@ -409,9 +409,10 @@ fn display_struct_handle<T: TableAccess>(
     write!(
         f,
         "{} ",
-        match struct_.kind {
-            Kind::Resource => "resource",
-            Kind::Copyable => "struct",
+        if struct_.is_nominal_resource {
+            "resource"
+        } else {
+            "struct"
         }
     )?;
     write!(f, "{}@", tables.get_string_at(struct_.name).unwrap())?;

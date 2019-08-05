@@ -87,9 +87,19 @@ pub enum SerializedType {
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
+pub enum SerializedNominalResourceFlag {
+    NOMINAL_RESOURCE        = 0x1,
+    NORMAL_STRUCT           = 0x2,
+}
+
+#[rustfmt::skip]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
 pub enum SerializedKind {
-    RESOURCE                = 0x1,
-    COPYABLE                = 0x2,
+    ALL                     = 0x1,
+    UNRESTRICTED            = 0x2,
+    RESOURCE                = 0x3,
 }
 
 #[rustfmt::skip]
