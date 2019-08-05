@@ -15,6 +15,6 @@ CONFIGDIR="$(dirname "$0")/../../terraform/validator-sets/dev"
 docker network create --subnet 172.18.0.0/24 testnet || true
 
 docker run -e AC_HOST="$AC_HOST" -e AC_PORT="$AC_PORT" -e LOG_LEVEL="$LOG_LEVEL" \
-    -e TRUSTED_PEERS="$(cat $CONFIGDIR/trusted_peers.config.toml)" \
-    -e MINT_KEY="$(base64 $CONFIGDIR/mint.key)" \
-    --network testnet --publish 8080:8000 "$IMAGE"
+	-v "$PWD/$CONFIGDIR/trusted_peers.config.toml:/opt/libra/etc/trusted_peers.config.toml" \
+	-e MINT_KEY="$(base64 $CONFIGDIR/mint.key)" \
+	--network testnet --publish 8080:8000 "$IMAGE"
