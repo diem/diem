@@ -7,7 +7,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-derive_deref = "1.1.0"
 futures = "0.1.28"
 grpcio = "0.4.3"
 protobuf = "~2.7"
