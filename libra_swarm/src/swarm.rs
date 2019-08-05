@@ -259,13 +259,14 @@ impl LibraSwarm {
     ) -> Self {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
+            let swarm_config_dir = Self::setup_config_dir(&config_dir);
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
             match Self::launch_swarm_attempt(
                 topology.clone(),
                 disable_logging,
                 faucet_account_keypair.clone(),
                 tee_logs,
-                &config_dir,
+                swarm_config_dir,
                 &template_path,
             ) {
                 Ok(swarm) => {
@@ -277,27 +278,37 @@ impl LibraSwarm {
         panic!("Max out {} attempts to launch swarm", num_launch_attempts);
     }
 
-    fn launch_swarm_attempt(
-        topology: LibraSwarmTopology,
-        disable_logging: bool,
-        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-        tee_logs: bool,
-        config_dir: &Option<String>,
-        template_path: &Option<String>,
-    ) -> std::result::Result<Self, SwarmLaunchFailure> {
+    /// Either create a persistent directory for swarm or return a temporary one.
+    /// If specified persistent directory already exists,
+    /// assumably due to previous launch failure, it will be removed.
+    /// The directory for the last failed attempt won't be removed.
+    fn setup_config_dir(config_dir: &Option<String>) -> LibraSwarmDir {
         let dir = match config_dir {
             Some(dir_str) => {
+                let path_buf = PathBuf::from_str(&dir_str).expect("unable to create config dir");
+                if path_buf.exists() {
+                    std::fs::remove_dir_all(dir_str).expect("unable to delete previous config dir");
+                }
                 std::fs::create_dir_all(dir_str).expect("unable to create config dir");
-                LibraSwarmDir::Persistent(
-                    PathBuf::from_str(&dir_str).expect("unable to create config dir"),
-                )
+                LibraSwarmDir::Persistent(path_buf)
             }
             None => LibraSwarmDir::Temporary(
                 tempfile::tempdir().expect("unable to create temporary config dir"),
             ),
         };
-        let logs_dir_path = &dir.as_ref().join("logs");
         println!("Base directory containing logs and configs: {:?}", &dir);
+        dir
+    }
+
+    fn launch_swarm_attempt(
+        topology: LibraSwarmTopology,
+        disable_logging: bool,
+        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+        tee_logs: bool,
+        dir: LibraSwarmDir,
+        template_path: &Option<String>,
+    ) -> std::result::Result<Self, SwarmLaunchFailure> {
+        let logs_dir_path = dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path).unwrap();
         let base = utils::workspace_root().join(
             template_path
