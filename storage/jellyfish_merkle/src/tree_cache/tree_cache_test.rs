@@ -34,13 +34,13 @@ fn test_root_node() {
     let next_version = 0;
     let db = MockTreeStore::default();
     let mut cache = TreeCache::new(&db, next_version);
-    assert_eq!(cache.get_root_node().unwrap(), None);
+    assert_eq!(*cache.get_root_node_key(), None);
 
     let (node, node_key) = random_leaf_with_key(next_version);
     db.put_node(node_key.clone(), node.clone()).unwrap();
-    cache.set_root_node_key(Some(node_key));
+    cache.set_root_node_key(Some(node_key.clone()));
 
-    assert_eq!(cache.get_root_node().unwrap().unwrap(), node);
+    assert_eq!(*cache.get_root_node_key().as_ref().unwrap(), node_key);
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn test_freeze_with_delete() {
     let db = MockTreeStore::default();
     let mut cache = TreeCache::new(&db, next_version);
 
-    assert_eq!(cache.get_root_node().unwrap(), None);
+    assert_eq!(*cache.get_root_node_key(), None);
 
     let (node1, node1_key) = random_leaf_with_key(next_version);
     cache.put_node(node1_key.clone(), node1.clone()).unwrap();
@@ -57,12 +57,12 @@ fn test_freeze_with_delete() {
     cache.put_node(node2_key.clone(), node2.clone()).unwrap();
     assert_eq!(cache.get_node(&node1_key).unwrap(), node1);
     assert_eq!(cache.get_node(&node2_key).unwrap(), node2);
-    cache.freeze().unwrap();
+    cache.freeze();
     assert_eq!(cache.get_node(&node1_key).unwrap(), node1);
     assert_eq!(cache.get_node(&node2_key).unwrap(), node2);
 
     cache.delete_node(&node1_key);
-    cache.freeze().unwrap();
+    cache.freeze();
     let (_, update_batch) = cache.into();
     let (node_batch, retire_log_batch) = update_batch.into();
     assert_eq!(node_batch.len(), 2);

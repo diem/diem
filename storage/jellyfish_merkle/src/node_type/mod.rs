@@ -72,6 +72,11 @@ impl NodeKey {
         node_nibble_path.push(n);
         Self::new(version, node_nibble_path)
     }
+
+    /// Sets the version to the given version.
+    pub fn set_version(&mut self, version: Version) {
+        self.version = version;
+    }
 }
 
 /// Each child of [`InternalNode`] encapsulates a nibble forking at this node.

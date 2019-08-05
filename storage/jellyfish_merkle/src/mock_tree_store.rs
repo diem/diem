@@ -72,7 +72,7 @@ impl MockTreeStore {
 
         for log in to_prune {
             let removed = wlocked.0.remove(&log.node_key).is_some();
-            ensure!(removed, "Retire log refers to non-existent record.");
+            ensure!(removed, "Stale node index refers to non-existent node.");
             wlocked.1.remove(&log);
         }
 
