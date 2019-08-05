@@ -22,7 +22,7 @@ resource "aws_lb" "validator-ac" {
 resource "aws_lb_target_group" "validator-ac" {
   name     = "${terraform.workspace}-ac"
   protocol = "TCP"
-  port     = 30307
+  port     = 8000
   vpc_id   = aws_vpc.testnet.id
 }
 

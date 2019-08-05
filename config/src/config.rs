@@ -361,7 +361,7 @@ impl Default for ExecutionConfig {
     fn default() -> ExecutionConfig {
         ExecutionConfig {
             address: "localhost".to_string(),
-            port: 55558,
+            port: 6183,
             testnet_genesis: false,
             genesis_file_location: "genesis.blob".to_string(),
         }
@@ -425,7 +425,7 @@ impl Default for SecretServiceConfig {
     fn default() -> SecretServiceConfig {
         SecretServiceConfig {
             address: "localhost".to_string(),
-            secret_service_port: 30333,
+            secret_service_port: 6185,
         }
     }
 }
@@ -442,7 +442,7 @@ impl Default for AdmissionControlConfig {
     fn default() -> AdmissionControlConfig {
         AdmissionControlConfig {
             address: "0.0.0.0".to_string(),
-            admission_control_service_port: 30307,
+            admission_control_service_port: 8000,
             need_to_check_mempool_before_validation: false,
         }
     }
@@ -462,10 +462,10 @@ pub struct DebugInterfaceConfig {
 impl Default for DebugInterfaceConfig {
     fn default() -> DebugInterfaceConfig {
         DebugInterfaceConfig {
-            admission_control_node_debug_port: 50313,
-            storage_node_debug_port: 50315,
-            secret_service_node_debug_port: 50316,
-            metrics_server_port: 14297,
+            admission_control_node_debug_port: 6191,
+            storage_node_debug_port: 6194,
+            secret_service_node_debug_port: 6195,
+            metrics_server_port: 9101,
             address: "localhost".to_string(),
         }
     }
@@ -490,7 +490,7 @@ impl Default for StorageConfig {
     fn default() -> StorageConfig {
         StorageConfig {
             address: "localhost".to_string(),
-            port: 30305,
+            port: 6184,
             dir: PathBuf::from("libradb"),
             grpc_max_receive_len: Some(100_000_000),
         }
@@ -518,8 +518,8 @@ impl Default for NetworkConfig {
         NetworkConfig {
             seed_peers_file: "seed_peers.config.toml".to_string(),
             seed_peers: SeedPeersConfig::default(),
-            listen_address: "/ip4/0.0.0.0/tcp/30303".parse::<Multiaddr>().unwrap(),
-            advertised_address: "/ip4/127.0.0.1/tcp/30303".parse::<Multiaddr>().unwrap(),
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_encryption_and_authentication: true,
@@ -612,7 +612,7 @@ impl Default for MempoolConfig {
             sequence_cache_capacity: 1000,
             system_transaction_timeout_secs: 86400,
             address: "localhost".to_string(),
-            mempool_service_port: 55555,
+            mempool_service_port: 6182,
             system_transaction_gc_interval_ms: 180_000,
         }
     }
