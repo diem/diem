@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
 use cli::{
-    AccountAddress,
-    client_proxy::ClientProxy,
-    RawTransactionBytes,
-    IntoProtoBytes,
-    CryptoHash
+    client_proxy::ClientProxy, AccountAddress, CryptoHash, IntoProtoBytes, RawTransactionBytes,
 };
+use crypto::signing::{generate_keypair_for_testing, sign_message};
+use hex;
 use libra_swarm::swarm::LibraSwarm;
 use num_traits::cast::FromPrimitive;
+use rand::{rngs::StdRng, SeedableRng};
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use rand::{rngs::StdRng, SeedableRng};
-use crypto::signing::{sign_message, generate_keypair_for_testing};
-use hex;
 
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
@@ -292,7 +288,7 @@ fn test_external_transaction_signer() {
             &sender_address,
             &format!("{}", sequence_number),
             &receiver_address,
-            &amount
+            &amount,
         ])
         .unwrap();
 
@@ -308,7 +304,7 @@ fn test_external_transaction_signer() {
         .submit_signed_transaction(&[
             &hex::encode(raw_bytes),
             &hex::encode(public_key.to_slice()),
-            &hex::encode(signature.to_compact().to_vec().as_slice())
+            &hex::encode(signature.to_compact().to_vec().as_slice()),
         ])
         .unwrap();
 
@@ -316,8 +312,5 @@ fn test_external_transaction_signer() {
         address_and_sequence.account_address.to_string(),
         sender_address
     );
-    assert_eq!(
-        address_and_sequence.sequence_number,
-        0
-    );
+    assert_eq!(address_and_sequence.sequence_number, 0);
 }

@@ -7,12 +7,16 @@
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
 use crypto::signing::KeyPair;
+pub use crypto::{
+    hash::CryptoHash,
+    signing::{PublicKey, Signature},
+};
+pub use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
-pub use types::account_address::AccountAddress;
-pub use types::transaction::{RawTransaction, RawTransactionBytes, TransactionArgument, Program};
-pub use proto_conv::{IntoProtoBytes, FromProtoBytes};
-pub use crypto::hash::CryptoHash;
-pub use crypto::signing::{Signature, PublicKey};
+pub use types::{
+    account_address::AccountAddress,
+    transaction::{Program, RawTransaction, RawTransactionBytes, TransactionArgument},
+};
 pub use vm_genesis;
 
 pub(crate) mod account_commands;

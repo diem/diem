@@ -4,7 +4,7 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::trusted_peers::TrustedPeersConfig;
-use crypto::signing::{KeyPair, Signature, PublicKey};
+use crypto::signing::{KeyPair, PublicKey, Signature};
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
@@ -41,7 +41,7 @@ use types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     transaction::{
-        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version
+        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
     },
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
@@ -464,8 +464,7 @@ impl ClientProxy {
             "Invalid number of arguments for transfer"
         );
 
-        let sender_address =
-            self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sender_sequence_number = space_delim_strings[2].parse::<u64>()?;
         let receiver_address = self.get_account_address_from_parameter(space_delim_strings[3])?;
 
@@ -564,7 +563,8 @@ impl ClientProxy {
         Ok(output_path)
     }
 
-    /// Submit a transaction to the network given raw bytes of the transaction, sender public key and signature
+    /// Submit a transaction to the network given raw bytes of the transaction, sender public key
+    /// and signature
     pub fn submit_signed_transaction(
         &mut self,
         space_delim_strings: &[&str],
@@ -578,7 +578,8 @@ impl ClientProxy {
         let signature_bytes = hex::decode(space_delim_strings[2])?;
         let signature = Signature::from_compact(signature_bytes.as_slice())?;
 
-        let signed_txn = SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature);
+        let signed_txn =
+            SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature);
 
         let mut req = SubmitTransactionRequest::new();
         let sender_address = signed_txn.sender();
@@ -591,7 +592,7 @@ impl ClientProxy {
 
         Ok(AddressAndSequence {
             account_address: AccountAddress::from(public_key),
-            sequence_number: sender_sequence
+            sequence_number: sender_sequence,
         })
     }
 

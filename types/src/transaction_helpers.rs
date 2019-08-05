@@ -64,7 +64,7 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
         sender_sequence_number,
         max_gas_amount,
         gas_unit_price,
-        txn_expiration
+        txn_expiration,
     );
     signer.sign_txn(raw_txn)
 }
