@@ -849,3 +849,27 @@ fn basic_restart_test() {
         assert_eq!(node.block_store.block_exists(id), true);
     }
 }
+
+#[test]
+/// Generate a NIL vote extending HQC upon timeout if no votes have been sent in the round.
+fn nil_vote_on_timeout() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+        .pop()
+        .unwrap();
+    let genesis_id = node.block_store.root().id();
+    block_on(async move {
+        // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
+        // extends genesis
+        let timeout_msg = node
+            .event_processor
+            .process_outgoing_pacemaker_timeout(1)
+            .await
+            .unwrap();
+        assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
+        let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
+        assert_eq!(vote_msg.round(), 1);
+        assert_eq!(vote_msg.parent_block_id(), genesis_id);
+    });
+}

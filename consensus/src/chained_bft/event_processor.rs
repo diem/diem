@@ -446,6 +446,27 @@ impl<T: Payload> EventProcessor<T> {
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
     pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<TimeoutMsg> {
+        let last_vote_sent = self.last_vote_sent.read().unwrap().as_ref().cloned();
+        let vote_msg_to_attach = match last_vote_sent.as_ref() {
+            Some((vote, vote_round)) if (*vote_round == round) => Some(vote.clone()),
+            _ => {
+                // Try to generate a NIL vote
+                match self.gen_nil_vote(round).await {
+                    Ok(nil_vote_msg) => {
+                        self.last_vote_sent
+                            .write()
+                            .unwrap()
+                            .replace((nil_vote_msg.clone(), round));
+                        Some(nil_vote_msg)
+                    }
+                    Err(e) => {
+                        warn!("Failed to generate a NIL vote: {:?}", e);
+                        None
+                    }
+                }
+            }
+        };
+
         // Stop voting at this round, persist the consensus state to support restarting from
         // a recent round (i.e. > the last vote round)  and then send the highest quorum
         // certificate known
@@ -474,25 +495,20 @@ impl<T: Payload> EventProcessor<T> {
             self.proposer_election.get_valid_proposers(round),
         );
 
-        let vote_msg_with_timeout = match self.last_vote_sent.read().unwrap().as_ref() {
-            Some((vote, vote_round)) => {
-                if *vote_round == round {
-                    Some(vote.clone())
-                } else {
-                    None
-                }
-            }
-            None => None,
-        };
         Some(TimeoutMsg::new(
             SyncInfo::new(
                 self.block_store.highest_quorum_cert().as_ref().clone(),
                 self.block_store.highest_ledger_info().as_ref().clone(),
                 None,
             ),
-            PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_with_timeout),
+            PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_to_attach),
             self.block_store.signer(),
         ))
+    }
+
+    async fn gen_nil_vote(&self, round: Round) -> failure::Result<VoteMsg> {
+        let block = self.proposal_generator.generate_nil_block(round)?;
+        self.execute_and_vote(block).await
     }
 
     /// This function processes a proposal that was chosen as a representative of its round:
@@ -500,8 +516,8 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    pub async fn process_winning_proposal(&self, proposal: ProposalMsg<T>) {
-        let qc = proposal.proposal.quorum_cert();
+    pub async fn process_winning_proposal(&self, proposal_msg: ProposalMsg<T>) {
+        let qc = proposal_msg.proposal.quorum_cert();
         self.safety_rules.write().unwrap().update(qc);
         if let Some(new_commit) = qc.committed_block_id() {
             if let Some(block) = self.block_store.get_block(new_commit) {
@@ -510,14 +526,14 @@ impl<T: Payload> EventProcessor<T> {
             }
         }
 
-        if let Some(time_to_receival) = duration_since_epoch()
-            .checked_sub(Duration::from_micros(proposal.proposal.timestamp_usecs()))
-        {
+        if let Some(time_to_receival) = duration_since_epoch().checked_sub(Duration::from_micros(
+            proposal_msg.proposal.timestamp_usecs(),
+        )) {
             counters::CREATION_TO_RECEIVAL_MS.observe(time_to_receival.as_millis() as f64);
         }
 
-        let proposal_round = proposal.proposal.round();
-        let vote_msg = match self.execute_and_vote(proposal).await {
+        let proposal_round = proposal_msg.proposal.round();
+        let vote_msg = match self.execute_and_vote(proposal_msg.proposal).await {
             Err(_) => {
                 return;
             }
@@ -591,28 +607,27 @@ impl<T: Payload> EventProcessor<T> {
         }
     }
 
-    /// The function generates a VoteMsg for a given proposal:
+    /// The function generates a VoteMsg for a given proposed_block:
     /// * first execute the block and add it to the block store
     /// * then verify the voting rules
     /// * save the updated state to consensus DB
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&self, proposal: ProposalMsg<T>) -> failure::Result<VoteMsg> {
+    async fn execute_and_vote(&self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
         let block = self
             .sync_manager
-            .execute_and_insert_block(proposal.proposal)
+            .execute_and_insert_block(proposed_block)
             .await
             .map_err(|e| {
                 debug!("Failed to execute_and_insert the block: {:?}", e);
                 e
             })?;
-
-        // Checking pacemaker round again, because multiple proposal can now race
+        // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
         if self.pacemaker.current_round() != block.round() {
             debug!(
-                "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposal: {}",
+                "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposed_block: {}",
                 block,
                 self.pacemaker.current_round(),
                 block.round(),
@@ -631,7 +646,6 @@ impl<T: Payload> EventProcessor<T> {
                 debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
                 e
             })?;
-
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone())
             .map_err(|e| {
@@ -643,7 +657,7 @@ impl<T: Payload> EventProcessor<T> {
         let executed_state = self
             .block_store
             .get_state_for_block(proposal_id)
-            .expect("Block proposal: no execution state found for inserted block.");
+            .expect("Block proposed_block: no execution state found for inserted block.");
 
         let ledger_info_placeholder = self
             .block_store

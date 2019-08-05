@@ -749,3 +749,45 @@ fn aggregate_timeout_votes() {
         );
     });
 }
+
+#[test]
+/// Verify that the NIL blocks formed during timeouts can be used to form commit chains.
+fn chain_with_nil_blocks() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+
+    // The proposer node[0] sends 3 proposals, after that its proposals are dropped and it cannot
+    // communicate with nodes 1 and 2. Nodes 1 and 2 should be able to commit the 3 proposal
+    // via NIL blocks commit chain.
+    let nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer);
+    block_on(async move {
+        // Wait for the first 3 proposals (each one sent to two nodes).
+        playground
+            .wait_for_messages(2 * 3, NetworkPlayground::proposals_only)
+            .await;
+        playground.drop_message_for(&nodes[0].author, nodes[1].author);
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+
+        // After the first timeout nodes 1 and 2 should have last_proposal votes and
+        // they can generate its QC independently.
+        // Upon the second timeout nodes 1 and 2 send NIL block_1 with a QC to last_proposal.
+        // Upon the third timeout nodes 1 and 2 send NIL block_2 with a QC to NIL block_1.
+        // G <- p1 <- p2 <- p3 <- NIL1 <- NIL2
+        playground
+            .wait_for_messages(4 * 3, NetworkPlayground::timeout_msg_only)
+            .await;
+        // We can't guarantee the timing of the last timeout processing, the only thing we can
+        // look at is that HQC round is at least 4.
+        assert!(
+            nodes[2]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_round()
+                >= 4
+        );
+
+        // TODO: extend this test once we update the rules for processing newly generated QCs
+    });
+}

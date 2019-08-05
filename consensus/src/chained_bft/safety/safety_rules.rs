@@ -62,7 +62,7 @@ impl VoteInfo {
     }
 
     pub fn parent_block_id(&self) -> HashValue {
-        self.proposal_id
+        self.parent_block_id
     }
 
     pub fn parent_block_round(&self) -> Round {
