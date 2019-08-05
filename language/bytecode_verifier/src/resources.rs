@@ -24,13 +24,13 @@ impl<'a> ResourceTransitiveChecker<'a> {
     pub fn verify(self) -> Vec<VerificationError> {
         let mut errors = vec![];
         for (idx, struct_def) in self.module_view.structs().enumerate() {
-            let def_is_resource = struct_def.is_resource();
-            if !def_is_resource {
+            if !struct_def.is_nominal_resource() {
                 match struct_def.fields() {
                     None => (),
                     Some(mut fields) => {
+                        // TODO must be rethought with generics
                         let any_resource_field =
-                            fields.any(|field| field.type_signature().is_resource());
+                            fields.any(|field| field.type_signature().contains_nominal_resource());
                         if any_resource_field {
                             errors.push(VerificationError {
                                 kind: IndexKind::StructDefinition,

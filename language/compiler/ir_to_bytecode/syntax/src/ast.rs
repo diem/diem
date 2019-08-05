@@ -117,9 +117,9 @@ pub struct StructName(String);
 /// A Move struct
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDefinition {
-    /// The struct will have kind resource if `resource_kind` is true
-    /// and a value otherwise
-    pub resource_kind: bool,
+    /// The struct will have kind resource if `is_nominal_resource` is true
+    /// and will be dependent on it's type arguments otherwise
+    pub is_nominal_resource: bool,
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
     /// the fields each instance has
@@ -692,9 +692,9 @@ impl StructDefinition {
     /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn move_declared(resource_kind: bool, name: String, fields: Fields<Type>) -> Self {
+    pub fn move_declared(is_nominal_resource: bool, name: String, fields: Fields<Type>) -> Self {
         StructDefinition {
-            resource_kind,
+            is_nominal_resource,
             name: StructName::new(name),
             fields: StructDefinitionFields::Move { fields },
         }
@@ -703,9 +703,9 @@ impl StructDefinition {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
-    pub fn native(resource_kind: bool, name: String) -> Self {
+    pub fn native(is_nominal_resource: bool, name: String) -> Self {
         StructDefinition {
-            resource_kind,
+            is_nominal_resource,
             name: StructName::new(name),
             fields: StructDefinitionFields::Native,
         }

@@ -9,12 +9,12 @@ use crate::{
 };
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{FieldDefinitionIndex, LocalIndex, StructDefinitionIndex};
+use vm::file_format::{FieldDefinitionIndex, Kind, LocalIndex, StructDefinitionIndex};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AbstractValue {
     Reference(Nonce),
-    Value(bool, BTreeSet<Nonce>),
+    Value(Kind, BTreeSet<Nonce>),
 }
 
 impl AbstractValue {
@@ -32,7 +32,8 @@ impl AbstractValue {
     pub fn is_unrestricted_value(&self) -> bool {
         match self {
             AbstractValue::Reference(_) => false,
-            AbstractValue::Value(is_resource, _) => !*is_resource,
+            AbstractValue::Value(Kind::Unrestricted, _) => true,
+            AbstractValue::Value(Kind::All, _) | AbstractValue::Value(Kind::Resource, _) => false,
         }
     }
 
@@ -45,15 +46,15 @@ impl AbstractValue {
 
     pub fn is_safe_to_destroy(&self) -> bool {
         match self {
-            AbstractValue::Reference(_) => false,
-            AbstractValue::Value(is_resource, borrowed_nonces) => {
-                !is_resource && borrowed_nonces.is_empty()
-            }
+            AbstractValue::Reference(_)
+            | AbstractValue::Value(Kind::All, _)
+            | AbstractValue::Value(Kind::Resource, _) => false,
+            AbstractValue::Value(Kind::Unrestricted, borrowed_nonces) => borrowed_nonces.is_empty(),
         }
     }
 
-    pub fn full_value(is_resource: bool) -> Self {
-        AbstractValue::Value(is_resource, BTreeSet::new())
+    pub fn full_value(kind: Kind) -> Self {
+        AbstractValue::Value(kind, BTreeSet::new())
     }
 
     pub fn extract_nonce(&self) -> Option<&Nonce> {
@@ -151,8 +152,8 @@ impl AbstractState {
         let local = self.locals.remove(&idx).unwrap();
         match local {
             AbstractValue::Reference(nonce) => self.destroy_nonce(nonce),
-            AbstractValue::Value(is_resource, borrowed_nonces) => {
-                checked_verify!(!is_resource && borrowed_nonces.is_empty());
+            AbstractValue::Value(kind, borrowed_nonces) => {
+                checked_verify!(kind == Kind::Unrestricted && borrowed_nonces.is_empty());
             }
         }
     }
@@ -183,19 +184,19 @@ impl AbstractState {
         }
 
         for (x, value) in &self.locals {
-            if let AbstractValue::Value(is_resource, y) = value {
+            if let AbstractValue::Value(kind, y) = value {
                 if y.contains(&nonce) {
                     let mut y_restrict = y.clone();
                     y_restrict.remove(&nonce);
                     new_locals.insert(
                         x.clone(),
                         AbstractValue::Value(
-                            *is_resource,
+                            *kind,
                             y_restrict.union(&nonce_set).cloned().collect(),
                         ),
                     );
                 } else {
-                    new_locals.insert(x.clone(), AbstractValue::Value(*is_resource, y.clone()));
+                    new_locals.insert(x.clone(), AbstractValue::Value(*kind, y.clone()));
                 }
             } else {
                 new_locals.insert(x.clone(), value.clone());
@@ -406,10 +407,10 @@ impl AbstractState {
             nonce_map.insert(y, Nonce::new(x as usize));
             locals.insert(x, AbstractValue::Reference(Nonce::new(x as usize)));
         }
-        for (x, (is_resource, nonce_set)) in values {
+        for (x, (kind, nonce_set)) in values {
             locals.insert(
                 x,
-                AbstractValue::Value(is_resource, Self::map_nonce_set(&nonce_map, &nonce_set)),
+                AbstractValue::Value(kind, Self::map_nonce_set(&nonce_map, &nonce_set)),
             );
         }
         let mut globals = BTreeMap::new();
@@ -499,7 +500,7 @@ impl AbstractState {
 
     fn split_locals(
         locals: &BTreeMap<LocalIndex, AbstractValue>,
-        values: &mut BTreeMap<LocalIndex, (bool, BTreeSet<Nonce>)>,
+        values: &mut BTreeMap<LocalIndex, (Kind, BTreeSet<Nonce>)>,
         references: &mut BTreeMap<LocalIndex, Nonce>,
     ) {
         for (x, y) in locals {
@@ -507,8 +508,8 @@ impl AbstractState {
                 AbstractValue::Reference(nonce) => {
                     references.insert(x.clone(), nonce.clone());
                 }
-                AbstractValue::Value(is_resource, nonces) => {
-                    values.insert(x.clone(), (*is_resource, nonces.clone()));
+                AbstractValue::Value(kind, nonces) => {
+                    values.insert(x.clone(), (*kind, nonces.clone()));
                 }
             }
         }
@@ -592,15 +593,12 @@ impl AbstractDomain for AbstractState {
         for (x, y) in &references1 {
             locals.insert(x.clone(), AbstractValue::Reference(y.clone()));
         }
-        for (x, (is_resource1, nonce_set1)) in &values1 {
-            if let Some((is_resource2, nonce_set2)) = values2.get(x) {
-                checked_verify!(is_resource1 == is_resource2);
+        for (x, (kind1, nonce_set1)) in &values1 {
+            if let Some((kind2, nonce_set2)) = values2.get(x) {
+                checked_verify!(kind1 == kind2);
                 locals.insert(
                     x.clone(),
-                    AbstractValue::Value(
-                        *is_resource1,
-                        nonce_set1.union(nonce_set2).cloned().collect(),
-                    ),
+                    AbstractValue::Value(*kind1, nonce_set1.union(nonce_set2).cloned().collect()),
                 );
             }
         }

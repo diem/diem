@@ -261,12 +261,12 @@ fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle
 /// A `StructHandle` gets serialized as follows:
 /// - `StructHandle.module` as a ULEB128 (index into the `ModuleHandle` table)
 /// - `StructHandle.name` as a ULEB128 (index into the `StringPool`)
-/// - `StructHandle.is_resource` as a 1 byte boolean (0 for false, 1 for true)
+/// - `StructHandle.is_nominal_resource` as a 1 byte boolean (0 for false, 1 for true)
 fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
     write_u16_as_uleb128(binary, struct_handle.module.0)?;
     write_u16_as_uleb128(binary, struct_handle.name.0)?;
-    serialize_kind(binary, struct_handle.kind)?;
-    serialize_kinds(binary, &struct_handle.kind_constraints)
+    serialize_nominal_resource_flag(binary, struct_handle.is_nominal_resource)?;
+    serialize_kinds(binary, &struct_handle.type_parameters)
 }
 
 /// Serializes a `FunctionHandle`.
@@ -419,7 +419,7 @@ fn serialize_function_signature(
     binary.push(SignatureType::FUNCTION_SIGNATURE as u8)?;
     serialize_signature_tokens(binary, &signature.return_types)?;
     serialize_signature_tokens(binary, &signature.arg_types)?;
-    serialize_kinds(binary, &signature.kind_constraints)
+    serialize_kinds(binary, &signature.type_parameters)
 }
 
 /// Serializes a `LocalsSignature`.
@@ -481,10 +481,23 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
     Ok(())
 }
 
+fn serialize_nominal_resource_flag(
+    binary: &mut BinaryData,
+    is_nominal_resource: bool,
+) -> Result<()> {
+    binary.push(if is_nominal_resource {
+        SerializedNominalResourceFlag::NOMINAL_RESOURCE
+    } else {
+        SerializedNominalResourceFlag::NORMAL_STRUCT
+    } as u8)?;
+    Ok(())
+}
+
 fn serialize_kind(binary: &mut BinaryData, kind: Kind) -> Result<()> {
     binary.push(match kind {
+        Kind::All => SerializedKind::ALL,
         Kind::Resource => SerializedKind::RESOURCE,
-        Kind::Copyable => SerializedKind::COPYABLE,
+        Kind::Unrestricted => SerializedKind::UNRESTRICTED,
     } as u8)?;
     Ok(())
 }

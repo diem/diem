@@ -287,11 +287,11 @@ where
             .iter()
             .enumerate()
             .filter_map(|(idx, struct_def)| {
-                let kind = self
+                let is_nominal_resource = self
                     .root_module
                     .struct_handle_at(struct_def.struct_handle)
-                    .kind;
-                if kind.is_resource() {
+                    .is_nominal_resource;
+                if is_nominal_resource {
                     Some(idx)
                 } else {
                     None

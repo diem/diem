@@ -13,14 +13,14 @@ use proptest::{
 #[derive(Clone, Debug)]
 pub enum KindGen {
     Resource,
-    Copyable,
+    Unrestricted,
 }
 
 impl KindGen {
     pub fn strategy() -> impl Strategy<Value = Self> {
         use KindGen::*;
 
-        static KINDS: &[KindGen] = &[Resource, Copyable];
+        static KINDS: &[KindGen] = &[Resource, Unrestricted];
 
         select(KINDS)
     }
@@ -28,7 +28,7 @@ impl KindGen {
     pub fn materialize(self) -> Kind {
         match self {
             KindGen::Resource => Kind::Resource,
-            KindGen::Copyable => Kind::Copyable,
+            KindGen::Unrestricted => Kind::Unrestricted,
         }
     }
 }
@@ -37,7 +37,7 @@ impl KindGen {
 pub struct FunctionSignatureGen {
     return_types: Vec<SignatureTokenGen>,
     arg_types: Vec<SignatureTokenGen>,
-    kind_constraints: Vec<KindGen>,
+    type_parameters: Vec<KindGen>,
 }
 
 impl FunctionSignatureGen {
@@ -51,10 +51,10 @@ impl FunctionSignatureGen {
             vec(SignatureTokenGen::strategy(), arg_count),
             vec(KindGen::strategy(), kind_count),
         )
-            .prop_map(|(return_types, arg_types, kind_constraints)| Self {
+            .prop_map(|(return_types, arg_types, type_parameters)| Self {
                 return_types,
                 arg_types,
-                kind_constraints,
+                type_parameters,
             })
     }
 
@@ -64,8 +64,8 @@ impl FunctionSignatureGen {
                 .collect(),
             arg_types: SignatureTokenGen::map_materialize(self.arg_types, struct_handles_len)
                 .collect(),
-            kind_constraints: self
-                .kind_constraints
+            type_parameters: self
+                .type_parameters
                 .into_iter()
                 .map(KindGen::materialize)
                 .collect(),

@@ -7,8 +7,8 @@ use vm::file_format::{Kind, StructHandleIndex};
 
 /// Struct representing the expected definition for a native struct
 pub struct NativeStruct {
-    /// The expected kind of the struct/resource
-    pub expected_kind: Kind,
+    /// The expected boolean indicating if it is a nominal resource or not
+    pub expected_nominal_resource: bool,
     /// The expected kind constraints of the type parameters.
     pub expected_type_parameters: Vec<Kind>,
     /// The expected index for the struct
@@ -26,16 +26,16 @@ pub fn dispatch_native_struct(
 }
 
 macro_rules! add {
-    ($m:ident, $addr:expr, $module:expr, $name:expr, $kind: expr) => {{
-        add!($m, $addr, $module, $name, $kind, vec![])
+    ($m:ident, $addr:expr, $module:expr, $name:expr, $resource: expr) => {{
+        add!($m, $addr, $module, $name, $resource, vec![])
     }};
-    ($m:ident, $addr:expr, $module:expr, $name:expr, $kind: expr, $ty_kinds: expr) => {{
+    ($m:ident, $addr:expr, $module:expr, $name:expr, $resource: expr, $ty_kinds: expr) => {{
         let id = ModuleId::new($addr, $module.into());
         let struct_table = $m.entry(id).or_insert_with(HashMap::new);
         let expected_index = StructHandleIndex(struct_table.len() as u16);
 
         let s = NativeStruct {
-            expected_kind: $kind,
+            expected_nominal_resource: $resource,
             expected_type_parameters: $ty_kinds,
             expected_index,
         };
@@ -48,10 +48,9 @@ type NativeStructMap = HashMap<ModuleId, HashMap<String, NativeStruct>>;
 
 lazy_static! {
     static ref NATIVE_STRUCT_MAP: NativeStructMap = {
-        use Kind::*;
         let mut m: NativeStructMap = HashMap::new();
         let addr = account_config::core_code_address();
-        add!(m, addr, "Vector", "T", Copyable);
+        add!(m, addr, "Vector", "T", false);
         m
     };
 }

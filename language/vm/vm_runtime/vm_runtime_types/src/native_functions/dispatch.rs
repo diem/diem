@@ -61,7 +61,7 @@ macro_rules! add {
         let expected_signature = FunctionSignature {
             return_types: $ret,
             arg_types: $args,
-            kind_constraints: $kinds,
+            type_parameters: $kinds,
         };
         let f = NativeFunction {
             dispatch: $dis,
