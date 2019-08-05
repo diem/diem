@@ -152,7 +152,7 @@ impl NibblePath {
     }
 }
 
-pub(crate) trait Peekable: Iterator {
+pub trait Peekable: Iterator {
     /// Returns the `next()` value without advancing the iterator.
     fn peek(&self) -> Option<Self::Item>;
 }
@@ -277,7 +277,7 @@ impl<'a> NibbleIterator<'a> {
 
 /// Advance both iterators if their next nibbles are the same until either reaches the end or
 /// the find a mismatch. Return the number of matched nibbles.
-pub(crate) fn skip_common_prefix<'a, 'b, I1: 'a, I2: 'b>(x: &'a mut I1, y: &mut I2) -> usize
+pub fn skip_common_prefix<'a, 'b, I1: 'a, I2: 'b>(x: &'a mut I1, y: &mut I2) -> usize
 where
     I1: Iterator + Peekable,
     I2: Iterator + Peekable,

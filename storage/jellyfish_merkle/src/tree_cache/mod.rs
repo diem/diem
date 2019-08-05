@@ -155,12 +155,9 @@ where
         }
     }
 
-    /// Gets the current root node.
-    pub fn get_root_node(&self) -> Result<Option<Node>> {
-        self.root_node_key
-            .as_ref()
-            .map(|node_key| self.get_node(node_key))
-            .transpose()
+    /// Gets the current root node key.
+    pub fn get_root_node_key(&self) -> &Option<NodeKey> {
+        &self.root_node_key
     }
 
     /// Set roots `node_key`.
@@ -188,9 +185,12 @@ where
     }
 
     /// Freezes all the contents in cache to be immutable and clear `node_cache`.
-    pub fn freeze(&mut self) -> Result<()> {
-        let root_hash = match self.get_root_node()? {
-            Some(node) => node.hash(),
+    pub fn freeze(&mut self) {
+        let root_hash = match self.get_root_node_key() {
+            Some(node_key) => self
+                .get_node(node_key)
+                .unwrap_or_else(|_| panic!("Root node with key {:?} must exist", node_key))
+                .hash(),
             None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
         };
         self.frozen_cache.root_hashes.push(root_hash);
@@ -208,7 +208,6 @@ where
                     }),
             );
         self.next_version += 1;
-        Ok(())
     }
 }
 
