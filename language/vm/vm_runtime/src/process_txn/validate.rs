@@ -255,6 +255,18 @@ where
 
                 None
             }
+            TransactionPayload::Module(_) => {
+                // UnknownModule is a good enough error for this temporary condition.
+                // It usually signals the VM does not allow publishing which is reasonable.
+                // Adding new errors does not seem a smart choice
+                return Err(VMStatus::Validation(VMValidationStatus::UnknownModule));
+            }
+            TransactionPayload::Script(_) => {
+                // UnknownScript is a good enough error for this temporary condition.
+                // It usually signals the VM does not allow custom script which is reasonable.
+                // Adding new errors does not seem a smart choice
+                return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
+            }
         };
 
         Ok(Self { txn, txn_state })

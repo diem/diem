@@ -12,7 +12,9 @@ use types::{
     account_address::AccountAddress,
     account_config::{self, EventHandle},
     byte_array::ByteArray,
-    transaction::{Program, RawTransaction, SignedTransaction, TransactionArgument},
+    transaction::{
+        Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionPayload,
+    },
 };
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
@@ -118,21 +120,51 @@ impl Account {
     // Helpers for transaction creation with Account instance as sender
     //
 
-    /// Returns a [`SignedTransaction`] with no arguments and this account as the sender.
+    /// Returns a [`SignedTransaction`] with a payload and this account as the sender.
+    ///
+    /// This is the most generic way to create a transaction for testing.
+    /// Max gas amount and gas unit price are ignored for WriteSet transactions.
     pub fn create_signed_txn(
         &self,
-        program: Vec<u8>,
+        payload: TransactionPayload,
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignedTransaction {
-        self.create_signed_txn_with_args(
-            program,
-            vec![],
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-        )
+        let raw_txn = match payload {
+            TransactionPayload::Program(program) => RawTransaction::new(
+                *self.address(),
+                sequence_number,
+                program,
+                max_gas_amount,
+                gas_unit_price,
+                Duration::from_secs(u64::max_value()),
+            ),
+            TransactionPayload::WriteSet(writeset) => {
+                RawTransaction::new_write_set(*self.address(), sequence_number, writeset)
+            }
+            TransactionPayload::Module(module) => RawTransaction::new_module(
+                *self.address(),
+                sequence_number,
+                module,
+                max_gas_amount,
+                gas_unit_price,
+                Duration::from_secs(u64::max_value()),
+            ),
+            TransactionPayload::Script(script) => RawTransaction::new_script(
+                *self.address(),
+                sequence_number,
+                script,
+                max_gas_amount,
+                gas_unit_price,
+                Duration::from_secs(u64::max_value()),
+            ),
+        };
+
+        raw_txn
+            .sign(&self.privkey, self.pubkey.clone())
+            .unwrap()
+            .into_inner()
     }
 
     /// Returns a [`SignedTransaction`] with the arguments defined in `args` and this account as

@@ -13,7 +13,7 @@ use crate::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorProof,
     transaction::{
-        Program, RawTransaction, SignatureCheckedTransaction, SignedTransaction,
+        Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
@@ -134,6 +134,22 @@ impl RawTransaction {
                             gas_unit_price,
                             Duration::from_secs(expiration_time_secs),
                         ),
+                        TransactionPayload::Module(module) => RawTransaction::new_module(
+                            sender,
+                            sequence_number,
+                            module,
+                            max_gas_amount,
+                            gas_unit_price,
+                            Duration::from_secs(expiration_time_secs),
+                        ),
+                        TransactionPayload::Script(script) => RawTransaction::new_script(
+                            sender,
+                            sequence_number,
+                            script,
+                            max_gas_amount,
+                            gas_unit_price,
+                            Duration::from_secs(expiration_time_secs),
+                        ),
                         TransactionPayload::WriteSet(write_set) => {
                             // It's a bit unfortunate that max_gas_amount etc is generated but
                             // not used, but it isn't a huge deal.
@@ -161,6 +177,18 @@ impl SignatureCheckedTransaction {
         keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::program_strategy())
+    }
+
+    pub fn script_strategy(
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+    ) -> impl Strategy<Value = Self> {
+        Self::strategy_impl(keypair_strategy, TransactionPayload::script_strategy())
+    }
+
+    pub fn module_strategy(
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+    ) -> impl Strategy<Value = Self> {
+        Self::strategy_impl(keypair_strategy, TransactionPayload::module_strategy())
     }
 
     pub fn write_set_strategy(
@@ -221,6 +249,14 @@ impl TransactionPayload {
         any::<Program>().prop_map(TransactionPayload::Program)
     }
 
+    pub fn script_strategy() -> impl Strategy<Value = Self> {
+        any::<Script>().prop_map(TransactionPayload::Script)
+    }
+
+    pub fn module_strategy() -> impl Strategy<Value = Self> {
+        any::<Module>().prop_map(TransactionPayload::Module)
+    }
+
     pub fn write_set_strategy() -> impl Strategy<Value = Self> {
         any::<WriteSet>().prop_map(TransactionPayload::WriteSet)
     }
@@ -253,7 +289,9 @@ impl Arbitrary for TransactionPayload {
         // at least not choke on write set strategies so introduce them with decent probability.
         // The figures below are probability weights.
         prop_oneof![
-            9 => Self::program_strategy(),
+            4 => Self::program_strategy(),
+            4 => Self::script_strategy(),
+            1 => Self::module_strategy(),
             1 => Self::write_set_strategy(),
         ]
         .boxed()
@@ -278,6 +316,33 @@ impl Arbitrary for Program {
     }
 
     type Strategy = BoxedStrategy<Self>;
+}
+
+impl Arbitrary for Script {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        // XXX This should eventually be an actually valid program, maybe?
+        // The vector sizes are picked out of thin air.
+        (
+            vec(any::<u8>(), 0..100),
+            vec(any::<TransactionArgument>(), 0..10),
+        )
+            .prop_map(|(code, args)| Script::new(code, args))
+            .boxed()
+    }
+}
+
+impl Arbitrary for Module {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        // XXX How should we generate random modules?
+        // The vector sizes are picked out of thin air.
+        vec(any::<u8>(), 0..100).prop_map(Module::new).boxed()
+    }
 }
 
 impl Arbitrary for TransactionArgument {
