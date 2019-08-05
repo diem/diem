@@ -56,6 +56,7 @@ impl SwarmConfig {
 
             let base_config = BaseConfig::new(
                 node_id.clone(),
+                template.base.role.clone(),
                 KeyPairs::default(),
                 key_file_name.into(),
                 template.base.data_dir_path.clone(),

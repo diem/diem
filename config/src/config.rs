@@ -82,6 +82,7 @@ pub struct NodeConfig {
 #[serde(default)]
 pub struct BaseConfig {
     pub peer_id: String,
+    pub role: String,
     // peer_keypairs contains all the node's private keys,
     // it is filled later on from a different file
     #[serde(skip)]
@@ -114,6 +115,7 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             peer_id: "".to_string(),
+            role: "validator".to_string(),
             peer_keypairs_file: PathBuf::from("peer_keypairs.config.toml"),
             peer_keypairs: KeyPairs::default(),
             data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
@@ -250,10 +252,17 @@ impl KeyPairs {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum RoleType {
+    Validator,
+    FullNode,
+}
+
 impl BaseConfig {
     /// Constructs a new BaseConfig with an empty temp directory
     pub fn new(
         peer_id: String,
+        role: String,
         peer_keypairs: KeyPairs,
         peer_keypairs_file: PathBuf,
         data_dir_path: PathBuf,
@@ -270,6 +279,7 @@ impl BaseConfig {
     ) -> Self {
         BaseConfig {
             peer_id,
+            role,
             peer_keypairs,
             peer_keypairs_file,
             data_dir_path,
@@ -282,6 +292,14 @@ impl BaseConfig {
             node_async_log_chan_size,
         }
     }
+
+    pub fn get_role(&self) -> RoleType {
+        match self.role.as_str() {
+            "validator" => RoleType::Validator,
+            "full_node" => RoleType::FullNode,
+            &_ => unimplemented!("Invalid node role: {}", self.role),
+        }
+    }
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -289,6 +307,7 @@ impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
             peer_id: self.peer_id.clone(),
+            role: self.role.clone(),
             peer_keypairs: self.peer_keypairs.clone(),
             peer_keypairs_file: self.peer_keypairs_file.clone(),
             data_dir_path: self.data_dir_path.clone(),

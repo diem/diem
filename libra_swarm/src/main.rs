@@ -49,6 +49,7 @@ fn main() {
         faucet_account_keypair,
         false, /* tee_logs */
         args.config_dir.clone(),
+        None, /* template_path */
     );
 
     let config = &swarm.config.get_configs()[0].1;

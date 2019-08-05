@@ -55,7 +55,7 @@ impl AdmissionControlNode {
 
         self.run_with_clients(
             Arc::clone(&client_env),
-            Arc::new(MempoolClient::new(mempool_channel)),
+            Some(Arc::new(MempoolClient::new(mempool_channel))),
             Some(Arc::new(StorageReadServiceClient::new(
                 Arc::clone(&client_env),
                 &self.node_config.storage.address,
@@ -70,7 +70,7 @@ impl AdmissionControlNode {
     pub fn run_with_clients<M: MempoolClientTrait + 'static>(
         &self,
         env: Arc<Environment>,
-        mp_client: Arc<M>,
+        mp_client: Option<Arc<M>>,
         storage_client: Option<Arc<StorageReadServiceClient>>,
     ) -> Result<()> {
         // create storage client if doesn't exist

@@ -147,6 +147,7 @@ mod tests {
                 faucet_account_keypair,
                 false,  /* tee_logs */
                 None,   /* config_dir */
+                None,   /* template_path */
             );
             let mut args = Opt {
                 validator_addresses: Vec::new(),

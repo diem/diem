@@ -5,7 +5,7 @@ use admission_control_proto::proto::admission_control_grpc::{
     create_admission_control, AdmissionControlClient,
 };
 use admission_control_service::admission_control_service::AdmissionControlService;
-use config::config::NodeConfig;
+use config::config::{NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use execution_proto::proto::execution_grpc;
@@ -40,9 +40,9 @@ use vm_validator::vm_validator::VMValidator;
 
 pub struct LibraHandle {
     _ac: ServerHandle,
-    _mempool: MempoolRuntime,
-    _network_runtime: Runtime,
-    consensus: Box<dyn ConsensusProvider>,
+    _mempool: Option<MempoolRuntime>,
+    _network: Option<Runtime>,
+    consensus: Option<Box<dyn ConsensusProvider>>,
     _execution: ServerHandle,
     _storage: ServerHandle,
     _debug: ServerHandle,
@@ -50,7 +50,9 @@ pub struct LibraHandle {
 
 impl Drop for LibraHandle {
     fn drop(&mut self) {
-        self.consensus.stop();
+        if let Some(consensus) = &mut self.consensus {
+            consensus.stop();
+        }
     }
 }
 
@@ -64,11 +66,16 @@ fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
     let port = config.admission_control.admission_control_service_port;
 
     // Create mempool client
-    let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
-    let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-    let mempool_client = Arc::new(MempoolClient::new(
-        ChannelBuilder::new(env2).connect(&connection_str),
-    ));
+    let mempool_client = match config.base.get_role() {
+        RoleType::FullNode => None,
+        RoleType::Validator => {
+            let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
+            let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
+            Some(Arc::new(MempoolClient::new(
+                ChannelBuilder::new(env2).connect(&connection_str),
+            )))
+        }
+    };
 
     // Create storage read client
     let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
@@ -234,22 +241,43 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     );
 
     instant = Instant::now();
-    let (
-        (mempool_network_sender, mempool_network_events),
-        (consensus_network_sender, consensus_network_events),
-        network_runtime,
-    ) = setup_network(node_config);
-    debug!("Network started in {} ms", instant.elapsed().as_millis());
-
-    instant = Instant::now();
     let (ac_server, ac_client) = setup_ac(&node_config);
     let ac = ServerHandle::setup(ac_server);
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
-    instant = Instant::now();
-    let mempool =
-        MempoolRuntime::bootstrap(&node_config, mempool_network_sender, mempool_network_events);
-    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+    let mut mempool = None;
+    let mut consensus = None;
+    let mut network = None;
+    if let RoleType::Validator = node_config.base.get_role() {
+        instant = Instant::now();
+        let (
+            (mempool_network_sender, mempool_network_events),
+            (consensus_network_sender, consensus_network_events),
+            network_runtime,
+        ) = setup_network(node_config);
+        network = Some(network_runtime);
+        debug!("Network started in {} ms", instant.elapsed().as_millis());
+
+        instant = Instant::now();
+        mempool = Some(MempoolRuntime::bootstrap(
+            &node_config,
+            mempool_network_sender,
+            mempool_network_events,
+        ));
+        debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+
+        instant = Instant::now();
+        let mut consensus_provider = make_consensus_provider(
+            node_config,
+            consensus_network_sender,
+            consensus_network_events,
+        );
+        consensus_provider
+            .start()
+            .expect("Failed to start consensus. Can't proceed.");
+        consensus = Some(consensus_provider);
+        debug!("Consensus started in {} ms", instant.elapsed().as_millis());
+    }
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
 
@@ -257,22 +285,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let metric_host = node_config.debug_interface.address.clone();
     thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
-    instant = Instant::now();
-    let mut consensus_provider = make_consensus_provider(
-        node_config,
-        consensus_network_sender,
-        consensus_network_events,
-    );
-    consensus_provider
-        .start()
-        .expect("Failed to start consensus. Can't proceed.");
-    debug!("Consensus started in {} ms", instant.elapsed().as_millis());
-
     let libra_handle = LibraHandle {
         _ac: ac,
         _mempool: mempool,
-        _network_runtime: network_runtime,
-        consensus: consensus_provider,
+        _network: network,
+        consensus,
         _execution: execution,
         _storage: storage,
         _debug: debug_if,
