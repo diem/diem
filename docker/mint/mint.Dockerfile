@@ -43,7 +43,7 @@ EXPOSE 8000
 CMD cd /opt/libra/etc && echo "$MINT_KEY" | \
     base64 -d > mint.key && \
     cd /opt/libra/bin && \
-    gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
+    exec gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
 
 
 ARG BUILD_DATE

@@ -66,7 +66,7 @@ scrape_configs:
   - job_name: 'validators'
     static_configs:
       %{ for target in split(",", validator_svcs) }
-      - targets: ['${element(split(":", target), 0)}:14297']
+      - targets: ['${element(split(":", target), 0)}:9101']
         labels:
           peer_id: '${substr(element(split(":", target), 1), 0, 8)}'
           role: 'validator'

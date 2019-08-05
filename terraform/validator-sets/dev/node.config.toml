@@ -1,9 +1,8 @@
 [network]
-advertised_address = "/ip4/${self_ip}/tcp/30303"
+advertised_address = "/ip4/${self_ip}/tcp/6180"
 
 [debug_interface]
 address = "0.0.0.0"
-admission_control_node_debug_port = 30306
 
 [storage]
 dir = "/opt/libra/data"

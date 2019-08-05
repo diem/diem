@@ -14,7 +14,7 @@ use structopt::StructOpt;
 )]
 struct Args {
     /// Admission Control port to connect to.
-    #[structopt(short = "p", long = "port", default_value = "30307")]
+    #[structopt(short = "p", long = "port", default_value = "8000")]
     pub port: String,
     /// Host address/name to connect to.
     #[structopt(short = "a", long = "host")]

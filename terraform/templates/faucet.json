@@ -12,7 +12,7 @@
             {"sourceVolume": "trusted-peers", "containerPath": "/opt/libra/etc/trusted_peers.config.toml"}
         ],
         "environment": [
-            {"name": "AC_PORT", "value": "30307"},
+            {"name": "AC_PORT", "value": "8000"},
             {"name": "AC_HOST", "value": "${ac_hosts}"},
             {"name": "LOG_LEVEL", "value": "${log_level}"}
         ],

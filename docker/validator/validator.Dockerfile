@@ -25,11 +25,11 @@ COPY docker/validator/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra_node /opt/libra/bin
 
 # Admission control
-EXPOSE 30307
+EXPOSE 8000
 # Validator network
-EXPOSE 30303
+EXPOSE 6180
 # Metrics
-EXPOSE 14297
+EXPOSE 9101
 
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
