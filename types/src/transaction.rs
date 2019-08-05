@@ -35,16 +35,20 @@ use proto_conv::{FromProto, IntoProto, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
+mod module;
 mod program;
+mod script;
 mod transaction_argument;
 
 #[cfg(test)]
 mod unit_tests;
 
-pub use program::{Program, TransactionArgument, SCRIPT_HASH_LENGTH};
+pub use module::Module;
+pub use program::{Program, SCRIPT_HASH_LENGTH};
 use protobuf::well_known_types::UInt64Value;
+pub use script::Script;
 use std::ops::Deref;
-pub use transaction_argument::parse_as_transaction_argument;
+pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 
@@ -90,6 +94,49 @@ impl RawTransaction {
             sender,
             sequence_number,
             payload: TransactionPayload::Program(program),
+            max_gas_amount,
+            gas_unit_price,
+            expiration_time,
+        }
+    }
+
+    /// Create a new `RawTransaction` with a script.
+    ///
+    /// A script transaction contains only code to execute. No publishing is allowed in scripts.
+    pub fn new_script(
+        sender: AccountAddress,
+        sequence_number: u64,
+        script: Script,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        expiration_time: Duration,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::Script(script),
+            max_gas_amount,
+            gas_unit_price,
+            expiration_time,
+        }
+    }
+
+    /// Create a new `RawTransaction` with a module to publish.
+    ///
+    /// A module transaction is the only way to publish code. Only one module per transaction
+    /// can be published.
+    pub fn new_module(
+        sender: AccountAddress,
+        sequence_number: u64,
+        module: Module,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        expiration_time: Duration,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::Module(module),
             max_gas_amount,
             gas_unit_price,
             expiration_time,
@@ -144,6 +191,10 @@ impl RawTransaction {
                 (get_transaction_name(program.code()), program.args())
             }
             TransactionPayload::WriteSet(_) => ("genesis".to_string(), &empty_vec[..]),
+            TransactionPayload::Script(script) => {
+                (get_transaction_name(script.code()), script.args())
+            }
+            TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
         };
         let mut f_args: String = "".to_string();
         for arg in args {
@@ -200,6 +251,10 @@ impl FromProto for RawTransaction {
                 TransactionPayload::Program(Program::from_proto(txn.take_program())?)
             } else if txn.has_write_set() {
                 TransactionPayload::WriteSet(WriteSet::from_proto(txn.take_write_set())?)
+            } else if txn.has_module() {
+                TransactionPayload::Module(Module::from_proto(txn.take_module())?)
+            } else if txn.has_script() {
+                TransactionPayload::Script(Script::from_proto(txn.take_script())?)
             } else {
                 bail!("RawTransaction payload missing");
             },
@@ -222,6 +277,8 @@ impl IntoProto for RawTransaction {
             TransactionPayload::WriteSet(write_set) => {
                 transaction.set_write_set(write_set.into_proto())
             }
+            TransactionPayload::Script(script) => transaction.set_script(script.into_proto()),
+            TransactionPayload::Module(module) => transaction.set_module(module.into_proto()),
         }
         transaction.set_gas_unit_price(self.gas_unit_price);
         transaction.set_max_gas_amount(self.max_gas_amount);
@@ -267,6 +324,10 @@ pub enum TransactionPayload {
     /// A regular programmatic transaction that is executed by the VM.
     Program(Program),
     WriteSet(WriteSet),
+    /// A transaction that publishes code.
+    Module(Module),
+    /// A transaction that executes code.
+    Script(Script),
 }
 
 impl CanonicalSerialize for TransactionPayload {
@@ -279,6 +340,14 @@ impl CanonicalSerialize for TransactionPayload {
             TransactionPayload::WriteSet(write_set) => {
                 serializer.encode_u32(TransactionPayloadType::WriteSet as u32)?;
                 serializer.encode_struct(write_set)?;
+            }
+            TransactionPayload::Script(script) => {
+                serializer.encode_u32(TransactionPayloadType::Script as u32)?;
+                serializer.encode_struct(script)?;
+            }
+            TransactionPayload::Module(module) => {
+                serializer.encode_u32(TransactionPayloadType::Module as u32)?;
+                serializer.encode_struct(module)?;
             }
         };
         Ok(())
@@ -296,6 +365,12 @@ impl CanonicalDeserialize for TransactionPayload {
             Some(TransactionPayloadType::WriteSet) => {
                 Ok(TransactionPayload::WriteSet(deserializer.decode_struct()?))
             }
+            Some(TransactionPayloadType::Script) => {
+                Ok(TransactionPayload::Script(deserializer.decode_struct()?))
+            }
+            Some(TransactionPayloadType::Module) => {
+                Ok(TransactionPayload::Module(deserializer.decode_struct()?))
+            }
             None => Err(format_err!(
                 "ParseError: Unable to decode TransactionPayloadType, found {}",
                 decoded_payload_type
@@ -308,6 +383,8 @@ impl CanonicalDeserialize for TransactionPayload {
 enum TransactionPayloadType {
     Program = 0,
     WriteSet = 1,
+    Script = 2,
+    Module = 3,
 }
 
 impl TransactionPayloadType {
@@ -315,6 +392,8 @@ impl TransactionPayloadType {
         match value {
             0 => Some(TransactionPayloadType::Program),
             1 => Some(TransactionPayloadType::WriteSet),
+            2 => Some(TransactionPayloadType::Script),
+            3 => Some(TransactionPayloadType::Module),
             _ => None,
         }
     }

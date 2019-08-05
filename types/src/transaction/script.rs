@@ -16,22 +16,18 @@ use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
+#[allow(dead_code)]
 pub const SCRIPT_HASH_LENGTH: usize = 32;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Program {
+pub struct Script {
     code: Vec<u8>,
     args: Vec<TransactionArgument>,
-    modules: Vec<Vec<u8>>,
 }
 
-impl Program {
-    pub fn new(code: Vec<u8>, modules: Vec<Vec<u8>>, args: Vec<TransactionArgument>) -> Program {
-        Program {
-            code,
-            modules,
-            args,
-        }
+impl Script {
+    pub fn new(code: Vec<u8>, args: Vec<TransactionArgument>) -> Self {
+        Script { code, args }
     }
 
     pub fn code(&self) -> &[u8] {
@@ -42,32 +38,28 @@ impl Program {
         &self.args
     }
 
-    pub fn modules(&self) -> &[Vec<u8>] {
-        &self.modules
-    }
-
-    pub fn into_inner(self) -> (Vec<u8>, Vec<TransactionArgument>, Vec<Vec<u8>>) {
-        (self.code, self.args, self.modules)
+    pub fn into_inner(self) -> (Vec<u8>, Vec<TransactionArgument>) {
+        (self.code, self.args)
     }
 }
 
-impl fmt::Debug for Program {
+impl fmt::Debug for Script {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // XXX note that "code" will eventually be encoded bytecode and will no longer be a
         // UTF8-ish string -- at that point the from_utf8_lossy will stop making sense.
-        f.debug_struct("Program")
+        f.debug_struct("Script")
             .field("code", &String::from_utf8_lossy(&self.code))
             .field("args", &self.args)
             .finish()
     }
 }
 
-impl FromProto for Program {
-    type ProtoType = crate::proto::transaction::Program;
+impl FromProto for Script {
+    type ProtoType = crate::proto::transaction::Script;
 
-    fn from_proto(proto_program: Self::ProtoType) -> Result<Self> {
+    fn from_proto(proto_script: Self::ProtoType) -> Result<Self> {
         let mut args = vec![];
-        for arg in proto_program.get_arguments() {
+        for arg in proto_script.get_arguments() {
             let argument = match arg.get_field_type() {
                 TransactionArgument_ArgType::U64 => {
                     let mut bytes = [0u8; 8];
@@ -94,24 +86,16 @@ impl FromProto for Program {
             };
             args.push(argument);
         }
-        let mut modules = vec![];
-        for m in proto_program.get_modules() {
-            modules.push(m.to_vec());
-        }
-        Ok(Program::new(
-            proto_program.get_code().to_vec(),
-            modules,
-            args,
-        ))
+        Ok(Script::new(proto_script.get_code().to_vec(), args))
     }
 }
 
-impl IntoProto for Program {
-    type ProtoType = crate::proto::transaction::Program;
+impl IntoProto for Script {
+    type ProtoType = crate::proto::transaction::Script;
 
     fn into_proto(self) -> Self::ProtoType {
-        let mut proto_program = Self::ProtoType::new();
-        proto_program.set_code(self.code);
+        let mut proto_script = Self::ProtoType::new();
+        proto_script.set_code(self.code);
         for arg in self.args {
             let mut argument = ProtoArgument::new();
 
@@ -137,30 +121,24 @@ impl IntoProto for Program {
                     argument.set_data(byte_array.as_bytes().to_vec())
                 }
             }
-            proto_program.mut_arguments().push(argument);
+            proto_script.mut_arguments().push(argument);
         }
-        for m in self.modules {
-            proto_program.mut_modules().push(m);
-        }
-        proto_program
+        proto_script
     }
 }
 
-impl CanonicalSerialize for Program {
+impl CanonicalSerialize for Script {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer.encode_vec(&self.code)?;
         serializer.encode_vec(&self.args)?;
-        serializer.encode_vec(&self.modules)?;
         Ok(())
     }
 }
 
-impl CanonicalDeserialize for Program {
+impl CanonicalDeserialize for Script {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let code: Vec<u8> = deserializer.decode_vec()?;
         let args: Vec<TransactionArgument> = deserializer.decode_vec()?;
-        let modules: Vec<Vec<u8>> = deserializer.decode_vec()?;
-
-        Ok(Program::new(code, modules, args))
+        Ok(Script::new(code, args))
     }
 }

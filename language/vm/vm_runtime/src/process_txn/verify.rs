@@ -63,6 +63,12 @@ where
                 // here.
                 None
             }
+            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
+                // This is an impossible condition at the moment and for a short time.
+                // ValidatedTransaction is never built with Module or Script so there
+                // is no way to reach this state
+                panic!("Unknown Transaction")
+            }
         };
 
         Ok(Self {

@@ -813,7 +813,9 @@ where
                     // should not reach this code path. The exception is genesis transaction (and
                     // maybe other FTVM transactions).
                     match transaction.payload() {
-                        TransactionPayload::Program(_) => {
+                        TransactionPayload::Program(_)
+                        | TransactionPayload::Module(_)
+                        | TransactionPayload::Script(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
                         TransactionPayload::WriteSet(_) => (),

@@ -24,6 +24,10 @@ message RawTransaction {
         // This bypasses the rules for regular transactions so will typically be
         // rejected. Only under special circumstances will it be accepted.
         WriteSet write_set = 4;
+        // The transaction script to execute.
+        Script script = 8;
+        // The MOVE Module to publish.
+        Module module = 9;
     }
     // Maximal total gas specified by wallet to spend for this transaction.
     uint64 max_gas_amount = 5;
@@ -44,6 +48,12 @@ message Program {
     repeated bytes modules = 3;
 }
 
+// The code for the transaction to execute
+message Script {
+    bytes code = 1;
+    repeated TransactionArgument arguments = 2;
+}
+
 // An argument to the transaction if the transaction takes arguments
 message TransactionArgument {
     enum ArgType {
@@ -54,6 +64,11 @@ message TransactionArgument {
     }
     ArgType type = 1;
     bytes data = 2;
+}
+
+// A Move Module to publish
+message Module {
+    bytes code = 1;
 }
 
 // A generic structure that represents signed RawTransaction
