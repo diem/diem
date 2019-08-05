@@ -83,6 +83,24 @@ impl<T: Payload> ProposalGenerator<T> {
         }
     }
 
+    /// Creates a NIL block proposal extending the highest certified block from the block store.
+    pub fn generate_nil_block(&self, round: Round) -> Result<Block<T>, ProposalGenerationError> {
+        let hqc_block = self.block_store.highest_certified_block();
+        if hqc_block.round() >= round {
+            // The given round is too low.
+            return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
+        }
+        let hqc_block_qc = self
+            .block_store
+            .get_quorum_cert_for_block(hqc_block.id())
+            .ok_or_else(|| ProposalGenerationError::GivenRoundTooLow(hqc_block.round()))?;
+        Ok(Block::make_nil_block(
+            hqc_block.as_ref(),
+            round,
+            hqc_block_qc.as_ref().clone(),
+        ))
+    }
+
     /// The function generates a new proposal block: the returned future is fulfilled when the
     /// payload is delivered by the TxnManager implementation.  At most one proposal can be
     /// generated per round (no proposal equivocation allowed).
