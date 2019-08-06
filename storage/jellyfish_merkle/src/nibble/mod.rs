@@ -100,7 +100,7 @@ prop_compose! {
 }
 
 prop_compose! {
-    pub fn arb_internal_nibble_path()(
+    fn arb_internal_nibble_path()(
         nibble_path in arb_nibble_path().prop_filter(
             "Filter out leaf paths.",
             |p| p.num_nibbles() < ROOT_NIBBLE_HEIGHT,
