@@ -91,6 +91,12 @@ pub enum VMStaticViolation {
     IndexOutOfBounds(IndexKind, usize, usize),
 
     #[fail(
+        display = "Index out of bounds for '{}' at code offset {} (expected 0..{}, found {})",
+        _0, _1, _2, _3
+    )]
+    CodeUnitIndexOutOfBounds(IndexKind, usize, usize, usize),
+
+    #[fail(
         display = "Range out of bounds for '{}' (expected 0..{}, found {}..{})",
         _0, _1, _2, _3
     )]
@@ -513,6 +519,9 @@ impl From<&VerificationError> for VMVerificationError {
         match error.err {
             VMStaticViolation::IndexOutOfBounds(_, _, _) => {
                 VMVerificationError::IndexOutOfBounds(message)
+            }
+            VMStaticViolation::CodeUnitIndexOutOfBounds(_, _, _, _) => {
+                VMVerificationError::CodeUnitIndexOutOfBounds(message)
             }
             VMStaticViolation::RangeOutOfBounds(_, _, _, _) => {
                 VMVerificationError::RangeOutOfBounds(message)

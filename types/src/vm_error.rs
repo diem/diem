@@ -41,6 +41,7 @@ pub enum VMValidationStatus {
 #[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub enum VMVerificationError {
     IndexOutOfBounds(String),
+    CodeUnitIndexOutOfBounds(String),
     RangeOutOfBounds(String),
     NoModuleHandles(String),
     ModuleAddressDoesNotMatchSender(String),
@@ -373,6 +374,9 @@ impl IntoProto for VMVerificationError {
             VMVerificationError::IndexOutOfBounds(message) => {
                 (ProtoKind::IndexOutOfBounds, message)
             }
+            VMVerificationError::CodeUnitIndexOutOfBounds(message) => {
+                (ProtoKind::CodeUnitIndexOutOfBounds, message)
+            }
             VMVerificationError::RangeOutOfBounds(message) => {
                 (ProtoKind::RangeOutOfBounds, message)
             }
@@ -572,6 +576,9 @@ impl FromProto for VMVerificationError {
         let (kind, message) = proto_verification_error;
         match kind {
             ProtoKind::IndexOutOfBounds => Ok(VMVerificationError::IndexOutOfBounds(message)),
+            ProtoKind::CodeUnitIndexOutOfBounds => {
+                Ok(VMVerificationError::CodeUnitIndexOutOfBounds(message))
+            }
             ProtoKind::RangeOutOfBounds => Ok(VMVerificationError::RangeOutOfBounds(message)),
             ProtoKind::NoModuleHandles => Ok(VMVerificationError::NoModuleHandles(message)),
             ProtoKind::ModuleAddressDoesNotMatchSender => Ok(
