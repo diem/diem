@@ -7,7 +7,7 @@ use crypto::{
     HashValue,
 };
 use proptest::prelude::*;
-use std::panic;
+use std::{panic, rc::Rc};
 use types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
@@ -667,5 +667,164 @@ fn test_internal_hash_and_proof() {
                 (None, vec![hash_x5])
             );
         }
+    }
+}
+
+enum BinaryTreeNode {
+    Internal(BinaryTreeInternalNode),
+    Child(BinaryTreeChildNode),
+    Null,
+}
+
+impl BinaryTreeNode {
+    fn new_child(index: u8, child: &Child) -> Self {
+        Self::Child(BinaryTreeChildNode {
+            index,
+            version: child.version,
+            hash: child.hash,
+            is_leaf: child.is_leaf,
+        })
+    }
+
+    fn new_internal(
+        first_child_index: u8,
+        num_children: u8,
+        left: BinaryTreeNode,
+        right: BinaryTreeNode,
+    ) -> Self {
+        let hash = SparseMerkleInternalNode::new(left.hash(), right.hash()).hash();
+
+        Self::Internal(BinaryTreeInternalNode {
+            first_child_index,
+            num_children,
+            left: Rc::new(left),
+            right: Rc::new(right),
+            hash,
+        })
+    }
+
+    fn hash(&self) -> HashValue {
+        match self {
+            BinaryTreeNode::Internal(node) => node.hash,
+            BinaryTreeNode::Child(node) => node.hash,
+            BinaryTreeNode::Null => *SPARSE_MERKLE_PLACEHOLDER_HASH,
+        }
+    }
+}
+
+struct BinaryTreeInternalNode {
+    first_child_index: u8,
+    num_children: u8,
+    left: Rc<BinaryTreeNode>,
+    right: Rc<BinaryTreeNode>,
+    hash: HashValue,
+}
+
+impl BinaryTreeInternalNode {
+    fn in_left_subtree(&self, n: u8) -> bool {
+        assert!(n >= self.first_child_index);
+        assert!(n < self.first_child_index + self.num_children);
+
+        n < self.first_child_index + self.num_children / 2
+    }
+}
+
+#[derive(Clone, Copy)]
+struct BinaryTreeChildNode {
+    version: Version,
+    index: u8,
+    hash: HashValue,
+    is_leaf: bool,
+}
+
+struct NaiveInternalNode {
+    root: Rc<BinaryTreeNode>,
+}
+
+impl NaiveInternalNode {
+    fn from_clever_node(node: &InternalNode) -> Self {
+        Self {
+            root: Rc::new(Self::node_for_subtree(0, 16, &node.children)),
+        }
+    }
+
+    fn node_for_subtree(
+        first_child_index: u8,
+        num_children: u8,
+        children: &Children,
+    ) -> BinaryTreeNode {
+        if num_children == 1 {
+            return children
+                .get(&first_child_index.into())
+                .map_or(BinaryTreeNode::Null, |child| {
+                    BinaryTreeNode::new_child(first_child_index, &child)
+                });
+        }
+
+        let half_size = num_children / 2;
+        let left = Self::node_for_subtree(first_child_index, half_size, children);
+        let right = Self::node_for_subtree(first_child_index + half_size, half_size, children);
+
+        match (&left, &right) {
+            (BinaryTreeNode::Null, BinaryTreeNode::Null) => {
+                return BinaryTreeNode::Null;
+            }
+            (BinaryTreeNode::Null, BinaryTreeNode::Child(node))
+            | (BinaryTreeNode::Child(node), BinaryTreeNode::Null) => {
+                if node.is_leaf {
+                    return BinaryTreeNode::Child(*node);
+                }
+            }
+            _ => (),
+        };
+
+        BinaryTreeNode::new_internal(first_child_index, num_children, left, right)
+    }
+
+    fn get_child_with_siblings(
+        &self,
+        node_key: &NodeKey,
+        n: u8,
+    ) -> (Option<NodeKey>, Vec<HashValue>) {
+        let mut current_node = Rc::clone(&self.root);
+        let mut siblings = Vec::new();
+
+        loop {
+            match current_node.as_ref() {
+                BinaryTreeNode::Internal(node) => {
+                    if node.in_left_subtree(n) {
+                        siblings.push(node.right.hash());
+                        current_node = Rc::clone(&node.left);
+                    } else {
+                        siblings.push(node.left.hash());
+                        current_node = Rc::clone(&node.right);
+                    }
+                }
+                BinaryTreeNode::Child(node) => {
+                    return (
+                        Some(node_key.gen_child_node_key(node.version, node.index.into())),
+                        siblings,
+                    )
+                }
+                BinaryTreeNode::Null => return (None, siblings),
+            }
+        }
+    }
+}
+
+proptest! {
+    #[test]
+    fn test_get_child_with_siblings(
+        node_key in any::<NodeKey>().prop_filter(
+            "Filter out keys for leaves.",
+            |k| k.nibble_path().num_nibbles() < 64
+        ),
+        node in any::<InternalNode>(),
+        n in any::<Nibble>(),
+    ) {
+        prop_assert_eq!(
+            node.get_child_with_siblings(&node_key, n),
+            NaiveInternalNode::from_clever_node(&node).get_child_with_siblings(&node_key, n.into())
+        )
     }
 }

@@ -15,4 +15,4 @@ allowed_lints=(
     "-A" "clippy::trivially-copy-pass-by-ref"
 )
 
-echo "${allowed_lints[@]}"
+echo "${allowed_lints[@]}"  -Z external-macro-backtrace

@@ -28,6 +28,7 @@ use crypto::{
 use failure::{prelude::*, Fail, Result};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
+use proptest::{collection::hash_map, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -114,7 +115,7 @@ impl NodeKey {
 }
 
 /// Each child of [`InternalNode`] encapsulates a nibble forking at this node.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Child {
     // The hash value of this child node.
     pub hash: HashValue,
@@ -266,6 +267,23 @@ impl From<LeafNode> for Node {
     fn from(node: LeafNode) -> Self {
         Node::Leaf(node)
     }
+}
+
+impl Arbitrary for InternalNode {
+    type Parameters = ();
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        hash_map(any::<Nibble>(), any::<Child>(), 1..=16)
+            .prop_filter(
+                "InternalNode with only one child which is a leaf is illegal",
+                |children| {
+                    !(children.len() == 1 || children.values().next().expect("Must exist.").is_leaf)
+                },
+            )
+            .prop_map(InternalNode::new)
+            .boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl InternalNode {
