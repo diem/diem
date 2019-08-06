@@ -300,7 +300,7 @@ impl ClientProxy {
     /// Waits for the next transaction for a specific address and prints it
     pub fn wait_for_transaction(&mut self, account: AccountAddress, sequence_number: u64) {
         let mut max_iterations = 5000;
-        print!("[waiting ");
+        print!("waiting ");
         loop {
             stdout().flush().unwrap();
             max_iterations -= 1;
@@ -311,7 +311,7 @@ impl ClientProxy {
             {
                 println!("transaction is stored!");
                 if events.is_empty() {
-                    println!("but it didn't emit any events");
+                    println!("no events emitted");
                 }
                 break;
             } else if max_iterations == 0 {
