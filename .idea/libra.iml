@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/common/crash_handler/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/crash_handler/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/crash_handler/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/crash_handler/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src/macros/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src/macros/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src/macros/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src/macros/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proptest_helpers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proptest_helpers/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proptest_helpers/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proptest_helpers/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/schemadb/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/schemadb/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/schemadb/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/schemadb/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/netcore/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/netcore/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/netcore/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/netcore/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/scratchpad/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/scratchpad/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/scratchpad/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/scratchpad/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/proto_conv_derive/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/proto_conv_derive/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/proto_conv_derive/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/proto_conv_derive/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpc_helpers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpc_helpers/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpc_helpers/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpc_helpers/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/serializer_tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/serializer_tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/serializer_tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/serializer_tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/client/libra_wallet/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/client/libra_wallet/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/client/libra_wallet/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/client/libra_wallet/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_client/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_client/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_client/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_client/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/e2e_tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/e2e_tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/e2e_tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/e2e_tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/libra_fuzzer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/libra_fuzzer/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/libra_fuzzer/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/libra_fuzzer/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_service/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_service/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_service/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/channel/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/channel/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/channel/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/channel/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/tools/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/tools/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/tools/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/tools/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/logger/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/logger/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/logger/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/logger/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/accumulator/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/accumulator/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/accumulator/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/accumulator/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/debug_interface/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/debug_interface/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/debug_interface/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/debug_interface/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/vm_validator/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vm_validator/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vm_validator/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/vm_validator/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_proto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_proto/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_proto/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/admission_control/admission_control_proto/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpcio-client/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpcio-client/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpcio-client/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/grpcio-client/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/libradb/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/libradb/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/libradb/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/libradb/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_service/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_service/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_service/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/jellyfish_merkle/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/jellyfish_merkle/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/jellyfish_merkle/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/jellyfish_merkle/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_swarm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_swarm/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_swarm/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_swarm/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_proto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_proto/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_proto/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_proto/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/generator/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/generator/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/generator/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/generator/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/executable_helpers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/executable_helpers/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/executable_helpers/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/executable_helpers/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/metrics/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/metrics/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/metrics/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/metrics/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/config_builder/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/config_builder/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/config_builder/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/config_builder/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/consensus/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/consensus/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/consensus/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/consensus/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/secret_service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/secret_service/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/secret_service/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/secret_service/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/mempool/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mempool/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mempool/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/mempool/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_service/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_service/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_service/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/bytecode_to_boogie/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/bytecode_to_boogie/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/bytecode_to_boogie/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stackless_bytecode/bytecode_to_boogie/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/cost_synthesis/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/cost_synthesis/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/cost_synthesis/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/cost_synthesis/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/benchmarks/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/benchmarks/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/benchmarks/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/benchmarks/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/repl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/repl/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/repl/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/tools/repl/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/types/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/types/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/types/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/types/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/memsocket/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/memsocket/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/memsocket/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/memsocket/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/bytecode_verifier_tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/bytecode_verifier_tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/bytecode_verifier_tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/bytecode_verifier_tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/jemalloc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/jemalloc/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/jemalloc/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/jemalloc/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stdlib/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stdlib/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stdlib/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/stdlib/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/noise/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/noise/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/noise/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/noise/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_node/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_node/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_node/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/libra_node/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_genesis/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_genesis/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_genesis/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_genesis/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_runtime_types/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_runtime_types/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_runtime_types/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_runtime_types/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/functional_tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/functional_tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/functional_tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/functional_tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/state_view/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/state_view/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/state_view/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/state_view/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/socket_bench_server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/socket_bench_server/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/network/socket_bench_server/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/network/socket_bench_server/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_client/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_client/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_client/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/storage_client/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/syntax/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/syntax/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/syntax/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/syntax/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/compiler/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/build_helpers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/build_helpers/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/build_helpers/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/build_helpers/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_cache_map/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_cache_map/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_cache_map/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_cache_map/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_proto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_proto/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_proto/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_proto/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/client/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/client/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/client/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/client/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/executor/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/executor/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/executor/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/executor/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/sparse_merkle/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/sparse_merkle/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/sparse_merkle/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/storage/sparse_merkle/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/benchmark/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/benchmark/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/benchmark/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/benchmark/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/transaction_builder/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/transaction_builder/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/transaction_builder/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/transaction_builder/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/failure_macros/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/failure_macros/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/failure_macros/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/failure_ext/failure_macros/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/generate_keypair/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/generate_keypair/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config/generate_keypair/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/config/generate_keypair/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/canonical_serialization/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/canonical_serialization/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/canonical_serialization/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/canonical_serialization/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/nextgen_crypto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/nextgen_crypto/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/nextgen_crypto/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crypto/nextgen_crypto/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/execution/execution_tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/cluster_test/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/cluster_test/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/cluster_test/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/cluster_test/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/common/proto_conv/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/invalid_mutations/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/invalid_mutations/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/invalid_mutations/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/language/bytecode_verifier/invalid_mutations/benches" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/admission_control/admission_control_proto/target" />
+      <excludeFolder url="file://$MODULE_DIR$/admission_control/admission_control_service/target" />
+      <excludeFolder url="file://$MODULE_DIR$/benchmark/target" />
+      <excludeFolder url="file://$MODULE_DIR$/client/libra_wallet/target" />
+      <excludeFolder url="file://$MODULE_DIR$/client/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/build_helpers/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/canonical_serialization/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/channel/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/crash_handler/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/debug_interface/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/executable_helpers/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/failure_ext/failure_macros/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/failure_ext/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/grpc_helpers/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/grpcio-client/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/jemalloc/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/logger/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/metrics/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/proptest_helpers/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/proto_conv/proto_conv_derive/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/proto_conv/target" />
+      <excludeFolder url="file://$MODULE_DIR$/common/tools/target" />
+      <excludeFolder url="file://$MODULE_DIR$/config/config_builder/target" />
+      <excludeFolder url="file://$MODULE_DIR$/config/generate_keypair/target" />
+      <excludeFolder url="file://$MODULE_DIR$/config/target" />
+      <excludeFolder url="file://$MODULE_DIR$/consensus/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/src/macros/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crypto/legacy_crypto/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crypto/nextgen_crypto/target" />
+      <excludeFolder url="file://$MODULE_DIR$/crypto/secret_service/target" />
+      <excludeFolder url="file://$MODULE_DIR$/execution/execution_client/target" />
+      <excludeFolder url="file://$MODULE_DIR$/execution/execution_proto/target" />
+      <excludeFolder url="file://$MODULE_DIR$/execution/execution_service/target" />
+      <excludeFolder url="file://$MODULE_DIR$/execution/execution_tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/execution/executor/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/benchmarks/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/bytecode_verifier/bytecode_verifier_tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/bytecode_verifier/invalid_mutations/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/bytecode_verifier/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/syntax/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/compiler/ir_to_bytecode/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/compiler/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/e2e_tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/functional_tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/stackless_bytecode/bytecode_to_boogie/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/stackless_bytecode/generator/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/stdlib/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/tools/cost_synthesis/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/tools/repl/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/transaction_builder/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/serializer_tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/vm_genesis/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_cache_map/target" />
+      <excludeFolder url="file://$MODULE_DIR$/language/vm/vm_runtime/vm_runtime_types/target" />
+      <excludeFolder url="file://$MODULE_DIR$/libra_node/target" />
+      <excludeFolder url="file://$MODULE_DIR$/libra_swarm/target" />
+      <excludeFolder url="file://$MODULE_DIR$/mempool/target" />
+      <excludeFolder url="file://$MODULE_DIR$/network/memsocket/target" />
+      <excludeFolder url="file://$MODULE_DIR$/network/netcore/target" />
+      <excludeFolder url="file://$MODULE_DIR$/network/noise/target" />
+      <excludeFolder url="file://$MODULE_DIR$/network/socket_bench_server/target" />
+      <excludeFolder url="file://$MODULE_DIR$/network/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/accumulator/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/jellyfish_merkle/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/libradb/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/schemadb/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/scratchpad/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/sparse_merkle/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/state_view/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/storage_client/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/storage_proto/target" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/storage_service/target" />
+      <excludeFolder url="file://$MODULE_DIR$/testsuite/cluster_test/target" />
+      <excludeFolder url="file://$MODULE_DIR$/testsuite/libra_fuzzer/target" />
+      <excludeFolder url="file://$MODULE_DIR$/testsuite/target" />
+      <excludeFolder url="file://$MODULE_DIR$/types/target" />
+      <excludeFolder url="file://$MODULE_DIR$/vm_validator/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
