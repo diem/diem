@@ -1,5 +1,5 @@
 // check: VerificationError
-// check: IndexOutOfBounds
+// check: CodeUnitIndexOutOfBounds
 
 main() {
     let ret_if_val: bool;
