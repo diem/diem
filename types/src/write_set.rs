@@ -5,6 +5,9 @@
 //! path it updates. For each access path, the VM can either give its new value or delete it.
 
 use crate::access_path::AccessPath;
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
 use failure::prelude::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -38,6 +41,50 @@ impl std::fmt::Debug for WriteOp {
         match self {
             WriteOp::Value(value) => write!(f, "Value({})", String::from_utf8_lossy(value)),
             WriteOp::Deletion => write!(f, "Deletion"),
+        }
+    }
+}
+
+impl CanonicalSerialize for WriteOp {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        match self {
+            WriteOp::Deletion => serializer.encode_u32(WriteOpType::Deletion as u32)?,
+            WriteOp::Value(value) => {
+                serializer.encode_u32(WriteOpType::Value as u32)?;
+                serializer.encode_vec(value)?
+            }
+        };
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for WriteOp {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let decoded_write_op_type = deserializer.decode_u32()?;
+        let write_op_type = WriteOpType::from_u32(decoded_write_op_type);
+        match write_op_type {
+            Some(WriteOpType::Deletion) => Ok(WriteOp::Deletion),
+            Some(WriteOpType::Value) => Ok(WriteOp::Value(deserializer.decode_vec()?)),
+            None => Err(format_err!(
+                "ParseError: Unable to decode WriteOpType, found {}",
+                decoded_write_op_type
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+enum WriteOpType {
+    Deletion = 0,
+    Value = 1,
+}
+
+impl WriteOpType {
+    fn from_u32(value: u32) -> Option<WriteOpType> {
+        match value {
+            0 => Some(WriteOpType::Deletion),
+            1 => Some(WriteOpType::Value),
+            _ => None,
         }
     }
 }
@@ -167,6 +214,20 @@ impl IntoProto for WriteSet {
         let mut proto_write_set = Self::ProtoType::new();
         proto_write_set.set_write_set(proto_write_ops);
         proto_write_set
+    }
+}
+
+impl CanonicalSerialize for WriteSet {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_vec(&self.0.write_set)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for WriteSet {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let write_set = deserializer.decode_vec::<(AccessPath, WriteOp)>()?;
+        WriteSetMut::new(write_set).freeze()
     }
 }
 
