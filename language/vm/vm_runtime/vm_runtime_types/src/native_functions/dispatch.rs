@@ -4,7 +4,7 @@
 use super::{hash, primitive_helpers, signature, vector};
 use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
 use std::collections::{HashMap, VecDeque};
-use types::{account_address::AccountAddress, language_storage::ModuleId};
+use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
 use vm::file_format::{FunctionSignature, SignatureToken};
 
 /// Enum representing the result of running a native function
@@ -67,8 +67,7 @@ macro_rules! add {
             dispatch: $dis,
             expected_signature,
         };
-        let addr = AccountAddress::from_hex_literal($addr).unwrap();
-        let id = ModuleId::new(addr, $module.into());
+        let id = ModuleId::new($addr, $module.into());
         let old = $m
             .entry(id)
             .or_insert_with(HashMap::new)
@@ -79,12 +78,11 @@ macro_rules! add {
 
 /// Helper for finding expected struct handle index
 fn tstruct(
-    addr_str: &str,
+    addr: AccountAddress,
     module_name: &str,
     function_name: &str,
     args: Vec<SignatureToken>,
 ) -> SignatureToken {
-    let addr = AccountAddress::from_hex_literal(addr_str).unwrap();
     let id = ModuleId::new(addr, module_name.into());
     let native_struct = dispatch_native_struct(&id, function_name).unwrap();
     let idx = native_struct.expected_index;
@@ -99,60 +97,61 @@ lazy_static! {
     static ref NATIVE_FUNCTION_MAP: NativeFunctionMap = {
         use SignatureToken::*;
         let mut m: NativeFunctionMap = HashMap::new();
+        let addr = account_config::core_code_address();
         // Hash
-        add!(m, "0x0", "Hash", "keccak256",
+        add!(m, addr, "Hash", "keccak256",
             hash::native_keccak_256,
             vec![ByteArray],
             vec![ByteArray]
         );
-        add!(m, "0x0", "Hash", "ripemd160",
+        add!(m, addr, "Hash", "ripemd160",
             hash::native_ripemd_160,
             vec![ByteArray],
             vec![ByteArray]
         );
-        add!(m, "0x0", "Hash", "sha2_256",
+        add!(m, addr, "Hash", "sha2_256",
             hash::native_sha2_256,
             vec![ByteArray],
             vec![ByteArray]
         );
-        add!(m, "0x0", "Hash", "sha3_256",
+        add!(m, addr, "Hash", "sha3_256",
             hash::native_sha3_256,
             vec![ByteArray],
             vec![ByteArray]
         );
         // Signature
-        add!(m, "0x0", "Signature", "ed25519_verify",
+        add!(m, addr, "Signature", "ed25519_verify",
             signature::native_ed25519_signature_verification,
             vec![ByteArray, ByteArray, ByteArray],
             vec![Bool]
         );
-        add!(m, "0x0", "Signature", "ed25519_threshold_verify",
+        add!(m, addr, "Signature", "ed25519_threshold_verify",
             signature::native_ed25519_threshold_signature_verification,
             vec![ByteArray, ByteArray, ByteArray, ByteArray],
             vec![U64]
         );
         // AddressUtil
-        add!(m, "0x0", "AddressUtil", "address_to_bytes",
+        add!(m, addr, "AddressUtil", "address_to_bytes",
             primitive_helpers::native_address_to_bytes,
             vec![Address],
             vec![ByteArray]
         );
         // U64Util
-        add!(m, "0x0", "U64Util", "u64_to_bytes",
+        add!(m, addr, "U64Util", "u64_to_bytes",
             primitive_helpers::native_u64_to_bytes,
             vec![U64],
             vec![ByteArray]
         );
         // BytearrayUtil
-        add!(m, "0x0", "BytearrayUtil", "bytearray_concat",
+        add!(m, addr, "BytearrayUtil", "bytearray_concat",
             primitive_helpers::native_bytearray_concat,
             vec![ByteArray, ByteArray],
             vec![ByteArray]
         );
         // Vector
-        add!(m, "0x0", "Vector", "length",
+        add!(m, addr, "Vector", "length",
             vector::native_length,
-            vec![Reference(Box::new(tstruct("0x0", "Vector", "T", vec![])))],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![])))],
             vec![U64]
         );
         m
