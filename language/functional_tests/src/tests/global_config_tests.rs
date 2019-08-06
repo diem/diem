@@ -8,19 +8,25 @@ use crate::{
 };
 
 #[test]
-fn parse_account() {
+fn parse_account_positive() {
     for s in &[
         "//! account: alice",
         "//!account: bob",
         "//! account: bob, 100",
         "//!account:alice,",
-        // TODO: The following should parse. Fix it.
-        // "//!   account :alice,1, 2",
+        "//!   account :alice,1, 2",
         "//! account: bob, 0, 0",
+        "//!    account : bob, 0, 0",
+        "//!    account     :bob,   0,  0",
+        "//!\naccount\n:bob,\n0,\n0",
+        "//!\taccount\t:bob,\t0,\t0",
     ] {
         s.parse::<Entry>().unwrap();
     }
+}
 
+#[test]
+fn parse_account_negative() {
     for s in &["//! account:", "//! account", "//! account: alice, 1, 2, 3"] {
         s.parse::<Entry>().unwrap_err();
     }

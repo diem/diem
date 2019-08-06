@@ -36,7 +36,7 @@ impl FromStr for Entry {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s1 = s.trim_start().trim_end();
+        let s1 = s.split_whitespace().collect::<String>();
         if !s1.starts_with("//!") {
             return Err(
                 ErrorKind::Other("global config entry must start with //!".to_string()).into(),

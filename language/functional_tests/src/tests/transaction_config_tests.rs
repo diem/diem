@@ -21,6 +21,10 @@ fn parse_simple_positive() {
         "//! no-run: compiler, verifier, runtime",
         "//! sender: alice",
         "//! sender:foobar42",
+        "//! sender :alice",
+        "//! sender:foobar42",
+        "//! sender\t:\tfoobar42",
+        "//!\nsender\n:\nfoobar42",
     ] {
         s.parse::<Entry>().unwrap();
     }
