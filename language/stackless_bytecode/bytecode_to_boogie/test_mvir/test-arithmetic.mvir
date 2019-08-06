@@ -18,14 +18,15 @@ module TestArithmetic {
       let d: bool;
       c = (copy(a) > copy(b)) && (copy(a) >= copy(b));
       d = (copy(a) < copy(b)) || (copy(a) <= copy(b));
-      assert(!(move(c) != move(d)), 42);
+      assert((move(c) != move(d)), 42);
       return;
   }
 
 
 	public arithmetic_ops(a: u64, b: u64): u64 * u64 {
       let c: u64;
-      c = (copy(a) + move(b) - 1) * 2 / 3 % 4;
+      c = (6 + 4 - 1) * 2 / 3 % 4;
+			assert(copy(c) == 3, 42);
       return move(c), move(a);
   }
 }

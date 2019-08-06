@@ -14,3 +14,4 @@ stackless_bytecode_generator = { path = "../generator"}
 
 [dev-dependencies]
 proptest = "0.9"
+types = { path = "../../../types", features = ["testing"]}

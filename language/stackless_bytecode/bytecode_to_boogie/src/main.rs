@@ -13,8 +13,14 @@ use vm::file_format::CompiledModule;
 fn main() {
     let args: Vec<String> = env::args().collect();
     let file_name = &args[1];
-
     // read file and compile into compiled module
+
+    // TODO: option for loading bytecode?
+    // let mut f = File::open(file_name).unwrap();
+    // let mut buffer = Vec::new();
+    // let _ = f.read_to_end(&mut buffer);
+    // let loaded_module = CompiledModuleMut::deserialize_no_check_bounds(&buffer).unwrap();
+
     let code = fs::read_to_string(file_name).unwrap();
     let module = parse_module(&code).unwrap();
     let address = &AccountAddress::default();
