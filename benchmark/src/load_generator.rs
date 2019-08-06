@@ -13,6 +13,7 @@ use logger::prelude::*;
 use proto_conv::IntoProto;
 use types::{
     account_address::AccountAddress,
+    get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::get_with_proof::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
     transaction::Program,
     transaction_helpers::{create_signed_txn, TransactionSigner},
@@ -163,6 +164,21 @@ pub fn gen_repeated_requests<T: LoadGenerator + ?Sized>(
         repeated_reqs.extend(requests.into_iter());
     }
     repeated_reqs
+}
+
+/// Generate a GetAccountTransactionBySequenceNumber request.
+pub fn gen_get_txn_by_sequnece_number_request(
+    sender: AccountAddress,
+    sequence_number: u64,
+) -> Request {
+    let req_item = RequestItem::GetAccountTransactionBySequenceNumber {
+        account: sender,
+        sequence_number,
+        fetch_events: false,
+    };
+    let request_items = vec![req_item];
+    let req = UpdateToLatestLedgerRequest::new(0, request_items);
+    Request::ReadRequest(req.into_proto())
 }
 
 /// -------------------------------------------------------------------------------- ///
