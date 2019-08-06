@@ -92,9 +92,9 @@ fn test_timeout_certificate() {
             pm.process_remote_timeout(pacemaker_timeout).await;
         }
         // Then timeout quorum for previous round (1,2,3) generates new round event for round 2
-        expect_timeout(2, &mut new_round_events_receiver).await;
+        expect_timeout(4, &mut new_round_events_receiver).await;
         // Then timeout quorum for previous round (2,3,4) generates new round event for round 3
-        expect_timeout(3, &mut new_round_events_receiver).await;
+        expect_timeout(5, &mut new_round_events_receiver).await;
     });
 }
 

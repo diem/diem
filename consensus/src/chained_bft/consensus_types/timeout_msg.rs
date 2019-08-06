@@ -339,7 +339,7 @@ impl PacemakerTimeoutCertificate {
         &self,
         validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> Result<(), PacemakerTimeoutCertificateVerificationError> {
-        let mut min_round: Option<Round> = None;
+        let mut max_round: Option<Round> = None;
         let mut unique_authors = HashSet::new();
         for timeout in &self.timeouts {
             if let Err(e) =
@@ -349,16 +349,16 @@ impl PacemakerTimeoutCertificate {
             }
             unique_authors.insert(timeout.author());
             let timeout_round = timeout.round();
-            min_round = Some(min_round.map_or(timeout_round, move |x| x.min(timeout_round)))
+            max_round = Some(max_round.map_or(timeout_round, move |x| x.max(timeout_round)))
         }
         if unique_authors.len() < validator.quorum_size() {
             return Err(NoQuorum);
         }
-        if min_round == Some(self.round) {
+        if max_round == Some(self.round) {
             Ok(())
         } else {
             Err(RoundMismatch {
-                expected: min_round.unwrap_or(0),
+                expected: max_round.unwrap_or(0),
             })
         }
     }

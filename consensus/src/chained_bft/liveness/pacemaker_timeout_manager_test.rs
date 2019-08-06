@@ -47,14 +47,14 @@ fn test_basic() {
             .highest_timeout_certificate()
             .unwrap()
             .round(),
-        1
+        2
     );
 
     // Timeout certificate increased when incrementing the round from signer 2
     let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signer2, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer2_round2),
-        true
+        false
     );
     assert_eq!(
         timeout_manager
@@ -68,14 +68,14 @@ fn test_basic() {
     let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signer2, None);
     assert_eq!(
         timeout_manager.update_received_timeout(timeout_signer2_round3),
-        false
+        true
     );
     assert_eq!(
         timeout_manager
             .highest_timeout_certificate()
             .unwrap()
             .round(),
-        2
+        3
     );
 
     // Simulate received a higher received timeout certificate

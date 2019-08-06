@@ -121,7 +121,7 @@ impl PacemakerTimeoutManager {
         Some(PacemakerTimeoutCertificate::new(
             // expect does not panic here because code above verifies values length
             slice
-                .last()
+                .first()
                 .expect("Slice for timeout certificate is empty")
                 .round(),
             slice.iter().map(|x| (*x).clone()).collect(),

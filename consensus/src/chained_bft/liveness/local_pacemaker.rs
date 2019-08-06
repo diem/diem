@@ -419,10 +419,10 @@ impl Pacemaker for LocalPacemaker {
         pacemaker_timeout: PacemakerTimeout,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
         let mut guard = self.inner.write().unwrap();
-        if guard
-            .pacemaker_timeout_manager
-            .update_received_timeout(pacemaker_timeout)
-        {
+        let received_timeout_update = guard.pacemaker_timeout_manager.update_received_timeout(pacemaker_timeout);
+        let current_highest_timeout_round = guard.pacemaker_timeout_manager.highest_timeout_certificate().map(PacemakerTimeoutCertificate::round).unwrap_or(0);
+        let self_timeout_update = current_highest_timeout_round >= guard.current_round;
+        if received_timeout_update && self_timeout_update {
             return guard.update_current_round();
         }
         async {}.boxed()
