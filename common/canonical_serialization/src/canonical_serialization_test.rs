@@ -340,3 +340,35 @@ fn test_deserialization_failure_cases() {
     deserializer = SimpleDeserializer::new(&bool_bytes);
     assert!(deserializer.clone().decode_bool().is_err());
 }
+
+#[test]
+fn test_tuples() {
+    let input: (u32, u32) = (123, 456);
+    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
+    serializer.encode_tuple2(&input).unwrap();
+    let serialized_bytes = serializer.get_output();
+
+    let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
+    let output: Result<(u32, u32)> = deserializer.decode_tuple2();
+    assert!(output.is_ok());
+    assert_eq!(output.unwrap(), input);
+
+    let bad_output: Result<(u32, u32)> = deserializer.decode_tuple2();
+    assert!(bad_output.is_err());
+}
+
+#[test]
+fn test_nested_tuples() {
+    let input: Vec<(u32, u32)> = vec![(123, 456)];
+    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
+    serializer.encode_vec(&input).unwrap();
+    let serialized_bytes = serializer.get_output();
+
+    let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
+    let output: Result<Vec<(u32, u32)>> = deserializer.decode_vec();
+    assert!(output.is_ok());
+    assert_eq!(output.unwrap(), input);
+
+    let bad_output: Result<(u32, u32)> = deserializer.decode_tuple2();
+    assert!(bad_output.is_err());
+}

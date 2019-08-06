@@ -104,6 +104,11 @@ pub trait CanonicalSerializer {
     ) -> Result<&mut Self>;
 
     fn encode_vec<T: CanonicalSerialize>(&mut self, v: &[T]) -> Result<&mut Self>;
+
+    fn encode_tuple2<T0: CanonicalSerialize, T1: CanonicalSerialize>(
+        &mut self,
+        v: &(T0, T1),
+    ) -> Result<&mut Self>;
 }
 
 type Endianness = LittleEndian;
@@ -256,6 +261,15 @@ where
         }
         Ok(self)
     }
+
+    fn encode_tuple2<T0: CanonicalSerialize, T1: CanonicalSerialize>(
+        &mut self,
+        v: &(T0, T1),
+    ) -> Result<&mut Self> {
+        self.encode_struct(&v.0)?;
+        self.encode_struct(&v.1)?;
+        Ok(self)
+    }
 }
 
 pub trait CanonicalDeserializer {
@@ -289,6 +303,10 @@ pub trait CanonicalDeserializer {
     ) -> Result<BTreeMap<K, V>>;
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>>;
+
+    fn decode_tuple2<T0: CanonicalDeserialize, T1: CanonicalDeserialize>(
+        &mut self,
+    ) -> Result<(T0, T1)>;
 }
 
 pub trait CanonicalDeserialize {
@@ -429,6 +447,12 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
             vec.push(v);
         }
         Ok(vec)
+    }
+
+    fn decode_tuple2<T0: CanonicalDeserialize, T1: CanonicalDeserialize>(
+        &mut self,
+    ) -> Result<(T0, T1)> {
+        Ok((T0::deserialize(self)?, T1::deserialize(self)?))
     }
 }
 
@@ -583,5 +607,29 @@ impl CanonicalDeserialize for BTreeMap<Vec<u8>, Vec<u8>> {
         Self: Sized,
     {
         Ok(deserializer.decode_btreemap()?)
+    }
+}
+
+impl<T0, T1> CanonicalSerialize for (T0, T1)
+where
+    T0: CanonicalSerialize,
+    T1: CanonicalSerialize,
+{
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_tuple2(self)?;
+        Ok(())
+    }
+}
+
+impl<T0, T1> CanonicalDeserialize for (T0, T1)
+where
+    T0: CanonicalDeserialize,
+    T1: CanonicalDeserialize,
+{
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        deserializer.decode_tuple2()
     }
 }
