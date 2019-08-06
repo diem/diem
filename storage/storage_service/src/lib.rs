@@ -39,6 +39,7 @@ pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
         config.storage.address.clone(),
         config.storage.port,
         "storage",
+        config.storage.grpc_max_receive_len,
         move || {
             shutdown_receiver
                 .recv()
