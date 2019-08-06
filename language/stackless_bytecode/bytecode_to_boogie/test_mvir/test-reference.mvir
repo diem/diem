@@ -3,13 +3,21 @@ module TestReference {
         value: u64,
     }
 
-    public all_about_refs(a: &R#Self.T, b: &mut u64, c: &mut R#Self.T): u64 {
-        let value_ref: &u64;
-        let frozen_ref: &R#Self.T;
-        *move(b) = 0;
-        value_ref = &move(a).value;
-        frozen_ref = freeze(move(c));
-        release(move(frozen_ref));
-        return *move(value_ref);
+    public mut_b(b: &mut u64){
+        *move(b) = 10;
+        return;
+    }
+
+    public mut_ref() {
+        let b: u64;
+        let b_ref: &mut u64;
+
+        b = 20;
+        b_ref = &mut b;
+        // mutable reference passed into a function call
+        Self.mut_b(copy(b_ref));
+        b = *move(b_ref);
+        assert(move(b) == 10, 42);
+        return;
     }
 }

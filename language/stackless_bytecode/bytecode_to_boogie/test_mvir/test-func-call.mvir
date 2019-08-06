@@ -13,11 +13,12 @@ module TestFuncCall {
 		let x: u64;
 		let y: u64;
 		x = 3;
-		if (move(b)) {
+		if (copy(b)) {
 			y = Self.f(move(x));
 		} else {
 		    y = Self.g(move(x));
 		}
+		assert((copy(b) && (copy(y) == 4)) || (!copy(b) && (copy(y) == 5)), 42);
 		return move(y);
 	}
 }

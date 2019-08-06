@@ -64,13 +64,15 @@ impl<'a> BoogieTranslator<'a> {
         let field_info = self.get_field_info_from_struct_handle_index(idx);
         let struct_name = self.struct_name_from_handle_index(idx);
         let mut args_str = String::new();
+        let mut typechecking_str = String::new();
         let mut fields_str = String::new();
         // pack
-        for (i, (field_name, _)) in field_info.iter().enumerate() {
+        for (i, (field_name, (_, value_cons))) in field_info.iter().enumerate() {
             if i > 0 {
                 args_str.push_str(", ");
             }
             args_str.push_str(&format!("v{}: Value", i));
+            typechecking_str.push_str(&format!("    assert is#{}(v{});\n", value_cons, i));
             fields_str.push_str(&format!(
                 "[Field({}_{}) := v{}]",
                 struct_name, field_name, i
@@ -80,6 +82,7 @@ impl<'a> BoogieTranslator<'a> {
             "procedure {{:inline 1}} Pack_{}({}) returns (v: Value)\n{{\n",
             struct_name, args_str
         ));
+        res.push_str(&typechecking_str);
         res.push_str(&format!("    v := Map(DefaultMap{});\n}}\n\n", fields_str));
 
         // unpack
@@ -87,6 +90,7 @@ impl<'a> BoogieTranslator<'a> {
             "procedure {{:inline 1}} Unpack_{}(v: Value) returns ({})\n{{\n",
             struct_name, args_str
         ));
+        res.push_str("    assert is#Map(v);\n");
         for (i, (field_name, _)) in field_info.iter().enumerate() {
             res.push_str(&format!(
                 "    v{} := m#Map(v)[Field({}_{})];\n",
@@ -95,9 +99,41 @@ impl<'a> BoogieTranslator<'a> {
         }
         res.push_str("}\n\n");
 
-        // TODO: Eq
+        // Eq
+        let mut bool_res_str = String::new();
+        let mut bool_assign_str = String::new();
+        res.push_str(&format!(
+            "procedure {{:inline 1}} Eq_{}(v1: Value, v2: Value) returns (res: Value)\n{{\n",
+            struct_name,
+        ));
+        for (i, (field_name, (field_type, _))) in field_info.iter().enumerate() {
+            res.push_str(&format!("    var b{}: Value;\n", i));
+            bool_res_str.push_str(&format!(" && b#Boolean(b{})", i));
+            bool_assign_str.push_str(&format!(
+                "    call b{} := Eq_{}(m#Map(v1)[Field({}_{})], m#Map(v1)[Field({}_{})]);\n",
+                i, field_type, struct_name, field_name, struct_name, field_name,
+            ));
+        }
+        res.push_str("    assert is#Map(v1) && is#Map(v2);\n");
+        res.push_str(&bool_assign_str);
+        res.push_str(&format!(
+            "    res := Boolean(true{});\n}}\n\n",
+            bool_res_str
+        ));
 
-        // TODO: Neq
+        // Neq
+        res.push_str(&format!(
+            "procedure {{:inline 1}} Neq_{}(v1: Value, v2: Value) returns (res: Value)\n{{\n",
+            struct_name,
+        ));
+        res.push_str("    var res_val: Value;\n");
+        res.push_str("    var res_bool: bool;\n");
+        res.push_str("    assert is#Map(v1) && is#Map(v2);\n");
+        res.push_str(&format!(
+            "    call res_val := Eq_{}(v1, v2);\n",
+            struct_name,
+        ));
+        res.push_str("    res := Boolean(!b#Boolean(res_val));\n}\n\n");
         res
     }
 }

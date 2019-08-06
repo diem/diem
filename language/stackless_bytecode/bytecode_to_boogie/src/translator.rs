@@ -139,13 +139,19 @@ impl<'a> BoogieTranslator<'a> {
         let mut rets = String::new();
         for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
             args.push_str(&format!(
-                ", t{}: {}",
+                ", arg{}: {}",
                 i,
                 self.format_value_or_ref(&arg_type)
             ));
+            if arg_type.is_mutable_reference() {
+                if !rets.is_empty() {
+                    rets.push_str(", ");
+                }
+                rets.push_str(&format!("t{}: {}", i, self.format_value_or_ref(&arg_type)));
+            }
         }
         for (i, return_type) in function_signature.return_types.iter().enumerate() {
-            if i > 0 {
+            if !rets.is_empty() {
                 rets.push_str(", ");
             }
             rets.push_str(&format!(
@@ -154,15 +160,15 @@ impl<'a> BoogieTranslator<'a> {
                 self.format_value_or_ref(&return_type)
             ));
         }
-        for (i, type_str) in self.all_type_strs.iter().enumerate() {
+        for type_str in self.all_type_strs.iter() {
             args.push_str(&format!(", rs_{}: ResourceStore", type_str));
-            if !rets.is_empty() || i > 0 {
+            if !rets.is_empty() {
                 rets.push_str(", ");
             }
             rets.push_str(&format!("rs_{}': ResourceStore", type_str));
         }
         res.push_str(&format!(
-            "procedure {} (c: CreationTime{}) returns ({}) {{\n",
+            "procedure {} (c: CreationTime{}) returns ({})\n{{\n",
             fun_name, args, rets
         ));
 
@@ -170,14 +176,26 @@ impl<'a> BoogieTranslator<'a> {
 
         let mut ref_vars = BTreeSet::new(); // set of locals that are references
         let mut val_vars = BTreeSet::new(); // set of locals that are not
+        let mut arg_assignment_str = String::new();
+        let mut arg_value_assumption_str = String::new();
         for (i, local_type) in code.local_types.iter().enumerate() {
             if i < num_args {
-                continue;
+                arg_assignment_str.push_str(&format!("    t{} := arg{};\n", i, i));
+                if !self.is_local_ref(i, idx) {
+                    arg_value_assumption_str.push_str(&format!(
+                        "    assume is#{}(arg{});\n",
+                        self.format_value_cons(local_type),
+                        i,
+                    ));
+                }
             }
             if SignatureTokenView::new(self.module, local_type).is_reference() {
                 ref_vars.insert(i);
             } else {
                 val_vars.insert(i);
+            }
+            if i < num_args && local_type.is_mutable_reference() {
+                continue;
             }
             res.push_str(&format!(
                 "    var t{}: {}; // {}\n",
@@ -187,8 +205,13 @@ impl<'a> BoogieTranslator<'a> {
             ));
         }
 
-        res.push_str("\n    // declare a new creation time for calls inside this functions;\n");
+        res.push_str("\n    // declare a new creation time for calls inside this function\n");
         res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
+        res.push_str("\n    // assume arguments are of correct types\n");
+        res.push_str(&arg_value_assumption_str);
+        res.push_str("\n    // assign arguments to locals so they can be modified\n");
+        res.push_str(&arg_assignment_str);
+        res.push_str("\n    // assign ResourceStores to locals so they can be modified\n");
         for type_str in self.all_type_strs.iter() {
             res.push_str(&format!("    rs_{}' := rs_{};\n", type_str, type_str));
         }
@@ -230,6 +253,31 @@ impl<'a> BoogieTranslator<'a> {
                 }
                 res.push_str("\n");
             }
+            if let Call(_, _, args) = bytecode {
+                // update everything that might be related to the updated reference
+                for dest in args {
+                    if !self.is_local_mutable_ref(*dest, idx) {
+                        continue;
+                    }
+                    for s in &ref_vars {
+                        if s == dest {
+                            continue;
+                        }
+                        res.push_str(&format!(
+                            "    call t{} := DeepUpdateReference(t{}, t{});\n",
+                            s, dest, s
+                        ));
+                    }
+
+                    for s in &val_vars {
+                        res.push_str(&format!(
+                            "    call t{} := DeepUpdateLocal(c, t{}_LocalName, t{}, t{});\n",
+                            s, s, dest, s
+                        ));
+                    }
+                    res.push_str("\n");
+                }
+            }
         }
         res.push_str("}\n".into());
         res
@@ -239,6 +287,10 @@ impl<'a> BoogieTranslator<'a> {
         let mut res = String::new();
         let stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
+            BrTrue(target, idx) => vec![format!(
+                "if (b#Boolean(t{})) {{ goto Label_{}; }}",
+                idx, target
+            )],
             BrFalse(target, idx) => vec![format!(
                 "if (!b#Boolean(t{})) {{ goto Label_{}; }}",
                 idx, target
@@ -278,17 +330,30 @@ impl<'a> BoogieTranslator<'a> {
             Call(dests, callee_index, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
                 let mut dest_str = String::new();
-                for (i, dest) in dests.iter().enumerate() {
-                    if i > 0 {
+                let mut args_str = String::new();
+                for arg in args.iter() {
+                    args_str.push_str(&format!(", t{}", arg));
+                    if self.is_local_mutable_ref(*arg, func_idx) {
+                        if !dest_str.is_empty() {
+                            dest_str.push_str(", ");
+                        }
+                        dest_str.push_str(&format!("t{}", arg));
+                    }
+                }
+                for dest in dests.iter() {
+                    if !dest_str.is_empty() {
                         dest_str.push_str(", ");
                     }
                     dest_str.push_str(&format!("t{}", dest));
                 }
-                let mut args_str = String::new();
-                for arg in args.iter() {
-                    args_str.push_str(&format!(", t{}", arg));
-                }
 
+                for type_str in self.all_type_strs.iter() {
+                    args_str.push_str(&format!(", rs_{}'", type_str));
+                    if !dest_str.is_empty() {
+                        dest_str.push_str(", ");
+                    }
+                    dest_str.push_str(&format!("rs_{}'", type_str));
+                }
                 vec![format!(
                     "call {} := {}(c'{});",
                     dest_str, callee_name, args_str
@@ -397,7 +462,14 @@ impl<'a> BoogieTranslator<'a> {
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
                 vec!["// bit operation not supported".into()]
             }
-            Abort(_) => vec!["// abort not supported".into()],
+            Abort(_) => vec!["assert false;".into()],
+            GetGasRemaining(idx) => vec![format!("call t{} := GetGasRemaining();", idx)],
+            GetTxnSequenceNumber(idx) => vec![format!("call t{} := GetTxnSequenceNumber();", idx)],
+            GetTxnPublicKey(idx) => vec![format!("call t{} := GetTxnPublicKey();", idx)],
+            GetTxnSenderAddress(idx) => vec![format!("call t{} := GetTxnSenderAddress();", idx)],
+            GetTxnMaxGasUnits(idx) => vec![format!("call t{} := GetTxnMaxGasUnits();", idx)],
+            GetTxnGasUnitPrice(idx) => vec![format!("call t{} := GetTxnGasUnitPrice();", idx)],
+            CreateAccount(idx) => vec![format!("call CreateAccount(t{});", idx)],
             _ => vec!["// unimplemented instruction".into()],
         };
         for code in stmts {
@@ -472,10 +544,31 @@ impl<'a> BoogieTranslator<'a> {
         }
     }
 
+    pub fn format_value_cons(&self, sig: &SignatureToken) -> String {
+        match sig {
+            SignatureToken::Bool => "Boolean",
+            SignatureToken::U64 => "Integer",
+            SignatureToken::String => "Str",
+            SignatureToken::ByteArray => "ByteArray",
+            SignatureToken::Address => "Address",
+            SignatureToken::Struct(_, _) => "Map",
+            _ => "unsupported",
+        }
+        .into()
+    }
+
     pub fn is_local_ref(&self, local_idx: usize, func_idx: usize) -> bool {
         let sig = &self.stackless_bytecode[func_idx].local_types[local_idx];
         match sig {
             SignatureToken::MutableReference(_) | SignatureToken::Reference(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_local_mutable_ref(&self, local_idx: usize, func_idx: usize) -> bool {
+        let sig = &self.stackless_bytecode[func_idx].local_types[local_idx];
+        match sig {
+            SignatureToken::MutableReference(_) => true,
             _ => false,
         }
     }
@@ -491,16 +584,18 @@ impl<'a> BoogieTranslator<'a> {
     pub fn get_field_info_from_struct_handle_index(
         &self,
         idx: StructHandleIndex,
-    ) -> BTreeMap<String, String> {
+    ) -> BTreeMap<String, (String, String)> {
         let mut name_to_type = BTreeMap::new();
         let def_idx = StructDefinitionIndex::new(*self.handle_to_def.get(&idx).unwrap() as u16);
         let struct_definition = self.module.struct_def_at(def_idx);
         let struct_definition_view = StructDefinitionView::new(self.module, struct_definition);
         for field_definition_view in struct_definition_view.fields().unwrap() {
             let field_name = field_definition_view.name().to_string();
-            let type_str =
-                self.format_type(field_definition_view.type_signature().token().as_inner());
-            name_to_type.insert(field_name, type_str);
+            let sig = field_definition_view.type_signature().token().as_inner();
+            name_to_type.insert(
+                field_name,
+                (self.format_type(sig), self.format_value_cons(sig)),
+            );
         }
         name_to_type
     }
