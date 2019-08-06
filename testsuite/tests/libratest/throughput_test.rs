@@ -42,6 +42,7 @@ rusty_fork_test! {
             faucet_account_keypair,
             false,  /* tee_logs */
             None,   /* config_dir */
+            None,   /* template_path */
         );
         let swarm_config_dir = String::from(swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap());
         let validator_addresses = parse_swarm_config_from_dir(&swarm_config_dir).unwrap();
