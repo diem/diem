@@ -45,9 +45,10 @@ lazy_static! {
 ///   * TXN generation: requested_txns, created_txns, sign_failed_txns;
 ///   * Submission to AC and AC response: submit_requests (used to measure submission rate),
 ///     submit_txns.{ac_status_code}, submit_txns.{mempool_status_code}, submit_txns.{vm_status},
-///     submit_txns.{grpc_error};
+///     submit_txns.{grpc_error}, submit_read_requests.{error};
 ///   * Final status within epoch: committed_txns, timedout_txns;
 /// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
+/// * Histograms: read_requests.response_bytes.
 pub struct Benchmarker {
     /// Using multiple clients can help improve the request speed.
     clients: Vec<Arc<AdmissionControlClient>>,

@@ -58,43 +58,57 @@ fn main() {
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
-        load_generator::RingTransferTxnGenerator,
+        load_generator::{
+            gen_get_txn_by_sequnece_number_request, LoadGenerator, Request,
+            RingTransferTxnGenerator,
+        },
         ruben_opt::{RubenOpt, TransactionPattern},
         OP_COUNTER,
     };
+    use client::AccountData;
     use libra_swarm::swarm::LibraSwarm;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
+    use std::ops::Range;
+    use tempdir::TempDir;
+
+    /// Start libra_swarm and create a RubenOpt struct for testing.
+    /// Must return the TempDir otherwise it will be freed somehow.
+    fn start_swarm_and_setup_arguments() -> (LibraSwarm, RubenOpt, Option<TempDir>) {
+        let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
+            generate_keypair::load_faucet_key_or_create_default(None);
+        let swarm = LibraSwarm::launch_swarm(
+            4,    /* num_nodes */
+            true, /* disable_logging */
+            faucet_account_keypair,
+            false, /* tee_logs */
+            None,  /* config_dir */
+            None,  /* template_path */
+        );
+        let mut args = RubenOpt {
+            validator_addresses: Vec::new(),
+            debug_address: None,
+            swarm_config_dir: Some(String::from(
+                swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap(),
+            )),
+            // Don't start metrics server as we are not testing with prometheus.
+            metrics_server_address: None,
+            faucet_key_file_path,
+            num_accounts: 4,
+            num_clients: 4,
+            stagger_range_ms: 1,
+            num_rounds: 4,
+            num_epochs: 2,
+            txn_pattern: TransactionPattern::Ring,
+            submit_rate: Some(50),
+        };
+        args.try_parse_validator_addresses();
+        (swarm, args, temp_dir)
+    }
 
     rusty_fork_test! {
         #[test]
         fn test_benchmarker_counters() {
-            let (faucet_account_keypair, faucet_key_file_path, _temp_dir) = generate_keypair::load_faucet_key_or_create_default(None);
-            let swarm = LibraSwarm::launch_swarm(
-                4,      /* num_nodes */
-                true,   /* disable_logging */
-                faucet_account_keypair,
-                false,  /* tee_logs */
-                None,   /* config_dir */
-                None,   /* template_path */
-            );
-            let mut args = RubenOpt {
-                validator_addresses: Vec::new(),
-                debug_address: None,
-                swarm_config_dir: Some(String::from(
-                    swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap(),
-                )),
-                // Don't start metrics server as we are not testing with prometheus.
-                metrics_server_address: None,
-                faucet_key_file_path,
-                num_accounts: 4,
-                num_clients: 4,
-                stagger_range_ms: 1,
-                num_rounds: 4,
-                num_epochs: 2,
-                txn_pattern: TransactionPattern::Ring,
-                submit_rate: None,
-            };
-            args.try_parse_validator_addresses();
+            let (_swarm, args, _temp_dir) = start_swarm_and_setup_arguments();
             let mut bm = create_benchmarker_from_opt(&args);
             let mut faucet_account = bm.load_faucet_account(&args.faucet_key_file_path);
             let mut ring_generator = RingTransferTxnGenerator::new();
@@ -116,5 +130,33 @@ mod tests {
             // Why `<=`: timedout TXNs in previous epochs can be committed in the next epoch.
             assert!(accepted_txns <= committed_txns + timedout_txns);
         }
+    }
+
+    /// Generate read requests for each account using a range of sequence numbers.
+    fn gen_test_read_requests(
+        accounts: &[AccountData],
+        sequence_number_range: Range<u64>,
+    ) -> Vec<Request> {
+        let mut results = vec![];
+        for sequence_number in sequence_number_range {
+            let read_requests: Vec<_> = accounts
+                .iter()
+                .map(|account| {
+                    gen_get_txn_by_sequnece_number_request(account.address, sequence_number)
+                })
+                .collect();
+            results.extend(read_requests.into_iter());
+        }
+        results
+    }
+
+    #[test]
+    fn test_benchmarker_read_requests() {
+        let (_swarm, args, _temp_dir) = start_swarm_and_setup_arguments();
+        let mut bm = create_benchmarker_from_opt(&args);
+        let mut ring_generator = RingTransferTxnGenerator::new();
+        let accounts: Vec<AccountData> = ring_generator.gen_accounts(args.num_accounts);
+        let read_requests = gen_test_read_requests(&accounts, Range { start: 0, end: 10 });
+        bm.submit_requests(&read_requests, args.submit_rate.unwrap());
     }
 }
