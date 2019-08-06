@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
 use cli::client_proxy::ClientProxy;
-use libra_swarm::swarm::LibraSwarm;
+use libra_swarm::{swarm::LibraSwarm, utils};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -87,6 +87,58 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
     assert_eq!(
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "2"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_execute_custom_module_and_script() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "50"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(50.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+
+    let recipient_address = client_proxy.create_next_account(false).unwrap().address;
+    client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
+
+    let module_path =
+        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/module.mvir");
+    let unwrapped_module_path = module_path.to_str().unwrap();
+    let module_params = &["compile", "0", unwrapped_module_path, "module"];
+    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
+
+    client_proxy
+        .publish_module(&["publish", "0", &module_compiled_path[..]])
+        .unwrap();
+
+    let script_path =
+        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/script.mvir");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+    let formatted_recipient_address = format!("0x{}", recipient_address);
+
+    client_proxy
+        .execute_script(&[
+            "execute",
+            "0",
+            &script_compiled_path[..],
+            &formatted_recipient_address[..],
+            "10",
+        ])
+        .unwrap();
+
+    assert_eq!(
+        Decimal::from_f64(49.999_990),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(1.000_010),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
