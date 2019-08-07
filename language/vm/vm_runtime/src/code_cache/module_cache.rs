@@ -9,6 +9,7 @@ use crate::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
+    substitution_map::SubstitutionMap,
 };
 use bytecode_verifier::VerifiedModule;
 use std::marker::PhantomData;
@@ -218,6 +219,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: &LoadedModule,
         idx: StructHandleIndex,
         gas_meter: &GasMeter,
+        subst_map: &SubstitutionMap,
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
         let struct_handle = module.struct_handle_at(idx);
@@ -229,7 +231,13 @@ impl<'alloc> VMModuleCache<'alloc> {
                     .struct_defs_table
                     .get(struct_name)
                     .ok_or(VMInvariantViolation::LinkerError)?;
-                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
+                self.resolve_struct_def_with_fetcher(
+                    module,
+                    *struct_def_idx,
+                    gas_meter,
+                    subst_map,
+                    fetcher,
+                )
             }
             Ok(None) => Ok(Ok(None)),
             Err(errors) => Ok(Err(errors)),
@@ -242,6 +250,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: &LoadedModule,
         tok: &SignatureToken,
         gas_meter: &GasMeter,
+        subst_map: &SubstitutionMap,
         fetcher: &F,
     ) -> VMResult<Option<Type>> {
         match tok {
@@ -250,23 +259,29 @@ impl<'alloc> VMModuleCache<'alloc> {
             SignatureToken::String => Ok(Ok(Some(Type::String))),
             SignatureToken::ByteArray => Ok(Ok(Some(Type::ByteArray))),
             SignatureToken::Address => Ok(Ok(Some(Type::Address))),
-            SignatureToken::TypeParameter(_) => unimplemented!(),
+            SignatureToken::TypeParameter(idx) => self.resolve_signature_token_with_fetcher(
+                module,
+                &subst_map.materialize(*idx)?,
+                gas_meter,
+                subst_map,
+                fetcher,
+            ),
             SignatureToken::Struct(sh_idx, _) => {
-                let struct_def =
-                    try_runtime!(self
-                        .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher));
+                let struct_def = try_runtime!(self.resolve_struct_handle_with_fetcher(
+                    module, *sh_idx, gas_meter, subst_map, fetcher
+                ));
                 Ok(Ok(struct_def.map(Type::Struct)))
             }
             SignatureToken::Reference(sub_tok) => {
-                let inner_ty =
-                    try_runtime!(self
-                        .resolve_signature_token_with_fetcher(module, sub_tok, gas_meter, fetcher));
+                let inner_ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                    module, sub_tok, gas_meter, subst_map, fetcher
+                ));
                 Ok(Ok(inner_ty.map(|t| Type::Reference(Box::new(t)))))
             }
             SignatureToken::MutableReference(sub_tok) => {
-                let inner_ty =
-                    try_runtime!(self
-                        .resolve_signature_token_with_fetcher(module, sub_tok, gas_meter, fetcher));
+                let inner_ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                    module, sub_tok, gas_meter, subst_map, fetcher
+                ));
                 Ok(Ok(inner_ty.map(|t| Type::MutableReference(Box::new(t)))))
             }
         }
@@ -279,6 +294,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: &LoadedModule,
         idx: StructDefinitionIndex,
         gas_meter: &GasMeter,
+        subst_map: &SubstitutionMap,
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
         if let Some(def) = module.cached_struct_def_at(idx) {
@@ -299,6 +315,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                             module,
                             &module.type_signature_at(field.signature).0,
                             gas_meter,
+                            subst_map,
                             fetcher
                         ));
                         if let Some(t) = ty {
@@ -334,7 +351,13 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         idx: StructDefinitionIndex,
         gas_meter: &GasMeter,
     ) -> VMResult<Option<StructDef>> {
-        self.resolve_struct_def_with_fetcher(module, idx, gas_meter, &NullFetcher())
+        self.resolve_struct_def_with_fetcher(
+            module,
+            idx,
+            gas_meter,
+            &SubstitutionMap::new(),
+            &NullFetcher(),
+        )
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
@@ -402,8 +425,13 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
         idx: StructDefinitionIndex,
         gas_meter: &GasMeter,
     ) -> VMResult<Option<StructDef>> {
-        self.vm_cache
-            .resolve_struct_def_with_fetcher(module, idx, gas_meter, &self.storage)
+        self.vm_cache.resolve_struct_def_with_fetcher(
+            module,
+            idx,
+            gas_meter,
+            &SubstitutionMap::new(),
+            &self.storage,
+        )
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {

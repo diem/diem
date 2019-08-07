@@ -112,6 +112,7 @@ mod gas_meter;
 mod move_vm;
 mod process_txn;
 mod runtime;
+mod substitution_map;
 
 pub mod code_cache;
 pub mod data_cache;
