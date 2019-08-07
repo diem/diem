@@ -41,7 +41,7 @@ struct InitialSetup {
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.
 pub struct ChainedBftProvider {
-    smr: ChainedBftSMR<Vec<SignedTransaction>, Author>,
+    smr: ChainedBftSMR<Vec<SignedTransaction>>,
     mempool_client: Arc<MempoolClient>,
     execution_client: Arc<ExecutionClient>,
     synchronizer_client: Arc<StateSynchronizer>,

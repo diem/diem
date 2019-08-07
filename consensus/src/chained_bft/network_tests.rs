@@ -5,7 +5,7 @@ use crate::{
     chained_bft::{
         common::Author,
         consensus_types::{
-            block::Block, proposal_info::ProposalInfo, quorum_cert::QuorumCert, sync_info::SyncInfo,
+            block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
         },
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
         safety::vote_msg::VoteMsg,
@@ -328,7 +328,7 @@ fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
     let mut peers = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64, Author>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
@@ -374,9 +374,8 @@ fn test_network_api() {
     );
     let previous_block = Block::make_genesis_block();
     let previous_qc = QuorumCert::certificate_for_genesis();
-    let proposal = ProposalInfo {
+    let proposal = ProposalMsg {
         proposal: Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
-        proposer_info: signers[0].author(),
         sync_info: SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
     };
     block_on(async move {
@@ -405,7 +404,7 @@ fn test_rpc() {
     let num_nodes = 2;
     let mut peers = Arc::new(Vec::new());
     let mut senders = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64, Author>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();

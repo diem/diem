@@ -11,7 +11,7 @@ use crate::{
         common::{Author, Payload, Round},
         consensus_types::{
             block::Block,
-            proposal_info::{ProposalInfo, ProposerInfo},
+            proposal_msg::ProposalMsg,
             quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, TimeoutMsg},
@@ -49,9 +49,9 @@ use types::ledger_info::LedgerInfoWithSignatures;
 /// winning proposal if it was found
 /// - NeedSync means separate task mast be spawned for state synchronization in the background
 #[derive(Debug, PartialEq, Eq)]
-pub enum ProcessProposalResult<T, P> {
-    Done(Option<ProposalInfo<T, P>>),
-    NeedSync(ProposalInfo<T, P>),
+pub enum ProcessProposalResult<T> {
+    Done(Option<ProposalMsg<T>>),
+    NeedSync(ProposalMsg<T>),
 }
 
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
@@ -59,11 +59,11 @@ pub enum ProcessProposalResult<T, P> {
 /// etc.). It is exposing the async processing functions for each event type.
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
-pub struct EventProcessor<T, P> {
-    author: P,
+pub struct EventProcessor<T> {
+    author: Author,
     block_store: Arc<BlockStore<T>>,
     pacemaker: Arc<dyn Pacemaker>,
-    proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
+    proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Arc<RwLock<SafetyRules<T>>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -77,12 +77,12 @@ pub struct EventProcessor<T, P> {
     last_vote_sent: Arc<RwLock<Option<(VoteMsg, Round)>>>,
 }
 
-impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
+impl<T: Payload> EventProcessor<T> {
     pub fn new(
-        author: P,
+        author: Author,
         block_store: Arc<BlockStore<T>>,
         pacemaker: Arc<dyn Pacemaker>,
-        proposer_election: Arc<dyn ProposerElection<T, P> + Send + Sync>,
+        proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Arc<RwLock<SafetyRules<T>>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -140,15 +140,13 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 counters::TIMEOUT_ROUNDS_COUNT.inc();
             }
         };
-        let proposer_info = match self
+        if self
             .proposer_election
             .is_valid_proposer(self.author, new_round_event.round)
+            .is_none()
         {
-            Some(pi) => pi,
-            None => {
-                return;
-            }
-        };
+            return;
+        }
 
         // Proposal generator will ensure that at most one proposal is generated per round
         let proposal = match self
@@ -177,9 +175,8 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             timeout_certificate,
         );
         network
-            .broadcast_proposal(ProposalInfo {
+            .broadcast_proposal(ProposalMsg {
                 proposal,
-                proposer_info,
                 sync_info,
             })
             .await;
@@ -195,10 +192,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// The reason for separating `process_proposal` from `process_winning_proposal` is to
     /// (a) asynchronously prefetch dependencies and
     /// (b) allow the proposer election to choose one proposal out of many.
-    pub async fn process_proposal(
-        &self,
-        proposal: ProposalInfo<T, P>,
-    ) -> ProcessProposalResult<T, P> {
+    pub async fn process_proposal(&self, proposal: ProposalMsg<T>) -> ProcessProposalResult<T> {
         debug!("Receive proposal {}", proposal);
         // Do not allow NIL block proposals
         if proposal.proposal.is_nil_block() {
@@ -213,7 +207,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         // filter out the proposals from old rounds.
         let current_round = self.pacemaker.current_round();
         self.help_remote_if_stale(
-            proposal.proposer_info.get_author(),
+            proposal.proposer(),
             proposal.proposal.round(),
             proposal
                 .sync_info
@@ -232,12 +226,12 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         }
         if self
             .proposer_election
-            .is_valid_proposer(proposal.proposer_info, proposal.proposal.round())
+            .is_valid_proposer(proposal.proposer(), proposal.proposal.round())
             .is_none()
         {
             warn!(
                 "Proposer {} for block {} is not a valid proposer for this round",
-                proposal.proposer_info.get_author(),
+                proposal.proposer(),
                 proposal.proposal
             );
             return ProcessProposalResult::Done(None);
@@ -277,10 +271,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// so be careful with the updates. The safest thing to do is to pass the proposal further
     /// to the proposal election.
     /// This function is invoked when all the dependencies for the given proposal are ready.
-    async fn finish_proposal_processing(
-        &self,
-        proposal: ProposalInfo<T, P>,
-    ) -> Option<ProposalInfo<T, P>> {
+    async fn finish_proposal_processing(&self, proposal: ProposalMsg<T>) -> Option<ProposalMsg<T>> {
         let qc = proposal.proposal.quorum_cert();
         self.pacemaker
             .process_certificates(
@@ -307,13 +298,10 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// synchronization, then completes processing proposal in dedicated task
     pub async fn sync_and_process_proposal(
         &mut self,
-        proposal: ProposalInfo<T, P>,
-    ) -> Option<ProposalInfo<T, P>> {
+        proposal: ProposalMsg<T>,
+    ) -> Option<ProposalMsg<T>> {
         if let Err(e) = self
-            .sync_up(
-                &proposal.sync_info,
-                Some(proposal.proposer_info.get_author()),
-            )
+            .sync_up(&proposal.sync_info, Some(proposal.proposer()))
             .await
         {
             warn!(
@@ -372,7 +360,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
         remote_round: Round,
         remote_hqc_round: Round,
     ) {
-        if self.author.get_author() == peer {
+        if self.author == peer {
             return;
         }
         if remote_round < self.pacemaker.current_round()
@@ -513,7 +501,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    pub async fn process_winning_proposal(&self, proposal: ProposalInfo<T, P>) {
+    pub async fn process_winning_proposal(&self, proposal: ProposalMsg<T>) {
         let qc = proposal.proposal.quorum_cert();
         let update_res = self.safety_rules.write().unwrap().update(qc);
         if let Some(new_commit) = update_res {
@@ -539,12 +527,9 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             .write()
             .unwrap()
             .replace((vote_msg.clone(), proposal_round));
-        let recipients: Vec<Author> = self
+        let recipients = self
             .proposer_election
-            .get_valid_proposers(proposal_round + 1)
-            .iter()
-            .map(ProposerInfo::get_author)
-            .collect();
+            .get_valid_proposers(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote_msg);
         self.network.send_vote(vote_msg, recipients).await;
     }
@@ -612,7 +597,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&self, proposal: ProposalInfo<T, P>) -> failure::Result<VoteMsg> {
+    async fn execute_and_vote(&self, proposal: ProposalMsg<T>) -> failure::Result<VoteMsg> {
         let block = self
             .sync_manager
             .execute_and_insert_block(proposal.proposal)
@@ -670,7 +655,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             vote_info.parent_block_round(),
             vote_info.grandparent_block_id(),
             vote_info.grandparent_block_round(),
-            self.author.get_author(),
+            self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
         ))

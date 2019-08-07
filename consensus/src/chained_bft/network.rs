@@ -6,10 +6,7 @@ use crate::{
         block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
         consensus_types::{
-            block::Block,
-            proposal_info::{ProposalInfo, ProposerInfo},
-            sync_info::SyncInfo,
-            timeout_msg::TimeoutMsg,
+            block::Block, proposal_msg::ProposalMsg, sync_info::SyncInfo, timeout_msg::TimeoutMsg,
         },
         safety::vote_msg::VoteMsg,
     },
@@ -93,8 +90,8 @@ pub struct ChunkRetrievalRequest {
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
 /// Will be returned by the networking trait upon startup.
-pub struct NetworkReceivers<T, P> {
-    pub proposals: channel::Receiver<ProposalInfo<T, P>>,
+pub struct NetworkReceivers<T> {
+    pub proposals: channel::Receiver<ProposalMsg<T>>,
     pub votes: channel::Receiver<VoteMsg>,
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
     pub timeout_msgs: channel::Receiver<TimeoutMsg>,
@@ -151,10 +148,7 @@ impl ConsensusNetworkImpl {
     }
 
     /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start<T: Payload, P: ProposerInfo>(
-        &mut self,
-        executor: &TaskExecutor,
-    ) -> NetworkReceivers<T, P> {
+    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T> {
         let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
         let (block_request_tx, block_request_rx) =
@@ -255,10 +249,7 @@ impl ConsensusNetworkImpl {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal<T: Payload, P: ProposerInfo>(
-        &mut self,
-        proposal: ProposalInfo<T, P>,
-    ) {
+    pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
         let mut msg = ConsensusMsg::new();
         msg.set_proposal(proposal.into_proto());
         self.broadcast(msg).await
@@ -336,8 +327,8 @@ impl ConsensusNetworkImpl {
     }
 }
 
-struct NetworkTask<T, P, S> {
-    proposal_tx: channel::Sender<ProposalInfo<T, P>>,
+struct NetworkTask<T, S> {
+    proposal_tx: channel::Sender<ProposalMsg<T>>,
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
@@ -347,11 +338,10 @@ struct NetworkTask<T, P, S> {
     validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
-impl<T, P, S> NetworkTask<T, P, S>
+impl<T, S> NetworkTask<T, S>
 where
     S: Stream<Item = Result<Event<ConsensusMsg>, failure::Error>> + Unpin,
     T: Payload,
-    P: ProposerInfo,
 {
     pub async fn run(mut self) {
         while let Some(Ok(message)) = self.all_events.next().await {
@@ -397,7 +387,7 @@ where
     }
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalInfo::<T, P>::from_proto(msg.take_proposal())?;
+        let proposal = ProposalMsg::<T>::from_proto(msg.take_proposal())?;
         proposal.verify(self.validator.as_ref()).map_err(|e| {
             security_log(SecurityEvent::InvalidConsensusProposal)
                 .error(&e)

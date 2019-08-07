@@ -7,7 +7,7 @@ use crate::{
         common::Author,
         consensus_types::{
             block::Block,
-            proposal_info::{ProposalInfo, ProposerInfo},
+            proposal_msg::ProposalMsg,
             quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
@@ -64,7 +64,7 @@ use types::{
 struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
-    event_processor: EventProcessor<TestPayload, Author>,
+    event_processor: EventProcessor<TestPayload>,
     new_rounds_receiver: channel::Receiver<NewRoundEvent>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner<Ed25519PrivateKey>,
@@ -122,7 +122,7 @@ impl NodeSetup {
 
     fn create_proposer_election(
         author: Author,
-    ) -> Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync> {
+    ) -> Arc<dyn ProposerElection<TestPayload> + Send + Sync> {
         Arc::new(RotatingProposer::new(vec![author], 1))
     }
 
@@ -272,9 +272,7 @@ fn basic_new_rank_event_test() {
         let pending_proposals = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalInfo::<TestPayload, Author>::from_proto(m.1.take_proposal()).unwrap()
-            })
+            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal.round(), new_round,);
@@ -285,7 +283,7 @@ fn basic_new_rank_event_test() {
                 .certified_block_id(),
             genesis.id()
         );
-        assert_eq!(pending_proposals[0].proposer_info.get_author(), node.author);
+        assert_eq!(pending_proposals[0].proposer(), node.author);
 
         // Simulate a case with a1 receiving enough votes for a QC: a new proposal
         // should be a child of a1 and carry its QC.
@@ -315,9 +313,7 @@ fn basic_new_rank_event_test() {
         let pending_proposals = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalInfo::<TestPayload, Author>::from_proto(m.1.take_proposal()).unwrap()
-            })
+            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal.round(), 2);
@@ -346,7 +342,7 @@ fn process_successful_proposal_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
-        let proposal_info = ProposalInfo::<TestPayload, Author> {
+        let proposal_info = ProposalMsg::<TestPayload> {
             proposal: Block::make_block(
                 genesis.as_ref(),
                 vec![1],
@@ -355,7 +351,6 @@ fn process_successful_proposal_test() {
                 genesis_qc.clone(),
                 node.block_store.signer(),
             ),
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         let proposal_id = proposal_info.proposal.id();
@@ -412,16 +407,14 @@ fn process_old_proposal_test() {
     let old_block_id = old_block.id();
     block_on(async move {
         node.event_processor
-            .process_winning_proposal(ProposalInfo::<TestPayload, Author> {
+            .process_winning_proposal(ProposalMsg::<TestPayload> {
                 proposal: new_block,
-                proposer_info: node.author,
                 sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
             })
             .await;
         node.event_processor
-            .process_winning_proposal(ProposalInfo::<TestPayload, Author> {
+            .process_winning_proposal(ProposalMsg::<TestPayload> {
                 proposal: old_block,
-                proposer_info: node.author,
                 sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
             })
             .await;
@@ -472,18 +465,16 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalInfo::<TestPayload, Author> {
+        let bad_proposal = ProposalMsg::<TestPayload> {
             proposal: block_skip_round,
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
             node.event_processor.process_proposal(bad_proposal).await,
             ProcessProposalResult::Done(None)
         );
-        let good_proposal = ProposalInfo::<TestPayload, Author> {
+        let good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
@@ -606,18 +597,16 @@ fn process_proposer_mismatch_test() {
         incorrect_proposer.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalInfo::<TestPayload, Author> {
+        let bad_proposal = ProposalMsg::<TestPayload> {
             proposal: block_incorrect_proposer,
-            proposer_info: incorrect_proposer.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
             node.event_processor.process_proposal(bad_proposal).await,
             ProcessProposalResult::Done(None)
         );
-        let good_proposal = ProposalInfo::<TestPayload, Author> {
+        let good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
 
@@ -661,9 +650,8 @@ fn process_timeout_certificate_test() {
     let tc =
         PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
     block_on(async move {
-        let skip_round_proposal = ProposalInfo::<TestPayload, Author> {
+        let skip_round_proposal = ProposalMsg::<TestPayload> {
             proposal: block_skip_round,
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
         };
         assert_eq!(
@@ -672,9 +660,8 @@ fn process_timeout_certificate_test() {
                 .await,
             ProcessProposalResult::Done(Some(skip_round_proposal))
         );
-        let old_good_proposal = ProposalInfo::<TestPayload, Author> {
+        let old_good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
-            proposer_info: node.author,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
@@ -745,9 +732,8 @@ fn process_block_retrieval() {
         node.block_store.signer(),
     );
     let block_id = block.id();
-    let proposal_info = ProposalInfo::<TestPayload, Author> {
+    let proposal_info = ProposalMsg::<TestPayload> {
         proposal: block.clone(),
-        proposer_info: node.author,
         sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
     };
     node.pacemaker
@@ -833,7 +819,7 @@ fn basic_restart_test() {
     // insert a few successful proposals
     block_on(async move {
         for i in 1..=num_proposals {
-            let proposal_info = ProposalInfo::<TestPayload, Author> {
+            let proposal_info = ProposalMsg::<TestPayload> {
                 proposal: Block::make_block(
                     genesis.as_ref(),
                     vec![1],
@@ -842,7 +828,6 @@ fn basic_restart_test() {
                     genesis_qc.clone(),
                     node_mut.block_store.signer(),
                 ),
-                proposer_info: node_mut.author,
                 sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
             };
             let proposal_id = proposal_info.proposal.id();

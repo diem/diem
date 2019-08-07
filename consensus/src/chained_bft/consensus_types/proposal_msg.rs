@@ -9,36 +9,18 @@ use failure::prelude::*;
 use network::proto::Proposal as ProtoProposal;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
-use rmp_serde::{from_slice, to_vec_named};
-use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
 use types::validator_verifier::ValidatorVerifier;
 
-/// ProposerInfo is a general trait that can include various proposer characteristics
-/// relevant to a specific protocol implementation. The author is the only common thing for now.
-pub trait ProposerInfo:
-    Send + Sync + Clone + Copy + fmt::Debug + DeserializeOwned + Serialize + 'static
-{
-    fn get_author(&self) -> Author;
-}
-
-/// Trivial ProposerInfo implementation.
-impl ProposerInfo for Author {
-    fn get_author(&self) -> Author {
-        *self
-    }
-}
-
-/// ProposalInfo contains the required information for the proposer election protocol to make its
+/// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ProposalInfo<T, P> {
+pub struct ProposalMsg<T> {
     pub proposal: Block<T>,
-    pub proposer_info: P,
     pub sync_info: SyncInfo,
 }
 
-impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
+impl<T: Payload> ProposalMsg<T> {
     pub fn verify(&self, validator: &ValidatorVerifier<Ed25519PublicKey>) -> Result<()> {
         if self.proposal.is_nil_block() {
             return Err(format_err!("Proposal {} for a NIL block", self.proposal));
@@ -80,22 +62,11 @@ impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
                 self.proposal.quorum_cert().certified_block_round(),
             );
         }
-        match self.proposal.author() {
-            Some(author) => {
-                if author != self.proposer_info.get_author() {
-                    return Err(format_err!(
-                        "Proposal {} mismatch author of block and proposer info: block={}, proposer={}",
-                        self.proposal,
-                        author,
-                        self.proposer_info.get_author()));
-                }
-            }
-            None => {
-                return Err(format_err!(
-                    "Proposal {} does not define an author",
-                    self.proposal
-                ));
-            }
+        if self.proposal.author().is_none() {
+            return Err(format_err!(
+                "Proposal {} does not define an author",
+                self.proposal
+            ));
         }
         self.sync_info
             .highest_ledger_info()
@@ -104,48 +75,43 @@ impl<T: Payload, P: ProposerInfo> ProposalInfo<T, P> {
 
         Ok(())
     }
-}
 
-impl<T, P> fmt::Display for ProposalInfo<T, P>
-where
-    P: ProposerInfo,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "[block {} from {}]",
-            self.proposal,
-            self.proposer_info.get_author().short_str()
-        )
+    pub fn proposer(&self) -> Author {
+        self.proposal
+            .author()
+            .expect("Proposal should be verified having an author")
     }
 }
 
-impl<T: Payload, P: ProposerInfo> IntoProto for ProposalInfo<T, P> {
+impl<T: Payload> fmt::Display for ProposalMsg<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let author = match self.proposal.author() {
+            Some(author) => author.short_str(),
+            None => String::from("NIL"),
+        };
+        write!(f, "[proposal {} from {}]", self.proposal, author,)
+    }
+}
+
+impl<T: Payload> IntoProto for ProposalMsg<T> {
     type ProtoType = ProtoProposal;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
         proto.set_proposed_block(self.proposal.into_proto());
-        proto.set_proposer(
-            to_vec_named(&self.proposer_info)
-                .expect("fail to serialize proposer info")
-                .into(),
-        );
         proto.set_sync_info(self.sync_info.into_proto());
         proto
     }
 }
 
-impl<T: Payload, P: ProposerInfo> FromProto for ProposalInfo<T, P> {
+impl<T: Payload> FromProto for ProposalMsg<T> {
     type ProtoType = ProtoProposal;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
-        let proposer_info = from_slice(object.get_proposer())?;
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
-        Ok(ProposalInfo {
+        Ok(ProposalMsg {
             proposal,
-            proposer_info,
             sync_info,
         })
     }
