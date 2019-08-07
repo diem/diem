@@ -25,6 +25,7 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use nextgen_crypto::ed25519::*;
+use state_synchronizer::StateSyncRuntime;
 use std::{
     cmp::min,
     convert::{TryFrom, TryInto},
@@ -41,6 +42,7 @@ use vm_validator::vm_validator::VMValidator;
 pub struct LibraHandle {
     _ac: ServerHandle,
     _mempool: Option<MempoolRuntime>,
+    _state_synchronizer: StateSyncRuntime,
     _network: Option<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
     _execution: ServerHandle,
@@ -245,6 +247,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let ac = ServerHandle::setup(ac_server);
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
+    let state_synchronizer = StateSyncRuntime::bootstrap(&node_config);
+
     let mut mempool = None;
     let mut consensus = None;
     let mut network = None;
@@ -288,6 +292,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let libra_handle = LibraHandle {
         _ac: ac,
         _mempool: mempool,
+        _state_synchronizer: state_synchronizer,
         _network: network,
         consensus,
         _execution: execution,

@@ -57,6 +57,7 @@ members = [
     "network/noise",
     "network/socket_bench_server",
     "mempool",
+    "state_synchronizer",
     "storage/accumulator",
     "storage/libradb",
     "storage/jellyfish_merkle",

@@ -1,0 +1,29 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package state_synchronizer;
+
+import "transaction.proto";
+import "ledger_info.proto";
+
+// -----------------------------------------------------------------------------
+// ---------------- State Synchronizer Service Definition
+// -----------------------------------------------------------------------------
+service StateSynchronizer {
+  // Notifies StateSynchronizer about new set of committed transactions
+  rpc CommitTransactions(CommitTransactionsRequest) returns (CommitTransactionsResponse) {}
+}
+
+// -----------------------------------------------------------------------------
+// ---------------- CommitTransactions
+// -----------------------------------------------------------------------------
+message CommitTransactionsRequest {
+  types.LedgerInfoWithSignatures ledger_info_with_signatures = 1;
+  repeated types.SignedTransaction transactions = 2;
+}
+
+message CommitTransactionsResponse {
+    uint64 version = 1;
+}
