@@ -58,7 +58,7 @@ fn prune_retired_records(
     expected_num_purged: usize,
 ) {
     let (num_purged, _last_seen_version) =
-        pruner::prune_state(Arc::clone(&store.db), least_readable_version, limit).unwrap();
+        pruner::prune_state(Arc::clone(&store.db), 0, least_readable_version, limit).unwrap();
     assert_eq!(num_purged, expected_num_purged);
 }
 

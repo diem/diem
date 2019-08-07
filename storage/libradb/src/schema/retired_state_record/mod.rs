@@ -28,10 +28,11 @@ use failure::prelude::*;
 use num_traits::{FromPrimitive, ToPrimitive};
 use schemadb::{
     define_schema,
-    schema::{KeyCodec, ValueCodec},
+    schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
 use sparse_merkle::{RetiredRecordType, RetiredStateRecord};
 use std::io::{Cursor, Write};
+use types::transaction::Version;
 
 define_schema!(
     RetiredStateRecordSchema,
@@ -84,6 +85,12 @@ impl ValueCodec<RetiredStateRecordSchema> for () {
     fn decode_value(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, 0)?;
         Ok(())
+    }
+}
+
+impl SeekKeyCodec<RetiredStateRecordSchema> for Version {
+    fn encode_seek_key(&self) -> Result<Vec<u8>> {
+        Ok(self.to_be_bytes().to_vec())
     }
 }
 

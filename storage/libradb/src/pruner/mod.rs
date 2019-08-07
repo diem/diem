@@ -158,6 +158,7 @@ impl Worker {
             // in case `Command::Quit` is received (that's when we should quit.)
             match prune_state(
                 Arc::clone(&self.db),
+                self.progress.load(Ordering::Relaxed),
                 self.least_readable_version,
                 Self::BATCH_SIZE,
             ) {
@@ -223,13 +224,17 @@ impl Worker {
 
 pub fn prune_state(
     db: Arc<DB>,
+    // `iter.seek_to_first()` can be costly if there are a lot of deletes at the beginning of the
+    // whole key range which have not been compacted away yet. We let the call site hint us where
+    // the first undeleted key is if possible. Pass in `0` to essentially seek to the first record.
+    max_pruned_version_hint: Version,
     least_readable_version: Version,
     limit: usize,
 ) -> Result<(usize, Version)> {
     let mut batch = SchemaBatch::new();
     let mut num_purged = 0;
     let mut iter = db.iter::<RetiredStateRecordSchema>(ReadOptions::default())?;
-    iter.seek_to_first();
+    iter.seek(&max_pruned_version_hint)?;
 
     // Collect records to purge, as many as `limit`.
     let mut iter = iter.take(limit);
