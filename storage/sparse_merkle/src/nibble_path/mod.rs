@@ -53,7 +53,8 @@ impl Arbitrary for NibblePath {
 
 prop_compose! {
     fn arb_nibble_path()(
-        mut bytes in vec(any::<u8>(), 0..ROOT_NIBBLE_HEIGHT/2), is_odd in any::<bool>()
+        mut bytes in vec(any::<u8>(), 0..=ROOT_NIBBLE_HEIGHT/2),
+        is_odd in any::<bool>()
     ) -> NibblePath {
         if let Some(last_byte) = bytes.last_mut() {
             if is_odd {
@@ -62,6 +63,17 @@ prop_compose! {
             }
         }
         NibblePath::new(bytes)
+    }
+}
+
+prop_compose! {
+    pub fn arb_internal_nibble_path()(
+        nibble_path in arb_nibble_path().prop_filter(
+            "Filter out leaf paths.",
+            |p| p.num_nibbles() < ROOT_NIBBLE_HEIGHT,
+        )
+    ) -> NibblePath {
+        nibble_path
     }
 }
 
