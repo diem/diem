@@ -24,10 +24,8 @@ message ConsensusMsg {
 message Proposal {
   // The proposed block
   Block proposed_block = 1;
-  // Author of the proposal
-  bytes proposer = 2;
   // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
-  SyncInfo sync_info = 3;
+  SyncInfo sync_info = 2;
 }
 
 message PacemakerTimeout {

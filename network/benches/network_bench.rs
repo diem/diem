@@ -168,7 +168,6 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::new();
     let proposal = msg.mut_proposal();
-    proposal.set_proposer(PeerId::random().into());
     let block = proposal.mut_proposed_block();
     block.set_payload(vec![0u8; msg_len].into());
     msg

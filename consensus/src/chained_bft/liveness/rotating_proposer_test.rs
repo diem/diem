@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::Author,
     consensus_types::{
-        block::Block, proposal_info::ProposalInfo, quorum_cert::QuorumCert, sync_info::SyncInfo,
+        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
     },
     liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
 };
@@ -19,7 +18,7 @@ fn test_rotating_proposer() {
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 1));
+    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -28,7 +27,7 @@ fn test_rotating_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -37,10 +36,9 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -49,10 +47,9 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             3,
@@ -61,7 +58,6 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     assert_eq!(
@@ -91,7 +87,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 3));
+    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 3));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -100,7 +96,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -109,10 +105,9 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -121,10 +116,9 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             3,
@@ -133,7 +127,6 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     assert_eq!(
@@ -159,7 +152,8 @@ fn test_fixed_proposer() {
     let chosen_author = chosen_validator_signer.author();
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let pe = Arc::new(RotatingProposer::<u32, Author>::new(vec![chosen_author], 1));
+    let pe: Arc<dyn ProposerElection<u32>> =
+        Arc::new(RotatingProposer::new(vec![chosen_author], 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is
     // from the chosen author.
@@ -168,7 +162,7 @@ fn test_fixed_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -177,10 +171,9 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -189,10 +182,9 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -201,7 +193,6 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
         sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
     assert_eq!(

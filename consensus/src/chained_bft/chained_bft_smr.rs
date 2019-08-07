@@ -5,10 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
         common::{Payload, Round},
-        consensus_types::{
-            proposal_info::{ProposalInfo, ProposerInfo},
-            timeout_msg::TimeoutMsg,
-        },
+        consensus_types::{proposal_msg::ProposalMsg, timeout_msg::TimeoutMsg},
         event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
@@ -51,7 +48,7 @@ use std::{
 };
 use tokio::runtime::{Runtime, TaskExecutor};
 
-type ConcurrentEventProcessor<T, P> = Arc<futures_locks::RwLock<EventProcessor<T, P>>>;
+type ConcurrentEventProcessor<T> = Arc<futures_locks::RwLock<EventProcessor<T>>>;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -77,15 +74,15 @@ impl ChainedBftSMRConfig {
     }
 }
 
-/// ChainedBFTSmr is the one to generate the components (BLockStore, Proposer, etc.) and start the
+/// ChainedBFTSMR is the one to generate the components (BlockStore, Proposer, etc.) and start the
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
-pub struct ChainedBftSMR<T, P> {
-    author: P,
+pub struct ChainedBftSMR<T> {
+    author: Author,
     // TODO [Reconfiguration] quorum size is just a function of current validator set.
     quorum_size: usize,
     signer: Option<ValidatorSigner<Ed25519PrivateKey>>,
-    proposers: Vec<P>,
+    proposers: Vec<Author>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
     network: ConsensusNetworkImpl,
@@ -95,12 +92,12 @@ pub struct ChainedBftSMR<T, P> {
 }
 
 #[allow(dead_code)]
-impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
+impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        author: P,
+        author: Author,
         quorum_size: usize,
         signer: ValidatorSigner<Ed25519PrivateKey>,
-        proposers: Vec<P>,
+        proposers: Vec<Author>,
         network: ConsensusNetworkImpl,
         runtime: Runtime,
         config: ChainedBftSMRConfig,
@@ -158,7 +155,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     /// Create a proposer election handler based on proposers
-    fn create_proposer_election(&self) -> Arc<dyn ProposerElection<T, P> + Send + Sync> {
+    fn create_proposer_election(&self) -> Arc<dyn ProposerElection<T> + Send + Sync> {
         assert!(!self.proposers.is_empty());
         Arc::new(RotatingProposer::new(
             self.proposers.clone(),
@@ -168,7 +165,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_new_round_events(
         mut receiver: channel::Receiver<NewRoundEvent>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some(new_round_event) = receiver.next().await {
             let guard = event_processor.read().compat().await.unwrap();
@@ -178,9 +175,9 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_proposals(
         executor: TaskExecutor,
-        mut receiver: channel::Receiver<ProposalInfo<T, P>>,
-        event_processor: ConcurrentEventProcessor<T, P>,
-        mut winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
+        mut receiver: channel::Receiver<ProposalMsg<T>>,
+        event_processor: ConcurrentEventProcessor<T>,
+        mut winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
             let winning_proposal = {
@@ -214,9 +211,9 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     async fn sync_and_process_proposal(
-        event_processor: ConcurrentEventProcessor<T, P>,
-        proposal: ProposalInfo<T, P>,
-        mut winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
+        event_processor: ConcurrentEventProcessor<T>,
+        proposal: ProposalMsg<T>,
+        mut winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
     ) {
         let winning_proposal = {
             let mut guard = event_processor.write().compat().await.unwrap();
@@ -230,8 +227,8 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     async fn process_winning_proposals(
-        mut receiver: channel::Receiver<ProposalInfo<T, P>>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        mut receiver: channel::Receiver<ProposalMsg<T>>,
+        event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
             let guard = event_processor.read().compat().await.unwrap();
@@ -241,7 +238,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_votes(
         mut receiver: channel::Receiver<VoteMsg>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
         quorum_size: usize,
     ) {
         while let Some(vote) = receiver.next().await {
@@ -252,7 +249,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_timeout_msg(
         mut receiver: channel::Receiver<TimeoutMsg>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
         quorum_size: usize,
     ) {
         while let Some(timeout_msg) = receiver.next().await {
@@ -263,7 +260,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_sync_info_msgs(
         mut receiver: channel::Receiver<(SyncInfo, Author)>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some((sync_info, author)) = receiver.next().await {
             let mut guard = event_processor.write().compat().await.unwrap();
@@ -273,7 +270,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_outgoing_pacemaker_timeouts(
         mut receiver: channel::Receiver<Round>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
         mut network: ConsensusNetworkImpl,
     ) {
         while let Some(round) = receiver.next().await {
@@ -293,7 +290,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_block_retrievals(
         mut receiver: channel::Receiver<BlockRetrievalRequest<T>>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some(request) = receiver.next().await {
             let guard = event_processor.read().compat().await.unwrap();
@@ -303,7 +300,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     async fn process_chunk_retrievals(
         mut receiver: channel::Receiver<ChunkRetrievalRequest>,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some(request) = receiver.next().await {
             let guard = event_processor.read().compat().await.unwrap();
@@ -313,13 +310,13 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
 
     fn start_event_processing(
         &self,
-        event_processor: ConcurrentEventProcessor<T, P>,
+        event_processor: ConcurrentEventProcessor<T>,
         executor: TaskExecutor,
         new_round_events_receiver: channel::Receiver<NewRoundEvent>,
-        winning_proposals_receiver: channel::Receiver<ProposalInfo<T, P>>,
-        network_receivers: NetworkReceivers<T, P>,
+        winning_proposals_receiver: channel::Receiver<ProposalMsg<T>>,
+        network_receivers: NetworkReceivers<T>,
         pacemaker_timeout_sender_rx: channel::Receiver<Round>,
-        winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
+        winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
     ) {
         executor.spawn(
             Self::process_new_round_events(new_round_events_receiver, event_processor.clone())
@@ -409,7 +406,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 }
 
-impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P> {
+impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     type Payload = T;
 
     fn start(

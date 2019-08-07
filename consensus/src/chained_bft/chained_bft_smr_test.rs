@@ -6,7 +6,7 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
         common::Author,
-        consensus_types::proposal_info::ProposalInfo,
+        consensus_types::proposal_msg::ProposalMsg,
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         safety::vote_msg::VoteMsg,
@@ -41,7 +41,7 @@ struct SMRNode {
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
     smr_id: usize,
-    smr: ChainedBftSMR<TestPayload, Author>,
+    smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
@@ -214,8 +214,7 @@ fn basic_start_test() {
         let mut msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal =
-            ProposalInfo::<Vec<u64>, Author>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
         assert_eq!(first_proposal.proposal.height(), 1);
         assert_eq!(first_proposal.proposal.parent_id(), genesis.id());
         assert_eq!(
@@ -279,10 +278,9 @@ fn basic_full_round() {
         let mut broadcast_proposals_2 = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let next_proposal = ProposalInfo::<Vec<u64>, Author>::from_proto(
-            broadcast_proposals_2[0].1.take_proposal(),
-        )
-        .unwrap();
+        let next_proposal =
+            ProposalMsg::<Vec<u64>>::from_proto(broadcast_proposals_2[0].1.take_proposal())
+                .unwrap();
         assert_eq!(next_proposal.proposal.round(), 2);
         assert_eq!(next_proposal.proposal.height(), 2);
     });
@@ -705,8 +703,7 @@ fn aggregate_timeout_votes() {
         let mut msg = playground
             .wait_for_messages(2, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal =
-            ProposalInfo::<Vec<u64>, Author>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
         let proposal_id = first_proposal.proposal.id();
         playground.drop_message_for(&nodes[0].author, nodes[1].author);
         playground.drop_message_for(&nodes[0].author, nodes[2].author);
