@@ -107,8 +107,8 @@ fn test_basic_qc() {
         // Wait for the initial event for the first round.
         expect_qc(1, &mut new_round_events_receiver).await;
 
-        pm.process_certificates(2, None).await;
-        pm.process_certificates(3, None).await;
+        pm.process_certificates(2, None, None).await;
+        pm.process_certificates(3, None, None).await;
 
         expect_qc(3, &mut new_round_events_receiver).await;
         expect_qc(4, &mut new_round_events_receiver).await;
