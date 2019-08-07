@@ -199,20 +199,10 @@ pub struct Function {
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
-
-/// Used to annotate struct types as a resource or value
-#[derive(Debug, PartialEq, Clone)]
-pub enum Kind {
-    /// `R`
-    Resource,
-    /// `V`
-    Value,
-}
-
 /// Identifier for a struct definition. Tells us where to look in the storage layer to find the
 /// code associated with the interface
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct StructType {
+pub struct QualifiedStructIdent {
     /// Module name and address in which the struct is contained
     pub module: ModuleName,
     /// Name for the struct class. Should be unique among structs published under the same
@@ -220,9 +210,9 @@ pub struct StructType {
     pub name: StructName,
 }
 
-/// Type "name" of the type
+/// The type of a single value
 #[derive(Debug, PartialEq, Clone)]
-pub enum Tag {
+pub enum Type {
     /// `address`
     Address,
     /// `u64`
@@ -231,31 +221,13 @@ pub enum Tag {
     Bool,
     /// `bytearray`
     ByteArray,
-    /// `string`
+    /// `string`, currently unused
     String,
     /// A module defined struct
-    /// `n`
-    Struct(StructType),
+    Struct(QualifiedStructIdent),
+    /// A reference type, the bool flag indicates whether the reference is mutable
+    Reference(bool, Box<Type>),
 }
-
-/// The type of a single value
-#[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    /// A non reference type
-    /// `g` or `k#d.n`
-    Normal(Kind, Tag),
-    /// A reference type
-    /// `&t` or `&mut t`
-    Reference {
-        /// true if `&mut` and false if `&`
-        is_mutable: bool,
-        /// the kind, value or resource
-        kind: Kind,
-        /// the "name" of the type
-        tag: Tag,
-    },
-}
-
 //**************************************************************************************************
 // Statements
 //**************************************************************************************************
@@ -632,48 +604,41 @@ impl ModuleDefinition {
 }
 
 impl Type {
-    /// Creates a new non-reference type from the type's kind and tag
-    pub fn nonreference(kind: Kind, tag: Tag) -> Type {
-        Type::Normal(kind, tag)
+    /// Creates a new struct type
+    pub fn r#struct(ident: QualifiedStructIdent) -> Type {
+        Type::Struct(ident)
     }
 
     /// Creates a new reference type from its mutability and underlying type
-    pub fn reference(is_mutable: bool, annot: Type) -> Type {
-        match annot {
-            Type::Normal(kind, tag) => Type::Reference {
-                is_mutable,
-                kind,
-                tag,
-            },
-            _ => panic!("ICE expected Normal annotation"),
-        }
+    pub fn reference(is_mutable: bool, t: Type) -> Type {
+        Type::Reference(is_mutable, Box::new(t))
     }
 
     /// Creates a new address type
     pub fn address() -> Type {
-        Type::Normal(Kind::Value, Tag::Address)
+        Type::Address
     }
 
     /// Creates a new u64 type
     pub fn u64() -> Type {
-        Type::Normal(Kind::Value, Tag::U64)
+        Type::U64
     }
 
     /// Creates a new bool type
     pub fn bool() -> Type {
-        Type::Normal(Kind::Value, Tag::Bool)
+        Type::Bool
     }
 
     /// Creates a new bytearray type
     pub fn bytearray() -> Type {
-        Type::Normal(Kind::Value, Tag::ByteArray)
+        Type::ByteArray
     }
 }
 
-impl StructType {
+impl QualifiedStructIdent {
     /// Creates a new StructType handle from the name of the module alias and the name of the struct
     pub fn new(module: ModuleName, name: StructName) -> Self {
-        StructType { module, name }
+        QualifiedStructIdent { module, name }
     }
 
     /// Accessor for the module alias
@@ -1135,52 +1100,23 @@ impl fmt::Display for FunctionSignature {
     }
 }
 
-impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Kind::Resource => write!(f, "R"),
-            Kind::Value => write!(f, "V"),
-        }
-    }
-}
-
-impl fmt::Display for StructType {
+impl fmt::Display for QualifiedStructIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.module, self.name.name())
-    }
-}
-
-impl fmt::Display for Tag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Tag::U64 => write!(f, "u64"),
-            Tag::Bool => write!(f, "bool"),
-            Tag::Address => write!(f, "address"),
-            Tag::ByteArray => write!(f, "bytearray"),
-            Tag::String => write!(f, "string"),
-            Tag::Struct(ty) => write!(f, "{}", ty),
-        }
-    }
-}
-
-fn write_kind_tag(f: &mut fmt::Formatter<'_>, k: &Kind, t: &Tag) -> fmt::Result {
-    match t {
-        Tag::Struct(_) => write!(f, "{}#{}", k, t),
-        _ => write!(f, "{}", t),
     }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Normal(k, t) => write_kind_tag(f, k, t),
-            Type::Reference {
-                kind,
-                tag,
-                is_mutable,
-            } => {
-                write!(f, "&{}", if *is_mutable { "mut " } else { "" })?;
-                write_kind_tag(f, kind, tag)
+            Type::U64 => write!(f, "u64"),
+            Type::Bool => write!(f, "bool"),
+            Type::Address => write!(f, "address"),
+            Type::ByteArray => write!(f, "bytearray"),
+            Type::String => write!(f, "string"),
+            Type::Struct(ident) => write!(f, "{}", ident),
+            Type::Reference(is_mutable, t) => {
+                write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
             }
         }
     }

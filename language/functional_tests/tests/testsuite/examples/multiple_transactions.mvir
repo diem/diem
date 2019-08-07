@@ -9,7 +9,7 @@ import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 
 main(receiver: address) {
-    let coins: R#LibraCoin.T;
+    let coins: LibraCoin.T;
 
     coins = LibraAccount.withdraw_from_sender(200);
     LibraAccount.deposit(move(receiver), move(coins));
