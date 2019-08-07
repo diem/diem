@@ -74,6 +74,8 @@ pub struct NodeConfig {
     #[serde(default)]
     pub mempool: MempoolConfig,
     #[serde(default)]
+    pub state_sync: StateSyncConfig,
+    #[serde(default)]
     pub log_collector: LoggerConfig,
     #[serde(default)]
     pub vm_config: VMConfig,
@@ -618,6 +620,22 @@ impl Default for MempoolConfig {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
+pub struct StateSyncConfig {
+    pub address: String,
+    pub service_port: u16,
+}
+
+impl Default for StateSyncConfig {
+    fn default() -> Self {
+        Self {
+            address: "localhost".to_string(),
+            service_port: 55557,
+        }
+    }
+}
+
 impl NodeConfig {
     /// Reads the config file and returns the configuration object
     pub fn load_template<P: AsRef<Path>>(path: P) -> Result<Self> {
@@ -806,6 +824,7 @@ impl NodeConfigHelpers {
         config.mempool.mempool_service_port = get_available_port();
         config.network.advertised_address = randomize_tcp_port(&config.network.advertised_address);
         config.network.listen_address = randomize_tcp_port(&config.network.listen_address);
+        config.state_sync.service_port = get_available_port();
         config.secret_service.secret_service_port = get_available_port();
         config.storage.port = get_available_port();
     }

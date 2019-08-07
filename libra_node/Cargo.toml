@@ -30,6 +30,7 @@ execution_service = { path = "../execution/execution_service" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 network = { path = "../network" }
 proto_conv = { path = "../common/proto_conv" }
+state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types" }

@@ -77,6 +77,7 @@ impl SwarmConfig {
                 network: template.network.clone(),
                 consensus: template.consensus.clone(),
                 mempool: template.mempool.clone(),
+                state_sync: template.state_sync.clone(),
                 log_collector: template.log_collector.clone(),
                 vm_config: template.vm_config.clone(),
                 secret_service: template.secret_service.clone(),

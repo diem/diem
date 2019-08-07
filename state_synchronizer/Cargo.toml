@@ -1,0 +1,24 @@
+[package]
+name = "state_synchronizer"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+futures = "0.1.28"
+grpcio = "0.4.3"
+grpcio-sys = "0.4.4"
+protobuf = "~2.7"
+
+config = { path = "../config" }
+grpc_helpers = { path = "../common/grpc_helpers" }
+logger = { path = "../common/logger" }
+types = { path = "../types" }
+
+[dev-dependencies]
+types = { path = "../types", features = ["testing"] }
+
+[build-dependencies]
+build_helpers = { path = "../common/build_helpers" }
