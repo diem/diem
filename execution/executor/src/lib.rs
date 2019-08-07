@@ -121,7 +121,7 @@ where
             phantom: PhantomData,
         };
 
-        if num_elements_in_accumulator == 0 {
+        if committed_block_id == *PRE_GENESIS_BLOCK_ID {
             let genesis_transaction = config
                 .execution
                 .get_genesis_transaction()

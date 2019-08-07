@@ -38,9 +38,9 @@ service Storage {
     // in the response will be relative to this given ledger version.
     rpc GetTransactions(GetTransactionsRequest) returns (GetTransactionsResponse);
 
-    rpc GetAccountStateWithProofByStateRoot(
-    GetAccountStateWithProofByStateRootRequest)
-    returns (GetAccountStateWithProofByStateRootResponse);
+    rpc GetAccountStateWithProofByVersion(
+    GetAccountStateWithProofByVersionRequest)
+    returns (GetAccountStateWithProofByVersionResponse);
 
     // Returns information needed for Executor to start up.
     rpc GetExecutorStartupInfo(GetExecutorStartupInfoRequest)
@@ -78,15 +78,15 @@ message GetTransactionsResponse {
     types.TransactionListWithProof txn_list_with_proof = 1;
 }
 
-message GetAccountStateWithProofByStateRootRequest {
+message GetAccountStateWithProofByVersionRequest {
     /// The account address to query with.
     bytes address = 1;
 
-    /// The state root hash the query is based on.
-    bytes state_root_hash = 2;
+    /// The version the query is based on.
+    uint64 version = 2;
 }
 
-message GetAccountStateWithProofByStateRootResponse {
+message GetAccountStateWithProofByVersionResponse {
     /// The optional blob of account state blob.
     types.AccountStateBlob account_state_blob = 1;
 

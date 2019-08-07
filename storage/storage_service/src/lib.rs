@@ -23,7 +23,7 @@ use std::{
 };
 use storage_proto::proto::{
     storage::{
-        GetAccountStateWithProofByStateRootRequest, GetAccountStateWithProofByStateRootResponse,
+        GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
         GetExecutorStartupInfoRequest, GetExecutorStartupInfoResponse, GetTransactionsRequest,
         GetTransactionsResponse, SaveTransactionsRequest, SaveTransactionsResponse,
     },
@@ -174,19 +174,17 @@ impl StorageService {
         Ok(rust_resp.into_proto())
     }
 
-    fn get_account_state_with_proof_by_state_root_inner(
+    fn get_account_state_with_proof_by_version_inner(
         &self,
-        req: GetAccountStateWithProofByStateRootRequest,
-    ) -> Result<GetAccountStateWithProofByStateRootResponse> {
-        let rust_req = storage_proto::GetAccountStateWithProofByStateRootRequest::from_proto(req)?;
+        req: GetAccountStateWithProofByVersionRequest,
+    ) -> Result<GetAccountStateWithProofByVersionResponse> {
+        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::from_proto(req)?;
 
-        let (account_state_blob, sparse_merkle_proof) =
-            self.db.get_account_state_with_proof_by_state_root(
-                rust_req.address,
-                rust_req.state_root_hash,
-            )?;
+        let (account_state_blob, sparse_merkle_proof) = self
+            .db
+            .get_account_state_with_proof_by_version(rust_req.address, rust_req.version)?;
 
-        let rust_resp = storage_proto::GetAccountStateWithProofByStateRootResponse {
+        let rust_resp = storage_proto::GetAccountStateWithProofByVersionResponse {
             account_state_blob,
             sparse_merkle_proof,
         };
@@ -239,15 +237,15 @@ impl Storage for StorageService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &mut self,
         ctx: grpcio::RpcContext,
-        req: GetAccountStateWithProofByStateRootRequest,
-        sink: grpcio::UnarySink<GetAccountStateWithProofByStateRootResponse>,
+        req: GetAccountStateWithProofByVersionRequest,
+        sink: grpcio::UnarySink<GetAccountStateWithProofByVersionResponse>,
     ) {
-        debug!("[GRPC] Storage::get_account_state_with_proof_by_state_root");
+        debug!("[GRPC] Storage::get_account_state_with_proof_by_version");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_account_state_with_proof_by_state_root_inner(req);
+        let resp = self.get_account_state_with_proof_by_version_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 

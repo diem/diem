@@ -9,7 +9,6 @@
 
 mod state_view;
 
-use crypto::HashValue;
 use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
@@ -22,8 +21,8 @@ use rand::Rng;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::{storage::GetExecutorStartupInfoRequest, storage_grpc},
-    ExecutorStartupInfo, GetAccountStateWithProofByStateRootRequest,
-    GetAccountStateWithProofByStateRootResponse, GetExecutorStartupInfoResponse,
+    ExecutorStartupInfo, GetAccountStateWithProofByVersionRequest,
+    GetAccountStateWithProofByVersionResponse, GetExecutorStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
 };
 use types::{
@@ -178,27 +177,27 @@ impl StorageRead for StorageReadServiceClient {
             .boxed()
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        block_on(self.get_account_state_with_proof_by_state_root_async(address, state_root_hash))
+        block_on(self.get_account_state_with_proof_by_version_async(address, version))
     }
 
-    fn get_account_state_with_proof_by_state_root_async(
+    fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
     {
-        let req = GetAccountStateWithProofByStateRootRequest::new(address, state_root_hash);
+        let req = GetAccountStateWithProofByVersionRequest::new(address, version);
         convert_grpc_response(
             self.client()
-                .get_account_state_with_proof_by_state_root_async(&log_and_convert(req)),
+                .get_account_state_with_proof_by_version_async(&log_and_convert(req)),
         )
         .map(|resp| {
-            let resp = GetAccountStateWithProofByStateRootResponse::from_proto(resp?)?;
+            let resp = GetAccountStateWithProofByVersionResponse::from_proto(resp?)?;
             Ok(resp.into())
         })
         .boxed()
@@ -330,24 +329,24 @@ pub trait StorageRead: Send + Sync {
         fetch_events: bool,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
-    /// See [`LibraDB::get_account_state_with_proof_by_state_root`].
+    /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
-    /// [`LibraDB::get_account_state_with_proof_by_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_state_root
-    fn get_account_state_with_proof_by_state_root(
+    /// [`LibraDB::get_account_state_with_proof_by_version`]:
+    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 
-    /// See [`LibraDB::get_account_state_with_proof_by_state_root`].
+    /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
-    /// [`LibraDB::get_account_state_with_proof_by_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_state_root
-    fn get_account_state_with_proof_by_state_root_async(
+    /// [`LibraDB::get_account_state_with_proof_by_version`]:
+    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>;
 
     /// See [`LibraDB::get_executor_startup_info`].

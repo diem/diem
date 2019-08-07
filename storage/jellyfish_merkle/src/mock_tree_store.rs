@@ -46,12 +46,13 @@ impl MockTreeStore {
     }
 
     pub fn write_tree_update_batch(&self, batch: TreeUpdateBatch) -> Result<()> {
-        let (node_batch, retired_record_batch) = batch.into();
-        node_batch
+        batch
+            .node_batch
             .into_iter()
             .map(|(k, v)| self.put_node(k, v))
             .collect::<Result<Vec<_>>>()?;
-        retired_record_batch
+        batch
+            .stale_node_index_batch
             .into_iter()
             .map(|i| self.put_stale_node_index(i))
             .collect::<Result<Vec<_>>>()?;

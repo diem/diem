@@ -25,10 +25,8 @@ fn to_blocks_to_commit(
     let tmp_dir = tempfile::tempdir()?;
     let db = db_with_mock_genesis(&tmp_dir)?;
 
-    let genesis_txn_info = GENESIS_INFO.0.clone();
     let genesis_ledger_info_with_sigs = GENESIS_INFO.1.clone();
     let genesis_ledger_info = genesis_ledger_info_with_sigs.ledger_info();
-    let mut cur_state_root_hash = genesis_txn_info.state_root_hash();
     let mut cur_ver = 0;
     let mut cur_txn_accu_hash = genesis_ledger_info.transaction_accumulator_hash();
     let blocks_to_commit = zip_eq(txns_to_commit_vec, partial_ledger_info_with_sigs_vec)
@@ -41,7 +39,6 @@ fn to_blocks_to_commit(
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
                     cur_ver,
-                    cur_state_root_hash,
                     &mut cs,
                 )?[0];
                 let event_root_hash =
@@ -59,7 +56,6 @@ fn to_blocks_to_commit(
                         .put_transaction_infos(cur_ver, &[txn_info], &mut cs)?;
                 db.db.write_schemas(cs.batch)?;
 
-                cur_state_root_hash = state_root_hash;
                 cur_txn_accu_hash = txn_accu_hash;
             }
 

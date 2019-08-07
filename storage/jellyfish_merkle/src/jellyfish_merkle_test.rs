@@ -449,7 +449,8 @@ fn test_non_existence() {
 fn test_put_blob_sets() {
     let mut keys = vec![];
     let mut values = vec![];;
-    for _i in 0..100 {
+    let total_updates = 20;
+    for _i in 0..total_updates {
         keys.push(HashValue::random());
         values.push(AccountStateBlob::from(HashValue::random().to_vec()));
     }
@@ -462,7 +463,7 @@ fn test_put_blob_sets() {
         let tree = JellyfishMerkleTree::new(&db);
         for version in 0..10 {
             let mut keyed_blob_set = vec![];
-            for _ in 0..10 {
+            for _ in 0..total_updates / 10 {
                 keyed_blob_set.push(iter.next().unwrap());
             }
             let (root, batch) = tree
@@ -474,6 +475,8 @@ fn test_put_blob_sets() {
             batch_one_by_one
                 .stale_node_index_batch
                 .extend(batch.stale_node_index_batch);
+            batch_one_by_one.num_new_leaves += batch.num_new_leaves;
+            batch_one_by_one.num_stale_leaves += batch.num_stale_leaves;
         }
     }
     {
@@ -483,7 +486,7 @@ fn test_put_blob_sets() {
         let mut blob_sets = vec![];
         for _ in 0..10 {
             let mut keyed_blob_set = vec![];
-            for _ in 0..10 {
+            for _ in 0..total_updates / 10 {
                 keyed_blob_set.push(iter.next().unwrap());
             }
             blob_sets.push(keyed_blob_set);
