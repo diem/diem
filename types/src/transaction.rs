@@ -38,6 +38,9 @@ use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 mod program;
 mod transaction_argument;
 
+#[cfg(test)]
+mod unit_tests;
+
 pub use program::{Program, TransactionArgument, SCRIPT_HASH_LENGTH};
 use protobuf::well_known_types::UInt64Value;
 use std::ops::Deref;
