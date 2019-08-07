@@ -5,10 +5,10 @@ use codespan::{ByteIndex, Span};
 use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
 use crate::ast::{
     FunctionAnnotation, FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
-    Kind, Block, Cmd, CopyableVal, Spanned,
+    Block, Cmd, CopyableVal, Spanned,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
-    FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Tag,  Field, Fields,
-    StructName, StructType, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp
+    FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
+    StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
@@ -185,13 +185,13 @@ StructName: StructName = {
     <n: Name> =>  StructName::new(n),
 }
 
-StructType : StructType = {
+QualifiedStructIdent : QualifiedStructIdent = {
     <module_dot_struct: DotName> => {
         let v: Vec<&str> = module_dot_struct.split(".").collect();
         assert!(v.len() == 2, 42);
         let m: ModuleName = ModuleName::new(v[0].to_string());
         let n: StructName = StructName::new(v[1].to_string());
-        StructType::new(m,n)
+        QualifiedStructIdent::new(m,n)
     }
 }
 
@@ -332,7 +332,7 @@ Block : Block = {
 }
 
 Declaration: (Var_, Type) = {
-  "let" <v: Sp<Var>> ":" <t: RefAnnotation> ";" => (v, t),
+  "let" <v: Sp<Var>> ":" <t: Type> ";" => (v, t),
 }
 
 Declarations: Vec<(Var_, Type)> = {
@@ -343,32 +343,18 @@ FunctionBlock: (Vec<(Var_, Type)>, Block) = {
     "{" <locals: Declarations> <stmts: Statements> "}" => (locals, Block::new(stmts))
 }
 
-Kind : Kind = {
-    "R" => Kind::Resource,
-    "V" => Kind::Value,
-}
-
-Annotation : Type = {
-    "address" => Type::address(),
-    "u64" => Type::u64(),
-    "bool" => Type::bool(),
-    "bytearray" => Type::bytearray(),
-    <kind: Kind> "#" <c: StructType> => {
-        Type::Normal(
-            kind,
-            Tag::Struct(c),
-        )
-    },
-}
-
-RefAnnotation: Type = {
-    <annot: Annotation> => annot,
-    "&"<annot: Annotation> => Type::reference(false, annot),
-    "&mut "<annot: Annotation> => Type::reference(true, annot),
+Type: Type = {
+    "address" => Type::Address,
+    "u64" => Type::U64,
+    "bool" => Type::Bool,
+    "bytearray" => Type::ByteArray,
+    (r"(R|V)#")? <s: QualifiedStructIdent> => Type::Struct(s),
+    "&" <t: Type> => Type::Reference(false, Box::new(t)),
+    "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
 }
 
 ArgDecl : (Var, Type) = {
-    <v: Var> ":" <t: RefAnnotation> ","? => (v, t)
+    <v: Var> ":" <t: Type> ","? => (v, t)
 }
 
 NativeTag: () = {
@@ -385,7 +371,7 @@ FunctionAnnotation: FunctionAnnotation = {
 }
 
 ReturnType: Vec<Type> = {
-    ":" <t: RefAnnotation> <v: ("*" <RefAnnotation>)*> => {
+    ":" <t: Type> <v: ("*" <Type>)*> => {
         let mut v = v;
         v.insert(0, t);
         v
@@ -425,7 +411,7 @@ NativeFunctionDecl: (FunctionName, Function) = {
 }
 
 FieldDecl : (Field, Type) = {
-    <f: Field> ":" <t: Annotation> ","? => (f, t)
+    <f: Field> ":" <t: Type> ","? => (f, t)
 }
 
 StructKind: bool = {
