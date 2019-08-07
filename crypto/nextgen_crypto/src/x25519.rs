@@ -8,8 +8,8 @@
 //!
 //! This is an API for [Elliptic Curves for Security - RFC
 //! 7748](https://tools.ietf.org/html/rfc7748) and which deals with
-//! long-term key generation and handling (`X25519StaticExchangeKey`,
-//! `X25519StaticPublicKey`) as well as short-term keys (`X25519ExchangeKey`,
+//! long-term key generation and handling (`X25519StaticPrivateKey`,
+//! `X25519StaticPublicKey`) as well as short-term keys (`X25519EphemeralPrivateKey`,
 //! `X25519PublicKey`).
 //!
 //! The default type for a Diffie-Hellman secret is an ephemeral
@@ -17,7 +17,7 @@
 //! and is not serializable, since the use of fresh DH secrets is
 //! recommended for various reasons including PFS.
 //!
-//! We also provide a "static" implementation `X25519StaticExchangeKey`,
+//! We also provide a "static" implementation `X25519StaticPrivateKey`,
 //! which supports serialization, forming a `PrivateKey`-`PublicKey` pair
 //! with `X25519StaticPublickey`. This later type is precisely a
 //! [newtype](https://doc.rust-lang.org/1.5.0/style/features/types/newtype.html)
@@ -35,15 +35,15 @@
 //! let seed = [5u8; 32]; // seed is denoted as IKM in HKDF RFC 5869.
 //! let info = &b"some app info"[..];
 //!
-//! let (private_key1, public_key1) = X25519StaticExchangeKey::derive_keypair_from_seed(Some(salt), &seed, Some(info));
-//! let (private_key2, public_key2) = X25519StaticExchangeKey::derive_keypair_from_seed(Some(salt), &seed, Some(info));
+//! let (private_key1, public_key1) = X25519StaticPrivateKey::derive_keypair_from_seed(Some(salt), &seed, Some(info));
+//! let (private_key2, public_key2) = X25519StaticPrivateKey::derive_keypair_from_seed(Some(salt), &seed, Some(info));
 //! assert_eq!(public_key1, public_key2);
 //!
 //! // Generate a random X25519 ephemeral key pair from an RNG (in this example a StdRng)
 //! use nextgen_crypto::Uniform;
 //! let seed = [1u8; 32];
 //! let mut rng: StdRng = SeedableRng::from_seed(seed);
-//! let private_key = X25519StaticExchangeKey::generate_for_testing(&mut rng);
+//! let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
 //! let public_key: X25519StaticPublicKey = (&private_key).into();
 //!
 //! // Generate an X25519 key pair from an RNG and a user-provided seed.
@@ -51,8 +51,8 @@
 //! // In production, ensure seed has at least 256 bits of entropy.
 //! let seed = [5u8; 32]; // seed is denoted as IKM in HKDF RFC 5869.
 //! let info = &b"some app info"[..];
-//! let (private_key1, public_key1) = X25519StaticExchangeKey::generate_keypair_hybrid(Some(salt), &seed, Some(info));
-//! let (private_key2, public_key2) = X25519StaticExchangeKey::generate_keypair_hybrid(Some(salt), &seed, Some(info));
+//! let (private_key1, public_key1) = X25519StaticPrivateKey::generate_keypair_hybrid(Some(salt), &seed, Some(info));
+//! let (private_key2, public_key2) = X25519StaticPrivateKey::generate_keypair_hybrid(Some(salt), &seed, Some(info));
 //! assert_ne!(public_key1, public_key2);
 //! ```
 
@@ -70,27 +70,27 @@ use x25519_dalek;
 /// Key interfaces for Diffie-Hellman key exchange protocol build on top
 /// of the key APIs in traits.rs
 
-/// x25519 Implementation
+/// x25519 implementation
 
 /// The length of the DHPublicKey
 pub const X25519_PUBLIC_KEY_LENGTH: usize = 32;
 /// The length of the DHPrivateKey
 pub const X25519_PRIVATE_KEY_LENGTH: usize = 32;
 
-/// An x25519 ephemeral key
+/// An x25519 ephemeral private (secret) key
 #[derive(SilentDisplay, SilentDebug)]
-pub struct X25519ExchangeKey(x25519_dalek::EphemeralSecret);
+pub struct X25519EphemeralPrivateKey(x25519_dalek::EphemeralSecret);
 
-/// An x25519 static key
+/// An x25519 static private (secret) key
 #[derive(SilentDisplay, SilentDebug, Clone)]
-pub struct X25519StaticExchangeKey(x25519_dalek::StaticSecret);
+pub struct X25519StaticPrivateKey(x25519_dalek::StaticSecret);
 
 /// An x25519 public key
 #[derive(Clone, Debug)]
 pub struct X25519PublicKey(x25519_dalek::PublicKey);
 
 /// An x25519 public key to match the X25519Static key type, which
-/// dereferences to an X2519PublicKey
+/// dereferences to an X25519PublicKey
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct X25519StaticPublicKey(X25519PublicKey);
 
@@ -99,23 +99,23 @@ pub struct X25519StaticPublicKey(X25519PublicKey);
 pub struct X25519SharedKey(x25519_dalek::SharedSecret);
 
 /////////////////////////
-// ExchangeKey Traits //
+// X25519EphemeralPrivateKey Traits //
 /////////////////////////
 
-impl Uniform for X25519ExchangeKey {
+impl Uniform for X25519EphemeralPrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
-        X25519ExchangeKey(x25519_dalek::EphemeralSecret::new(rng))
+        X25519EphemeralPrivateKey(x25519_dalek::EphemeralSecret::new(rng))
     }
 }
 
-impl PrivateKey for X25519ExchangeKey {
+impl PrivateKey for X25519EphemeralPrivateKey {
     type PublicKeyMaterial = X25519PublicKey;
 }
 
-impl ExchangeKey for X25519ExchangeKey {
+impl ExchangeKey for X25519EphemeralPrivateKey {
     type DHPublicKeyMaterial = X25519PublicKey;
     type DHSharedKeyMaterial = X25519SharedKey;
 
@@ -127,10 +127,10 @@ impl ExchangeKey for X25519ExchangeKey {
 }
 
 //////////////////////
-// StaticExchangeKey Traits //
+// X25519StaticPrivateKey Traits //
 //////////////////////
 
-impl X25519StaticExchangeKey {
+impl X25519StaticPrivateKey {
     /// Derives a keypair `(X25519PrivateKey, X25519PublicKey)` from
     /// a) salt (optional) - denoted as 'salt' in RFC 5869
     /// b) seed - denoted as 'IKM' in RFC 5869
@@ -143,7 +143,7 @@ impl X25519StaticExchangeKey {
         salt: Option<&[u8]>,
         seed: &[u8],
         app_info: Option<&[u8]>,
-    ) -> (X25519StaticExchangeKey, X25519StaticPublicKey) {
+    ) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
         let derived_bytes =
             Hkdf::<Sha256>::extract_then_expand(salt, seed, app_info, X25519_PRIVATE_KEY_LENGTH);
         let mut key_bytes = [0u8; X25519_PRIVATE_KEY_LENGTH];
@@ -152,7 +152,7 @@ impl X25519StaticExchangeKey {
         let secret: x25519_dalek::StaticSecret = x25519_dalek::StaticSecret::from(key_bytes);
         let public: x25519_dalek::PublicKey = (&secret).into();
         (
-            X25519StaticExchangeKey(secret),
+            X25519StaticPrivateKey(secret),
             X25519StaticPublicKey(X25519PublicKey(public)),
         )
     }
@@ -171,7 +171,7 @@ impl X25519StaticExchangeKey {
         salt: Option<&[u8]>,
         seed: &[u8],
         app_info: Option<&[u8]>,
-    ) -> (X25519StaticExchangeKey, X25519StaticPublicKey) {
+    ) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
         let mut rng = EntropyRng::new();
         let mut seed_from_rng = [0u8; X25519_PRIVATE_KEY_LENGTH];
         rng.fill_bytes(&mut seed_from_rng);
@@ -179,24 +179,24 @@ impl X25519StaticExchangeKey {
         let mut final_seed = seed.to_vec();
         final_seed.extend_from_slice(&seed_from_rng);
 
-        X25519StaticExchangeKey::derive_keypair_from_seed(salt, &final_seed, app_info)
+        X25519StaticPrivateKey::derive_keypair_from_seed(salt, &final_seed, app_info)
     }
 }
 
-impl Uniform for X25519StaticExchangeKey {
+impl Uniform for X25519StaticPrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
-        X25519StaticExchangeKey(x25519_dalek::StaticSecret::new(rng))
+        X25519StaticPrivateKey(x25519_dalek::StaticSecret::new(rng))
     }
 }
 
-impl PrivateKey for X25519StaticExchangeKey {
+impl PrivateKey for X25519StaticPrivateKey {
     type PublicKeyMaterial = X25519StaticPublicKey;
 }
 
-impl ExchangeKey for X25519StaticExchangeKey {
+impl ExchangeKey for X25519StaticPrivateKey {
     type DHPublicKeyMaterial = X25519StaticPublicKey;
     type DHSharedKeyMaterial = X25519SharedKey;
 
@@ -207,38 +207,38 @@ impl ExchangeKey for X25519StaticExchangeKey {
     }
 }
 
-impl TryFrom<&[u8]> for X25519StaticExchangeKey {
+impl TryFrom<&[u8]> for X25519StaticPrivateKey {
     type Error = CryptoMaterialError;
-    fn try_from(bytes: &[u8]) -> std::result::Result<X25519StaticExchangeKey, CryptoMaterialError> {
+    fn try_from(bytes: &[u8]) -> std::result::Result<X25519StaticPrivateKey, CryptoMaterialError> {
         if bytes.len() != X25519_PRIVATE_KEY_LENGTH {
             return Err(CryptoMaterialError::DeserializationError);
         }
         let mut bits = [0u8; X25519_PRIVATE_KEY_LENGTH];
         bits.copy_from_slice(&bytes[..X25519_PRIVATE_KEY_LENGTH]);
-        Ok(X25519StaticExchangeKey(x25519_dalek::StaticSecret::from(
+        Ok(X25519StaticPrivateKey(x25519_dalek::StaticSecret::from(
             bits,
         )))
     }
 }
 
-impl ValidKey for X25519StaticExchangeKey {
+impl ValidKey for X25519StaticPrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
 }
 
 //////////////////////
-// PublicKey Traits //
+// X25519PublicKey Traits //
 //////////////////////
 
-impl<'a> From<&'a X25519ExchangeKey> for X25519PublicKey {
-    fn from(ephemeral: &'a X25519ExchangeKey) -> X25519PublicKey {
+impl<'a> From<&'a X25519EphemeralPrivateKey> for X25519PublicKey {
+    fn from(ephemeral: &'a X25519EphemeralPrivateKey) -> X25519PublicKey {
         X25519PublicKey(x25519_dalek::PublicKey::from(&ephemeral.0))
     }
 }
 
-impl<'a> From<&'a X25519StaticExchangeKey> for X25519StaticPublicKey {
-    fn from(ephemeral: &'a X25519StaticExchangeKey) -> X25519StaticPublicKey {
+impl<'a> From<&'a X25519StaticPrivateKey> for X25519StaticPublicKey {
+    fn from(ephemeral: &'a X25519StaticPrivateKey) -> X25519StaticPublicKey {
         X25519StaticPublicKey(X25519PublicKey(x25519_dalek::PublicKey::from(&ephemeral.0)))
     }
 }
@@ -267,7 +267,7 @@ impl PartialEq for X25519PublicKey {
 impl Eq for X25519PublicKey {}
 
 impl PublicKey for X25519PublicKey {
-    type PrivateKeyMaterial = X25519ExchangeKey;
+    type PrivateKeyMaterial = X25519EphemeralPrivateKey;
 
     fn length() -> usize {
         X25519_PUBLIC_KEY_LENGTH
@@ -275,7 +275,7 @@ impl PublicKey for X25519PublicKey {
 }
 
 impl PublicKey for X25519StaticPublicKey {
-    type PrivateKeyMaterial = X25519StaticExchangeKey;
+    type PrivateKeyMaterial = X25519StaticPrivateKey;
 
     fn length() -> usize {
         X25519_PUBLIC_KEY_LENGTH
@@ -310,7 +310,7 @@ impl ValidKey for X25519StaticPublicKey {
 // Compact Serialization    //
 //////////////////////////////
 
-impl ser::Serialize for X25519StaticExchangeKey {
+impl ser::Serialize for X25519StaticPrivateKey {
     fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -328,22 +328,22 @@ impl ser::Serialize for X25519StaticPublicKey {
     }
 }
 
-struct X25519StaticExchangeKeyVisitor;
+struct X25519StaticPrivateKeyVisitor;
 
 struct X25519StaticPublicKeyVisitor;
 
-impl<'de> de::Visitor<'de> for X25519StaticExchangeKeyVisitor {
-    type Value = X25519StaticExchangeKey;
+impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
+    type Value = X25519StaticPrivateKey;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("x25519_dalek static key in bytes")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<X25519StaticExchangeKey, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<X25519StaticPrivateKey, E>
     where
         E: de::Error,
     {
-        match X25519StaticExchangeKey::try_from(value) {
+        match X25519StaticPrivateKey::try_from(value) {
             Ok(key) => Ok(key),
             Err(error) => Err(E::custom(error)),
         }
@@ -368,12 +368,12 @@ impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
     }
 }
 
-impl<'de> de::Deserialize<'de> for X25519StaticExchangeKey {
+impl<'de> de::Deserialize<'de> for X25519StaticPrivateKey {
     fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
-        deserializer.deserialize_bytes(X25519StaticExchangeKeyVisitor {})
+        deserializer.deserialize_bytes(X25519StaticPrivateKeyVisitor {})
     }
 }
 
@@ -383,5 +383,64 @@ impl<'de> de::Deserialize<'de> for X25519StaticPublicKey {
         D: de::Deserializer<'de>,
     {
         deserializer.deserialize_bytes(X25519StaticPublicKeyVisitor {})
+    }
+}
+
+//////////////////////////
+// Compatibility Traits //
+//////////////////////////
+
+/// Those transitory traits are meant to help with the progressive
+/// migration of the code base to the nextgen_crypto module and will
+/// disappear after.
+pub mod compat {
+    use crate::traits::*;
+    #[cfg(any(test, feature = "testing"))]
+    use proptest::strategy::LazyJust;
+    #[cfg(any(test, feature = "testing"))]
+    use proptest::{prelude::*, strategy::Strategy};
+
+    use crate::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
+    use rand::{rngs::StdRng, SeedableRng};
+
+    /// Generate an arbitrary key pair, with possible Rng input
+    ///
+    /// Warning: if you pass in None, this will not return distinct
+    /// results every time! Should you want to write non-deterministic
+    /// tests, look at config::config_builder::util::get_test_config
+    pub fn generate_keypair<'a, T>(opt_rng: T) -> (X25519StaticPrivateKey, X25519StaticPublicKey)
+    where
+        T: Into<Option<&'a mut StdRng>> + Sized,
+    {
+        if let Some(rng_mut_ref) = opt_rng.into() {
+            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate_for_testing(rng_mut_ref)
+        } else {
+            let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
+            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate_for_testing(&mut rng)
+        }
+    }
+
+    /// Used to produce keypairs from a seed for testing purposes
+    #[cfg(any(test, feature = "testing"))]
+    pub fn keypair_strategy(
+    ) -> impl Strategy<Value = (X25519StaticPrivateKey, X25519StaticPublicKey)> {
+        // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
+        // keypair to be generated, which appears to not be very useful.
+        any::<[u8; 32]>()
+            .prop_map(|seed| {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let (private_key, public_key) = generate_keypair(&mut rng);
+                (private_key, public_key)
+            })
+            .no_shrink()
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    impl Arbitrary for X25519StaticPublicKey {
+        type Parameters = ();
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            LazyJust::new(|| generate_keypair(None).1).boxed()
+        }
+        type Strategy = BoxedStrategy<Self>;
     }
 }

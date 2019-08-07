@@ -500,13 +500,12 @@ pub mod compat {
 
     #[cfg(any(test, feature = "testing"))]
     impl Arbitrary for Ed25519PublicKey {
+        type Parameters = ();
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             LazyJust::new(|| generate_keypair(None).1).boxed()
         }
         type Strategy = BoxedStrategy<Self>;
-        type Parameters = ();
     }
-
 }
 
 //////////////////////////////

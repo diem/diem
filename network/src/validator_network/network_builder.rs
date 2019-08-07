@@ -25,10 +25,12 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use crypto::x25519::{X25519PrivateKey, X25519PublicKey};
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::{
+    ed25519::*,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
@@ -98,7 +100,7 @@ pub struct NetworkBuilder {
     max_concurrent_network_notifs: u32,
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
-    identity_keys: Option<(X25519PrivateKey, X25519PublicKey)>,
+    identity_keys: Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>,
 }
 
 impl NetworkBuilder {
@@ -164,7 +166,10 @@ impl NetworkBuilder {
     }
 
     /// Set identity keys of local node.
-    pub fn identity_keys(&mut self, keys: (X25519PrivateKey, X25519PublicKey)) -> &mut Self {
+    pub fn identity_keys(
+        &mut self,
+        keys: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    ) -> &mut Self {
         self.identity_keys = Some(keys);
         self
     }

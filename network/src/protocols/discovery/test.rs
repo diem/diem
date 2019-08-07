@@ -4,10 +4,10 @@
 use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
-use crypto::x25519;
 use futures::future::{FutureExt, TryFutureExt};
 use memsocket::MemorySocket;
-use nextgen_crypto::{ed25519::Ed25519PrivateKey, *};
+use nextgen_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, *};
+use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
 
 fn get_random_seed() -> PeerInfo {
@@ -92,8 +92,9 @@ async fn expect_address_update(
 fn generate_network_pub_keys_and_signer(
     peer_id: PeerId,
 ) -> (NetworkPublicKeys, Signer<Ed25519PrivateKey>) {
-    let (signing_priv_key, _) = compat::generate_keypair(None);
-    let (_, identity_pub_key) = x25519::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (signing_priv_key, _) = compat::generate_keypair(&mut rng);
+    let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
     (
         NetworkPublicKeys {
             signing_public_key: signing_priv_key.public_key().clone().into(),
