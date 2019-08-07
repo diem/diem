@@ -11,7 +11,6 @@ use crate::{
     },
     counters,
     state_replication::StateComputer,
-    state_synchronizer::SyncStatus,
     util::mutex_map::MutexMap,
 };
 use crypto::HashValue;
@@ -19,6 +18,7 @@ use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
+use state_synchronizer::SyncStatus;
 use std::{
     clone::Clone,
     result::Result,
@@ -72,7 +72,6 @@ where
         // Prometheus if some conditions never happen.  Invoking get() function enforces creation.
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
-        counters::STATE_SYNC_TXN_REPLAYED.get();
         let block_mutex_map = MutexMap::new();
         SyncManager {
             block_store,

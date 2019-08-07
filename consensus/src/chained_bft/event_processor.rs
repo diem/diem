@@ -834,42 +834,13 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     /// We'll also try to add the QuorumCert into block store if it's for a existing block and
     /// potentially commit.
     pub async fn process_chunk_retrieval(&self, request: ChunkRetrievalRequest) {
-        if self
-            .block_store
-            .block_exists(request.target.certified_block_id())
-            && self
-                .block_store
-                .get_quorum_cert_for_block(request.target.certified_block_id())
-                .is_none()
-        {
-            if let Err(e) = self
-                .block_store
-                .insert_single_quorum_cert(request.target.clone())
-                .await
-            {
-                error!(
-                    "Failed to insert QuorumCert {} from ChunkRetrievalRequest: {}",
-                    request.target, e
-                );
-                return;
-            }
-            let update_res = self
-                .safety_rules
-                .write()
-                .expect("[state synchronizer handler] unable to lock safety rules")
-                .process_ledger_info(&request.target.ledger_info());
-
-            if let Some(block) = update_res {
-                self.process_commit(block, request.target.ledger_info().clone())
-                    .await;
-            }
-        }
-
-        let target_version = request.target.ledger_info().ledger_info().version();
-
         let response = self
             .sync_manager
-            .get_chunk(request.start_version, target_version, request.batch_size)
+            .get_chunk(
+                request.start_version,
+                request.target_version,
+                request.batch_size,
+            )
             .await;
 
         if let Err(e) = request.response_sender.send(response) {

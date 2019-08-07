@@ -526,7 +526,7 @@ fn test_rpc() {
         let mut req = RequestChunk::new();
         req.set_start_version(0);
         req.set_batch_size(1);
-        req.set_target(target);
+        req.set_target_version(target.version);
         let chunk = senders[0]
             .request_chunk(peers[1], req, Duration::from_secs(5))
             .await

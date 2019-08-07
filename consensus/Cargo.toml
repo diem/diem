@@ -37,6 +37,7 @@ mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 proto_conv = { path = "../common/proto_conv" }
+state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
 storage_proto = { path = "../storage/storage_proto" }

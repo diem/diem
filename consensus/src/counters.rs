@@ -71,10 +71,6 @@ pub static ref TIMEOUT_VOTES_FORM_QC_COUNT: IntCounter = OP_COUNTERS.counter("ti
 /// Count the number of times we invoked state synchronization since last restart.
 pub static ref STATE_SYNC_COUNT: IntCounter = OP_COUNTERS.counter("state_sync_count");
 
-/// Count the overall number of transactions state synchronizer has retrieved since last restart.
-/// Large values mean that a node has been significantly behind and had to replay a lot of txns.
-pub static ref STATE_SYNC_TXN_REPLAYED: IntCounter = OP_COUNTERS.counter("state_sync_txns_replayed");
-
 /// Count the number of block retrieval requests issued since last restart.
 pub static ref BLOCK_RETRIEVAL_COUNT: IntCounter = OP_COUNTERS.counter("block_retrieval_count");
 

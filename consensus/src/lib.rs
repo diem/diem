@@ -24,5 +24,4 @@ mod counters;
 
 mod state_computer;
 mod state_replication;
-mod state_synchronizer;
 mod txn_manager;

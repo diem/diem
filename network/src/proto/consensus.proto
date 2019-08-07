@@ -160,7 +160,7 @@ message RespondBlock {
 
 message RequestChunk {
   uint64 start_version = 1;
-  QuorumCert target = 2;
+  uint64 target_version = 2;
   uint64 batch_size = 3;
 }
 

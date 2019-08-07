@@ -5,7 +5,6 @@ use crate::{
     chained_bft::QuorumCert,
     counters,
     state_replication::{StateComputeResult, StateComputer},
-    state_synchronizer::{StateSynchronizer, SyncStatus},
 };
 use crypto::HashValue;
 use execution_proto::proto::{
@@ -15,6 +14,7 @@ use execution_proto::proto::{
 use failure::Result;
 use futures::{compat::Future01CompatExt, Future, FutureExt};
 use proto_conv::{FromProto, IntoProto};
+use state_synchronizer::{StateSynchronizer, SyncStatus};
 use std::{pin::Pin, sync::Arc, time::Instant};
 use types::{
     ledger_info::LedgerInfoWithSignatures,
@@ -159,7 +159,9 @@ impl StateComputer for ExecutionProxy {
         commit: QuorumCert,
     ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer.sync_to(commit).boxed()
+        self.synchronizer
+            .sync_to(commit.ledger_info().clone())
+            .boxed()
     }
 
     fn get_chunk(

@@ -26,7 +26,6 @@ use crate::{
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
-    state_synchronizer::SyncStatus,
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
@@ -38,6 +37,7 @@ use futures::{
     stream::StreamExt,
 };
 use nextgen_crypto::ed25519::*;
+use state_synchronizer::SyncStatus;
 use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};

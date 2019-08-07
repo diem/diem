@@ -1,18 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::QuorumCert,
-    state_synchronizer::{
-        coordinator::{
-            CoordinatorMsg, ExecutorProxy, ExecutorProxyTrait, SyncCoordinator, SyncStatus,
-        },
-        downloader::Downloader,
-    },
+use crate::txn_fetcher::{
+    coordinator::{CoordinatorMsg, ExecutorProxy, ExecutorProxyTrait, SyncCoordinator, SyncStatus},
+    downloader::Downloader,
 };
 use config::config::NodeConfig;
 use failure::prelude::*;
-use futures::{
+use futures_preview::{
     channel::{mpsc, oneshot},
     future::{Future, FutureExt, TryFutureExt},
     SinkExt,
@@ -23,7 +18,7 @@ use network::validator_network::ConsensusNetworkSender;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::TaskExecutor;
-use types::transaction::TransactionListWithProof;
+use types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
 /// Used for synchronization between validators for committed states
 pub struct StateSynchronizer {
@@ -69,12 +64,16 @@ impl StateSynchronizer {
     }
 
     /// Sync validator's state up to given `version`
-    pub fn sync_to(&self, qc: QuorumCert) -> impl Future<Output = Result<SyncStatus>> {
+    pub fn sync_to(
+        &self,
+        target: LedgerInfoWithSignatures,
+    ) -> impl Future<Output = Result<SyncStatus>> {
+        debug!("flask new sync_to consensus request");
         let mut sender = self.synchronizer_to_coordinator.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {
             sender
-                .send(CoordinatorMsg::Requested(qc, cb_sender))
+                .send(CoordinatorMsg::Requested(target, cb_sender))
                 .await?;
             let sync_status = cb_receiver.await?;
             Ok(sync_status)
