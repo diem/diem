@@ -7,6 +7,7 @@ use benchmark::{
     ruben_opt::parse_swarm_config_from_dir,
     Benchmarker,
 };
+use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::swarm::LibraSwarm;
 use num::traits::Float;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
@@ -33,11 +34,12 @@ rusty_fork_test! {
         let (num_nodes, num_accounts, num_clients) = (4, 32, 4);
         let (num_rounds, num_epochs, stagger_ms) = (2, 4, 1);
         let submit_rate = 50;
+        let topology = LibraSwarmTopology::create_validator_network(num_nodes);
 
         let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
             generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
-            num_nodes,
+            topology,
             true,   /* disable_logging */
             faucet_account_keypair,
             false,  /* tee_logs */

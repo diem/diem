@@ -22,4 +22,5 @@ cli = { path = "../client", package="client" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_swarm = { path = "../libra_swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
+config_builder = { path = "../config/config_builder" }
 tempfile = "3.1.0"

@@ -12,6 +12,42 @@ use failure::prelude::*;
 use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::path::{Path, PathBuf};
 
+/// Topology indicates the shape of the validator network
+/// Currently does not handle full nodes, the launch_swarm will only use num_nodes value
+#[derive(Debug, Clone)]
+pub struct LibraSwarmTopology {
+    // TODO: make it more general to support various network shapes
+    data: Vec<usize>,
+}
+
+impl LibraSwarmTopology {
+    pub fn create_validator_network(num_validator_nodes: usize) -> Self {
+        Self {
+            data: vec![num_validator_nodes],
+        }
+    }
+
+    pub fn create_uniform_network(num_validator_nodes: usize, num_full_nodes: usize) -> Self {
+        Self {
+            data: vec![num_validator_nodes, num_full_nodes],
+        }
+    }
+
+    pub fn num_validators(&self) -> usize {
+        if !self.data.is_empty() {
+            return self.data[0];
+        }
+        0
+    }
+
+    pub fn num_full_nodes(&self) -> usize {
+        if self.data.len() > 1 {
+            return self.data[1];
+        }
+        0
+    }
+}
+
 pub struct SwarmConfig {
     configs: Vec<(PathBuf, NodeConfig)>,
     seed_peers: (PathBuf, SeedPeersConfig),
@@ -22,7 +58,7 @@ impl SwarmConfig {
     //TODO convert this to use the Builder paradigm
     pub fn new(
         mut template: NodeConfig,
-        num_nodes: usize,
+        topology: &LibraSwarmTopology,
         faucet_key: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         prune_seed_peers_for_discovery: bool,
         is_ipv4: bool,
@@ -33,7 +69,7 @@ impl SwarmConfig {
         // Generate trusted peer configs + their private keys.
         template.base.data_dir_path = output_dir.into();
         let (mut peers_private_keys, trusted_peers_config) =
-            TrustedPeersConfigHelpers::get_test_config(num_nodes, key_seed);
+            TrustedPeersConfigHelpers::get_test_config(topology.num_validators(), key_seed);
         let trusted_peers_file = template.base.trusted_peers_file.clone();
         let seed_peers_file = template.network.seed_peers_file.clone();
         trusted_peers_config.save_config(&output_dir.join(&trusted_peers_file));
@@ -158,7 +194,7 @@ impl SwarmConfig {
 }
 
 pub struct SwarmConfigBuilder {
-    node_count: usize,
+    topology: LibraSwarmTopology,
     template_path: PathBuf,
     static_ports: bool,
     output_dir: PathBuf,
@@ -171,7 +207,7 @@ pub struct SwarmConfigBuilder {
 impl Default for SwarmConfigBuilder {
     fn default() -> Self {
         SwarmConfigBuilder {
-            node_count: 1,
+            topology: LibraSwarmTopology::create_validator_network(1),
             template_path: "config/data/configs/node.config.toml".into(),
             static_ports: false,
             output_dir: "configs".into(),
@@ -222,8 +258,8 @@ impl SwarmConfigBuilder {
         self
     }
 
-    pub fn with_nodes(&mut self, n: usize) -> &mut Self {
-        self.node_count = n;
+    pub fn with_topology(&mut self, topology: LibraSwarmTopology) -> &mut Self {
+        self.topology = topology;
         self
     }
 
@@ -290,7 +326,7 @@ impl SwarmConfigBuilder {
 
         SwarmConfig::new(
             template,
-            self.node_count,
+            &self.topology,
             faucet_key,
             self.force_discovery,
             self.is_ipv4,
