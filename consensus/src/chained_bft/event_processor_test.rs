@@ -737,7 +737,7 @@ fn process_block_retrieval() {
         sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
     };
     node.pacemaker
-        .process_certificates(proposal_info.proposal.round() - 1, None);
+        .process_certificates(proposal_info.proposal.round() - 1, None, None);
 
     block_on(async move {
         node.event_processor
@@ -834,7 +834,7 @@ fn basic_restart_test() {
             proposals_mut.push(proposal_id);
             node_mut
                 .pacemaker
-                .process_certificates(proposal_info.proposal.round() - 1, None);
+                .process_certificates(proposal_info.proposal.round() - 1, None, None);
             node_mut
                 .event_processor
                 .process_winning_proposal(proposal_info)

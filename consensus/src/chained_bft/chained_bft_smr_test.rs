@@ -792,6 +792,6 @@ fn chain_with_nil_blocks() {
                 >= 4
         );
 
-        // TODO: extend this test once we update the rules for processing newly generated QCs
+        assert!(nodes[2].smr.block_store().unwrap().root().round() >= 1)
     });
 }

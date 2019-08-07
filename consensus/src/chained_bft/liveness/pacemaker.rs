@@ -74,6 +74,7 @@ pub trait Pacemaker: Send + Sync {
     fn process_certificates(
         &self,
         qc_round: Round,
+        highest_committed_round: Option<Round>,
         timeout_certificate: Option<&PacemakerTimeoutCertificate>,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 
@@ -82,7 +83,4 @@ pub trait Pacemaker: Send + Sync {
         &self,
         pacemaker_timeout: PacemakerTimeout,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
-
-    /// Update the highest committed round and return if it's updated.
-    fn update_highest_committed_round(&self, highest_committed_round: Round) -> bool;
 }

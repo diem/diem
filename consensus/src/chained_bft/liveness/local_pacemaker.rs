@@ -18,7 +18,7 @@ use channel;
 use futures::{Future, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use logger::prelude::*;
 use std::{
-    cmp::{self, max},
+    cmp,
     pin::Pin,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
@@ -244,14 +244,10 @@ impl LocalPacemakerInner {
                 // Genesis doesn't require the 3-chain rule for commit, hence start the index at
                 // the round after genesis.
                 self.current_round - 1
+            } else if self.current_round < self.highest_committed_round + 3 {
+                0
             } else {
-                if self.current_round - self.highest_committed_round < 3 {
-                    warn!("Finding a deadline for a round {} that should have already been completed since the highest committed round is {}",
-                          self.current_round,
-                          self.highest_committed_round);
-                }
-
-                max(0, self.current_round - self.highest_committed_round - 3)
+                self.current_round - self.highest_committed_round - 3
             }
         } as usize;
         let timeout = self
@@ -410,11 +406,18 @@ impl Pacemaker for LocalPacemaker {
     fn process_certificates(
         &self,
         qc_round: Round,
+        highest_committed_round: Option<Round>,
         timeout_certificate: Option<&PacemakerTimeoutCertificate>,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
         let mut guard = self.inner.write().unwrap();
         let tc_round_updated = guard.check_and_update_highest_received_tc(timeout_certificate);
         let qc_round_updated = guard.update_highest_qc_round(qc_round);
+        match highest_committed_round {
+            Some(commit_round) if (commit_round > guard.highest_committed_round) => {
+                guard.highest_committed_round = commit_round;
+            }
+            _ => (),
+        }
         if tc_round_updated || qc_round_updated {
             return guard.update_current_round();
         }
@@ -434,15 +437,5 @@ impl Pacemaker for LocalPacemaker {
             return guard.update_current_round();
         }
         async {}.boxed()
-    }
-
-    fn update_highest_committed_round(&self, highest_committed_round: Round) -> bool {
-        let mut guard = self.inner.write().unwrap();
-        if guard.highest_committed_round < highest_committed_round {
-            guard.highest_committed_round = highest_committed_round;
-            true
-        } else {
-            false
-        }
     }
 }
