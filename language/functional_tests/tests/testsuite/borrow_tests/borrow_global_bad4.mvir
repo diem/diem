@@ -1,0 +1,12 @@
+module A {
+    resource T{v: u64}
+
+    public A4() {
+        let t_ref: &mut R#Self.T;
+        t_ref = borrow_global<T>(get_txn_sender());
+        return;
+    }
+}
+
+// check: VerificationError
+// check: RetUnsafeToDestroyError
