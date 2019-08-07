@@ -70,7 +70,7 @@ mod tests {
             let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
                 generate_keypair::load_faucet_key_or_create_default(None);
             let swarm = LibraSwarm::launch_swarm(
-                4,      /* num_nodes */
+                vec![4],      /* topology */
                 true,   /* disable_logging */
                 faucet_account_keypair,
                 false,  /* tee_logs */

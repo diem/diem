@@ -16,9 +16,10 @@ fn setup_env(
 
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
+    let topology = vec![num_nodes];
 
     let swarm = LibraSwarm::launch_swarm(
-        num_nodes,
+        topology,
         false, /* disable_logging */
         faucet_account_keypair,
         true, /* tee_logs */

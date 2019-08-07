@@ -34,6 +34,9 @@ struct Args {
 fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes.unwrap_or(1);
+    // topology indicates the shape of the validator network
+    // ['num_nodes', 'num_full_nodes', 'num_full_node_children']
+    let topology = vec![num_nodes];
 
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(args.faucet_key_path);
@@ -44,7 +47,7 @@ fn main() {
     );
 
     let swarm = LibraSwarm::launch_swarm(
-        num_nodes,
+        topology,
         !args.enable_logging,
         faucet_account_keypair,
         false, /* tee_logs */
