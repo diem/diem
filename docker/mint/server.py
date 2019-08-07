@@ -40,7 +40,7 @@ print(sys.version, platform.python_version())
 create_client()
 
 
-@application.route("/", methods=('GET', 'POST'))
+@application.route("/", methods=('POST',))
 def send_transaction():
     address = flask.request.args['address']
 
