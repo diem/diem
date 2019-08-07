@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nibble_path::{skip_common_prefix, NibblePath};
+use crate::nibble_path::{arb_internal_nibble_path, skip_common_prefix, NibblePath};
 use proptest::prelude::*;
 
 #[test]
@@ -167,7 +167,10 @@ prop_compose! {
 
 proptest! {
     #[test]
-    fn test_push(nibble_path in any::<NibblePath>(), nibble in (0..16u8)) {
+    fn test_push(
+        nibble_path in arb_internal_nibble_path(),
+        nibble in 0..16u8
+    ) {
         let mut new_nibble_path = nibble_path.clone();
         new_nibble_path.push(nibble);
         let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
