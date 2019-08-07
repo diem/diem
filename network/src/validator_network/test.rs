@@ -12,9 +12,8 @@ use crate::{
     },
     ProtocolId,
 };
-use crypto::x25519;
 use futures::{executor::block_on, future::join, StreamExt};
-use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED};
+use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use parity_multiaddr::Multiaddr;
 use protobuf::Message as proto_msg;
 use rand::{rngs::StdRng, SeedableRng};
@@ -34,8 +33,9 @@ fn test_network_builder() {
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
     let consensus_get_blocks_protocol = ProtocolId::from_static(b"get_blocks");
     let synchronizer_get_chunks_protocol = ProtocolId::from_static(b"get_chunks");
-    let (signing_private_key, signing_public_key) = compat::generate_keypair(None);
-    let (identity_private_key, identity_public_key) = x25519::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (signing_private_key, signing_public_key) = compat::generate_keypair(&mut rng);
+    let (identity_private_key, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
 
     let (
         (_mempool_network_sender, _mempool_network_events),
@@ -44,7 +44,7 @@ fn test_network_builder() {
     ) = NetworkBuilder::new(runtime.executor(), peer_id, addr)
         .transport(TransportType::Memory)
         .signing_keys((signing_private_key, signing_public_key.clone()))
-        .identity_keys((identity_private_key, identity_public_key))
+        .identity_keys((identity_private_key, identity_public_key.clone()))
         .trusted_peers(
             vec![(
                 peer_id,
@@ -83,8 +83,10 @@ fn test_mempool_sync() {
     let (dialer_signing_private_key, dialer_signing_public_key) =
         compat::generate_keypair(&mut rng);
     // Setup identity public keys.
-    let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
-    let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
+    let (listener_identity_private_key, listener_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
+    let (dialer_identity_private_key, dialer_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Set up the listener network
     let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -94,14 +96,14 @@ fn test_mempool_sync() {
             listener_peer_id,
             NetworkPublicKeys {
                 signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key,
+                identity_public_key: listener_identity_public_key.clone(),
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
                 signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key,
+                identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
     ]
@@ -205,8 +207,10 @@ fn test_consensus_rpc() {
     let (dialer_signing_private_key, dialer_signing_public_key) =
         compat::generate_keypair(&mut rng);
     // Setup identity public keys.
-    let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
-    let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
+    let (listener_identity_private_key, listener_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
+    let (dialer_identity_private_key, dialer_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Set up the listener network
     let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -216,14 +220,14 @@ fn test_consensus_rpc() {
             listener_peer_id,
             NetworkPublicKeys {
                 signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key,
+                identity_public_key: listener_identity_public_key.clone(),
             },
         ),
         (
             dialer_peer_id,
             NetworkPublicKeys {
                 signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key,
+                identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
     ]

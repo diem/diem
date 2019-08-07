@@ -26,7 +26,7 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
                 AccountAddress::try_from(peer_id.clone()).expect("[config] invalid peer_id"),
                 peer.get_consensus_public().clone(),
                 peer.get_network_signing_public().clone(),
-                peer.get_network_identity_public(),
+                peer.get_network_identity_public().clone(),
             )
         })
         .collect();

@@ -13,7 +13,7 @@ use crate::{
 use bytes::Bytes;
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
-use crypto::{x25519, HashValue};
+use crypto::HashValue;
 use failure::prelude::*;
 use futures::{
     executor::block_on,
@@ -30,7 +30,7 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, SigningKey};
+use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, SigningKey};
 use parity_multiaddr::Multiaddr;
 use proto_conv::IntoProto;
 use protobuf::Message;
@@ -78,22 +78,24 @@ impl SynchronizerEnv {
         let (a_signing_private_key, a_signing_public_key) = compat::generate_keypair(&mut rng);
         let (b_signing_private_key, b_signing_public_key) = compat::generate_keypair(&mut rng);
         // Setup identity public keys.
-        let (a_identity_private_key, a_identity_public_key) = x25519::generate_keypair();
-        let (b_identity_private_key, b_identity_public_key) = x25519::generate_keypair();
+        let (a_identity_private_key, a_identity_public_key) =
+            x25519::compat::generate_keypair(&mut rng);
+        let (b_identity_private_key, b_identity_public_key) =
+            x25519::compat::generate_keypair(&mut rng);
 
         let trusted_peers: HashMap<_, _> = vec![
             (
                 peers[0],
                 NetworkPublicKeys {
                     signing_public_key: a_signing_public_key.clone(),
-                    identity_public_key: a_identity_public_key,
+                    identity_public_key: a_identity_public_key.clone(),
                 },
             ),
             (
                 peers[1],
                 NetworkPublicKeys {
                     signing_public_key: b_signing_public_key.clone(),
-                    identity_public_key: b_identity_public_key,
+                    identity_public_key: b_identity_public_key.clone(),
                 },
             ),
         ]

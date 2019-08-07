@@ -11,9 +11,13 @@ use std::{
     string::ToString,
 };
 
-use crypto::x25519::{self, X25519PrivateKey, X25519PublicKey};
 use logger::LoggerType;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::{
+    ed25519::*,
+    test_utils::TEST_SEED,
+    x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
+};
+use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 use toml;
@@ -144,10 +148,10 @@ pub struct KeyPairs {
 
     #[serde(serialize_with = "serialize_legacy_key")]
     #[serde(deserialize_with = "deserialize_legacy_key")]
-    network_identity_private_key: X25519PrivateKey,
+    network_identity_private_key: X25519StaticPrivateKey,
     #[serde(serialize_with = "serialize_legacy_key")]
     #[serde(deserialize_with = "deserialize_legacy_key")]
-    network_identity_public_key: X25519PublicKey,
+    network_identity_public_key: X25519StaticPublicKey,
 
     #[serde(serialize_with = "serialize_opt_key")]
     #[serde(deserialize_with = "deserialize_opt_key")]
@@ -160,9 +164,10 @@ pub struct KeyPairs {
 // required for serialization
 impl Default for KeyPairs {
     fn default() -> Self {
-        let (net_private_sig, net_public_sig) = compat::generate_keypair(None);
-        let (consensus_private_sig, consensus_public_sig) = compat::generate_keypair(None);
-        let (private_kex, public_kex) = x25519::generate_keypair();
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        let (net_private_sig, net_public_sig) = compat::generate_keypair(&mut rng);
+        let (consensus_private_sig, consensus_public_sig) = compat::generate_keypair(&mut rng);
+        let (private_kex, public_kex) = x25519::compat::generate_keypair(&mut rng);
         Self {
             network_signing_private_key: Some(net_private_sig),
             network_signing_public_key: net_public_sig,
@@ -222,7 +227,7 @@ impl KeyPairs {
     pub fn get_network_signing_private(&self) -> &Option<Ed25519PrivateKey> {
         &self.network_signing_private_key
     }
-    pub fn get_network_identity_private(&self) -> X25519PrivateKey {
+    pub fn get_network_identity_private(&self) -> X25519StaticPrivateKey {
         self.network_identity_private_key.clone()
     }
     pub fn get_consensus_private(&self) -> &Option<Ed25519PrivateKey> {
@@ -237,17 +242,17 @@ impl KeyPairs {
     pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
         &self.network_signing_public_key
     }
-    pub fn get_network_identity_public(&self) -> X25519PublicKey {
-        self.network_identity_public_key
+    pub fn get_network_identity_public(&self) -> &X25519StaticPublicKey {
+        &self.network_identity_public_key
     }
     pub fn get_consensus_public(&self) -> &Ed25519PublicKey {
         &self.consensus_public_key
     }
     // getters for keypairs
-    pub fn get_network_identity_keypair(&self) -> (X25519PrivateKey, X25519PublicKey) {
+    pub fn get_network_identity_keypair(&self) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
         (
             self.get_network_identity_private(),
-            self.get_network_identity_public(),
+            self.get_network_identity_public().clone(),
         )
     }
 }

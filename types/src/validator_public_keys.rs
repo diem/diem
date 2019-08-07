@@ -10,9 +10,8 @@ use crate::{
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use crypto::x25519::X25519PublicKey;
 use failure::Result;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
@@ -34,7 +33,7 @@ pub struct ValidatorPublicKeys {
     network_signing_public_key: Ed25519PublicKey,
     // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
     // network
-    network_identity_public_key: X25519PublicKey,
+    network_identity_public_key: X25519StaticPublicKey,
 }
 
 impl ValidatorPublicKeys {
@@ -42,7 +41,7 @@ impl ValidatorPublicKeys {
         account_address: AccountAddress,
         consensus_public_key: Ed25519PublicKey,
         network_signing_public_key: Ed25519PublicKey,
-        network_identity_public_key: X25519PublicKey,
+        network_identity_public_key: X25519StaticPublicKey,
     ) -> Self {
         ValidatorPublicKeys {
             account_address,
@@ -69,7 +68,7 @@ impl ValidatorPublicKeys {
     }
 
     /// Returns the key that establishes a validator's identity in the p2p network
-    pub fn network_identity_public_key(&self) -> &X25519PublicKey {
+    pub fn network_identity_public_key(&self) -> &X25519StaticPublicKey {
         &self.network_identity_public_key
     }
 }
@@ -83,7 +82,7 @@ impl FromProto for ValidatorPublicKeys {
         let network_signing_public_key =
             Ed25519PublicKey::try_from(object.get_network_signing_public_key())?;
         let network_identity_public_key =
-            X25519PublicKey::from_slice(object.get_network_identity_public_key())?;
+            X25519StaticPublicKey::try_from(object.get_network_identity_public_key())?;
         Ok(Self::new(
             account_address,
             consensus_public_key,
@@ -106,7 +105,7 @@ impl IntoProto for ValidatorPublicKeys {
             Ed25519PublicKey::to_bytes(&self.network_signing_public_key).to_vec(),
         );
         proto.set_network_identity_public_key(
-            X25519PublicKey::to_slice(&self.network_identity_public_key).to_vec(),
+            X25519StaticPublicKey::to_bytes(&self.network_identity_public_key).to_vec(),
         );
         proto
     }
@@ -117,7 +116,9 @@ impl CanonicalSerialize for ValidatorPublicKeys {
         serializer
             .encode_struct(&self.account_address)?
             .encode_variable_length_bytes(&self.consensus_public_key.to_bytes())?
-            .encode_variable_length_bytes(&self.network_identity_public_key.to_slice())?
+            .encode_variable_length_bytes(
+                &X25519StaticPublicKey::to_bytes(&self.network_identity_public_key)[..],
+            )?
             .encode_variable_length_bytes(&self.network_signing_public_key.to_bytes())?;
         Ok(())
     }
@@ -129,7 +130,7 @@ impl CanonicalDeserialize for ValidatorPublicKeys {
         let consensus_public_key =
             Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
         let network_identity_public_key =
-            X25519PublicKey::from_slice(&deserializer.decode_variable_length_bytes()?)?;
+            X25519StaticPublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
         let network_signing_public_key =
             Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
         Ok(ValidatorPublicKeys::new(

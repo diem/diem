@@ -1,13 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{
-    utils::{encode_to_string, from_encoded_string},
-    x25519::{self, X25519PrivateKey, X25519PublicKey},
-};
+use crypto::utils::{encode_to_string, from_encoded_string};
 use nextgen_crypto::{
     ed25519::{compat, *},
     traits::ValidKeyStringExt,
+    x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
@@ -30,10 +28,10 @@ pub struct TrustedPeer {
     #[serde(deserialize_with = "deserialize_key")]
     #[serde(rename = "ns")]
     network_signing_pubkey: Ed25519PublicKey,
-    #[serde(serialize_with = "serialize_legacy_key")]
-    #[serde(deserialize_with = "deserialize_legacy_key")]
+    #[serde(serialize_with = "serialize_key")]
+    #[serde(deserialize_with = "deserialize_key")]
     #[serde(rename = "ni")]
-    network_identity_pubkey: X25519PublicKey,
+    network_identity_pubkey: X25519StaticPublicKey,
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
     #[serde(rename = "c")]
@@ -42,12 +40,12 @@ pub struct TrustedPeer {
 
 pub struct TrustedPeerPrivateKeys {
     network_signing_private_key: Ed25519PrivateKey,
-    network_identity_private_key: X25519PrivateKey,
+    network_identity_private_key: X25519StaticPrivateKey,
     consensus_private_key: Ed25519PrivateKey,
 }
 
 impl TrustedPeerPrivateKeys {
-    pub fn get_key_triplet(self) -> (Ed25519PrivateKey, X25519PrivateKey, Ed25519PrivateKey) {
+    pub fn get_key_triplet(self) -> (Ed25519PrivateKey, X25519StaticPrivateKey, Ed25519PrivateKey) {
         (
             self.network_signing_private_key,
             self.network_identity_private_key,
@@ -60,8 +58,8 @@ impl TrustedPeer {
     pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
         &self.network_signing_pubkey
     }
-    pub fn get_network_identity_public(&self) -> X25519PublicKey {
-        self.network_identity_pubkey
+    pub fn get_network_identity_public(&self) -> &X25519StaticPublicKey {
+        &self.network_identity_pubkey
     }
     pub fn get_consensus_public(&self) -> &Ed25519PublicKey {
         &self.consensus_pubkey
@@ -174,7 +172,7 @@ impl TrustedPeersConfig {
         self.get_public_keys(peer_id).network_signing_pubkey
     }
 
-    pub fn get_network_identity_keys(&self, peer_id: &str) -> X25519PublicKey {
+    pub fn get_network_identity_keys(&self, peer_id: &str) -> X25519StaticPublicKey {
         self.get_public_keys(peer_id).network_identity_pubkey
     }
 
@@ -195,7 +193,7 @@ impl TrustedPeersConfig {
     /// of the network.
     pub fn get_trusted_network_peers(
         &self,
-    ) -> HashMap<AccountAddress, (Ed25519PublicKey, X25519PublicKey)> {
+    ) -> HashMap<AccountAddress, (Ed25519PublicKey, X25519StaticPublicKey)> {
         self.peers
             .iter()
             .map(|(account, keys)| {
@@ -204,7 +202,7 @@ impl TrustedPeersConfig {
                         .expect("Failed to parse account addr"),
                     (
                         keys.network_signing_pubkey.clone(),
-                        keys.network_identity_pubkey,
+                        keys.network_identity_pubkey.clone(),
                     ),
                 )
             })
@@ -245,7 +243,7 @@ impl TrustedPeersConfigHelpers {
         let mut fast_rng = StdRng::from_seed(seed);
         for _ in 0..number_of_peers {
             let (private0, public0) = compat::generate_keypair(&mut fast_rng);
-            let (private1, public1) = x25519::generate_keypair_for_testing(&mut fast_rng);
+            let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
             let (private2, public2) = compat::generate_keypair(&mut fast_rng);
             // save the public_key in peers hashmap
             let peer = TrustedPeer {
