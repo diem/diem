@@ -6,7 +6,7 @@ use crate::{
     utils,
 };
 use config::config::NodeConfig;
-use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
+use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use logger::prelude::*;
@@ -250,7 +250,7 @@ pub enum SwarmLaunchFailure {
 
 impl LibraSwarm {
     pub fn launch_swarm(
-        num_nodes: usize,
+        topology: LibraSwarmTopology,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
@@ -261,7 +261,7 @@ impl LibraSwarm {
         for i in 0..num_launch_attempts {
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
             match Self::launch_swarm_attempt(
-                num_nodes,
+                topology.clone(),
                 disable_logging,
                 faucet_account_keypair.clone(),
                 tee_logs,
@@ -278,7 +278,7 @@ impl LibraSwarm {
     }
 
     fn launch_swarm_attempt(
-        num_nodes: usize,
+        topology: LibraSwarmTopology,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         tee_logs: bool,
@@ -305,9 +305,10 @@ impl LibraSwarm {
                 .unwrap_or(&"config/data/configs/node.config.toml".to_string()),
         );
         let mut config_builder = SwarmConfigBuilder::new();
+
         config_builder
             .with_ipv4()
-            .with_nodes(num_nodes)
+            .with_topology(topology)
             .with_base(base)
             .with_output_dir(&dir)
             .with_faucet_keypair(faucet_account_keypair)

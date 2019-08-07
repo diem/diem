@@ -66,6 +66,7 @@ mod tests {
         OP_COUNTER,
     };
     use client::AccountData;
+    use config_builder::swarm_config::LibraSwarmTopology;
     use libra_swarm::swarm::LibraSwarm;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;
@@ -76,9 +77,10 @@ mod tests {
     fn start_swarm_and_setup_arguments() -> (LibraSwarm, RubenOpt, Option<TempDir>) {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
             generate_keypair::load_faucet_key_or_create_default(None);
+        let topology = LibraSwarmTopology::create_validator_network(4);
         let swarm = LibraSwarm::launch_swarm(
-            4,    /* num_nodes */
-            true, /* disable_logging */
+            topology, /* num_nodes */
+            true,     /* disable_logging */
             faucet_account_keypair,
             false, /* tee_logs */
             None,  /* config_dir */

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
 use cli::client_proxy::ClientProxy;
+use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{swarm::LibraSwarm, utils};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
@@ -16,9 +17,10 @@ fn setup_env(
 
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
+    let topology = LibraSwarmTopology::create_validator_network(num_nodes);
 
     let swarm = LibraSwarm::launch_swarm(
-        num_nodes,
+        topology,
         false, /* disable_logging */
         faucet_account_keypair,
         true, /* tee_logs */

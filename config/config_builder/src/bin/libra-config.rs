@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{value_t, App, Arg};
-use config_builder::swarm_config::SwarmConfigBuilder;
+use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfigBuilder};
 use std::convert::TryInto;
 
 const BASE_ARG: &str = "base";
@@ -74,9 +74,10 @@ fn main() {
     let (faucet_account_keypair, _faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(Some(faucet_account_file_path));
 
+    let topology = LibraSwarmTopology::create_validator_network(nodes_count);
     let mut config_builder = SwarmConfigBuilder::new();
     config_builder
-        .with_nodes(nodes_count)
+        .with_topology(topology)
         .with_base(base_path)
         .with_output_dir(output_dir)
         .with_faucet_keypair(faucet_account_keypair);
