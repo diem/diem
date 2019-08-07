@@ -188,7 +188,7 @@ impl Benchmarker {
                     // that are accepted by AC, and how long the client is delayed.
                     move || -> (Vec<ProtoSubmitTransactionResponse>, u16) {
                         let delay_duration_ms = Self::stagger_client(stagger_range_ms);
-                        info!(
+                        debug!(
                             "Dispatch {} requests to client after staggered {} ms.",
                             local_chunk.len(),
                             delay_duration_ms,
@@ -239,7 +239,7 @@ impl Benchmarker {
                     .map(|sender| (sender.address, sender.sequence_number))
                     .collect();
                 let local_client = Arc::clone(client);
-                info!(
+                debug!(
                     "Dispatch a chunk of {} accounts to client.",
                     local_chunk.len()
                 );
@@ -295,7 +295,11 @@ impl Benchmarker {
             assert!(sender.sequence_number >= *sync_sequence_number);
             assert!(*sync_sequence_number >= *prev_sequence_number);
             if sender.sequence_number > *sync_sequence_number {
-                error!("Account {:?} has uncommitted TXNs", sender.address);
+                error!(
+                    "Account {:?} has {} uncommitted TXNs",
+                    sender.address,
+                    sender.sequence_number - *sync_sequence_number
+                );
             }
             committed_txns += *sync_sequence_number - *prev_sequence_number;
             uncommitted_txns += sender.sequence_number - *sync_sequence_number;
@@ -342,7 +346,7 @@ impl Benchmarker {
     fn calculate_throughput(num_txns: usize, duration_ms: u128, prefix: &str) -> f64 {
         assert!(duration_ms > 0);
         let throughput = num_txns as f64 * 1000f64 / duration_ms as f64;
-        info!(
+        debug!(
             "{} throughput est = {} txns / {} ms = {:.2} rps.",
             prefix, num_txns, duration_ms, throughput,
         );

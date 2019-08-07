@@ -66,23 +66,23 @@ fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
             true
         } else {
             OP_COUNTER.inc(&format!("submit_txns.{:?}", status));
-            error!("Request rejected by AC: {:?}", resp);
+            debug!("Request rejected by AC: {:?}", resp);
             false
         }
     } else if resp.has_vm_status() {
         OP_COUNTER.inc(&format!("submit_txns.{:?}", resp.get_vm_status()));
-        error!("Request causes error on VM: {:?}", resp);
+        debug!("Request causes error on VM: {:?}", resp);
         false
     } else if resp.has_mempool_status() {
         OP_COUNTER.inc(&format!(
             "submit_txns.{:?}",
             resp.get_mempool_status().get_code()
         ));
-        error!("Request causes error on mempool: {:?}", resp);
+        debug!("Request causes error on mempool: {:?}", resp);
         false
     } else {
         OP_COUNTER.inc("submit_txns.Unknown");
-        error!("Request rejected by AC for unknown error: {:?}", resp);
+        debug!("Request rejected by AC for unknown error: {:?}", resp);
         false
     }
 }
@@ -122,7 +122,7 @@ pub fn submit_and_wait_txn_requests(
             }
             Err(e) => {
                 OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
-                error!("Failed to receive gRPC response: {:?}", e);
+                debug!("Failed to receive gRPC response: {:?}", e);
                 None
             }
         })
@@ -185,7 +185,7 @@ pub fn get_account_states(
         .filter_map(|address| match get_account_state_async(client, *address) {
             Ok(future) => Some(future),
             Err(e) => {
-                error!("Failed to send account request: {:?}", e);
+                debug!("Failed to send account request: {:?}", e);
                 None
             }
         })
@@ -204,11 +204,11 @@ pub fn get_account_states(
                     states.insert(address, (sequence_number, status));
                 }
                 Err(e) => {
-                    error!("Invalid account response for {:?}: {:?}", address, e);
+                    debug!("Invalid account response for {:?}: {:?}", address, e);
                 }
             },
             Err(e) => {
-                error!("Failed to receive account response: {:?}", e);
+                debug!("Failed to receive account response: {:?}", e);
             }
         }
     }
