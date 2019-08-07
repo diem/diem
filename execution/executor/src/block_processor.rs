@@ -314,10 +314,10 @@ where
             .unzip();
 
         // Construct a StateView and pass the transactions to VM.
-        let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            db_root_hash,
+            self.committed_transaction_accumulator.num_elements(),
+            self.committed_state_tree.root_hash(),
             &self.committed_state_tree,
         );
         let vm_outputs = {
@@ -380,8 +380,9 @@ where
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
+        let num_txns = txns_to_commit.len() as u64;
         let ledger_info_to_commit = if self.committed_transaction_accumulator.num_elements()
-            + txns_to_commit.len() as u64
+            + num_txns
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
@@ -599,10 +600,10 @@ where
             .expect("Block to execute should exist.");
 
         // Construct a StateView and pass the transactions to VM.
-        let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            db_root_hash,
+            self.committed_transaction_accumulator.num_elements(),
+            self.committed_state_tree.root_hash(),
             &previous_state_tree,
         );
         let vm_outputs = {

@@ -8,8 +8,8 @@ use schemadb::schema::assert_encode_decode;
 proptest! {
     #[test]
     fn test_encode_decode(
-        retired_record in any::<RetiredStateRecord>(),
+        stale_node_index in any::<StaleNodeIndex>(),
     ) {
-        assert_encode_decode::<RetiredStateRecordSchema>(&retired_record, &());
+        assert_encode_decode::<StaleNodeIndexSchema>(&stale_node_index, &());
     }
 }

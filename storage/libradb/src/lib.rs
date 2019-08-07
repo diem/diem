@@ -40,10 +40,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use crypto::{
-    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
-    HashValue,
-};
+use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
@@ -116,7 +113,7 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
-            (RETIRED_STATE_RECORD_CF_NAME, ColumnFamilyOptions::default()),
+            (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
             (
@@ -182,7 +179,7 @@ impl LibraDB {
             .get_transaction_info_with_proof(version, ledger_version)?;
         let (account_state_blob, sparse_merkle_proof) = self
             .state_store
-            .get_account_state_with_proof_by_state_root(address, txn_info.state_root_hash())?;
+            .get_account_state_with_proof_by_version(address, version)?;
         Ok(AccountStateWithProof::new(
             version,
             account_state_blob,
@@ -358,14 +355,6 @@ impl LibraDB {
             "txns_to_commit is empty while ledger_info_with_sigs is None.",
         );
 
-        let cur_state_root_hash = if first_version == 0 {
-            *SPARSE_MERKLE_PLACEHOLDER_HASH
-        } else {
-            self.ledger_store
-                .get_transaction_info(first_version - 1)?
-                .state_root_hash()
-        };
-
         if let Some(x) = ledger_info_with_sigs {
             let claimed_last_version = x.ledger_info().version();
             ensure!(
@@ -380,12 +369,7 @@ impl LibraDB {
         // Gather db mutations to `batch`.
         let mut cs = ChangeSet::new();
 
-        let new_root_hash = self.save_transactions_impl(
-            txns_to_commit,
-            first_version,
-            cur_state_root_hash,
-            &mut cs,
-        )?;
+        let new_root_hash = self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
 
         // If expected ledger info is provided, verify result root hash and save the ledger info.
         if let Some(x) = ledger_info_with_sigs {
@@ -424,7 +408,6 @@ impl LibraDB {
         &self,
         txns_to_commit: &[TransactionToCommit],
         first_version: u64,
-        cur_state_root_hash: HashValue,
         mut cs: &mut ChangeSet,
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
@@ -434,12 +417,9 @@ impl LibraDB {
             .iter()
             .map(|txn_to_commit| txn_to_commit.account_states().clone())
             .collect::<Vec<_>>();
-        let state_root_hashes = self.state_store.put_account_state_sets(
-            account_state_sets,
-            first_version,
-            cur_state_root_hash,
-            &mut cs,
-        )?;
+        let state_root_hashes =
+            self.state_store
+                .put_account_state_sets(account_state_sets, first_version, &mut cs)?;
 
         // Event updates. Gather event accumulator root hashes.
         let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
@@ -586,13 +566,13 @@ impl LibraDB {
     /// Merkle tree root hash.
     ///
     /// This is used by the executor module internally.
-    pub fn get_account_state_with_proof_by_state_root(
+    pub fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         self.state_store
-            .get_account_state_with_proof_by_state_root(address, state_root)
+            .get_account_state_with_proof_by_version(address, version)
     }
 
     /// Gets information needed from storage during the startup of the executor module.
@@ -735,12 +715,7 @@ impl LibraDB {
     ) -> Result<u64> {
         let (account_state_blob, _proof) = self
             .state_store
-            .get_account_state_with_proof_by_state_root(
-                address,
-                self.ledger_store
-                    .get_transaction_info(version)?
-                    .state_root_hash(),
-            )?;
+            .get_account_state_with_proof_by_version(address, version)?;
 
         // If an account does not exist, we treat it as if it has sequence number 0.
         Ok(get_account_resource_or_default(&account_state_blob)?.sequence_number())

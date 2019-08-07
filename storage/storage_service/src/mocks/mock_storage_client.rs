@@ -114,18 +114,18 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &self,
         _address: AccountAddress,
-        _state_root_hash: HashValue,
+        _version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!()
     }
 
-    fn get_account_state_with_proof_by_state_root_async(
+    fn get_account_state_with_proof_by_version_async(
         &self,
         _address: AccountAddress,
-        _state_root_hash: HashValue,
+        _version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
     {
         unimplemented!();

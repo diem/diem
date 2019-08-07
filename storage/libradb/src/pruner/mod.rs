@@ -6,14 +6,14 @@
 
 use crate::{
     schema::{
-        retired_state_record::RetiredStateRecordSchema, state_merkle_node::StateMerkleNodeSchema,
+        jellyfish_merkle_node::JellyfishMerkleNodeSchema,
+        retired_state_record::StaleNodeIndexSchema,
     },
     OP_COUNTER,
 };
 use failure::prelude::*;
 use logger::prelude::*;
 use schemadb::{ReadOptions, SchemaBatch, DB};
-use sparse_merkle::RetiredRecordType;
 use std::{
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -233,28 +233,21 @@ pub fn prune_state(
 ) -> Result<(usize, Version)> {
     let mut batch = SchemaBatch::new();
     let mut num_pruned = 0;
-    let mut iter = db.iter::<RetiredStateRecordSchema>(ReadOptions::default())?;
+    let mut iter = db.iter::<StaleNodeIndexSchema>(ReadOptions::default())?;
     iter.seek(&max_pruned_version_hint)?;
 
     // Collect records to prune, as many as `limit`.
     let mut iter = iter.take(limit);
     let mut last_seen_version = 0;
-    while let Some((record, _)) = iter.next().transpose()? {
+    while let Some((index, _)) = iter.next().transpose()? {
         // Only records that have retired before or at version `least_readable_version` can be
         // pruned in order to keep that version still readable after pruning.
-        if record.version_retired > least_readable_version {
+        if index.stale_since_version > least_readable_version {
             break;
         }
-        last_seen_version = record.version_retired;
-        match record.record_type {
-            RetiredRecordType::Node => {
-                batch.delete::<StateMerkleNodeSchema>(&record.hash)?;
-            }
-            RetiredRecordType::Blob => {
-                // TODO: prune state blobs after its key has `version_created` as a prefix.
-            }
-        }
-        batch.delete::<RetiredStateRecordSchema>(&record)?;
+        last_seen_version = index.stale_since_version;
+        batch.delete::<JellyfishMerkleNodeSchema>(&index.node_key)?;
+        batch.delete::<StaleNodeIndexSchema>(&index)?;
         num_pruned += 1;
     }
 

@@ -90,8 +90,14 @@ struct FrozenTreeCache {
     /// Immutable node_cache.
     node_cache: HashMap<NodeKey, Node>,
 
+    /// # of leaves in the `node_cache`,
+    num_new_leaves: usize,
+
     /// Immutable stale_node_index_cache.
     stale_node_index_cache: HashSet<StaleNodeIndex>,
+
+    /// # of leaves in the `stale_node_index_cache`,
+    num_stale_leaves: usize,
 
     /// Frozen root hashes after each earlier transaction.
     root_hashes: Vec<HashValue>,
@@ -109,8 +115,14 @@ pub struct TreeCache<'a, R: 'a + TreeReader> {
     /// Intermediate nodes keyed by node hash
     node_cache: HashMap<NodeKey, Node>,
 
-    /// Partial retire log. `NodeKey` to identify the retired record.
+    /// # of leaves in the `node_cache`,
+    num_new_leaves: usize,
+
+    /// Partial stale log. `NodeKey` to identify the stale record.
     stale_node_index_cache: HashSet<NodeKey>,
+
+    /// # of leaves in the `stale_node_index_cache`,
+    num_stale_leaves: usize,
 
     /// The immutable part of this cache, which will be committed to the underlying storage.
     frozen_cache: FrozenTreeCache,
@@ -152,11 +164,13 @@ where
         };
         Self {
             node_cache,
-            stale_node_index_cache: HashSet::default(),
+            stale_node_index_cache: HashSet::new(),
             frozen_cache: FrozenTreeCache::default(),
             root_node_key,
             next_version,
             reader,
+            num_stale_leaves: 0,
+            num_new_leaves: 0,
         }
     }
 
@@ -173,19 +187,29 @@ where
     /// Puts the node with given hash as key into node_cache.
     pub fn put_node(&mut self, node_key: NodeKey, new_node: Node) -> Result<()> {
         match self.node_cache.entry(node_key) {
-            Entry::Vacant(o) => o.insert(new_node),
+            Entry::Vacant(o) => {
+                if new_node.is_leaf() {
+                    self.num_new_leaves += 1
+                }
+                o.insert(new_node);
+            }
             Entry::Occupied(o) => bail!("Node with key {:?} already exists in NodeBatch", o.key()),
         };
         Ok(())
     }
 
     /// Deletes a node with given hash.
-    pub fn delete_node(&mut self, old_node_key: &NodeKey) {
+    pub fn delete_node(&mut self, old_node_key: &NodeKey, is_leaf: bool) {
         // If node cache doesn't have this node, it means the node is in the previous version of
         // the tree on the disk.
         if self.node_cache.remove(&old_node_key).is_none() {
             let is_new_entry = self.stale_node_index_cache.insert(old_node_key.clone());
-            assert!(is_new_entry, "Node retired twice unexpectedly.");
+            assert!(is_new_entry, "Node gets stale twice unexpectedly.");
+            if is_leaf {
+                self.num_stale_leaves += 1;
+            }
+        } else if is_leaf {
+            self.num_new_leaves -= 1;
         }
     }
 
@@ -210,6 +234,11 @@ where
                         node_key,
                     }),
             );
+        self.frozen_cache.num_stale_leaves += self.num_stale_leaves;
+        self.num_stale_leaves = 0;
+        self.frozen_cache.num_new_leaves += self.num_new_leaves;
+        self.num_new_leaves = 0;
+
         self.next_version += 1;
     }
 }
@@ -224,6 +253,8 @@ where
             TreeUpdateBatch {
                 node_batch: self.frozen_cache.node_cache,
                 stale_node_index_batch: self.frozen_cache.stale_node_index_cache,
+                num_new_leaves: self.frozen_cache.num_new_leaves,
+                num_stale_leaves: self.frozen_cache.num_stale_leaves,
             },
         )
     }

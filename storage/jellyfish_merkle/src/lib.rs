@@ -1,5 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::unit_arg)]
 
 #[cfg(test)]
 mod jellyfish_merkle_test;
@@ -11,6 +12,7 @@ mod tree_cache;
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
+use proptest_derive::Arbitrary;
 use sparse_merkle::nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use std::collections::{HashMap, HashSet};
 use tree_cache::TreeCache;
@@ -35,7 +37,7 @@ pub type NodeBatch = HashMap<NodeKey, Node>;
 pub type StaleNodeIndexBatch = HashSet<StaleNodeIndex>;
 
 /// Indicates a node becomes stale since `stale_since_version`.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Arbitrary, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StaleNodeIndex {
     /// The version since when the node is overwritten and becomes stale.
     pub stale_since_version: Version,
@@ -45,20 +47,15 @@ pub struct StaleNodeIndex {
     pub node_key: NodeKey,
 }
 
-/// This is a wrapper of [`NodeBatch`] and [`StaleNodeIndexBatch`] that represents the incremental
-/// updates of a tree and pruning indices after applying a write set, which is a vector of
-/// `hashed_account_address` and `new_account_state_blob` pairs.
+/// This is a wrapper of [`NodeBatch`], [`StaleNodeIndexBatch`] and some stats of nodes that
+/// represents the incremental updates of a tree and pruning indices after applying a write set,
+/// which is a vector of `hashed_account_address` and `new_account_state_blob` pairs.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TreeUpdateBatch {
-    node_batch: NodeBatch,
-    stale_node_index_batch: StaleNodeIndexBatch,
-}
-
-/// Conversion between tuple type and [`TreeUpdateBatch`].
-impl From<TreeUpdateBatch> for (NodeBatch, StaleNodeIndexBatch) {
-    fn from(batch: TreeUpdateBatch) -> Self {
-        (batch.node_batch, batch.stale_node_index_batch)
-    }
+    pub node_batch: NodeBatch,
+    pub stale_node_index_batch: StaleNodeIndexBatch,
+    pub num_new_leaves: usize,
+    pub num_stale_leaves: usize,
 }
 
 /// The Jellyfish Merkle tree data structure. See [`crate`] for description.
@@ -219,7 +216,7 @@ where
                 }
                 // delete the old null node if the at the same version.
                 if node_key.version() == version {
-                    tree_cache.delete_node(&node_key);
+                    tree_cache.delete_node(&node_key, false /* is_leaf */);
                 }
                 Self::create_leaf_node(
                     NodeKey::new_empty_path(version),
@@ -243,7 +240,7 @@ where
     ) -> Result<(NodeKey, Node)> {
         // We always delete the existing internal node here because it will not be referenced anyway
         // since this version.
-        tree_cache.delete_node(&node_key);
+        tree_cache.delete_node(&node_key, false /* is_leaf */);
 
         // Find the next node to visit following the next nibble as index.
         let child_index = nibble_iter.next().expect("Ran out of nibbles");
@@ -287,7 +284,7 @@ where
         // We are on a leaf node but trying to insert another node, so we may diverge.
         // We always delete the existing leaf node here because it will not be referenced anyway
         // since this version.
-        tree_cache.delete_node(&node_key);
+        tree_cache.delete_node(&node_key, true /* is_leaf */);
 
         // 1. Make sure that the existing leaf nibble_path has the same prefix as the already
         // visited part of the nibble iter of the incoming key and advances the existing leaf

@@ -1,83 +1,63 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the physical storage schema for information related to outdated account
-//! state records and outdated state Merkle tree nodes, both of which are ready to be pruned
-//! after being old enough.
+//! This module defines the physical storage schema for information related to outdated state
+//! Jellyfish Merkle tree nodes, which are ready to be pruned after being old enough.
 //!
 //! A record in this data set has 3 pieces of information:
-//!     1. The version at which a retired record (in another data set) becomes retired, meaning,
-//! replaced by an updated record.
-//!     2. Which data set the retired record is in, either the account state data set or the sparse
-//! Merkle nodes data set.
-//!     3. The key to identify the retired record in the data set it belongs, which consists of the
-//! version at which is was created and the hash of the record.
+//!     1. The version since which a node (in another data set) becomes stale, meaning,
+//! replaced by an updated node.
+//!     2. The node_key to identify the stale node.
 //!
 //! ```text
-//! |<----------------------key---------------------->|
-//! | version_retired | type | version_created | hash |
+//! |<--------------key-------------->|
+//! | stale_since_vesrion | node_key |
 //! ```
 //!
-//! `version_retired` is serialized in big endian so that records in RocksDB will be in order of its
-//! numeric value.
+//! `stale_since_version` is serialized in big endian so that records in RocksDB will be in order of
+//! its numeric value.
 
-use crate::schema::{ensure_slice_len_eq, RETIRED_STATE_RECORD_CF_NAME};
+use crate::schema::{ensure_slice_len_eq, STALE_NODE_INDEX_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use crypto::hash::HashValue;
 use failure::prelude::*;
-use num_traits::{FromPrimitive, ToPrimitive};
+use jellyfish_merkle::{node_type::NodeKey, StaleNodeIndex};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
-use sparse_merkle::{RetiredRecordType, RetiredStateRecord};
-use std::io::{Cursor, Write};
+use std::{io::Write, mem::size_of};
 use types::transaction::Version;
 
 define_schema!(
-    RetiredStateRecordSchema,
-    RetiredStateRecord,
+    StaleNodeIndexSchema,
+    StaleNodeIndex,
     (),
-    RETIRED_STATE_RECORD_CF_NAME
+    STALE_NODE_INDEX_CF_NAME
 );
 
-const ROW_LEN: usize = 49;
-
-impl KeyCodec<RetiredStateRecordSchema> for RetiredStateRecord {
+impl KeyCodec<StaleNodeIndexSchema> for StaleNodeIndex {
     fn encode_key(&self) -> Result<Vec<u8>> {
-        let mut encoded = Vec::with_capacity(ROW_LEN);
-        encoded.write_u64::<BigEndian>(self.version_retired)?;
-        encoded.write_u8(
-            self.record_type
-                .to_u8()
-                .ok_or_else(|| format_err!("RecordType should be able to convert to u64."))?,
-        )?;
-        encoded.write_u64::<BigEndian>(self.version_created)?;
-        encoded.write_all(self.hash.as_ref())?;
+        let mut encoded = vec![];
+        encoded.write_u64::<BigEndian>(self.stale_since_version)?;
+        encoded.write_all(&self.node_key.encode()?)?;
 
         Ok(encoded)
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
-        ensure_slice_len_eq(data, ROW_LEN)?;
-        let mut reader = Cursor::new(data);
+        let version_size = size_of::<Version>();
 
-        let version_retired = reader.read_u64::<BigEndian>()?;
-        let record_type = RetiredRecordType::from_u8(reader.read_u8()?)
-            .ok_or_else(|| format_err!("Failed to convert to RetiredRecordType."))?;
-        let version_created = reader.read_u64::<BigEndian>()?;
-        let hash = HashValue::from_slice(&data[(data.len() - HashValue::LENGTH)..])?;
+        let stale_since_version = (&data[..version_size]).read_u64::<BigEndian>()?;
+        let node_key = NodeKey::decode(&data[version_size..])?;
 
         Ok(Self {
-            version_retired,
-            record_type,
-            version_created,
-            hash,
+            stale_since_version,
+            node_key,
         })
     }
 }
 
-impl ValueCodec<RetiredStateRecordSchema> for () {
+impl ValueCodec<StaleNodeIndexSchema> for () {
     fn encode_value(&self) -> Result<Vec<u8>> {
         Ok(Vec::new())
     }
@@ -88,7 +68,7 @@ impl ValueCodec<RetiredStateRecordSchema> for () {
     }
 }
 
-impl SeekKeyCodec<RetiredStateRecordSchema> for Version {
+impl SeekKeyCodec<StaleNodeIndexSchema> for Version {
     fn encode_seek_key(&self) -> Result<Vec<u8>> {
         Ok(self.to_be_bytes().to_vec())
     }
