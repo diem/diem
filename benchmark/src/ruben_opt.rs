@@ -24,7 +24,7 @@ arg_enum! {
     author = "Libra",
     about = "RuBen (Ru)ns The Libra (Ben)chmarker For You."
 )]
-pub struct Opt {
+pub struct RubenOpt {
     /// Validator address list separated by whitespace: `ip_address:port ip_address:port ...`.
     /// It is required unless (and hence conflict with) swarm_config_dir is present.
     #[structopt(
@@ -56,9 +56,6 @@ pub struct Opt {
     /// Number of accounts to create in Libra.
     #[structopt(short = "n", long = "num_accounts", default_value = "32")]
     pub num_accounts: u64,
-    /// Free lunch amount to accounts.
-    #[structopt(short = "l", long = "free_lunch", default_value = "1000000")]
-    pub free_lunch: u64,
     /// Number of AC clients.
     /// If not specified or equals 0, it will be set to validator_addresses.len().
     #[structopt(short = "c", long = "num_clients", default_value = "0")]
@@ -142,9 +139,9 @@ pub fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>>
     Ok(validator_addresses)
 }
 
-impl Opt {
+impl RubenOpt {
     pub fn new_from_args() -> Self {
-        let mut args = Opt::from_args();
+        let mut args = RubenOpt::from_args();
         args.try_parse_validator_addresses();
         if args.num_clients == 0 {
             args.num_clients = args.validator_addresses.len();
