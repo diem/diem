@@ -1,0 +1,63 @@
+module A {
+    resource T{v: u64}
+    resource U{v: u64}
+
+    public A0() {
+        let sender: address;
+        let t_ref: &mut R#Self.T;
+        sender = get_txn_sender();
+        t_ref = borrow_global<T>(copy(sender));
+        release(move(t_ref));
+        t_ref = borrow_global<T>(copy(sender));
+        release(move(t_ref));
+        return;
+    }
+
+    public A1() {
+        let sender: address;
+        let t_ref: &mut R#Self.T;
+        let u_ref: &mut R#Self.U;
+        sender = get_txn_sender();
+        t_ref = borrow_global<T>(copy(sender));
+        u_ref = borrow_global<U>(copy(sender));
+        release(move(t_ref));
+        release(move(u_ref));
+        return;
+    }
+
+    public A2(b: bool) {
+        let sender: address;
+        let t_ref: &mut R#Self.T;
+        sender = get_txn_sender();
+        if (move(b)) {
+            t_ref = borrow_global<T>(copy(sender));
+        } else {
+            t_ref = borrow_global<T>(copy(sender));
+        }
+        release(move(t_ref));
+        return;
+    }
+
+    public A3(b: bool) {
+        let sender: address;
+        let t_ref: &mut R#Self.T;
+        sender = get_txn_sender();
+        if (move(b)) {
+            t_ref = borrow_global<T>(copy(sender));
+            release(move(t_ref));
+        }
+        return;
+    }
+
+    public A4(b: bool) {
+        let sender: address;
+        let x: R#Self.T;
+        let y: &mut R#Self.T;
+        sender = get_txn_sender();
+        x = move_from<T>(copy(sender));
+        y = borrow_global<T>(move(sender));
+        release(move(y));
+        move_to_sender<T>(move(x));
+        return;
+    }
+}

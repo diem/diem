@@ -9,7 +9,7 @@ use crate::{
 };
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{FieldDefinitionIndex, LocalIndex};
+use vm::file_format::{FieldDefinitionIndex, LocalIndex, StructDefinitionIndex};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AbstractValue {
@@ -73,13 +73,17 @@ enum BorrowInfo {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AbstractState {
     locals: BTreeMap<LocalIndex, AbstractValue>,
+    globals: BTreeMap<StructDefinitionIndex, BTreeSet<Nonce>>,
     borrows: BTreeMap<Nonce, BorrowInfo>,
     partition: Partition,
 }
 
 impl AbstractState {
     /// create a new abstract state
-    pub fn new(locals: BTreeMap<LocalIndex, AbstractValue>) -> Self {
+    pub fn new(
+        locals: BTreeMap<LocalIndex, AbstractValue>,
+        globals: BTreeMap<StructDefinitionIndex, BTreeSet<Nonce>>,
+    ) -> Self {
         let borrows = BTreeMap::new();
         let mut partition = Partition::default();
         for value in locals.values() {
@@ -89,6 +93,7 @@ impl AbstractState {
         }
         AbstractState {
             locals,
+            globals,
             borrows,
             partition,
         }
@@ -102,6 +107,11 @@ impl AbstractState {
     /// returns local@idx
     pub fn local(&self, idx: LocalIndex) -> &AbstractValue {
         &self.locals[&idx]
+    }
+
+    /// returns global@idx
+    pub fn global(&mut self, idx: StructDefinitionIndex) -> &BTreeSet<Nonce> {
+        self.globals.entry(idx).or_insert_with(BTreeSet::new)
     }
 
     /// removes local@idx
@@ -124,13 +134,19 @@ impl AbstractState {
         self.locals[&idx].is_value()
     }
 
-    /// Return true if local@idx may safely be released
-    pub fn is_safe_to_destroy(&self, idx: LocalIndex) -> bool {
+    /// Return true if self may safely be destroyed
+    pub fn is_safe_to_destroy(&self) -> bool {
+        self.locals.values().all(|x| x.is_safe_to_destroy())
+            && self.globals.values().all(|x| x.is_empty())
+    }
+
+    /// Return true if local@idx may safely be destroyed
+    pub fn is_local_safe_to_destroy(&self, idx: LocalIndex) -> bool {
         self.local(idx).is_safe_to_destroy()
     }
 
     /// destroys local@idx
-    /// call only if self.is_safe_to_destroy(idx) returns true
+    /// call only if self.is_local_safe_to_destroy(idx) returns true
     pub fn destroy_local(&mut self, idx: LocalIndex) {
         let local = self.locals.remove(&idx).unwrap();
         match local {
@@ -151,6 +167,7 @@ impl AbstractState {
     pub fn destroy_nonce(&mut self, nonce: Nonce) {
         let mut nonce_set = BTreeSet::new();
         let mut new_locals = BTreeMap::new();
+        let mut new_globals = BTreeMap::new();
         let mut new_borrows = BTreeMap::new();
 
         if let Some(borrow_info) = self.borrows.remove(&nonce) {
@@ -182,6 +199,16 @@ impl AbstractState {
                 }
             } else {
                 new_locals.insert(x.clone(), value.clone());
+            }
+        }
+
+        for (x, y) in &self.globals {
+            if y.contains(&nonce) {
+                let mut y_restrict = y.clone();
+                y_restrict.remove(&nonce);
+                new_globals.insert(x.clone(), y_restrict.union(&nonce_set).cloned().collect());
+            } else {
+                new_globals.insert(x.clone(), y.clone());
             }
         }
 
@@ -233,6 +260,7 @@ impl AbstractState {
         }
 
         self.locals = new_locals;
+        self.globals = new_globals;
         self.borrows = new_borrows;
         self.partition.remove_nonce(nonce);
     }
@@ -343,6 +371,14 @@ impl AbstractState {
         }
     }
 
+    /// update self to reflect a borrow of a value global@idx by new_nonce
+    pub fn borrow_from_global_value(&mut self, idx: StructDefinitionIndex, new_nonce: Nonce) {
+        self.globals
+            .entry(idx)
+            .or_insert_with(BTreeSet::new)
+            .insert(new_nonce);
+    }
+
     /// update self to reflect a borrow from each nonce in to_borrow_from by new_nonce
     pub fn borrow_from_nonces(&mut self, to_borrow_from: &BTreeSet<Nonce>, new_nonce: Nonce) {
         for x in to_borrow_from {
@@ -376,6 +412,10 @@ impl AbstractState {
                 AbstractValue::Value(is_resource, Self::map_nonce_set(&nonce_map, &nonce_set)),
             );
         }
+        let mut globals = BTreeMap::new();
+        for (x, nonce_set) in &self.globals {
+            globals.insert(x.clone(), Self::map_nonce_set(&nonce_map, &nonce_set));
+        }
         let mut borrows = BTreeMap::new();
         for (x, borrow_info) in &self.borrows {
             match borrow_info {
@@ -401,6 +441,7 @@ impl AbstractState {
 
         AbstractState {
             locals,
+            globals,
             borrows,
             partition,
         }
@@ -564,6 +605,14 @@ impl AbstractDomain for AbstractState {
             }
         }
 
+        let mut globals = self.globals.clone();
+        for (x, y) in &state.globals {
+            globals
+                .entry(*x)
+                .and_modify(|nonce_set| *nonce_set = y.union(nonce_set).cloned().collect())
+                .or_insert_with(|| y.clone());
+        }
+
         let mut borrows = BTreeMap::new();
         for (x, borrow_info) in &self.borrows {
             if state.borrows.contains_key(x) {
@@ -611,6 +660,7 @@ impl AbstractDomain for AbstractState {
 
         let next_state = AbstractState {
             locals,
+            globals,
             borrows,
             partition,
         };

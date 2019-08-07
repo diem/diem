@@ -58,7 +58,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 );
             }
         }
-        let initial_state = AbstractState::new(locals);
+        let initial_state = AbstractState::new(locals, BTreeMap::new());
         // nonces in [0, locals_signature_view.len()) are reserved for constructing canonical state
         let next_nonce = locals_signature_view.len();
         let mut verifier = Self {
@@ -161,7 +161,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     return Err(VMStaticViolation::StLocTypeMismatchError(offset));
                 }
                 if state.is_available(*idx) {
-                    if state.is_safe_to_destroy(*idx) {
+                    if state.is_local_safe_to_destroy(*idx) {
                         state.destroy_local(*idx);
                     } else {
                         return Err(VMStaticViolation::StLocUnsafeToDestroyError(offset));
@@ -176,16 +176,13 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if error_code.signature != SignatureToken::U64 {
                     return Err(VMStaticViolation::AbortTypeMismatchError(offset));
                 }
-                *state = AbstractState::new(BTreeMap::new());
+                *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
                 Ok(())
             }
 
             Bytecode::Ret => {
-                for arg_idx in 0..self.locals_signature_view.len() {
-                    let idx = arg_idx as LocalIndex;
-                    if state.is_available(idx) && !state.is_safe_to_destroy(idx) {
-                        return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
-                    }
+                if !state.is_safe_to_destroy() {
+                    return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
                 }
                 for return_type_view in self
                     .function_definition_view
@@ -198,7 +195,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         return Err(VMStaticViolation::RetTypeMismatchError(offset));
                     }
                 }
-                *state = AbstractState::new(BTreeMap::new());
+                *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
                 Ok(())
             }
 
@@ -642,7 +639,12 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             // TODO: Handle type actuals for generics
-            Bytecode::Exists(_, _) => {
+            Bytecode::Exists(idx, _) => {
+                let struct_definition = self.module.struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
+                    return Err(VMStaticViolation::ExistsNoResourceError(offset));
+                }
+
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
                     self.stack.push(StackAbstractValue {
@@ -660,11 +662,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
                     return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
                 }
 
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
                     let nonce = self.get_nonce(&mut state);
+                    state.borrow_from_global_value(*idx, nonce.clone());
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::MutableReference(Box::new(
                             SignatureToken::Struct(struct_definition.struct_handle, vec![]),
@@ -682,6 +687,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let struct_definition = self.module.struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module, struct_definition).is_resource() {
                     return Err(VMStaticViolation::MoveFromNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
                 }
 
                 let operand = self.stack.pop().unwrap();
@@ -752,9 +759,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::EmitEvent => {
                 // TODO: EmitEvent is currently unimplemented
                 //       following is a workaround to skip the check
+                // However, the nonce must still be destroyed to ensure the type checker does not
+                // complain
                 self.stack.pop();
                 self.stack.pop();
-                self.stack.pop();
+                let ref_operand = self.stack.pop().unwrap();
+                if let Some(ref_operand_nonce) = ref_operand.value.extract_nonce() {
+                    state.destroy_nonce(ref_operand_nonce.clone());
+                }
                 Ok(())
             }
         }

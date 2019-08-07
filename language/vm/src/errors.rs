@@ -279,6 +279,9 @@ pub enum VMStaticViolation {
     #[fail(display = "Unable to verify Exists at offset {}", _0)]
     ExistsResourceTypeMismatchError(usize),
 
+    #[fail(display = "Unable to verify Exists at offset {}", _0)]
+    ExistsNoResourceError(usize),
+
     #[fail(display = "Unable to verify BorrowGlobal at offset {}", _0)]
     BorrowGlobalTypeMismatchError(usize),
 
@@ -299,6 +302,9 @@ pub enum VMStaticViolation {
 
     #[fail(display = "Unable to verify MoveToSender at offset {}", _0)]
     CreateAccountTypeMismatchError(usize),
+
+    #[fail(display = "Illegal global operation at offset {}", _0)]
+    GlobalReferenceError(usize),
 }
 
 #[derive(Clone, Debug, Eq, Fail, Ord, PartialEq, PartialOrd)]
@@ -686,6 +692,9 @@ impl From<&VerificationError> for VMVerificationError {
             VMStaticViolation::ExistsResourceTypeMismatchError(_) => {
                 VMVerificationError::ExistsResourceTypeMismatchError(message)
             }
+            VMStaticViolation::ExistsNoResourceError(_) => {
+                VMVerificationError::ExistsNoResourceError(message)
+            }
             VMStaticViolation::BorrowGlobalTypeMismatchError(_) => {
                 VMVerificationError::BorrowGlobalTypeMismatchError(message)
             }
@@ -706,6 +715,9 @@ impl From<&VerificationError> for VMVerificationError {
             }
             VMStaticViolation::CreateAccountTypeMismatchError(_) => {
                 VMVerificationError::CreateAccountTypeMismatchError(message)
+            }
+            VMStaticViolation::GlobalReferenceError(_) => {
+                VMVerificationError::GlobalReferenceError(message)
             }
         }
     }

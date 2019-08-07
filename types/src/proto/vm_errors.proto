@@ -160,17 +160,19 @@ enum VMVerificationErrorKind {
     BooleanOpTypeMismatchError = 57;
     EqualityOpTypeMismatchError = 58;
     ExistsResourceTypeMismatchError = 59;
-    BorrowGlobalTypeMismatchError = 60;
-    BorrowGlobalNoResourceError = 61;
-    MoveFromTypeMismatchError = 62;
-    MoveFromNoResourceError = 63;
-    MoveToSenderTypeMismatchError = 64;
-    MoveToSenderNoResourceError = 65;
-    CreateAccountTypeMismatchError = 66;
+    ExistsNoResourceError = 60;
+    BorrowGlobalTypeMismatchError = 61;
+    BorrowGlobalNoResourceError = 62;
+    MoveFromTypeMismatchError = 63;
+    MoveFromNoResourceError = 64;
+    MoveToSenderTypeMismatchError = 65;
+    MoveToSenderNoResourceError = 66;
+    CreateAccountTypeMismatchError = 67;
+    GlobalReferenceError = 68;
     // The self address of a module the transaction is publishing is not the sender address
-    ModuleAddressDoesNotMatchSender = 67;
+    ModuleAddressDoesNotMatchSender = 69;
     // The module does not have any module handles. Each module or script must have at least one module handle.
-    NoModuleHandles = 68;
+    NoModuleHandles = 70;
 }
 
 // These are errors that the VM might raise if a violation of internal
