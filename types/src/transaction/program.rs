@@ -146,6 +146,25 @@ impl IntoProto for Program {
     }
 }
 
+impl CanonicalSerialize for Program {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_vec(&self.code)?;
+        serializer.encode_vec(&self.args)?;
+        serializer.encode_vec(&self.modules)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for Program {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let code: Vec<u8> = deserializer.decode_vec()?;
+        let args: Vec<TransactionArgument> = deserializer.decode_vec()?;
+        let modules: Vec<Vec<u8>> = deserializer.decode_vec()?;
+
+        Ok(Program::new(code, modules, args))
+    }
+}
+
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
     U64(u64),
