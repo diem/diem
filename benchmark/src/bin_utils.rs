@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ruben_opt::Opt,
+    ruben_opt::RubenOpt,
     txn_generator::{convert_load_to_txn_requests, gen_repeated_txn_load, LoadGenerator},
     Benchmarker,
 };
@@ -44,7 +44,7 @@ pub fn create_ac_clients(
     clients
 }
 
-pub fn create_benchmarker_from_opt(args: &Opt) -> Benchmarker {
+pub fn create_benchmarker_from_opt(args: &RubenOpt) -> Benchmarker {
     // Create AdmissionControlClient instances.
     let clients = create_ac_clients(args.num_clients, &args.validator_addresses);
     let submit_rate = args.parse_submit_rate();
@@ -55,7 +55,7 @@ pub fn create_benchmarker_from_opt(args: &Opt) -> Benchmarker {
 /// Benchmarker is not a long-lived job, so starting a server and expecting it to be polled
 /// continuously is not ideal. Directly pushing metrics when benchmarker is running
 /// can be achieved by using Pushgateway.
-pub fn try_start_metrics_server(args: &Opt) {
+pub fn try_start_metrics_server(args: &RubenOpt) {
     if let Some(metrics_server_address) = &args.metrics_server_address {
         let address = metrics_server_address.clone();
         std::thread::spawn(move || {

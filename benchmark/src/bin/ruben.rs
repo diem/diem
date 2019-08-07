@@ -25,7 +25,7 @@
 /// this flow is basically the same for different LoadGenerators/experiments.
 use benchmark::{
     bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
-    ruben_opt::{Opt, TransactionPattern},
+    ruben_opt::{RubenOpt, TransactionPattern},
     txn_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
 };
 use logger::{self, prelude::*};
@@ -34,7 +34,7 @@ use std::ops::DerefMut;
 fn main() {
     let _g = logger::set_default_global_logger(false, Some(256));
     info!("RuBen: the utility to (Ru)n (Ben)chmarker");
-    let args = Opt::new_from_args();
+    let args = RubenOpt::new_from_args();
     info!("Parsed arguments: {:#?}", args);
     try_start_metrics_server(&args);
     let mut bm = create_benchmarker_from_opt(&args);
@@ -57,7 +57,7 @@ fn main() {
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
-        ruben_opt::{Opt, TransactionPattern},
+        ruben_opt::{RubenOpt, TransactionPattern},
         txn_generator::RingTransferTxnGenerator,
         OP_COUNTER,
     };
@@ -77,7 +77,7 @@ mod tests {
                 None,   /* config_dir */
                 None,   /* template_path */
             );
-            let mut args = Opt {
+            let mut args = RubenOpt {
                 validator_addresses: Vec::new(),
                 debug_address: None,
                 swarm_config_dir: Some(String::from(
@@ -87,7 +87,6 @@ mod tests {
                 metrics_server_address: None,
                 faucet_key_file_path,
                 num_accounts: 4,
-                free_lunch: 10_000_000,
                 num_clients: 4,
                 stagger_range_ms: 1,
                 num_rounds: 4,
