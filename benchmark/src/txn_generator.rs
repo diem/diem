@@ -21,7 +21,7 @@ use types::{
 /// Placeholder values used to generate offline TXNs.
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
-const TXN_EXPIRATION: i64 = 100;
+pub const TXN_EXPIRATION: i64 = 100;
 /// The amount of coins initially minted to all generated accounts.
 /// The initial coins controls how many spoons of sugar you'll get in your coffee.
 /// Setting to a large value(e.g., > 10 * num_accounts) will help reduce failed transfers
