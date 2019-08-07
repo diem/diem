@@ -1,25 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{test_utils, QuorumCert},
-    state_replication::ExecutedState,
-    state_synchronizer::{
-        coordinator::SyncStatus,
-        mocks::{gen_txn_list, MockExecutorProxy},
-        PeerId, StateSynchronizer,
-    },
+use crate::txn_fetcher::{
+    coordinator::{ExecutorProxyTrait, SyncStatus},
+    PeerId, StateSynchronizer,
 };
 use bytes::Bytes;
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::HashValue;
-use failure::prelude::*;
-use futures::{
+use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
+use failure::{prelude::*, Result};
+use futures_preview::{
     executor::block_on,
     future::{join_all, TryFutureExt},
     stream::StreamExt,
-    FutureExt,
+    Future, FutureExt,
 };
 use metrics::get_all_metrics;
 use network::{
@@ -32,19 +28,70 @@ use network::{
 };
 use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, SigningKey};
 use parity_multiaddr::Multiaddr;
-use proto_conv::IntoProto;
+use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use rand::{rngs::StdRng, SeedableRng};
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicUsize, Ordering},
+    pin::Pin,
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
 };
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use types::{
+    account_address::AccountAddress,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    transaction::TransactionListWithProof,
+    proof::AccumulatorProof,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
 };
+use vm_genesis::{encode_transfer_program, GENESIS_KEYPAIR};
+
+#[derive(Default)]
+pub struct MockExecutorProxy {
+    version: AtomicU64,
+}
+
+impl ExecutorProxyTrait for MockExecutorProxy {
+    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
+        let version = self.version.load(Ordering::Relaxed);
+        async move { Ok(version) }.boxed()
+    }
+
+    fn execute_chunk(
+        &self,
+        _request: ExecuteChunkRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<ExecuteChunkResponse>> + Send>> {
+        self.version.fetch_add(1, Ordering::Relaxed);
+        async move { Ok(ExecuteChunkResponse::new()) }.boxed()
+    }
+}
+
+pub fn gen_txn_list(sequence_number: u64) -> TransactionListWithProof {
+    let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
+    let receiver = AccountAddress::new([0xff; 32]);
+    let program = encode_transfer_program(&receiver, 1);
+    let transaction = get_test_signed_txn(
+        sender.into(),
+        sequence_number,
+        GENESIS_KEYPAIR.0.clone(),
+        GENESIS_KEYPAIR.1.clone(),
+        Some(program),
+    );
+
+    let txn_info = TransactionInfo::new(HashValue::zero(), HashValue::zero(), HashValue::zero(), 0);
+    let accumulator_proof = AccumulatorProof::new(vec![]);
+    TransactionListWithProof::new(
+        vec![(
+            SignedTransaction::from_proto(transaction).unwrap(),
+            txn_info,
+        )],
+        None,
+        Some(0),
+        Some(accumulator_proof),
+        None,
+    )
+}
 
 struct SynchronizerEnv {
     synchronizers: Vec<StateSynchronizer>,
@@ -62,7 +109,7 @@ impl SynchronizerEnv {
         handler: Box<dyn Fn() -> Result<TransactionListWithProof> + Send + 'static>,
         opt_config: Option<NodeConfig>,
     ) -> Self {
-        let mut runtime = test_utils::consensus_runtime();
+        let mut runtime = Builder::new().build().unwrap();
         let config = opt_config.unwrap_or_else(|| {
             let (config_inner, _) = get_test_config();
             config_inner
@@ -172,7 +219,7 @@ impl SynchronizerEnv {
         }
     }
 
-    fn gen_commit(&self, version: u64) -> QuorumCert {
+    fn gen_commit(&self, version: u64) -> LedgerInfoWithSignatures {
         let ledger_info = LedgerInfo::new(
             version,
             HashValue::zero(),
@@ -185,16 +232,7 @@ impl SynchronizerEnv {
         let private_key = Ed25519PrivateKey::genesis();
         let signature = private_key.sign_message(&HashValue::zero());
         signatures.insert(self.peers[1], signature);
-        QuorumCert::new(
-            HashValue::zero(),
-            ExecutedState::state_for_genesis(),
-            0,
-            LedgerInfoWithSignatures::new(ledger_info, signatures),
-            HashValue::zero(),
-            0,
-            HashValue::zero(),
-            0,
-        )
+        LedgerInfoWithSignatures::new(ledger_info, signatures)
     }
 }
 
@@ -226,7 +264,7 @@ fn test_concurrent_requests() {
     block_on(join_all(requests));
     // ensure we downloaded each chunk exactly 1 time
     let metrics = get_all_metrics();
-    assert_eq!(metrics["consensus{op=download}"].parse::<i32>().unwrap(), 3);
+    assert_eq!(metrics["state_sync{op=download}"].parse::<i32>().unwrap(), 3);
 }
 }
 

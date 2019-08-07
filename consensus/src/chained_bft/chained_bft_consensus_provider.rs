@@ -15,17 +15,15 @@ use crate::{
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use nextgen_crypto::ed25519::*;
 
-use crate::{
-    chained_bft::{
-        chained_bft_smr::ChainedBftSMRConfig, common::Author, persistent_storage::StorageWriteProxy,
-    },
-    state_synchronizer::{setup_state_synchronizer, StateSynchronizer},
+use crate::chained_bft::{
+    chained_bft_smr::ChainedBftSMRConfig, common::Author, persistent_storage::StorageWriteProxy,
 };
 use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
 use execution_proto::proto::execution_grpc::ExecutionClient;
 use failure::prelude::*;
 use logger::prelude::*;
 use mempool::proto::mempool_grpc::MempoolClient;
+use state_synchronizer::{setup_state_synchronizer, StateSynchronizer};
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 use types::{

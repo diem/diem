@@ -2,25 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::QuorumCert,
     counters::OP_COUNTERS,
-    state_synchronizer::{coordinator::CoordinatorMsg, PeerId},
+    txn_fetcher::{coordinator::CoordinatorMsg, PeerId},
 };
 use failure::prelude::*;
-use futures::{channel::mpsc, SinkExt, StreamExt};
+use futures_preview::{channel::mpsc, SinkExt, StreamExt};
 use logger::prelude::*;
 use network::{proto::RequestChunk, validator_network::ConsensusNetworkSender};
-use proto_conv::IntoProto;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
-use types::proto::transaction::TransactionListWithProof;
+use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
 
 /// Used for communication between coordinator and downloader
 /// and represents a single fetch request
 #[derive(Clone)]
 pub struct FetchChunkMsg {
     // target version that we want to fetch
-    pub target: QuorumCert,
+    pub target: LedgerInfoWithSignatures,
     // version from which to start fetching (the offset version)
     pub start_version: u64,
 }
@@ -81,7 +79,7 @@ impl Downloader {
         // Construct the message and use rpc call via network stack
         let mut req = RequestChunk::new();
         req.set_start_version(msg.start_version);
-        req.set_target(msg.target.clone().into_proto());
+        req.set_target_version(msg.target.ledger_info().version());
         req.set_batch_size(self.batch_size);
         // Longer-term, we will read from a cloud provider.  But for testnet, just read
         // from the node which is proposing this block
@@ -98,12 +96,12 @@ impl Downloader {
     }
 
     fn pick_peer_id(&self, msg: &FetchChunkMsg) -> PeerId {
-        let signatures = msg.target.ledger_info().signatures();
+        let signatures = msg.target.signatures();
         let idx = thread_rng().gen_range(0, signatures.len());
         signatures
             .keys()
             .nth(idx)
             .cloned()
-            .expect("[state synchronizer] failed to pick peer from qc")
+            .expect("[state synchronizer] failed to pick peer from ledger info")
     }
 }

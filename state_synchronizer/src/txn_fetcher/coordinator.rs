@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::QuorumCert, counters, state_synchronizer::downloader::FetchChunkMsg};
+use crate::{counters, txn_fetcher::downloader::FetchChunkMsg};
 use config::config::NodeConfig;
 use execution_proto::proto::{
     execution::{ExecuteChunkRequest, ExecuteChunkResponse},
     execution_grpc::ExecutionClient,
 };
 use failure::prelude::*;
-use futures::{
+use futures_preview::{
     channel::{mpsc, oneshot},
     Future, FutureExt, SinkExt, StreamExt,
 };
@@ -18,14 +18,14 @@ use logger::prelude::*;
 use proto_conv::IntoProto;
 use std::{collections::BTreeMap, pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use types::proto::transaction::TransactionListWithProof;
+use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
 
 /// unified message used for communication with Coordinator
 pub enum CoordinatorMsg {
     // is sent from Synchronizer to Coordinator to request a new sync
-    Requested(QuorumCert, oneshot::Sender<SyncStatus>),
+    Requested(LedgerInfoWithSignatures, oneshot::Sender<SyncStatus>),
     // is sent from Downloader to Coordinator to indicate that new batch is ready
-    Fetched(Result<TransactionListWithProof>, QuorumCert),
+    Fetched(Result<TransactionListWithProof>, LedgerInfoWithSignatures),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -49,7 +49,7 @@ pub struct SyncCoordinator<T> {
     // last committed version that validator is aware of
     known_version: u64,
     // target state to sync to
-    target: Option<QuorumCert>,
+    target: Option<LedgerInfoWithSignatures>,
     // used to track progress of synchronization
     sync_position: u64,
     // subscribers of synchronization
@@ -80,14 +80,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub async fn start(mut self) {
         while let Some(msg) = self.receiver.next().await {
             match msg {
-                CoordinatorMsg::Requested(qc, subscriber) => {
-                    self.handle_request(qc, subscriber).await;
+                CoordinatorMsg::Requested(target, subscriber) => {
+                    self.handle_request(target, subscriber).await;
                 }
                 CoordinatorMsg::Fetched(Ok(txn_list_with_proof), ledger_info_with_sigs) => {
                     self.process_transactions(txn_list_with_proof, ledger_info_with_sigs)
                         .await;
                 }
                 CoordinatorMsg::Fetched(Err(_), _) => {
+                    debug!("flask error with state_sync downloader");
                     self.notify_subscribers(SyncStatus::DownloadFailed);
                 }
             }
@@ -96,14 +97,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     fn target_version(&self) -> u64 {
         match &self.target {
-            Some(qc) => qc.ledger_info().ledger_info().version(),
+            Some(target) => target.ledger_info().version(),
             None => 0,
         }
     }
 
     /// Consensus request handler
-    async fn handle_request(&mut self, qc: QuorumCert, subscriber: oneshot::Sender<SyncStatus>) {
-        let requested_version = qc.ledger_info().ledger_info().version();
+    async fn handle_request(
+        &mut self,
+        target: LedgerInfoWithSignatures,
+        subscriber: oneshot::Sender<SyncStatus>,
+    ) {
+        let requested_version = target.ledger_info().version();
         let committed_version = self.executor_proxy.get_latest_version().await;
 
         // if requested version equals to current committed, just pass ledger info to executor
@@ -111,7 +116,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if let Ok(version) = committed_version {
             if version == requested_version {
                 let status = match self
-                    .store_transactions(TransactionListWithProof::new(), qc)
+                    .store_transactions(TransactionListWithProof::new(), target)
                     .await
                 {
                     Ok(_) => SyncStatus::Finished,
@@ -127,7 +132,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         if requested_version > self.target_version() {
-            self.target = Some(qc.clone());
+            self.target = Some(target.clone());
         }
 
         self.subscribers
@@ -144,7 +149,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     // send request to Downloader
                     let fetch_request = FetchChunkMsg {
                         start_version: self.sync_position,
-                        target: qc,
+                        target,
                     };
                     if self.sender_to_downloader.send(fetch_request).await.is_err() {
                         self.notify_subscribers(SyncStatus::DownloaderNotAvailable);
@@ -162,7 +167,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn process_transactions(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        qc: QuorumCert,
+        target: LedgerInfoWithSignatures,
     ) {
         let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
         if chunk_size == 0 {
@@ -184,7 +189,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
 
-        let status = match self.store_transactions(txn_list_with_proof, qc).await {
+        let status = match self.store_transactions(txn_list_with_proof, target).await {
             Ok(_) => SyncStatus::Finished,
             Err(_) => SyncStatus::ExecutionFailed,
         };
@@ -219,11 +224,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn store_transactions(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        qc: QuorumCert,
+        target: LedgerInfoWithSignatures,
     ) -> Result<ExecuteChunkResponse> {
         let mut req = ExecuteChunkRequest::new();
         req.set_txn_list_with_proof(txn_list_with_proof);
-        req.set_ledger_info_with_sigs(qc.ledger_info().clone().into_proto());
+        req.set_ledger_info_with_sigs(target.clone().into_proto());
         self.executor_proxy.execute_chunk(req).await
     }
 }

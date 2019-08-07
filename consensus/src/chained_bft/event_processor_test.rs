@@ -21,10 +21,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{
-            BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
-            ConsensusNetworkImpl,
-        },
+        network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
         safety::{
@@ -36,7 +33,6 @@ use crate::{
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
         },
     },
-    state_replication::ExecutedState,
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
@@ -54,16 +50,13 @@ use network::{
 use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{
-    collections::HashMap,
     sync::{Arc, RwLock},
     time::Duration,
 };
 use tokio::runtime::TaskExecutor;
 use types::{
-    account_address::AccountAddress,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress, ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -749,60 +742,6 @@ fn process_votes_basic_test() {
         assert_eq!(new_round_event.round, 2);
     });
     block_on(runtime.shutdown_now().compat()).unwrap();
-}
-
-#[test]
-fn process_chunk_retrieval() {
-    let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
-        .pop()
-        .unwrap();
-
-    let genesis = node.block_store.root();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
-
-    let block = Block::make_block(
-        genesis.as_ref(),
-        vec![1],
-        1,
-        1,
-        genesis_qc.clone(),
-        node.block_store.signer(),
-    );
-    let proposal_info = ProposalInfo::<TestPayload, Author> {
-        proposal: block.clone(),
-        proposer_info: node.author,
-        sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-    };
-    node.pacemaker
-        .process_certificates(proposal_info.proposal.round() - 1, None);
-
-    block_on(async move {
-        node.event_processor
-            .process_winning_proposal(proposal_info)
-            .await;
-        let ledger_info =
-            LedgerInfo::new(1, HashValue::zero(), HashValue::zero(), block.id(), 0, 0);
-        let target = QuorumCert::new(
-            block.id(),
-            ExecutedState::state_for_genesis(),
-            0,
-            LedgerInfoWithSignatures::new(ledger_info, HashMap::new()),
-            block.id(),
-            0,
-            block.id(),
-            0,
-        );
-        let req = ChunkRetrievalRequest {
-            start_version: 0,
-            target,
-            batch_size: 1,
-            response_sender: oneshot::channel().0,
-        };
-        node.event_processor.process_chunk_retrieval(req).await;
-        assert_eq!(node.block_store.root().round(), 1);
-    });
 }
 
 #[test]

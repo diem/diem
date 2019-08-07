@@ -8,7 +8,6 @@ use crate::{
         consensus_types::{
             block::Block,
             proposal_info::{ProposalInfo, ProposerInfo},
-            quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::TimeoutMsg,
         },
@@ -87,7 +86,7 @@ pub struct BlockRetrievalRequest<T> {
 #[derive(Debug)]
 pub struct ChunkRetrievalRequest {
     pub start_version: u64,
-    pub target: QuorumCert,
+    pub target_version: u64,
     pub batch_size: u64,
     pub response_sender: oneshot::Sender<Result<TransactionListWithProof, failure::Error>>,
 }
@@ -463,19 +462,15 @@ where
         msg: &'a mut ConsensusMsg,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
     ) -> failure::Result<()> {
-        let mut req = msg.take_request_chunk();
+        let req = msg.take_request_chunk();
         debug!(
             "Received request_chunk RPC for start version: {} target: {:?} batch_size: {}",
-            req.start_version,
-            req.get_target(),
-            req.batch_size
+            req.start_version, req.target_version, req.batch_size
         );
         let (tx, rx) = oneshot::channel();
-        let target = QuorumCert::from_proto(req.take_target())?;
-        target.verify(self.validator.as_ref())?;
         let request = ChunkRetrievalRequest {
             start_version: req.start_version,
-            target,
+            target_version: req.target_version,
             batch_size: req.batch_size,
             response_sender: tx,
         };
