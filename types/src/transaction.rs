@@ -230,12 +230,97 @@ impl IntoProto for RawTransaction {
     }
 }
 
+impl CanonicalSerialize for RawTransaction {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_struct(&self.sender)?;
+        serializer.encode_u64(self.sequence_number)?;
+        serializer.encode_struct(&self.payload)?;
+        serializer.encode_u64(self.max_gas_amount)?;
+        serializer.encode_u64(self.gas_unit_price)?;
+        serializer.encode_u64(self.expiration_time.as_secs())?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for RawTransaction {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let sender = deserializer.decode_struct()?;
+        let sequence_number = deserializer.decode_u64()?;
+        let payload = deserializer.decode_struct()?;
+        let max_gas_amount = deserializer.decode_u64()?;
+        let gas_unit_price = deserializer.decode_u64()?;
+        let expiration_time = Duration::from_secs(deserializer.decode_u64()?);
+
+        Ok(RawTransaction {
+            sender,
+            sequence_number,
+            payload,
+            max_gas_amount,
+            gas_unit_price,
+            expiration_time,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
     /// A regular programmatic transaction that is executed by the VM.
     Program(Program),
     WriteSet(WriteSet),
 }
+
+impl CanonicalSerialize for TransactionPayload {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        match self {
+            TransactionPayload::Program(program) => {
+                serializer.encode_u32(TransactionPayloadType::Program as u32)?;
+                serializer.encode_struct(program)?;
+            }
+            TransactionPayload::WriteSet(write_set) => {
+                serializer.encode_u32(TransactionPayloadType::WriteSet as u32)?;
+                serializer.encode_struct(write_set)?;
+            }
+        };
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for TransactionPayload {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let decoded_payload_type = deserializer.decode_u32()?;
+        let payload_type = TransactionPayloadType::from_u32(decoded_payload_type);
+        match payload_type {
+            Some(TransactionPayloadType::Program) => {
+                Ok(TransactionPayload::Program(deserializer.decode_struct()?))
+            }
+            Some(TransactionPayloadType::WriteSet) => {
+                Ok(TransactionPayload::WriteSet(deserializer.decode_struct()?))
+            }
+            None => Err(format_err!(
+                "ParseError: Unable to decode TransactionPayloadType, found {}",
+                decoded_payload_type
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+enum TransactionPayloadType {
+    Program = 0,
+    WriteSet = 1,
+}
+
+impl TransactionPayloadType {
+    fn from_u32(value: u32) -> Option<TransactionPayloadType> {
+        match value {
+            0 => Some(TransactionPayloadType::Program),
+            1 => Some(TransactionPayloadType::WriteSet),
+            _ => None,
+        }
+    }
+}
+
+impl ::std::marker::Copy for TransactionPayloadType {}
 
 /// A transaction that has been signed.
 ///
