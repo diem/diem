@@ -78,3 +78,8 @@ variable "prometheus_pagerduty_key" {
   default     = ""
   description = "Key for Prometheus-PagerDuty integration"
 }
+
+variable "monitoring_snapshot" {
+  default     = ""
+  description = "EBS snapshot ID to initialise monitoring data with"
+}
