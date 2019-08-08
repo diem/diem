@@ -21,7 +21,7 @@ pub use ir_to_bytecode_syntax::ast;
 // comments for now. Will later on add in other comment types.
 fn strip_comments(string: &str) -> String {
     // Remove line comments
-    let line_comments = Regex::new(r"//.*(\r\n|\n|\r)").unwrap();
+    let line_comments = Regex::new(r"(?m)//.*$").unwrap();
     line_comments.replace_all(string, "$1").into_owned()
 }
 
