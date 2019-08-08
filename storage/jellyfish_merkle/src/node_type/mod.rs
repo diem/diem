@@ -16,6 +16,7 @@
 mod node_type_test;
 
 use bincode::{deserialize, serialize};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{
     hash::{
         CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
@@ -23,13 +24,16 @@ use crypto::{
     },
     HashValue,
 };
-use failure::{Fail, Result};
+use failure::{prelude::*, Fail, Result};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use sparse_merkle::nibble_path::NibblePath;
-use std::collections::hash_map::HashMap;
+use std::{
+    collections::hash_map::HashMap,
+    io::{Cursor, Read, Write},
+};
 use types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
@@ -79,6 +83,33 @@ impl NodeKey {
     /// Sets the version to the given version.
     pub fn set_version(&mut self, version: Version) {
         self.version = version;
+    }
+
+    /// Serializes to bytes for physical storage.
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        let mut out = vec![];
+        out.write_u64::<BigEndian>(self.version())?;
+        out.write_u8((self.nibble_path().num_nibbles() & 1) as u8)?;
+        out.write_all(self.nibble_path().bytes())?;
+        Ok(out)
+    }
+
+    /// Recovers from serialized bytes in physical storage.
+    pub fn decode(val: &[u8]) -> Result<NodeKey> {
+        let mut reader = Cursor::new(val);
+        let version = reader.read_u64::<BigEndian>()?;
+        let is_odd = reader.read_u8()? == 1;
+        let mut nibble_bytes = vec![];
+        reader.read_to_end(&mut nibble_bytes)?;
+        if nibble_bytes.is_empty() && is_odd {
+            bail!("corrupted node key: empty node key with odd number of nibbles.")
+        }
+        let nibble_path = if is_odd {
+            NibblePath::new_odd(nibble_bytes)
+        } else {
+            NibblePath::new(nibble_bytes)
+        };
+        Ok(NodeKey::new(version, nibble_path))
     }
 }
 
