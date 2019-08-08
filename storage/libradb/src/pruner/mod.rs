@@ -96,7 +96,7 @@ impl Pruner {
             let end = Instant::now() + TIMEOUT;
 
             while Instant::now() < end {
-                if self.worker_progress.load(Ordering::Acquire) >= least_readable_version {
+                if self.worker_progress.load(Ordering::Relaxed) >= least_readable_version {
                     return Ok(());
                 }
                 sleep(Duration::from_millis(1));
@@ -167,7 +167,7 @@ impl Worker {
                     self.blocking_recv = num_pruned < Self::BATCH_SIZE;
 
                     // Log the progress.
-                    self.progress.store(last_seen_version, Ordering::Release);
+                    self.progress.store(last_seen_version, Ordering::Relaxed);
                     OP_COUNTER.set(
                         "pruner.least_readable_state_version",
                         last_seen_version as usize,
