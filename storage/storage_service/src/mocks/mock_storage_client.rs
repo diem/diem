@@ -4,11 +4,15 @@
 //! This module provides mock storage clients for tests.
 
 use canonical_serialization::SimpleSerializer;
-use crypto::{signing::generate_keypair, HashValue};
+use crypto::HashValue;
 use failure::prelude::*;
 use futures::prelude::*;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
 use std::{collections::BTreeMap, pin::Pin};
 use storage_client::StorageRead;
 use storage_proto::ExecutorStartupInfo;
@@ -240,12 +244,14 @@ fn get_mock_txn_data(
     Vec<types::proto::transaction::SignedTransaction>,
     Vec<TransactionInfo>,
 ) {
-    let (priv_key, pub_key) = generate_keypair();
+    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let seed_buf: [u8; 32] = seed_rng.gen();
+    let mut rng = StdRng::from_seed(seed_buf);
+    let (priv_key, pub_key) = compat::generate_keypair(&mut rng);
     let mut txns = vec![];
     let mut infos = vec![];
     for i in start_seq..=end_seq {
-        let signed_txn =
-            get_test_signed_txn(address, i, priv_key.clone().into(), pub_key.into(), None);
+        let signed_txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None);
         txns.push(signed_txn);
 
         let info = get_transaction_info().into_proto();

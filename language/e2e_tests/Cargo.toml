@@ -9,7 +9,6 @@ publish = false
 [dependencies]
 bytecode_verifier = { path = "../bytecode_verifier" }
 canonical_serialization = { path = "../../common/canonical_serialization" }
-crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 compiler = { path = "../compiler" }
 ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }

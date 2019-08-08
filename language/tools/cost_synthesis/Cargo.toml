@@ -20,7 +20,7 @@ vm_runtime = { path = "../../vm/vm_runtime" }
 vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
 language_e2e_tests = { path = "../../e2e_tests" }
 vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
-crypto = { path = "../../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../../crypto/nextgen_crypto" }
 state_view = { path = "../../../storage/state_view" }
 structopt = "0.2.15"
 

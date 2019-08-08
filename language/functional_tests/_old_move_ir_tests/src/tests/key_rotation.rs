@@ -40,8 +40,7 @@ main() {{
 fn can_send_transaction_with_new_key_after_rotation() {
     let mut test_env = TestEnvironment::default();
 
-    let (privkey, pubkey) =
-        crypto::signing::generate_keypair_for_testing(&mut test_env.accounts.randomness_source);
+    let (privkey, pubkey) = compat::generate_keypair(&mut test_env.accounts.randomness_source);
     let program = format!(
         "
 import 0x0.LibraAccount;
@@ -52,7 +51,7 @@ main() {{
 
   return;
 }}",
-        hex::encode(AccountAddress::from(pubkey))
+        hex::encode(AccountAddress::from_public_key(pubkey))
     );
 
     // rotate key
