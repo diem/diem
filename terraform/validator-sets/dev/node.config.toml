@@ -6,7 +6,6 @@ address = "0.0.0.0"
 
 [storage]
 dir = "/opt/libra/data"
-grpc_max_receive_len = 100000000
 
 [metrics]
 dir = ""
