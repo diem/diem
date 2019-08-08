@@ -2,6 +2,7 @@ use crate::{aws::Aws, instance::Instance};
 use failure::{self, prelude::*};
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter};
+use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Cluster {
@@ -12,6 +13,7 @@ impl Cluster {
     pub fn discover(aws: &Aws) -> failure::Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
+        let mut retries_left = 10;
         loop {
             let filters = vec![
                 Filter {
@@ -34,10 +36,24 @@ impl Cluster {
                     max_results: Some(1000),
                     dry_run: None,
                     instance_ids: None,
-                    next_token,
+                    next_token: next_token.clone(),
                 })
-                .sync()
-                .expect("Failed to describe aws instances");
+                .sync();
+            let result = match result {
+                Err(e) => {
+                    println!(
+                        "Failed to describe aws instances: {:?}, retries left: {}",
+                        e, retries_left
+                    );
+                    thread::sleep(Duration::from_secs(1));
+                    if retries_left == 0 {
+                        panic!("Last attempt to describe instances failed");
+                    }
+                    retries_left -= 1;
+                    continue;
+                }
+                Ok(r) => r,
+            };
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance

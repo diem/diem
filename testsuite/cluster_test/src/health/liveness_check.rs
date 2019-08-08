@@ -8,7 +8,7 @@ pub struct LivenessHealthCheck {
     last_committed: HashMap<String, LastCommitInfo>,
 }
 
-const MAX_BEHIND: Duration = Duration::from_secs(20);
+const MAX_BEHIND: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
 struct LastCommitInfo {
@@ -63,6 +63,11 @@ impl HealthCheck for LivenessHealthCheck {
                 );
             }
         }
+    }
+
+    fn invalidate(&mut self, validator: &str) {
+        self.last_committed
+            .insert(validator.into(), LastCommitInfo::default());
     }
 
     fn name(&self) -> &'static str {
