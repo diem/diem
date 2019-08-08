@@ -40,7 +40,17 @@ impl FromStr for Directive {
             // TODO: implement transaction directive
             unimplemented!();
         }
-        Ok(Directive::Check(s.to_string()))
+        if s.starts_with("check:")
+            || s.starts_with("sameln:")
+            || s.starts_with("nextln:")
+            || s.starts_with("unordered:")
+            || s.starts_with("not:")
+            || s.starts_with("regex:")
+        {
+            Ok(Directive::Check(s.to_string()))
+        } else {
+            Err(ErrorKind::Other("unrecognized directive".to_string()).into())
+        }
     }
 }
 

@@ -7,7 +7,7 @@ fn parse_input_no_transactions() {
 
 #[test]
 fn parse_input_no_transactions_with_config() {
-    parse_input("//! no-verify").unwrap_err();
+    parse_input("//! no-run: verifier").unwrap_err();
 }
 
 #[rustfmt::skip]

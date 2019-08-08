@@ -10,6 +10,8 @@ use crate::{
 fn parse_directives() {
     for s in &[
         "abc",
+        "// not a directive",
+        "//",
         "// stage:   runtime  bad  ",
         "// stage: bad stage",
         "// stage: ",
@@ -21,6 +23,10 @@ fn parse_directives() {
         "// check: abc",
         "  // check: abc",
         "//not: foo",
+        "// sameln: abc",
+        "// nextln: abc",
+        "// unordered: abc",
+        "// regex: X=aaa",
         "// stage: parser",
         "// stage: compiler",
         "// stage: verifier",
