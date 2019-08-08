@@ -82,7 +82,7 @@ impl MockTreeStore {
         Ok(())
     }
 
-    pub fn purge_retired_records(&self, least_readable_version: Version) -> Result<()> {
+    pub fn prune_retired_records(&self, least_readable_version: Version) -> Result<()> {
         let mut wlocked = self.0.write().unwrap();
 
         // Only records retired before or at `least_readable_version` can be purged in order

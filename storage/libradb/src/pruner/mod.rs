@@ -232,11 +232,11 @@ pub fn prune_state(
     limit: usize,
 ) -> Result<(usize, Version)> {
     let mut batch = SchemaBatch::new();
-    let mut num_purged = 0;
+    let mut num_pruned = 0;
     let mut iter = db.iter::<RetiredStateRecordSchema>(ReadOptions::default())?;
     iter.seek(&max_pruned_version_hint)?;
 
-    // Collect records to purge, as many as `limit`.
+    // Collect records to prune, as many as `limit`.
     let mut iter = iter.take(limit);
     let mut last_seen_version = 0;
     while let Some((record, _)) = iter.next().transpose()? {
@@ -255,15 +255,15 @@ pub fn prune_state(
             }
         }
         batch.delete::<RetiredStateRecordSchema>(&record)?;
-        num_purged += 1;
+        num_pruned += 1;
     }
 
     // Persist.
-    if num_purged > 0 {
+    if num_pruned > 0 {
         db.write_schemas(batch)?;
     }
 
-    Ok((num_purged, last_seen_version))
+    Ok((num_pruned, last_seen_version))
 }
 
 #[cfg(test)]

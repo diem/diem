@@ -55,11 +55,11 @@ fn prune_retired_records(
     store: &StateStore,
     least_readable_version: Version,
     limit: usize,
-    expected_num_purged: usize,
+    expected_num_pruned: usize,
 ) {
-    let (num_purged, _last_seen_version) =
+    let (num_pruned, _last_seen_version) =
         pruner::prune_state(Arc::clone(&store.db), 0, least_readable_version, limit).unwrap();
-    assert_eq!(num_purged, expected_num_purged);
+    assert_eq!(num_pruned, expected_num_pruned);
 }
 
 fn verify_state_in_store(
@@ -197,7 +197,7 @@ fn test_retired_records() {
     );
 
     // Verify.
-    // Purge with limit=0, nothing is gone.
+    // Prune with limit=0, nothing is gone.
     {
         prune_retired_records(
             store, 1, /* least_readable_version */
@@ -206,7 +206,7 @@ fn test_retired_records() {
         );
         verify_state_in_store(store, address1, Some(&value1), root0);
     }
-    // Purge till version=1.
+    // Prune till version=1.
     {
         prune_retired_records(
             store, 1,   /* least_readable_version */
@@ -222,7 +222,7 @@ fn test_retired_records() {
         verify_state_in_store(store, address2, Some(&value2_update), root1);
         verify_state_in_store(store, address3, Some(&value3), root1);
     }
-    // Purge till version=2.
+    // Prune till version=2.
     {
         prune_retired_records(
             store, 2,   /* least_readable_version */
