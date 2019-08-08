@@ -34,7 +34,7 @@ fn test_insert_to_empty_tree() {
     assert!(batch.stale_node_index_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
 
-    assert_eq!(tree.get(key, Some(0)).unwrap().unwrap(), value);
+    assert_eq!(tree.get(key, 0).unwrap().unwrap(), value);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn test_insert_at_leaf_with_internal_created() {
 
     assert!(batch.stale_node_index_batch.is_empty());
     db.write_tree_update_batch(batch).unwrap();
-    assert_eq!(tree.get(key1, Some(0)).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
 
     // Insert at the previous leaf node. Should generate an internal node at the root.
     // Change the 1st nibble to 15.
@@ -64,9 +64,9 @@ fn test_insert_at_leaf_with_internal_created() {
     assert_eq!(batch.stale_node_index_batch.len(), 1);
     db.write_tree_update_batch(batch).unwrap();
 
-    assert_eq!(tree.get(key1, Some(0)).unwrap().unwrap(), value1);
-    assert!(tree.get(key2, Some(0)).unwrap().is_none());
-    assert_eq!(tree.get(key2, Some(1)).unwrap().unwrap(), value2);
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
+    assert!(tree.get(key2, 0).unwrap().is_none());
+    assert_eq!(tree.get(key2, 1).unwrap().unwrap(), value2);
 
     // get # of nodes
     assert_eq!(db.num_nodes(), 4 /* 1 + 3 */);
@@ -115,7 +115,7 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
         .put_blob_set(vec![(key1, value1.clone())], 0 /* version */)
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
-    assert_eq!(tree.get(key1, Some(0)).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
 
     // 2. Insert at the previous leaf node. Should generate a branch node at root.
     // Change the 2nd nibble to 1.
@@ -126,9 +126,9 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
         .put_blob_set(vec![(key2, value2.clone())], 1 /* version */)
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
-    assert_eq!(tree.get(key1, Some(0)).unwrap().unwrap(), value1);
-    assert!(tree.get(key2, Some(0)).unwrap().is_none());
-    assert_eq!(tree.get(key2, Some(1)).unwrap().unwrap(), value2);
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
+    assert!(tree.get(key2, 0).unwrap().is_none());
+    assert_eq!(tree.get(key2, 1).unwrap().unwrap(), value2);
 
     assert_eq!(db.num_nodes(), 5);
 
@@ -191,9 +191,9 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
         .put_blob_set(vec![(key2, value2_update.clone())], 2 /* version */)
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
-    assert!(tree.get(key2, Some(0)).unwrap().is_none());
-    assert_eq!(tree.get(key2, Some(1)).unwrap().unwrap(), value2);
-    assert_eq!(tree.get(key2, Some(2)).unwrap().unwrap(), value2_update);
+    assert!(tree.get(key2, 0).unwrap().is_none());
+    assert_eq!(tree.get(key2, 1).unwrap().unwrap(), value2);
+    assert_eq!(tree.get(key2, 2).unwrap().unwrap(), value2_update);
 
     // Get # of nodes.
     assert_eq!(db.num_nodes(), 8);
@@ -203,8 +203,8 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
     assert_eq!(db.num_nodes(), 7);
     db.purge_stale_nodes(2).unwrap();
     assert_eq!(db.num_nodes(), 4);
-    assert_eq!(tree.get(key1, Some(2)).unwrap().unwrap(), value1);
-    assert_eq!(tree.get(key2, Some(2)).unwrap().unwrap(), value2_update);
+    assert_eq!(tree.get(key1, 2).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key2, 2).unwrap().unwrap(), value2_update);
 }
 
 #[test]
@@ -262,7 +262,7 @@ fn test_batch_insertion() {
     let verify_fn = |tree: &JellyfishMerkleTree<MockTreeStore>, version: Version| {
         to_verify
             .iter()
-            .for_each(|(k, v)| assert_eq!(tree.get(*k, Some(version)).unwrap().unwrap(), *v))
+            .for_each(|(k, v)| assert_eq!(tree.get(*k, version).unwrap().unwrap(), *v))
     };
 
     // Insert as one batch.
@@ -415,9 +415,9 @@ fn test_non_existence() {
         )
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
-    assert_eq!(tree.get(key1, Some(0)).unwrap().unwrap(), value1);
-    assert_eq!(tree.get(key2, Some(0)).unwrap().unwrap(), value2);
-    assert_eq!(tree.get(key3, Some(0)).unwrap().unwrap(), value3);
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key2, 0).unwrap().unwrap(), value2);
+    assert_eq!(tree.get(key3, 0).unwrap().unwrap(), value3);
     // get # of nodes
     assert_eq!(db.num_nodes(), 6);
 
@@ -425,21 +425,21 @@ fn test_non_existence() {
     // 1. Non-existing node at root node
     {
         let non_existing_key = update_nibble(&key1, 0, 1);
-        let (value, proof) = tree.get_with_proof(non_existing_key, Some(0)).unwrap();
+        let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
         assert!(verify_sparse_merkle_element(root, non_existing_key, &None, &proof).is_ok());
     }
     // 2. Non-existing node at non-root internal node
     {
         let non_existing_key = update_nibble(&key1, 1, 15);
-        let (value, proof) = tree.get_with_proof(non_existing_key, Some(0)).unwrap();
+        let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
         assert!(verify_sparse_merkle_element(root, non_existing_key, &None, &proof).is_ok());
     }
     // 3. Non-existing node at leaf node
     {
         let non_existing_key = update_nibble(&key1, 2, 4);
-        let (value, proof) = tree.get_with_proof(non_existing_key, Some(0)).unwrap();
+        let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
         assert!(verify_sparse_merkle_element(root, non_existing_key, &None, &proof).is_ok());
     }
@@ -514,7 +514,7 @@ fn many_keys_get_proof_and_verify_tree_root(seed: &[u8], num_keys: usize) {
     db.write_tree_update_batch(batch).unwrap();
 
     for (k, v) in &kvs {
-        let (value, proof) = tree.get_with_proof(*k, Some(0)).unwrap();
+        let (value, proof) = tree.get_with_proof(*k, 0).unwrap();
         assert_eq!(value.unwrap(), *v);
         assert!(verify_sparse_merkle_element(root, *k, &Some(v.clone()), &proof).is_ok());
     }
@@ -565,9 +565,7 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
 
     for (i, (k, v, _)) in kvs.iter().enumerate() {
         let random_version = rng.gen_range(i, i + num_versions);
-        let (value, proof) = tree
-            .get_with_proof(*k, Some(random_version as Version))
-            .unwrap();
+        let (value, proof) = tree.get_with_proof(*k, random_version as Version).unwrap();
         assert_eq!(value.unwrap(), *v);
         assert!(
             verify_sparse_merkle_element(roots[random_version], *k, &Some(v.clone()), &proof)
@@ -577,9 +575,7 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
 
     for (i, (k, _, v)) in kvs.iter().enumerate() {
         let random_version = rng.gen_range(i + num_versions, 2 * num_versions);
-        let (value, proof) = tree
-            .get_with_proof(*k, Some(random_version as Version))
-            .unwrap();
+        let (value, proof) = tree.get_with_proof(*k, random_version as Version).unwrap();
         assert_eq!(value.unwrap(), *v);
         assert!(
             verify_sparse_merkle_element(roots[random_version], *k, &Some(v.clone()), &proof)
