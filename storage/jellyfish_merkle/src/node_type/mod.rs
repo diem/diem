@@ -162,27 +162,6 @@ pub struct LeafNode {
     blob: AccountStateBlob,
 }
 
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-enum NodeTag {
-    Internal = 1,
-    Leaf = 2,
-}
-
-/// The explicit tag is used as a prefix in the encoded format of nodes to distinguish different
-/// node discrinminants.
-trait Tag {
-    const TAG: NodeTag;
-}
-
-impl Tag for InternalNode {
-    const TAG: NodeTag = NodeTag::Internal;
-}
-
-impl Tag for LeafNode {
-    const TAG: NodeTag = NodeTag::Leaf;
-}
-
 /// Computes the hash of internal node according to [`JellyfishTree`](crate::JellyfishTree)
 /// data structure in the logical view. `start` and `nibble_height` determine a subtree whose
 /// root hash we want to get. For an internal node with 16 children at the bottom level, we compute
@@ -255,10 +234,20 @@ impl CryptoHash for LeafNode {
 /// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Node {
+    /// Represents `null`.
+    Null,
     /// A wrapper of [`InternalNode`].
     Internal(InternalNode),
     /// A wrapper of [`LeafNode`].
     Leaf(LeafNode),
+}
+
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+enum NodeTag {
+    Null = 0,
+    Internal = 1,
+    Leaf = 2,
 }
 
 impl From<InternalNode> for Node {
@@ -474,6 +463,11 @@ impl LeafNode {
 }
 
 impl Node {
+    /// Creates the [`Null`](Node::Null) variant.
+    pub fn new_null() -> Self {
+        Node::Null
+    }
+
     /// Creates the [`Internal`](Node::Internal) variant.
     pub fn new_internal(children: HashMap<u8, Child>) -> Self {
         Node::Internal(InternalNode::new(children))
@@ -496,12 +490,15 @@ impl Node {
     pub fn encode(&self) -> Result<Vec<u8>> {
         let mut out = vec![];
         match self {
+            Node::Null => {
+                out.push(NodeTag::Null as u8);
+            }
             Node::Internal(internal_node) => {
-                out.push(InternalNode::TAG as u8);
+                out.push(NodeTag::Internal as u8);
                 out.extend(serialize(&internal_node)?);
             }
             Node::Leaf(leaf_node) => {
-                out.push(LeafNode::TAG as u8);
+                out.push(NodeTag::Leaf as u8);
                 out.extend(serialize(&leaf_node)?);
             }
         }
@@ -511,6 +508,7 @@ impl Node {
     /// Computes the hash of nodes.
     pub fn hash(&self) -> HashValue {
         match self {
+            Node::Null => *SPARSE_MERKLE_PLACEHOLDER_HASH,
             Node::Internal(internal_node) => internal_node.hash(),
             Node::Leaf(leaf_node) => leaf_node.hash(),
         }
@@ -524,6 +522,7 @@ impl Node {
         let tag = val[0];
         let node_tag = NodeTag::from_u8(tag);
         match node_tag {
+            Some(NodeTag::Null) => Ok(Node::Null),
             Some(NodeTag::Internal) => Ok(Node::Internal(deserialize(&val[1..])?)),
             Some(NodeTag::Leaf) => Ok(Node::Leaf(deserialize(&val[1..])?)),
             None => Err(NodeDecodeError::UnknownTag { unknown_tag: tag }.into()),

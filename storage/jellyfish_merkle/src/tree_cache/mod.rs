@@ -73,7 +73,7 @@ use crate::{
     node_type::{Node, NodeKey},
     StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
-use crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
+use crypto::HashValue;
 use failure::prelude::*;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
@@ -101,7 +101,7 @@ struct FrozenTreeCache {
 /// blobs.
 pub struct TreeCache<'a, R: 'a + TreeReader> {
     /// `NodeKey` of the current root node in cache.
-    root_node_key: Option<NodeKey>,
+    root_node_key: NodeKey,
 
     /// The version of the transaction to which the upcoming `put`s will be related.
     next_version: Version,
@@ -141,27 +141,32 @@ where
 {
     /// Constructs a new `TreeCache` instance.
     pub fn new(reader: &'a R, next_version: Version) -> Self {
+        let mut node_cache = HashMap::new();
+        let root_node_key = if next_version == 0 {
+            // If the first version is 0, it means we need to start from an empty tree so we insert
+            // a null node beforehand deliberately to deal with this corner case.
+            node_cache.insert(NodeKey::new_empty_path(0), Node::new_null());
+            NodeKey::new_empty_path(0)
+        } else {
+            NodeKey::new_empty_path(next_version - 1)
+        };
         Self {
-            node_cache: HashMap::default(),
+            node_cache,
             stale_node_index_cache: HashSet::default(),
             frozen_cache: FrozenTreeCache::default(),
-            root_node_key: if next_version == 0 {
-                None
-            } else {
-                Some(NodeKey::new_empty_path(next_version - 1))
-            },
+            root_node_key,
             next_version,
             reader,
         }
     }
 
     /// Gets the current root node key.
-    pub fn get_root_node_key(&self) -> &Option<NodeKey> {
+    pub fn get_root_node_key(&self) -> &NodeKey {
         &self.root_node_key
     }
 
     /// Set roots `node_key`.
-    pub fn set_root_node_key(&mut self, root_node_key: Option<NodeKey>) {
+    pub fn set_root_node_key(&mut self, root_node_key: NodeKey) {
         self.root_node_key = root_node_key;
     }
 
@@ -186,13 +191,11 @@ where
 
     /// Freezes all the contents in cache to be immutable and clear `node_cache`.
     pub fn freeze(&mut self) {
-        let root_hash = match self.get_root_node_key() {
-            Some(node_key) => self
-                .get_node(node_key)
-                .unwrap_or_else(|_| panic!("Root node with key {:?} must exist", node_key))
-                .hash(),
-            None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
-        };
+        let root_node_key = self.get_root_node_key();
+        let root_hash = self
+            .get_node(root_node_key)
+            .unwrap_or_else(|_| panic!("Root node with key {:?} must exist", root_node_key))
+            .hash();
         self.frozen_cache.root_hashes.push(root_hash);
         self.frozen_cache.node_cache.extend(self.node_cache.drain());
 

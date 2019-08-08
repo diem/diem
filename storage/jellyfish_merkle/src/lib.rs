@@ -169,23 +169,15 @@ where
         let mut nibble_iter = nibble_path.nibbles();
 
         // Start insertion from the root node.
-        let (new_root_node_key, _) = match root_node_key {
-            Some(root_node_key) => Self::insert_at(
-                root_node_key.clone(),
-                version,
-                &mut nibble_iter,
-                blob,
-                tree_cache,
-            )?,
-            None => Self::create_leaf_node(
-                NodeKey::new_empty_path(version),
-                &nibble_iter,
-                blob,
-                tree_cache,
-            )?,
-        };
+        let (new_root_node_key, _) = Self::insert_at(
+            root_node_key.clone(),
+            version,
+            &mut nibble_iter,
+            blob,
+            tree_cache,
+        )?;
 
-        tree_cache.set_root_node_key(Some(new_root_node_key));
+        tree_cache.set_root_node_key(new_root_node_key);
         Ok(())
     }
 
@@ -218,6 +210,24 @@ where
                 blob,
                 tree_cache,
             ),
+            Node::Null => {
+                if node_key.nibble_path().num_nibbles() != 0 {
+                    bail!(
+                        "Null node exists for non-root node with node_key {:?}",
+                        node_key
+                    );
+                }
+                // delete the old null node if the at the same version.
+                if node_key.version() == version {
+                    tree_cache.delete_node(&node_key);
+                }
+                Self::create_leaf_node(
+                    NodeKey::new_empty_path(version),
+                    &nibble_iter,
+                    blob,
+                    tree_cache,
+                )
+            }
         }
     }
 
@@ -397,20 +407,17 @@ where
     pub fn get_with_proof(
         &self,
         key: HashValue,
-        version: Option<Version>,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         // Empty tree just returns proof with no sibling hash.
-        let mut next_node_key = match version {
-            None => return Ok((None, SparseMerkleProof::new(None, vec![]))),
-            Some(version) => NodeKey::new_empty_path(version),
-        };
+        let mut next_node_key = NodeKey::new_empty_path(version);
         let mut siblings = vec![];
         let nibble_path = NibblePath::new(key.to_vec());
         let mut nibble_iter = nibble_path.nibbles();
 
         // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
         // in the tree structure.
-        for _i in 0..ROOT_NIBBLE_HEIGHT {
+        for nibble_depth in 0..ROOT_NIBBLE_HEIGHT {
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
                 Node::Internal(internal_node) => {
@@ -440,17 +447,23 @@ where
                         ),
                     ));
                 }
+                Node::Null => {
+                    if nibble_depth == 0 {
+                        return Ok((None, SparseMerkleProof::new(None, vec![])));
+                    } else {
+                        bail!(
+                            "Non-root null node exists with node key {:?}",
+                            next_node_key
+                        );
+                    }
+                }
             }
         }
         bail!("Jellyfish Merkle tree has cyclic graph inside.");
     }
 
     #[cfg(test)]
-    pub fn get(
-        &self,
-        key: HashValue,
-        version: Option<Version>,
-    ) -> Result<Option<AccountStateBlob>> {
+    pub fn get(&self, key: HashValue, version: Version) -> Result<Option<AccountStateBlob>> {
         Ok(self.get_with_proof(key, version)?.0)
     }
 }
