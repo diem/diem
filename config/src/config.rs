@@ -631,7 +631,7 @@ impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
             address: "localhost".to_string(),
-            service_port: 55557,
+            service_port: 6186,
         }
     }
 }
