@@ -82,14 +82,14 @@ fn test_pruner() {
         root1,
     );
 
-    // Purge till version=0.
+    // Prune till version=0.
     {
         pruner.wake_and_wait(0 /* latest_version */).unwrap();
         verify_state_in_store(state_store, address, Some(&value0), root0);
         verify_state_in_store(state_store, address, Some(&value1), root1);
         verify_state_in_store(state_store, address, Some(&value2), root2);
     }
-    // Purge till version=1.
+    // Prune till version=1.
     {
         pruner.wake_and_wait(1 /* latest_version */).unwrap();
         // root0 is gone.
@@ -100,7 +100,7 @@ fn test_pruner() {
         verify_state_in_store(state_store, address, Some(&value1), root1);
         verify_state_in_store(state_store, address, Some(&value2), root2);
     }
-    // Purge till version=2.
+    // Prune till version=2.
     {
         pruner.wake_and_wait(2 /* latest_version */).unwrap();
         // root1 is gone.

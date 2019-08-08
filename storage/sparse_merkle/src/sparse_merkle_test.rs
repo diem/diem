@@ -162,10 +162,10 @@ fn test_insert_at_leaf_with_extension_and_branch_created() {
     assert_eq!(db.num_blobs(), 3);
 
     // Purge retired nodes.
-    db.purge_retired_records(1).unwrap();
+    db.prune_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 7);
     assert_eq!(db.num_blobs(), 3);
-    db.purge_retired_records(2).unwrap();
+    db.prune_retired_records(2).unwrap();
     assert_eq!(db.num_nodes(), 4);
     assert_eq!(db.num_blobs(), 2);
     assert_eq!(tree.get(key1, root3).unwrap().unwrap(), value1);
@@ -249,7 +249,7 @@ fn test_insert_at_extension_fork_at_begining() {
     assert_eq!(db.num_blobs(), 3);
 
     // Purge retired nodes. (The old extension should be gone.)
-    db.purge_retired_records(1).unwrap();
+    db.prune_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 6);
     assert_eq!(db.num_blobs(), 3);
 }
@@ -295,7 +295,7 @@ fn test_insert_at_extension_fork_in_the_middle() {
     assert_eq!(db.num_blobs(), 3);
 
     // Purge retired nodes. (The old extension should be gone.)
-    db.purge_retired_records(1).unwrap();
+    db.prune_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 7);
     assert_eq!(db.num_blobs(), 3);
 }
@@ -337,7 +337,7 @@ fn test_insert_at_extension_fork_at_end() {
     assert_eq!(db.num_blobs(), 3);
 
     // Purge retired nodes. (The old extension should be gone.)
-    db.purge_retired_records(1).unwrap();
+    db.prune_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 6);
     assert_eq!(db.num_blobs(), 3);
 }
@@ -372,7 +372,7 @@ fn test_insert_at_extension_fork_at_only_nibble() {
     assert_eq!(db.num_blobs(), 3);
 
     // Purge retired nodes. (The old extension should be gone.)
-    db.purge_retired_records(1).unwrap();
+    db.prune_retired_records(1).unwrap();
     assert_eq!(db.num_nodes(), 5);
     assert_eq!(db.num_blobs(), 3);
 }
@@ -476,18 +476,18 @@ fn test_batch_insertion() {
         assert_eq!(db.num_blobs(), 7);
 
         // Purge retired nodes.
-        db.purge_retired_records(1).unwrap();
+        db.prune_retired_records(1).unwrap();
         assert_eq!(db.num_nodes(), 22);
-        db.purge_retired_records(2).unwrap();
+        db.prune_retired_records(2).unwrap();
         assert_eq!(db.num_nodes(), 21);
-        db.purge_retired_records(3).unwrap();
+        db.prune_retired_records(3).unwrap();
         assert_eq!(db.num_nodes(), 19);
-        db.purge_retired_records(4).unwrap();
+        db.prune_retired_records(4).unwrap();
         assert_eq!(db.num_nodes(), 17);
-        db.purge_retired_records(5).unwrap();
+        db.prune_retired_records(5).unwrap();
         assert_eq!(db.num_nodes(), 14);
         assert_eq!(db.num_blobs(), 7); // no blobs purged till this point
-        db.purge_retired_records(6).unwrap();
+        db.prune_retired_records(6).unwrap();
         assert_eq!(db.num_nodes(), 12);
         assert_eq!(db.num_blobs(), 6); // and the old value2 is gone here
         verify_fn(&tree, root);
