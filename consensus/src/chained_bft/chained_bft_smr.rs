@@ -42,6 +42,7 @@ use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};
 use config::config::ConsensusConfig;
+use futures::sink::SinkExt;
 use logger::prelude::*;
 use std::{
     sync::{Arc, RwLock},
@@ -157,15 +158,11 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     }
 
     /// Create a proposer election handler based on proposers
-    fn create_proposer_election(
-        &self,
-        winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
-    ) -> Arc<dyn ProposerElection<T, P> + Send + Sync> {
+    fn create_proposer_election(&self) -> Arc<dyn ProposerElection<T, P> + Send + Sync> {
         assert!(!self.proposers.is_empty());
         Arc::new(RotatingProposer::new(
             self.proposers.clone(),
             self.config.contiguous_rounds,
-            winning_proposals_sender,
         ))
     }
 
@@ -183,19 +180,35 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         executor: TaskExecutor,
         mut receiver: channel::Receiver<ProposalInfo<T, P>>,
         event_processor: ConcurrentEventProcessor<T, P>,
+        mut winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
-            let guard = event_processor.read().compat().await.unwrap();
-            match guard.process_proposal(proposal_info).await {
-                ProcessProposalResult::Done(_) => (),
-                // Spawn a new task that would start state synchronization
-                // in the background.
-                ProcessProposalResult::NeedSync(proposal) => executor.spawn(
-                    Self::sync_and_process_proposal(Arc::clone(&event_processor), proposal)
-                        .boxed()
-                        .unit_error()
-                        .compat(),
-                ),
+            let winning_proposal = {
+                let guard = event_processor.read().compat().await.unwrap();
+                match guard.process_proposal(proposal_info).await {
+                    ProcessProposalResult::Done(winning_proposal) => winning_proposal,
+                    // Spawn a new task that would start state synchronization
+                    // in the background.
+                    ProcessProposalResult::NeedSync(proposal) => {
+                        let winning_proposals_sender = winning_proposals_sender.clone();
+                        executor.spawn(
+                            Self::sync_and_process_proposal(
+                                Arc::clone(&event_processor),
+                                proposal,
+                                winning_proposals_sender,
+                            )
+                            .boxed()
+                            .unit_error()
+                            .compat(),
+                        );
+                        None
+                    }
+                }
+            };
+            if let Some(winning_proposal) = winning_proposal {
+                if let Err(e) = winning_proposals_sender.send(winning_proposal).await {
+                    warn!("Failed to send winning proposal: {:?}", e);
+                }
             }
         }
     }
@@ -203,9 +216,17 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
     async fn sync_and_process_proposal(
         event_processor: ConcurrentEventProcessor<T, P>,
         proposal: ProposalInfo<T, P>,
+        mut winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
     ) {
-        let mut guard = event_processor.write().compat().await.unwrap();
-        guard.sync_and_process_proposal(proposal).await
+        let winning_proposal = {
+            let mut guard = event_processor.write().compat().await.unwrap();
+            guard.sync_and_process_proposal(proposal).await
+        };
+        if let Some(winning_proposal) = winning_proposal {
+            if let Err(e) = winning_proposals_sender.send(winning_proposal).await {
+                warn!("Failed to send winning proposal: {:?}", e);
+            }
+        }
     }
 
     async fn process_winning_proposals(
@@ -298,6 +319,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
         winning_proposals_receiver: channel::Receiver<ProposalInfo<T, P>>,
         network_receivers: NetworkReceivers<T, P>,
         pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        winning_proposals_sender: channel::Sender<ProposalInfo<T, P>>,
     ) {
         executor.spawn(
             Self::process_new_round_events(new_round_events_receiver, event_processor.clone())
@@ -311,6 +333,7 @@ impl<T: Payload, P: ProposerInfo> ChainedBftSMR<T, P> {
                 executor.clone(),
                 network_receivers.proposals,
                 event_processor.clone(),
+                winning_proposals_sender,
             )
             .boxed()
             .unit_error()
@@ -484,7 +507,7 @@ impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P
 
             let (winning_proposals_sender, winning_proposals_receiver) =
                 channel::new(1_024, &counters::PENDING_WINNING_PROPOSALS);
-            let proposer_election = self.create_proposer_election(winning_proposals_sender);
+            let proposer_election = self.create_proposer_election();
             let event_processor = Arc::new(futures_locks::RwLock::new(EventProcessor::new(
                 self.author,
                 Arc::clone(&block_store),
@@ -507,6 +530,7 @@ impl<T: Payload, P: ProposerInfo> StateMachineReplication for ChainedBftSMR<T, P
                 winning_proposals_receiver,
                 network_receivers,
                 external_timeout_receiver,
+                winning_proposals_sender,
             );
         } else {
             panic!("start called twice on the same Chained BFT SMR!");
