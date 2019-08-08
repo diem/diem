@@ -29,6 +29,7 @@ pub mod proto;
 
 use crypto::HashValue;
 use failure::prelude::*;
+use nextgen_crypto::ed25519::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
@@ -139,7 +140,7 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 pub struct SaveTransactionsRequest {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
-    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl SaveTransactionsRequest {
@@ -147,7 +148,7 @@ impl SaveTransactionsRequest {
     pub fn new(
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Self {
         SaveTransactionsRequest {
             txns_to_commit,

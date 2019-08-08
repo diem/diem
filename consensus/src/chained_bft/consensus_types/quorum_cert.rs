@@ -36,7 +36,7 @@ pub struct QuorumCert {
     /// The round of a certified block.
     certified_block_round: Round,
     /// The signed LedgerInfo of a committed block that carries the data about the certified block.
-    signed_ledger_info: LedgerInfoWithSignatures,
+    signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
     /// The id of the parent block of the certified block
     certified_parent_block_id: HashValue,
     /// The round of the parent block of the certified block
@@ -63,7 +63,7 @@ impl QuorumCert {
         block_id: HashValue,
         state: ExecutedState,
         round: Round,
-        signed_ledger_info: LedgerInfoWithSignatures,
+        signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
         certified_parent_block_id: HashValue,
         certified_parent_block_round: Round,
         certified_grandparent_block_id: HashValue,
@@ -93,7 +93,7 @@ impl QuorumCert {
         self.certified_block_round
     }
 
-    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures {
+    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures<Ed25519Signature> {
         &self.signed_ledger_info
     }
 

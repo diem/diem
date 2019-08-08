@@ -301,7 +301,7 @@ prop_compose! {
     }
 }
 
-impl Arbitrary for LedgerInfoWithSignatures {
+impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
     type Parameters = SizeRange;
     type Strategy = BoxedStrategy<Self>;
 
@@ -327,15 +327,15 @@ impl Arbitrary for LedgerInfoWithSignatures {
 prop_compose! {
     fn arb_update_to_latest_ledger_response()(
         response_items in vec(any::<ResponseItem>(), 0..10),
-        ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
-        validator_change_events in vec(any::<ValidatorChangeEventWithProof>(), 0..10),
-    ) -> UpdateToLatestLedgerResponse {
+        ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
+        validator_change_events in vec(any::<ValidatorChangeEventWithProof<Ed25519Signature>>(), 0..10),
+    ) -> UpdateToLatestLedgerResponse<Ed25519Signature> {
         UpdateToLatestLedgerResponse::new(
             response_items, ledger_info_with_sigs, validator_change_events)
     }
 }
 
-impl Arbitrary for UpdateToLatestLedgerResponse {
+impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 

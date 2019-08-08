@@ -41,7 +41,8 @@ pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
 pub fn build_empty_tree_with_custom_signing(
     my_signer: ValidatorSigner<Ed25519PrivateKey>,
 ) -> Arc<BlockStore<Vec<usize>>> {
-    let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+    let (commit_cb_sender, _commit_cb_receiver) =
+        mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,

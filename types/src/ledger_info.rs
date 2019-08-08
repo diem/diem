@@ -14,14 +14,13 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    convert::TryFrom,
     fmt::{Display, Formatter},
 };
 
@@ -188,24 +187,21 @@ impl CryptoHash for LedgerInfo {
 // again when the client performs a query, those are only there for the client
 // to be able to verify the state
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LedgerInfoWithSignatures {
+pub struct LedgerInfoWithSignatures<Sig> {
     ledger_info: LedgerInfo,
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
-    signatures: HashMap<AccountAddress, Ed25519Signature>,
+    signatures: HashMap<AccountAddress, Sig>,
 }
 
-impl Display for LedgerInfoWithSignatures {
+impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.ledger_info)
     }
 }
 
-impl LedgerInfoWithSignatures {
-    pub fn new(
-        ledger_info: LedgerInfo,
-        signatures: HashMap<AccountAddress, Ed25519Signature>,
-    ) -> Self {
+impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
+    pub fn new(ledger_info: LedgerInfo, signatures: HashMap<AccountAddress, Sig>) -> Self {
         LedgerInfoWithSignatures {
             ledger_info,
             signatures,
@@ -216,17 +212,17 @@ impl LedgerInfoWithSignatures {
         &self.ledger_info
     }
 
-    pub fn add_signature(&mut self, validator: AccountAddress, signature: Ed25519Signature) {
+    pub fn add_signature(&mut self, validator: AccountAddress, signature: Sig) {
         self.signatures.entry(validator).or_insert(signature);
     }
 
-    pub fn signatures(&self) -> &HashMap<AccountAddress, Ed25519Signature> {
+    pub fn signatures(&self) -> &HashMap<AccountAddress, Sig> {
         &self.signatures
     }
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
     ) -> ::std::result::Result<(), VerifyError> {
         if self.ledger_info.is_zero() {
             // We're not trying to verify nominal ledger info that does not carry any information.
@@ -237,7 +233,7 @@ impl LedgerInfoWithSignatures {
     }
 }
 
-impl FromProto for LedgerInfoWithSignatures {
+impl<Sig: Signature> FromProto for LedgerInfoWithSignatures<Sig> {
     type ProtoType = crate::proto::ledger_info::LedgerInfoWithSignatures;
 
     fn from_proto(mut proto: Self::ProtoType) -> Result<Self> {
@@ -250,7 +246,7 @@ impl FromProto for LedgerInfoWithSignatures {
             .map(|proto| {
                 let validator_id = AccountAddress::from_proto(proto.get_validator_id().to_vec())?;
                 let signature_bytes: &[u8] = proto.get_signature();
-                let signature = Ed25519Signature::try_from(signature_bytes)?;
+                let signature = Sig::try_from(signature_bytes)?;
                 Ok((validator_id, signature))
             })
             .collect::<Result<HashMap<_, _>>>()?;
@@ -266,7 +262,7 @@ impl FromProto for LedgerInfoWithSignatures {
     }
 }
 
-impl IntoProto for LedgerInfoWithSignatures {
+impl<Sig: Signature> IntoProto for LedgerInfoWithSignatures<Sig> {
     type ProtoType = crate::proto::ledger_info::LedgerInfoWithSignatures;
 
     fn into_proto(self) -> Self::ProtoType {

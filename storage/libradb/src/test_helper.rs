@@ -7,13 +7,19 @@ use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 use crypto::hash::CryptoHash;
 use itertools::zip_eq;
+use nextgen_crypto::ed25519::*;
 use proptest::{collection::vec, prelude::*};
 use types::{ledger_info::LedgerInfo, proptest_types::arb_txn_to_commit_batch};
 
 fn to_blocks_to_commit(
     txns_to_commit_vec: Vec<Vec<TransactionToCommit>>,
-    partial_ledger_info_with_sigs_vec: Vec<LedgerInfoWithSignatures>,
-) -> Result<Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>> {
+    partial_ledger_info_with_sigs_vec: Vec<LedgerInfoWithSignatures<Ed25519Signature>>,
+) -> Result<
+    Vec<(
+        Vec<TransactionToCommit>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+    )>,
+> {
     // Use temporary LibraDB and STORE LEVEL APIs to calculate hashes on a per transaction basis.
     // Result is used to test the batch PUBLIC API for saving everything, i.e. `save_transactions()`
     let tmp_dir = tempfile::tempdir()?;
@@ -88,8 +94,12 @@ fn to_blocks_to_commit(
 ///
 /// It is used in tests for both transaction block committing during normal running and
 /// transaction syncing during start up.
-pub fn arb_blocks_to_commit(
-) -> impl Strategy<Value = Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>> {
+pub fn arb_blocks_to_commit() -> impl Strategy<
+    Value = Vec<(
+        Vec<TransactionToCommit>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+    )>,
+> {
     vec(0..3usize, 1..10usize)
         .prop_flat_map(|batch_sizes| {
             let total_txns = batch_sizes.iter().sum();
@@ -98,7 +108,7 @@ pub fn arb_blocks_to_commit(
                 Just(batch_sizes),
                 arb_txn_to_commit_batch(3, total_txns),
                 vec(
-                    any_with::<LedgerInfoWithSignatures>((1..3).into()),
+                    any_with::<LedgerInfoWithSignatures<Ed25519Signature>>((1..3).into()),
                     total_batches,
                 ),
             )

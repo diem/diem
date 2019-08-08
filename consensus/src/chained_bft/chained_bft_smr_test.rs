@@ -42,7 +42,7 @@ struct SMRNode {
     proposer: Vec<Author>,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
+    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
@@ -97,7 +97,8 @@ impl SMRNode {
             storage.clone(),
             initial_data,
         );
-        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (commit_cb_sender, commit_cb_receiver) =
+            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
         let mut mp = MockTransactionManager::new();
         let commit_receiver = mp.take_commit_receiver();
         let mempool = Arc::new(mp);
@@ -188,7 +189,10 @@ impl SMRNode {
     }
 }
 
-fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSignatures) {
+fn verify_finality_proof(
+    node: &SMRNode,
+    ledger_info_with_sig: &LedgerInfoWithSignatures<Ed25519Signature>,
+) {
     let ledger_info_hash = ledger_info_with_sig.ledger_info().hash();
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(

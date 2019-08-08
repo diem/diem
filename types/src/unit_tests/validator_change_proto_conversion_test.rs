@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::validator_change::ValidatorChangeEventWithProof;
+use nextgen_crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 
@@ -10,7 +11,7 @@ proptest! {
 
     #[test]
     fn test_validator_change_event_with_proof_conversion(
-        change in any::<ValidatorChangeEventWithProof>()
+        change in any::<ValidatorChangeEventWithProof<Ed25519Signature>>()
     ) {
         assert_protobuf_encode_decode(&change);
     }

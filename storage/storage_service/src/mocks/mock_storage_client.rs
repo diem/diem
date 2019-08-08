@@ -7,6 +7,7 @@ use canonical_serialization::SimpleSerializer;
 use crypto::{signing::generate_keypair, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::{collections::BTreeMap, pin::Pin};
 use storage_client::StorageRead;
@@ -48,8 +49,8 @@ impl StorageRead for MockStorageReadClient {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )> {
         let request = types::get_with_proof::UpdateToLatestLedgerRequest::new(
             client_known_version,
@@ -75,8 +76,8 @@ impl StorageRead for MockStorageReadClient {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,

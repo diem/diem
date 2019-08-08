@@ -6,6 +6,7 @@ use failure::prelude::*;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use logger::prelude::*;
 use network::{proto::RequestChunk, validator_network::ConsensusNetworkSender};
+use nextgen_crypto::ed25519::*;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
@@ -15,7 +16,7 @@ use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::Transacti
 #[derive(Clone)]
 pub struct FetchChunkMsg {
     // target version that we want to fetch
-    pub target: LedgerInfoWithSignatures,
+    pub target: LedgerInfoWithSignatures<Ed25519Signature>,
     // version from which to start fetching (the offset version)
     pub start_version: u64,
 }

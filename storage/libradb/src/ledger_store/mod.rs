@@ -19,6 +19,7 @@ use crypto::{
 };
 use failure::prelude::*;
 use itertools::Itertools;
+use nextgen_crypto::ed25519::*;
 use schemadb::{ReadOptions, DB};
 use std::sync::Arc;
 use types::{
@@ -44,19 +45,24 @@ impl LedgerStore {
     /// Note: ledger infos and signatures are only available at the last version of each earlier
     /// epoch and at the latest version of current epoch.
     #[cfg(test)]
-    fn get_ledger_infos(&self, start_version: Version) -> Result<Vec<LedgerInfoWithSignatures>> {
+    fn get_ledger_infos(
+        &self,
+        start_version: Version,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_version)?;
         Ok(iter.map(|kv| Ok(kv?.1)).collect::<Result<Vec<_>>>()?)
     }
 
-    pub fn get_latest_ledger_info_option(&self) -> Result<Option<LedgerInfoWithSignatures>> {
+    pub fn get_latest_ledger_info_option(
+        &self,
+    ) -> Result<Option<LedgerInfoWithSignatures<Ed25519Signature>>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek_to_last();
         Ok(iter.next().transpose()?.map(|kv| kv.1))
     }
 
-    pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+    pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures<Ed25519Signature>> {
         self.get_latest_ledger_info_option()?
             .ok_or_else(|| LibraDbError::NotFound(String::from("Genesis LedgerInfo")).into())
     }
@@ -135,7 +141,7 @@ impl LedgerStore {
     /// Write `ledger_info` to `cs`.
     pub fn put_ledger_info(
         &self,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
         cs: &mut ChangeSet,
     ) -> Result<()> {
         cs.batch.put::<LedgerInfoSchema>(

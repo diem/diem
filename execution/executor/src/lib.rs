@@ -21,6 +21,7 @@ use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -199,7 +200,7 @@ where
     /// Commits a block and all its ancestors.
     pub fn commit_block(
         &self,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> oneshot::Receiver<Result<CommitBlockResponse>> {
         debug!(
             "Received request to commit block {:x}.",
@@ -231,7 +232,7 @@ where
     pub fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> oneshot::Receiver<Result<ExecuteChunkResponse>> {
         debug!(
             "Received request to execute chunk. Chunk size: {}. Target version: {}.",
@@ -287,12 +288,12 @@ enum Command {
         resp_sender: oneshot::Sender<Result<ExecuteBlockResponse>>,
     },
     CommitBlock {
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
         resp_sender: oneshot::Sender<Result<CommitBlockResponse>>,
     },
     ExecuteChunk {
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
         resp_sender: oneshot::Sender<Result<ExecuteChunkResponse>>,
     },
 }

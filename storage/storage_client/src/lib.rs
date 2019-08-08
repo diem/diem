@@ -15,6 +15,7 @@ use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
 use metrics::counters::SVC_COUNTERS;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use rand::Rng;
@@ -105,8 +106,8 @@ impl StorageRead for StorageReadServiceClient {
         requested_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
     }
@@ -120,8 +121,8 @@ impl StorageRead for StorageReadServiceClient {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,
@@ -248,7 +249,7 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Result<()> {
         block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
     }
@@ -257,7 +258,7 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
@@ -283,8 +284,8 @@ pub trait StorageRead: Send + Sync {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )>;
 
     /// See [`LibraDB::update_to_latest_ledger`].
@@ -300,8 +301,8 @@ pub trait StorageRead: Send + Sync {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,
@@ -377,7 +378,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Result<()>;
 
     /// See [`LibraDB::save_transactions`].
@@ -387,7 +388,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 }
 

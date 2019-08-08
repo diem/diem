@@ -37,6 +37,7 @@ use crate::{
 };
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
+use nextgen_crypto::ed25519::*;
 use std::{
     sync::{Arc, RwLock},
     time::Duration,
@@ -753,7 +754,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn process_commit(
         &self,
         committed_block: Arc<Block<T>>,
-        finality_proof: LedgerInfoWithSignatures,
+        finality_proof: LedgerInfoWithSignatures<Ed25519Signature>,
     ) {
         // Verify that the ledger info is indeed for the block we're planning to
         // commit.

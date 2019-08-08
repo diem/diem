@@ -15,6 +15,7 @@ use execution_proto::proto::execution_grpc::create_execution;
 use execution_service::ExecutionService;
 use grpc_helpers::ServerHandle;
 use grpcio::{EnvBuilder, ServerBuilder};
+use nextgen_crypto::ed25519::*;
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
@@ -28,7 +29,7 @@ pub fn gen_ledger_info_with_sigs(
     version: u64,
     root_hash: HashValue,
     commit_block_id: HashValue,
-) -> LedgerInfoWithSignatures {
+) -> LedgerInfoWithSignatures<Ed25519Signature> {
     let ledger_info = LedgerInfo::new(
         version,
         root_hash,
