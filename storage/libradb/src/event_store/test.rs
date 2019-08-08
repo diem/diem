@@ -10,7 +10,7 @@ use proptest::{
     prelude::*,
     strategy::Union,
 };
-use rand::{Rng, StdRng};
+use rand::Rng;
 use std::collections::HashMap;
 use tempfile::tempdir;
 use types::{

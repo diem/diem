@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
-use crypto::{signing::generate_genesis_keypair, PublicKey};
+use nextgen_crypto::ed25519::{compat, Ed25519PublicKey};
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 pub struct TransactionMetadata {
     pub sender: AccountAddress,
-    pub public_key: PublicKey,
+    pub public_key: Ed25519PublicKey,
     pub sequence_number: u64,
     pub max_gas_amount: GasUnits<GasCarrier>,
     pub gas_unit_price: GasPrice<GasCarrier>,
@@ -38,7 +38,7 @@ impl TransactionMetadata {
         self.sender.to_owned()
     }
 
-    pub fn public_key(&self) -> &PublicKey {
+    pub fn public_key(&self) -> &Ed25519PublicKey {
         &self.public_key
     }
 
@@ -53,7 +53,7 @@ impl TransactionMetadata {
 
 impl Default for TransactionMetadata {
     fn default() -> Self {
-        let (_, public_key) = generate_genesis_keypair();
+        let (_, public_key) = compat::generate_genesis_keypair();
         TransactionMetadata {
             sender: AccountAddress::default(),
             public_key,

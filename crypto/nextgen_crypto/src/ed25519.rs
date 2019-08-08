@@ -39,6 +39,13 @@ use failure::prelude::*;
 use serde::{de, export, ser};
 use std::fmt;
 
+/// The length of the Ed25519PrivateKey
+const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+/// The length of the Ed25519PublicKey
+const ED25519_PUBLIC_KEY_LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
+/// The length of the Ed25519Signature
+const ED25519_SIGNATURE_LENGTH: usize = ed25519_dalek::SIGNATURE_LENGTH;
+
 /// An Ed25519 private key
 #[derive(SilentDisplay, SilentDebug)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
@@ -53,7 +60,7 @@ pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
     /// Serialize an Ed25519PrivateKey.
-    pub fn to_bytes(&self) -> [u8; ed25519_dalek::SECRET_KEY_LENGTH] {
+    pub fn to_bytes(&self) -> [u8; ED25519_PRIVATE_KEY_LENGTH] {
         self.0.to_bytes()
     }
 
@@ -70,7 +77,7 @@ impl Ed25519PrivateKey {
 
 impl Ed25519PublicKey {
     /// Serialize an Ed25519PublicKey.
-    pub fn to_bytes(&self) -> [u8; ed25519_dalek::PUBLIC_KEY_LENGTH] {
+    pub fn to_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_LENGTH] {
         self.0.to_bytes()
     }
 
@@ -87,7 +94,7 @@ impl Ed25519PublicKey {
 
 impl Ed25519Signature {
     /// Serialize an Ed25519Signature.
-    pub fn to_bytes(&self) -> [u8; ed25519_dalek::SIGNATURE_LENGTH] {
+    pub fn to_bytes(&self) -> [u8; ED25519_SIGNATURE_LENGTH] {
         self.0.to_bytes()
     }
 
@@ -105,7 +112,7 @@ impl Ed25519Signature {
     /// Check for correct size and malleability issues.
     /// This method ensures s is of canonical form and R does not lie on a small group.
     pub fn check_malleability(bytes: &[u8]) -> std::result::Result<(), CryptoMaterialError> {
-        if bytes.len() != ed25519_dalek::SIGNATURE_LENGTH {
+        if bytes.len() != ED25519_SIGNATURE_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
         }
 
@@ -203,8 +210,8 @@ impl ValidKey for Ed25519PrivateKey {
 
 impl Genesis for Ed25519PrivateKey {
     fn genesis() -> Self {
-        let mut buf = [0u8; ed25519_dalek::SECRET_KEY_LENGTH];
-        buf[ed25519_dalek::SECRET_KEY_LENGTH - 1] = 1;
+        let mut buf = [0u8; ED25519_PRIVATE_KEY_LENGTH];
+        buf[ED25519_PRIVATE_KEY_LENGTH - 1] = 1;
         Self::try_from(buf.as_ref()).unwrap()
     }
 }
@@ -226,7 +233,7 @@ impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
 impl PublicKey for Ed25519PublicKey {
     type PrivateKeyMaterial = Ed25519PrivateKey;
     fn length() -> usize {
-        ed25519_dalek::PUBLIC_KEY_LENGTH
+        ED25519_PUBLIC_KEY_LENGTH
     }
 }
 
@@ -267,12 +274,12 @@ impl TryFrom<&[u8]> for Ed25519PublicKey {
     fn try_from(bytes: &[u8]) -> std::result::Result<Ed25519PublicKey, CryptoMaterialError> {
         // We need to access the Edwards point which is not directly accessible from
         // ed25519_dalek::PublicKey, so we need to do some custom deserialization.
-        if bytes.len() != ed25519_dalek::PUBLIC_KEY_LENGTH {
+        if bytes.len() != ED25519_PUBLIC_KEY_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
         }
 
-        let mut bits = [0u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
-        bits.copy_from_slice(&bytes[..ed25519_dalek::PUBLIC_KEY_LENGTH]);
+        let mut bits = [0u8; ED25519_PUBLIC_KEY_LENGTH];
+        bits.copy_from_slice(&bytes[..ED25519_PUBLIC_KEY_LENGTH]);
 
         let compressed = curve25519_dalek::edwards::CompressedEdwardsY(bits);
         let point = compressed
@@ -324,6 +331,10 @@ impl Signature for Ed25519Signature {
             .and(Ok(()))
     }
 
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes().to_vec()
+    }
+
     /// Batch signature verification as described in the original EdDSA article
     /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
     /// signatures on the same message and it checks for malleability.
@@ -345,10 +356,6 @@ impl Signature for Ed25519Signature {
         let messages = vec![message_ref; dalek_signatures.len()];
         ed25519_dalek::verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])?;
         Ok(())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
     }
 }
 
@@ -415,7 +422,7 @@ pub mod compat {
             // bincode requires size-padding on 8 bytes before the
             // serialized material — so we reproduce this technique
             let mut res = vec![
-                ed25519_dalek::SECRET_KEY_LENGTH as u8,
+                ED25519_PRIVATE_KEY_LENGTH as u8,
                 0u8,
                 0u8,
                 0u8,
@@ -433,7 +440,6 @@ pub mod compat {
     // This is impossible to activate due to reliance on private key
     // conversion from legacy in chained_bft_consensus_provider.
     // TODO: remove this when NodeConfig accepts nextgen_config keys
-    // #[cfg(any(test, feature = "testing"))]
     impl From<LegacyPrivateKey> for Ed25519PrivateKey {
         fn from(private_key: LegacyPrivateKey) -> Self {
             let serialized: Vec<u8> = serialize(&private_key).unwrap();
@@ -466,7 +472,9 @@ pub mod compat {
         }
     }
 
+    use crate::Uniform;
     use rand::{rngs::StdRng, SeedableRng};
+
     /// Generate an arbitrary key pair, with possible Rng input
     ///
     /// Warning: if you pass in None, this will not return distinct
@@ -496,6 +504,17 @@ pub mod compat {
                 (private_key, public_key)
             })
             .no_shrink()
+    }
+
+    /// Generates a well-known keypair `(Ed25519PrivateKey, Ed25519PublicKey)` for special use
+    /// in the genesis block. A genesis block is the first block of a blockchain and it is
+    /// hardcoded as it's a special case in that it does not reference a previous block.
+    pub fn generate_genesis_keypair() -> (Ed25519PrivateKey, Ed25519PublicKey) {
+        let mut buf = [0u8; ED25519_PRIVATE_KEY_LENGTH];
+        buf[ED25519_PRIVATE_KEY_LENGTH - 1] = 1;
+        let private_key = Ed25519PrivateKey::try_from(&buf[..]).unwrap();
+        let public_key = (&private_key).into();
+        (private_key, public_key)
     }
 
     #[cfg(any(test, feature = "testing"))]

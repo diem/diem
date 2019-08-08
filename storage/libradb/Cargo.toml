@@ -12,7 +12,7 @@ itertools = "0.7.3"
 lazy_static = "1.2.0"
 num-derive = "0.2"
 num-traits = "0.2"
-rand = "0.4.2"
+rand = "0.6.5"
 strum = "0.15.0"
 strum_macros = "0.15.0"
 tempfile = "3.0.6"
@@ -20,11 +20,11 @@ tempfile = "3.0.6"
 accumulator = { path = "../accumulator" }
 canonical_serialization = { path = "../../common/canonical_serialization" }
 crypto = { path = "../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 jellyfish_merkle = { path = "../jellyfish_merkle" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
 rusty-fork = "0.2.1"

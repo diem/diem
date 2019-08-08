@@ -1,6 +1,10 @@
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
-use crypto::{PrivateKey, PublicKey};
+use nextgen_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
 use std::iter::Iterator;
 use types::{
     access_path::AccessPath, account_address::AccountAddress, account_config, byte_array::ByteArray,
@@ -18,9 +22,9 @@ pub struct Account {
     /// The account address
     pub addr: AccountAddress,
     /// The account private key
-    pub privkey: PrivateKey,
+    pub privkey: Ed25519PrivateKey,
     /// The account public key
-    pub pubkey: PublicKey,
+    pub pubkey: Ed25519PublicKey,
     /// The set of modules that are published under that account.
     pub modules: Vec<VerifiedModule>,
 }
@@ -28,8 +32,11 @@ pub struct Account {
 impl Account {
     /// Create a new Account. The account is a logical entity at this point
     pub fn new() -> Self {
-        let (privkey, pubkey) = crypto::signing::generate_keypair();
-        let addr = pubkey.into();
+        let mut seed_rng = OsRng::new().expect("can't access OsRng");
+        let seed_buf: [u8; 32] = seed_rng.gen();
+        let mut rng = StdRng::from_seed(seed_buf);
+        let (privkey, pubkey) = compat::generate_keypair(&mut rng);
+        let addr = AccountAddress::from_public_key(&pubkey);
         Account {
             addr,
             privkey,
@@ -83,7 +90,7 @@ impl Account {
             let coin = Value::Struct(vec![MutVal::new(Value::U64(10_000_000))]);
             let account = Value::Struct(vec![
                 MutVal::new(Value::ByteArray(ByteArray::new(
-                    AccountAddress::from(self.pubkey).to_vec(),
+                    AccountAddress::from_public_key(&self.pubkey).to_vec(),
                 ))),
                 MutVal::new(coin),
                 MutVal::new(Value::U64(0)),

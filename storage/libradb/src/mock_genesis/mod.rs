@@ -6,12 +6,15 @@
 use crate::LibraDB;
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
-    signing::generate_keypair,
     HashValue,
 };
 use failure::Result;
 use lazy_static::lazy_static;
 use nextgen_crypto::ed25519::*;
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
 use std::collections::HashMap;
 use types::{
     account_address::AccountAddress,
@@ -26,8 +29,11 @@ fn gen_mock_genesis() -> (
     LedgerInfoWithSignatures<Ed25519Signature>,
     TransactionToCommit,
 ) {
-    let (privkey, pubkey) = generate_keypair();
-    let some_addr = AccountAddress::from(pubkey);
+    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let seed_buf: [u8; 32] = seed_rng.gen();
+    let mut rng = StdRng::from_seed(seed_buf);
+    let (privkey, pubkey) = compat::generate_keypair(&mut rng);
+    let some_addr = AccountAddress::from_public_key(&pubkey);
     let raw_txn = RawTransaction::new(
         some_addr,
         /* sequence_number = */ 0,

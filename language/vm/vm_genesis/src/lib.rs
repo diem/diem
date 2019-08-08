@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{VMConfig, VMPublishingOption};
-use crypto::{PrivateKey, PublicKey};
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
@@ -46,7 +45,7 @@ const GENESIS_SEED: [u8; 32] = [42; 32];
 
 lazy_static! {
     pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
-        let mut rng = ::rand::rngs::StdRng::from_seed(GENESIS_SEED);
+        let mut rng = StdRng::from_seed(GENESIS_SEED);
         compat::generate_keypair(&mut rng)
     };
 }
@@ -59,14 +58,14 @@ pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureChec
 #[derive(Debug, Clone)]
 pub struct Account {
     pub addr: AccountAddress,
-    pub privkey: PrivateKey,
-    pub pubkey: PublicKey,
+    pub privkey: Ed25519PrivateKey,
+    pub pubkey: Ed25519PublicKey,
 }
 
 impl Account {
     pub fn new(rng: &mut StdRng) -> Self {
-        let (privkey, pubkey) = crypto::signing::generate_keypair_for_testing(rng);
-        let addr = pubkey.into();
+        let (privkey, pubkey) = compat::generate_keypair(&mut *rng);
+        let addr = AccountAddress::from_public_key(&pubkey);
         Account {
             addr,
             privkey,
@@ -121,8 +120,8 @@ impl Accounts {
         self.accounts[account].clone()
     }
 
-    pub fn get_public_key(&self, account: usize) -> PublicKey {
-        self.accounts[account].pubkey
+    pub fn get_public_key(&self, account: usize) -> Ed25519PublicKey {
+        self.accounts[account].clone().pubkey
     }
 
     pub fn create_txn_with_args(

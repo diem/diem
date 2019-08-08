@@ -15,6 +15,7 @@ proptest = "0.9"
 proptest-derive = "0.1.1"
 
 crypto = { path = "../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../../common/proptest_helpers" }
 types = { path = "../../types" }

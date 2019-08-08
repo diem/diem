@@ -14,6 +14,7 @@ protobuf = "~2.7"
 canonical_serialization = { path = "../../common/canonical_serialization" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 debug_interface = { path = "../../common/debug_interface" }
 executable_helpers = { path = "../../common/executable_helpers" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
@@ -21,11 +22,11 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 storage_client = { path = "../storage_client" }
 storage_proto = { path = "../storage_proto" }
 types = { path = "../../types" }
+rand = "0.6.5"
 
 [dev-dependencies]
 itertools = "0.8.0"

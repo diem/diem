@@ -480,7 +480,7 @@ where
                 }
                 Bytecode::GetTxnPublicKey => {
                     self.execution_stack.push(Local::bytearray(ByteArray::new(
-                        self.txn_data.public_key().to_slice().to_vec(),
+                        self.txn_data.public_key().to_bytes().to_vec(),
                     )));
                 }
                 Bytecode::BorrowGlobal(idx, _) => {
