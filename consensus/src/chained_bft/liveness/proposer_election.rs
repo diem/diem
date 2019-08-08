@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{common::Round, consensus_types::proposal_info::ProposalInfo};
-use futures::Future;
-use std::pin::Pin;
 
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
 /// We are open to a possibility for having multiple proposers per round, the ultimate choice
@@ -21,8 +19,5 @@ pub trait ProposerElection<T, P> {
     /// Notify proposer election about a new proposal. The function doesn't return any information:
     /// proposer election is going to notify the client about the chosen proposal via a dedicated
     /// channel (to be passed in constructor).
-    fn process_proposal(
-        &self,
-        proposal: ProposalInfo<T, P>,
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+    fn process_proposal(&self, proposal: ProposalInfo<T, P>) -> Option<ProposalInfo<T, P>>;
 }

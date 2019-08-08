@@ -44,10 +44,12 @@ use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;
 
 /// Result of initial proposal processing
-/// - Done(true) indicates that the proposal was sent to the proposer election
+/// - Done(proposal_option) indicates that the proposal is processed, and `proposal_option` contains
+/// winning proposal if it was found
 /// - NeedSync means separate task mast be spawned for state synchronization in the background
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProcessProposalResult<T, P> {
-    Done(bool),
+    Done(Option<ProposalInfo<T, P>>),
     NeedSync(ProposalInfo<T, P>),
 }
 
@@ -217,7 +219,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.round(),
                 current_round
             );
-            return ProcessProposalResult::Done(false);
+            return ProcessProposalResult::Done(None);
         }
         if self
             .proposer_election
@@ -229,7 +231,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.author(),
                 proposal.proposal
             );
-            return ProcessProposalResult::Done(false);
+            return ProcessProposalResult::Done(None);
         }
 
         match self
@@ -241,7 +243,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
             }
             NeedFetchResult::QCRoundBeforeRoot => {
                 warn!("Proposal {} has a highest quorum certificate with round older than root round {}", proposal, self.block_store.root().round());
-                return ProcessProposalResult::Done(false);
+                return ProcessProposalResult::Done(None);
             }
             NeedFetchResult::QCBlockExist => {
                 if let Err(e) = self
@@ -253,13 +255,13 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                         "Quorum certificate for proposal {} could not be inserted to the block store: {:?}",
                         proposal, e
                     );
-                    return ProcessProposalResult::Done(false);
+                    return ProcessProposalResult::Done(None);
                 }
             }
             NeedFetchResult::QCAlreadyExist => (),
         }
 
-        self.finish_proposal_processing(proposal).await
+        ProcessProposalResult::Done(self.finish_proposal_processing(proposal).await)
     }
 
     /// Finish proposal processing: note that multiple tasks can execute this function in parallel
@@ -269,7 +271,7 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
     async fn finish_proposal_processing(
         &self,
         proposal: ProposalInfo<T, P>,
-    ) -> ProcessProposalResult<T, P> {
+    ) -> Option<ProposalInfo<T, P>> {
         let qc = proposal.proposal.quorum_cert();
         self.pacemaker
             .process_certificates(
@@ -286,16 +288,18 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 proposal.proposal.round(),
                 current_round
             );
-            return ProcessProposalResult::Done(false);
+            return None;
         }
 
-        self.proposer_election.process_proposal(proposal).await;
-        ProcessProposalResult::Done(true)
+        self.proposer_election.process_proposal(proposal)
     }
 
     /// Takes mutable reference to avoid race with other processing and perform state
     /// synchronization, then completes processing proposal in dedicated task
-    pub async fn sync_and_process_proposal(&mut self, proposal: ProposalInfo<T, P>) {
+    pub async fn sync_and_process_proposal(
+        &mut self,
+        proposal: ProposalInfo<T, P>,
+    ) -> Option<ProposalInfo<T, P>> {
         if let Err(e) = self
             .sync_up(
                 &proposal.sync_info,
@@ -307,9 +311,9 @@ impl<T: Payload, P: ProposerInfo> EventProcessor<T, P> {
                 "Dependencies of proposal {} could not be added to the block store: {:?}",
                 proposal, e
             );
-            return;
+            return None;
         }
-        self.finish_proposal_processing(proposal).await;
+        self.finish_proposal_processing(proposal).await
     }
 
     /// Upon receiving TimeoutMsg, ensure that any branches with higher quorum certificates are

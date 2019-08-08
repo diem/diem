@@ -12,7 +12,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
-        event_processor::EventProcessor,
+        event_processor::{EventProcessor, ProcessProposalResult},
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
@@ -55,8 +55,8 @@ use std::{
 };
 use tokio::runtime::TaskExecutor;
 use types::{
-    account_address::AccountAddress, ledger_info::LedgerInfoWithSignatures,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+    ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -66,7 +66,6 @@ struct NodeSetup {
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload, Author>,
     new_rounds_receiver: channel::Receiver<NewRoundEvent>,
-    winning_proposals_receiver: channel::Receiver<ProposalInfo<TestPayload, AccountAddress>>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
@@ -123,19 +122,8 @@ impl NodeSetup {
 
     fn create_proposer_election(
         author: Author,
-    ) -> (
-        Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync>,
-        channel::Receiver<ProposalInfo<TestPayload, Author>>,
-    ) {
-        let (winning_proposals_sender, winning_proposals_receiver) = channel::new_test(1_024);
-        (
-            Arc::new(RotatingProposer::new(
-                vec![author],
-                1,
-                winning_proposals_sender,
-            )),
-            winning_proposals_receiver,
-        )
+    ) -> Arc<dyn ProposerElection<TestPayload, Author> + Send + Sync> {
+        Arc::new(RotatingProposer::new(vec![author], 1))
     }
 
     fn create_nodes(
@@ -212,8 +200,7 @@ impl NodeSetup {
         let (pacemaker, new_rounds_receiver) =
             Self::create_pacemaker(executor.clone(), time_service.clone());
 
-        let (proposer_election, winning_proposals_receiver) =
-            Self::create_proposer_election(proposer_author);
+        let proposer_election = Self::create_proposer_election(proposer_author);
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let event_processor = EventProcessor::new(
             author,
@@ -234,7 +221,6 @@ impl NodeSetup {
             block_store,
             event_processor,
             new_rounds_receiver,
-            winning_proposals_receiver,
             storage,
             signer,
             proposer_author,
@@ -464,7 +450,7 @@ fn process_round_mismatch_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -477,7 +463,6 @@ fn process_round_mismatch_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let correct_block_id = correct_block.id();
     let block_skip_round = Block::make_block(
         genesis.as_ref(),
         vec![1],
@@ -487,27 +472,26 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: block_skip_round,
-                proposer_info: node.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
-            .await;
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: correct_block,
-                proposer_info: node.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
-            .await;
-
-        let winning = node
-            .winning_proposals_receiver
-            .next()
-            .await
-            .expect("No winning proposal");
-        assert_eq!(winning.proposal.id(), correct_block_id);
+        let bad_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: block_skip_round,
+            proposer_info: node.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        };
+        assert_eq!(
+            node.event_processor.process_proposal(bad_proposal).await,
+            ProcessProposalResult::Done(None)
+        );
+        let good_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: correct_block.clone(),
+            proposer_info: node.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        };
+        assert_eq!(
+            node.event_processor
+                .process_proposal(good_proposal.clone())
+                .await,
+            ProcessProposalResult::Done(Some(good_proposal))
+        );
     });
 }
 
@@ -602,7 +586,7 @@ fn process_proposer_mismatch_test() {
     // node (which will send the votes to the proposer).
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let incorrect_proposer = nodes.pop().unwrap();
-    let mut node = nodes.pop().unwrap();
+    let node = nodes.pop().unwrap();
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
@@ -613,7 +597,6 @@ fn process_proposer_mismatch_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let correct_block_id = correct_block.id();
     let block_incorrect_proposer = Block::make_block(
         genesis.as_ref(),
         vec![1],
@@ -623,28 +606,27 @@ fn process_proposer_mismatch_test() {
         incorrect_proposer.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: block_incorrect_proposer,
-                proposer_info: incorrect_proposer.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
-            .await;
+        let bad_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: block_incorrect_proposer,
+            proposer_info: incorrect_proposer.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        };
+        assert_eq!(
+            node.event_processor.process_proposal(bad_proposal).await,
+            ProcessProposalResult::Done(None)
+        );
+        let good_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: correct_block.clone(),
+            proposer_info: node.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        };
 
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: correct_block,
-                proposer_info: node.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
-            .await;
-
-        let winning = node
-            .winning_proposals_receiver
-            .next()
-            .await
-            .expect("No winning proposal");
-        assert_eq!(winning.proposal.id(), correct_block_id);
+        assert_eq!(
+            node.event_processor
+                .process_proposal(good_proposal.clone())
+                .await,
+            ProcessProposalResult::Done(Some(good_proposal))
+        );
     });
 }
 
@@ -655,7 +637,7 @@ fn process_timeout_certificate_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -668,7 +650,6 @@ fn process_timeout_certificate_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let _correct_block_id = correct_block.id();
     let block_skip_round = Block::make_block(
         genesis.as_ref(),
         vec![1],
@@ -677,31 +658,31 @@ fn process_timeout_certificate_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let block_skip_round_id = block_skip_round.id();
     let tc =
         PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
     block_on(async move {
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: block_skip_round,
-                proposer_info: node.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
-            })
-            .await;
-        node.event_processor
-            .process_proposal(ProposalInfo::<TestPayload, Author> {
-                proposal: correct_block,
-                proposer_info: node.author,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
-            .await;
-
-        let winning = node
-            .winning_proposals_receiver
-            .next()
-            .await
-            .expect("No winning proposal");
-        assert_eq!(winning.proposal.id(), block_skip_round_id);
+        let skip_round_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: block_skip_round,
+            proposer_info: node.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
+        };
+        assert_eq!(
+            node.event_processor
+                .process_proposal(skip_round_proposal.clone())
+                .await,
+            ProcessProposalResult::Done(Some(skip_round_proposal))
+        );
+        let old_good_proposal = ProposalInfo::<TestPayload, Author> {
+            proposal: correct_block.clone(),
+            proposer_info: node.author,
+            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        };
+        assert_eq!(
+            node.event_processor
+                .process_proposal(old_good_proposal.clone())
+                .await,
+            ProcessProposalResult::Done(None)
+        );
     });
 }
 
