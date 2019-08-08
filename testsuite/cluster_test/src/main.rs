@@ -140,6 +140,10 @@ impl ClusterTestRunner {
             style::Reset
         );
 
+        for validator in affected_validators.iter() {
+            self.health_check_runner.invalidate(validator);
+        }
+
         loop {
             if Instant::now() > experiment_deadline {
                 panic!("Cluster did not become healthy in time");

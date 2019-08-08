@@ -53,6 +53,9 @@ pub trait HealthCheck {
     fn on_event(&mut self, event: &ValidatorEvent, ctx: &mut HealthCheckContext);
     /// Periodic verification (happens even if when no events produced)
     fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
+    /// Optionally marks validator as failed, requiring waiting for at least one event from it to
+    /// mark it as healthy again
+    fn invalidate(&mut self, _validator: &str) {}
 
     fn name(&self) -> &'static str;
 }
@@ -130,6 +133,12 @@ impl HealthCheckRunner {
         println!();
 
         failed
+    }
+
+    pub fn invalidate(&mut self, validator: &str) {
+        for hc in self.health_checks.iter_mut() {
+            hc.invalidate(validator);
+        }
     }
 }
 

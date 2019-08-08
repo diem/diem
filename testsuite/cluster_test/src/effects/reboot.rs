@@ -20,29 +20,21 @@ impl Effect for Reboot {
     }
 
     fn is_complete(&self) -> bool {
-        if self.instance.check_ac_port() {
-            match self
-                .instance
-                .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
-            {
-                Ok(..) => {
-                    println!("Rebooting {} complete", self.instance);
-                    true
-                }
-                Err(..) => {
-                    println!(
-                        "Rebooting {} in progress - did not reboot yet",
-                        self.instance
-                    );
-                    false
-                }
+        match self
+            .instance
+            .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
+        {
+            Ok(..) => {
+                println!("Rebooting {} complete", self.instance);
+                true
             }
-        } else {
-            println!(
-                "Rebooting {} in progress - waiting for connection",
-                self.instance
-            );
-            false
+            Err(..) => {
+                println!(
+                    "Rebooting {} in progress - did not reboot yet",
+                    self.instance
+                );
+                false
+            }
         }
     }
 }

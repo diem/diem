@@ -39,16 +39,6 @@ impl Instance {
         Ok(())
     }
 
-    pub fn check_ac_port(&self) -> bool {
-        let mut cmd = Command::new("nc");
-        cmd.args(vec!["-w", "1", "-z", self.ip.as_str(), "8000"]);
-        let status = cmd.status();
-        match status {
-            Err(..) => false,
-            Ok(exit_status) => exit_status.success(),
-        }
-    }
-
     pub fn short_hash(&self) -> &String {
         &self.short_hash
     }
