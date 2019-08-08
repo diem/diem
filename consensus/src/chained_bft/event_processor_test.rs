@@ -71,7 +71,7 @@ struct NodeSetup {
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
     pacemaker: Arc<dyn Pacemaker>,
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
+    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl NodeSetup {
@@ -80,7 +80,8 @@ impl NodeSetup {
         storage: Arc<dyn PersistentStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (commit_cb_sender, _commit_cb_receiver) =
+            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
 
         Arc::new(block_on(BlockStore::new(
             storage,
@@ -201,7 +202,8 @@ impl NodeSetup {
             Self::create_pacemaker(executor.clone(), time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (commit_cb_sender, commit_cb_receiver) =
+            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
         let event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),

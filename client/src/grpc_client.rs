@@ -138,7 +138,9 @@ impl GRPCClient {
     fn get_with_proof_async(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<impl Future<Item = UpdateToLatestLedgerResponse, Error = failure::Error>> {
+    ) -> Result<
+        impl Future<Item = UpdateToLatestLedgerResponse<Ed25519Signature>, Error = failure::Error>,
+    > {
         let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into_proto();
@@ -176,8 +178,8 @@ impl GRPCClient {
     pub(crate) fn get_with_proof_sync(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<UpdateToLatestLedgerResponse> {
-        let mut resp: Result<UpdateToLatestLedgerResponse> =
+    ) -> Result<UpdateToLatestLedgerResponse<Ed25519Signature>> {
+        let mut resp: Result<UpdateToLatestLedgerResponse<Ed25519Signature>> =
             self.get_with_proof_async(requested_items.clone())?.wait();
         let mut try_cnt = 0_u64;
 

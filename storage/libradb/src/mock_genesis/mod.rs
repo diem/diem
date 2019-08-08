@@ -11,6 +11,7 @@ use crypto::{
 };
 use failure::Result;
 use lazy_static::lazy_static;
+use nextgen_crypto::ed25519::*;
 use std::collections::HashMap;
 use types::{
     account_address::AccountAddress,
@@ -22,7 +23,7 @@ use types::{
 
 fn gen_mock_genesis() -> (
     TransactionInfo,
-    LedgerInfoWithSignatures,
+    LedgerInfoWithSignatures<Ed25519Signature>,
     TransactionToCommit,
 ) {
     let (privkey, pubkey) = generate_keypair();
@@ -89,7 +90,7 @@ lazy_static! {
     /// other mocked information including validator signatures.
     pub static ref GENESIS_INFO: (
         TransactionInfo,
-        LedgerInfoWithSignatures,
+        LedgerInfoWithSignatures<Ed25519Signature>,
         TransactionToCommit
     ) = gen_mock_genesis();
 }

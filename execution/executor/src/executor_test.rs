@@ -11,6 +11,7 @@ use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
+use nextgen_crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::IntoProtoBytes;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
@@ -157,7 +158,7 @@ fn gen_ledger_info(
     root_hash: HashValue,
     commit_block_id: HashValue,
     timestamp_usecs: u64,
-) -> LedgerInfoWithSignatures {
+) -> LedgerInfoWithSignatures<Ed25519Signature> {
     let ledger_info = LedgerInfo::new(
         version,
         root_hash,

@@ -16,6 +16,7 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkRes
 use failure::prelude::*;
 use futures::channel::oneshot;
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use scratchpad::{Accumulator, ProofRead, SparseMerkleTree};
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
@@ -280,7 +281,7 @@ where
     fn execute_and_commit_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Result<()> {
         if ledger_info_with_sigs.ledger_info().timestamp_usecs() <= self.committed_timestamp_usecs {
             warn!(
@@ -425,7 +426,7 @@ where
     fn verify_chunk(
         &self,
         txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Result<(u64, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),

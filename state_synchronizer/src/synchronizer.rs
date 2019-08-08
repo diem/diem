@@ -15,6 +15,7 @@ use futures::{
 use grpcio::EnvBuilder;
 use logger::prelude::*;
 use network::validator_network::ConsensusNetworkSender;
+use nextgen_crypto::ed25519::*;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
@@ -91,7 +92,7 @@ impl StateSyncClient {
     /// Sync validator's state up to given `version`
     pub fn sync_to(
         &self,
-        target: LedgerInfoWithSignatures,
+        target: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> impl Future<Output = Result<SyncStatus>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();

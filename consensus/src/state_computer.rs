@@ -14,6 +14,7 @@ use execution_proto::proto::{
 use failure::Result;
 use futures::{compat::Future01CompatExt, Future, FutureExt};
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use state_synchronizer::{StateSyncClient, SyncStatus};
 use std::{pin::Pin, sync::Arc, time::Instant};
@@ -119,7 +120,7 @@ impl StateComputer for ExecutionProxy {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures,
+        commit: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = commit.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);

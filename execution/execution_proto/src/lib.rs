@@ -10,6 +10,7 @@ mod protobuf_conversion_test;
 
 use crypto::HashValue;
 use failure::prelude::*;
+use nextgen_crypto::ed25519::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
@@ -151,7 +152,7 @@ impl IntoProto for ExecuteBlockResponse {
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::execution::CommitBlockRequest)]
 pub struct CommitBlockRequest {
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
+    pub ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -192,7 +193,7 @@ impl IntoProto for CommitBlockResponse {
 #[ProtoType(crate::proto::execution::ExecuteChunkRequest)]
 pub struct ExecuteChunkRequest {
     pub txn_list_with_proof: TransactionListWithProof,
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
+    pub ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]

@@ -15,6 +15,7 @@ protobuf = "~2.7"
 
 crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 types = { path = "../../types" }
 
