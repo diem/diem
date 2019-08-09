@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    consensus_types::{
-        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-    },
+    consensus_types::{block::Block, quorum_cert::QuorumCert},
     liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
 };
 use nextgen_crypto::ed25519::*;
@@ -27,39 +25,30 @@ fn test_rotating_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            1,
-            1,
-            1,
-            quorum_cert.clone(),
-            &another_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let bad_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            2,
-            1,
-            2,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let next_good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            3,
-            2,
-            3,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
+    let good_proposal = Block::make_block(
+        &genesis_block,
+        1,
+        1,
+        1,
+        quorum_cert.clone(),
+        &another_validator_signer,
+    );
+    let bad_proposal = Block::make_block(
+        &genesis_block,
+        2,
+        1,
+        2,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
+    let next_good_proposal = Block::make_block(
+        &genesis_block,
+        3,
+        2,
+        3,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
@@ -96,39 +85,30 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            1,
-            1,
-            1,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let bad_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            2,
-            1,
-            2,
-            quorum_cert.clone(),
-            &another_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let next_good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            3,
-            2,
-            3,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
+    let good_proposal = Block::make_block(
+        &genesis_block,
+        1,
+        1,
+        1,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
+    let bad_proposal = Block::make_block(
+        &genesis_block,
+        2,
+        1,
+        2,
+        quorum_cert.clone(),
+        &another_validator_signer,
+    );
+    let next_good_proposal = Block::make_block(
+        &genesis_block,
+        3,
+        2,
+        3,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
@@ -162,39 +142,30 @@ fn test_fixed_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            1,
-            1,
-            1,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let bad_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            2,
-            1,
-            2,
-            quorum_cert.clone(),
-            &another_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
-    let next_good_proposal = ProposalMsg {
-        proposal: Block::make_block(
-            &genesis_block,
-            2,
-            2,
-            3,
-            quorum_cert.clone(),
-            &chosen_validator_signer,
-        ),
-        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
-    };
+    let good_proposal = Block::make_block(
+        &genesis_block,
+        1,
+        1,
+        1,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
+    let bad_proposal = Block::make_block(
+        &genesis_block,
+        2,
+        1,
+        2,
+        quorum_cert.clone(),
+        &another_validator_signer,
+    );
+    let next_good_proposal = Block::make_block(
+        &genesis_block,
+        2,
+        2,
+        3,
+        quorum_cert.clone(),
+        &chosen_validator_signer,
+    );
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)

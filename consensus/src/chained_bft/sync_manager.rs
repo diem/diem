@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockStore, InsertError},
+        block_storage::{BlockReader, BlockStore, InsertError, NeedFetchResult},
         common::{Author, Payload},
         consensus_types::{block::Block, quorum_cert::QuorumCert, sync_info::SyncInfo},
         network::ConsensusNetworkImpl,
@@ -44,11 +44,11 @@ pub struct SyncMgrContext {
     /// thus has higher chances to be able to return the information than the other
     /// peers that signed the QC.
     /// If no preferred peer provided, random peers from the given QC are going to be queried.
-    pub preferred_peer: Option<Author>,
+    pub preferred_peer: Author,
 }
 
 impl SyncMgrContext {
-    pub fn new(sync_info: &SyncInfo, preferred_peer: Option<Author>) -> Self {
+    pub fn new(sync_info: &SyncInfo, preferred_peer: Author) -> Self {
         Self {
             highest_ledger_info: sync_info.highest_ledger_info().clone(),
             highest_quorum_cert: sync_info.highest_quorum_cert().clone(),
@@ -96,12 +96,23 @@ where
         )
         .await?;
 
-        self.fetch_quorum_cert(
-            sync_context.highest_quorum_cert.clone(),
-            sync_context.preferred_peer,
-            deadline,
-        )
-        .await?;
+        match self
+            .block_store
+            .need_fetch_for_quorum_cert(&sync_context.highest_quorum_cert)
+        {
+            NeedFetchResult::NeedFetch => {
+                self.fetch_quorum_cert(
+                    sync_context.highest_quorum_cert.clone(),
+                    sync_context.preferred_peer,
+                    deadline,
+                )
+                .await?
+            }
+            NeedFetchResult::QCBlockExist => self
+                .block_store
+                .insert_single_quorum_cert(sync_context.highest_quorum_cert)?,
+            _ => (),
+        }
         Ok(())
     }
 
@@ -121,7 +132,7 @@ where
     pub async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        preferred_peer: Option<Author>,
+        preferred_peer: Author,
         deadline: Instant,
     ) -> Result<(), InsertError> {
         let mut lock_set = self.block_mutex_map.new_lock_set();
@@ -178,7 +189,7 @@ where
     async fn process_highest_ledger_info(
         &self,
         highest_ledger_info: QuorumCert,
-        peer: Option<Author>,
+        peer: Author,
         deadline: Instant,
     ) -> failure::Result<()> {
         let committed_block_id = highest_ledger_info
@@ -192,7 +203,7 @@ where
         }
         debug!(
             "Start state sync with peer: {}, to block: {}, round: {} from {}",
-            peer.map_or_else(|| "[no preferred peer]".to_string(), |x| x.short_str()),
+            peer.short_str(),
             committed_block_id,
             highest_ledger_info.certified_block_round() - 2,
             self.block_store.root()
@@ -255,7 +266,7 @@ where
 struct BlockRetriever {
     network: ConsensusNetworkImpl,
     deadline: Instant,
-    preferred_peer: Option<Author>,
+    preferred_peer: Author,
 }
 
 #[derive(Debug, Fail)]
@@ -352,18 +363,16 @@ impl BlockRetriever {
     fn pick_peer(&self, attempt: u32, peers: &mut Vec<&AccountAddress>) -> AccountAddress {
         assert!(!peers.is_empty(), "pick_peer on empty peer list");
 
-        if let Some(preferred_peer) = self.preferred_peer {
-            if attempt == 0 {
-                // remove preferred_peer if its in list of peers
-                // (strictly speaking it is not required to be there)
-                for i in 0..peers.len() {
-                    if *peers[i] == preferred_peer {
-                        peers.remove(i);
-                        break;
-                    }
+        if attempt == 0 {
+            // remove preferred_peer if its in list of peers
+            // (strictly speaking it is not required to be there)
+            for i in 0..peers.len() {
+                if *peers[i] == self.preferred_peer {
+                    peers.remove(i);
+                    break;
                 }
-                return preferred_peer;
             }
+            return self.preferred_peer;
         }
 
         let peer_idx = thread_rng().gen_range(0, peers.len());

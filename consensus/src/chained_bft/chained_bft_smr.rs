@@ -6,7 +6,7 @@ use crate::{
         block_storage::{BlockReader, BlockStore},
         common::{Payload, Round},
         consensus_types::{proposal_msg::ProposalMsg, timeout_msg::TimeoutMsg},
-        event_processor::{EventProcessor, ProcessProposalResult},
+        event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
             pacemaker::{NewRoundEvent, Pacemaker},
@@ -34,7 +34,10 @@ use futures::{
 use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
-use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};
+use crate::chained_bft::{
+    common::Author,
+    consensus_types::{block::Block, sync_info::SyncInfo},
+};
 use config::config::ConsensusConfig;
 use futures::sink::SinkExt;
 use logger::prelude::*;
@@ -170,33 +173,14 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     async fn process_proposals(
-        executor: TaskExecutor,
         mut receiver: channel::Receiver<ProposalMsg<T>>,
         event_processor: ConcurrentEventProcessor<T>,
-        mut winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
+        mut winning_proposals_sender: channel::Sender<Block<T>>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
             let winning_proposal = {
-                let guard = event_processor.read().compat().await.unwrap();
-                match guard.process_proposal(proposal_info).await {
-                    ProcessProposalResult::Done(winning_proposal) => winning_proposal,
-                    // Spawn a new task that would start state synchronization
-                    // in the background.
-                    ProcessProposalResult::NeedSync(proposal) => {
-                        let winning_proposals_sender = winning_proposals_sender.clone();
-                        executor.spawn(
-                            Self::sync_and_process_proposal(
-                                futures_locks::RwLock::clone(&event_processor),
-                                proposal,
-                                winning_proposals_sender,
-                            )
-                            .boxed()
-                            .unit_error()
-                            .compat(),
-                        );
-                        None
-                    }
-                }
+                let mut guard = event_processor.write().compat().await.unwrap();
+                guard.process_proposal(proposal_info).await
             };
             if let Some(winning_proposal) = winning_proposal {
                 if let Err(e) = winning_proposals_sender.send(winning_proposal).await {
@@ -206,24 +190,8 @@ impl<T: Payload> ChainedBftSMR<T> {
         }
     }
 
-    async fn sync_and_process_proposal(
-        event_processor: ConcurrentEventProcessor<T>,
-        proposal: ProposalMsg<T>,
-        mut winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
-    ) {
-        let winning_proposal = {
-            let mut guard = event_processor.write().compat().await.unwrap();
-            guard.sync_and_process_proposal(proposal).await
-        };
-        if let Some(winning_proposal) = winning_proposal {
-            if let Err(e) = winning_proposals_sender.send(winning_proposal).await {
-                warn!("Failed to send winning proposal: {:?}", e);
-            }
-        }
-    }
-
     async fn process_winning_proposals(
-        mut receiver: channel::Receiver<ProposalMsg<T>>,
+        mut receiver: channel::Receiver<Block<T>>,
         event_processor: ConcurrentEventProcessor<T>,
     ) {
         while let Some(proposal_info) = receiver.next().await {
@@ -299,10 +267,10 @@ impl<T: Payload> ChainedBftSMR<T> {
         event_processor: ConcurrentEventProcessor<T>,
         executor: TaskExecutor,
         new_round_events_receiver: channel::Receiver<NewRoundEvent>,
-        winning_proposals_receiver: channel::Receiver<ProposalMsg<T>>,
+        winning_proposals_receiver: channel::Receiver<Block<T>>,
         network_receivers: NetworkReceivers<T>,
         pacemaker_timeout_sender_rx: channel::Receiver<Round>,
-        winning_proposals_sender: channel::Sender<ProposalMsg<T>>,
+        winning_proposals_sender: channel::Sender<Block<T>>,
     ) {
         executor.spawn(
             Self::process_new_round_events(new_round_events_receiver, event_processor.clone())
@@ -313,7 +281,6 @@ impl<T: Payload> ChainedBftSMR<T> {
 
         executor.spawn(
             Self::process_proposals(
-                executor.clone(),
                 network_receivers.proposals,
                 event_processor.clone(),
                 winning_proposals_sender,
