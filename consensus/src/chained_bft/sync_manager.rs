@@ -174,10 +174,10 @@ where
         // insert the qc <- block pair
         while let Some(block) = pending.pop() {
             let block_qc = block.quorum_cert().clone();
-            self.block_store.insert_single_quorum_cert(block_qc).await?;
+            self.block_store.insert_single_quorum_cert(block_qc)?;
             self.block_store.execute_and_insert_block(block).await?;
         }
-        self.block_store.insert_single_quorum_cert(qc).await
+        self.block_store.insert_single_quorum_cert(qc)
     }
 
     /// Check the highest ledger info sent by peer to see if we're behind and start a fast

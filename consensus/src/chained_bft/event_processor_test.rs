@@ -299,7 +299,7 @@ fn basic_new_rank_event_test() {
             placeholder_ledger_info(),
             node.block_store.signer(),
         );
-        node.block_store.insert_vote_and_qc(vote_msg, 0).await;
+        node.block_store.insert_vote_and_qc(vote_msg, 0);
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,
@@ -524,12 +524,10 @@ fn process_new_round_msg_test() {
         block_0.quorum_cert().certified_parent_block_id(),
         block_0.quorum_cert().certified_parent_block_round(),
     );
-    block_on(
-        non_proposer
-            .block_store
-            .insert_single_quorum_cert(block_0_quorum_cert.clone()),
-    )
-    .unwrap();
+    non_proposer
+        .block_store
+        .insert_single_quorum_cert(block_0_quorum_cert.clone())
+        .unwrap();
     assert_eq!(
         static_proposer
             .block_store
