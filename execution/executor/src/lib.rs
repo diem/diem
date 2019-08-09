@@ -76,7 +76,7 @@ where
                 (
                     info.account_state_root_hash,
                     info.ledger_frozen_subtree_hashes,
-                    ledger_info.version() + 1,
+                    info.latest_version + 1,
                     ledger_info.timestamp_usecs(),
                     ledger_info.consensus_block_id(),
                 )
