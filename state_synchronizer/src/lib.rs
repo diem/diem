@@ -1,11 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+//! Used to perform catching up between nodes for committed states.
+//! Used for node restarts, network partitions, full node syncs
 #![feature(async_await)]
-pub mod proto;
-pub use runtime::StateSyncRuntime;
-pub use txn_fetcher::{setup_state_synchronizer, StateSynchronizer, SyncStatus};
+use types::account_address::AccountAddress;
 
+pub use coordinator::SyncStatus;
+pub use synchronizer::{StateSyncClient, StateSynchronizer};
+
+mod coordinator;
 mod counters;
-mod runtime;
-mod state_sync_service;
-mod txn_fetcher;
+mod downloader;
+mod synchronizer;
+
+type PeerId = AccountAddress;
+
+#[cfg(test)]
+mod tests;

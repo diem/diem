@@ -23,7 +23,7 @@ use execution_proto::proto::execution_grpc::ExecutionClient;
 use failure::prelude::*;
 use logger::prelude::*;
 use mempool::proto::mempool_grpc::MempoolClient;
-use state_synchronizer::{setup_state_synchronizer, StateSynchronizer};
+use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 use types::{
@@ -44,7 +44,7 @@ pub struct ChainedBftProvider {
     smr: ChainedBftSMR<Vec<SignedTransaction>>,
     mempool_client: Arc<MempoolClient>,
     execution_client: Arc<ExecutionClient>,
-    synchronizer_client: Arc<StateSynchronizer>,
+    synchronizer_client: Arc<StateSyncClient>,
 }
 
 impl ChainedBftProvider {
@@ -54,6 +54,7 @@ impl ChainedBftProvider {
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
         execution_client: Arc<ExecutionClient>,
+        synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()
             .name_prefix("consensus-")
@@ -68,8 +69,6 @@ impl ChainedBftProvider {
             Arc::clone(&initial_setup.peers),
             Arc::clone(&initial_setup.validator),
         );
-        let synchronizer =
-            setup_state_synchronizer(network_sender, runtime.executor(), node_config);
         let proposer = {
             if node_config.consensus.get_proposer_type() == FixedProposer {
                 vec![Self::choose_leader(&initial_setup)]
@@ -101,7 +100,7 @@ impl ChainedBftProvider {
             smr,
             mempool_client,
             execution_client,
-            synchronizer_client: Arc::new(synchronizer),
+            synchronizer_client,
         }
     }
 

@@ -9,6 +9,7 @@ use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use execution_proto::proto::execution_grpc::ExecutionClient;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use mempool::proto::mempool_grpc::MempoolClient;
+use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 
@@ -30,6 +31,7 @@ pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_receiver: ConsensusNetworkEvents,
+    state_sync_client: Arc<StateSyncClient>,
 ) -> Box<dyn ConsensusProvider> {
     Box::new(ChainedBftProvider::new(
         node_config,
@@ -37,6 +39,7 @@ pub fn make_consensus_provider(
         network_receiver,
         create_mempool_client(node_config),
         create_execution_client(node_config),
+        state_sync_client,
     ))
 }
 /// Create a mempool client assuming the mempool is running on localhost

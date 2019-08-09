@@ -13,8 +13,9 @@ use execution_proto::proto::{
 };
 use failure::Result;
 use futures::{compat::Future01CompatExt, Future, FutureExt};
+use logger::prelude::*;
 use proto_conv::{FromProto, IntoProto};
-use state_synchronizer::{StateSynchronizer, SyncStatus};
+use state_synchronizer::{StateSyncClient, SyncStatus};
 use std::{pin::Pin, sync::Arc, time::Instant};
 use types::{
     ledger_info::LedgerInfoWithSignatures,
@@ -25,11 +26,11 @@ use types::{
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution: Arc<ExecutionClient>,
-    synchronizer: Arc<StateSynchronizer>,
+    synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSynchronizer>) -> Self {
+    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSyncClient>) -> Self {
         Self {
             execution: Arc::clone(&execution),
             synchronizer,
@@ -120,11 +121,13 @@ impl StateComputer for ExecutionProxy {
         &self,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        counters::LAST_COMMITTED_VERSION.set(commit.ledger_info().version() as i64);
+        let version = commit.ledger_info().version();
+        counters::LAST_COMMITTED_VERSION.set(version as i64);
         let mut commit_req = CommitBlockRequest::new();
         commit_req.set_ledger_info_with_sigs(commit.into_proto());
 
         let pre_commit_instant = Instant::now();
+        let synchronizer = Arc::clone(&self.synchronizer);
         match self.execution.commit_block_async(&commit_req) {
             Ok(receiver) => {
                 // convert from grpcio enum to failure::Error
@@ -135,6 +138,9 @@ impl StateComputer for ExecutionProxy {
                                 let commit_duration_ms = pre_commit_instant.elapsed().as_millis();
                                 counters::BLOCK_COMMIT_DURATION_MS
                                     .observe(commit_duration_ms as f64);
+                                if let Err(e) = synchronizer.commit(version).await {
+                                    error!("failed to notify state synchronizer: {:?}", e);
+                                }
                                 Ok(())
                             } else {
                                 Err(grpcio::Error::RpcFailure(grpcio::RpcStatus::new(

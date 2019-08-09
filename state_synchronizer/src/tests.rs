@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::txn_fetcher::{
+use crate::{
     coordinator::{ExecutorProxyTrait, SyncStatus},
-    PeerId, StateSynchronizer,
+    PeerId, StateSyncClient, StateSynchronizer,
 };
 use bytes::Bytes;
 use config::config::NodeConfig;
@@ -11,13 +11,7 @@ use config_builder::util::get_test_config;
 use crypto::HashValue;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
-use futures_preview::{
-    executor::block_on,
-    future::{join_all, TryFutureExt},
-    stream::StreamExt,
-    Future, FutureExt,
-};
-use metrics::get_all_metrics;
+use futures::{executor::block_on, future::TryFutureExt, stream::StreamExt, Future, FutureExt};
 use network::{
     proto::{ConsensusMsg, RespondChunk},
     validator_network::{
@@ -31,11 +25,13 @@ use parity_multiaddr::Multiaddr;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use rand::{rngs::StdRng, SeedableRng};
-use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
     collections::HashMap,
     pin::Pin,
-    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+        Arc,
+    },
 };
 use tokio::runtime::{Builder, Runtime};
 use types::{
@@ -94,8 +90,9 @@ pub fn gen_txn_list(sequence_number: u64) -> TransactionListWithProof {
 }
 
 struct SynchronizerEnv {
-    synchronizers: Vec<StateSynchronizer>,
     peers: Vec<PeerId>,
+    clients: Vec<Arc<StateSyncClient>>,
+    _synchronizers: Vec<StateSynchronizer>,
     _runtime: Runtime,
 }
 
@@ -177,19 +174,21 @@ impl SynchronizerEnv {
 
         // create synchronizers
         let synchronizers = vec![
-            StateSynchronizer::new(
+            StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_a,
-                runtime.executor(),
                 &config,
                 MockExecutorProxy::default(),
             ),
-            StateSynchronizer::new(
+            StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_b,
-                runtime.executor(),
                 &config,
                 MockExecutorProxy::default(),
             ),
         ];
+        let clients = synchronizers
+            .iter()
+            .map(|s| s.create_client(&config))
+            .collect();
 
         let rpc_handler = async move {
             while let Some(event) = events_b.next().await {
@@ -213,13 +212,14 @@ impl SynchronizerEnv {
         runtime.spawn(rpc_handler.boxed().unit_error().compat());
 
         Self {
-            synchronizers,
             peers,
+            clients,
+            _synchronizers: synchronizers,
             _runtime: runtime,
         }
     }
 
-    fn gen_commit(&self, version: u64) -> LedgerInfoWithSignatures {
+    fn sync_to(&self, peer_id: usize, version: u64) -> SyncStatus {
         let ledger_info = LedgerInfo::new(
             version,
             HashValue::zero(),
@@ -232,7 +232,8 @@ impl SynchronizerEnv {
         let private_key = Ed25519PrivateKey::genesis();
         let signature = private_key.sign_message(&HashValue::zero());
         signatures.insert(self.peers[1], signature);
-        LedgerInfoWithSignatures::new(ledger_info, signatures)
+        let target = LedgerInfoWithSignatures::new(ledger_info, signatures);
+        block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 }
 
@@ -242,30 +243,12 @@ fn test_basic_flow() {
 
     // test small sequential syncs
     for version in 1..5 {
-        let status = block_on(env.synchronizers[0].sync_to(env.gen_commit(version)));
-        assert_eq!(status.unwrap(), SyncStatus::Finished);
+        let status = env.sync_to(0, version);
+        assert_eq!(status, SyncStatus::Finished);
     }
     // test batch sync for multiple transactions
-    let status = block_on(env.synchronizers[0].sync_to(env.gen_commit(10)));
-    assert_eq!(status.unwrap(), SyncStatus::Finished);
-}
-
-rusty_fork_test! {
-#[test]
-fn test_concurrent_requests() {
-    let env = SynchronizerEnv::new();
-
-    let requests = vec![
-        env.synchronizers[0].sync_to(env.gen_commit(1)),
-        env.synchronizers[0].sync_to(env.gen_commit(2)),
-        env.synchronizers[0].sync_to(env.gen_commit(3)),
-    ];
-    // ensure we can execute requests in parallel
-    block_on(join_all(requests));
-    // ensure we downloaded each chunk exactly 1 time
-    let metrics = get_all_metrics();
-    assert_eq!(metrics["state_sync{op=download}"].parse::<i32>().unwrap(), 3);
-}
+    let status = env.sync_to(0, 10);
+    assert_eq!(status, SyncStatus::Finished);
 }
 
 #[test]
@@ -274,8 +257,8 @@ fn test_download_failure() {
     let handler = Box::new(|| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
 
     let env = SynchronizerEnv::new_with(handler, None);
-    let status = block_on(env.synchronizers[0].sync_to(env.gen_commit(5)));
-    assert_eq!(status.unwrap(), SyncStatus::DownloadFailed);
+    let status = env.sync_to(0, 5);
+    assert_eq!(status, SyncStatus::DownloadFailed);
 }
 
 #[test]
@@ -292,6 +275,6 @@ fn test_download_retry() {
         }
     });
     let env = SynchronizerEnv::new_with(handler, None);
-    let status = block_on(env.synchronizers[0].sync_to(env.gen_commit(1)));
-    assert_eq!(status.unwrap(), SyncStatus::Finished);
+    let status = env.sync_to(0, 1);
+    assert_eq!(status, SyncStatus::Finished);
 }
