@@ -17,6 +17,7 @@ use crypto::HashValue;
 use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
+use nextgen_crypto::*;
 use rand::{prelude::*, Rng};
 use state_synchronizer::SyncStatus;
 use std::{
@@ -29,18 +30,18 @@ use termion::color::*;
 use types::{account_address::AccountAddress, transaction::TransactionListWithProof};
 
 /// SyncManager is responsible for fetching dependencies and 'catching up' for given qc/ledger info
-pub struct SyncManager<T> {
-    block_store: Arc<BlockStore<T>>,
-    storage: Arc<dyn PersistentStorage<T>>,
-    network: ConsensusNetworkImpl,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
+pub struct SyncManager<T, Sig: Signature> {
+    block_store: Arc<BlockStore<T, Sig>>,
+    storage: Arc<dyn PersistentStorage<T, Sig>>,
+    network: ConsensusNetworkImpl<Sig>,
+    state_computer: Arc<dyn StateComputer<Payload = T, Sig = Sig>>,
     block_mutex_map: MutexMap<HashValue>,
 }
 
 /// Keeps the necessary context for `SyncMgr` to bring the missing information.
-pub struct SyncMgrContext {
-    pub highest_ledger_info: QuorumCert,
-    pub highest_quorum_cert: QuorumCert,
+pub struct SyncMgrContext<Sig> {
+    pub highest_ledger_info: QuorumCert<Sig>,
+    pub highest_quorum_cert: QuorumCert<Sig>,
     /// Preferred peer: this is typically the peer that delivered the original QC and
     /// thus has higher chances to be able to return the information than the other
     /// peers that signed the QC.
@@ -48,8 +49,11 @@ pub struct SyncMgrContext {
     pub preferred_peer: Option<Author>,
 }
 
-impl SyncMgrContext {
-    pub fn new(sync_info: &SyncInfo, preferred_peer: Option<Author>) -> Self {
+impl<Sig: Signature> SyncMgrContext<Sig>
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
+    pub fn new(sync_info: &SyncInfo<Sig>, preferred_peer: Option<Author>) -> Self {
         Self {
             highest_ledger_info: sync_info.highest_ledger_info().clone(),
             highest_quorum_cert: sync_info.highest_quorum_cert().clone(),
@@ -58,16 +62,18 @@ impl SyncMgrContext {
     }
 }
 
-impl<T> SyncManager<T>
+impl<T, Sig> SyncManager<T, Sig>
 where
     T: Payload,
+    Sig: Signature + 'static,
+    Sig::SigningKeyMaterial: Genesis + Send + Sync,
 {
     pub fn new(
-        block_store: Arc<BlockStore<T>>,
-        storage: Arc<dyn PersistentStorage<T>>,
-        network: ConsensusNetworkImpl,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ) -> SyncManager<T> {
+        block_store: Arc<BlockStore<T, Sig>>,
+        storage: Arc<dyn PersistentStorage<T, Sig>>,
+        network: ConsensusNetworkImpl<Sig>,
+        state_computer: Arc<dyn StateComputer<Payload = T, Sig = Sig>>,
+    ) -> SyncManager<T, Sig> {
         // Our counters are initialized via lazy_static, so they're not going to appear in
         // Prometheus if some conditions never happen.  Invoking get() function enforces creation.
         counters::BLOCK_RETRIEVAL_COUNT.get();
@@ -88,7 +94,7 @@ where
     pub async fn sync_to(
         &mut self,
         deadline: Instant,
-        sync_context: SyncMgrContext,
+        sync_context: SyncMgrContext<Sig>,
     ) -> failure::Result<()> {
         self.process_highest_ledger_info(
             sync_context.highest_ledger_info.clone(),
@@ -120,8 +126,8 @@ where
 
     pub async fn execute_and_insert_block(
         &self,
-        block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+        block: Block<T, Sig>,
+    ) -> Result<Arc<Block<T, Sig>>, InsertError> {
         let _guard = self.block_mutex_map.lock(block.id());
         // execute_and_insert_block has shortcut to return block if it exists
         self.block_store.execute_and_insert_block(block).await
@@ -133,7 +139,7 @@ where
     /// fails to provide the missing ancestors, the qc is not going to be added.
     pub async fn fetch_quorum_cert(
         &self,
-        qc: QuorumCert,
+        qc: QuorumCert<Sig>,
         preferred_peer: Option<Author>,
         deadline: Instant,
     ) -> Result<(), InsertError> {
@@ -190,7 +196,7 @@ where
     /// 3. We prune the old tree and replace with a new tree built with the 3-chain.
     async fn process_highest_ledger_info(
         &self,
-        highest_ledger_info: QuorumCert,
+        highest_ledger_info: QuorumCert<Sig>,
         peer: Option<Author>,
         deadline: Instant,
     ) -> failure::Result<()> {
@@ -266,8 +272,8 @@ where
 }
 
 /// BlockRetriever is used internally to retrieve blocks
-struct BlockRetriever {
-    network: ConsensusNetworkImpl,
+struct BlockRetriever<Sig: Signature> {
+    network: ConsensusNetworkImpl<Sig>,
     deadline: Instant,
     preferred_peer: Option<Author>,
 }
@@ -286,7 +292,11 @@ impl From<BlockRetrieverError> for InsertError {
     }
 }
 
-impl BlockRetriever {
+impl<Sig> BlockRetriever<Sig>
+where
+    Sig: Signature + 'static,
+    Sig::SigningKeyMaterial: Genesis,
+{
     /// Retrieve chain of n blocks for given QC
     ///
     /// Returns Result with Vec that has a guaranteed size of num_blocks
@@ -301,9 +311,9 @@ impl BlockRetriever {
     /// error is returned
     pub async fn retrieve_block_for_qc<'a, T>(
         &'a mut self,
-        qc: &'a QuorumCert,
+        qc: &'a QuorumCert<Sig>,
         num_blocks: u64,
-    ) -> Result<Vec<Block<T>>, BlockRetrieverError>
+    ) -> Result<Vec<Block<T, Sig>>, BlockRetrieverError>
     where
         T: Payload,
     {

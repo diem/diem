@@ -25,7 +25,7 @@ use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock, RespondChunk},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::{
@@ -40,12 +40,15 @@ use types::{
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
-pub struct BlockRetrievalResponse<T> {
+pub struct BlockRetrievalResponse<T, Sig> {
     pub status: BlockRetrievalStatus,
-    pub blocks: Vec<Block<T>>,
+    pub blocks: Vec<Block<T, Sig>>,
 }
 
-impl<T: Payload> BlockRetrievalResponse<T> {
+impl<T: Payload, Sig: Signature> BlockRetrievalResponse<T, Sig>
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn verify(&self, mut block_id: HashValue, num_blocks: u64) -> Result<(), failure::Error> {
         if self.status == BlockRetrievalStatus::SUCCEEDED && self.blocks.len() as u64 != num_blocks
         {
@@ -72,10 +75,10 @@ impl<T: Payload> BlockRetrievalResponse<T> {
 /// BlockRetrievalRequest carries a block id for the requested block as well as the
 /// oneshot sender to deliver the response.
 #[derive(Debug)]
-pub struct BlockRetrievalRequest<T> {
+pub struct BlockRetrievalRequest<T, Sig> {
     pub block_id: HashValue,
     pub num_blocks: u64,
-    pub response_sender: oneshot::Sender<BlockRetrievalResponse<T>>,
+    pub response_sender: oneshot::Sender<BlockRetrievalResponse<T, Sig>>,
 }
 
 /// Represents a request to get up to batch_size transactions starting from start_version
@@ -90,17 +93,17 @@ pub struct ChunkRetrievalRequest {
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
 /// Will be returned by the networking trait upon startup.
-pub struct NetworkReceivers<T> {
-    pub proposals: channel::Receiver<ProposalMsg<T>>,
-    pub votes: channel::Receiver<VoteMsg>,
-    pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
-    pub timeout_msgs: channel::Receiver<TimeoutMsg>,
+pub struct NetworkReceivers<T, Sig> {
+    pub proposals: channel::Receiver<ProposalMsg<T, Sig>>,
+    pub votes: channel::Receiver<VoteMsg<Sig>>,
+    pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T, Sig>>,
+    pub timeout_msgs: channel::Receiver<TimeoutMsg<Sig>>,
     pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
-    pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
+    pub sync_info_msgs: channel::Receiver<(SyncInfo<Sig>, AccountAddress)>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
-pub struct ConsensusNetworkImpl {
+pub struct ConsensusNetworkImpl<Sig: Signature> {
     author: Author,
     network_sender: ConsensusNetworkSender,
     network_events: Option<ConsensusNetworkEvents>,
@@ -110,10 +113,10 @@ pub struct ConsensusNetworkImpl {
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
 }
 
-impl Clone for ConsensusNetworkImpl {
+impl<Sig: Signature> Clone for ConsensusNetworkImpl<Sig> {
     fn clone(&self) -> Self {
         Self {
             author: self.author,
@@ -127,13 +130,17 @@ impl Clone for ConsensusNetworkImpl {
     }
 }
 
-impl ConsensusNetworkImpl {
+impl<Sig> ConsensusNetworkImpl<Sig>
+where
+    Sig: Signature + 'static,
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn new(
         author: Author,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+        validator: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -148,7 +155,7 @@ impl ConsensusNetworkImpl {
     }
 
     /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T> {
+    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T, Sig> {
         let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
         let (block_request_tx, block_request_rx) =
@@ -204,7 +211,7 @@ impl ConsensusNetworkImpl {
         num_blocks: u64,
         from: Author,
         timeout: Duration,
-    ) -> Result<BlockRetrievalResponse<T>, BlockRetrievalFailure> {
+    ) -> Result<BlockRetrievalResponse<T, Sig>, BlockRetrievalFailure> {
         if from == self.author {
             return Err(BlockRetrievalFailure::SelfRetrieval);
         }
@@ -249,7 +256,7 @@ impl ConsensusNetworkImpl {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
+    pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T, Sig>) {
         let mut msg = ConsensusMsg::new();
         msg.set_proposal(proposal.into_proto());
         self.broadcast(msg).await
@@ -281,7 +288,7 @@ impl ConsensusNetworkImpl {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
+    pub async fn send_vote(&self, vote_msg: VoteMsg<Sig>, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
         let mut msg = ConsensusMsg::new();
@@ -301,7 +308,7 @@ impl ConsensusNetworkImpl {
     }
 
     /// Broadcasts timeout message to all validators
-    pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
+    pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg<Sig>) {
         let mut msg = ConsensusMsg::new();
         msg.set_timeout_msg(timeout_msg.into_proto());
         self.broadcast(msg).await
@@ -310,7 +317,7 @@ impl ConsensusNetworkImpl {
     /// Sends the given sync info to the given author.
     /// The future is fulfilled as soon as the message is added to the internal network channel
     /// (does not indicate whether the message is delivered or sent out).
-    pub async fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
+    pub async fn send_sync_info(&self, sync_info: SyncInfo<Sig>, recipient: Author) {
         if recipient == self.author {
             error!("An attempt to deliver sync info msg to itself: ignore.");
             return;
@@ -327,21 +334,23 @@ impl ConsensusNetworkImpl {
     }
 }
 
-struct NetworkTask<T, S> {
-    proposal_tx: channel::Sender<ProposalMsg<T>>,
-    vote_tx: channel::Sender<VoteMsg>,
-    block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
+struct NetworkTask<T, S, Sig: Signature> {
+    proposal_tx: channel::Sender<ProposalMsg<T, Sig>>,
+    vote_tx: channel::Sender<VoteMsg<Sig>>,
+    block_request_tx: channel::Sender<BlockRetrievalRequest<T, Sig>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
-    timeout_msg_tx: channel::Sender<TimeoutMsg>,
-    sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
+    timeout_msg_tx: channel::Sender<TimeoutMsg<Sig>>,
+    sync_info_tx: channel::Sender<(SyncInfo<Sig>, AccountAddress)>,
     all_events: S,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
 }
 
-impl<T, S> NetworkTask<T, S>
+impl<T, S, Sig> NetworkTask<T, S, Sig>
 where
     S: Stream<Item = Result<Event<ConsensusMsg>, failure::Error>> + Unpin,
     T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     pub async fn run(mut self) {
         while let Some(Ok(message)) = self.all_events.next().await {
@@ -387,7 +396,7 @@ where
     }
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalMsg::<T>::from_proto(msg.take_proposal())?;
+        let proposal = ProposalMsg::<T, Sig>::from_proto(msg.take_proposal())?;
         proposal.verify(self.validator.as_ref()).map_err(|e| {
             security_log(SecurityEvent::InvalidConsensusProposal)
                 .error(&e)
@@ -458,7 +467,7 @@ where
             req.start_version, req.target_version, req.batch_size
         );
         let (tx, rx) = oneshot::channel();
-        let request = ChunkRetrievalRequest {
+        let request: ChunkRetrievalRequest = ChunkRetrievalRequest {
             start_version: req.start_version,
             target_version: req.target_version,
             batch_size: req.batch_size,

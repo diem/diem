@@ -13,15 +13,24 @@ use super::QC_CF_NAME;
 use crate::chained_bft::consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use failure::prelude::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::{
-    define_schema,
-    schema::{KeyCodec, ValueCodec},
-};
+use schemadb::schema::{KeyCodec, Schema, ValueCodec};
+use std::{fmt::Debug, marker::PhantomData};
 
-define_schema!(QCSchema, HashValue, QuorumCert, QC_CF_NAME);
+// Polymorphic variant of
+// define_schema!(QCSchema, HashValue, QuorumCert, QC_CF_NAME);
+pub(crate) struct QCSchema<Sig> {
+    _marker: PhantomData<Sig>,
+}
 
-impl KeyCodec<QCSchema> for HashValue {
+impl<Sig: Signature> Schema for QCSchema<Sig> {
+    const COLUMN_FAMILY_NAME: schemadb::ColumnFamilyName = QC_CF_NAME;
+    type Key = HashValue;
+    type Value = QuorumCert<Sig>;
+}
+
+impl<Sig: Debug + Signature> KeyCodec<QCSchema<Sig>> for HashValue {
     fn encode_key(&self) -> Result<Vec<u8>> {
         Ok(self.to_vec())
     }
@@ -31,7 +40,7 @@ impl KeyCodec<QCSchema> for HashValue {
     }
 }
 
-impl ValueCodec<QCSchema> for QuorumCert {
+impl<Sig: Signature> ValueCodec<QCSchema<Sig>> for QuorumCert<Sig> {
     fn encode_value(&self) -> Result<Vec<u8>> {
         self.clone().into_proto_bytes()
     }

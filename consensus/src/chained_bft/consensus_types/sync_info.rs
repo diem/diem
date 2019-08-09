@@ -2,12 +2,12 @@ use crate::chained_bft::consensus_types::{
     quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
 };
 use network;
-use nextgen_crypto::ed25519::*;
 
 use crate::chained_bft::{
     consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,
     safety::vote_msg::VoteMsgVerificationError,
 };
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -15,16 +15,19 @@ use types::validator_verifier::ValidatorVerifier;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 /// This struct describes basic synchronization metadata.
-pub struct SyncInfo {
+pub struct SyncInfo<Sig> {
     /// Highest quorum certificate known to the peer.
-    highest_quorum_cert: QuorumCert,
+    highest_quorum_cert: QuorumCert<Sig>,
     /// Highest ledger info known to the peer.
-    highest_ledger_info: QuorumCert,
+    highest_ledger_info: QuorumCert<Sig>,
     /// Optional highest timeout certificate if available.
-    highest_timeout_cert: Option<PacemakerTimeoutCertificate>,
+    highest_timeout_cert: Option<PacemakerTimeoutCertificate<Sig>>,
 }
 
-impl Display for SyncInfo {
+impl<Sig: Signature> Display for SyncInfo<Sig>
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let htc_repr = match self.highest_timeout_certificate() {
             Some(tc) => format!("TC for round {}", tc.round()),
@@ -59,11 +62,15 @@ impl From<PacemakerTimeoutCertificateVerificationError> for SyncInfoVerification
     }
 }
 
-impl SyncInfo {
+impl<Sig> SyncInfo<Sig>
+where
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn new(
-        highest_quorum_cert: QuorumCert,
-        highest_ledger_info: QuorumCert,
-        highest_timeout_cert: Option<PacemakerTimeoutCertificate>,
+        highest_quorum_cert: QuorumCert<Sig>,
+        highest_ledger_info: QuorumCert<Sig>,
+        highest_timeout_cert: Option<PacemakerTimeoutCertificate<Sig>>,
     ) -> Self {
         Self {
             highest_quorum_cert,
@@ -73,23 +80,23 @@ impl SyncInfo {
     }
 
     /// Highest quorum certificate
-    pub fn highest_quorum_cert(&self) -> &QuorumCert {
+    pub fn highest_quorum_cert(&self) -> &QuorumCert<Sig> {
         &self.highest_quorum_cert
     }
 
     /// Highest ledger info
-    pub fn highest_ledger_info(&self) -> &QuorumCert {
+    pub fn highest_ledger_info(&self) -> &QuorumCert<Sig> {
         &self.highest_ledger_info
     }
 
     /// Highest timeout certificate if available
-    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
+    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate<Sig>> {
         self.highest_timeout_cert.as_ref()
     }
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
     ) -> Result<(), SyncInfoVerificationError> {
         self.highest_quorum_cert.verify(validator)?;
         self.highest_ledger_info.verify(validator)?;
@@ -100,7 +107,11 @@ impl SyncInfo {
     }
 }
 
-impl FromProto for SyncInfo {
+impl<Sig> FromProto for SyncInfo<Sig>
+where
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     type ProtoType = network::proto::SyncInfo;
 
     fn from_proto(mut object: network::proto::SyncInfo) -> failure::Result<Self> {
@@ -118,7 +129,7 @@ impl FromProto for SyncInfo {
         ))
     }
 }
-impl IntoProto for SyncInfo {
+impl<Sig: Signature> IntoProto for SyncInfo<Sig> {
     type ProtoType = network::proto::SyncInfo;
 
     fn into_proto(self) -> Self::ProtoType {

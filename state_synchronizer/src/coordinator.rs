@@ -15,7 +15,7 @@ use futures::{
 use grpc_helpers::convert_grpc_response;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::IntoProto;
 use std::{collections::BTreeMap, pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -24,10 +24,10 @@ use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::Transacti
 /// unified message used for communication with Coordinator
 // TODO: remove lint whitelist
 #[allow(clippy::large_enum_variant)]
-pub enum CoordinatorMsg {
+pub enum CoordinatorMsg<Sig> {
     // sent from client to initiate new sync
     Requested(
-        LedgerInfoWithSignatures<Ed25519Signature>,
+        LedgerInfoWithSignatures<Sig>,
         oneshot::Sender<SyncStatus>,
     ),
     // sent from client to notify about new txn commit
@@ -35,7 +35,7 @@ pub enum CoordinatorMsg {
     // is sent from Downloader to Coordinator to indicate that new batch is ready
     Fetched(
         Result<TransactionListWithProof>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
+        LedgerInfoWithSignatures<Sig>,
     ),
 }
 
@@ -51,16 +51,16 @@ pub enum SyncStatus {
 
 /// used to coordinate synchronization process
 /// handles Consensus requests and drives sync with remote peers
-pub struct SyncCoordinator<T> {
+pub struct SyncCoordinator<T, Sig> {
     // communication with SyncCoordinator is done via this channel
-    receiver: mpsc::UnboundedReceiver<CoordinatorMsg>,
+    receiver: mpsc::UnboundedReceiver<CoordinatorMsg<Sig>>,
     // connection to transaction fetcher
-    sender_to_downloader: mpsc::Sender<FetchChunkMsg>,
+    sender_to_downloader: mpsc::Sender<FetchChunkMsg<Sig>>,
 
     // last committed version that validator is aware of
     known_version: u64,
     // target state to sync to
-    target: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+    target: Option<LedgerInfoWithSignatures<Sig>>,
     // used to track progress of synchronization
     sync_position: u64,
     // subscribers of synchronization
@@ -69,10 +69,10 @@ pub struct SyncCoordinator<T> {
     executor_proxy: T,
 }
 
-impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
+impl<T: ExecutorProxyTrait, Sig: Signature> SyncCoordinator<T, Sig> {
     pub fn new(
-        receiver: mpsc::UnboundedReceiver<CoordinatorMsg>,
-        sender_to_downloader: mpsc::Sender<FetchChunkMsg>,
+        receiver: mpsc::UnboundedReceiver<CoordinatorMsg<Sig>>,
+        sender_to_downloader: mpsc::Sender<FetchChunkMsg<Sig>>,
         executor_proxy: T,
     ) -> Self {
         Self {
@@ -118,7 +118,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// Consensus request handler
     async fn handle_request(
         &mut self,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures<Sig>,
         subscriber: oneshot::Sender<SyncStatus>,
     ) {
         let requested_version = target.ledger_info().version();
@@ -180,7 +180,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn process_transactions(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures<Sig>,
     ) {
         let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
         if chunk_size == 0 {
@@ -237,7 +237,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn store_transactions(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures<Sig>,
     ) -> Result<ExecuteChunkResponse> {
         let mut req = ExecuteChunkRequest::new();
         req.set_txn_list_with_proof(txn_list_with_proof);

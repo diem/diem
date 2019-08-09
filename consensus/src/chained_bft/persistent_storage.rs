@@ -15,19 +15,21 @@ use config::config::NodeConfig;
 use crypto::HashValue;
 use failure::Result;
 use logger::prelude::*;
+use nextgen_crypto::*;
 use rmp_serde::{from_slice, to_vec_named};
+use serde::{de::Deserialize, ser::Serialize};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
 /// Persistent storage for liveness data
-pub trait PersistentLivenessStorage: Send + Sync {
+pub trait PersistentLivenessStorage<Sig>: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
     fn save_highest_timeout_cert(
         &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
+        highest_timeout_certs: HighestTimeoutCertificates<Sig>,
     ) -> Result<()>;
 }
 
@@ -37,13 +39,21 @@ pub trait PersistentLivenessStorage: Send + Sync {
 /// and supports clean up (i.e. tree pruning).
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
-pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
+pub trait PersistentStorage<T, Sig: Signature>:
+    PersistentLivenessStorage<Sig> + Send + Sync
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
     /// Get an Arc to an instance of PersistentLivenessStorage
     /// (workaround for trait downcasting
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage>;
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage<Sig>>;
 
     /// Persist the blocks and quorum certs into storage atomically.
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
+    fn save_tree(
+        &self,
+        blocks: Vec<Block<T, Sig>>,
+        quorum_certs: Vec<QuorumCert<Sig>>,
+    ) -> Result<()>;
 
     /// Delete the corresponding blocks and quorum certs atomically.
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
@@ -55,7 +65,7 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     /// This could guarantee we only read once during start, and we would panic if the
     /// read fails.
     /// It makes sense to be synchronous since we can't do anything else until this finishes.
-    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>)
+    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T, Sig>)
     where
         Self: Sized;
 }
@@ -63,31 +73,36 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 #[derive(Debug)]
-pub struct RecoveryData<T> {
+pub struct RecoveryData<T, Sig> {
     // Safety data
     state: ConsensusState,
-    root: (Block<T>, QuorumCert, QuorumCert),
+    root: (Block<T, Sig>, QuorumCert<Sig>, QuorumCert<Sig>),
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
-    blocks: Vec<Block<T>>,
-    quorum_certs: Vec<QuorumCert>,
+    blocks: Vec<Block<T, Sig>>,
+    quorum_certs: Vec<QuorumCert<Sig>>,
     blocks_to_prune: Option<Vec<HashValue>>,
 
     // Liveness data
-    highest_timeout_certificates: HighestTimeoutCertificates,
+    highest_timeout_certificates: HighestTimeoutCertificates<Sig>,
 
     // whether root is consistent with StateComputer, if not we need to do the state sync before
     // starting
     need_sync: bool,
 }
 
-impl<T: Payload> RecoveryData<T> {
+impl<T, Sig> RecoveryData<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn new(
         state: ConsensusState,
-        mut blocks: Vec<Block<T>>,
-        mut quorum_certs: Vec<QuorumCert>,
+        mut blocks: Vec<Block<T, Sig>>,
+        mut quorum_certs: Vec<QuorumCert<Sig>>,
         root_from_storage: HashValue,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificates: HighestTimeoutCertificates<Sig>,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, root_from_storage).map_err(|e| {
@@ -131,9 +146,9 @@ impl<T: Payload> RecoveryData<T> {
     pub fn take(
         self,
     ) -> (
-        (Block<T>, QuorumCert, QuorumCert),
-        Vec<Block<T>>,
-        Vec<QuorumCert>,
+        (Block<T, Sig>, QuorumCert<Sig>, QuorumCert<Sig>),
+        Vec<Block<T, Sig>>,
+        Vec<QuorumCert<Sig>>,
     ) {
         (self.root, self.blocks, self.quorum_certs)
     }
@@ -144,11 +159,11 @@ impl<T: Payload> RecoveryData<T> {
             .expect("blocks_to_prune already taken")
     }
 
-    pub fn highest_timeout_certificates(&self) -> &HighestTimeoutCertificates {
+    pub fn highest_timeout_certificates(&self) -> &HighestTimeoutCertificates<Sig> {
         &self.highest_timeout_certificates
     }
 
-    pub fn root_ledger_info(&self) -> QuorumCert {
+    pub fn root_ledger_info(&self) -> QuorumCert<Sig> {
         self.root.2.clone()
     }
 
@@ -179,10 +194,10 @@ impl<T: Payload> RecoveryData<T> {
     /// ConsensusDB: we're going to start with LI(C) and invoke state synchronizer in order to
     /// resume the synchronization.
     fn find_root(
-        blocks: &mut Vec<Block<T>>,
-        quorum_certs: &mut Vec<QuorumCert>,
+        blocks: &mut Vec<Block<T, Sig>>,
+        quorum_certs: &mut Vec<QuorumCert<Sig>>,
         root_from_storage: HashValue,
-    ) -> Result<(Block<T>, QuorumCert, QuorumCert)> {
+    ) -> Result<(Block<T, Sig>, QuorumCert<Sig>, QuorumCert<Sig>)> {
         // sort by round to guarantee the topological order of parent <- child
         blocks.sort_by_key(Block::round);
         let root_from_consensus = {
@@ -241,8 +256,8 @@ impl<T: Payload> RecoveryData<T> {
 
     fn find_blocks_to_prune(
         root_id: HashValue,
-        blocks: &mut Vec<Block<T>>,
-        quorum_certs: &mut Vec<QuorumCert>,
+        blocks: &mut Vec<Block<T, Sig>>,
+        quorum_certs: &mut Vec<QuorumCert<Sig>>,
     ) -> Vec<HashValue> {
         // prune all the blocks that don't have root as ancestor
         let mut tree = HashSet::new();
@@ -274,22 +289,31 @@ impl StorageWriteProxy {
     }
 }
 
-impl PersistentLivenessStorage for StorageWriteProxy {
+impl<Sig: Signature + Serialize> PersistentLivenessStorage<Sig> for StorageWriteProxy {
     fn save_highest_timeout_cert(
         &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
+        highest_timeout_certs: HighestTimeoutCertificates<Sig>,
     ) -> Result<()> {
         self.db
-            .save_highest_timeout_certificates(to_vec_named(&highest_timeout_certs)?)
+            .save_highest_timeout_certificates::<Sig>(to_vec_named(&highest_timeout_certs)?)
     }
 }
 
-impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
+impl<T, Sig> PersistentStorage<T, Sig> for StorageWriteProxy
+where
+    T: Payload,
+    Sig: Signature + Serialize + for<'de> Deserialize<'de>,
+    Sig::SigningKeyMaterial: Genesis,
+{
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage<Sig>> {
         Box::new(StorageWriteProxy::new(Arc::clone(&self.db)))
     }
 
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+    fn save_tree(
+        &self,
+        blocks: Vec<Block<T, Sig>>,
+        quorum_certs: Vec<QuorumCert<Sig>>,
+    ) -> Result<()> {
         self.db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)
     }
@@ -298,7 +322,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         if !block_ids.is_empty() {
             // quorum certs that certified the block_ids will get removed
             self.db
-                .delete_blocks_and_quorum_certificates::<T>(block_ids)?;
+                .delete_blocks_and_quorum_certificates::<T, Sig>(block_ids)?;
         }
         Ok(())
     }
@@ -307,7 +331,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         self.db.save_state(to_vec_named(&state)?)
     }
 
-    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
+    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T, Sig>) {
         info!("Start consensus recovery.");
         let read_client = create_storage_read_client(config);
         let db = Arc::new(ConsensusDB::new(config.storage.dir.clone()));
@@ -365,8 +389,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 
-        <dyn PersistentStorage<T>>::prune_tree(proxy.as_ref(), initial_data.take_blocks_to_prune())
-            .expect("unable to prune dangling blocks during restart");
+        <dyn PersistentStorage<T, Sig>>::prune_tree(
+            proxy.as_ref(),
+            initial_data.take_blocks_to_prune(),
+        )
+        .expect("unable to prune dangling blocks during restart");
 
         debug!("Consensus root to start with: {}", initial_data.root.0);
 

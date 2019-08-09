@@ -33,14 +33,14 @@ pub use mock_txn_manager::MockTransactionManager;
 
 pub type TestPayload = Vec<usize>;
 
-pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
+pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>, Ed25519Signature>> {
     let signer = ValidatorSigner::random(None);
     build_empty_tree_with_custom_signing(signer)
 }
 
 pub fn build_empty_tree_with_custom_signing(
     my_signer: ValidatorSigner<Ed25519PrivateKey>,
-) -> Arc<BlockStore<Vec<usize>>> {
+) -> Arc<BlockStore<Vec<usize>, Ed25519Signature>> {
     let (commit_cb_sender, _commit_cb_receiver) =
         mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
@@ -56,11 +56,11 @@ pub fn build_empty_tree_with_custom_signing(
 
 pub struct TreeInserter {
     payload_val: usize,
-    block_store: Arc<BlockStore<Vec<usize>>>,
+    block_store: Arc<BlockStore<Vec<usize>, Ed25519Signature>>,
 }
 
 impl TreeInserter {
-    pub fn new(block_store: Arc<BlockStore<Vec<usize>>>) -> Self {
+    pub fn new(block_store: Arc<BlockStore<Vec<usize>, Ed25519Signature>>) -> Self {
         Self {
             payload_val: 0,
             block_store,
@@ -72,9 +72,9 @@ impl TreeInserter {
     /// `insert_block_with_qc`.
     pub fn insert_block(
         &mut self,
-        parent: &Block<Vec<usize>>,
+        parent: &Block<Vec<usize>, Ed25519Signature>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<Block<Vec<usize>, Ed25519Signature>> {
         // Node must carry a QC to its parent
         let parent_qc = placeholder_certificate_for_block(
             vec![self.block_store.signer()],
@@ -91,10 +91,10 @@ impl TreeInserter {
 
     pub fn insert_block_with_qc(
         &mut self,
-        parent_qc: QuorumCert,
-        parent: &Block<Vec<usize>>,
+        parent_qc: QuorumCert<Ed25519Signature>,
+        parent: &Block<Vec<usize>, Ed25519Signature>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<Block<Vec<usize>, Ed25519Signature>> {
         self.payload_val += 1;
         block_on(self.block_store.insert_block_with_qc(Block::make_block(
             parent,
@@ -109,10 +109,10 @@ impl TreeInserter {
 
     pub fn insert_pre_made_block(
         &mut self,
-        block: Block<Vec<usize>>,
+        block: Block<Vec<usize>, Ed25519Signature>,
         block_signer: &ValidatorSigner<Ed25519PrivateKey>,
         qc_signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<Block<Vec<usize>, Ed25519Signature>> {
         self.payload_val += 1;
         let new_round = if block.round() > 0 {
             block.round() - 1
@@ -162,10 +162,10 @@ pub fn placeholder_certificate_for_block(
     certified_parent_block_round: u64,
     certified_grandparent_block_id: HashValue,
     certified_grandparent_block_round: u64,
-) -> QuorumCert {
+) -> QuorumCert<Ed25519Signature> {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteMsg::vote_digest(
+    let consensus_data_hash = VoteMsg::<Ed25519Signature>::vote_digest(
         certified_block_id,
         certified_block_state,
         certified_block_round,

@@ -17,6 +17,7 @@ use crate::chained_bft::{
 use crypto::HashValue;
 use failure::prelude::*;
 use logger::prelude::*;
+use nextgen_crypto::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
@@ -60,14 +61,17 @@ impl ConsensusDB {
         Self { db }
     }
 
-    pub fn get_data<T: Payload>(
+    pub fn get_data<T: Payload, Sig: Signature>(
         &self,
     ) -> Result<(
         Option<ConsensusStateData>,
         Option<HighestTimeoutCertificates>,
-        Vec<Block<T>>,
-        Vec<QuorumCert>,
-    )> {
+        Vec<Block<T, Sig>>,
+        Vec<QuorumCert<Sig>>,
+    )>
+    where
+        Sig::SigningKeyMaterial: Genesis,
+    {
         let consensus_state = self.get_state()?;
         let highest_timeout_certificates = self.get_highest_timeout_certificates()?;
         self.db
@@ -90,7 +94,7 @@ impl ConsensusDB {
         ))
     }
 
-    pub fn save_highest_timeout_certificates(
+    pub fn save_highest_timeout_certificates<Sig: Signature>(
         &self,
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Result<()> {
@@ -108,11 +112,14 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_blocks_and_quorum_certificates<T: Payload>(
+    pub fn save_blocks_and_quorum_certificates<T: Payload, Sig: Signature>(
         &self,
-        block_data: Vec<Block<T>>,
-        qc_data: Vec<QuorumCert>,
-    ) -> Result<()> {
+        block_data: Vec<Block<T, Sig>>,
+        qc_data: Vec<QuorumCert<Sig>>,
+    ) -> Result<()>
+    where
+        Sig::SigningKeyMaterial: Genesis,
+    {
         ensure!(
             !block_data.is_empty() || !qc_data.is_empty(),
             "Consensus block and qc data is empty!"
@@ -120,26 +127,29 @@ impl ConsensusDB {
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
-            .map(|block| batch.put::<BlockSchema<T>>(&block.id(), block))
+            .map(|block| batch.put::<BlockSchema<T, Sig>>(&block.id(), block))
             .collect::<Result<()>>()?;
         qc_data
             .iter()
-            .map(|qc| batch.put::<QCSchema>(&qc.certified_block_id(), qc))
+            .map(|qc| batch.put::<QCSchema<Sig>>(&qc.certified_block_id(), qc))
             .collect::<Result<()>>()?;
         self.commit(batch)
     }
 
-    pub fn delete_blocks_and_quorum_certificates<T: Payload>(
+    pub fn delete_blocks_and_quorum_certificates<T: Payload, Sig: Signature>(
         &self,
         block_ids: Vec<HashValue>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        Sig::SigningKeyMaterial: Genesis,
+    {
         ensure!(!block_ids.is_empty(), "Consensus block ids is empty!");
         let mut batch = SchemaBatch::new();
         block_ids
             .iter()
             .map(|hash| {
-                batch.delete::<BlockSchema<T>>(hash)?;
-                batch.delete::<QCSchema>(hash)
+                batch.delete::<BlockSchema<T, Sig>>(hash)?;
+                batch.delete::<QCSchema<Sig>>(hash)
             })
             .collect::<Result<_>>()?;
         self.commit(batch)
@@ -164,16 +174,23 @@ impl ConsensusDB {
     }
 
     /// Get all consensus blocks.
-    fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
-        let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
+    fn get_blocks<T: Payload, Sig: Signature>(&self) -> Result<HashMap<HashValue, Block<T, Sig>>>
+    where
+        Sig::SigningKeyMaterial: Genesis,
+    {
+        let mut iter = self
+            .db
+            .iter::<BlockSchema<T, Sig>>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, Block<T>>>>()
+        iter.collect::<Result<HashMap<HashValue, Block<T, Sig>>>>()
     }
 
     /// Get all consensus QCs.
-    fn get_quorum_certificates(&self) -> Result<HashMap<HashValue, QuorumCert>> {
-        let mut iter = self.db.iter::<QCSchema>(ReadOptions::default())?;
+    fn get_quorum_certificates<Sig: Signature>(
+        &self,
+    ) -> Result<HashMap<HashValue, QuorumCert<Sig>>> {
+        let mut iter = self.db.iter::<QCSchema<Sig>>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
+        iter.collect::<Result<HashMap<HashValue, QuorumCert<Sig>>>>()
     }
 }

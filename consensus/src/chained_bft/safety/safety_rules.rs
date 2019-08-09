@@ -11,6 +11,7 @@ use crate::{
 };
 
 use crypto::HashValue;
+use nextgen_crypto::*;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
@@ -188,16 +189,24 @@ impl ConsensusState {
 /// the blocks and their QCs.
 /// SafetyRules is NOT THREAD SAFE (should be protected outside via e.g., RwLock).
 /// The commit decisions are returned to the caller as result of learning about a new QuorumCert.
-pub struct SafetyRules<T> {
+pub struct SafetyRules<T, Sig> {
     // To query about the relationships between blocks and QCs.
-    block_tree: Arc<dyn BlockReader<Payload = T>>,
+    block_tree: Arc<dyn BlockReader<Payload = T, Sig = Sig>>,
     // Keeps the state.
     state: ConsensusState,
 }
 
-impl<T: Payload> SafetyRules<T> {
+impl<T, Sig> SafetyRules<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis + Send + Sync,
+{
     /// Constructs a new instance of SafetyRules given the BlockTree and ConsensusState.
-    pub fn new(block_tree: Arc<dyn BlockReader<Payload = T>>, state: ConsensusState) -> Self {
+    pub fn new(
+        block_tree: Arc<dyn BlockReader<Payload = T, Sig = Sig>>,
+        state: ConsensusState,
+    ) -> Self {
         Self { block_tree, state }
     }
 
@@ -208,7 +217,7 @@ impl<T: Payload> SafetyRules<T> {
     /// Requires that all the ancestors of the block are available for at least up to the last
     /// committed block, might panic otherwise.
     /// The update function is invoked whenever a system learns about a potentially high QC.
-    pub fn update(&mut self, qc: &QuorumCert) {
+    pub fn update(&mut self, qc: &QuorumCert<Sig>) {
         //TODO: remove
         // Preferred block rule: choose the highest 2-chain head.
         if let Some(one_chain_head) = self.block_tree.get_block(qc.certified_block_id()) {
@@ -224,8 +233,8 @@ impl<T: Payload> SafetyRules<T> {
     /// block at round r if possible
     pub fn commit_rule_for_certified_block(
         &self,
-        one_chain_head: Arc<Block<T>>,
-    ) -> Option<Arc<Block<T>>> {
+        one_chain_head: Arc<Block<T, Sig>>,
+    ) -> Option<Arc<Block<T, Sig>>> {
         if let Some(two_chain_head) = self.block_tree.get_block(one_chain_head.parent_id()) {
             if let Some(three_chain_head) = self.block_tree.get_block(two_chain_head.parent_id()) {
                 // We're using a so-called 3-chain commit rule: B0 (as well as its prefix)
@@ -264,7 +273,7 @@ impl<T: Payload> SafetyRules<T> {
     /// committed block, might panic otherwise.
     pub fn voting_rule(
         &mut self,
-        proposed_block: Arc<Block<T>>,
+        proposed_block: Arc<Block<T, Sig>>,
     ) -> Result<VoteInfo, ProposalReject> {
         if proposed_block.round() <= self.state.last_vote_round() {
             return Err(ProposalReject::OldProposal {

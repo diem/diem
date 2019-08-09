@@ -41,7 +41,7 @@ struct SMRNode {
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
     smr_id: usize,
-    smr: ChainedBftSMR<TestPayload>,
+    smr: ChainedBftSMR<TestPayload, Ed25519Signature>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
@@ -58,7 +58,7 @@ impl SMRNode {
         proposer: Vec<Author>,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
+        initial_data: RecoveryData<TestPayload, Ed25519Signature>,
     ) -> Self {
         let author = signer.author();
 
@@ -218,7 +218,9 @@ fn basic_start_test() {
         let mut msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let first_proposal =
+            ProposalMsg::<Vec<u64>, Ed25519Signature>::from_proto(msg[0].1.take_proposal())
+                .unwrap();
         assert_eq!(first_proposal.proposal.height(), 1);
         assert_eq!(first_proposal.proposal.parent_id(), genesis.id());
         assert_eq!(
@@ -240,11 +242,11 @@ fn start_with_proposal_test() {
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
         // Need to wait for 2 votes for the 2 replicas
-        let votes: Vec<VoteMsg> = playground
+        let votes: Vec<VoteMsg<Ed25519Signature>> = playground
             .wait_for_messages(2, NetworkPlayground::votes_only)
             .await
             .into_iter()
-            .map(|(_, mut msg)| VoteMsg::from_proto(msg.take_vote()).unwrap())
+            .map(|(_, mut msg)| VoteMsg::<Ed25519Signature>::from_proto(msg.take_vote()).unwrap())
             .collect();
         let proposed_block_id = votes[0].proposed_block_id();
 
@@ -282,9 +284,10 @@ fn basic_full_round() {
         let mut broadcast_proposals_2 = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let next_proposal =
-            ProposalMsg::<Vec<u64>>::from_proto(broadcast_proposals_2[0].1.take_proposal())
-                .unwrap();
+        let next_proposal = ProposalMsg::<Vec<u64>, Ed25519Signature>::from_proto(
+            broadcast_proposals_2[0].1.take_proposal(),
+        )
+        .unwrap();
         assert_eq!(next_proposal.proposal.round(), 2);
         assert_eq!(next_proposal.proposal.height(), 2);
     });
@@ -328,7 +331,7 @@ fn basic_commit_and_restart() {
             let mut votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
+            let vote_msg = VoteMsg::<Ed25519Signature>::from_proto(votes[0].1.take_vote()).unwrap();
             block_ids.push(vote_msg.proposed_block_id());
         }
         assert!(
@@ -405,7 +408,7 @@ fn basic_block_retrieval() {
             let mut votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
+            let vote_msg = VoteMsg::<Ed25519Signature>::from_proto(votes[0].1.take_vote()).unwrap();
             let proposal_id = vote_msg.proposed_block_id();
             first_proposals.push(proposal_id);
         }
@@ -464,7 +467,7 @@ fn block_retrieval_with_timeout() {
             let mut votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
+            let vote_msg = VoteMsg::<Ed25519Signature>::from_proto(votes[0].1.take_vote()).unwrap();
             let proposal_id = vote_msg.proposed_block_id();
             first_proposals.push(proposal_id);
         }
@@ -521,7 +524,7 @@ fn basic_state_sync() {
             let mut votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
+            let vote_msg = VoteMsg::<Ed25519Signature>::from_proto(votes[0].1.take_vote()).unwrap();
             let proposal_id = vote_msg.proposed_block_id();
             proposals.push(proposal_id);
         }
@@ -598,7 +601,7 @@ fn state_sync_on_timeout() {
             let mut votes = playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
+            let vote_msg = VoteMsg::<Ed25519Signature>::from_proto(votes[0].1.take_vote()).unwrap();
             let proposal_id = vote_msg.proposed_block_id();
             proposals.push(proposal_id);
         }
@@ -707,7 +710,9 @@ fn aggregate_timeout_votes() {
         let mut msg = playground
             .wait_for_messages(2, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let first_proposal =
+            ProposalMsg::<Vec<u64>, Ed25519Signature>::from_proto(msg[0].1.take_proposal())
+                .unwrap();
         let proposal_id = first_proposal.proposal.id();
         playground.drop_message_for(&nodes[0].author, nodes[1].author);
         playground.drop_message_for(&nodes[0].author, nodes[2].author);

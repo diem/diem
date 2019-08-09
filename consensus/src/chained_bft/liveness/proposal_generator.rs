@@ -10,6 +10,7 @@ use crate::{
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
 use logger::prelude::*;
+use nextgen_crypto::*;
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
@@ -49,10 +50,10 @@ pub enum ProposalGenerationError {
 ///
 /// TxnManager should be aware of the pending transactions in the branch that it is extending,
 /// such that it will filter them out to avoid transaction duplication.
-pub struct ProposalGenerator<T> {
+pub struct ProposalGenerator<T, Sig> {
     // Block store is queried both for finding the branch to extend and for generating the
     // proposed block.
-    block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
+    block_store: Arc<dyn BlockReader<Payload = T, Sig = Sig> + Send + Sync>,
     // Transaction manager is delivering the transactions.
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     // Time service to generate block timestamps
@@ -65,9 +66,14 @@ pub struct ProposalGenerator<T> {
     last_round_generated: Mutex<Round>,
 }
 
-impl<T: Payload> ProposalGenerator<T> {
+impl<T, Sig> ProposalGenerator<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn new(
-        block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
+        block_store: Arc<dyn BlockReader<Payload = T, Sig = Sig> + Send + Sync>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
@@ -84,7 +90,10 @@ impl<T: Payload> ProposalGenerator<T> {
     }
 
     /// Creates a NIL block proposal extending the highest certified block from the block store.
-    pub fn generate_nil_block(&self, round: Round) -> Result<Block<T>, ProposalGenerationError> {
+    pub fn generate_nil_block(
+        &self,
+        round: Round,
+    ) -> Result<Block<T, Sig>, ProposalGenerationError> {
         let hqc_block = self.block_store.highest_certified_block();
         if hqc_block.round() >= round {
             // The given round is too low.
@@ -116,7 +125,7 @@ impl<T: Payload> ProposalGenerator<T> {
         &self,
         round: Round,
         round_deadline: Instant,
-    ) -> Result<Block<T>, ProposalGenerationError> {
+    ) -> Result<Block<T, Sig>, ProposalGenerationError> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {

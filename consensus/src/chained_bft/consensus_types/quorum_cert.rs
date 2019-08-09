@@ -14,7 +14,7 @@ use crypto::{
 };
 use failure::Result;
 use network::proto::QuorumCert as ProtoQuorumCert;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -28,7 +28,7 @@ use types::{
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
-pub struct QuorumCert {
+pub struct QuorumCert<Sig> {
     /// The id of a block that is certified by this QuorumCertificate.
     certified_block_id: HashValue,
     /// The execution state of the corresponding block.
@@ -36,7 +36,7 @@ pub struct QuorumCert {
     /// The round of a certified block.
     certified_block_round: Round,
     /// The signed LedgerInfo of a committed block that carries the data about the certified block.
-    signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
+    signed_ledger_info: LedgerInfoWithSignatures<Sig>,
     /// The id of the parent block of the certified block
     certified_parent_block_id: HashValue,
     /// The round of the parent block of the certified block
@@ -47,7 +47,7 @@ pub struct QuorumCert {
     certified_grandparent_block_round: Round,
 }
 
-impl Display for QuorumCert {
+impl<Sig> Display for QuorumCert<Sig> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -58,12 +58,16 @@ impl Display for QuorumCert {
 }
 
 #[allow(dead_code)]
-impl QuorumCert {
+impl<Sig> QuorumCert<Sig>
+where
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     pub fn new(
         block_id: HashValue,
         state: ExecutedState,
         round: Round,
-        signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
+        signed_ledger_info: LedgerInfoWithSignatures<Sig>,
         certified_parent_block_id: HashValue,
         certified_parent_block_round: Round,
         certified_grandparent_block_id: HashValue,
@@ -93,7 +97,7 @@ impl QuorumCert {
         self.certified_block_round
     }
 
-    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures<Ed25519Signature> {
+    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures<Sig> {
         &self.signed_ledger_info
     }
 
@@ -127,8 +131,8 @@ impl QuorumCert {
     /// - the accumulator root hash of the LedgerInfo is set to `ACCUMULATOR_PLACEHOLDER_HASH`
     ///   constant.
     /// - the map of signatures is empty because genesis block is implicitly agreed.
-    pub fn certificate_for_genesis() -> QuorumCert {
-        let genesis_digest = VoteMsg::vote_digest(
+    pub fn certificate_for_genesis() -> QuorumCert<Sig> {
+        let genesis_digest = VoteMsg::<Sig>::vote_digest(
             *GENESIS_BLOCK_ID,
             ExecutedState::state_for_genesis(),
             0,
@@ -137,7 +141,7 @@ impl QuorumCert {
             *GENESIS_BLOCK_ID,
             0,
         );
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
+        let signer = ValidatorSigner::<Sig::SigningKeyMaterial>::genesis();
         let li = LedgerInfo::new(
             0,
             *ACCUMULATOR_PLACEHOLDER_HASH,
@@ -165,9 +169,9 @@ impl QuorumCert {
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
     ) -> ::std::result::Result<(), VoteMsgVerificationError> {
-        let vote_hash = VoteMsg::vote_digest(
+        let vote_hash = VoteMsg::<Sig>::vote_digest(
             self.certified_block_id,
             self.certified_state,
             self.certified_block_round,
@@ -192,7 +196,7 @@ impl QuorumCert {
     }
 }
 
-impl IntoProto for QuorumCert {
+impl<Sig: Signature> IntoProto for QuorumCert<Sig> {
     type ProtoType = ProtoQuorumCert;
 
     fn into_proto(self) -> Self::ProtoType {
@@ -210,7 +214,7 @@ impl IntoProto for QuorumCert {
     }
 }
 
-impl FromProto for QuorumCert {
+impl<Sig: Signature> FromProto for QuorumCert<Sig> {
     type ProtoType = ProtoQuorumCert;
 
     fn from_proto(object: Self::ProtoType) -> Result<Self> {

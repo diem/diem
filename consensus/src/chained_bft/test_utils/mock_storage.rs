@@ -11,6 +11,7 @@ use crate::chained_bft::{
 use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::HashValue;
 use failure::Result;
+use nextgen_crypto::ed25519::*;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -18,12 +19,12 @@ use std::{
 
 pub struct MockSharedStorage<T> {
     // Safety state
-    pub block: Mutex<HashMap<HashValue, Block<T>>>,
-    pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
+    pub block: Mutex<HashMap<HashValue, Block<T, Ed25519Signature>>>,
+    pub qc: Mutex<HashMap<HashValue, QuorumCert<Ed25519Signature>>>,
     pub state: Mutex<ConsensusState>,
 
     // Liveness state
-    pub highest_timeout_certificates: Mutex<HighestTimeoutCertificates>,
+    pub highest_timeout_certificates: Mutex<HighestTimeoutCertificates<Ed25519Signature>>,
 }
 
 /// A storage that simulates the operations in-memory, used in the tests that cares about storage
@@ -37,7 +38,7 @@ impl<T: Payload> MockStorage<T> {
         MockStorage { shared_storage }
     }
 
-    pub fn get_recovery_data(&self) -> Result<RecoveryData<T>> {
+    pub fn get_recovery_data(&self) -> Result<RecoveryData<T, Ed25519Signature>> {
         let mut blocks: Vec<_> = self
             .shared_storage
             .block
@@ -77,15 +78,15 @@ impl<T: Payload> MockStorage<T> {
         self.get_recovery_data().map(|_| ())
     }
 
-    pub fn start_for_testing() -> (Arc<Self>, RecoveryData<T>) {
+    pub fn start_for_testing() -> (Arc<Self>, RecoveryData<T, Ed25519Signature>) {
         Self::start(&NodeConfigHelpers::get_single_node_test_config(false))
     }
 }
 
-impl<T: Payload> PersistentLivenessStorage for MockStorage<T> {
+impl<T: Payload> PersistentLivenessStorage<Ed25519Signature> for MockStorage<T> {
     fn save_highest_timeout_cert(
         &self,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificates: HighestTimeoutCertificates<Ed25519Signature>,
     ) -> Result<()> {
         *self
             .shared_storage
@@ -97,14 +98,18 @@ impl<T: Payload> PersistentLivenessStorage for MockStorage<T> {
 }
 
 // A impl that always start from genesis.
-impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
+impl<T: Payload> PersistentStorage<T, Ed25519Signature> for MockStorage<T> {
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage<Ed25519Signature>> {
         Box::new(MockStorage {
             shared_storage: Arc::clone(&self.shared_storage),
         })
     }
 
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+    fn save_tree(
+        &self,
+        blocks: Vec<Block<T, Ed25519Signature>>,
+        quorum_certs: Vec<QuorumCert<Ed25519Signature>>,
+    ) -> Result<()> {
         for block in blocks {
             self.shared_storage
                 .block
@@ -141,7 +146,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn start(_config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
+    fn start(_config: &NodeConfig) -> (Arc<Self>, RecoveryData<T, Ed25519Signature>) {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
@@ -170,23 +175,30 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
 pub struct EmptyStorage;
 
 impl EmptyStorage {
-    pub fn start_for_testing<T: Payload>() -> (Arc<Self>, RecoveryData<T>) {
+    pub fn start_for_testing<T: Payload>() -> (Arc<Self>, RecoveryData<T, Ed25519Signature>) {
         Self::start(&NodeConfigHelpers::get_single_node_test_config(false))
     }
 }
 
-impl PersistentLivenessStorage for EmptyStorage {
-    fn save_highest_timeout_cert(&self, _: HighestTimeoutCertificates) -> Result<()> {
+impl PersistentLivenessStorage<Ed25519Signature> for EmptyStorage {
+    fn save_highest_timeout_cert(
+        &self,
+        _: HighestTimeoutCertificates<Ed25519Signature>,
+    ) -> Result<()> {
         Ok(())
     }
 }
 
-impl<T: Payload> PersistentStorage<T> for EmptyStorage {
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
+impl<T: Payload> PersistentStorage<T, Ed25519Signature> for EmptyStorage {
+    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage<Ed25519Signature>> {
         Box::new(EmptyStorage)
     }
 
-    fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
+    fn save_tree(
+        &self,
+        _: Vec<Block<T, Ed25519Signature>>,
+        _: Vec<QuorumCert<Ed25519Signature>>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -198,7 +210,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
+    fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T, Ed25519Signature>) {
         let genesis = Block::make_genesis_block();
         let genesis_qc = QuorumCert::certificate_for_genesis();
         let htc = HighestTimeoutCertificates::new(None, None);

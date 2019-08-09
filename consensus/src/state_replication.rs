@@ -6,7 +6,7 @@ use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
 use futures::Future;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use serde::{Deserialize, Serialize};
 use state_synchronizer::SyncStatus;
 use std::{pin::Pin, sync::Arc};
@@ -91,6 +91,7 @@ impl CanonicalSerialize for ExecutedState {
 /// StateComputer is using proposed block ids for identifying the transactions.
 pub trait StateComputer: Send + Sync {
     type Payload;
+    type Sig: Signature;
 
     /// How to execute a sequence of transactions and obtain the next state. While some of the
     /// transactions succeed, some of them can fail.
@@ -110,13 +111,13 @@ pub trait StateComputer: Send + Sync {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures<Ed25519Signature>,
+        commit: LedgerInfoWithSignatures<Self::Sig>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Synchronize to a commit that not present locally.
     fn sync_to(
         &self,
-        commit: QuorumCert,
+        commit: QuorumCert<Self::Sig>,
     ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>>;
 
     /// Get a chunk of transactions as a batch
@@ -130,12 +131,13 @@ pub trait StateComputer: Send + Sync {
 
 pub trait StateMachineReplication {
     type Payload;
+    type Sig: Signature;
     /// The function is synchronous: it returns when the state is initialized / recovered from
     /// persisted storage and all the threads have been started.
     fn start(
         &mut self,
         txn_manager: Arc<dyn TxnManager<Payload = Self::Payload>>,
-        state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
+        state_computer: Arc<dyn StateComputer<Payload = Self::Payload, Sig = Self::Sig>>,
     ) -> Result<()>;
 
     /// Stop is synchronous: returns when all the threads are shutdown and the state is persisted.

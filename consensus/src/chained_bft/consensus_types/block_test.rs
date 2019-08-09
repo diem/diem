@@ -11,7 +11,7 @@ use crate::chained_bft::{
 };
 
 use crypto::HashValue;
-use nextgen_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use nextgen_crypto::ed25519::*;
 use proptest::{prelude::*, std_facade::hash_map::HashMap};
 use std::{
     panic,
@@ -22,7 +22,7 @@ use std::{
 use types::validator_signer::proptests;
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 
-type LinearizedBlockForest<T> = Vec<Block<T>>;
+type LinearizedBlockForest<T> = Vec<Block<T, Ed25519Signature>>;
 
 prop_compose! {
     /// This strategy is a swiss-army tool to produce a low-level block
@@ -41,7 +41,7 @@ prop_compose! {
         payload in 0usize..10usize,
         height in Just(height),
         signer in signer_strategy,
-    ) -> Block<Vec<usize>> {
+    ) -> Block<Vec<usize>, Ed25519Signature> {
         Block::new_internal(
             vec![payload],
             parent_id,
@@ -55,7 +55,7 @@ prop_compose! {
 }
 
 /// This produces the genesis block
-pub fn genesis_strategy() -> impl Strategy<Value = Block<Vec<usize>>> {
+pub fn genesis_strategy() -> impl Strategy<Value = Block<Vec<usize>, Ed25519Signature>> {
     Just(Block::make_genesis_block())
 }
 
@@ -71,22 +71,22 @@ prop_compose! {
             123,
             proptests::arb_signer(),
         )
-    ) -> Block<Vec<usize>> {
+    ) -> Block<Vec<usize>, Ed25519Signature> {
         block
     }
 }
 
 /// Offers the genesis block.
-pub fn leaf_strategy() -> impl Strategy<Value = Block<Vec<usize>>> {
+pub fn leaf_strategy() -> impl Strategy<Value = Block<Vec<usize>, Ed25519Signature>> {
     genesis_strategy().boxed()
 }
 
 prop_compose! {
     /// This produces a block with an invalid id (and therefore signature)
     /// given a valid block
-    pub fn fake_id(block_strategy: impl Strategy<Value = Block<Vec<usize>>>)
+    pub fn fake_id(block_strategy: impl Strategy<Value = Block<Vec<usize>, Ed25519Signature>>)
         (fake_id in HashValue::arbitrary(),
-         block in block_strategy) -> Block<Vec<usize>> {
+         block in block_strategy) -> Block<Vec<usize>, Ed25519Signature> {
             Block {
                 timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
@@ -189,7 +189,7 @@ pub fn block_forest_and_its_keys(
 #[test]
 fn test_genesis() {
     // Test genesis and the next block
-    let genesis_block = Block::<i64>::make_genesis_block();
+    let genesis_block = Block::<i64, Ed25519Signature>::make_genesis_block();
     assert_eq!(genesis_block.height(), 0);
     assert_eq!(genesis_block.parent_id(), HashValue::zero());
     assert_ne!(genesis_block.id(), HashValue::zero());
@@ -240,9 +240,9 @@ fn test_nil_block() {
 
 #[test]
 fn test_block_relation() {
-    let signer = ValidatorSigner::random(None);
+    let signer = ValidatorSigner::<Ed25519PrivateKey>::random(None);
     // Test genesis and the next block
-    let genesis_block = Block::make_genesis_block();
+    let genesis_block = Block::<u64, Ed25519Signature>::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
     let payload = 101;
     let next_block = Block::make_block(

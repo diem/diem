@@ -7,7 +7,7 @@ use crate::chained_bft::{
 };
 use failure::prelude::*;
 use network::proto::Proposal as ProtoProposal;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use std::fmt;
 use types::validator_verifier::ValidatorVerifier;
@@ -15,13 +15,18 @@ use types::validator_verifier::ValidatorVerifier;
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ProposalMsg<T> {
-    pub proposal: Block<T>,
-    pub sync_info: SyncInfo,
+pub struct ProposalMsg<T, Sig> {
+    pub proposal: Block<T, Sig>,
+    pub sync_info: SyncInfo<Sig>,
 }
 
-impl<T: Payload> ProposalMsg<T> {
-    pub fn verify(&self, validator: &ValidatorVerifier<Ed25519PublicKey>) -> Result<()> {
+impl<T, Sig> ProposalMsg<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
+    pub fn verify(&self, validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>) -> Result<()> {
         if self.proposal.is_nil_block() {
             return Err(format_err!("Proposal {} for a NIL block", self.proposal));
         }
@@ -83,7 +88,12 @@ impl<T: Payload> ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> fmt::Display for ProposalMsg<T> {
+impl<T, Sig> fmt::Display for ProposalMsg<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let author = match self.proposal.author() {
             Some(author) => author.short_str(),
@@ -93,7 +103,10 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> IntoProto for ProposalMsg<T> {
+impl<T: Payload, Sig: Signature> IntoProto for ProposalMsg<T, Sig>
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
     type ProtoType = ProtoProposal;
 
     fn into_proto(self) -> Self::ProtoType {
@@ -104,11 +117,14 @@ impl<T: Payload> IntoProto for ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> FromProto for ProposalMsg<T> {
+impl<T: Payload, Sig: Signature> FromProto for ProposalMsg<T, Sig>
+where
+    Sig::SigningKeyMaterial: Genesis,
+{
     type ProtoType = ProtoProposal;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
+        let proposal = Block::<T, Sig>::from_proto(object.take_proposed_block())?;
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
         Ok(ProposalMsg {
             proposal,

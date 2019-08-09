@@ -6,6 +6,7 @@ use crate::chained_bft::{
     consensus_types::proposal_msg::ProposalMsg,
     liveness::proposer_election::ProposerElection,
 };
+use nextgen_crypto::*;
 
 /// The rotating proposer maps a round to an author according to a round-robin rotation.
 /// A fixed proposer strategy loses liveness when the fixed proposer is down. Rotating proposers
@@ -33,7 +34,12 @@ impl RotatingProposer {
     }
 }
 
-impl<T: Payload> ProposerElection<T> for RotatingProposer {
+impl<T, Sig> ProposerElection<T, Sig> for RotatingProposer
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
+{
     fn is_valid_proposer(&self, author: Author, round: Round) -> Option<Author> {
         if self.get_proposer(round) == author {
             Some(author)
@@ -46,7 +52,7 @@ impl<T: Payload> ProposerElection<T> for RotatingProposer {
         vec![self.get_proposer(round)]
     }
 
-    fn process_proposal(&self, proposal: ProposalMsg<T>) -> Option<ProposalMsg<T>> {
+    fn process_proposal(&self, proposal: ProposalMsg<T, Sig>) -> Option<ProposalMsg<T, Sig>> {
         // This is a simple rotating proposer, the proposal is processed in the context of the
         // caller task, no synchronization required because there is no mutable state.
         let round_author = self.get_proposer(proposal.proposal.round());

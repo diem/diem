@@ -18,7 +18,8 @@ fn test_rotating_proposer() {
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 1));
+    let pe: Arc<dyn ProposerElection<u32, Ed25519Signature>> =
+        Arc::new(RotatingProposer::new(proposers, 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -87,7 +88,8 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 3));
+    let pe: Arc<dyn ProposerElection<u32, Ed25519Signature>> =
+        Arc::new(RotatingProposer::new(proposers, 3));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -152,7 +154,7 @@ fn test_fixed_proposer() {
     let chosen_author = chosen_validator_signer.author();
     let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let pe: Arc<dyn ProposerElection<u32>> =
+    let pe: Arc<dyn ProposerElection<u32, Ed25519Signature>> =
         Arc::new(RotatingProposer::new(vec![chosen_author], 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is

@@ -9,6 +9,7 @@ use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use execution_proto::proto::execution_grpc::ExecutionClient;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use mempool::proto::mempool_grpc::MempoolClient;
+use nextgen_crypto::ed25519::*;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -27,11 +28,11 @@ pub trait ConsensusProvider {
 }
 
 /// Helper function to create a ConsensusProvider based on configuration
-pub fn make_consensus_provider(
+pub fn make_consensus_provider<Ed25519Sigature>(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_receiver: ConsensusNetworkEvents,
-    state_sync_client: Arc<StateSyncClient>,
+    state_sync_client: Arc<StateSyncClient<Ed25519Signature>>,
 ) -> Box<dyn ConsensusProvider> {
     Box::new(ChainedBftProvider::new(
         node_config,

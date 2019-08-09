@@ -15,7 +15,9 @@ use canonical_serialization::CanonicalSerialize;
 use crypto::HashValue;
 use logger::prelude::*;
 use mirai_annotations::checked_verify_eq;
+#[cfg(test)]
 use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use serde::Serialize;
 use std::{
     collections::{
@@ -32,13 +34,13 @@ use types::ledger_info::LedgerInfoWithSignatures;
 /// This structure maintains a consistent block tree of parent and children links. Blocks contain
 /// parent links and are immutable.  For all parent links, a child link exists. This structure
 /// should only be used internally in BlockStore.
-pub struct BlockTree<T> {
+pub struct BlockTree<T, Sig> {
     /// All the blocks known to this replica (with parent links)
-    id_to_block: HashMap<HashValue, Arc<Block<T>>>,
+    id_to_block: HashMap<HashValue, Arc<Block<T, Sig>>>,
     /// All child links (i.e. reverse parent links) for easy cleaning.  Note that a block may
     /// have multiple child links.  There should be id_to_blocks.len() - 1 total
     /// id_to_child entries.
-    id_to_child: HashMap<HashValue, Vec<Arc<Block<T>>>>,
+    id_to_child: HashMap<HashValue, Vec<Arc<Block<T, Sig>>>>,
     /// Mapping between proposals(Block) to execution results.
     id_to_state: HashMap<HashValue, ExecutedState>,
     /// Keeps the state compute results of the executed blocks.
@@ -48,13 +50,13 @@ pub struct BlockTree<T> {
     /// pending blocks upon restart.
     id_to_compute_result: HashMap<HashValue, Arc<StateComputeResult>>,
     /// Root of the tree.
-    root: Arc<Block<T>>,
+    root: Arc<Block<T, Sig>>,
     /// A certified block with highest round
-    highest_certified_block: Arc<Block<T>>,
+    highest_certified_block: Arc<Block<T, Sig>>,
     /// The quorum certificate of highest_certified_block
-    highest_quorum_cert: Arc<QuorumCert>,
+    highest_quorum_cert: Arc<QuorumCert<Sig>>,
     /// The quorum certificate that carries a highest ledger info
-    highest_ledger_info: Arc<QuorumCert>,
+    highest_ledger_info: Arc<QuorumCert<Sig>>,
 
     /// `id_to_votes` might keep multiple LedgerInfos per proposed block in order
     /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
@@ -62,23 +64,25 @@ pub struct BlockTree<T> {
     /// The vote digest is a hash that covers both the proposal id and the state id.
     /// Thus, the structure of `id_to_votes` is as follows:
     /// HashMap<proposed_block_id, HashMap<vote_digest, LedgerInfoWithSignatures>>
-    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures<Ed25519Signature>>>,
+    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures<Sig>>>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
-    id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
+    id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert<Sig>>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
     pruned_block_ids: VecDeque<HashValue>,
     /// Num pruned blocks to keep in memory.
     max_pruned_blocks_in_mem: usize,
 }
 
-impl<T> BlockTree<T>
+impl<T, Sig> BlockTree<T, Sig>
 where
     T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     pub(super) fn new(
-        root: Block<T>,
-        root_quorum_cert: QuorumCert,
-        root_ledger_info: QuorumCert,
+        root: Block<T, Sig>,
+        root_quorum_cert: QuorumCert<Sig>,
+        root_ledger_info: QuorumCert<Sig>,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {
         assert_eq!(
@@ -137,7 +141,7 @@ where
         self.id_to_block.contains_key(&block_id)
     }
 
-    pub(super) fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<T>>> {
+    pub(super) fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<T, Sig>>> {
         self.id_to_block.get(&block_id).cloned()
     }
 
@@ -152,30 +156,33 @@ where
         self.id_to_compute_result.get(&block_id).cloned()
     }
 
-    pub(super) fn root(&self) -> Arc<Block<T>> {
+    pub(super) fn root(&self) -> Arc<Block<T, Sig>> {
         self.root.clone()
     }
 
-    pub(super) fn highest_certified_block(&self) -> Arc<Block<T>> {
+    pub(super) fn highest_certified_block(&self) -> Arc<Block<T, Sig>> {
         Arc::clone(&self.highest_certified_block)
     }
 
-    pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
+    pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert<Sig>> {
         Arc::clone(&self.highest_quorum_cert)
     }
 
-    pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {
+    pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert<Sig>> {
         Arc::clone(&self.highest_ledger_info)
     }
 
-    pub(super) fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>> {
+    pub(super) fn get_quorum_cert_for_block(
+        &self,
+        block_id: HashValue,
+    ) -> Option<Arc<QuorumCert<Sig>>> {
         self.id_to_quorum_cert.get(&block_id).cloned()
     }
 
     pub(super) fn is_ancestor(
         &self,
-        ancestor: &Block<T>,
-        block: &Block<T>,
+        ancestor: &Block<T, Sig>,
+        block: &Block<T, Sig>,
     ) -> Result<bool, BlockTreeError> {
         let mut current_block = block;
         while current_block.round() >= ancestor.round() {
@@ -193,10 +200,10 @@ where
 
     pub(super) fn insert_block(
         &mut self,
-        block: Block<T>,
+        block: Block<T, Sig>,
         state: ExecutedState,
         compute_result: StateComputeResult,
-    ) -> Result<Arc<Block<T>>, BlockTreeError> {
+    ) -> Result<Arc<Block<T, Sig>>, BlockTreeError> {
         if !self.block_exists(block.parent_id()) {
             return Err(BlockTreeError::BlockNotFound {
                 id: block.parent_id(),
@@ -229,7 +236,7 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> Result<(), BlockTreeError> {
+    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert<Sig>) -> Result<(), BlockTreeError> {
         let block_id = qc.certified_block_id();
         let qc = Arc::new(qc);
         match self.id_to_block.get(&block_id) {
@@ -269,9 +276,9 @@ where
 
     pub(super) fn insert_vote(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote_msg: &VoteMsg<Sig>,
         min_votes_for_qc: usize,
-    ) -> VoteReceptionResult {
+    ) -> VoteReceptionResult<Sig> {
         let block_id = vote_msg.proposed_block_id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
@@ -399,7 +406,10 @@ where
     /// a race, in which the root of the tree is propagated forward between retrieving the block
     /// and getting its path from root (e.g., at proposal generator). Hence, we don't want to panic
     /// and prefer to return None instead.
-    pub(super) fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
+    pub(super) fn path_from_root(
+        &self,
+        block: Arc<Block<T, Sig>>,
+    ) -> Option<Vec<Arc<Block<T, Sig>>>> {
         let mut res = vec![];
         let mut cur_block = block;
         while cur_block.round() > self.root.round() {
@@ -436,7 +446,7 @@ where
 }
 
 #[cfg(test)]
-impl<T> BlockTree<T>
+impl<T> BlockTree<T, Ed25519Signature>
 where
     T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
