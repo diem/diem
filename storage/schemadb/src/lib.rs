@@ -257,6 +257,24 @@ impl DB {
             .map_err(convert_rocksdb_err)
     }
 
+    /// Delete all keys in range [begin, end).
+    ///
+    /// `SK` has to be an explict type parameter since
+    /// https://github.com/rust-lang/rust/issues/44721
+    pub fn range_delete<S, SK>(&self, begin: &SK, end: &SK) -> Result<()>
+    where
+        S: Schema,
+        SK: SeekKeyCodec<S>,
+    {
+        let raw_begin = begin.encode_seek_key()?;
+        let raw_end = end.encode_seek_key()?;
+        let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
+
+        self.inner
+            .delete_range_cf(&cf_handle, &raw_begin, &raw_end)
+            .map_err(convert_rocksdb_err)
+    }
+
     /// Returns a [`SchemaIterator`] on a certain schema.
     pub fn iter<S: Schema>(&self, opts: ReadOptions) -> Result<SchemaIterator<S>> {
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
