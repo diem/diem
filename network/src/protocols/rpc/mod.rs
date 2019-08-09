@@ -84,6 +84,7 @@ use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 pub mod error;
+pub mod utils;
 
 #[cfg(test)]
 mod test;
