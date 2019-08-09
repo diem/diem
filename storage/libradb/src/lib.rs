@@ -91,7 +91,6 @@ pub struct LibraDB {
     transaction_store: TransactionStore,
     state_store: StateStore,
     event_store: EventStore,
-    #[allow(dead_code)]
     system_store: SystemStore,
     pruner: Pruner,
 }
