@@ -111,10 +111,10 @@ impl<TSubstream> PeerManagerRequestSender<TSubstream> {
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         let request = PeerManagerRequest::OpenSubstream(peer_id, protocol, oneshot_tx);
         self.inner.send(request).await.unwrap();
-        // TODO(philiphayes): If this error changes, also change rpc errors to
-        // handle appropriate cases.
         oneshot_rx
             .await
+            // The open_substream request can get dropped/canceled if the peer
+            // connection is in the process of shutting down.
             .map_err(|_| PeerManagerError::NotConnected(peer_id))?
     }
 }

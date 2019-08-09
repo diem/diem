@@ -106,7 +106,7 @@ where
             Ok(Some(substream)) => Ok(Compat01As03::new(substream)),
             Ok(None) => Err(io::Error::new(
                 io::ErrorKind::Other,
-                "Unable to open substream",
+                "Unable to open substream; underlying connection is dead",
             )),
             Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
         };
