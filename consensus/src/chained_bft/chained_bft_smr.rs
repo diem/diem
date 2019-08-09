@@ -48,7 +48,7 @@ use std::{
 };
 use tokio::runtime::{Runtime, TaskExecutor};
 
-type ConcurrentEventProcessor<T> = Arc<futures_locks::RwLock<EventProcessor<T>>>;
+type ConcurrentEventProcessor<T> = futures_locks::RwLock<EventProcessor<T>>;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -190,7 +190,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                         let winning_proposals_sender = winning_proposals_sender.clone();
                         executor.spawn(
                             Self::sync_and_process_proposal(
-                                Arc::clone(&event_processor),
+                                futures_locks::RwLock::clone(&event_processor),
                                 proposal,
                                 winning_proposals_sender,
                             )
@@ -505,7 +505,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             let (winning_proposals_sender, winning_proposals_receiver) =
                 channel::new(1_024, &counters::PENDING_WINNING_PROPOSALS);
             let proposer_election = self.create_proposer_election();
-            let event_processor = Arc::new(futures_locks::RwLock::new(EventProcessor::new(
+            let event_processor = futures_locks::RwLock::new(EventProcessor::new(
                 self.author,
                 Arc::clone(&block_store),
                 Arc::clone(&pacemaker),
@@ -518,7 +518,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 Arc::clone(&self.storage),
                 time_service.clone(),
                 true,
-            )));
+            ));
 
             self.start_event_processing(
                 event_processor,
