@@ -7,6 +7,7 @@
 mod consensus;
 mod mempool;
 mod network;
+mod state_synchronizer;
 
 use types::proto::{ledger_info, transaction};
 
@@ -18,5 +19,6 @@ pub use self::{
     },
     mempool::MempoolSyncMsg,
     network::{DiscoveryMsg, IdentityMsg, Note, PeerInfo, Ping, Pong},
+    state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
 pub use transaction::SignedTransaction;
