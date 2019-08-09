@@ -399,6 +399,14 @@ impl Pacemaker for LocalPacemaker {
         self.inner.read().unwrap().current_round
     }
 
+    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate> {
+        let guard = self.inner.read().unwrap();
+        guard
+            .pacemaker_timeout_manager
+            .highest_timeout_certificate()
+            .cloned()
+    }
+
     fn process_certificates(
         &self,
         qc_round: Round,
@@ -428,18 +436,13 @@ impl Pacemaker for LocalPacemaker {
         async {}.boxed()
     }
 
-    fn update_highest_committed_round(&self, highest_committed_round: Round) {
+    fn update_highest_committed_round(&self, highest_committed_round: Round) -> bool {
         let mut guard = self.inner.write().unwrap();
         if guard.highest_committed_round < highest_committed_round {
             guard.highest_committed_round = highest_committed_round;
+            true
+        } else {
+            false
         }
-    }
-
-    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate> {
-        let guard = self.inner.read().unwrap();
-        guard
-            .pacemaker_timeout_manager
-            .highest_timeout_certificate()
-            .cloned()
     }
 }

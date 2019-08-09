@@ -503,10 +503,12 @@ impl<T: Payload> EventProcessor<T> {
     /// position.
     pub async fn process_winning_proposal(&self, proposal: ProposalMsg<T>) {
         let qc = proposal.proposal.quorum_cert();
-        let update_res = self.safety_rules.write().unwrap().update(qc);
-        if let Some(new_commit) = update_res {
-            let finality_proof = qc.ledger_info().clone();
-            self.process_commit(new_commit, finality_proof).await;
+        self.safety_rules.write().unwrap().update(qc);
+        if let Some(new_commit) = qc.committed_block_id() {
+            if let Some(block) = self.block_store.get_block(new_commit) {
+                let finality_proof = qc.ledger_info().clone();
+                self.process_commit(block, finality_proof).await;
+            }
         }
 
         if let Some(time_to_receival) = duration_since_epoch()
@@ -750,8 +752,12 @@ impl<T: Payload> EventProcessor<T> {
 
         // Update the pacemaker with the highest committed round so that on the next round
         // duration it calculates, the initial round index is reset
-        self.pacemaker
-            .update_highest_committed_round(committed_block.round());
+        if !self
+            .pacemaker
+            .update_highest_committed_round(committed_block.round())
+        {
+            return;
+        }
 
         if let Err(e) = self.state_computer.commit(finality_proof).await {
             // We assume that state computer cannot enter an inconsistent state that might
