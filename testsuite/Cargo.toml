@@ -21,4 +21,3 @@ logger = { path = "../common/logger" }
 tempfile = "3.1.0"
 crypto = { path = "../crypto/legacy_crypto" }
 rand = "0.6.5"
-hex = "0.3.2"

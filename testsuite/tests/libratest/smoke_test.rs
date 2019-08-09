@@ -5,7 +5,6 @@ use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, IntoProtoBytes, RawTransactionBytes,
 };
 use crypto::signing::{generate_keypair_for_testing, sign_message};
-use hex;
 use libra_swarm::swarm::LibraSwarm;
 use num_traits::cast::FromPrimitive;
 use rand::{rngs::StdRng, SeedableRng};
@@ -268,28 +267,31 @@ fn test_external_transaction_signer() {
     let (private_key, public_key) = generate_keypair_for_testing(&mut rng);
 
     // create address from public key
-    let sender_address = AccountAddress::from(public_key).to_string();
-    let receiver_address = "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a";
-    let amount = "1";
+    let sender_address = AccountAddress::from(public_key);
+    let receiver_address = client_proxy.get_account_address_from_parameter(
+        "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a")
+        .unwrap();
+    let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
 
     // mint to the address
     client_proxy
-        .mint_coins(&["mintb", &sender_address, "10"], true)
-        .unwrap();
-
-    let sequence_number = client_proxy
-        .get_sequence_number(&["sequence", &sender_address])
+        .mint_coins(&["mintb", &format!("{}", sender_address), "10"], true)
         .unwrap();
 
     // prepare transfer transaction
+    let sequence_number = client_proxy
+        .get_sequence_number(&["sequence", &format!("{}", sender_address)])
+        .unwrap();
+
     let unsigned_txn = client_proxy
-        .prepare_transfer_coins(&[
-            "prepare_transfer",
-            &sender_address,
-            &format!("{}", sequence_number),
-            &receiver_address,
-            &amount,
-        ])
+        .prepare_transfer_coins(
+            sender_address,
+            sequence_number,
+            receiver_address,
+            amount,
+            None,  /* gas_unit_price */
+            None,  /* max_gas_amount */
+        )
         .unwrap();
 
     // extract the hash to sign from the raw transaction
@@ -301,16 +303,16 @@ fn test_external_transaction_signer() {
 
     // submit the transaction
     let address_and_sequence = client_proxy
-        .submit_signed_transaction(&[
-            &hex::encode(raw_bytes),
-            &hex::encode(public_key.to_slice()),
-            &hex::encode(signature.to_compact().to_vec().as_slice()),
-        ])
+        .submit_signed_transaction(
+            unsigned_txn,
+            public_key,
+            signature,
+        )
         .unwrap();
 
     assert_eq!(
         address_and_sequence.account_address.to_string(),
-        sender_address
+        format!("{}", sender_address)
     );
     assert_eq!(address_and_sequence.sequence_number, 0);
 }

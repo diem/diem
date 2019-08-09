@@ -15,7 +15,7 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
-use proto_conv::{FromProtoBytes, IntoProto};
+use proto_conv::IntoProto;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
@@ -378,25 +378,24 @@ impl ClientProxy {
     }
 
     /// Prepare a transfer transaction: return the unsigned raw transaction
-    pub fn prepare_transfer_coins_int(
+    pub fn prepare_transfer_coins(
         &mut self,
         sender_address: AccountAddress,
         sender_sequence_number: u64,
-        receiver_address: &AccountAddress,
+        receiver_address: AccountAddress,
         num_coins: u64,
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
         let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
-        let unsigned_tx = self.create_unsigned_transaction(
+
+        Ok(self.create_unsigned_transaction(
             program,
             sender_address,
             sender_sequence_number,
-            max_gas_amount, /* max_gas_amount */
-            gas_unit_price, /* gas_unit_price */
-        );
-
-        Ok(unsigned_tx)
+            max_gas_amount,
+            gas_unit_price,
+        ))
     }
 
     /// Transfers coins from sender to receiver.
@@ -451,58 +450,6 @@ impl ClientProxy {
             gas_unit_price,
             max_gas_amount,
             is_blocking,
-        )
-    }
-
-    /// Transfers coins from sender to receiver.
-    pub fn prepare_transfer_coins(
-        &mut self,
-        space_delim_strings: &[&str],
-    ) -> Result<RawTransaction> {
-        ensure!(
-            space_delim_strings.len() >= 5 && space_delim_strings.len() <= 7,
-            "Invalid number of arguments for transfer"
-        );
-
-        let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let sender_sequence_number = space_delim_strings[2].parse::<u64>()?;
-        let receiver_address = self.get_account_address_from_parameter(space_delim_strings[3])?;
-
-        let num_coins = Self::convert_to_micro_libras(space_delim_strings[4])?;
-
-        let gas_unit_price = if space_delim_strings.len() > 5 {
-            Some(space_delim_strings[5].parse::<u64>().map_err(|error| {
-                format_parse_data_error(
-                    "gas_unit_price",
-                    InputType::UnsignedInt,
-                    space_delim_strings[5],
-                    error,
-                )
-            })?)
-        } else {
-            None
-        };
-
-        let max_gas_amount = if space_delim_strings.len() > 6 {
-            Some(space_delim_strings[6].parse::<u64>().map_err(|error| {
-                format_parse_data_error(
-                    "max_gas_amount",
-                    InputType::UnsignedInt,
-                    space_delim_strings[6],
-                    error,
-                )
-            })?)
-        } else {
-            None
-        };
-
-        self.prepare_transfer_coins_int(
-            sender_address,
-            sender_sequence_number,
-            &receiver_address,
-            num_coins,
-            gas_unit_price,
-            max_gas_amount,
         )
     }
 
@@ -563,21 +510,14 @@ impl ClientProxy {
         Ok(output_path)
     }
 
-    /// Submit a transaction to the network given raw bytes of the transaction, sender public key
+    /// Submit a transaction to the network given the unsigned raw transaction, sender public key
     /// and signature
     pub fn submit_signed_transaction(
         &mut self,
-        space_delim_strings: &[&str],
+        raw_txn: RawTransaction,
+        public_key: PublicKey,
+        signature: Signature,
     ) -> Result<AddressAndSequence> {
-        let raw_txn_bytes = hex::decode(space_delim_strings[0])?;
-        let raw_txn = RawTransaction::from_proto_bytes(raw_txn_bytes.as_slice())?;
-
-        let pk_bytes = hex::decode(space_delim_strings[1])?;
-        let public_key = PublicKey::from_slice(pk_bytes.as_slice())?;
-
-        let signature_bytes = hex::decode(space_delim_strings[2])?;
-        let signature = Signature::from_compact(signature_bytes.as_slice())?;
-
         let signed_txn =
             SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature);
 
@@ -1018,7 +958,8 @@ impl ClientProxy {
         Ok(())
     }
 
-    fn convert_to_micro_libras(input: &str) -> Result<u64> {
+    /// convert number of Libras (main unit) given as string to number of micro Libras
+    pub fn convert_to_micro_libras(input: &str) -> Result<u64> {
         ensure!(!input.is_empty(), "Empty input not allowed for libra unit");
         // This is not supposed to panic as it is used as constant here.
         let max_value = Decimal::from_u64(std::u64::MAX).unwrap() / Decimal::new(1_000_000, 0);
