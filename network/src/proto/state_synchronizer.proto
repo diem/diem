@@ -1,0 +1,28 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package network;
+
+import "ledger_info.proto";
+import "transaction.proto";
+
+message GetChunkRequest {
+  uint64 known_version = 1;
+  uint64 limit = 2;
+  uint64 timeout = 3;
+}
+
+message GetChunkResponse {
+  types.LedgerInfoWithSignatures ledger_info_with_sigs = 1;
+  // chunk of transactions with proof corresponding to version in `ledger_info_with_sigs`
+  types.TransactionListWithProof txn_list_with_proof = 2;
+}
+
+message StateSynchronizerMsg {
+  oneof message {
+    GetChunkRequest chunk_request = 1;
+    GetChunkResponse chunk_response = 2;
+  }
+}
