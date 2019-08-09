@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, txn_fetcher::downloader::FetchChunkMsg};
+use crate::{counters, downloader::FetchChunkMsg};
 use config::config::NodeConfig;
 use execution_proto::proto::{
     execution::{ExecuteChunkRequest, ExecuteChunkResponse},
     execution_grpc::ExecutionClient,
 };
 use failure::prelude::*;
-use futures_preview::{
+use futures::{
     channel::{mpsc, oneshot},
     Future, FutureExt, SinkExt, StreamExt,
 };
@@ -21,9 +21,13 @@ use storage_client::{StorageRead, StorageReadServiceClient};
 use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
 
 /// unified message used for communication with Coordinator
+// TODO: remove lint whitelist
+#[allow(clippy::large_enum_variant)]
 pub enum CoordinatorMsg {
-    // is sent from Synchronizer to Coordinator to request a new sync
+    // sent from client to initiate new sync
     Requested(LedgerInfoWithSignatures, oneshot::Sender<SyncStatus>),
+    // sent from client to notify about new txn commit
+    Commit(u64),
     // is sent from Downloader to Coordinator to indicate that new batch is ready
     Fetched(Result<TransactionListWithProof>, LedgerInfoWithSignatures),
 }
@@ -88,8 +92,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         .await;
                 }
                 CoordinatorMsg::Fetched(Err(_), _) => {
-                    debug!("flask error with state_sync downloader");
                     self.notify_subscribers(SyncStatus::DownloadFailed);
+                }
+                CoordinatorMsg::Commit(version) => {
+                    self.handle_commit(version);
                 }
             }
         }
@@ -230,6 +236,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         req.set_txn_list_with_proof(txn_list_with_proof);
         req.set_ledger_info_with_sigs(target.clone().into_proto());
         self.executor_proxy.execute_chunk(req).await
+    }
+
+    fn handle_commit(&self, _version: u64) {
+        // TODO: add actual handler
     }
 }
 

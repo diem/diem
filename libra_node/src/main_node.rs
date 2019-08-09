@@ -25,7 +25,7 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use nextgen_crypto::ed25519::*;
-use state_synchronizer::StateSyncRuntime;
+use state_synchronizer::StateSynchronizer;
 use std::{
     cmp::min,
     convert::{TryFrom, TryInto},
@@ -42,8 +42,8 @@ use vm_validator::vm_validator::VMValidator;
 pub struct LibraHandle {
     _ac: ServerHandle,
     _mempool: Option<MempoolRuntime>,
-    _state_synchronizer: StateSyncRuntime,
-    _network: Option<Runtime>,
+    _state_synchronizer: StateSynchronizer,
+    _network: Runtime,
     consensus: Option<Box<dyn ConsensusProvider>>,
     _execution: ServerHandle,
     _storage: ServerHandle,
@@ -247,21 +247,20 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let ac = ServerHandle::setup(ac_server);
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
-    let state_synchronizer = StateSyncRuntime::bootstrap(&node_config);
+    instant = Instant::now();
+    let (
+        (mempool_network_sender, mempool_network_events),
+        (consensus_network_sender, consensus_network_events),
+        network,
+    ) = setup_network(node_config);
+    debug!("Network started in {} ms", instant.elapsed().as_millis());
+
+    let state_synchronizer =
+        StateSynchronizer::bootstrap(consensus_network_sender.clone(), &node_config);
 
     let mut mempool = None;
     let mut consensus = None;
-    let mut network = None;
     if let RoleType::Validator = node_config.base.get_role() {
-        instant = Instant::now();
-        let (
-            (mempool_network_sender, mempool_network_events),
-            (consensus_network_sender, consensus_network_events),
-            network_runtime,
-        ) = setup_network(node_config);
-        network = Some(network_runtime);
-        debug!("Network started in {} ms", instant.elapsed().as_millis());
-
         instant = Instant::now();
         mempool = Some(MempoolRuntime::bootstrap(
             &node_config,
@@ -275,6 +274,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             node_config,
             consensus_network_sender,
             consensus_network_events,
+            state_synchronizer.create_client(&node_config),
         );
         consensus_provider
             .start()

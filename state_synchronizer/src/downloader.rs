@@ -1,12 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    counters::OP_COUNTERS,
-    txn_fetcher::{coordinator::CoordinatorMsg, PeerId},
-};
+use crate::{coordinator::CoordinatorMsg, counters::OP_COUNTERS, PeerId};
 use failure::prelude::*;
-use futures_preview::{channel::mpsc, SinkExt, StreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use logger::prelude::*;
 use network::{proto::RequestChunk, validator_network::ConsensusNetworkSender};
 use rand::{thread_rng, Rng};

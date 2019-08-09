@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::txn_fetcher::{
+use crate::{
     coordinator::{CoordinatorMsg, ExecutorProxy, ExecutorProxyTrait, SyncCoordinator, SyncStatus},
     downloader::Downloader,
 };
 use config::config::NodeConfig;
 use failure::prelude::*;
-use futures_preview::{
+use futures::{
     channel::{mpsc, oneshot},
     future::{Future, FutureExt, TryFutureExt},
     SinkExt,
@@ -17,23 +17,33 @@ use logger::prelude::*;
 use network::validator_network::ConsensusNetworkSender;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::{Builder, Runtime};
 use types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
-/// Used for synchronization between validators for committed states
 pub struct StateSynchronizer {
+    _runtime: Runtime,
     synchronizer_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg>,
-    storage_read_client: Arc<dyn StorageRead>,
 }
 
 impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
-    pub fn new<E: ExecutorProxyTrait + 'static>(
+    pub fn bootstrap(network: ConsensusNetworkSender, config: &NodeConfig) -> Self {
+        let executor_proxy = ExecutorProxy::new(config);
+        Self::bootstrap_with_executor_proxy(network, config, executor_proxy)
+    }
+
+    pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
+        // TODO: move to separate network stack
         network: ConsensusNetworkSender,
-        executor: TaskExecutor,
         config: &NodeConfig,
         executor_proxy: E,
     ) -> Self {
+        let runtime = Builder::new()
+            .name_prefix("state-sync-")
+            .build()
+            .expect("[state synchronizer] failed to create runtime");
+        let executor = runtime.executor();
+
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
         let (fetcher_sender, fetcher_receiver) = mpsc::channel(1);
 
@@ -50,6 +60,13 @@ impl StateSynchronizer {
         executor.spawn(coordinator.start().boxed().unit_error().compat());
         executor.spawn(downloader.start().boxed().unit_error().compat());
 
+        Self {
+            _runtime: runtime,
+            synchronizer_to_coordinator: coordinator_sender,
+        }
+    }
+
+    pub fn create_client(&self, config: &NodeConfig) -> Arc<StateSyncClient> {
         let env = Arc::new(EnvBuilder::new().name_prefix("grpc-sync-").build());
         let storage_read_client = Arc::new(StorageReadServiceClient::new(
             env,
@@ -57,19 +74,26 @@ impl StateSynchronizer {
             config.storage.port,
         ));
 
-        Self {
-            synchronizer_to_coordinator: coordinator_sender,
+        Arc::new(StateSyncClient {
+            coordinator_sender: self.synchronizer_to_coordinator.clone(),
             storage_read_client,
-        }
+        })
     }
+}
 
+pub struct StateSyncClient {
+    coordinator_sender: mpsc::UnboundedSender<CoordinatorMsg>,
+    // TODO: temporary. get rid of it after move out of Consensus p2p stack
+    storage_read_client: Arc<dyn StorageRead>,
+}
+
+impl StateSyncClient {
     /// Sync validator's state up to given `version`
     pub fn sync_to(
         &self,
         target: LedgerInfoWithSignatures,
     ) -> impl Future<Output = Result<SyncStatus>> {
-        debug!("flask new sync_to consensus request");
-        let mut sender = self.synchronizer_to_coordinator.clone();
+        let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {
             sender
@@ -80,6 +104,15 @@ impl StateSynchronizer {
         }
     }
 
+    /// Notifies state synchronizer about new version
+    pub fn commit(&self, version: u64) -> impl Future<Output = Result<()>> {
+        let mut sender = self.coordinator_sender.clone();
+        async move {
+            sender.send(CoordinatorMsg::Commit(version)).await?;
+            Ok(())
+        }
+    }
+
     /// Get a batch of transactions
     pub fn get_chunk(
         &self,
@@ -87,6 +120,8 @@ impl StateSynchronizer {
         target_version: u64,
         batch_size: u64,
     ) -> impl Future<Output = Result<TransactionListWithProof>> {
+        // TODO: shouldn't be part of a client. Remove it once we move out of Consensus p2p stack
+        // handler should live in separate service component
         let client = Arc::clone(&self.storage_read_client);
         async move {
             let txn_list_with_proof = client
@@ -108,14 +143,4 @@ impl StateSynchronizer {
             Ok(txn_list_with_proof)
         }
     }
-}
-
-/// Make the state synchronizer
-pub fn setup_state_synchronizer(
-    network: ConsensusNetworkSender,
-    executor: TaskExecutor,
-    config: &NodeConfig,
-) -> StateSynchronizer {
-    let executor_proxy = ExecutorProxy::new(config);
-    StateSynchronizer::new(network, executor, config, executor_proxy)
 }

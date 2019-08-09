@@ -7,8 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.1.28"
-futures-preview = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
 grpcio = "0.4.3"
 grpcio-sys = "0.4.4"
 lazy_static = "1.3.0"
@@ -34,7 +33,6 @@ features = ["push"]
 
 [dev-dependencies]
 bytes = "0.4.12"
-rusty-fork = "0.2.1"
 
 config_builder = { path = "../config/config_builder" }
 crypto = { path = "../crypto/legacy_crypto" }
@@ -42,6 +40,3 @@ nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
 parity-multiaddr = "0.4.0"
 types = { path = "../types", features = ["testing"] }
 vm_genesis = { path = "../language/vm/vm_genesis" }
-
-[build-dependencies]
-build_helpers = { path = "../common/build_helpers" }
