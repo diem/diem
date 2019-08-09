@@ -7,6 +7,7 @@ use crate::chained_bft::{
     persistent_storage::PersistentLivenessStorage,
 };
 use logger::prelude::*;
+use nextgen_crypto::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -15,19 +16,28 @@ use std::collections::HashMap;
 mod pacemaker_timeout_manager_test;
 
 /// Tracks the highest round known local and received timeout certificates
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct HighestTimeoutCertificates {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HighestTimeoutCertificates<Sig> {
     // Highest timeout certificate gathered locally
-    highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate>,
+    highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate<Sig>>,
     // Highest timeout certificate received from another replica
-    highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate>,
+    highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate<Sig>>,
 }
 
-impl HighestTimeoutCertificates {
+impl<Sig> Default for HighestTimeoutCertificates<Sig> {
+    fn default() -> Self {
+        HighestTimeoutCertificates {
+            highest_local_timeout_certificate: None,
+            highest_received_timeout_certificate: None,
+        }
+    }
+}
+
+impl<Sig: Signature> HighestTimeoutCertificates<Sig> {
     #[cfg(test)]
     pub fn new(
-        highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate>,
-        highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate>,
+        highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate<Sig>>,
+        highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate<Sig>>,
     ) -> Self {
         Self {
             highest_local_timeout_certificate,
@@ -37,7 +47,7 @@ impl HighestTimeoutCertificates {
 
     /// Return a optional reference to the highest timeout certificate (locally generated or
     /// remotely received)
-    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
+    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate<Sig>> {
         if let Some(highest_received_timeout_certificate) =
             self.highest_received_timeout_certificate.as_ref()
         {
@@ -63,22 +73,22 @@ impl HighestTimeoutCertificates {
 ///
 /// A replica can generate and track TimeoutCertificates of the highest round (locally and received)
 /// to allow a pacemaker to advance to the latest certificate round.
-pub struct PacemakerTimeoutManager {
+pub struct PacemakerTimeoutManager<Sig> {
     // The minimum quorum to generate a timeout certificate
     timeout_certificate_quorum_size: usize,
     // Track the PacemakerTimeoutMsg for highest timeout round received from this node
-    author_to_received_timeouts: HashMap<Author, PacemakerTimeout>,
+    author_to_received_timeouts: HashMap<Author, PacemakerTimeout<Sig>>,
     // Highest timeout certificates
-    highest_timeout_certificates: HighestTimeoutCertificates,
+    highest_timeout_certificates: HighestTimeoutCertificates<Sig>,
     // Used to persistently store the latest known timeout certificate
-    persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
+    persistent_liveness_storage: Box<dyn PersistentLivenessStorage<Sig>>,
 }
 
-impl PacemakerTimeoutManager {
+impl<Sig: Signature> PacemakerTimeoutManager<Sig> {
     pub fn new(
         timeout_certificate_quorum_size: usize,
-        highest_timeout_certificates: HighestTimeoutCertificates,
-        persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
+        highest_timeout_certificates: HighestTimeoutCertificates<Sig>,
+        persistent_liveness_storage: Box<dyn PersistentLivenessStorage<Sig>>,
     ) -> Self {
         // This struct maintains the invariant that the highest round timeout certificate
         // that author_to_received_timeouts can generate is always equal to
@@ -109,13 +119,14 @@ impl PacemakerTimeoutManager {
     /// for rounds (1,2,3,4), then rounds (2,3,4) would form PacemakerTimeoutCertificate with
     /// round=2.
     fn generate_timeout_certificate(
-        author_to_received_timeouts: &HashMap<Author, PacemakerTimeout>,
+        author_to_received_timeouts: &HashMap<Author, PacemakerTimeout<Sig>>,
         timeout_certificate_quorum_size: usize,
-    ) -> Option<PacemakerTimeoutCertificate> {
+    ) -> Option<PacemakerTimeoutCertificate<Sig>> {
         if author_to_received_timeouts.values().len() < timeout_certificate_quorum_size {
             return None;
         }
-        let mut values: Vec<&PacemakerTimeout> = author_to_received_timeouts.values().collect();
+        let mut values: Vec<&PacemakerTimeout<Sig>> =
+            author_to_received_timeouts.values().collect();
         values.sort_by(|x, y| y.round().cmp(&x.round()));
         let slice = &values[..timeout_certificate_quorum_size];
         Some(PacemakerTimeoutCertificate::new(
@@ -130,7 +141,7 @@ impl PacemakerTimeoutManager {
 
     /// Updates internal state according to received message from remote pacemaker and returns true
     /// if round derived from highest PacemakerTimeoutCertificate has increased.
-    pub fn update_received_timeout(&mut self, pacemaker_timeout: PacemakerTimeout) -> bool {
+    pub fn update_received_timeout(&mut self, pacemaker_timeout: PacemakerTimeout<Sig>) -> bool {
         let author = pacemaker_timeout.author();
         let prev_timeout = self.author_to_received_timeouts.get(&author).cloned();
         if let Some(prev_timeout) = &prev_timeout {
@@ -183,7 +194,7 @@ impl PacemakerTimeoutManager {
     /// timeout certificate.  Returns true if highest_received_timeout_certificate has changed
     pub fn update_highest_received_timeout_certificate(
         &mut self,
-        timeout_certificate: &PacemakerTimeoutCertificate,
+        timeout_certificate: &PacemakerTimeoutCertificate<Sig>,
     ) -> bool {
         if timeout_certificate.round()
             > self
@@ -215,7 +226,7 @@ impl PacemakerTimeoutManager {
 
     /// Return a optional reference to the highest timeout certificate (locally generated or
     /// remotely received)
-    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
+    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate<Sig>> {
         self.highest_timeout_certificates
             .highest_timeout_certificate()
     }

@@ -14,7 +14,7 @@ use execution_proto::proto::{
 use failure::Result;
 use futures::{compat::Future01CompatExt, Future, FutureExt};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use state_synchronizer::{StateSyncClient, SyncStatus};
 use std::{pin::Pin, sync::Arc, time::Instant};
@@ -25,13 +25,13 @@ use types::{
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
-pub struct ExecutionProxy {
+pub struct ExecutionProxy<Sig> {
     execution: Arc<ExecutionClient>,
-    synchronizer: Arc<StateSyncClient>,
+    synchronizer: Arc<StateSyncClient<Sig>>,
 }
 
-impl ExecutionProxy {
-    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSyncClient>) -> Self {
+impl<Sig: Signature> ExecutionProxy<Sig> {
+    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSyncClient<Sig>>) -> Self {
         Self {
             execution: Arc::clone(&execution),
             synchronizer,
@@ -76,8 +76,13 @@ impl ExecutionProxy {
     }
 }
 
-impl StateComputer for ExecutionProxy {
+impl<Sig> StateComputer for ExecutionProxy<Sig>
+where
+    Sig: Signature + 'static,
+    Sig::SigningKeyMaterial: Genesis,
+{
     type Payload = Vec<SignedTransaction>;
+    type Sig = Sig;
 
     fn compute(
         &self,
@@ -120,7 +125,7 @@ impl StateComputer for ExecutionProxy {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures<Ed25519Signature>,
+        commit: LedgerInfoWithSignatures<Sig>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = commit.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
@@ -163,7 +168,7 @@ impl StateComputer for ExecutionProxy {
     /// Synchronize to a commit that not present locally.
     fn sync_to(
         &self,
-        commit: QuorumCert,
+        commit: QuorumCert<Sig>,
     ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
         self.synchronizer

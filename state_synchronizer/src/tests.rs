@@ -91,8 +91,8 @@ pub fn gen_txn_list(sequence_number: u64) -> TransactionListWithProof {
 
 struct SynchronizerEnv {
     peers: Vec<PeerId>,
-    clients: Vec<Arc<StateSyncClient>>,
-    _synchronizers: Vec<StateSynchronizer>,
+    clients: Vec<Arc<StateSyncClient<Ed25519Signature>>>,
+    _synchronizers: Vec<StateSynchronizer<Ed25519Signature>>,
     _runtime: Runtime,
 }
 

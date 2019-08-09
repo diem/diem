@@ -15,18 +15,18 @@ use futures::{
 use grpcio::EnvBuilder;
 use logger::prelude::*;
 use network::validator_network::ConsensusNetworkSender;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
-pub struct StateSynchronizer {
+pub struct StateSynchronizer<Sig> {
     _runtime: Runtime,
-    synchronizer_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg>,
+    synchronizer_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg<Sig>>,
 }
 
-impl StateSynchronizer {
+impl<Sig: Signature + 'static> StateSynchronizer<Sig> {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(network: ConsensusNetworkSender, config: &NodeConfig) -> Self {
         let executor_proxy = ExecutorProxy::new(config);
@@ -67,7 +67,7 @@ impl StateSynchronizer {
         }
     }
 
-    pub fn create_client(&self, config: &NodeConfig) -> Arc<StateSyncClient> {
+    pub fn create_client(&self, config: &NodeConfig) -> Arc<StateSyncClient<Sig>> {
         let env = Arc::new(EnvBuilder::new().name_prefix("grpc-sync-").build());
         let storage_read_client = Arc::new(StorageReadServiceClient::new(
             env,
@@ -82,17 +82,17 @@ impl StateSynchronizer {
     }
 }
 
-pub struct StateSyncClient {
-    coordinator_sender: mpsc::UnboundedSender<CoordinatorMsg>,
+pub struct StateSyncClient<Sig> {
+    coordinator_sender: mpsc::UnboundedSender<CoordinatorMsg<Sig>>,
     // TODO: temporary. get rid of it after move out of Consensus p2p stack
     storage_read_client: Arc<dyn StorageRead>,
 }
 
-impl StateSyncClient {
+impl<Sig> StateSyncClient<Sig> {
     /// Sync validator's state up to given `version`
     pub fn sync_to(
         &self,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures<Sig>,
     ) -> impl Future<Output = Result<SyncStatus>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();

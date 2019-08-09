@@ -9,7 +9,7 @@ use crate::chained_bft::{
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
 /// We are open to a possibility for having multiple proposers per round, the ultimate choice
 /// of a proposal is exposed by the election protocol via the stream of proposals.
-pub trait ProposerElection<T> {
+pub trait ProposerElection<T, Sig> {
     /// If a given author is a valid candidate for being a proposer, generate the info,
     /// otherwise return None.
     /// Note that this function is synchronous.
@@ -22,5 +22,7 @@ pub trait ProposerElection<T> {
     /// Notify proposer election about a new proposal. The function doesn't return any information:
     /// proposer election is going to notify the client about the chosen proposal via a dedicated
     /// channel (to be passed in constructor).
-    fn process_proposal(&self, proposal: ProposalMsg<T>) -> Option<ProposalMsg<T>>;
+    // Sadly, using a generic parameter here instead of in the struct
+    // would make it unusable as a trait object.
+    fn process_proposal(&self, proposal: ProposalMsg<T, Sig>) -> Option<ProposalMsg<T, Sig>>;
 }

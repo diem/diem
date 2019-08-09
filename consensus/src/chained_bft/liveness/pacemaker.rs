@@ -6,6 +6,7 @@ use crate::chained_bft::{
     consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
 };
 use futures::Future;
+use nextgen_crypto::*;
 use std::{
     fmt,
     pin::Pin,
@@ -14,12 +15,14 @@ use std::{
 
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
 #[derive(Eq, Debug, PartialEq)]
-pub enum NewRoundReason {
+pub enum NewRoundReason<Sig> {
     QCReady,
-    Timeout { cert: PacemakerTimeoutCertificate },
+    Timeout {
+        cert: PacemakerTimeoutCertificate<Sig>,
+    },
 }
 
-impl fmt::Display for NewRoundReason {
+impl<Sig: Signature> fmt::Display for NewRoundReason<Sig> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             NewRoundReason::QCReady => write!(f, "QCReady"),
@@ -33,13 +36,13 @@ impl fmt::Display for NewRoundReason {
 /// or voting for some proposals that wouldn't have been voted otherwise.
 /// The duration is populated for debugging and testing
 #[derive(Debug, PartialEq, Eq)]
-pub struct NewRoundEvent {
+pub struct NewRoundEvent<Sig> {
     pub round: Round,
-    pub reason: NewRoundReason,
+    pub reason: NewRoundReason<Sig>,
     pub timeout: Duration,
 }
 
-impl fmt::Display for NewRoundEvent {
+impl<Sig: Signature> fmt::Display for NewRoundEvent<Sig> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -58,6 +61,8 @@ impl fmt::Display for NewRoundEvent {
 /// The trait doesn't specify the starting conditions or the executor that is responsible for
 /// driving the logic.
 pub trait Pacemaker: Send + Sync {
+    type Sig: Signature;
+
     /// Returns deadline for current round
     fn current_round_deadline(&self) -> Instant;
 
@@ -66,7 +71,7 @@ pub trait Pacemaker: Send + Sync {
 
     /// Return a optional reference to the highest timeout certificate (locally generated or
     /// remotely received)
-    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate>;
+    fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate<Self::Sig>>;
 
     /// Function to update current round based on received certificates.
     /// Both round of latest received QC and timeout certificates are taken into account.
@@ -74,13 +79,13 @@ pub trait Pacemaker: Send + Sync {
     fn process_certificates(
         &self,
         qc_round: Round,
-        timeout_certificate: Option<&PacemakerTimeoutCertificate>,
+        timeout_certificate: Option<&PacemakerTimeoutCertificate<Self::Sig>>,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 
     /// The function is invoked upon receiving a remote timeout message from another validator.
     fn process_remote_timeout(
         &self,
-        pacemaker_timeout: PacemakerTimeout,
+        pacemaker_timeout: PacemakerTimeout<Self::Sig>,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 
     /// Update the highest committed round and return if it's updated.

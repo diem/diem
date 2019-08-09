@@ -42,7 +42,7 @@ use vm_validator::vm_validator::VMValidator;
 pub struct LibraHandle {
     _ac: ServerHandle,
     _mempool: Option<MempoolRuntime>,
-    _state_synchronizer: StateSynchronizer,
+    _state_synchronizer: StateSynchronizer<Ed25519Signature>,
     _network: Runtime,
     consensus: Option<Box<dyn ConsensusProvider>>,
     _execution: ServerHandle,
@@ -270,7 +270,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
         instant = Instant::now();
-        let mut consensus_provider = make_consensus_provider(
+        let mut consensus_provider = make_consensus_provider::<Ed25519Signature>(
             node_config,
             consensus_network_sender,
             consensus_network_events,

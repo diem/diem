@@ -13,7 +13,7 @@ use crate::{
     txn_manager::MempoolProxy,
 };
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::{ed25519::*, *};
 
 use crate::chained_bft::{
     chained_bft_smr::ChainedBftSMRConfig, common::Author, persistent_storage::StorageWriteProxy,
@@ -31,30 +31,30 @@ use types::{
     validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 
-struct InitialSetup {
+struct InitialSetup<Sig: Signature> {
     author: Author,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
+    signer: ValidatorSigner<Sig::SigningKeyMaterial>,
     quorum_size: usize,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
 }
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.
-pub struct ChainedBftProvider {
-    smr: ChainedBftSMR<Vec<SignedTransaction>>,
+pub struct ChainedBftProvider<Sig: Signature> {
+    smr: ChainedBftSMR<Vec<SignedTransaction>, Sig>,
     mempool_client: Arc<MempoolClient>,
     execution_client: Arc<ExecutionClient>,
-    synchronizer_client: Arc<StateSyncClient>,
+    synchronizer_client: Arc<StateSyncClient<Sig>>,
 }
 
-impl ChainedBftProvider {
+impl ChainedBftProvider<Ed25519Signature> {
     pub fn new(
         node_config: &mut NodeConfig,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
         execution_client: Arc<ExecutionClient>,
-        synchronizer_client: Arc<StateSyncClient>,
+        synchronizer_client: Arc<StateSyncClient<Ed25519Signature>>,
     ) -> Self {
         let runtime = runtime::Builder::new()
             .name_prefix("consensus-")
@@ -106,7 +106,7 @@ impl ChainedBftProvider {
 
     /// Retrieve the initial "state" for consensus. This function is synchronous and returns after
     /// reading the local persistent store and retrieving the initial state from the executor.
-    fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup {
+    fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup<Ed25519Signature> {
         // Keeping the initial set of validators in a node config is embarrassing and we should
         // all feel bad about it.
         let peer_id_str = node_config.base.peer_id.clone();
@@ -149,7 +149,7 @@ impl ChainedBftProvider {
 
     /// Choose a proposer that is going to be the single leader (relevant for a mock fixed proposer
     /// election only).
-    fn choose_leader(initial_setup: &InitialSetup) -> Author {
+    fn choose_leader(initial_setup: &InitialSetup<Ed25519Signature>) -> Author {
         // As it is just a tmp hack function, pick the max PeerId to be a proposer.
         // TODO: VRF will be integrated later.
         *initial_setup
@@ -160,7 +160,7 @@ impl ChainedBftProvider {
     }
 }
 
-impl ConsensusProvider for ChainedBftProvider {
+impl ConsensusProvider for ChainedBftProvider<Ed25519Signature> {
     fn start(&mut self) -> Result<()> {
         let txn_manager = Arc::new(MempoolProxy::new(self.mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(

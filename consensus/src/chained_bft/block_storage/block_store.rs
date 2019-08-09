@@ -19,7 +19,9 @@ use logger::prelude::*;
 use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::StateComputeResult};
 use crypto::hash::CryptoHash;
 use mirai_annotations::checked_precondition;
+#[cfg(test)]
 use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
@@ -55,22 +57,27 @@ pub enum NeedFetchResult {
 ///             | -> C1
 ///             | -------> C2
 ///             | -------------> D3
-pub struct BlockStore<T> {
-    inner: Arc<RwLock<BlockTree<T>>>,
-    validator_signer: ValidatorSigner<Ed25519PrivateKey>,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
+pub struct BlockStore<T, Sig: Signature> {
+    inner: Arc<RwLock<BlockTree<T, Sig>>>,
+    validator_signer: ValidatorSigner<Sig::SigningKeyMaterial>,
+    state_computer: Arc<dyn StateComputer<Payload = T, Sig = Sig>>,
     enforce_increasing_timestamps: bool,
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
-    storage: Arc<dyn PersistentStorage<T>>,
+    storage: Arc<dyn PersistentStorage<T, Sig>>,
 }
 
-impl<T: Payload> BlockStore<T> {
+impl<T, Sig> BlockStore<T, Sig>
+where
+    T: Payload,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis + Sync + Send,
+{
     pub async fn new(
-        storage: Arc<dyn PersistentStorage<T>>,
-        initial_data: RecoveryData<T>,
-        validator_signer: ValidatorSigner<Ed25519PrivateKey>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
+        storage: Arc<dyn PersistentStorage<T, Sig>>,
+        initial_data: RecoveryData<T, Sig>,
+        validator_signer: ValidatorSigner<Sig::SigningKeyMaterial>,
+        state_computer: Arc<dyn StateComputer<Payload = T, Sig = Sig>>,
         enforce_increasing_timestamps: bool,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {
@@ -95,12 +102,12 @@ impl<T: Payload> BlockStore<T> {
     }
 
     async fn build_block_tree(
-        root: (Block<T>, QuorumCert, QuorumCert),
-        blocks: Vec<Block<T>>,
-        quorum_certs: Vec<QuorumCert>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
+        root: (Block<T, Sig>, QuorumCert<Sig>, QuorumCert<Sig>),
+        blocks: Vec<Block<T, Sig>>,
+        quorum_certs: Vec<QuorumCert<Sig>>,
+        state_computer: Arc<dyn StateComputer<Payload = T, Sig = Sig>>,
         max_pruned_blocks_in_mem: usize,
-    ) -> BlockTree<T> {
+    ) -> BlockTree<T, Sig> {
         let mut tree = BlockTree::new(root.0, root.1, root.2, max_pruned_blocks_in_mem);
         let quorum_certs = quorum_certs
             .into_iter()
@@ -141,9 +148,9 @@ impl<T: Payload> BlockStore<T> {
 
     pub async fn rebuild(
         &self,
-        root: (Block<T>, QuorumCert, QuorumCert),
-        blocks: Vec<Block<T>>,
-        quorum_certs: Vec<QuorumCert>,
+        root: (Block<T, Sig>, QuorumCert<Sig>, QuorumCert<Sig>),
+        blocks: Vec<Block<T, Sig>>,
+        quorum_certs: Vec<QuorumCert<Sig>>,
     ) {
         let tree = Self::build_block_tree(
             root,
@@ -161,7 +168,7 @@ impl<T: Payload> BlockStore<T> {
         *self.inner.write().unwrap() = tree;
     }
 
-    pub fn signer(&self) -> &ValidatorSigner<Ed25519PrivateKey> {
+    pub fn signer(&self) -> &ValidatorSigner<Sig::SigningKeyMaterial> {
         &self.validator_signer
     }
 
@@ -175,8 +182,8 @@ impl<T: Payload> BlockStore<T> {
     /// receives a certificate for a block that is currently being added).
     pub async fn execute_and_insert_block(
         &self,
-        block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+        block: Block<T, Sig>,
+    ) -> Result<Arc<Block<T, Sig>>, InsertError> {
         if let Some(existing_block) = self.inner.read().unwrap().get_block(block.id()) {
             return Ok(existing_block);
         }
@@ -221,7 +228,7 @@ impl<T: Payload> BlockStore<T> {
     pub fn need_sync_for_quorum_cert(
         &self,
         committed_block_id: HashValue,
-        qc: &QuorumCert,
+        qc: &QuorumCert<Sig>,
     ) -> bool {
         // LedgerInfo doesn't carry the information about the round of the committed block. However,
         // the 3-chain safety rules specify that the round of the committed block must be
@@ -233,7 +240,7 @@ impl<T: Payload> BlockStore<T> {
 
     /// Checks if quorum certificate can be inserted in block store without RPC
     /// Returns the enum to indicate the detailed status.
-    pub fn need_fetch_for_quorum_cert(&self, qc: &QuorumCert) -> NeedFetchResult {
+    pub fn need_fetch_for_quorum_cert(&self, qc: &QuorumCert<Sig>) -> NeedFetchResult {
         if qc.certified_block_round() < self.root().round() {
             return NeedFetchResult::QCRoundBeforeRoot;
         }
@@ -250,7 +257,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
-    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> Result<(), InsertError> {
+    pub fn insert_single_quorum_cert(&self, qc: QuorumCert<Sig>) -> Result<(), InsertError> {
         // Ensure executed state is consistent with Quorum Cert, otherwise persist the quorum's
         // state and hopefully we restart and agree with it.
         let executed_state = self
@@ -283,7 +290,11 @@ impl<T: Payload> BlockStore<T> {
     /// Different execution ids are treated as different blocks (e.g., if some proposal is
     /// executed in a non-deterministic fashion due to a bug, then the votes for execution result
     /// A and the votes for execution result B are aggregated separately).
-    pub fn insert_vote(&self, vote_msg: VoteMsg, min_votes_for_qc: usize) -> VoteReceptionResult {
+    pub fn insert_vote(
+        &self,
+        vote_msg: VoteMsg<Sig>,
+        min_votes_for_qc: usize,
+    ) -> VoteReceptionResult<Sig> {
         self.inner
             .write()
             .unwrap()
@@ -368,7 +379,7 @@ impl<T: Payload> BlockStore<T> {
 
     fn verify_and_get_parent_info(
         &self,
-        block: &Block<T>,
+        block: &Block<T, Sig>,
     ) -> Result<(HashValue, u64), InsertError> {
         if block.round() <= self.inner.read().unwrap().root().round() {
             return Err(InsertError::OldBlock);
@@ -414,14 +425,21 @@ impl<T: Payload> BlockStore<T> {
     }
 }
 
-impl<T: Payload> BlockReader for BlockStore<T> {
+impl<T, Sig> BlockReader for BlockStore<T, Sig>
+where
+    T: Payload,
+    Sig: Signature + Send + Sync,
+    Sig::SigningKeyMaterial: Genesis + Send + Sync,
+    Sig::VerifyingKeyMaterial: Send + Sync,
+{
     type Payload = T;
+    type Sig = Sig;
 
     fn block_exists(&self, block_id: HashValue) -> bool {
         self.inner.read().unwrap().block_exists(block_id)
     }
 
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>> {
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload, Self::Sig>>> {
         self.inner.read().unwrap().get_block(block_id)
     }
 
@@ -433,11 +451,11 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().get_compute_result(block_id)
     }
 
-    fn root(&self) -> Arc<Block<Self::Payload>> {
+    fn root(&self) -> Arc<Block<Self::Payload, Self::Sig>> {
         self.inner.read().unwrap().root()
     }
 
-    fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>> {
+    fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert<Self::Sig>>> {
         self.inner
             .read()
             .unwrap()
@@ -446,23 +464,26 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn is_ancestor(
         &self,
-        ancestor: &Block<Self::Payload>,
-        block: &Block<Self::Payload>,
+        ancestor: &Block<Self::Payload, Self::Sig>,
+        block: &Block<Self::Payload, Self::Sig>,
     ) -> Result<bool, BlockTreeError> {
         self.inner.read().unwrap().is_ancestor(ancestor, block)
     }
 
-    fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
+    fn path_from_root(
+        &self,
+        block: Arc<Block<T, Self::Sig>>,
+    ) -> Option<Vec<Arc<Block<T, Self::Sig>>>> {
         self.inner.read().unwrap().path_from_root(block)
     }
 
     fn create_block(
         &self,
-        parent: Arc<Block<Self::Payload>>,
+        parent: Arc<Block<Self::Payload, Self::Sig>>,
         payload: Self::Payload,
         round: Round,
         timestamp_usecs: u64,
-    ) -> Block<Self::Payload> {
+    ) -> Block<Self::Payload, Self::Sig> {
         if self.enforce_increasing_timestamps {
             checked_precondition!(parent.timestamp_usecs() < timestamp_usecs);
         }
@@ -481,21 +502,21 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         )
     }
 
-    fn highest_certified_block(&self) -> Arc<Block<Self::Payload>> {
+    fn highest_certified_block(&self) -> Arc<Block<Self::Payload, Self::Sig>> {
         self.inner.read().unwrap().highest_certified_block()
     }
 
-    fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
+    fn highest_quorum_cert(&self) -> Arc<QuorumCert<Self::Sig>> {
         self.inner.read().unwrap().highest_quorum_cert()
     }
 
-    fn highest_ledger_info(&self) -> Arc<QuorumCert> {
+    fn highest_ledger_info(&self) -> Arc<QuorumCert<Sig>> {
         self.inner.read().unwrap().highest_ledger_info()
     }
 }
 
 #[cfg(test)]
-impl<T: Payload> BlockStore<T> {
+impl<T: Payload> BlockStore<T, Ed25519Signature> {
     /// Returns the number of blocks in the tree
     fn len(&self) -> usize {
         self.inner.read().unwrap().len()
@@ -513,7 +534,11 @@ impl<T: Payload> BlockStore<T> {
 
     /// Helper to insert vote and qc
     /// Can't be used in production, because production insertion potentially requires state sync
-    pub fn insert_vote_and_qc(&self, vote_msg: VoteMsg, qc_size: usize) -> VoteReceptionResult {
+    pub fn insert_vote_and_qc(
+        &self,
+        vote_msg: VoteMsg<Ed25519Signature>,
+        qc_size: usize,
+    ) -> VoteReceptionResult<Ed25519Signature> {
         let r = self.insert_vote(vote_msg, qc_size);
         if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {
             self.insert_single_quorum_cert(qc.as_ref().clone()).unwrap();
@@ -524,8 +549,8 @@ impl<T: Payload> BlockStore<T> {
     /// Helper function to insert the block with the qc together
     pub async fn insert_block_with_qc(
         &self,
-        block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+        block: Block<T, Ed25519Signature>,
+    ) -> Result<Arc<Block<T, Ed25519Signature>>, InsertError> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }

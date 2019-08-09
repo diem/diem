@@ -63,23 +63,23 @@ use types::{
 #[allow(dead_code)]
 struct NodeSetup {
     author: Author,
-    block_store: Arc<BlockStore<TestPayload>>,
-    event_processor: EventProcessor<TestPayload>,
-    new_rounds_receiver: channel::Receiver<NewRoundEvent>,
+    block_store: Arc<BlockStore<TestPayload, Ed25519Signature>>,
+    event_processor: EventProcessor<TestPayload, Ed25519Signature>,
+    new_rounds_receiver: channel::Receiver<NewRoundEvent<Ed25519Signature>>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
-    pacemaker: Arc<dyn Pacemaker>,
+    pacemaker: Arc<dyn Pacemaker<Sig = Ed25519Signature>>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl NodeSetup {
     fn build_empty_store(
         signer: ValidatorSigner<Ed25519PrivateKey>,
-        storage: Arc<dyn PersistentStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
-    ) -> Arc<BlockStore<TestPayload>> {
+        storage: Arc<dyn PersistentStorage<TestPayload, Ed25519Signature>>,
+        initial_data: RecoveryData<TestPayload, Ed25519Signature>,
+    ) -> Arc<BlockStore<TestPayload, Ed25519Signature>> {
         let (commit_cb_sender, _commit_cb_receiver) =
             mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
 
@@ -96,7 +96,10 @@ impl NodeSetup {
     fn create_pacemaker(
         executor: TaskExecutor,
         time_service: Arc<dyn TimeService>,
-    ) -> (Arc<dyn Pacemaker>, channel::Receiver<NewRoundEvent>) {
+    ) -> (
+        Arc<dyn Pacemaker<Sig = Ed25519Signature>>,
+        channel::Receiver<NewRoundEvent<Ed25519Signature>>,
+    ) {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;
@@ -123,7 +126,7 @@ impl NodeSetup {
 
     fn create_proposer_election(
         author: Author,
-    ) -> Arc<dyn ProposerElection<TestPayload> + Send + Sync> {
+    ) -> Arc<dyn ProposerElection<TestPayload, Ed25519Signature> + Send + Sync> {
         Arc::new(RotatingProposer::new(vec![author], 1))
     }
 
@@ -164,7 +167,7 @@ impl NodeSetup {
         proposer_author: Author,
         peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
+        initial_data: RecoveryData<TestPayload, Ed25519Signature>,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -274,7 +277,10 @@ fn basic_new_rank_event_test() {
         let pending_proposals = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
+            .map(|mut m| {
+                ProposalMsg::<TestPayload, Ed25519Signature>::from_proto(m.1.take_proposal())
+                    .unwrap()
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal.round(), new_round,);
@@ -315,7 +321,10 @@ fn basic_new_rank_event_test() {
         let pending_proposals = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
+            .map(|mut m| {
+                ProposalMsg::<TestPayload, Ed25519Signature>::from_proto(m.1.take_proposal())
+                    .unwrap()
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal.round(), 2);
@@ -344,7 +353,7 @@ fn process_successful_proposal_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
-        let proposal_info = ProposalMsg::<TestPayload> {
+        let proposal_info = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: Block::make_block(
                 genesis.as_ref(),
                 vec![1],
@@ -365,7 +374,7 @@ fn process_successful_proposal_test() {
         let pending_for_proposer = pending_messages
             .into_iter()
             .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .map(|mut m| VoteMsg::<Ed25519Signature>::from_proto(m.1.take_vote()).unwrap())
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
@@ -409,13 +418,13 @@ fn process_old_proposal_test() {
     let old_block_id = old_block.id();
     block_on(async move {
         node.event_processor
-            .process_winning_proposal(ProposalMsg::<TestPayload> {
+            .process_winning_proposal(ProposalMsg::<TestPayload, Ed25519Signature> {
                 proposal: new_block,
                 sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
             })
             .await;
         node.event_processor
-            .process_winning_proposal(ProposalMsg::<TestPayload> {
+            .process_winning_proposal(ProposalMsg::<TestPayload, Ed25519Signature> {
                 proposal: old_block,
                 sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
             })
@@ -426,7 +435,7 @@ fn process_old_proposal_test() {
         let pending_for_me = pending_messages
             .into_iter()
             .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .map(|mut m| VoteMsg::<Ed25519Signature>::from_proto(m.1.take_vote()).unwrap())
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
@@ -467,7 +476,7 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalMsg::<TestPayload> {
+        let bad_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: block_skip_round,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
@@ -475,7 +484,7 @@ fn process_round_mismatch_test() {
             node.event_processor.process_proposal(bad_proposal).await,
             ProcessProposalResult::Done(None)
         );
-        let good_proposal = ProposalMsg::<TestPayload> {
+        let good_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: correct_block.clone(),
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
@@ -597,7 +606,7 @@ fn process_proposer_mismatch_test() {
         incorrect_proposer.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalMsg::<TestPayload> {
+        let bad_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: block_incorrect_proposer,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
@@ -605,7 +614,7 @@ fn process_proposer_mismatch_test() {
             node.event_processor.process_proposal(bad_proposal).await,
             ProcessProposalResult::Done(None)
         );
-        let good_proposal = ProposalMsg::<TestPayload> {
+        let good_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: correct_block.clone(),
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
@@ -650,7 +659,7 @@ fn process_timeout_certificate_test() {
     let tc =
         PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
     block_on(async move {
-        let skip_round_proposal = ProposalMsg::<TestPayload> {
+        let skip_round_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: block_skip_round,
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
         };
@@ -660,7 +669,7 @@ fn process_timeout_certificate_test() {
                 .await,
             ProcessProposalResult::Done(Some(skip_round_proposal))
         );
-        let old_good_proposal = ProposalMsg::<TestPayload> {
+        let old_good_proposal = ProposalMsg::<TestPayload, Ed25519Signature> {
             proposal: correct_block.clone(),
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
@@ -732,7 +741,7 @@ fn process_block_retrieval() {
         node.block_store.signer(),
     );
     let block_id = block.id();
-    let proposal_info = ProposalMsg::<TestPayload> {
+    let proposal_info = ProposalMsg::<TestPayload, Ed25519Signature> {
         proposal: block.clone(),
         sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
     };
@@ -819,7 +828,7 @@ fn basic_restart_test() {
     // insert a few successful proposals
     block_on(async move {
         for i in 1..=num_proposals {
-            let proposal_info = ProposalMsg::<TestPayload> {
+            let proposal_info = ProposalMsg::<TestPayload, Ed25519Signature> {
                 proposal: Block::make_block(
                     genesis.as_ref(),
                     vec![1],

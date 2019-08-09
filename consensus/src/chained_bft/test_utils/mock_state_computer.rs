@@ -29,6 +29,7 @@ impl MockStateComputer {
 
 impl StateComputer for MockStateComputer {
     type Payload = Vec<usize>;
+    type Sig = Ed25519Signature;
     fn compute(
         &self,
         _parent_id: HashValue,
@@ -58,7 +59,7 @@ impl StateComputer for MockStateComputer {
 
     fn sync_to(
         &self,
-        commit: QuorumCert,
+        commit: QuorumCert<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
         debug!(
             "{}Fake sync{} to block id {}",

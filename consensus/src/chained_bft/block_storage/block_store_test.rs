@@ -21,7 +21,10 @@ use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
 use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
 
-fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize>>>) {
+fn build_simple_tree() -> (
+    Vec<Arc<Block<Vec<usize>, Ed25519Signature>>>,
+    Arc<BlockStore<Vec<usize>, Ed25519Signature>>,
+) {
     let block_store = build_empty_tree();
     let genesis = block_store.root();
     let genesis_block_id = genesis.id();
@@ -395,7 +398,7 @@ fn test_insert_vote() {
 fn test_illegal_timestamp() {
     let block_store = build_empty_tree();
     let genesis = block_store.root();
-    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_internal(
+    let block_with_illegal_timestamp = Block::<Vec<usize>, Ed25519Signature>::new_internal(
         vec![],
         genesis.id(),
         1,

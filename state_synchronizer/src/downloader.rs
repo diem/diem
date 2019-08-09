@@ -6,7 +6,7 @@ use failure::prelude::*;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use logger::prelude::*;
 use network::{proto::RequestChunk, validator_network::ConsensusNetworkSender};
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
@@ -14,26 +14,26 @@ use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::Transacti
 /// Used for communication between coordinator and downloader
 /// and represents a single fetch request
 #[derive(Clone)]
-pub struct FetchChunkMsg {
+pub struct FetchChunkMsg<Sig> {
     // target version that we want to fetch
-    pub target: LedgerInfoWithSignatures<Ed25519Signature>,
+    pub target: LedgerInfoWithSignatures<Sig>,
     // version from which to start fetching (the offset version)
     pub start_version: u64,
 }
 
 /// Used to download chunks of transactions from peers
-pub struct Downloader {
-    receiver_from_coordinator: mpsc::Receiver<FetchChunkMsg>,
-    sender_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg>,
+pub struct Downloader<Sig> {
+    receiver_from_coordinator: mpsc::Receiver<FetchChunkMsg<Sig>>,
+    sender_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg<Sig>>,
     network: ConsensusNetworkSender,
     batch_size: u64,
     retries: usize,
 }
 
-impl Downloader {
+impl<Sig: Signature> Downloader<Sig> {
     pub fn new(
-        receiver_from_coordinator: mpsc::Receiver<FetchChunkMsg>,
-        sender_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg>,
+        receiver_from_coordinator: mpsc::Receiver<FetchChunkMsg<Sig>>,
+        sender_to_coordinator: mpsc::UnboundedSender<CoordinatorMsg<Sig>>,
         network: ConsensusNetworkSender,
         batch_size: u64,
         retries: usize,
@@ -72,7 +72,7 @@ impl Downloader {
     async fn download_chunk(
         &mut self,
         peer_id: PeerId,
-        msg: FetchChunkMsg,
+        msg: FetchChunkMsg<Sig>,
     ) -> Result<TransactionListWithProof> {
         // Construct the message and use rpc call via network stack
         let mut req = RequestChunk::new();
@@ -93,7 +93,7 @@ impl Downloader {
         Ok(resp.take_txn_list_with_proof())
     }
 
-    fn pick_peer_id(&self, msg: &FetchChunkMsg) -> PeerId {
+    fn pick_peer_id(&self, msg: &FetchChunkMsg<Sig>) -> PeerId {
         let signatures = msg.target.signatures();
         let idx = thread_rng().gen_range(0, signatures.len());
         signatures

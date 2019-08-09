@@ -274,7 +274,10 @@ rusty_fork_test! {
 /// Generates a list of `TransactionListWithProof`s according to the given ranges.
 fn create_transaction_chunks(
     chunk_ranges: Vec<std::ops::Range<Version>>,
-) -> (Vec<TransactionListWithProof>, LedgerInfoWithSignatures) {
+) -> (
+    Vec<TransactionListWithProof>,
+    LedgerInfoWithSignatures<Ed25519Signature>,
+) {
     assert_eq!(chunk_ranges.first().unwrap().start, 1);
     for i in 1..chunk_ranges.len() {
         let previous_range = &chunk_ranges[i - 1];

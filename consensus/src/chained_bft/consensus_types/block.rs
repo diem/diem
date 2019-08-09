@@ -19,7 +19,7 @@ use crypto::{
 use failure::Result;
 use mirai_annotations::{checked_precondition, checked_precondition_eq};
 use network::proto::Block as ProtoBlock;
-use nextgen_crypto::ed25519::*;
+use nextgen_crypto::*;
 use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -55,12 +55,12 @@ pub enum BlockVerificationError {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub enum BlockSource {
+pub enum BlockSource<Sig> {
     Proposal {
         /// Author of the block that can be validated by the author's public key and the signature
         author: Author,
         /// Signature that the hash of this block has been authored by the owner of the private key
-        signature: Ed25519Signature,
+        signature: Sig,
     },
     /// NIL blocks don't have authors or signatures: they're generated upon timeouts to fill in the
     /// gaps in the rounds.
@@ -70,7 +70,7 @@ pub enum BlockSource {
 /// Blocks are managed in a speculative tree, the committed blocks form a chain.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct Block<T> {
+pub struct Block<T, Sig> {
     /// This block's id as a hash value
     id: HashValue,
     /// Parent block id of this block as a hash value (all zeros to indicate the genesis block)
@@ -102,12 +102,12 @@ pub struct Block<T> {
     timestamp_usecs: u64,
     /// Contains the quorum certified ancestor and whether the quorum certified ancestor was
     /// voted on successfully
-    quorum_cert: QuorumCert,
+    quorum_cert: QuorumCert<Sig>,
     /// If a block is a real proposal, contains its author and signature.
-    block_source: BlockSource,
+    block_source: BlockSource<Sig>,
 }
 
-impl<T> Display for Block<T> {
+impl<T, Sig: Signature> Display for Block<T, Sig> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let nil_marker = if self.block_source == BlockSource::NilBlock {
             " (NIL)"
@@ -122,14 +122,16 @@ impl<T> Display for Block<T> {
     }
 }
 
-impl<T> Block<T>
+impl<T, Sig> Block<T, Sig>
 where
     T: Serialize + Default + CanonicalSerialize + PartialEq,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     // Make an empty genesis block
     pub fn make_genesis_block() -> Self {
         let ancestor_id = HashValue::zero();
-        let genesis_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
+        let genesis_validator_signer = ValidatorSigner::<Sig::SigningKeyMaterial>::genesis();
         let state = ExecutedState::state_for_genesis();
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
@@ -181,8 +183,8 @@ where
         round: Round,
         height: Height,
         timestamp_usecs: u64,
-        quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        quorum_cert: QuorumCert<Sig>,
+        validator_signer: &ValidatorSigner<Sig::SigningKeyMaterial>,
     ) -> Self {
         let block_internal = BlockSerializer {
             parent_id,
@@ -215,12 +217,12 @@ where
     }
 
     pub fn make_block(
-        parent_block: &Block<T>,
+        parent_block: &Block<T, Sig>,
         payload: T,
         round: Round,
         timestamp_usecs: u64,
-        quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        quorum_cert: QuorumCert<Sig>,
+        validator_signer: &ValidatorSigner<Sig::SigningKeyMaterial>,
     ) -> Self {
         // A block must carry a QC to its parent.
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
@@ -239,7 +241,11 @@ where
 
     /// The NIL blocks are special: they're not carrying any real payload and are generated
     /// independently by different validators just to fill in the round with some QC.
-    pub fn make_nil_block(parent_block: &Block<T>, round: Round, quorum_cert: QuorumCert) -> Self {
+    pub fn make_nil_block(
+        parent_block: &Block<T, Sig>,
+        round: Round,
+        quorum_cert: QuorumCert<Sig>,
+    ) -> Self {
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
 
@@ -280,7 +286,7 @@ where
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
     ) -> ::std::result::Result<(), BlockVerificationError> {
         if self.is_genesis_block() {
             return Ok(());
@@ -329,7 +335,7 @@ where
         self.timestamp_usecs
     }
 
-    pub fn quorum_cert(&self) -> &QuorumCert {
+    pub fn quorum_cert(&self) -> &QuorumCert<Sig> {
         &self.quorum_cert
     }
 
@@ -341,7 +347,7 @@ where
         }
     }
 
-    pub fn signature(&self) -> Option<&Ed25519Signature> {
+    pub fn signature(&self) -> Option<&Sig> {
         if let BlockSource::Proposal { signature, .. } = &self.block_source {
             Some(signature)
         } else {
@@ -363,9 +369,11 @@ where
     }
 }
 
-impl<T> CryptoHash for Block<T>
+impl<T, Sig> CryptoHash for Block<T, Sig>
 where
     T: canonical_serialization::CanonicalSerialize,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     type Hasher = BlockHasher;
 
@@ -390,19 +398,21 @@ where
 
 // Internal use only. Contains all the fields in Block that contributes to the computation of
 // Block Id
-struct BlockSerializer<'a, T> {
+struct BlockSerializer<'a, T, Sig> {
     parent_id: HashValue,
     payload: &'a T,
     round: Round,
     height: Height,
     timestamp_usecs: u64,
-    quorum_cert: &'a QuorumCert,
+    quorum_cert: &'a QuorumCert<Sig>,
     author: Option<Author>,
 }
 
-impl<'a, T> CryptoHash for BlockSerializer<'a, T>
+impl<'a, T, Sig> CryptoHash for BlockSerializer<'a, T, Sig>
 where
     T: CanonicalSerialize,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     type Hasher = BlockHasher;
 
@@ -415,9 +425,11 @@ where
     }
 }
 
-impl<'a, T> CanonicalSerialize for BlockSerializer<'a, T>
+impl<'a, T, Sig> CanonicalSerialize for BlockSerializer<'a, T, Sig>
 where
     T: CanonicalSerialize,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
@@ -433,7 +445,7 @@ where
 }
 
 #[cfg(test)]
-impl<T> Block<T>
+impl<T, Sig> Block<T, Sig>
 where
     T: Default + Serialize + CanonicalSerialize,
 {
@@ -443,9 +455,11 @@ where
     }
 }
 
-impl<T> IntoProto for Block<T>
+impl<T, Sig> IntoProto for Block<T, Sig>
 where
     T: Serialize + Default + CanonicalSerialize + PartialEq,
+    Sig: Signature,
+    Sig::SigningKeyMaterial: Genesis,
 {
     type ProtoType = ProtoBlock;
 
@@ -463,16 +477,17 @@ where
         proto.set_height(self.height());
         proto.set_quorum_cert(self.quorum_cert().clone().into_proto());
         if let BlockSource::Proposal { author, signature } = self.block_source {
-            proto.set_signature(signature.to_bytes().as_ref().into());
+            proto.set_signature((&signature.to_bytes()[..]).into());
             proto.set_author(author.into());
         }
         proto
     }
 }
 
-impl<T> FromProto for Block<T>
+impl<T, Sig> FromProto for Block<T, Sig>
 where
     T: DeserializeOwned + CanonicalDeserialize,
+    Sig: Signature,
 {
     type ProtoType = ProtoBlock;
 
@@ -489,7 +504,7 @@ where
         } else {
             BlockSource::Proposal {
                 author: Author::try_from(object.get_author())?,
-                signature: Ed25519Signature::try_from(object.get_signature())?,
+                signature: Sig::try_from(object.get_signature())?,
             }
         };
         Ok(Block {

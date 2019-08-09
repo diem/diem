@@ -13,6 +13,7 @@ use crate::chained_bft::{
 };
 use cached::{cached_key, SizedCache};
 use crypto::HashValue;
+use nextgen_crypto::ed25519::*;
 use proptest::prelude::*;
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
@@ -96,7 +97,7 @@ proptest! {
             }
 
             let insert_res = inserter.insert_pre_made_block(block.clone(), &first_signer, qc_signers.iter().collect());
-            let id_and_qc = |ref block: Arc<Block<Vec<usize>>>| { (block.id(), block.quorum_cert().clone()) };
+            let id_and_qc = |ref block: Arc<Block<Vec<usize>, Ed25519Signature>>| { (block.id(), block.quorum_cert().clone()) };
             let (inserted_id, inserted_qc) = id_and_qc(insert_res.clone());
             safety_rules.update(&inserted_qc);
 

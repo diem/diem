@@ -12,13 +12,13 @@ use crate::{
     state_replication::ExecutedState,
 };
 use crypto::HashValue;
-use nextgen_crypto::ed25519::Ed25519PrivateKey;
+use nextgen_crypto::ed25519::*;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_proto_convert_block() {
-    let block: Block<u64> = Block::make_genesis_block();
+    let block: Block<u64, Ed25519Signature> = Block::make_genesis_block();
     assert_protobuf_encode_decode(&block);
 }
 
@@ -26,7 +26,7 @@ fn test_proto_convert_block() {
 fn test_proto_convert_proposal() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let proposal = ProposalMsg {
-        proposal: Block::<u64>::make_genesis_block(),
+        proposal: Block::<u64, Ed25519Signature>::make_genesis_block(),
         sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
     };
     assert_protobuf_encode_decode(&proposal);
@@ -35,7 +35,7 @@ fn test_proto_convert_proposal() {
 #[test]
 fn test_proto_convert_vote() {
     let signer = ValidatorSigner::<Ed25519PrivateKey>::random(None);
-    let vote = VoteMsg::new(
+    let vote = VoteMsg::<Ed25519Signature>::new(
         HashValue::random(),
         ExecutedState::state_for_genesis(),
         1,

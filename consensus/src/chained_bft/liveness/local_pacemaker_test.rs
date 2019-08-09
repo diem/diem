@@ -117,7 +117,10 @@ fn test_basic_qc() {
 
 fn make_pacemaker(
     runtime: &runtime::Runtime,
-) -> (Arc<LocalPacemaker>, channel::Receiver<NewRoundEvent>) {
+) -> (
+    Arc<LocalPacemaker<Ed25519Signature>>,
+    channel::Receiver<NewRoundEvent<Ed25519Signature>>,
+) {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let simulated_time = SimulatedTimeService::new();
     let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
@@ -141,14 +144,14 @@ fn make_pacemaker(
     )
 }
 
-async fn expect_qc(round: u64, rx: &mut channel::Receiver<NewRoundEvent>) {
-    let event: NewRoundEvent = rx.next().await.unwrap();
+async fn expect_qc(round: u64, rx: &mut channel::Receiver<NewRoundEvent<Ed25519Signature>>) {
+    let event: NewRoundEvent<Ed25519Signature> = rx.next().await.unwrap();
     assert_eq!(round, event.round);
     assert_eq!(NewRoundReason::QCReady, event.reason);
 }
 
-async fn expect_timeout(round: u64, rx: &mut channel::Receiver<NewRoundEvent>) {
-    let event: NewRoundEvent = rx.next().await.unwrap();
+async fn expect_timeout(round: u64, rx: &mut channel::Receiver<NewRoundEvent<Ed25519Signature>>) {
+    let event: NewRoundEvent<Ed25519Signature> = rx.next().await.unwrap();
     assert_eq!(round, event.round);
     match event.reason {
         NewRoundReason::Timeout { .. } => (),

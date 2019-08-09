@@ -6,6 +6,7 @@ use crate::chained_bft::{
     consensus_types::{block::Block, quorum_cert::QuorumCert},
 };
 use crypto::HashValue;
+use nextgen_crypto::*;
 use std::sync::Arc;
 
 mod block_store;
@@ -124,16 +125,16 @@ impl From<VoteMsgVerificationError> for InsertError {
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.
 #[derive(Debug, PartialEq)]
-pub enum VoteReceptionResult {
+pub enum VoteReceptionResult<Sig> {
     /// The vote has been added but QC has not been formed yet. Return the number of votes for
     /// the given (proposal, execution) pair.
     VoteAdded(usize),
     /// The very same vote message has been processed in past.
     DuplicateVote,
     /// This block has been already certified.
-    OldQuorumCertificate(Arc<QuorumCert>),
+    OldQuorumCertificate(Arc<QuorumCert<Sig>>),
     /// This block has just been certified after adding the vote.
-    NewQuorumCertificate(Arc<QuorumCert>),
+    NewQuorumCertificate(Arc<QuorumCert<Sig>>),
 }
 
 #[derive(Debug, Fail)]
@@ -153,12 +154,13 @@ impl From<BlockTreeError> for InsertError {
 
 pub trait BlockReader: Send + Sync {
     type Payload;
+    type Sig: Signature;
 
     /// Check if a block with the block_id exist in the BlockTree.
     fn block_exists(&self, block_id: HashValue) -> bool;
 
     /// Try to get a block with the block_id, return an Arc of it if found.
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>>;
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload, Self::Sig>>>;
 
     /// Try to get a state id (HashValue) of the system corresponding to block execution.
     fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState>;
@@ -167,17 +169,17 @@ pub trait BlockReader: Send + Sync {
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
 
     /// Get the current root block of the BlockTree.
-    fn root(&self) -> Arc<Block<Self::Payload>>;
+    fn root(&self) -> Arc<Block<Self::Payload, Self::Sig>>;
 
-    fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>>;
+    fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert<Self::Sig>>>;
 
     /// Returns true if a given "ancestor" block is an ancestor of a given "block".
     /// Returns a failure if not all the blocks are present between the block's height and the
     /// parent's height.
     fn is_ancestor(
         &self,
-        ancestor: &Block<Self::Payload>,
-        block: &Block<Self::Payload>,
+        ancestor: &Block<Self::Payload, Self::Sig>,
+        block: &Block<Self::Payload, Self::Sig>,
     ) -> Result<bool, BlockTreeError>;
 
     /// Returns all the blocks between the root and the given block, including the given block
@@ -189,8 +191,8 @@ pub trait BlockReader: Send + Sync {
     /// path_from_root(a) -> None
     fn path_from_root(
         &self,
-        block: Arc<Block<Self::Payload>>,
-    ) -> Option<Vec<Arc<Block<Self::Payload>>>>;
+        block: Arc<Block<Self::Payload, Self::Sig>>,
+    ) -> Option<Vec<Arc<Block<Self::Payload, Self::Sig>>>>;
 
     /// Generates and returns a block with the given parent and payload.
     /// Note that it does not add the block to the tree, just generates it.
@@ -202,18 +204,18 @@ pub trait BlockReader: Send + Sync {
     ///   of a parent.
     fn create_block(
         &self,
-        parent: Arc<Block<Self::Payload>>,
+        parent: Arc<Block<Self::Payload, Self::Sig>>,
         payload: Self::Payload,
         round: Round,
         timestamp_usecs: u64,
-    ) -> Block<Self::Payload>;
+    ) -> Block<Self::Payload, Self::Sig>;
 
     /// Return the certified block with the highest round.
-    fn highest_certified_block(&self) -> Arc<Block<Self::Payload>>;
+    fn highest_certified_block(&self) -> Arc<Block<Self::Payload, Self::Sig>>;
 
     /// Return the quorum certificate with the highest round
-    fn highest_quorum_cert(&self) -> Arc<QuorumCert>;
+    fn highest_quorum_cert(&self) -> Arc<QuorumCert<Self::Sig>>;
 
     /// Return the quorum certificate that carries ledger info with the highest round
-    fn highest_ledger_info(&self) -> Arc<QuorumCert>;
+    fn highest_ledger_info(&self) -> Arc<QuorumCert<Self::Sig>>;
 }

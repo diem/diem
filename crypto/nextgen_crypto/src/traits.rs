@@ -129,7 +129,7 @@ pub trait SigningKey:
 /// reference.
 /// This convertibility requirement ensures the existence of a
 /// deterministic, canonical public key construction from a private key.
-pub trait PublicKey: Sized + Clone + Eq + Hash +
+pub trait PublicKey: Sized + Send + Sync + Clone + Eq + Hash +
     // This unsightly turbofish type parameter is the precise constraint
     // needed to require that there exists an
     //
@@ -192,7 +192,14 @@ pub trait VerifyingKey:
 /// scheme. This would be done as an extension trait of
 /// [`Signature`][Signature].
 pub trait Signature:
-    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Sized + Debug + Clone + Eq + Hash
+    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError>
+    + Sized
+    + Send
+    + Sync
+    + Debug
+    + Clone
+    + Eq
+    + Hash
 {
     /// The associated verifying key type for this signature.
     type VerifyingKeyMaterial: VerifyingKey<SignatureMaterial = Self>;

@@ -328,7 +328,7 @@ fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
     let mut peers = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64, Ed25519Signature>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
@@ -404,7 +404,7 @@ fn test_rpc() {
     let num_nodes = 2;
     let mut peers = Arc::new(Vec::new());
     let mut senders = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64, Ed25519Signature>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
@@ -438,7 +438,7 @@ fn test_rpc() {
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);
-    let genesis = Arc::new(Block::<u64>::make_genesis_block());
+    let genesis = Arc::new(Block::<u64, Ed25519Signature>::make_genesis_block());
     let genesis_clone = Arc::clone(&genesis);
 
     // verify request block rpc
@@ -497,7 +497,7 @@ fn test_rpc() {
         ledger_info.set_transaction_accumulator_hash(HashValue::zero().to_vec());
         ledger_info.set_consensus_block_id(HashValue::zero().to_vec());
         ledger_info.set_consensus_data_hash(
-            VoteMsg::vote_digest(
+            VoteMsg::<Ed25519Signature>::vote_digest(
                 HashValue::zero(),
                 ExecutedState {
                     state_id: HashValue::zero(),
