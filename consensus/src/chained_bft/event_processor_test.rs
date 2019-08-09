@@ -12,7 +12,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
-        event_processor::{EventProcessor, ProcessProposalResult},
+        event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
@@ -341,20 +341,17 @@ fn process_successful_proposal_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
-        let proposal_info = ProposalMsg::<TestPayload> {
-            proposal: Block::make_block(
-                genesis.as_ref(),
-                vec![1],
-                1,
-                1,
-                genesis_qc.clone(),
-                node.block_store.signer(),
-            ),
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
-        let proposal_id = proposal_info.proposal.id();
+        let proposal = Block::make_block(
+            genesis.as_ref(),
+            vec![1],
+            1,
+            1,
+            genesis_qc.clone(),
+            node.block_store.signer(),
+        );
+        let proposal_id = proposal.id();
         node.event_processor
-            .process_winning_proposal(proposal_info)
+            .process_winning_proposal(proposal)
             .await;
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only)
@@ -406,16 +403,10 @@ fn process_old_proposal_test() {
     let old_block_id = old_block.id();
     block_on(async move {
         node.event_processor
-            .process_winning_proposal(ProposalMsg::<TestPayload> {
-                proposal: new_block,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
+            .process_winning_proposal(new_block)
             .await;
         node.event_processor
-            .process_winning_proposal(ProposalMsg::<TestPayload> {
-                proposal: old_block,
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            })
+            .process_winning_proposal(old_block)
             .await;
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only)
@@ -434,7 +425,7 @@ fn process_old_proposal_test() {
 
 #[test]
 /// We don't vote for proposals that 'skips' rounds
-/// After that When we then receive proposal for correct round, we vote for it
+/// After that when we then receive proposal for correct round, we vote for it
 /// Basically it checks that adversary can not send proposal and skip rounds violating pacemaker
 /// rules
 fn process_round_mismatch_test() {
@@ -442,7 +433,7 @@ fn process_round_mismatch_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -470,7 +461,7 @@ fn process_round_mismatch_test() {
         };
         assert_eq!(
             node.event_processor.process_proposal(bad_proposal).await,
-            ProcessProposalResult::Done(None)
+            None
         );
         let good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
@@ -480,7 +471,7 @@ fn process_round_mismatch_test() {
             node.event_processor
                 .process_proposal(good_proposal.clone())
                 .await,
-            ProcessProposalResult::Done(Some(good_proposal))
+            Some(good_proposal.proposal)
         );
     });
 }
@@ -574,7 +565,7 @@ fn process_proposer_mismatch_test() {
     // node (which will send the votes to the proposer).
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let incorrect_proposer = nodes.pop().unwrap();
-    let node = nodes.pop().unwrap();
+    let mut node = nodes.pop().unwrap();
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
@@ -600,7 +591,7 @@ fn process_proposer_mismatch_test() {
         };
         assert_eq!(
             node.event_processor.process_proposal(bad_proposal).await,
-            ProcessProposalResult::Done(None)
+            None
         );
         let good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
@@ -611,7 +602,7 @@ fn process_proposer_mismatch_test() {
             node.event_processor
                 .process_proposal(good_proposal.clone())
                 .await,
-            ProcessProposalResult::Done(Some(good_proposal))
+            Some(good_proposal.proposal)
         );
     });
 }
@@ -623,7 +614,7 @@ fn process_timeout_certificate_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -655,7 +646,7 @@ fn process_timeout_certificate_test() {
             node.event_processor
                 .process_proposal(skip_round_proposal.clone())
                 .await,
-            ProcessProposalResult::Done(Some(skip_round_proposal))
+            Some(skip_round_proposal.proposal)
         );
         let old_good_proposal = ProposalMsg::<TestPayload> {
             proposal: correct_block.clone(),
@@ -665,7 +656,7 @@ fn process_timeout_certificate_test() {
             node.event_processor
                 .process_proposal(old_good_proposal.clone())
                 .await,
-            ProcessProposalResult::Done(None)
+            None
         );
     });
 }
@@ -729,17 +720,11 @@ fn process_block_retrieval() {
         node.block_store.signer(),
     );
     let block_id = block.id();
-    let proposal_info = ProposalMsg::<TestPayload> {
-        proposal: block.clone(),
-        sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-    };
     node.pacemaker
-        .process_certificates(proposal_info.proposal.round() - 1, None, None);
+        .process_certificates(block.round() - 1, None, None);
 
     block_on(async move {
-        node.event_processor
-            .process_winning_proposal(proposal_info)
-            .await;
+        node.event_processor.process_winning_proposal(block).await;
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
@@ -816,25 +801,22 @@ fn basic_restart_test() {
     // insert a few successful proposals
     block_on(async move {
         for i in 1..=num_proposals {
-            let proposal_info = ProposalMsg::<TestPayload> {
-                proposal: Block::make_block(
-                    genesis.as_ref(),
-                    vec![1],
-                    i,
-                    1,
-                    genesis_qc.clone(),
-                    node_mut.block_store.signer(),
-                ),
-                sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-            };
-            let proposal_id = proposal_info.proposal.id();
+            let proposal = Block::make_block(
+                genesis.as_ref(),
+                vec![1],
+                i,
+                1,
+                genesis_qc.clone(),
+                node_mut.block_store.signer(),
+            );
+            let proposal_id = proposal.id();
             proposals_mut.push(proposal_id);
             node_mut
                 .pacemaker
-                .process_certificates(proposal_info.proposal.round() - 1, None, None);
+                .process_certificates(proposal.round() - 1, None, None);
             node_mut
                 .event_processor
-                .process_winning_proposal(proposal_info)
+                .process_winning_proposal(proposal)
                 .await;
         }
     });

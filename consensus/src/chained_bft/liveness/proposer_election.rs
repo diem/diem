@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::{Author, Round},
-    consensus_types::proposal_msg::ProposalMsg,
+    consensus_types::block::Block,
 };
 
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
@@ -22,5 +22,5 @@ pub trait ProposerElection<T> {
     /// Notify proposer election about a new proposal. The function doesn't return any information:
     /// proposer election is going to notify the client about the chosen proposal via a dedicated
     /// channel (to be passed in constructor).
-    fn process_proposal(&self, proposal: ProposalMsg<T>) -> Option<ProposalMsg<T>>;
+    fn process_proposal(&self, proposal: Block<T>) -> Option<Block<T>>;
 }

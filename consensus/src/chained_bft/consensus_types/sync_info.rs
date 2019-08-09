@@ -5,7 +5,7 @@ use network;
 use nextgen_crypto::ed25519::*;
 
 use crate::chained_bft::{
-    consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,
+    common::Round, consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,
     safety::vote_msg::VoteMsgVerificationError,
 };
 use proto_conv::{FromProto, IntoProto};
@@ -32,8 +32,11 @@ impl Display for SyncInfo {
         };
         write!(
             f,
-            "HQC: {}, HLI: {}, HTC: {}",
-            self.highest_quorum_cert, self.highest_ledger_info, htc_repr,
+            "SyncInfo[round: {}, HQC: {}, HLI: {}, HTC: {}]",
+            self.highest_round(),
+            self.highest_quorum_cert,
+            self.highest_ledger_info,
+            htc_repr,
         )
     }
 }
@@ -85,6 +88,22 @@ impl SyncInfo {
     /// Highest timeout certificate if available
     pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
         self.highest_timeout_cert.as_ref()
+    }
+
+    pub fn hqc_round(&self) -> Round {
+        self.highest_quorum_cert.certified_block_round()
+    }
+
+    pub fn htc_round(&self) -> Round {
+        match self.highest_timeout_certificate() {
+            Some(tc) => tc.round(),
+            None => 0,
+        }
+    }
+
+    /// The highest round the SyncInfo carries.
+    pub fn highest_round(&self) -> Round {
+        std::cmp::max(self.hqc_round(), self.htc_round())
     }
 
     pub fn verify(

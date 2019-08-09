@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::{Author, Payload, Round},
-    consensus_types::proposal_msg::ProposalMsg,
+    consensus_types::block::Block,
     liveness::proposer_election::ProposerElection,
 };
 
@@ -46,11 +46,11 @@ impl<T: Payload> ProposerElection<T> for RotatingProposer {
         vec![self.get_proposer(round)]
     }
 
-    fn process_proposal(&self, proposal: ProposalMsg<T>) -> Option<ProposalMsg<T>> {
+    fn process_proposal(&self, proposal: Block<T>) -> Option<Block<T>> {
         // This is a simple rotating proposer, the proposal is processed in the context of the
         // caller task, no synchronization required because there is no mutable state.
-        let round_author = self.get_proposer(proposal.proposal.round());
-        if round_author != proposal.proposer() {
+        let round_author = self.get_proposer(proposal.round());
+        if Some(round_author) != proposal.author() {
             None
         } else {
             Some(proposal)
