@@ -225,3 +225,65 @@ impl Iterator for FrozenSubTreeIterator {
         Some(root)
     }
 }
+
+/// `FrozenSubtreeSiblingIterator` yields the "siblings" of given frozen subtrees. The frozen
+/// subtrees can be combined with these siblings to compute the hash of a bigger accumulator. For
+/// example, given an accumulator with 10 leaves, this iterator generates the sequence of positions
+/// of `A`, `B`, `C`, ....
+///
+/// ```text
+///                          o
+///                         / \
+///                       /     \
+///                     /         \
+///                   /             \
+///                 o                 C
+///               /   \
+///             /       \
+///           /           \
+///         o               o
+///       /   \            / \
+///      /     \          /   \
+///     o       o        o     B
+///    / \     / \      / \
+///   o   o   o   o   o    A
+///  / \ / \ / \ / \ / \
+///  o o o o o o o o o o
+/// ```
+pub struct FrozenSubtreeSiblingIterator {
+    current_num_leaves: u64,
+    current_level: u32,
+}
+
+impl FrozenSubtreeSiblingIterator {
+    pub fn new(num_leaves: u64) -> Self {
+        assert_ne!(num_leaves, 0);
+        assert!(num_leaves <= 1 << 63);
+        Self {
+            current_num_leaves: num_leaves,
+            current_level: 0,
+        }
+    }
+}
+
+impl Iterator for FrozenSubtreeSiblingIterator {
+    type Item = Position;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // If the current level has even number of leaves, we do not need a sibling at this level.
+        while self.current_num_leaves % 2 == 0 {
+            self.current_num_leaves >>= 1;
+            self.current_level += 1;
+        }
+        if self.current_level >= 63 {
+            return None;
+        }
+
+        // Otherwise, there should be a sibling next to the rightmost leaf.
+        let ret = Some(Position::from_inorder_index(
+            treebits::node_from_level_and_pos(self.current_level, self.current_num_leaves),
+        ));
+        self.current_num_leaves += 1;
+        ret
+    }
+}

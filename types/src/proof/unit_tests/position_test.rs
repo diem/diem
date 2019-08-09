@@ -319,3 +319,39 @@ fn test_frozen_subtree_iterator() {
         );
     }
 }
+
+fn collect_first_n_positions(num_leaves: u64, n: usize) -> Vec<u64> {
+    FrozenSubtreeSiblingIterator::new(num_leaves)
+        .take(n)
+        .map(Position::to_inorder_index)
+        .collect()
+}
+
+fn collect_all_positions(num_leaves: u64) -> Vec<u64> {
+    FrozenSubtreeSiblingIterator::new(num_leaves)
+        .map(Position::to_inorder_index)
+        .collect()
+}
+
+#[test]
+fn test_frozen_subtree_sibling_iterator() {
+    assert_eq!(collect_first_n_positions(1, 5), vec![2, 5, 11, 23, 47]);
+    assert_eq!(collect_first_n_positions(2, 5), vec![5, 11, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(3, 5), vec![6, 11, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(4, 4), vec![11, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(5, 5), vec![10, 13, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(6, 4), vec![13, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(7, 4), vec![14, 23, 47, 95]);
+    assert_eq!(collect_first_n_positions(8, 3), vec![23, 47, 95]);
+
+    assert_eq!(collect_all_positions(1).len(), 63);
+    assert_eq!(
+        collect_all_positions(1 << 62),
+        vec![(1 << 63) + (1 << 62) - 1]
+    );
+    assert_eq!(
+        collect_all_positions((1 << 63) - 1),
+        vec![std::u64::MAX - 1]
+    );
+    assert_eq!(collect_all_positions(1 << 63).len(), 0);
+}
