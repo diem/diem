@@ -389,12 +389,13 @@ impl ClientProxy {
     ) -> Result<RawTransaction> {
         let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
 
-        Ok(self.create_unsigned_transaction(
+        Ok(create_unsigned_txn(
             program,
             sender_address,
             sender_sequence_number,
-            max_gas_amount,
-            gas_unit_price,
+            max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+            gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
+            TX_EXPIRATION,
         ))
     }
 
@@ -1007,25 +1008,6 @@ impl ClientProxy {
         let mut req = SubmitTransactionRequest::new();
         req.set_signed_txn(signed_txn.into_proto());
         Ok(req)
-    }
-
-    /// Craft an unsigned transaction
-    pub fn create_unsigned_transaction(
-        &self,
-        program: Program,
-        sender_address: AccountAddress,
-        sender_sequence_number: u64,
-        max_gas_amount: Option<u64>,
-        gas_unit_price: Option<u64>,
-    ) -> RawTransaction {
-        create_unsigned_txn(
-            program,
-            sender_address,
-            sender_sequence_number,
-            max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
-            gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            TX_EXPIRATION,
-        )
     }
 
     fn mut_account_from_parameter(&mut self, para: &str) -> Result<&mut AccountData> {
