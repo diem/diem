@@ -489,7 +489,7 @@ impl<T: Payload> EventProcessor<T> {
             SyncInfo::new(
                 self.block_store.highest_quorum_cert().as_ref().clone(),
                 self.block_store.highest_ledger_info().as_ref().clone(),
-                None,
+                self.pacemaker.highest_timeout_certificate(),
             ),
             PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_with_timeout),
             self.block_store.signer(),
