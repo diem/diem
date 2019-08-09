@@ -307,7 +307,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(executor_duration_sum{op='storage_save_transactions_time_us'}[1m]) / irate(executor_duration_count{op='storage_save_transactions_time_us'}[1m])",
+          "expr": "irate(executor_duration_sum{op='storage_save_transactions_time_s'}[1m]) / irate(executor_duration_count{op='storage_save_transactions_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -333,7 +333,7 @@
       },
       "yaxes": [
         {
-          "format": "µs",
+          "format": "s",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -355,7 +355,7 @@
       }
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
