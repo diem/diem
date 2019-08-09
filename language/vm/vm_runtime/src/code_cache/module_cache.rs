@@ -294,7 +294,6 @@ impl<'alloc> VMModuleCache<'alloc> {
                     fields,
                 } => {
                     let mut field_types = vec![];
-
                     for field in module.field_def_range(*field_count, *fields) {
                         let ty = try_runtime!(self.resolve_signature_token_with_fetcher(
                             module,
@@ -303,10 +302,11 @@ impl<'alloc> VMModuleCache<'alloc> {
                             fetcher
                         ));
                         if let Some(t) = ty {
-                            // `field_types` is initally empty, a single element is pushed per loop
-                            // iteration and the number of iterations is bound to the max size of
-                            // `module.field_def_range()`
-                            // MIRAI cannot currently check this bound in terms of `field_count`.
+                            // `field_types` is initally empty, a single element is pushed
+                            // per loop iteration and the number of iterations is bound to
+                            // the max size of `module.field_def_range()`.
+                            // MIRAI cannot currently check this bound in terms of
+                            // `field_count`.
                             assume!(field_types.len() < usize::max_value());
                             field_types.push(t);
                         } else {
