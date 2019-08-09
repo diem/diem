@@ -86,7 +86,7 @@ fn test_proposal_generation_parent() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_on(block_store.insert_vote_and_qc(vote_msg_a1, 1));
+    block_store.insert_vote_and_qc(vote_msg_a1, 1);
     let a1_child_res =
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
@@ -108,7 +108,7 @@ fn test_proposal_generation_parent() {
         block_store.signer(),
     );
 
-    block_on(block_store.insert_vote_and_qc(vote_msg_b1, 1));
+    block_store.insert_vote_and_qc(vote_msg_b1, 1);
     let b1_child_res =
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
@@ -142,7 +142,7 @@ fn test_old_proposal_generation() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_on(block_store.insert_vote_and_qc(vote_msg_a1, 1));
+    block_store.insert_vote_and_qc(vote_msg_a1, 1);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
     assert_eq!(

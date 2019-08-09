@@ -252,7 +252,6 @@ impl<T: Payload> EventProcessor<T> {
                 if let Err(e) = self
                     .block_store
                     .insert_single_quorum_cert(proposal.proposal.quorum_cert().clone())
-                    .await
                 {
                     warn!(
                         "Quorum certificate for proposal {} could not be inserted to the block store: {:?}",
@@ -705,7 +704,7 @@ impl<T: Payload> EventProcessor<T> {
         // TODO [Reconfiguration] Verify epoch of the vote message.
         // Add the vote and check whether it completes a new QC.
         if let VoteReceptionResult::NewQuorumCertificate(qc) =
-            self.block_store.insert_vote(vote, quorum_size).await
+            self.block_store.insert_vote(vote, quorum_size)
         {
             if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
                 if let Err(e) = self
@@ -719,7 +718,6 @@ impl<T: Payload> EventProcessor<T> {
             } else if let Err(e) = self
                 .block_store
                 .insert_single_quorum_cert(qc.as_ref().clone())
-                .await
             {
                 error!("Error inserting qc {}: {:?}", qc, e);
                 return None;
@@ -795,7 +793,7 @@ impl<T: Payload> EventProcessor<T> {
         }
         counters::LAST_COMMITTED_ROUND.set(committed_block.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *committed_block);
-        self.block_store.prune_tree(committed_block.id()).await;
+        self.block_store.prune_tree(committed_block.id());
     }
 
     /// Retrieve a n chained blocks from the block store starting from

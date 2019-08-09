@@ -250,7 +250,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
-    pub async fn insert_single_quorum_cert(&self, qc: QuorumCert) -> Result<(), InsertError> {
+    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> Result<(), InsertError> {
         // Ensure executed state is consistent with Quorum Cert, otherwise persist the quorum's
         // state and hopefully we restart and agree with it.
         let executed_state = self
@@ -283,11 +283,7 @@ impl<T: Payload> BlockStore<T> {
     /// Different execution ids are treated as different blocks (e.g., if some proposal is
     /// executed in a non-deterministic fashion due to a bug, then the votes for execution result
     /// A and the votes for execution result B are aggregated separately).
-    pub async fn insert_vote(
-        &self,
-        vote_msg: VoteMsg,
-        min_votes_for_qc: usize,
-    ) -> VoteReceptionResult {
+    pub fn insert_vote(&self, vote_msg: VoteMsg, min_votes_for_qc: usize) -> VoteReceptionResult {
         self.inner
             .write()
             .unwrap()
@@ -305,7 +301,7 @@ impl<T: Payload> BlockStore<T> {
     /// B_3 -> B_4, root = B_3
     ///
     /// Returns the block ids of the blocks removed.
-    pub async fn prune_tree(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
+    pub fn prune_tree(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
         let id_to_remove = self
             .inner
             .read()
@@ -510,16 +506,10 @@ impl<T: Payload> BlockStore<T> {
 
     /// Helper to insert vote and qc
     /// Can't be used in production, because production insertion potentially requires state sync
-    pub async fn insert_vote_and_qc(
-        &self,
-        vote_msg: VoteMsg,
-        qc_size: usize,
-    ) -> VoteReceptionResult {
-        let r = self.insert_vote(vote_msg, qc_size).await;
+    pub fn insert_vote_and_qc(&self, vote_msg: VoteMsg, qc_size: usize) -> VoteReceptionResult {
+        let r = self.insert_vote(vote_msg, qc_size);
         if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {
-            self.insert_single_quorum_cert(qc.as_ref().clone())
-                .await
-                .unwrap();
+            self.insert_single_quorum_cert(qc.as_ref().clone()).unwrap();
         }
         r
     }
@@ -529,8 +519,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         block: Block<T>,
     ) -> Result<Arc<Block<T>>, InsertError> {
-        self.insert_single_quorum_cert(block.quorum_cert().clone())
-            .await?;
+        self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }
 }
