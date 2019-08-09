@@ -9,27 +9,42 @@ commands:
           name: Version Information
           command: rustc --version; cargo --version; rustup --version
       - run:
-          name: Install Dependencies
-          command: |
-            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
-            sudo apt-get update
-            sudo apt-get install -y protobuf-compiler/stretch-backports cmake golang curl
-            sudo apt-get clean
-            sudo rm -r /var/lib/apt/lists/*
-            rustup component add clippy rustfmt
-      - run:
           name: Setup Env
           command: |
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
+            echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
+            echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
+            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
+            echo 'export CC="sccache cc"' >> $BASH_ENV
+            echo 'export CXX="sccache c++"' >> $BASH_ENV
+  restore_sccache_cache:
+    steps:
+      - restore_cache:
+          name: Restore sccache Cache
+          key: sccache-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
+  save_sccache_cache:
+    steps:
+      - run:
+          name: Show sccache Stats
+          command: sccache -s
+      - save_cache:
+          name: Save sccache Cache
+          key: sccache-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          paths:
+            - "~/.cache/sccache"
 
 jobs:
   build:
     docker:
-      - image: circleci/rust:stretch
+      - image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/github_circleci:latest
+        aws_auth:
+          aws_access_key_id: $ECR_RO_ACCESS_KEY_ID
+          aws_secret_access_key: $ECR_RO_SECRET_ACCESS_KEY
     resource_class: 2xlarge
     steps:
       - env_setup
+      - restore_sccache_cache
       - run:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
@@ -48,6 +63,7 @@ jobs:
       - run:
           name: Run All End to End Tests
           command: RUST_BACKTRACE=1 cargo test --package testsuite
+      - save_sccache_cache
   audit:
     docker:
       - image: circleci/rust:stretch
