@@ -9,7 +9,7 @@ use crate::{
     proto::{ConsensusMsg, RequestBlock, RequestChunk, RespondBlock, RespondChunk},
     protocols::{
         direct_send::Message,
-        rpc::{error::RpcError, OutboundRpcRequest},
+        rpc::{self, error::RpcError},
     },
     validator_network::Event,
     NetworkPublicKeys, ProtocolId,
@@ -17,7 +17,6 @@ use crate::{
 use bytes::Bytes;
 use channel;
 use futures::{
-    channel::oneshot,
     stream::Map,
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
@@ -138,10 +137,14 @@ impl ConsensusNetworkSender {
         let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
         let mut req_msg_enum = ConsensusMsg::new();
         req_msg_enum.set_request_block(req_msg);
-
-        let mut res_msg_enum = self
-            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
-            .await?;
+        let mut res_msg_enum = rpc::utils::unary_rpc(
+            self.inner.clone(),
+            recipient,
+            protocol,
+            req_msg_enum,
+            timeout,
+        )
+        .await?;
 
         if res_msg_enum.has_respond_block() {
             Ok(res_msg_enum.take_respond_block())
@@ -166,9 +169,14 @@ impl ConsensusNetworkSender {
         let mut req_msg_enum = ConsensusMsg::new();
         req_msg_enum.set_request_chunk(req_msg);
 
-        let mut res_msg_enum = self
-            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
-            .await?;
+        let mut res_msg_enum = rpc::utils::unary_rpc(
+            self.inner.clone(),
+            recipient,
+            protocol,
+            req_msg_enum,
+            timeout,
+        )
+        .await?;
 
         if res_msg_enum.has_respond_chunk() {
             Ok(res_msg_enum.take_respond_chunk())
@@ -200,45 +208,13 @@ impl ConsensusNetworkSender {
             .await?;
         Ok(())
     }
-
-    /// Send a unary rpc request to remote peer `recipient`. Handles
-    /// serialization and deserialization of the `ConsensusMsg` message enum.
-    ///
-    /// TODO(philiphayes): specify error cases
-    async fn unary_rpc(
-        &mut self,
-        recipient: PeerId,
-        protocol: ProtocolId,
-        req_msg: ConsensusMsg,
-        timeout: Duration,
-    ) -> Result<ConsensusMsg, RpcError> {
-        // serialize request
-        let req_data = req_msg.write_to_bytes()?.into();
-
-        // ask network to fulfill rpc request
-        let (res_tx, res_rx) = oneshot::channel();
-        let req = OutboundRpcRequest {
-            protocol,
-            data: req_data,
-            res_tx,
-            timeout,
-        };
-        self.inner
-            .send(NetworkRequest::SendRpc(recipient, req))
-            .await?;
-
-        // wait for response and deserialize
-        let res_data = res_rx.await??;
-        let res_msg = ::protobuf::parse_from_bytes(res_data.as_ref())?;
-        Ok(res_msg)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{proto::Vote, protocols::rpc::InboundRpcRequest};
-    use futures::{executor::block_on, future::try_join};
+    use futures::{channel::oneshot, executor::block_on, future::try_join};
 
     fn new_test_vote() -> ConsensusMsg {
         let mut vote = Vote::new();
