@@ -494,7 +494,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             let pacemaker = self.create_pacemaker(
                 executor.clone(),
                 self.storage.persistent_liveness_storage(),
-                safety_rules.read().unwrap().last_committed_round(),
+                block_store.root().round(),
                 block_store.highest_certified_block().round(),
                 highest_timeout_certificates,
                 time_service.clone(),

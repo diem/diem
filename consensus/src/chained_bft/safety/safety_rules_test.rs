@@ -159,7 +159,6 @@ fn test_initial_state() {
     let safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
     let state = safety_rules.consensus_state();
     assert_eq!(state.last_vote_round(), 0);
-    assert_eq!(state.last_committed_round(), block_tree.root().round());
     assert_eq!(state.preferred_block_round(), block_tree.root().round());
 }
 

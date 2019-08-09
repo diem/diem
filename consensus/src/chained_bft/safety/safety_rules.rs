@@ -16,7 +16,6 @@ use std::{
     fmt::{Display, Formatter},
     sync::Arc,
 };
-use types::ledger_info::LedgerInfoWithSignatures;
 
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
@@ -118,7 +117,6 @@ pub enum ProposalReject {
 #[derive(Serialize, Default, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct ConsensusState {
     last_vote_round: Round,
-    last_committed_round: Round,
 
     // A "preferred block" is the two-chain head with the highest block round.
     // We're using the `head` / `tail` terminology for describing the chains of QCs for describing
@@ -138,24 +136,18 @@ impl Display for ConsensusState {
             f,
             "ConsensusState: [\n\
              \tlast_vote_round = {},\n\
-             \tlast_committed_round = {},\n\
              \tpreferred_block_round = {}\n\
              ]",
-            self.last_vote_round, self.last_committed_round, self.preferred_block_round
+            self.last_vote_round, self.preferred_block_round
         )
     }
 }
 
 impl ConsensusState {
     #[cfg(test)]
-    pub fn new(
-        last_vote_round: Round,
-        last_committed_round: Round,
-        preferred_block_round: Round,
-    ) -> Self {
+    pub fn new(last_vote_round: Round, preferred_block_round: Round) -> Self {
         Self {
             last_vote_round,
-            last_committed_round,
             preferred_block_round,
         }
     }
@@ -163,12 +155,6 @@ impl ConsensusState {
     /// Returns the last round that was voted on
     pub fn last_vote_round(&self) -> Round {
         self.last_vote_round
-    }
-
-    /// Returns the last committed round
-    #[cfg(test)]
-    pub fn last_committed_round(&self) -> Round {
-        self.last_committed_round
     }
 
     /// Returns the preferred block round
@@ -222,7 +208,7 @@ impl<T: Payload> SafetyRules<T> {
     /// Requires that all the ancestors of the block are available for at least up to the last
     /// committed block, might panic otherwise.
     /// The update function is invoked whenever a system learns about a potentially high QC.
-    pub fn update(&mut self, qc: &QuorumCert) -> Option<Arc<Block<T>>> {
+    pub fn update(&mut self, qc: &QuorumCert) {
         //TODO: remove
         // Preferred block rule: choose the highest 2-chain head.
         if let Some(one_chain_head) = self.block_tree.get_block(qc.certified_block_id()) {
@@ -232,31 +218,6 @@ impl<T: Payload> SafetyRules<T> {
                 }
             }
         }
-
-        self.process_ledger_info(qc.ledger_info())
-    }
-
-    /// Check to see if a processing a new LedgerInfoWithSignatures leads to a commit.  Return a
-    /// new committed block if there is one.
-    pub fn process_ledger_info(
-        &mut self,
-        ledger_info: &LedgerInfoWithSignatures,
-    ) -> Option<Arc<Block<T>>> {
-        // While voting for a block the validators have already calculated the potential commits.
-        // In case there are no commits enabled by this ledger info, the committed block id is going
-        // to carry some placeholder value (e.g., zero).
-        let committed_block_id = ledger_info.ledger_info().consensus_block_id();
-        if let Some(committed_block) = self.block_tree.get_block(committed_block_id) {
-            // We check against the root of the tree instead of last committed round to avoid
-            // double commit.
-            // Because we only persist the ConsensusState before sending out the vote, it could
-            // be lagged behind the reality if we crash between committing and sending the vote.
-            if committed_block.round() > self.block_tree.root().round() {
-                self.state.last_committed_round = committed_block.round();
-                return Some(committed_block);
-            }
-        }
-        None
     }
 
     /// Check if a one-chain at round r+2 causes a commit at round r and return the committed
@@ -280,11 +241,6 @@ impl<T: Payload> SafetyRules<T> {
             }
         }
         None
-    }
-
-    /// Return the highest known committed round
-    pub fn last_committed_round(&self) -> Round {
-        self.state.last_committed_round
     }
 
     /// Return the new state if the voting round was increased, otherwise ignore.  Increasing the
