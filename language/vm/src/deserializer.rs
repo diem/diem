@@ -380,6 +380,8 @@ fn build_script_tables(
         match table.kind {
             TableType::MAIN => {
                 let start: usize = table.offset as usize;
+                // `check_tables()` ensures that the table indices are in bounds
+                assume!(start <= usize::max_value() - (table.count as usize));
                 let end: usize = start + table.count as usize;
                 let mut cursor = Cursor::new(&binary[start..end]);
                 let main = load_function_def(&mut cursor)?;

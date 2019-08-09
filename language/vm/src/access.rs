@@ -159,6 +159,8 @@ pub trait ModuleAccess: Sync {
     ) -> &[FieldDefinition] {
         let first_field = first_field.0 as usize;
         let field_count = field_count as usize;
+        // Both `first_field` and `field_count` are `u16` before being converted to usize
+        assume!(first_field <= usize::max_value() - field_count);
         let last_field = first_field + field_count;
         &self.as_module().as_inner().field_defs[first_field..last_field]
     }
