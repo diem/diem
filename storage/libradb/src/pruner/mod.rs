@@ -12,7 +12,7 @@ use crate::{
 };
 use failure::prelude::*;
 use logger::prelude::*;
-use schemadb::{ReadOptions, SchemaBatch, DB};
+use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 use std::{
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -23,11 +23,14 @@ use std::{
 use types::transaction::Version;
 
 use failure::_core::sync::atomic::Ordering;
-use std::sync::atomic::AtomicU64;
+use jellyfish_merkle::StaleNodeIndex;
 #[cfg(test)]
 use std::thread::sleep;
-#[cfg(test)]
-use std::time::{Duration, Instant};
+use std::{
+    iter::Peekable,
+    sync::atomic::AtomicU64,
+    time::{Duration, Instant},
+};
 
 /// The `Pruner` is meant to be part of a `LibraDB` instance and runs in the background to prune old
 /// data.
@@ -130,25 +133,33 @@ enum Command {
 struct Worker {
     db: Arc<DB>,
     command_receiver: Receiver<Command>,
-    least_readable_version: Version,
+    target_least_readable_version: Version,
     /// (For tests) a way for the worker thread to inform the `Pruner` the pruning progress. If we
     /// set this atomic value to `V`, all versions before `V` can no longer be accessed.
-    progress: Arc<AtomicU64>,
+    least_readable_version: Arc<AtomicU64>,
     /// indicates if there's NOT any pending work to do currently, to hint
     /// `Self::receive_commands()` to `recv()` blocking-ly.
     blocking_recv: bool,
+    index_purged_till: Version,
+    index_purged_at: Instant,
 }
 
 impl Worker {
-    const BATCH_SIZE: usize = 1024;
+    const MAX_VERSIONS_TO_PRUNE_PER_BATCH: usize = 100;
 
-    fn new(db: Arc<DB>, command_receiver: Receiver<Command>, progress: Arc<AtomicU64>) -> Self {
+    fn new(
+        db: Arc<DB>,
+        command_receiver: Receiver<Command>,
+        least_readable_version: Arc<AtomicU64>,
+    ) -> Self {
         Self {
             db,
             command_receiver,
-            progress,
-            least_readable_version: 0,
+            least_readable_version,
+            target_least_readable_version: 0,
             blocking_recv: true,
+            index_purged_till: 0,
+            index_purged_at: Instant::now(),
         }
     }
 
@@ -158,23 +169,30 @@ impl Worker {
             // in case `Command::Quit` is received (that's when we should quit.)
             match prune_state(
                 Arc::clone(&self.db),
-                self.progress.load(Ordering::Relaxed),
-                self.least_readable_version,
-                Self::BATCH_SIZE,
+                self.least_readable_version.load(Ordering::Relaxed),
+                self.target_least_readable_version,
+                Self::MAX_VERSIONS_TO_PRUNE_PER_BATCH,
             ) {
-                Ok((num_pruned, last_seen_version)) => {
+                Ok(least_readable_version) => {
                     // Make next recv() blocking if all done.
-                    self.blocking_recv = num_pruned < Self::BATCH_SIZE;
+                    self.blocking_recv =
+                        least_readable_version == self.target_least_readable_version;
 
                     // Log the progress.
-                    self.progress.store(last_seen_version, Ordering::Relaxed);
+                    self.least_readable_version
+                        .store(least_readable_version, Ordering::Relaxed);
                     OP_COUNTER.set(
                         "pruner.least_readable_state_version",
-                        last_seen_version as usize,
+                        least_readable_version as usize,
                     );
+
+                    // Try to purge the log.
+                    if let Err(e) = self.maybe_purge_index() {
+                        crit!("Failed purging state state node index, ignored. Err: {}", e);
+                    }
                 }
                 Err(e) => {
-                    crit!("Error purging db records. {:?}", e);
+                    crit!("Error pruning stale state nodes. {:?}", e);
                     // On error, stop retrying vigorously by making next recv() blocking.
                     self.blocking_recv = true;
                 }
@@ -210,8 +228,8 @@ impl Worker {
                 Command::Prune {
                     least_readable_version,
                 } => {
-                    if least_readable_version > self.least_readable_version {
-                        self.least_readable_version = least_readable_version;
+                    if least_readable_version > self.target_least_readable_version {
+                        self.target_least_readable_version = least_readable_version;
                         // Switch to non-blocking to allow some work to be done after the
                         // channel has drained.
                         self.blocking_recv = false;
@@ -220,43 +238,119 @@ impl Worker {
             }
         }
     }
+
+    /// Purge the stale node index so that after restart not too much already pruned stuff is dealt
+    /// with again (although no harm is done deleting those then non-existent things.)
+    ///
+    /// We issue (range) deletes on the index only periodically instead of after every pruning batch
+    /// to avoid sending too many deletions to the DB, which takes disk space and slows it down.
+    fn maybe_purge_index(&mut self) -> Result<()> {
+        const MIN_INTERVAL: Duration = Duration::from_secs(60);
+        const MIN_VERSIONS: u64 = 60000;
+
+        // A deletion is issued at most once in one minute and when the pruner has progressed by at
+        // least 60000 versions (assuming the pruner deletes as slow as 1000 versions per second,
+        // this imposes at most one minute of work in vain after restarting.)
+        let now = Instant::now();
+        if now - self.index_purged_at > MIN_INTERVAL {
+            let least_readable_version = self.least_readable_version.load(Ordering::Relaxed);
+
+            if least_readable_version - self.index_purged_till > MIN_VERSIONS {
+                self.db.range_delete::<StaleNodeIndexSchema, Version>(
+                    &self.index_purged_till,
+                    &(least_readable_version + 1), // end is exclusive
+                )?;
+                self.index_purged_till = least_readable_version;
+                self.index_purged_at = now;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+struct StaleNodeIndicesByVersionIterator<'a> {
+    inner: Peekable<SchemaIterator<'a, StaleNodeIndexSchema>>,
+    target_least_readable_version: Version,
+}
+
+impl<'a> StaleNodeIndicesByVersionIterator<'a> {
+    fn new(
+        db: &'a DB,
+        least_readable_version: Version,
+        target_least_readable_version: Version,
+    ) -> Result<Self> {
+        let mut iter = db.iter::<StaleNodeIndexSchema>(ReadOptions::default())?;
+        iter.seek(&least_readable_version)?;
+
+        Ok(Self {
+            inner: iter.peekable(),
+            target_least_readable_version,
+        })
+    }
+
+    fn next_result(&mut self) -> Result<Option<Vec<StaleNodeIndex>>> {
+        match self.inner.next().transpose()? {
+            None => Ok(None),
+            Some((index, _)) => {
+                let version = index.stale_since_version;
+                if version > self.target_least_readable_version {
+                    return Ok(None);
+                }
+
+                let mut indices = vec![index];
+                while let Some(res) = self.inner.peek() {
+                    if let Ok((index_ref, _)) = res {
+                        if index_ref.stale_since_version != version {
+                            break;
+                        }
+                    }
+
+                    let (index, _) = self.inner.next().transpose()?.expect("Should be Some.");
+                    indices.push(index);
+                }
+
+                Ok(Some(indices))
+            }
+        }
+    }
+}
+
+impl<'a> Iterator for StaleNodeIndicesByVersionIterator<'a> {
+    type Item = Result<Vec<StaleNodeIndex>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_result().transpose()
+    }
 }
 
 pub fn prune_state(
     db: Arc<DB>,
-    // `iter.seek_to_first()` can be costly if there are a lot of deletes at the beginning of the
-    // whole key range which have not been compacted away yet. We let the call site hint us where
-    // the first undeleted key is if possible. Pass in `0` to essentially seek to the first record.
-    max_pruned_version_hint: Version,
     least_readable_version: Version,
-    limit: usize,
-) -> Result<(usize, Version)> {
-    let mut batch = SchemaBatch::new();
-    let mut num_pruned = 0;
-    let mut iter = db.iter::<StaleNodeIndexSchema>(ReadOptions::default())?;
-    iter.seek(&max_pruned_version_hint)?;
+    target_least_readable_version: Version,
+    max_versions: usize,
+) -> Result<Version> {
+    let index_by_version = StaleNodeIndicesByVersionIterator::new(
+        &db,
+        least_readable_version,
+        target_least_readable_version,
+    )?
+    .take(max_versions)
+    .collect::<Result<Vec<_>>>()?;
+    let indices = index_by_version.into_iter().flatten().collect::<Vec<_>>();
 
-    // Collect records to prune, as many as `limit`.
-    let mut iter = iter.take(limit);
-    let mut last_seen_version = 0;
-    while let Some((index, _)) = iter.next().transpose()? {
-        // Only records that have retired before or at version `least_readable_version` can be
-        // pruned in order to keep that version still readable after pruning.
-        if index.stale_since_version > least_readable_version {
-            break;
-        }
-        last_seen_version = index.stale_since_version;
-        batch.delete::<JellyfishMerkleNodeSchema>(&index.node_key)?;
-        batch.delete::<StaleNodeIndexSchema>(&index)?;
-        num_pruned += 1;
-    }
-
-    // Persist.
-    if num_pruned > 0 {
+    if indices.is_empty() {
+        Ok(least_readable_version)
+    } else {
+        let new_least_readable_version = indices.last().expect("Should exist.").stale_since_version;
+        let mut batch = SchemaBatch::new();
+        indices
+            .into_iter()
+            .map(|index| batch.delete::<JellyfishMerkleNodeSchema>(&index.node_key))
+            .collect::<Result<_>>()?;
         db.write_schemas(batch)?;
+        Ok(new_least_readable_version)
     }
-
-    Ok((num_pruned, last_seen_version))
 }
 
 #[cfg(test)]

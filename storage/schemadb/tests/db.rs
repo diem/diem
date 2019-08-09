@@ -3,6 +3,7 @@
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use failure::Result;
+use proptest::{collection::vec, prelude::*};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, Schema, ValueCodec},
@@ -151,6 +152,35 @@ fn test_schema_put_get() {
         db.get::<TestSchema2>(&TestField(4)).unwrap(),
         Some(TestField(5)),
     );
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10))]
+
+    #[test]
+    fn test_schema_range_delete(
+        ranges_to_delete in vec(
+            (0..100u32).prop_flat_map(|begin| (Just(begin), (begin..100u32))), 0..10)
+    ) {
+        let db = TestDB::new();
+        for i in 0..100u32 {
+            db.put::<TestSchema1>(&TestField(i), &TestField(i)).unwrap();
+        }
+        let mut should_exist = [true; 100];
+        for (begin, end) in ranges_to_delete {
+            db.range_delete::<TestSchema1, TestField>(&TestField(begin), &TestField(end)).unwrap();
+            for i in begin..end {
+                should_exist[i as usize] = false;
+            }
+        }
+
+        for (i, should_exist) in should_exist.iter().enumerate() {
+            assert_eq!(
+                db.get::<TestSchema1>(&TestField(i as u32)).unwrap().is_some(),
+                *should_exist,
+            )
+        }
+    }
 }
 
 fn collect_values<S: Schema>(db: &TestDB) -> Vec<(S::Key, S::Value)> {
