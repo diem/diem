@@ -268,8 +268,10 @@ fn test_external_transaction_signer() {
 
     // create address from public key
     let sender_address = AccountAddress::from(public_key);
-    let receiver_address = client_proxy.get_account_address_from_parameter(
-        "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a")
+    let receiver_address = client_proxy
+        .get_account_address_from_parameter(
+            "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a",
+        )
         .unwrap();
     let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
 
@@ -289,8 +291,8 @@ fn test_external_transaction_signer() {
             sequence_number,
             receiver_address,
             amount,
-            None,  /* gas_unit_price */
-            None,  /* max_gas_amount */
+            None, /* gas_unit_price */
+            None, /* max_gas_amount */
         )
         .unwrap();
 
@@ -303,11 +305,7 @@ fn test_external_transaction_signer() {
 
     // submit the transaction
     let address_and_sequence = client_proxy
-        .submit_signed_transaction(
-            unsigned_txn,
-            public_key,
-            signature,
-        )
+        .submit_signed_transaction(unsigned_txn, public_key, signature)
         .unwrap();
 
     assert_eq!(
