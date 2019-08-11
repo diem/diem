@@ -17,14 +17,9 @@ arg_enum! {
     }
 }
 
-/// CLI options for RuBen.
+/// CLI options for creating Benchmarker, shared by binaries that use Benchmarker.
 #[derive(Debug, StructOpt)]
-#[structopt(
-    name = "RuBen",
-    author = "Libra",
-    about = "RuBen (Ru)ns The Libra (Ben)chmarker For You."
-)]
-pub struct RubenOpt {
+pub struct BenchOpt {
     /// Validator address list separated by whitespace: `ip_address:port ip_address:port ...`.
     /// It is required unless (and hence conflict with) swarm_config_dir is present.
     #[structopt(
@@ -34,9 +29,6 @@ pub struct RubenOpt {
         required_unless = "swarm_config_dir"
     )]
     pub validator_addresses: Vec<String>,
-    /// TODO: Discard this option. Debug interface address in the form of ip_address:port.
-    #[structopt(short = "d", long = "debug_address")]
-    pub debug_address: Option<String>,
     /// libra_swarm's config file directory, which holds libra_node's config .toml file(s).
     /// It is requried unless (and hence conflicts with) validator_addresses .
     #[structopt(
@@ -53,26 +45,43 @@ pub struct RubenOpt {
     /// Valid faucet key file path.
     #[structopt(short = "f", long = "faucet_key_file_path", required = true)]
     pub faucet_key_file_path: String,
-    /// Number of accounts to create in Libra.
-    #[structopt(short = "n", long = "num_accounts", default_value = "32")]
-    pub num_accounts: u64,
     /// Number of AC clients.
-    /// If not specified or equals 0, it will be set to validator_addresses.len().
+    /// If not specified or equals 0, it will be set to #validators * #cpus. Why this value?
+    /// We want to create/connect 1 AC client to each AC thread on each validator.
     #[structopt(short = "c", long = "num_clients", default_value = "0")]
     pub num_clients: usize,
     /// Randomly distribute the clients to start sending requests over the stagger_range_ms time.
     /// A value of 1 ms effectively means starting all clients at once.
     #[structopt(short = "g", long = "stagger_range_ms", default_value = "64")]
     pub stagger_range_ms: u16,
-    /// Number of repetition to attempt, in one epoch, to increase overall number of sent TXNs.
+    /// Submit constant number of requests per second per client; otherwise flood requests.
+    #[structopt(short = "k", long = "submit_rate")]
+    pub submit_rate: Option<u64>,
+}
+
+/// CLI options for RuBen.
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "RuBen",
+    author = "Libra",
+    about = "RuBen (Ru)ns The Libra (Ben)chmarker For You."
+)]
+pub struct RubenOpt {
+    // Options for creating Benchmarker.
+    #[structopt(flatten)]
+    pub bench_opt: BenchOpt,
+    /// TODO: Discard this option. Debug interface address in the form of ip_address:port.
+    #[structopt(short = "d", long = "debug_address")]
+    pub debug_address: Option<String>,
+    /// Number of accounts to create in Libra.
+    #[structopt(short = "n", long = "num_accounts", default_value = "32")]
+    pub num_accounts: u64,
+    /// Number of repetition to attempt, in one epoch, to increase overall number of sent requests.
     #[structopt(short = "r", long = "num_rounds", default_value = "1")]
     pub num_rounds: u64,
     /// Number of epochs to measure the TXN throughput, each time with newly created Benchmarker.
     #[structopt(short = "e", long = "num_epochs", default_value = "10")]
     pub num_epochs: u64,
-    /// Submit constant number of requests per second; otherwise requests are flood to Libra.
-    #[structopt(short = "k", long = "submit_rate")]
-    pub submit_rate: Option<u64>,
     /// Choices of how to generate TXNs.
     #[structopt(
         short = "t",
@@ -82,6 +91,34 @@ pub struct RubenOpt {
         default_value = "Ring"
     )]
     pub txn_pattern: TransactionPattern,
+}
+
+/// CLI options for linear search max throughput.
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "max_throughput",
+    author = "Libra",
+    about = "Linear Search Maximum Throughput."
+)]
+pub struct SearchOpt {
+    // Options for creating Benchmarker.
+    #[structopt(flatten)]
+    pub bench_opt: BenchOpt,
+    /// Upper bound value of submission rate for each client.
+    #[structopt(short = "u", long = "upper_bound", default_value = "8000")]
+    pub upper_bound: u64,
+    /// Lower bound value of submission rate for each client.
+    #[structopt(short = "l", long = "lower_bound", default_value = "10")]
+    pub lower_bound: u64,
+    /// Increase step of submission rate for each client.
+    #[structopt(short = "i", long = "inc_step", default_value = "10")]
+    pub inc_step: u64,
+    /// Number of epochs to send TXNs at a fixed rate.
+    #[structopt(short = "e", long = "num_epochs", default_value = "4")]
+    pub num_epochs: u64,
+    /// How many times to repeat the same linear search. Each time with new accounts/TXNs.
+    #[structopt(short = "b", long = "num_searches", default_value = "10")]
+    pub num_searches: u64,
 }
 
 /// Helper that checks if address is valid, and converts unspecified address to localhost.
@@ -139,16 +176,7 @@ pub fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>>
     Ok(validator_addresses)
 }
 
-impl RubenOpt {
-    pub fn new_from_args() -> Self {
-        let mut args = RubenOpt::from_args();
-        args.try_parse_validator_addresses();
-        if args.num_clients == 0 {
-            args.num_clients = args.validator_addresses.len();
-        }
-        args
-    }
-
+impl BenchOpt {
     /// Override validator_addresses if swarm_config_dir is provided.
     pub fn try_parse_validator_addresses(&mut self) {
         if let Some(swarm_config_dir) = &self.swarm_config_dir {
@@ -158,14 +186,47 @@ impl RubenOpt {
         }
     }
 
+    /// Ensure at least one client for one validator.
+    pub fn parse_num_clients(&mut self) {
+        if self.num_clients == 0 {
+            self.num_clients = self.validator_addresses.len() * num_cpus::get();
+            info!(
+                "Set number of clients in Benchmarker to {}",
+                self.num_clients
+            );
+        }
+    }
+
+    /// Using either specified constant rate or flood.
     pub fn parse_submit_rate(&self) -> u64 {
         self.submit_rate.unwrap_or(std::u64::MAX)
     }
 }
 
+impl RubenOpt {
+    pub fn new_from_args() -> Self {
+        let mut args = RubenOpt::from_args();
+        args.bench_opt.try_parse_validator_addresses();
+        args.bench_opt.parse_num_clients();
+        args
+    }
+}
+
+impl SearchOpt {
+    pub fn new_from_args() -> Self {
+        let mut args = SearchOpt::from_args();
+        args.bench_opt.try_parse_validator_addresses();
+        args.bench_opt.parse_num_clients();
+        assert!(args.lower_bound > 0);
+        assert!(args.inc_step > 0);
+        assert!(args.lower_bound < args.upper_bound);
+        args
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::ruben_opt::{parse_socket_address, parse_swarm_config_from_dir};
+    use crate::cli_opt::{parse_socket_address, parse_swarm_config_from_dir};
 
     #[test]
     fn test_parse_socket_address() {

@@ -26,8 +26,8 @@
 /// this flow is basically the same for different LoadGenerators/experiments.
 use benchmark::{
     bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
+    cli_opt::{RubenOpt, TransactionPattern},
     load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
-    ruben_opt::{RubenOpt, TransactionPattern},
 };
 use logger::{self, prelude::*};
 use std::ops::DerefMut;
@@ -37,9 +37,9 @@ fn main() {
     info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     let args = RubenOpt::new_from_args();
     info!("Parsed arguments: {:#?}", args);
-    try_start_metrics_server(&args);
-    let mut bm = create_benchmarker_from_opt(&args);
-    let mut faucet_account = bm.load_faucet_account(&args.faucet_key_file_path);
+    try_start_metrics_server(&args.bench_opt);
+    let mut bm = create_benchmarker_from_opt(&args.bench_opt);
+    let mut faucet_account = bm.load_faucet_account(&args.bench_opt.faucet_key_file_path);
     let mut generator: Box<dyn LoadGenerator> = match args.txn_pattern {
         TransactionPattern::Ring => Box::new(RingTransferTxnGenerator::new()),
         TransactionPattern::Pairwise => Box::new(PairwiseTransferTxnGenerator::new()),
@@ -58,11 +58,11 @@ fn main() {
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
     use benchmark::{
+        cli_opt::BenchOpt,
         load_generator::{
             gen_get_txn_by_sequnece_number_request, LoadGenerator, Request,
             RingTransferTxnGenerator,
         },
-        ruben_opt::{RubenOpt, TransactionPattern},
         OP_COUNTER,
     };
     use client::AccountData;
@@ -71,9 +71,9 @@ mod tests {
     use std::ops::Range;
     use tempdir::TempDir;
 
-    /// Start libra_swarm and create a RubenOpt struct for testing.
+    /// Start libra_swarm and create a BenchOpt struct for testing.
     /// Must return the TempDir otherwise it will be freed somehow.
-    fn start_swarm_and_setup_arguments() -> (LibraSwarm, RubenOpt, Option<TempDir>) {
+    fn start_swarm_and_setup_arguments() -> (LibraSwarm, BenchOpt, Option<TempDir>) {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
             generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
@@ -84,21 +84,16 @@ mod tests {
             None,  /* config_dir */
             None,  /* template_path */
         );
-        let mut args = RubenOpt {
+        let mut args = BenchOpt {
             validator_addresses: Vec::new(),
-            debug_address: None,
             swarm_config_dir: Some(String::from(
                 swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap(),
             )),
             // Don't start metrics server as we are not testing with prometheus.
             metrics_server_address: None,
             faucet_key_file_path,
-            num_accounts: 4,
             num_clients: 4,
             stagger_range_ms: 1,
-            num_rounds: 4,
-            num_epochs: 2,
-            txn_pattern: TransactionPattern::Ring,
             submit_rate: Some(50),
         };
         args.try_parse_validator_addresses();
@@ -112,13 +107,14 @@ mod tests {
             let mut bm = create_benchmarker_from_opt(&args);
             let mut faucet_account = bm.load_faucet_account(&args.faucet_key_file_path);
             let mut ring_generator = RingTransferTxnGenerator::new();
+            let (num_accounts, num_rounds, num_epochs) = (4, 4, 2);
             measure_throughput(
                 &mut bm,
                 &mut ring_generator,
                 &mut faucet_account,
-                args.num_accounts,
-                args.num_rounds,
-                args.num_epochs,
+                num_accounts,
+                num_rounds,
+                num_epochs,
             );
             let requested_txns = OP_COUNTER.counter("requested_txns").get();
             let created_txns = OP_COUNTER.counter("created_txns").get();
@@ -155,7 +151,7 @@ mod tests {
         let (_swarm, args, _temp_dir) = start_swarm_and_setup_arguments();
         let mut bm = create_benchmarker_from_opt(&args);
         let mut ring_generator = RingTransferTxnGenerator::new();
-        let accounts: Vec<AccountData> = ring_generator.gen_accounts(args.num_accounts);
+        let accounts: Vec<AccountData> = ring_generator.gen_accounts(16 /* num_accounts */);
         let read_requests = gen_test_read_requests(&accounts, Range { start: 0, end: 10 });
         bm.submit_requests(&read_requests, args.submit_rate.unwrap());
     }
