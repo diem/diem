@@ -69,7 +69,7 @@ lazy_static! {
             Box::new(compiled_module::CompiledModuleTarget::default()),
             Box::new(signed_transaction::SignedTransactionTarget::default()),
             Box::new(vm_value::ValueTarget::default()),
-            Box::new(consensus_proposal::ConsensusProposal::default()),
+            //Box::new(consensus_proposal::ConsensusProposal::default()),
         ];
         targets.into_iter().map(|target| (target.name(), target)).collect()
     };

@@ -5,6 +5,7 @@
 ---
 
 [![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
+[![fuzzit](https://app.fuzzit.dev/badge?org_id=libray=master)](https://fuzzit.dev)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE.md)
 
 Libra Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.

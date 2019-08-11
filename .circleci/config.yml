@@ -115,14 +115,25 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
-
+  fuzzit:
+    docker:
+      - image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/github_circleci:latest
+        aws_auth:
+          aws_access_key_id: $ECR_RO_ACCESS_KEY_ID
+          aws_secret_access_key: $ECR_RO_SECRET_ACCESS_KEY
+    resource_class: 2xlarge
+    steps:
+      - env_setup
+      - run:
+          name: Run Fuzzit Regression and Fuzzing
+          command: ./scripts/fuzzit.sh
 workflows:
   commit-workflow:
     jobs:
       - build
       - validate-config
       - terraform
-
+      - fuzzit
   scheduled-workflow:
     triggers:
       - schedule:
@@ -132,3 +143,4 @@ workflows:
               only: master
     jobs:
       - audit
+      - fuzzit
