@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    cli_opt::BenchOpt,
     load_generator::{gen_repeated_requests, LoadGenerator},
-    ruben_opt::RubenOpt,
     BenchSummary, Benchmarker,
 };
 use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
@@ -46,9 +46,10 @@ pub fn create_ac_clients(
     clients
 }
 
-pub fn create_benchmarker_from_opt(args: &RubenOpt) -> Benchmarker {
+pub fn create_benchmarker_from_opt(args: &BenchOpt) -> Benchmarker {
     // Create AdmissionControlClient instances.
     let clients = create_ac_clients(args.num_clients, &args.validator_addresses);
+
     let submit_rate = args.parse_submit_rate();
     // Ready to instantiate Benchmarker.
     Benchmarker::new(clients, args.stagger_range_ms, submit_rate)
@@ -57,7 +58,7 @@ pub fn create_benchmarker_from_opt(args: &RubenOpt) -> Benchmarker {
 /// Benchmarker is not a long-lived job, so starting a server and expecting it to be polled
 /// continuously is not ideal. Directly pushing metrics when benchmarker is running
 /// can be achieved by using Pushgateway.
-pub fn try_start_metrics_server(args: &RubenOpt) {
+pub fn try_start_metrics_server(args: &BenchOpt) {
     if let Some(metrics_server_address) = &args.metrics_server_address {
         let address = metrics_server_address.clone();
         std::thread::spawn(move || {

@@ -16,9 +16,9 @@ use std::{collections::HashMap, convert::TryInto, sync::Arc, thread, time};
 use types::{account_address::AccountAddress, account_config::association_address};
 
 pub mod bin_utils;
+pub mod cli_opt;
 pub mod grpc_helpers;
 pub mod load_generator;
-pub mod ruben_opt;
 pub mod submit_rate;
 
 use grpc_helpers::{

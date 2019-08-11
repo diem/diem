@@ -3,8 +3,8 @@
 
 use benchmark::{
     bin_utils::{create_ac_clients, measure_throughput},
+    cli_opt::parse_swarm_config_from_dir,
     load_generator::PairwiseTransferTxnGenerator,
-    ruben_opt::parse_swarm_config_from_dir,
     Benchmarker,
 };
 use config_builder::swarm_config::LibraSwarmTopology;
