@@ -112,11 +112,11 @@ prop_compose! {
 #[cfg(any(test, feature = "testing"))]
 impl Arbitrary for AccountStateBlob {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         account_state_blob_strategy().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
