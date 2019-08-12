@@ -87,7 +87,7 @@ fn tstruct(
     let native_struct = dispatch_native_struct(&id, function_name).unwrap();
     let idx = native_struct.expected_index;
     // TODO assert kinds match
-    assert!(args.len() == native_struct.expected_type_parameters.len());
+    assert_eq!(args.len(), native_struct.expected_type_parameters.len());
     SignatureToken::Struct(idx, args)
 }
 

@@ -27,7 +27,7 @@ fn random_63nibbles_node_key() -> NodeKey {
 // Generate a pair of leaf node key and account key with a passed-in 63-nibble node key and the last
 // nibble to be appended.
 fn gen_leaf_keys(version: Version, nibble_path: &NibblePath, nibble: u8) -> (NodeKey, HashValue) {
-    assert!(nibble_path.num_nibbles() == 63);
+    assert_eq!(nibble_path.num_nibbles(), 63);
     let mut np = nibble_path.clone();
     np.push(nibble);
     let account_key = HashValue::from_slice(np.bytes()).unwrap();

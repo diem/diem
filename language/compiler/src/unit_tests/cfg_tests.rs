@@ -18,9 +18,9 @@ fn cfg_compile_script_ret() {
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     cfg.display();
-    assert!(cfg.blocks.len() == 1);
-    assert!(cfg.num_blocks() == 1);
-    assert!(cfg.reachable_from(0).len() == 1);
+    assert_eq!(cfg.blocks.len(), 1);
+    assert_eq!(cfg.num_blocks(), 1);
+    assert_eq!(cfg.reachable_from(0).len(), 1);
 }
 
 #[test]
@@ -43,9 +43,9 @@ fn cfg_compile_script_let() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 1);
-    assert!(cfg.num_blocks() == 1);
-    assert!(cfg.reachable_from(0).len() == 1);
+    assert_eq!(cfg.blocks.len(), 1);
+    assert_eq!(cfg.num_blocks(), 1);
+    assert_eq!(cfg.reachable_from(0).len(), 1);
 }
 
 #[test]
@@ -68,9 +68,9 @@ fn cfg_compile_if() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 3);
-    assert!(cfg.num_blocks() == 3);
-    assert!(cfg.reachable_from(0).len() == 3);
+    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.num_blocks(), 3);
+    assert_eq!(cfg.reachable_from(0).len(), 3);
 }
 
 #[test]
@@ -96,9 +96,9 @@ fn cfg_compile_if_else() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 4);
-    assert!(cfg.num_blocks() == 4);
-    assert!(cfg.reachable_from(0).len() == 4);
+    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.num_blocks(), 4);
+    assert_eq!(cfg.reachable_from(0).len(), 4);
 }
 
 #[test]
@@ -122,9 +122,9 @@ fn cfg_compile_if_else_with_else_return() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 4);
-    assert!(cfg.num_blocks() == 4);
-    assert!(cfg.reachable_from(0).len() == 4);
+    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.num_blocks(), 4);
+    assert_eq!(cfg.reachable_from(0).len(), 4);
 }
 
 #[test]
@@ -151,9 +151,9 @@ fn cfg_compile_nested_if() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 6);
-    assert!(cfg.num_blocks() == 6);
-    assert!(cfg.reachable_from(7).len() == 4);
+    assert_eq!(cfg.blocks.len(), 6);
+    assert_eq!(cfg.num_blocks(), 6);
+    assert_eq!(cfg.reachable_from(7).len(), 4);
 }
 
 #[test]
@@ -176,11 +176,11 @@ fn cfg_compile_if_else_with_if_return() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 3);
-    assert!(cfg.num_blocks() == 3);
-    assert!(cfg.reachable_from(0).len() == 3);
-    assert!(cfg.reachable_from(4).len() == 1);
-    assert!(cfg.reachable_from(5).len() == 1);
+    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.num_blocks(), 3);
+    assert_eq!(cfg.reachable_from(0).len(), 3);
+    assert_eq!(cfg.reachable_from(4).len(), 1);
+    assert_eq!(cfg.reachable_from(5).len(), 1);
 }
 
 #[test]
@@ -202,12 +202,12 @@ fn cfg_compile_if_else_with_two_returns() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 4);
-    assert!(cfg.num_blocks() == 4);
-    assert!(cfg.reachable_from(0).len() == 3);
-    assert!(cfg.reachable_from(4).len() == 1);
-    assert!(cfg.reachable_from(5).len() == 1);
-    assert!(cfg.reachable_from(6).len() == 1);
+    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.num_blocks(), 4);
+    assert_eq!(cfg.reachable_from(0).len(), 3);
+    assert_eq!(cfg.reachable_from(4).len(), 1);
+    assert_eq!(cfg.reachable_from(5).len(), 1);
+    assert_eq!(cfg.reachable_from(6).len(), 1);
 }
 
 #[test]
@@ -231,9 +231,9 @@ fn cfg_compile_if_else_with_else_abort() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 4);
-    assert!(cfg.num_blocks() == 4);
-    assert!(cfg.reachable_from(0).len() == 4);
+    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.num_blocks(), 4);
+    assert_eq!(cfg.reachable_from(0).len(), 4);
 }
 
 #[test]
@@ -256,11 +256,11 @@ fn cfg_compile_if_else_with_if_abort() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 3);
-    assert!(cfg.num_blocks() == 3);
-    assert!(cfg.reachable_from(0).len() == 3);
-    assert!(cfg.reachable_from(4).len() == 1);
-    assert!(cfg.reachable_from(6).len() == 1);
+    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.num_blocks(), 3);
+    assert_eq!(cfg.reachable_from(0).len(), 3);
+    assert_eq!(cfg.reachable_from(4).len(), 1);
+    assert_eq!(cfg.reachable_from(6).len(), 1);
 }
 
 #[test]
@@ -282,10 +282,10 @@ fn cfg_compile_if_else_with_two_aborts() {
     let cfg: VMControlFlowGraph = ControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert!(cfg.blocks.len() == 4);
-    assert!(cfg.num_blocks() == 4);
-    assert!(cfg.reachable_from(0).len() == 3);
-    assert!(cfg.reachable_from(4).len() == 1);
-    assert!(cfg.reachable_from(6).len() == 1);
-    assert!(cfg.reachable_from(8).len() == 1);
+    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.num_blocks(), 4);
+    assert_eq!(cfg.reachable_from(0).len(), 3);
+    assert_eq!(cfg.reachable_from(4).len(), 1);
+    assert_eq!(cfg.reachable_from(6).len(), 1);
+    assert_eq!(cfg.reachable_from(8).len(), 1);
 }

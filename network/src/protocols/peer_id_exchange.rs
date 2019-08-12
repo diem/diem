@@ -50,7 +50,7 @@ impl PeerIdExchange {
         // Now exchange your PeerIds
         let mut buf: Vec<u8> = self.0.into();
         let buf_len = buf.len();
-        assert!(buf_len == 32);
+        assert_eq!(buf_len, 32);
         let buf_len = buf_len as u8;
         buf.insert(0, buf_len);
 

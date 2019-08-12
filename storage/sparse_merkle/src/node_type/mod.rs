@@ -266,7 +266,7 @@ impl BranchNode {
             leaf_bitmap |= (v.1 as u16) << k;
         }
         // `leaf_bitmap` must be a subset of `child_bitmap`.
-        assert!(child_bitmap | leaf_bitmap == child_bitmap);
+        assert_eq!(child_bitmap | leaf_bitmap, child_bitmap);
         (child_bitmap, leaf_bitmap)
     }
 
