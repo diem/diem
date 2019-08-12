@@ -564,11 +564,11 @@ fn test_dependency_fails_verification() {
     modules:
     module Test {
         resource R1 { }
-        struct S1 { r1: R#Self.R1 }
+        struct S1 { r1: Self.R1 }
 
-        public new_S1(): V#Self.S1 {
-            let s: V#Self.S1;
-            let r: R#Self.R1;
+        public new_S1(): Self.S1 {
+            let s: Self.S1;
+            let r: Self.R1;
             r = R1 {};
             s = S1 { r1: move(r) };
             return move(s);
@@ -598,7 +598,7 @@ fn test_dependency_fails_verification() {
     import 0x0.Test;
 
     main() {
-        let x: V#Test.S1;
+        let x: Test.S1;
         x = Test.new_S1();
         return;
     }

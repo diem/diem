@@ -7,26 +7,26 @@ module TestStruct {
 
     resource A {
         val: u64,
-        b: R#Self.B,
+        b: Self.B,
     }
 
     resource C {
         val: u64,
-        b: R#Self.A,
+        b: Self.A,
     }
 
 		resource T {
         x: u64,
     }
 
-	public identity(a: R#Self.A, c: R#Self.C): R#Self.A*R#Self.C {
+	public identity(a: Self.A, c: Self.C): Self.A*Self.C {
 	     return move(a), move(c);
 	}
 
-	public module_builtins(a: address):  &mut R#Self.T*bool {
-		let t: R#Self.T;
-		let t_ref1: &mut R#Self.T;
-		let t_ref2: &mut R#Self.T;
+	public module_builtins(a: address):  &mut Self.T*bool {
+		let t: Self.T;
+		let t_ref1: &mut Self.T;
+		let t_ref2: &mut Self.T;
 		let b: bool;
 
 		b = exists<T>(copy(a));
@@ -39,11 +39,11 @@ module TestStruct {
 		return move(t_ref2), move(b);
     }
 
-	public nested_struct(a: address) : R#Self.B
+	public nested_struct(a: address) : Self.B
 	{
-		let var_a: R#Self.A;
-		let var_b: R#Self.B;
-        let var_b_ref: &R#Self.B;
+		let var_a: Self.A;
+		let var_b: Self.B;
+        let var_b_ref: &Self.B;
         let b_val_ref: &u64;
         let b_val: u64;
 
@@ -61,7 +61,7 @@ module TestStruct {
 
     public try_unpack(a: address): u64 {
         let v: u64;
-        let b: R#Self.B;
+        let b: Self.B;
         let aa: address;
         b = B { addr: copy(a), val: 42 };
         B { aa, v } = move(b);

@@ -175,7 +175,7 @@ fn single_resource() {
 module Test {
     resource T { i: u64 }
 
-    public new_t(): R#Self.T {
+    public new_t(): Self.T {
         return T { i: 0 };
     }
 }",
@@ -213,21 +213,21 @@ fn compile_borrow_field() {
         module Foobar {
             resource FooCoin { value: u64 }
 
-            public borrow_immut_field(arg: &R#Self.FooCoin) {
+            public borrow_immut_field(arg: &Self.FooCoin) {
                 let field_ref: &u64;
                 field_ref = &move(arg).value;
                 release(move(field_ref));
                 return;
             }
 
-            public borrow_immut_field_from_mut_ref(arg: &mut R#Self.FooCoin) {
+            public borrow_immut_field_from_mut_ref(arg: &mut Self.FooCoin) {
                 let field_ref: &u64;
                 field_ref = &move(arg).value;
                 release(move(field_ref));
                 return;
             }
 
-            public borrow_mut_field(arg: &mut R#Self.FooCoin) {
+            public borrow_mut_field(arg: &mut Self.FooCoin) {
                 let field_ref: &mut u64;
                 field_ref = &mut move(arg).value;
                 release(move(field_ref));

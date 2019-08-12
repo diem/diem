@@ -16,9 +16,9 @@ fn transform_code_with_refs() {
         module Foobar {
             resource T { value: u64 }
 
-            public all_about_refs(a: &R#Self.T, b: &mut u64, c: &mut R#Self.T): u64 {
+            public all_about_refs(a: &Self.T, b: &mut u64, c: &mut Self.T): u64 {
                 let value_ref: &u64;
-                let frozen_ref: &R#Self.T;
+                let frozen_ref: &Self.T;
                 *move(b) = 0;
                 value_ref = &move(a).value;
                 frozen_ref = freeze(move(c));
@@ -141,7 +141,7 @@ fn transform_code_with_pack_unpack() {
             resource T { x: u64, y: address }
 
             public pack_unpack(a: address) {
-                let t: R#Self.T;
+                let t: Self.T;
                 let x_d: u64;
                 let y_d: address;
 
@@ -466,9 +466,9 @@ fn transform_code_with_module_builtins() {
                 x: u64,
             }
 
-            public module_builtins(a: address):  &mut R#Self.T {
-                let t: R#Self.T;
-                let t_ref: &mut R#Self.T;
+            public module_builtins(a: address):  &mut Self.T {
+                let t: Self.T;
+                let t_ref: &mut Self.T;
                 let b: bool;
 
                 b = exists<T>(copy(a));
