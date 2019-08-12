@@ -1,6 +1,6 @@
 module M {
     struct M { }
-    public new(): V#Self.M {
+    public new(): Self.M {
         return M{ };
     }
 }
@@ -10,7 +10,7 @@ module M {
 import {{default}}.M;
 
 main() {
-    let x: V#M.M;
+    let x: M.M;
     x = M.new();
     return;
 }

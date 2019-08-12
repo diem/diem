@@ -1,7 +1,7 @@
 import 0x0.LibraCoin;
 
 main() {
-    let z: R#LibraCoin.T;
+    let z: LibraCoin.T;
     z = LibraCoin.zero();
     z = LibraCoin.zero();
     return;

@@ -3,7 +3,7 @@
 module Test {
     struct T{fint: u64}
 
-    public t1(): V#Self.T {
+    public t1(): Self.T {
         return T{fint: false};
     }
 }
@@ -13,7 +13,7 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let t1: V#Test.T;
+    let t1: Test.T;
     t1 = Test.t1();
     return;
 }

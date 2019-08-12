@@ -8,20 +8,20 @@ module SillyColdWallet {
     import 0x0.LibraCoin;
 
     resource T {
-        cap: R#LibraAccount.WithdrawalCapability,
+        cap: LibraAccount.WithdrawalCapability,
         owner: address,
     }
 
-    public publish(cap: R#LibraAccount.WithdrawalCapability, owner: address) {
-        let t: R#Self.T;
+    public publish(cap: LibraAccount.WithdrawalCapability, owner: address) {
+        let t: Self.T;
 
         t = T { cap: move(cap), owner: move(owner) };
         move_to_sender<T>(move(t));
         return;
     }
 
-    public withdraw(wallet_address: address, amount: u64): R#LibraCoin.T {
-        let wallet_ref: &mut R#Self.T;
+    public withdraw(wallet_address: address, amount: u64): LibraCoin.T {
+        let wallet_ref: &mut Self.T;
 
         wallet_ref = borrow_global<T>(move(wallet_address));
         if (*&copy(wallet_ref).owner == get_txn_sender()) {
@@ -39,7 +39,7 @@ import 0x0.LibraAccount;
 
 // create a cold wallet for Bob that withdraws from Alice's account
 main() {
-    let cap: R#LibraAccount.WithdrawalCapability;
+    let cap: LibraAccount.WithdrawalCapability;
 
     cap = LibraAccount.extract_sender_withdrawal_capability();
     SillyColdWallet.publish(move(cap), {{bob}});
@@ -57,7 +57,7 @@ import 0x0.LibraCoin;
 // use the cold wallet that Alice created to move funds into Bob's account
 main() {
     let alice_initial_balance: u64;
-    let coin: R#LibraCoin.T;
+    let coin: LibraCoin.T;
 
     alice_initial_balance = LibraAccount.balance({{alice}});
     coin = SillyColdWallet.withdraw({{alice}}, 1000);
@@ -77,7 +77,7 @@ import 0x0.LibraCoin;
 
 // check that Alice can no longer withdraw from her account
 main() {
-    let coin: R#LibraCoin.T;
+    let coin: LibraCoin.T;
 
     coin = LibraAccount.withdraw_from_sender(1000);
     LibraAccount.deposit(get_txn_sender(), move(coin));
@@ -95,7 +95,7 @@ import 0x0.LibraCoin;
 
 // check that Bob can still withdraw from his normal account
 main() {
-    let coin: R#LibraCoin.T;
+    let coin: LibraCoin.T;
 
     coin = LibraAccount.withdraw_from_sender(1000);
     LibraAccount.deposit(get_txn_sender(), move(coin));

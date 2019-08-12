@@ -1,25 +1,25 @@
 module VTest {
     struct T{fint: u64, fv: bool}
 
-    public new(x: u64, y: bool): V#Self.T {
+    public new(x: u64, y: bool): Self.T {
         return T{fint: move(x), fv: move(y)};
     }
 
-    public t1(this: &V#Self.T): u64 {
+    public t1(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
         release(move(this));
         return *move(x);
     }
 
-    public t2(this: &V#Self.T): u64 {
+    public t2(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
         release(move(this));
         return *move(x);
     }
 
-    public t3(this: &V#Self.T): bool {
+    public t3(this: &Self.T): bool {
         let x: &bool;
         x = &copy(this).fv;
         release(move(this));
@@ -32,32 +32,32 @@ module VTest {
 module RTest {
     resource T{fint: u64, fv: bool}
 
-    public new(x: u64, y: bool): R#Self.T {
+    public new(x: u64, y: bool): Self.T {
         return T{fint: move(x), fv: move(y)};
     }
 
-    public t1(this: &R#Self.T): u64 {
+    public t1(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
         release(move(this));
         return *move(x);
     }
 
-    public t2(this: &R#Self.T): u64 {
+    public t2(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
         release(move(this));
         return *move(x);
     }
 
-    public t3(this: &R#Self.T): bool {
+    public t3(this: &Self.T): bool {
         let x: &bool;
         x = &copy(this).fv;
         release(move(this));
         return *move(x);
     }
 
-    public destroy_t(t: R#Self.T) {
+    public destroy_t(t: Self.T) {
         let fint: u64;
         let fv: bool;
         T{ fint, fv } = move(t);
@@ -71,10 +71,10 @@ import {{default}}.RTest;
 import {{default}}.VTest;
 
 main() {
-    let vt: V#VTest.T;
-    let vref: &V#VTest.T;
-    let rt: R#RTest.T;
-    let rref: &R#RTest.T;
+    let vt: VTest.T;
+    let vref: &VTest.T;
+    let rt: RTest.T;
+    let rref: &RTest.T;
     let r1: u64;
     let r2: u64;
     let r3: u64;

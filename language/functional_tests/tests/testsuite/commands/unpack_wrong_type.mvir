@@ -2,11 +2,11 @@ module Test {
     struct X { }
     struct T { }
 
-    public new_t(): V#Self.T {
+    public new_t(): Self.T {
         return T { };
     }
 
-    public destroy_t(t: V#Self.T) {
+    public destroy_t(t: Self.T) {
         X { } = move(t);
         return;
     }
@@ -18,9 +18,9 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let x: V#Test.X;
+    let x: Test.X;
     let i: u64;
-    let t: V#Test.T;
+    let t: Test.T;
     let b: bool;
 
     t = Test.new_t();

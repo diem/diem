@@ -2,15 +2,15 @@ module M {
     resource A{x: u64}
     struct B{y: u64}
 
-    public a(x: u64): R#Self.A {
+    public a(x: u64): Self.A {
         return A{x: move(x)};
     }
 
-    public b(y: u64): V#Self.B {
+    public b(y: u64): Self.B {
         return B{y: move(y)};
     }
 
-    public set_a_with_b(a: &mut R#Self.A, b: &V#Self.B) {
+    public set_a_with_b(a: &mut Self.A, b: &Self.B) {
         let x_ref: &mut u64;
         let y_ref: &u64;
         x_ref = &mut copy(a).x;
@@ -21,7 +21,7 @@ module M {
         return;
     }
 
-    public set_b_with_a(b: &mut V#Self.B, a: &R#Self.A) {
+    public set_b_with_a(b: &mut Self.B, a: &Self.A) {
         let x_ref: &u64;
         let y_ref: &mut u64;
         y_ref = &mut copy(b).y;
@@ -32,7 +32,7 @@ module M {
         return;
     }
 
-    public destroy_a(a: R#Self.A) {
+    public destroy_a(a: Self.A) {
         let x: u64;
         A{ x } = move(a);
         return;
@@ -44,12 +44,12 @@ module M {
 import {{default}}.M;
 
 main() {
-    let a: R#M.A;
-    let a_ref: &R#M.A;
-    let a_mut_ref: &mut R#M.A;
-    let b: V#M.B;
-    let b_ref: &V#M.B;
-    let b_mut_ref: &mut V#M.B;
+    let a: M.A;
+    let a_ref: &M.A;
+    let a_mut_ref: &mut M.A;
+    let b: M.B;
+    let b_ref: &M.B;
+    let b_mut_ref: &mut M.B;
 
     a = M.a(0);
     b = M.b(1);

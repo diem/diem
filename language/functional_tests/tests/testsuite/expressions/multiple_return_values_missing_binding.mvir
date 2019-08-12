@@ -3,15 +3,15 @@
 module Test {
     resource T { }
 
-    public new(): R#Self.T {
+    public new(): Self.T {
         return T { };
     }
 
-    public test(i: &u64, x: R#Self.T): u64 * R#Self.T * bool {
+    public test(i: &u64, x: Self.T): u64 * Self.T * bool {
         return *move(i), move(x), false;
     }
 
-    public destroy(x: R#Self.T) {
+    public destroy(x: Self.T) {
         T { } = move(x);
         return;
     }
@@ -22,9 +22,9 @@ module Test {
 import {{default}}.Test;
 main() {
     let i: u64;
-    let t: R#Test.T;
+    let t: Test.T;
     let a: u64;
-    let x: R#Test.T;
+    let x: Test.T;
 
     i = 0;
     t = Test.new();

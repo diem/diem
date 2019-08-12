@@ -1,16 +1,16 @@
 module Test {
     struct X { }
-    struct T { i: u64, x: V#Self.X }
+    struct T { i: u64, x: Self.X }
 
-    public new_t(): V#Self.T {
-        let x: V#Self.T;
+    public new_t(): Self.T {
+        let x: Self.T;
         x = X { };
         return T { i: 0, x: move(x), b: false };
     }
 
-    public destroy_t(t: V#Self.T): u64 * V#Self.X * bool {
+    public destroy_t(t: Self.T): u64 * Self.X * bool {
         let i: u64;
-        let x: V#Self.X;
+        let x: Self.X;
         let flag: bool;
         T { i, x, b: flag } = move(t);
         return move(i), move(x), move(flag);
@@ -23,9 +23,9 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let x: V#Test.X;
+    let x: Test.X;
     let i: u64;
-    let t: V#Test.X;
+    let t: Test.X;
     let b: bool;
 
     t = Test.new_t();

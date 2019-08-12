@@ -2,8 +2,8 @@ module Token {
     resource T { }
 
     public test() {
-        let t: R#Self.T;
-        let t_ref: &R#Self.T;
+        let t: Self.T;
+        let t_ref: &Self.T;
         t = T{};
         t_ref = &t;
         assert(copy(t_ref) == move(t_ref), 42);

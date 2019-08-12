@@ -12,7 +12,7 @@ module TestMoveFrom {
 
     public increment() {
       let sender_address: address;
-      let t_ref: &mut R#Self.Counter;
+      let t_ref: &mut Self.Counter;
       let counter_ref: &mut u64;
 
       sender_address = get_txn_sender();
@@ -25,7 +25,7 @@ module TestMoveFrom {
     }
 
     public publish() {
-      let t: R#Self.Counter;
+      let t: Self.Counter;
 
       t = Counter { i: 0 };
       move_to_sender<Counter>(move(t));
@@ -35,7 +35,7 @@ module TestMoveFrom {
 
     public unpublish() {
       let sender_address: address;
-      let counter: R#Self.Counter;
+      let counter: Self.Counter;
       let i: u64;
 
       sender_address = get_txn_sender();

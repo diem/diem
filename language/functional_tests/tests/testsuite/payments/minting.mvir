@@ -2,7 +2,7 @@ import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 
 main() {
-  let coin: R#LibraCoin.T;
+  let coin: LibraCoin.T;
 
   // should fail because default account doesn't have the capability
   coin = LibraCoin.mint_with_default_capability(100);

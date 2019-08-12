@@ -2,7 +2,7 @@ module Token {
     resource T { count: u64 }
 
     public test() {
-        let t_ref: &mut R#Self.T;
+        let t_ref: &mut Self.T;
         let count_ref: &mut u64;
         let local: u64;
         let local_ref: &mut u64;

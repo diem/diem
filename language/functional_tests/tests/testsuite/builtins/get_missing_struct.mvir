@@ -1,7 +1,7 @@
 module Token {
     resource T { }
 
-    public new(): R#Self.T {
+    public new(): Self.T {
         return T{ };
     }
 
@@ -11,14 +11,14 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: R#Self.T) {
+    public publish(t: Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
 
     public test() {
         let addr1: address;
-        let struct1: &mut R#Self.T;
+        let struct1: &mut Self.T;
 
         addr1 = 0x0111111111111111111111111111111111111111111111111111111111111110;
         struct1 = borrow_global<T>(move(addr1));

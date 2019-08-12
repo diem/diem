@@ -8,7 +8,7 @@ main() {
     let recipient_addr: address;
     let sender_original_balance: u64;
     let recipient_original_balance: u64;
-    let five_coins: R#LibraCoin.T;
+    let five_coins: LibraCoin.T;
     let sender_new_balance: u64;
     let recipient_new_balance: u64;
 

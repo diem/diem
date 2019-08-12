@@ -2,7 +2,7 @@
 
 module Token {
     resource T { }
-    public new(): R#Self.T {
+    public new(): Self.T {
         return T{ };
     }
 }
@@ -13,7 +13,7 @@ import {{default}}.Token;
 
 main() {
     let sender: address;
-    let yes: &mut R#Token.T;
+    let yes: &mut Token.T;
 
     sender = get_txn_sender();
     yes = borrow_global<T>(copy(sender));
