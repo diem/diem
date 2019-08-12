@@ -1,7 +1,7 @@
 # Rust specific ignores
 # Please follow https://help.github.com/en/articles/ignoring-files to create a global
 # .gitignore file locally for IDE/Emacs/Vim generated files.
-/target
+**/target
 **/*.rs.bk
 # Cargo.lock is needed for deterministic testing and repeatable builds.
 #
