@@ -103,13 +103,13 @@
 //! ```text
 //! // module operators are available only inside the module that declares n.
 //! mop ∈ ModuleOp ::=
-//!   | move_to_sender<n>(e) // type: 'R#Self.n -> unit'
+//!   | move_to_sender<n>(e) // type: 'Self.n -> unit'
 //!                          // publishes resource struct 'n' under sender's address
 //!                          // fails if there is already a resource present for 'Self.n'
-//!   | move_from<n>(e)      // type: 'address -> R#Self.n'
+//!   | move_from<n>(e)      // type: 'address -> Self.n'
 //!                          // removes the resource struct 'n' at the specified address
 //!                          // fails if there is no resource present for 'Self.n'
-//!   | borrow_global<n>(e)  // type: 'address -> &mut R#Self.n'
+//!   | borrow_global<n>(e)  // type: 'address -> &mut Self.n'
 //!                          // borrows a mutable reference to the resource struct 'n' at the specified address
 //!                          // fails if there is no resource
 //!                          // fails if it is already borrowed in this transaction's execution

@@ -348,7 +348,7 @@ Type: Type = {
     "u64" => Type::U64,
     "bool" => Type::Bool,
     "bytearray" => Type::ByteArray,
-    (r"(R|V)#")? <s: QualifiedStructIdent> => Type::Struct(s),
+    <s: QualifiedStructIdent> => Type::Struct(s),
     "&" <t: Type> => Type::Reference(false, Box::new(t)),
     "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
 }

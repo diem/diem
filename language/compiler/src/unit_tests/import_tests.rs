@@ -33,16 +33,16 @@ fn compile_module_with_imports() {
 
             resource FooCoin { value: u64 }
 
-            public value(this: &R#Self.FooCoin): u64 {
+            public value(this: &Self.FooCoin): u64 {
                 let value_ref: &u64;
                 value_ref = &move(this).value;
                 return *move(value_ref);
             }
 
-            public deposit(this: &mut R#Self.FooCoin, check: R#Self.FooCoin) {
+            public deposit(this: &mut Self.FooCoin, check: Self.FooCoin) {
                 let value_ref: &mut u64;
                 let value: u64;
-                let check_ref: &R#Self.FooCoin;
+                let check_ref: &Self.FooCoin;
                 let check_value: u64;
                 let new_value: u64;
                 let i: u64;

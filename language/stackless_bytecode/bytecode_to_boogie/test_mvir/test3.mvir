@@ -6,8 +6,8 @@ module Test3 {
 	}
 
 	public test3(flag: bool) {
-		let x: V#Self.T;
-		let x_ref: &mut V#Self.T;
+		let x: Self.T;
+		let x_ref: &mut Self.T;
 		let f_or_g_ref: &mut u64;
 		let f_ref: &u64;
 		let g_ref: &u64;
