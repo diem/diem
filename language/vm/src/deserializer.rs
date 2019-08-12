@@ -866,11 +866,11 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
                 Bytecode::StLoc(idx)
             }
-            Opcodes::LD_REF_LOC => {
+            Opcodes::BORROW_LOC => {
                 let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
                 Bytecode::BorrowLoc(idx)
             }
-            Opcodes::LD_REF_FIELD => {
+            Opcodes::BORROW_FIELD => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::BorrowField(FieldDefinitionIndex(idx))
             }
@@ -922,7 +922,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let types_idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::Exists(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
-            Opcodes::BORROW_REF => {
+            Opcodes::BORROW_GLOBAL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::BorrowGlobal(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
@@ -1065,8 +1065,8 @@ impl Opcodes {
             0x0B => Ok(Opcodes::COPY_LOC),
             0x0C => Ok(Opcodes::MOVE_LOC),
             0x0D => Ok(Opcodes::ST_LOC),
-            0x0E => Ok(Opcodes::LD_REF_LOC),
-            0x0F => Ok(Opcodes::LD_REF_FIELD),
+            0x0E => Ok(Opcodes::BORROW_LOC),
+            0x0F => Ok(Opcodes::BORROW_FIELD),
             0x10 => Ok(Opcodes::LD_BYTEARRAY),
             0x11 => Ok(Opcodes::CALL),
             0x12 => Ok(Opcodes::PACK),
@@ -1096,7 +1096,7 @@ impl Opcodes {
             0x2A => Ok(Opcodes::GET_GAS_REMAINING),
             0x2B => Ok(Opcodes::GET_TXN_SENDER),
             0x2C => Ok(Opcodes::EXISTS),
-            0x2D => Ok(Opcodes::BORROW_REF),
+            0x2D => Ok(Opcodes::BORROW_GLOBAL),
             0x2E => Ok(Opcodes::RELEASE_REF),
             0x2F => Ok(Opcodes::MOVE_FROM),
             0x30 => Ok(Opcodes::MOVE_TO),
