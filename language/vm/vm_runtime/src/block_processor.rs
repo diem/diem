@@ -84,6 +84,10 @@ pub fn execute_block<'alloc>(
         };
         report_execution_status(output.status());
         data_cache.push_write_set(&output.write_set());
+
+        // `result` is initally empty, a single element is pushed per loop iteration and
+        // the number of iterations is bound to the max size of `signature_verified_block`
+        assume!(result.len() < usize::max_value());
         result.push(output);
     }
     trace!("[VM] Execute block finished");

@@ -246,8 +246,16 @@ impl<'txn> TransactionDataCache<'txn> {
                 let deleted = global_ref.is_deleted();
                 if let Some(data) = global_ref.get_data() {
                     if deleted {
+                        // The write set will not grow to this size due to the gas limit.
+                        // Expressing the bound in terms of the gas limit is impractical
+                        // for MIRAI to check to we set a safe upper bound.
+                        assume!(write_set.len() < usize::max_value());
                         write_set.push((key, WriteOp::Deletion));
                     } else if let Some(blob) = data.simple_serialize() {
+                        // The write set will not grow to this size due to the gas limit.
+                        // Expressing the bound in terms of the gas limit is impractical
+                        // for MIRAI to check to we set a safe upper bound.
+                        assume!(write_set.len() < usize::max_value());
                         write_set.push((key, WriteOp::Value(blob)));
                     } else {
                         return Err(VMRuntimeError {
@@ -265,8 +273,15 @@ impl<'txn> TransactionDataCache<'txn> {
         }
 
         // Insert the code blob to the writeset.
-        for (key, blob) in to_be_published_modules.into_iter() {
-            write_set.push(((&key).into(), WriteOp::Value(blob)));
+        if write_set.len() <= usize::max_value() - to_be_published_modules.len() {
+            for (key, blob) in to_be_published_modules.into_iter() {
+                write_set.push(((&key).into(), WriteOp::Value(blob)));
+            }
+        } else {
+            return Err(VMRuntimeError {
+                loc: Location::new(),
+                err: VMErrorKind::InvalidData,
+            });
         }
 
         match write_set.freeze() {

@@ -104,6 +104,10 @@ where
                     ));
                 }
 
+                // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
+                // `raw_bytes_len`
+                assume!(raw_bytes_len.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
+
                 // The submitted max gas units that the transaction can consume is greater than the
                 // maximum number of gas units bound that we have set for any
                 // transaction.
