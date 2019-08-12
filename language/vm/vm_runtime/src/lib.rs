@@ -104,6 +104,8 @@ extern crate vm;
 extern crate lazy_static;
 #[macro_use]
 extern crate rental;
+#[macro_use]
+extern crate mirai_annotations;
 
 mod block_processor;
 mod counters;

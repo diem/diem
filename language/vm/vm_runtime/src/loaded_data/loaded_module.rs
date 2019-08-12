@@ -63,6 +63,7 @@ impl LoadedModule {
         let mut field_defs_table = HashMap::new();
         let mut function_defs_table = HashMap::new();
         let mut function_defs = vec![];
+
         let struct_defs = module
             .struct_defs()
             .iter()
@@ -85,7 +86,10 @@ impl LoadedModule {
             } = &struct_def.field_information
             {
                 for i in 0..*field_count {
-                    field_offsets[fields.into_index() + i as usize] = i;
+                    let field_index = fields.into_index();
+                    // Implication of module verification `member_struct_defs` check
+                    assume!(field_index <= usize::max_value() - (i as usize));
+                    field_offsets[field_index + (i as usize)] = i;
                 }
             }
         }
@@ -94,12 +98,18 @@ impl LoadedModule {
             let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
             field_defs_table.insert(name, fd_idx);
         }
+
         for (idx, function_def) in module.function_defs().iter().enumerate() {
             let name = module
                 .string_at(module.function_handle_at(function_def.function).name)
                 .to_string();
             let fd_idx = FunctionDefinitionIndex::new(idx as TableIndex);
             function_defs_table.insert(name, fd_idx);
+            // `function_defs` is initally empty, a single element is pushed per loop iteration and
+            // the number of iterations is bound to the max size of `module.function_defs()`
+            // MIRAI currently cannot work with a bound based on the length of
+            // `module.function_defs()`.
+            assume!(function_defs.len() < usize::max_value());
             function_defs.push(FunctionDef::new(&module, fd_idx));
         }
         LoadedModule {
