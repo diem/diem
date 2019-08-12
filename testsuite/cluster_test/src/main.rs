@@ -2,7 +2,7 @@ use clap::{App, Arg, ArgGroup, ArgMatches};
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
-    experiments::{Experiment, RebootRandomValidator},
+    experiments::{Experiment, RebootRandomValidators},
     health::{AwsLogTail, HealthCheckRunner},
 };
 use std::{
@@ -14,7 +14,7 @@ use std::{
 };
 use termion::{color, style};
 
-const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 pub fn main() {
     let matches = arg_matches();
@@ -81,7 +81,7 @@ impl ClusterTestRunner {
             panic!("Some validators are unhealthy before experiment started");
         }
 
-        let experiment = RebootRandomValidator::new(&self.cluster);
+        let experiment = RebootRandomValidators::new(3, &self.cluster);
         println!(
             "{}Starting experiment {}{}{}{}",
             style::Bold,

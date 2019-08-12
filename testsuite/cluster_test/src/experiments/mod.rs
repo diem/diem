@@ -1,6 +1,6 @@
 mod reboot_random_validator;
 
-pub use reboot_random_validator::RebootRandomValidator;
+pub use reboot_random_validator::RebootRandomValidators;
 use std::{collections::HashSet, fmt::Display};
 
 pub trait Experiment: Display {
