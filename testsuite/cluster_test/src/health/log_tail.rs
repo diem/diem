@@ -168,6 +168,7 @@ impl AwsLogThread {
             Ok(v) => v.parse().expect("Failed to parse STARTUP_TIMEOUT env"),
         };
         let startup_deadline = Instant::now() + Duration::from_secs(startup_timeout_sec);
+        let mut kinesis_fail_retries = 0usize;
         loop {
             let response = self
                 .aws
@@ -176,8 +177,20 @@ impl AwsLogThread {
                     shard_iterator: self.kinesis_iterator.clone(),
                     limit: Some(10000),
                 })
-                .sync()
-                .expect("Request to kinesis failed");
+                .sync();
+            let response = match response {
+                Err(e) => {
+                    println!("Kinesis failure: {:?}, retry {}", e, kinesis_fail_retries);
+                    kinesis_fail_retries += 1;
+                    if kinesis_fail_retries > 10 {
+                        panic!("Too many kinesis failures");
+                    }
+                    thread::sleep(Duration::from_secs(1));
+                    continue;
+                }
+                Ok(r) => r,
+            };
+            kinesis_fail_retries = 0;
             let next_iterator = response
                 .next_shard_iterator
                 .expect("Next iterator is expected for kinesis stream");
