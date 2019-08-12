@@ -161,34 +161,52 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dest: Reference)
 }
 
 // Eq, Pack, and Unpack are auto-generated for each type T
+const MAX_U64: int;
+axiom MAX_U64 == 9223372036854775807;
+var abort_flag: bool;
 
 procedure {:inline 1} Add(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) + i#Integer(src2));
 }
 
 procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) < i#Integer(src2)) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
 procedure {:inline 1} Mul(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) * i#Integer(src2));
 }
 
 procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) div i#Integer(src2));
 }
 
 procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) mod i#Integer(src2));
 }
 
@@ -339,11 +357,11 @@ procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
 
 // Special instruction
 var Address_Exists: [Address]bool;
-procedure {:inline 1} CreateAccount(addr_val: Value)
-modifies Address_Exists;
+procedure {:inline 1} CreateAccount(addr_val: Value, addr_exists: [Address]bool)
+returns (addr_exists': [Address]bool)
 {
   var addr: Address;
   addr := a#Address(addr_val);
-  assert !Address_Exists[addr];
-  Address_Exists[addr] := true;
+  assert !addr_exists[addr];
+  addr_exists' := addr_exists[addr := true];
 }

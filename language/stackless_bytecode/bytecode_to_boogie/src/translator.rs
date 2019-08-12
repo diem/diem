@@ -144,34 +144,29 @@ impl<'a> BoogieTranslator<'a> {
                 self.format_value_or_ref(&arg_type)
             ));
             if arg_type.is_mutable_reference() {
-                if !rets.is_empty() {
-                    rets.push_str(", ");
-                }
-                rets.push_str(&format!("t{}: {}", i, self.format_value_or_ref(&arg_type)));
+                rets.push_str(&format!(
+                    ", t{}: {}",
+                    i,
+                    self.format_value_or_ref(&arg_type)
+                ));
             }
         }
         for (i, return_type) in function_signature.return_types.iter().enumerate() {
-            if !rets.is_empty() {
-                rets.push_str(", ");
-            }
             rets.push_str(&format!(
-                "ret{}: {}",
+                ", ret{}: {}",
                 i,
                 self.format_value_or_ref(&return_type)
             ));
         }
         for type_str in self.all_type_strs.iter() {
             args.push_str(&format!(", rs_{}: ResourceStore", type_str));
-            if !rets.is_empty() {
-                rets.push_str(", ");
-            }
-            rets.push_str(&format!("rs_{}': ResourceStore", type_str));
+            rets.push_str(&format!(", rs_{}': ResourceStore", type_str));
         }
         res.push_str(&format!(
-            "procedure {} (c: CreationTime{}) returns ({})\n{{\n",
+            "procedure {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})\n",
             fun_name, args, rets
         ));
-
+        res.push_str("ensures !abort_flag;\n{\n");
         res.push_str("    // declare local variables\n".into());
 
         let mut ref_vars = BTreeSet::new(); // set of locals that are references
@@ -207,6 +202,7 @@ impl<'a> BoogieTranslator<'a> {
 
         res.push_str("\n    // declare a new creation time for calls inside this function\n");
         res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
+        res.push_str("    assume !abort_flag;\n");
         res.push_str("\n    // assume arguments are of correct types\n");
         res.push_str(&arg_value_assumption_str);
         res.push_str("\n    // assign arguments to locals so they can be modified\n");
@@ -215,6 +211,7 @@ impl<'a> BoogieTranslator<'a> {
         for type_str in self.all_type_strs.iter() {
             res.push_str(&format!("    rs_{}' := rs_{};\n", type_str, type_str));
         }
+        res.push_str("    addr_exists' := addr_exists;\n");
         res.push_str("\n    // bytecode translation starts here\n".into());
         for (offset, bytecode) in code.code.iter().enumerate() {
             // uncomment to print out bytecode for debugging purpose
@@ -334,28 +331,19 @@ impl<'a> BoogieTranslator<'a> {
                 for arg in args.iter() {
                     args_str.push_str(&format!(", t{}", arg));
                     if self.is_local_mutable_ref(*arg, func_idx) {
-                        if !dest_str.is_empty() {
-                            dest_str.push_str(", ");
-                        }
-                        dest_str.push_str(&format!("t{}", arg));
+                        dest_str.push_str(&format!(", t{}", arg));
                     }
                 }
                 for dest in dests.iter() {
-                    if !dest_str.is_empty() {
-                        dest_str.push_str(", ");
-                    }
-                    dest_str.push_str(&format!("t{}", dest));
+                    dest_str.push_str(&format!(", t{}", dest));
                 }
 
                 for type_str in self.all_type_strs.iter() {
                     args_str.push_str(&format!(", rs_{}'", type_str));
-                    if !dest_str.is_empty() {
-                        dest_str.push_str(", ");
-                    }
-                    dest_str.push_str(&format!("rs_{}'", type_str));
+                    dest_str.push_str(&format!(", rs_{}'", type_str));
                 }
                 vec![format!(
-                    "call {} := {}(c'{});",
+                    "call addr_exists'{} := {}(c', addr_exists'{});",
                     dest_str, callee_name, args_str
                 )]
             }
@@ -469,7 +457,10 @@ impl<'a> BoogieTranslator<'a> {
             GetTxnSenderAddress(idx) => vec![format!("call t{} := GetTxnSenderAddress();", idx)],
             GetTxnMaxGasUnits(idx) => vec![format!("call t{} := GetTxnMaxGasUnits();", idx)],
             GetTxnGasUnitPrice(idx) => vec![format!("call t{} := GetTxnGasUnitPrice();", idx)],
-            CreateAccount(idx) => vec![format!("call CreateAccount(t{});", idx)],
+            CreateAccount(idx) => vec![format!(
+                "call addr_exists' := CreateAccount(t{}, addr_exists');",
+                idx
+            )],
             _ => vec!["// unimplemented instruction".into()],
         };
         for code in stmts {

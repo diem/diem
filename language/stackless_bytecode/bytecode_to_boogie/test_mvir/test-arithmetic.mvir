@@ -26,7 +26,31 @@ module TestArithmetic {
 	public arithmetic_ops(a: u64, b: u64): u64 * u64 {
       let c: u64;
       c = (6 + 4 - 1) * 2 / 3 % 4;
-			assert(copy(c) == 3, 42);
+			assert(copy(c) == 2, 42);
       return move(c), move(a);
   }
+
+	public overflow() {
+		  let x: u64;
+			let y: u64;
+			x = 9223372036854775807;
+			y = move(x) + 1;
+			return;
+	}
+
+	public underflow() {
+		  let x: u64;
+			let y: u64;
+			x = 0;
+			y = move(x) - 1;
+			return;
+	}
+
+	public div_by_zero() {
+		  let x: u64;
+			let y: u64;
+			x = 0;
+			y = 1/move(x);
+			return;
+	}
 }
