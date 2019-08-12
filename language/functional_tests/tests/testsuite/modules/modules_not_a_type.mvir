@@ -1,7 +1,7 @@
 // check: no struct handle with module handle index 0 named M
 
 module M {
-    public no(x: V#Self.M) {
+    public no(x: Self.M) {
         return;
     }
 }

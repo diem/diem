@@ -5,7 +5,7 @@ import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 
 main() {
-    let coins: R#LibraCoin.T;
+    let coins: LibraCoin.T;
 
     coins = LibraAccount.withdraw_from_sender(42);
     LibraAccount.deposit({{bob}}, move(coins));

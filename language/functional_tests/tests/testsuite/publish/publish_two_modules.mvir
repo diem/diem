@@ -1,14 +1,14 @@
 module MoneyHolder {
         import 0x0.LibraCoin;
 
-        resource T { money: R#LibraCoin.T }
+        resource T { money: LibraCoin.T }
 
-        public new(m: R#LibraCoin.T): R#Self.T {
+        public new(m: LibraCoin.T): Self.T {
             return T{ money: move(m) };
         }
 
-        public value(this :&R#Self.T): u64 {
-            let ref: &R#LibraCoin.T;
+        public value(this :&Self.T): u64 {
+            let ref: &LibraCoin.T;
             let val: u64;
             ref = &copy(this).money;
             val = LibraCoin.value(move(ref));
@@ -16,8 +16,8 @@ module MoneyHolder {
             return move(val);
         }
 
-        public destroy_t(t: R#Self.T) {
-            let money: R#LibraCoin.T;
+        public destroy_t(t: Self.T) {
+            let money: LibraCoin.T;
             T{ money } = move(t);
             LibraCoin.destroy_zero(move(money));
             return;
@@ -28,10 +28,10 @@ module MoneyHolder {
 
 module Bar {
         struct T{baz: u64}
-        public new(m: u64): V#Self.T {
+        public new(m: u64): Self.T {
             return T{baz: move(m)};
         }
-        public value(this: &V#Self.T): u64 {
+        public value(this: &Self.T): u64 {
             let ref: &u64;
             ref = &move(this).baz;
             return *move(ref);
@@ -45,13 +45,13 @@ import {{default}}.Bar;
 import 0x0.LibraCoin;
 
 main() {
-    let coin: R#LibraCoin.T;
-    let money_holder: R#MoneyHolder.T;
-    let money_holder_ref: &R#MoneyHolder.T;
+    let coin: LibraCoin.T;
+    let money_holder: MoneyHolder.T;
+    let money_holder_ref: &MoneyHolder.T;
     let value: u64;
     let v: u64;
-    let bar: V#Bar.T;
-    let bar_ref: &V#Bar.T;
+    let bar: Bar.T;
+    let bar_ref: &Bar.T;
     let v2: u64;
 
     coin = LibraCoin.zero();

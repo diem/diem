@@ -3,28 +3,28 @@ module LibraAccount {
 
     resource T{sequence_number: u64}
 
-    public new(m: u64): R#Self.T {
+    public new(m: u64): Self.T {
         return T{sequence_number: move(m)};
     }
 
-    public sequence_number(this: &R#Self.T): u64 {
+    public sequence_number(this: &Self.T): u64 {
         let ref: &u64;
         ref = &copy(this).sequence_number;
         release(move(this));
         return *move(ref);
     }
 
-    public publish(r: R#Self.T) {
+    public publish(r: Self.T) {
         move_to_sender<T>(move(r));
         return;
     }
 
     public test() {
-        let c1: R#Self.T;
+        let c1: Self.T;
         let sender: address;
         let sequence_number: u64;
-        let fake_ref: &mut R#Self.T;
-        let fake_ref_frozen: &R#Self.T;
+        let fake_ref: &mut Self.T;
+        let fake_ref_frozen: &Self.T;
         let fake_value: u64;
 
         c1 = Self.new(112);

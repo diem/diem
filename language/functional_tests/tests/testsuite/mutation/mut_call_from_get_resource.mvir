@@ -1,11 +1,11 @@
 module Token {
     resource T {balance: u64}
 
-    public new(balance: u64): R#Self.T  {
+    public new(balance: u64): Self.T  {
         return T{balance: copy(balance)};
     }
 
-    public value(this: &R#Self.T): u64 {
+    public value(this: &Self.T): u64 {
         let b: u64;
         let b_ref: &u64;
         b_ref = &move(this).balance;
@@ -13,7 +13,7 @@ module Token {
         return move(b);
     }
 
-    public bump(this: &mut R#Self.T) {
+    public bump(this: &mut Self.T) {
         let val: &mut u64;
         let x: u64;
         val = &mut move(this).balance;
@@ -22,16 +22,16 @@ module Token {
         return;
     }
 
-    public publish(t: R#Self.T) {
+    public publish(t: Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
 
     public test() {
-        let z: R#Self.T;
+        let z: Self.T;
         let addr1: address;
-        let struct1: &mut R#Self.T;
-        let imm_struct1: &R#Self.T;
+        let struct1: &mut Self.T;
+        let imm_struct1: &Self.T;
         let struct1_original_balance: u64;
         let struct1_new_balance: u64;
 

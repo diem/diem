@@ -1,16 +1,16 @@
 module Test {
     struct T{v: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T{g: move(g)};
     }
     
-    public thousand(t : &mut V#Self.T) {
+    public thousand(t : &mut Self.T) {
         *(&mut move(t).v) = 1000;
         return;
     }
 
-    public value(this: &mut V#Self.T): u64 {
+    public value(this: &mut Self.T): u64 {
         let y: &u64;
         y = &move(this).v;
         return *move(y);
@@ -22,7 +22,7 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let x: V#Test.T;
+    let x: Test.T;
     let x_ref: u64;
     x = Test.new(500);
     Test.thousand(&mut x);

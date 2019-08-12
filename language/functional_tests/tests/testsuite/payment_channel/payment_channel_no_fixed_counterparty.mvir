@@ -10,57 +10,57 @@ module PaymentChannel {
     // It keeps track of the balances for funder and counterparty
     // 
     resource T {
-        funder_capacity: R#LibraCoin.T,
-        counterparty_capacity: R#LibraCoin.T,
+        funder_capacity: LibraCoin.T,
+        counterparty_capacity: LibraCoin.T,
         seq_id: u64,
         funder_pk: bytearray,
         counterparty_pk: bytearray,
         funder_addr: address,
     }
 
-    counterparty_balance(this: &R#Self.T): u64 {
+    counterparty_balance(this: &Self.T): u64 {
         let counterparty_balance: u64;
-        let counterparty_capacity_ref: &R#LibraCoin.T;
+        let counterparty_capacity_ref: &LibraCoin.T;
         counterparty_capacity_ref = &move(this).counterparty_capacity;
         counterparty_balance = LibraCoin.value(move(counterparty_capacity_ref));
         return move(counterparty_balance);
     }
 
-    funder_balance(this: &R#Self.T): u64 {
+    funder_balance(this: &Self.T): u64 {
         let funder_balance: u64;
-        let funder_capacity_ref: &R#LibraCoin.T;
+        let funder_capacity_ref: &LibraCoin.T;
         funder_capacity_ref = &move(this).funder_capacity;
         funder_balance = LibraCoin.value(move(funder_capacity_ref));
         return move(funder_balance);
     }
 
-    seq_id(this: &R#Self.T): u64 {
+    seq_id(this: &Self.T): u64 {
         let seq_id: u64;
         seq_id = *&move(this).seq_id;
         return move(seq_id);
     }
 
-    funder_pk(this: &R#Self.T): bytearray {
+    funder_pk(this: &Self.T): bytearray {
         let funder_pk: bytearray;
         funder_pk = *&move(this).funder_pk;
         return move(funder_pk);
     }
 
-    counterparty_pk(this: &R#Self.T): bytearray {
+    counterparty_pk(this: &Self.T): bytearray {
         let counterparty_pk: bytearray;
         counterparty_pk = *&move(this).counterparty_pk;
         return move(counterparty_pk);
     }
 
-    funder_addr(this: &R#Self.T): address {
+    funder_addr(this: &Self.T): address {
         let funder: address;
         funder = *&move(this).funder_addr;
         return move(funder);
     }
 
-    public new_payment_channel(funding: R#LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): R#Self.T {
+    public new_payment_channel(funding: LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): Self.T {
 	let sender: address;
-        let counterparty_capacity: R#LibraCoin.T;
+        let counterparty_capacity: LibraCoin.T;
 	sender = get_txn_sender();
         counterparty_capacity = LibraCoin.zero();
 
@@ -74,7 +74,7 @@ module PaymentChannel {
         };
     }
 
-   ver(this: &R#Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit: address): bool {
+   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit: address): bool {
         let seq_id: u64;
         let ver: bool;
         let message: bytearray;
@@ -99,12 +99,12 @@ module PaymentChannel {
         return move(ver);
     } 
 
-    public update(this: &mut R#Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
         let sender: address;
         let ver_funder: bool;
         let ver_counterparty: bool;
-        let ref: &R#Self.T;
-        let transfer_amt: R#LibraCoin.T;
+        let ref: &Self.T;
+        let transfer_amt: LibraCoin.T;
         let funder_pk: bytearray;
         let counterparty_pk: bytearray;
 
@@ -128,20 +128,20 @@ module PaymentChannel {
         return;
     }
 
-    public close(this: &mut R#Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
         let funder_addr: address;
         let counterparty_addr: address;
 
-        let funder_capacity_ref: &mut R#LibraCoin.T;
-        let counterparty_capacity_ref: &mut R#LibraCoin.T;
+        let funder_capacity_ref: &mut LibraCoin.T;
+        let counterparty_capacity_ref: &mut LibraCoin.T;
 
         let funder_balance: u64;
         let counterparty_balance: u64;
 
-        let funder_to_withdraw: R#LibraCoin.T;
-        let counterparty_to_withdraw: R#LibraCoin.T;
+        let funder_to_withdraw: LibraCoin.T;
+        let counterparty_to_withdraw: LibraCoin.T;
 
-        let ref: &R#Self.T;
+        let ref: &Self.T;
 
         Self.update(copy(this), move(amt_to_transfer), move(new_seq_id), move(funder_signature), move(counterparty_signature));
 

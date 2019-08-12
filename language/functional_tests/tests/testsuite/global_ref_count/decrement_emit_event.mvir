@@ -2,11 +2,11 @@ module Test {
     resource T { i: u64 }
     struct Event { }
     public test() {
-        let t: R#Self.T;
-        let t_ref: &mut R#Self.T;
+        let t: Self.T;
+        let t_ref: &mut Self.T;
         let i_ref: &mut u64;
         let sender: address;
-        let event: V#Self.Event;
+        let event: Self.Event;
         let event_id: bytearray;
 
         t = T { i: 0 };

@@ -4,7 +4,7 @@ module Test {
     import 0x0.LibraCoin;
 
     struct T{
-        fc: R#LibraCoin.T,
+        fc: LibraCoin.T,
         fint: u64,
     }
 }

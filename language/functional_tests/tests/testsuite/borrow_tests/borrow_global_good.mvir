@@ -4,7 +4,7 @@ module A {
 
     public A0() {
         let sender: address;
-        let t_ref: &mut R#Self.T;
+        let t_ref: &mut Self.T;
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         release(move(t_ref));
@@ -15,8 +15,8 @@ module A {
 
     public A1() {
         let sender: address;
-        let t_ref: &mut R#Self.T;
-        let u_ref: &mut R#Self.U;
+        let t_ref: &mut Self.T;
+        let u_ref: &mut Self.U;
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         u_ref = borrow_global<U>(copy(sender));
@@ -27,7 +27,7 @@ module A {
 
     public A2(b: bool) {
         let sender: address;
-        let t_ref: &mut R#Self.T;
+        let t_ref: &mut Self.T;
         sender = get_txn_sender();
         if (move(b)) {
             t_ref = borrow_global<T>(copy(sender));
@@ -40,7 +40,7 @@ module A {
 
     public A3(b: bool) {
         let sender: address;
-        let t_ref: &mut R#Self.T;
+        let t_ref: &mut Self.T;
         sender = get_txn_sender();
         if (move(b)) {
             t_ref = borrow_global<T>(copy(sender));
@@ -51,8 +51,8 @@ module A {
 
     public A4(b: bool) {
         let sender: address;
-        let x: R#Self.T;
-        let y: &mut R#Self.T;
+        let x: Self.T;
+        let y: &mut Self.T;
         sender = get_txn_sender();
         x = move_from<T>(copy(sender));
         y = borrow_global<T>(move(sender));

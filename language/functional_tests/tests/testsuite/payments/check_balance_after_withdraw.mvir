@@ -4,8 +4,8 @@ import 0x0.LibraCoin;
 main() {
     let addr: address;
     let sender_original_balance: u64;
-    let five_coins: R#LibraCoin.T;
-    let five_coins_ref: &R#LibraCoin.T;
+    let five_coins: LibraCoin.T;
+    let five_coins_ref: &LibraCoin.T;
     let five_coins_value: u64;
     let sender_new_balance: u64;
 

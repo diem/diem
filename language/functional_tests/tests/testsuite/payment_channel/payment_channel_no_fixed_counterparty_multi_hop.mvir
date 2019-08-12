@@ -16,8 +16,8 @@ module PaymentChannel {
     // Note further that the funder_addr is known on-chain as the funder
     // instantiated the payment channel resource.
     resource T {
-        funder_capacity: R#LibraCoin.T,
-        counterparty_capacity: R#LibraCoin.T,
+        funder_capacity: LibraCoin.T,
+        counterparty_capacity: LibraCoin.T,
         seq_id: u64,
         funder_pk: bytearray,
         counterparty_pk: bytearray,
@@ -25,39 +25,39 @@ module PaymentChannel {
     }
 
     // Getter for the balance of the counterparty_capacity resource value
-    counterparty_balance(this: &R#Self.T): u64 {
+    counterparty_balance(this: &Self.T): u64 {
         let counterparty_balance: u64;
-        let counterparty_capacity_ref: &R#LibraCoin.T;
+        let counterparty_capacity_ref: &LibraCoin.T;
         counterparty_capacity_ref = &move(this).counterparty_capacity;
         counterparty_balance = LibraCoin.value(move(counterparty_capacity_ref));
         return move(counterparty_balance);
     }
 
     // Getter for the balance of the funder_capacity resource value
-    funder_balance(this: &R#Self.T): u64 {
+    funder_balance(this: &Self.T): u64 {
         let funder_balance: u64;
-        let funder_capacity_ref: &R#LibraCoin.T;
+        let funder_capacity_ref: &LibraCoin.T;
         funder_capacity_ref = &move(this).funder_capacity;
         funder_balance = LibraCoin.value(move(funder_capacity_ref));
         return move(funder_balance);
     }
 
     // Getter for the sequence id of the on-chain state of the payment channel
-    seq_id(this: &R#Self.T): u64 {
+    seq_id(this: &Self.T): u64 {
         let seq_id: u64;
         seq_id = *&move(this).seq_id;
         return move(seq_id);
     }
 
     // Getter for the public key of the funder
-    funder_pk(this: &R#Self.T): bytearray {
+    funder_pk(this: &Self.T): bytearray {
         let funder_pk: bytearray;
         funder_pk = *&move(this).funder_pk;
         return move(funder_pk);
     }
 
     // Getter for the public key of the counterparty
-    counterparty_pk(this: &R#Self.T): bytearray {
+    counterparty_pk(this: &Self.T): bytearray {
         let counterparty_pk: bytearray;
         counterparty_pk = *&move(this).counterparty_pk;
         return move(counterparty_pk);
@@ -65,7 +65,7 @@ module PaymentChannel {
 
     // Getter for the address of the funder
     // Note that this construction does not require to lock-in the counterparty address
-    funder_addr(this: &R#Self.T): address {
+    funder_addr(this: &Self.T): address {
         let funder: address;
         funder = *&move(this).funder_addr;
         return move(funder);
@@ -74,9 +74,9 @@ module PaymentChannel {
     // Constructor for the new payment channel
     // Due to the lack of a time API in the Move VM, this payment channel is forced to be
     // uni-directional. Therefore, only the funder is funding the channel.
-    public new_payment_channel(funding: R#LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): R#Self.T {
+    public new_payment_channel(funding: LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): Self.T {
 	let sender: address;
-        let counterparty_capacity: R#LibraCoin.T;
+        let counterparty_capacity: LibraCoin.T;
 	sender = get_txn_sender();
         counterparty_capacity = LibraCoin.zero();
 
@@ -122,7 +122,7 @@ module PaymentChannel {
    //       but the counterparty address can change on every off-chain update.
    //       In general, the counterparty would always use the same commit_address,
    //       but in general needn't do so.
-   ver(this: &R#Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit_address: address, preimage: bytearray): bool {
+   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit_address: address, preimage: bytearray): bool {
         let seq_id: u64;
         let ver: bool;
         let message: bytearray;
@@ -155,12 +155,12 @@ module PaymentChannel {
     // Public on-chain update function that allows to update the internal state of the payment channel.
     // This function is called by the `close` method before withdrawing the funds in order to update the
     // on-chain state of the contract before moving the LibraCoin resources to their respective parties.
-    public update(this: &mut R#Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
+    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
         let sender: address;
         let ver_funder: bool;
         let ver_counterparty: bool;
-        let ref: &R#Self.T;
-        let transfer_amt: R#LibraCoin.T;
+        let ref: &Self.T;
+        let transfer_amt: LibraCoin.T;
         let funder_pk: bytearray;
         let counterparty_pk: bytearray;
 
@@ -185,20 +185,20 @@ module PaymentChannel {
     }
 
     // Public method for closing the channel. Invokes the update method and then pays out the LibraCoin to each party
-    public close(this: &mut R#Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
+    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray, preimage: bytearray) {
         let funder_addr: address;
         let counterparty_addr: address;
 
-        let funder_capacity_ref: &mut R#LibraCoin.T;
-        let counterparty_capacity_ref: &mut R#LibraCoin.T;
+        let funder_capacity_ref: &mut LibraCoin.T;
+        let counterparty_capacity_ref: &mut LibraCoin.T;
 
         let funder_balance: u64;
         let counterparty_balance: u64;
 
-        let funder_to_withdraw: R#LibraCoin.T;
-        let counterparty_to_withdraw: R#LibraCoin.T;
+        let funder_to_withdraw: LibraCoin.T;
+        let counterparty_to_withdraw: LibraCoin.T;
 
-        let ref: &R#Self.T;
+        let ref: &Self.T;
 
         Self.update(copy(this), move(amt_to_transfer), move(new_seq_id), move(funder_signature), move(counterparty_signature), move(preimage));
 

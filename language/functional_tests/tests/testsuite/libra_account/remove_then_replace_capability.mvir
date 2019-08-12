@@ -3,8 +3,8 @@ import 0x0.LibraCoin;
 
 main() {
   let sender: address;
-  let cap: R#LibraAccount.WithdrawalCapability;
-  let coin: R#LibraCoin.T;
+  let cap: LibraAccount.WithdrawalCapability;
+  let coin: LibraCoin.T;
 
   sender = get_txn_sender();
 

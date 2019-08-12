@@ -1,17 +1,17 @@
 module A {
     struct T {value: u64, even: bool}
 
-    public new(): V#Self.T {
+    public new(): Self.T {
         return T {value: 0, even: true};
     }
 
-    public get_value(this: &mut V#Self.T): u64 {
+    public get_value(this: &mut Self.T): u64 {
         let v: &u64;
         v = &move(this).value;
         return *move(v);
     }
 
-    public get_parity(this: &mut V#Self.T): bool {
+    public get_parity(this: &mut Self.T): bool {
         let b: &bool;
         b = &move(this).even;
         return *move(b);
@@ -31,7 +31,7 @@ module A {
 import {{default}}.A;
 
 main() {
-    let x: V#A.T;
+    let x: A.T;
     let y: u64;
     let z: bool;
     x = A.new();

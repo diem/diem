@@ -2,8 +2,8 @@ module A {
     resource T{v: u64}
 
     public A0(addr: address) {
-        let x: &mut R#Self.T;
-        let y: &mut R#Self.T;
+        let x: &mut Self.T;
+        let y: &mut Self.T;
         x = borrow_global<T>(get_txn_sender());
         y = borrow_global<T>(move(addr));
         release(move(x));

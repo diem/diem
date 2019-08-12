@@ -2,8 +2,8 @@ module Test {
     resource T { i: u64 }
 
     public test() {
-        let t: R#Self.T;
-        let t_ref: &mut R#Self.T;
+        let t: Self.T;
+        let t_ref: &mut Self.T;
         let i_ref: &u64;
         let sender: address;
 

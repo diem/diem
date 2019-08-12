@@ -11,8 +11,8 @@ main() {
     let struct1_original_balance: u64;
     let struct2_original_balance: u64;
     let struct3_original_balance: u64;
-    let five_coins1: R#LibraCoin.T;
-    let five_coins2: R#LibraCoin.T;
+    let five_coins1: LibraCoin.T;
+    let five_coins2: LibraCoin.T;
     let struct1_new_balance: u64;
     let struct2_new_balance: u64;
     let struct3_new_balance: u64;

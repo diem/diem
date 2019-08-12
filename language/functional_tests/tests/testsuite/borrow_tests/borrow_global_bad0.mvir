@@ -3,7 +3,7 @@ module A {
 
     public A0() {
         let sender: address;
-        let t_ref: &mut R#Self.T;
+        let t_ref: &mut Self.T;
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         t_ref = borrow_global<T>(move(sender));
