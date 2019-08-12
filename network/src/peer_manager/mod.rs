@@ -390,7 +390,7 @@ where
         connection: TMuxer,
     ) {
         let peer_id = identity.peer_id();
-        assert!(self.own_peer_id != peer_id);
+        assert_ne!(self.own_peer_id, peer_id);
 
         let mut send_new_peer_notification = true;
 

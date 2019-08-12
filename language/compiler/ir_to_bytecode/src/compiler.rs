@@ -1084,14 +1084,14 @@ fn compile_module_impl<'a>(
     // Create an empty locals signature with index 0.
     // This is required by the current implementation of generics.
     let locals_empty_idx = compiler.make_locals_signature(&LocalsSignature(vec![]))?;
-    assert!(locals_empty_idx.0 == 0);
+    assert_eq!(locals_empty_idx.0, 0);
 
     // Create a module handle for the current module.
     // It is required this be first entry in the table.
     let addr_idx = compiler.make_address(&address)?;
     let name_idx = compiler.make_string(module.name.name_ref())?;
     let mh_idx = compiler.make_module_handle(addr_idx, name_idx)?;
-    assert!(mh_idx.0 == 0);
+    assert_eq!(mh_idx.0, 0);
 
     for import in &module.imports {
         compiler.import_module(
@@ -1172,14 +1172,14 @@ fn compile_program_impl(
     // Create an empty locals signature with index 0.
     // This is required by the current implementation of generics.
     let locals_empty_idx = compiler.make_locals_signature(&LocalsSignature(vec![]))?;
-    assert!(locals_empty_idx.0 == 0);
+    assert_eq!(locals_empty_idx.0, 0);
 
     // Create a module handle for the script.
     // It is required this be first entry in the table.
     let addr_idx = compiler.make_address(&address)?;
     let name_idx = compiler.make_string(SELF_MODULE_NAME)?;
     let mh_idx = compiler.make_module_handle(addr_idx, name_idx)?;
-    assert!(mh_idx.0 == 0);
+    assert_eq!(mh_idx.0, 0);
 
     for import in &program.script.imports {
         compiler.import_module(

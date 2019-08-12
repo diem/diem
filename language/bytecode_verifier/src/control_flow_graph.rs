@@ -188,7 +188,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
             }
         }
 
-        assert!(entry == code.len() as CodeOffset);
+        assert_eq!(entry, code.len() as CodeOffset);
         cfg
     }
 }
