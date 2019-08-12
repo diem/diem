@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::utils::{encode_to_string, from_encoded_string};
 use nextgen_crypto::{
     ed25519::{compat, *},
     traits::ValidKeyStringExt,
@@ -66,14 +65,6 @@ impl TrustedPeer {
     }
 }
 
-pub fn serialize_legacy_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    K: Serialize,
-{
-    serializer.serialize_str(&encode_to_string(key))
-}
-
 pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -96,16 +87,6 @@ where
                 .map_err(<S::Error as serde::ser::Error>::custom)
         })
         .and_then(|str| serializer.serialize_str(&str[..]))
-}
-
-pub fn deserialize_legacy_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>
-where
-    D: Deserializer<'de>,
-    K: DeserializeOwned + 'static,
-{
-    let encoded_key: String = Deserialize::deserialize(deserializer)?;
-
-    Ok(from_encoded_string(encoded_key))
 }
 
 pub fn deserialize_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>

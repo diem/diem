@@ -10,11 +10,11 @@ use canonical_serialization::{
 };
 use crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
-    HashValue, PublicKey as LegacyPublicKey,
+    HashValue,
 };
 use failure::prelude::*;
 use hex;
-use nextgen_crypto::{ed25519::*, VerifyingKey};
+use nextgen_crypto::VerifyingKey;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
@@ -196,13 +196,6 @@ impl IntoProto for AccountAddress {
 
     fn into_proto(self) -> Self::ProtoType {
         self.0.to_vec()
-    }
-}
-
-impl From<LegacyPublicKey> for AccountAddress {
-    fn from(public_key: LegacyPublicKey) -> AccountAddress {
-        let ed25519_public_key: Ed25519PublicKey = public_key.into();
-        AccountAddress::from_public_key(&ed25519_public_key)
     }
 }
 
