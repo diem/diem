@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::{mock_tree_store::MockTreeStore, node_type::Node, NodeKey};
+use crate::{mock_tree_store::MockTreeStore, nibble::NibblePath, node_type::Node, NodeKey};
 use crypto::HashValue;
-use sparse_merkle::nibble_path::NibblePath;
 use types::account_state_blob::AccountStateBlob;
 
 fn random_leaf_with_key(next_version: Version) -> (Node, NodeKey) {

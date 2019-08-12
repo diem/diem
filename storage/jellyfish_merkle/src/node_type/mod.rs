@@ -15,6 +15,7 @@
 #[cfg(test)]
 mod node_type_test;
 
+use crate::nibble::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{
@@ -29,7 +30,6 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use sparse_merkle::nibble_path::NibblePath;
 use std::{
     collections::hash_map::HashMap,
     io::{Cursor, Read, Write},

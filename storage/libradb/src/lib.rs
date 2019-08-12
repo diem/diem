@@ -104,7 +104,6 @@ impl LibraDB {
                 /* LedgerInfo CF = */ DEFAULT_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
-            (ACCOUNT_STATE_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
@@ -115,7 +114,6 @@ impl LibraDB {
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
-            (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
             (
                 TRANSACTION_ACCUMULATOR_CF_NAME,
                 ColumnFamilyOptions::default(),
