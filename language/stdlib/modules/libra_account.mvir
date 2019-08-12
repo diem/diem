@@ -6,7 +6,7 @@ module LibraAccount {
     // Every Libra account has a LibraAccount.T resource
     resource T {
         // The coins stored in this account
-        balance: R#LibraCoin.T,
+        balance: LibraCoin.T,
         // The current authentication key.
         // This can be different than the key used to create the account
         authentication_key: bytearray,
@@ -51,8 +51,8 @@ module LibraAccount {
 
     // Creates a new LibraAccount.T
     // Invoked by the `create_account` builtin
-    make(auth_key: bytearray): R#Self.T {
-        let zero_balance: R#LibraCoin.T;
+    make(auth_key: bytearray): Self.T {
+        let zero_balance: LibraCoin.T;
         zero_balance = LibraCoin.zero();
         return T {
             balance: move(zero_balance),
@@ -65,13 +65,13 @@ module LibraAccount {
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account
-    public deposit(payee: address, to_deposit: R#LibraCoin.T) {
+    public deposit(payee: address, to_deposit: LibraCoin.T) {
         let deposit_value: u64;
-        let payee_account_ref: &mut R#Self.T;
+        let payee_account_ref: &mut Self.T;
         let sender: address;
-        let sender_account_ref: &mut R#Self.T;
-        let sent_event: V#Self.SentPaymentEvent;
-        let received_event: V#Self.ReceivedPaymentEvent;
+        let sender_account_ref: &mut Self.T;
+        let sent_event: Self.SentPaymentEvent;
+        let received_event: Self.ReceivedPaymentEvent;
 
         // Check that the `to_deposit` coin is non-zero
         deposit_value = LibraCoin.value(&to_deposit);
@@ -114,16 +114,16 @@ module LibraAccount {
     }
 
     // Helper to withdraw `amount` from the given `account` and return the resulting LibraCoin.T
-    withdraw_from_account(account: &mut R#Self.T, amount: u64): R#LibraCoin.T {
-        let to_withdraw: R#LibraCoin.T;
+    withdraw_from_account(account: &mut Self.T, amount: u64): LibraCoin.T {
+        let to_withdraw: LibraCoin.T;
 
         to_withdraw = LibraCoin.withdraw(&mut move(account).balance, copy(amount));
         return move(to_withdraw);
     }
 
     // Withdraw `amount` LibraCoin.T from the transaction sender's account
-    public withdraw_from_sender(amount: u64): R#LibraCoin.T {
-        let sender_account: &mut R#Self.T;
+    public withdraw_from_sender(amount: u64): LibraCoin.T {
+        let sender_account: &mut Self.T;
 
         sender_account = borrow_global<T>(get_txn_sender());
         if (*&copy(sender_account).delegated_withdrawal_capability) {
@@ -136,17 +136,17 @@ module LibraAccount {
     }
 
     // Withdraw `amount` LibraCoin.T from account under cap.account_address
-    public withdraw_with_capability(cap: &R#Self.WithdrawalCapability, amount: u64): R#LibraCoin.T {
-        let account: &mut R#Self.T;
+    public withdraw_with_capability(cap: &Self.WithdrawalCapability, amount: u64): LibraCoin.T {
+        let account: &mut Self.T;
 
         account = borrow_global<T>(*&move(cap).account_address);
         return Self.withdraw_from_account(move(account), move(amount));
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
-    public extract_sender_withdrawal_capability(): R#Self.WithdrawalCapability {
+    public extract_sender_withdrawal_capability(): Self.WithdrawalCapability {
         let sender: address;
-        let sender_account: &mut R#Self.T;
+        let sender_account: &mut Self.T;
         let delegated_ref: &mut bool;
 
         sender = get_txn_sender();
@@ -162,9 +162,9 @@ module LibraAccount {
     }
 
     // Return the withdrawal capability to the account it originally came from
-    public restore_withdrawal_capability(cap: R#Self.WithdrawalCapability) {
+    public restore_withdrawal_capability(cap: Self.WithdrawalCapability) {
         let account_address: address;
-        let account: &mut R#Self.T;
+        let account: &mut Self.T;
 
         // Destroy the capability
         WithdrawalCapability { account_address } = move(cap);
@@ -181,7 +181,7 @@ module LibraAccount {
     // to the `payee` address
     // Creates the `payee` account if it does not exist
     public pay_from_sender(payee: address, amount: u64) {
-        let to_pay: R#LibraCoin.T;
+        let to_pay: LibraCoin.T;
         let payee_exists: bool;
         payee_exists = exists<T>(copy(payee));
         if (move(payee_exists)) {
@@ -197,7 +197,7 @@ module LibraAccount {
     // The new key will be used for signing future transactions
     public rotate_authentication_key(new_authentication_key: bytearray) {
         let sender: address;
-        let sender_account: &mut R#Self.T;
+        let sender_account: &mut Self.T;
         sender = get_txn_sender();
         sender_account = borrow_global<T>(move(sender));
         *(&mut move(sender_account).authentication_key) = move(new_authentication_key);
@@ -215,7 +215,7 @@ module LibraAccount {
     }
 
     // Helper to return u64 value of the `balance` field for given `account`
-    balance_for_account(account: &R#Self.T): u64 {
+    balance_for_account(account: &Self.T): u64 {
         let balance_value: u64;
         balance_value = LibraCoin.value(&move(account).balance);
         return move(balance_value);
@@ -223,8 +223,8 @@ module LibraAccount {
 
     // Return the current balance of the LibraCoin.T in LibraAccount.T at `addr`
     public balance(addr: address): u64 {
-        let payee_account: &mut R#Self.T;
-        let imm_payee_account: &R#Self.T;
+        let payee_account: &mut Self.T;
+        let imm_payee_account: &Self.T;
         let balance_amount: u64;
         payee_account = borrow_global<T>(move(addr));
         imm_payee_account = freeze(move(payee_account));
@@ -233,14 +233,14 @@ module LibraAccount {
     }
 
     // Helper to return the sequence number field for given `account`
-    sequence_number_for_account(account: &R#Self.T): u64 {
+    sequence_number_for_account(account: &Self.T): u64 {
         return *(&move(account).sequence_number);
     }
 
     // Return the current sequence number at `addr`
     public sequence_number(addr: address): u64 {
-        let account_ref: &mut R#Self.T;
-        let imm_ref: &R#Self.T;
+        let account_ref: &mut Self.T;
+        let imm_ref: &Self.T;
         let sequence_number_value: u64;
         account_ref = borrow_global<T>(move(addr));
         imm_ref = freeze(move(account_ref));
@@ -250,7 +250,7 @@ module LibraAccount {
 
     // Return true if the account at `addr` has delegated its withdrawal capability
     public delegated_withdrawal_capability(addr: address): bool {
-        let account_ref: &mut R#Self.T;
+        let account_ref: &mut Self.T;
 
         account_ref = borrow_global<T>(move(addr));
         return *&move(account_ref).delegated_withdrawal_capability;
@@ -271,8 +271,8 @@ module LibraAccount {
     prologue() {
         let transaction_sender: address;
         let transaction_sender_exists: bool;
-        let sender_account: &mut R#Self.T;
-        let imm_sender_account: &R#Self.T;
+        let sender_account: &mut Self.T;
+        let imm_sender_account: &Self.T;
         let sender_public_key: bytearray;
         let public_key_hash: bytearray;
         let gas_price: u64;
@@ -317,14 +317,14 @@ module LibraAccount {
     // It collects gas and bumps the sequence number
     epilogue() {
         let transaction_sender: address;
-        let sender_account: &mut R#Self.T;
-        let imm_sender_account: &R#Self.T;
+        let sender_account: &mut Self.T;
+        let imm_sender_account: &Self.T;
         let gas_price: u64;
         let gas_units_remaining: u64;
         let starting_gas_units: u64;
         let gas_fee_amount: u64;
         let balance_amount: u64;
-        let gas_fee: R#LibraCoin.T;
+        let gas_fee: LibraCoin.T;
         let transaction_sequence_number_value: u64;
 
         transaction_sender = get_txn_sender();
