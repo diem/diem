@@ -30,7 +30,6 @@ proptest-derive = "0.1.2"
 rusty-fork = "0.2.1"
 proto_conv = { path = "../../common/proto_conv" }
 schemadb = { path = "../schemadb" }
-sparse_merkle = { path = "../sparse_merkle" }
 storage_proto = { path = "../storage_proto" }
 types = { path = "../../types" }
 

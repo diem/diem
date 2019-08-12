@@ -17,7 +17,6 @@ proptest-derive = "0.1.2"
 crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 serde = { version = "1.0.89", features = ["derive"] }
-sparse_merkle = { path = "../sparse_merkle" }
 types = { path = "../../types" }
 
 [dev-dependencies]
