@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::LibraDB;
-use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, utils::keypair_strategy};
+use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use itertools::Itertools;
 use proptest::{
     collection::{hash_set, vec},

@@ -44,7 +44,7 @@ use bytes::Bytes;
 use channel;
 use crypto::{
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, Signature as LegacySignature,
+    HashValue,
 };
 use failure::Fail;
 use futures::{
@@ -493,8 +493,7 @@ fn sign(signer: &Signer<Ed25519PrivateKey>, msg: &[u8]) -> Vec<u8> {
     let signature: Ed25519Signature = signer
         .sign_message(get_hash(msg))
         .expect("Message signing fails");
-    let sig: LegacySignature = signature.into();
-    sig.to_compact().to_vec()
+    signature.to_bytes().to_vec()
 }
 
 async fn push_state_to_peer<TSubstream>(

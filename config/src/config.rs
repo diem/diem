@@ -30,9 +30,8 @@ use crate::{
     config::ConsensusProposerType::{FixedProposer, RotatingProposer},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{
-        deserialize_key, deserialize_legacy_key, deserialize_opt_key, serialize_key,
-        serialize_legacy_key, serialize_opt_key, TrustedPeerPrivateKeys, TrustedPeersConfig,
-        TrustedPeersConfigHelpers,
+        deserialize_key, deserialize_opt_key, serialize_key, serialize_opt_key,
+        TrustedPeerPrivateKeys, TrustedPeersConfig, TrustedPeersConfigHelpers,
     },
     utils::get_available_port,
 };
@@ -148,11 +147,11 @@ pub struct KeyPairs {
     #[serde(deserialize_with = "deserialize_key")]
     network_signing_public_key: Ed25519PublicKey,
 
-    #[serde(serialize_with = "serialize_legacy_key")]
-    #[serde(deserialize_with = "deserialize_legacy_key")]
+    #[serde(serialize_with = "serialize_key")]
+    #[serde(deserialize_with = "deserialize_key")]
     network_identity_private_key: X25519StaticPrivateKey,
-    #[serde(serialize_with = "serialize_legacy_key")]
-    #[serde(deserialize_with = "deserialize_legacy_key")]
+    #[serde(serialize_with = "serialize_key")]
+    #[serde(deserialize_with = "deserialize_key")]
     network_identity_public_key: X25519StaticPublicKey,
 
     #[serde(serialize_with = "serialize_opt_key")]

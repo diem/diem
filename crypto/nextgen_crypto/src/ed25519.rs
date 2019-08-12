@@ -394,75 +394,9 @@ impl Eq for Ed25519Signature {}
 pub mod compat {
     use crate::ed25519::*;
     #[cfg(any(test, feature = "testing"))]
-    use bincode::deserialize;
-    use bincode::serialize;
-    use crypto::{
-        PrivateKey as LegacyPrivateKey, PublicKey as LegacyPublicKey, Signature as LegacySignature,
-    };
-    #[cfg(any(test, feature = "testing"))]
     use proptest::strategy::LazyJust;
     #[cfg(any(test, feature = "testing"))]
     use proptest::{prelude::*, strategy::Strategy};
-
-    impl From<Ed25519PublicKey> for LegacyPublicKey {
-        fn from(public_key: Ed25519PublicKey) -> Self {
-            LegacyPublicKey::from_slice(&public_key.to_bytes()).unwrap()
-        }
-    }
-
-    impl From<Ed25519Signature> for LegacySignature {
-        fn from(signature: Ed25519Signature) -> Self {
-            LegacySignature::from_compact(&signature.to_bytes()).unwrap()
-        }
-    }
-
-    #[cfg(any(test, feature = "testing"))]
-    impl From<Ed25519PrivateKey> for LegacyPrivateKey {
-        fn from(private_key: Ed25519PrivateKey) -> Self {
-            // bincode requires size-padding on 8 bytes before the
-            // serialized material — so we reproduce this technique
-            let mut res = vec![
-                ED25519_PRIVATE_KEY_LENGTH as u8,
-                0u8,
-                0u8,
-                0u8,
-                0u8,
-                0u8,
-                0u8,
-                0u8,
-            ];
-            let serialized: Vec<u8> = private_key.to_bytes().to_vec();
-            res.extend(serialized);
-            deserialize::<LegacyPrivateKey>(&res).unwrap()
-        }
-    }
-
-    // This is impossible to activate due to reliance on private key
-    // conversion from legacy in chained_bft_consensus_provider.
-    // TODO: remove this when NodeConfig accepts nextgen_config keys
-    impl From<LegacyPrivateKey> for Ed25519PrivateKey {
-        fn from(private_key: LegacyPrivateKey) -> Self {
-            let serialized: Vec<u8> = serialize(&private_key).unwrap();
-            // The 8th index here is due to bincode's serialization, which
-            // preprends 8 bytes of size information to the serialized material
-            Ed25519PrivateKey::try_from(&serialized[8..]).unwrap()
-        }
-    }
-
-    impl From<LegacyPublicKey> for Ed25519PublicKey {
-        fn from(public_key: LegacyPublicKey) -> Self {
-            let encoded_privkey = public_key.to_slice();
-            let res_key = Ed25519PublicKey::try_from(&encoded_privkey[..]);
-            res_key.unwrap()
-        }
-    }
-
-    impl From<LegacySignature> for Ed25519Signature {
-        fn from(sig: LegacySignature) -> Self {
-            let data = sig.to_compact();
-            Ed25519Signature(ed25519_dalek::Signature::from_bytes(&data).unwrap())
-        }
-    }
 
     #[cfg(any(test, feature = "testing"))]
     impl Clone for Ed25519PrivateKey {
