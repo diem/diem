@@ -20,7 +20,8 @@ use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
-        CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL,
+        StateSynchronizerEvents, StateSynchronizerSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
+        CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL, STATE_SYNCHRONIZER_MSG_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -151,6 +152,7 @@ pub fn setup_network(
 ) -> (
     (MempoolNetworkSender, MempoolNetworkEvents),
     (ConsensusNetworkSender, ConsensusNetworkEvents),
+    (StateSynchronizerSender, StateSynchronizerEvents),
     Runtime,
 ) {
     let runtime = Builder::new()
@@ -192,6 +194,7 @@ pub fn setup_network(
     let (
         (mempool_network_sender, mempool_network_events),
         (consensus_network_sender, consensus_network_events),
+        (state_sync_network_sender, state_sync_network_events),
         _listen_addr,
     ) = NetworkBuilder::new(runtime.executor(), peer_id, listen_addr)
         .transport(if config.network.enable_encryption_and_authentication {
@@ -211,9 +214,13 @@ pub fn setup_network(
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
         ])
         .mempool_protocols(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)])
+        .state_sync_protocols(vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        )])
         .direct_send_protocols(vec![
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
         ])
         .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
         .build();
@@ -221,6 +228,7 @@ pub fn setup_network(
     (
         (mempool_network_sender, mempool_network_events),
         (consensus_network_sender, consensus_network_events),
+        (state_sync_network_sender, state_sync_network_events),
         runtime,
     )
 }
@@ -251,10 +259,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let (
         (mempool_network_sender, mempool_network_events),
         (consensus_network_sender, consensus_network_events),
+        (_state_sync_network_sender, _state_sync_network_events),
         network,
     ) = setup_network(node_config);
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 
+    // TODO: Migrate to use state_sync_network_sender.
     let state_synchronizer =
         StateSynchronizer::bootstrap(consensus_network_sender.clone(), &node_config);
 

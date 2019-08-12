@@ -40,6 +40,7 @@ fn test_network_builder() {
     let (
         (_mempool_network_sender, _mempool_network_events),
         (_consensus_network_sender, _consensus_network_events),
+        (_state_sync_network_sender, _state_sync_network_events),
         _listen_addr,
     ) = NetworkBuilder::new(runtime.executor(), peer_id, addr)
         .transport(TransportType::Memory)
@@ -110,7 +111,7 @@ fn test_mempool_sync() {
     .into_iter()
     .collect();
 
-    let ((_, mut listener_mp_net_events), _, listener_addr) =
+    let ((_, mut listener_mp_net_events), _, _, listener_addr) =
         NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
             .signing_keys((listener_signing_private_key, listener_signing_public_key))
             .identity_keys((listener_identity_private_key, listener_identity_public_key))
@@ -124,7 +125,7 @@ fn test_mempool_sync() {
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
 
-    let ((mut dialer_mp_net_sender, mut dialer_mp_net_events), _, _dialer_addr) =
+    let ((mut dialer_mp_net_sender, mut dialer_mp_net_events), _, _, _dialer_addr) =
         NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
             .transport(TransportType::Memory)
             .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
@@ -234,7 +235,7 @@ fn test_consensus_rpc() {
     .into_iter()
     .collect();
 
-    let (_, (_, mut listener_con_net_events), listener_addr) =
+    let (_, (_, mut listener_con_net_events), _, listener_addr) =
         NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
             .signing_keys((listener_signing_private_key, listener_signing_public_key))
             .identity_keys((listener_identity_private_key, listener_identity_public_key))
@@ -248,7 +249,7 @@ fn test_consensus_rpc() {
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
 
-    let (_, (mut dialer_con_net_sender, mut dialer_con_net_events), _dialer_addr) =
+    let (_, (mut dialer_con_net_sender, mut dialer_con_net_events), _, _dialer_addr) =
         NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
             .transport(TransportType::Memory)
             .signing_keys((dialer_signing_private_key, dialer_signing_public_key))

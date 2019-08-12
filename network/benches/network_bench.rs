@@ -91,7 +91,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let ((_, _), (_listener_sender, mut listener_events), listen_addr) =
+    let ((_, _), (_listener_sender, mut listener_events), _, listen_addr) =
         NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
             .transport(TransportType::TcpNoise)
             .trusted_peers(trusted_peers.clone())
@@ -107,7 +107,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
             .build();
 
     // Set up the dialer network
-    let ((_, _), (mut dialer_sender, mut dialer_events), _) =
+    let ((_, _), (mut dialer_sender, mut dialer_events), _, _dialer_addr) =
         NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
             .transport(TransportType::TcpNoise)
             .trusted_peers(trusted_peers.clone())
@@ -218,7 +218,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let ((_, _), (_listener_sender, mut listener_events), listen_addr) =
+    let ((_, _), (_listener_sender, mut listener_events), _, listen_addr) =
         NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
             .transport(TransportType::TcpNoise)
             .trusted_peers(trusted_peers.clone())
@@ -230,7 +230,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
             .build();
 
     // Set up the dialer network
-    let ((_, _), (dialer_sender, mut dialer_events), _) =
+    let ((_, _), (dialer_sender, mut dialer_events), _, _dialer_addr) =
         NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
             .transport(TransportType::TcpNoise)
             .trusted_peers(trusted_peers.clone())

@@ -146,7 +146,7 @@ impl SynchronizerEnv {
         .into_iter()
         .collect();
 
-        let (_, (sender_b, mut events_b), listener_addr) =
+        let (_, (sender_b, mut events_b), _, listener_addr) =
             NetworkBuilder::new(runtime.executor(), peers[1], addr.clone())
                 .signing_keys((b_signing_private_key, b_signing_public_key))
                 .identity_keys((b_identity_private_key, b_identity_public_key))
