@@ -471,7 +471,7 @@ pub enum SignatureToken {
     Struct(StructHandleIndex, Vec<SignatureToken>),
     /// Reference to a type.
     Reference(Box<SignatureToken>),
-    /// Immutable reference to a type.
+    /// Mutable reference to a type.
     MutableReference(Box<SignatureToken>),
     /// Type parameter.
     TypeParameter(TypeParameterIndex),
@@ -844,13 +844,21 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., reference```
     BorrowLoc(LocalIndex),
-    /// Load a reference to a field identified by `FieldDefinitionIndex`.
+    /// Load a mutable reference to a field identified by `FieldDefinitionIndex`.
+    /// The top of the stack must be a mutable reference to a type that contains the field
+    /// definition.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., reference -> ..., field_reference```
+    MutBorrowField(FieldDefinitionIndex),
+    /// Load an immutable reference to a field identified by `FieldDefinitionIndex`.
     /// The top of the stack must be a reference to a type that contains the field definition.
     ///
     /// Stack transition:
     ///
     /// ```..., reference -> ..., field_reference```
-    BorrowField(FieldDefinitionIndex),
+    ImmBorrowField(FieldDefinitionIndex),
     /// Return reference to an instance of type `StructDefinitionIndex` published at the address
     /// passed as argument. Abort execution if such an object does not exist or if a reference
     /// has already been handed out.
@@ -1050,7 +1058,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 52;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1077,7 +1085,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::ReleaseRef => write!(f, "ReleaseRef"),
             Bytecode::FreezeRef => write!(f, "FreezeRef"),
             Bytecode::BorrowLoc(a) => write!(f, "BorrowLoc({})", a),
-            Bytecode::BorrowField(a) => write!(f, "BorrowField({})", a),
+            Bytecode::MutBorrowField(a) => write!(f, "MutBorrowField({})", a),
+            Bytecode::ImmBorrowField(a) => write!(f, "ImmBorrowField({})", a),
             Bytecode::BorrowGlobal(a, b) => write!(f, "BorrowGlobal({}, {:?})", a, b),
             Bytecode::Add => write!(f, "Add"),
             Bytecode::Sub => write!(f, "Sub"),

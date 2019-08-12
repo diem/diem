@@ -199,7 +199,8 @@ enum BytecodeGen {
     LdAddr(PropIndex),
     LdStr(PropIndex),
     LdByteArray(PropIndex),
-    BorrowField(PropIndex),
+    MutBorrowField(PropIndex),
+    ImmBorrowField(PropIndex),
     Call(PropIndex, PropIndex),
     Pack(PropIndex, PropIndex),
     Unpack(PropIndex, PropIndex),
@@ -227,7 +228,8 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(LdAddr),
             any::<PropIndex>().prop_map(LdStr),
             any::<PropIndex>().prop_map(LdByteArray),
-            any::<PropIndex>().prop_map(BorrowField),
+            any::<PropIndex>().prop_map(ImmBorrowField),
+            any::<PropIndex>().prop_map(MutBorrowField),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Call(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Pack(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
@@ -257,7 +259,7 @@ impl BytecodeGen {
         use BytecodeGen::*;
 
         match self {
-            BorrowField(_) => state.field_defs_len != 0,
+            MutBorrowField(_) | ImmBorrowField(_) => state.field_defs_len != 0,
             CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) => !locals_signature.is_empty(),
             _ => true,
         }
@@ -286,14 +288,23 @@ impl BytecodeGen {
             BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex::new(
                 idx.index(state.byte_array_pool_len) as TableIndex,
             )),
-            BytecodeGen::BorrowField(idx) => {
+            BytecodeGen::MutBorrowField(idx) => {
                 // Again, once meaningful bytecodes are generated this won't actually be a
                 // possibility since it would be impossible to load a field from a struct that
                 // doesn't have any.
                 if state.field_defs_len == 0 {
                     return None;
                 }
-                Bytecode::BorrowField(FieldDefinitionIndex::new(
+                Bytecode::MutBorrowField(FieldDefinitionIndex::new(
+                    idx.index(state.field_defs_len) as TableIndex
+                ))
+            }
+            BytecodeGen::ImmBorrowField(idx) => {
+                // Same situation as above
+                if state.field_defs_len == 0 {
+                    return None;
+                }
+                Bytecode::ImmBorrowField(FieldDefinitionIndex::new(
                     idx.index(state.field_defs_len) as TableIndex
                 ))
             }

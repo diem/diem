@@ -352,7 +352,7 @@ where
                         }
                     }
                 }
-                Bytecode::BorrowField(fd_idx) => {
+                Bytecode::ImmBorrowField(fd_idx) | Bytecode::MutBorrowField(fd_idx) => {
                     let field_offset = self
                         .execution_stack
                         .top_frame()?

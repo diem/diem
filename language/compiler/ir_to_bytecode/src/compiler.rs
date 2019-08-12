@@ -2193,7 +2193,7 @@ impl<S: Scope + Sized> Compiler<S> {
         &mut self,
         struct_type: InferredType,
         struct_field: &Field,
-        is_mutable: bool,
+        is_mutable_borrow: bool,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
     ) -> Result<VecDeque<InferredType>> {
@@ -2202,22 +2202,14 @@ impl<S: Scope + Sized> Compiler<S> {
         let field_type = self.scope.get_field_type(sh_idx, struct_field.name())?;
         let fd_idx = self.scope.get_field_def(sh_idx, struct_field.name())?;
         function_frame.pop()?;
-        code.code.push(Bytecode::BorrowField(fd_idx));
-        function_frame.push()?;
-        let input_is_mutable = match struct_type {
-            InferredType::Reference(_) => false,
-            _ => true,
-        };
         let inner_token = Box::new(InferredType::from_signature_token(&field_type.0));
-        Ok(if is_mutable {
-            if !input_is_mutable {
-                bail!("Unsupported Syntax: Cannot take a mutable field reference in an immutable reference. It is not expressible in the bytecode");
-            }
+        Ok(if is_mutable_borrow {
+            code.code.push(Bytecode::MutBorrowField(fd_idx));
+            function_frame.push()?;
             self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
         } else {
-            if input_is_mutable {
-                code.code.push(Bytecode::FreezeRef);
-            }
+            code.code.push(Bytecode::ImmBorrowField(fd_idx));
+            function_frame.push()?;
             self.make_singleton_vec_deque(InferredType::Reference(inner_token))
         })
     }

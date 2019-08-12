@@ -253,7 +253,8 @@ impl GasMeter {
                 Self::gas_of(default_gas)
             }
             | Bytecode::BorrowLoc(_)
-            | Bytecode::BorrowField(_) => {
+            | Bytecode::MutBorrowField(_)
+            | Bytecode::ImmBorrowField(_) => {
                 let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }

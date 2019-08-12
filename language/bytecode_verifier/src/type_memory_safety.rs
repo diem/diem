@@ -14,7 +14,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     errors::VMStaticViolation,
-    file_format::{Bytecode, CompiledModule, FunctionDefinition, Kind, LocalIndex, SignatureToken},
+    file_format::{
+        Bytecode, CompiledModule, FieldDefinitionIndex, FunctionDefinition, Kind, LocalIndex,
+        SignatureToken,
+    },
     views::{
         FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView, SignatureTokenView,
         StructDefinitionView, ViewInternals,
@@ -132,6 +135,29 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         }
     }
 
+    fn verify_field_access(
+        &self,
+        operand: &StackAbstractValue,
+        field_definition_index: &FieldDefinitionIndex,
+        offset: usize,
+    ) -> Result<(), VMStaticViolation> {
+        let struct_handle_index =
+            match SignatureToken::get_struct_handle_from_reference(&operand.signature) {
+                Some(struct_handle_index) => struct_handle_index,
+                None => {
+                    return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
+                }
+            };
+        if !self
+            .module
+            .is_field_in_struct(*field_definition_index, struct_handle_index)
+        {
+            return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
+        }
+
+        Ok(())
+    }
+
     fn execute_inner(
         &mut self,
         mut state: &mut AbstractState,
@@ -235,63 +261,74 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
             }
 
-            Bytecode::BorrowField(field_definition_index) => {
+            Bytecode::MutBorrowField(field_definition_index) => {
                 let operand = self.stack.pop().unwrap();
-                if let Some(struct_handle_index) =
-                    SignatureToken::get_struct_handle_from_reference(&operand.signature)
-                {
-                    if self
-                        .module
-                        .is_field_in_struct(*field_definition_index, struct_handle_index)
-                    {
-                        let field_signature = self
-                            .module
-                            .get_field_signature(*field_definition_index)
-                            .0
-                            .clone();
-                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
-                        let nonce = self.get_nonce(&mut state);
-                        if operand.signature.is_mutable_reference() {
-                            let borrowed_nonces = state.borrowed_nonces_for_field(
-                                *field_definition_index,
-                                operand_nonce.clone(),
-                            );
-                            if Self::write_borrow_ok(borrowed_nonces) {
-                                self.stack.push(StackAbstractValue {
-                                    signature: SignatureToken::MutableReference(Box::new(
-                                        field_signature.clone(),
-                                    )),
-                                    value: AbstractValue::Reference(nonce.clone()),
-                                });
-                                state.borrow_field_from_nonce(
-                                    *field_definition_index,
-                                    operand_nonce.clone(),
-                                    nonce,
-                                );
-                                state.destroy_nonce(operand_nonce);
-                            } else {
-                                return Err(
-                                    VMStaticViolation::BorrowFieldExistsMutableBorrowError(offset),
-                                );
-                            }
-                        } else {
-                            self.stack.push(StackAbstractValue {
-                                signature: SignatureToken::Reference(Box::new(field_signature)),
-                                value: AbstractValue::Reference(nonce.clone()),
-                            });
-                            state.borrow_field_from_nonce(
-                                *field_definition_index,
-                                operand_nonce.clone(),
-                                nonce,
-                            );
-                            state.destroy_nonce(operand_nonce);
-                        }
-                    } else {
-                        return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
-                    }
-                } else {
+                self.verify_field_access(&operand, field_definition_index, offset)?;
+
+                let operand_nonce = operand.value.extract_nonce().unwrap().clone();
+                let nonce = self.get_nonce(&mut state);
+                if !operand.signature.is_mutable_reference() {
                     return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
                 }
+
+                let borrowed_nonces =
+                    state.borrowed_nonces_for_field(*field_definition_index, operand_nonce.clone());
+                if !Self::write_borrow_ok(borrowed_nonces) {
+                    return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
+                        offset,
+                    ));
+                }
+
+                let field_signature = self
+                    .module
+                    .get_field_signature(*field_definition_index)
+                    .0
+                    .clone();
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::MutableReference(Box::new(field_signature)),
+                    value: AbstractValue::Reference(nonce.clone()),
+                });
+                state.borrow_field_from_nonce(
+                    *field_definition_index,
+                    operand_nonce.clone(),
+                    nonce,
+                );
+                state.destroy_nonce(operand_nonce);
+                Ok(())
+            }
+
+            Bytecode::ImmBorrowField(field_definition_index) => {
+                let operand = self.stack.pop().unwrap();
+                self.verify_field_access(&operand, field_definition_index, offset)?;
+
+                let operand_nonce = operand.value.extract_nonce().unwrap().clone();
+                let nonce = self.get_nonce(&mut state);
+                // No checks needed for immutable case
+                if operand.signature.is_mutable_reference() {
+                    let borrowed_nonces = state
+                        .borrowed_nonces_for_field(*field_definition_index, operand_nonce.clone());
+                    if !self.freeze_ok(&state, borrowed_nonces) {
+                        return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
+                            offset,
+                        ));
+                    }
+                }
+
+                let field_signature = self
+                    .module
+                    .get_field_signature(*field_definition_index)
+                    .0
+                    .clone();
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Reference(Box::new(field_signature)),
+                    value: AbstractValue::Reference(nonce.clone()),
+                });
+                state.borrow_field_from_nonce(
+                    *field_definition_index,
+                    operand_nonce.clone(),
+                    nonce,
+                );
+                state.destroy_nonce(operand_nonce);
                 Ok(())
             }
 

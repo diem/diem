@@ -636,8 +636,13 @@ fn display_bytecode<T: TableAccess>(
             write!(f, ")")
         }
         Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_string_at(*idx).unwrap()),
-        Bytecode::BorrowField(idx) => {
-            write!(f, "BorrowField(")?;
+        Bytecode::MutBorrowField(idx) => {
+            write!(f, "MutBorrowField(")?;
+            display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
+            write!(f, ")")
+        }
+        Bytecode::ImmBorrowField(idx) => {
+            write!(f, "ImmBorrowField(")?;
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }
