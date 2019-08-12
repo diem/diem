@@ -73,7 +73,7 @@ impl<'a> StackUsageVerifier<'a> {
                 -return_count
             }
 
-            Bytecode::Branch(_) | Bytecode::BorrowField(_) => 0,
+            Bytecode::Branch(_) | Bytecode::MutBorrowField(_) | Bytecode::ImmBorrowField(_) => 0,
 
             Bytecode::LdConst(_)
             | Bytecode::LdAddr(_)

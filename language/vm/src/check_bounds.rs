@@ -330,7 +330,7 @@ impl FunctionDefinition {
                     LdStr(idx) => {
                         check_code_unit_bounds_impl(&module.string_pool, bytecode_offset, *idx)
                     }
-                    BorrowField(idx) => {
+                    MutBorrowField(idx) | ImmBorrowField(idx) => {
                         check_code_unit_bounds_impl(&module.field_defs, bytecode_offset, *idx)
                     }
                     Call(idx, _) => {

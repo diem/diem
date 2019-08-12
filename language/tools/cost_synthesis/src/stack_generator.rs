@@ -175,7 +175,8 @@ where
             | Unpack(_, _)
             | Pack(_, _)
             | Call(_, _) => true,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) | BorrowField(_) => true,
+            CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) | ImmBorrowField(_)
+            | MutBorrowField(_) => true,
             _ => false,
         }
     }
@@ -562,7 +563,7 @@ where
     // that we are aware of.
     fn generate_from_module_info(&mut self) -> StackState<'txn> {
         use Bytecode::*;
-        match self.op {
+        match &self.op {
             MoveToSender(_, _) => {
                 let struct_handle_idx = self.next_resource();
                 // We can just pick a random address -- this is incorrect by the bytecode semantics
@@ -706,7 +707,7 @@ where
                     HashMap::new(),
                 )
             }
-            BorrowField(_) => {
+            ImmBorrowField(_) | MutBorrowField(_) => {
                 // First grab a random struct
                 let struct_def_bound = self.root_module.struct_defs().len() as TableIndex;
                 let random_struct_idx =
@@ -726,10 +727,16 @@ where
                     .borrow_field(u32::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")
                     .size();
+                let fdi = FieldDefinitionIndex::new(field_index);
+                let op = match self.op {
+                    ImmBorrowField(_) => ImmBorrowField(fdi),
+                    MutBorrowField(_) => MutBorrowField(fdi),
+                    _ => panic!("[BorrowField] Impossible case for op"),
+                };
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(vec![struct_stack]),
-                    BorrowField(FieldDefinitionIndex::new(field_index)),
+                    op,
                     field_size,
                     HashMap::new(),
                 )

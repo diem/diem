@@ -203,12 +203,19 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         ByteArrayPoolIndex,
                         LdByteArray
                     ),
-                    BorrowField(_) => new_bytecode!(
+                    ImmBorrowField(_) => new_bytecode!(
                         field_defs_len,
                         bytecode_idx,
                         offset,
                         FieldDefinitionIndex,
-                        BorrowField
+                        ImmBorrowField
+                    ),
+                    MutBorrowField(_) => new_bytecode!(
+                        field_defs_len,
+                        bytecode_idx,
+                        offset,
+                        FieldDefinitionIndex,
+                        MutBorrowField
                     ),
                     Call(_, _) => struct_bytecode!(
                         function_handles_len,
@@ -298,7 +305,8 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         LdAddr(_)
         | LdStr(_)
         | LdByteArray(_)
-        | BorrowField(_)
+        | ImmBorrowField(_)
+        | MutBorrowField(_)
         | Call(_, _)
         | Pack(_, _)
         | Unpack(_, _)

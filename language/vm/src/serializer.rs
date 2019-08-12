@@ -604,8 +604,12 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::BORROW_LOC as u8)?;
             binary.push(*local_idx)
         }
-        Bytecode::BorrowField(field_idx) => {
-            binary.push(Opcodes::BORROW_FIELD as u8)?;
+        Bytecode::MutBorrowField(field_idx) => {
+            binary.push(Opcodes::MUT_BORROW_FIELD as u8)?;
+            write_u16_as_uleb128(binary, field_idx.0)
+        }
+        Bytecode::ImmBorrowField(field_idx) => {
+            binary.push(Opcodes::IMM_BORROW_FIELD as u8)?;
             write_u16_as_uleb128(binary, field_idx.0)
         }
         Bytecode::Call(method_idx, types_idx) => {

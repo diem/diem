@@ -227,7 +227,7 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
             empty() => ref_values(1),
             empty() => ref_resources(1)
         },
-        Bytecode::BorrowLoc(_) | Bytecode::BorrowField(_) => {
+        Bytecode::BorrowLoc(_) | Bytecode::ImmBorrowField(_) | Bytecode::MutBorrowField(_) => {
             type_transition! { empty() => ref_values(1), empty() => ref_resources(1) }
         }
         Bytecode::ReadRef => type_transition! { ref_values(1) => values(1) },
