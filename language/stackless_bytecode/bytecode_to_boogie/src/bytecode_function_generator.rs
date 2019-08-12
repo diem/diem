@@ -110,7 +110,7 @@ impl<'a> BoogieTranslator<'a> {
             res.push_str(&format!("    var b{}: Value;\n", i));
             bool_res_str.push_str(&format!(" && b#Boolean(b{})", i));
             bool_assign_str.push_str(&format!(
-                "    call b{} := Eq_{}(m#Map(v1)[Field({}_{})], m#Map(v1)[Field({}_{})]);\n",
+                "    call b{} := Eq_{}(m#Map(v1)[Field({}_{})], m#Map(v2)[Field({}_{})]);\n",
                 i, field_type, struct_name, field_name, struct_name, field_name,
             ));
         }

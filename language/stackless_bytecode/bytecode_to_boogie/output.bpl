@@ -161,34 +161,52 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dest: Reference)
 }
 
 // Eq, Pack, and Unpack are auto-generated for each type T
+const MAX_U64: int;
+axiom MAX_U64 == 9223372036854775807;
+var abort_flag: bool;
 
 procedure {:inline 1} Add(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) + i#Integer(src2));
 }
 
 procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) < i#Integer(src2)) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
 procedure {:inline 1} Mul(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) * i#Integer(src2));
 }
 
 procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) div i#Integer(src2));
 }
 
 procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
 {
     assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
     dst := Integer(i#Integer(src1) mod i#Integer(src2));
 }
 
@@ -339,54 +357,17 @@ procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
 
 // Special instruction
 var Address_Exists: [Address]bool;
-procedure {:inline 1} CreateAccount(addr_val: Value)
-modifies Address_Exists;
+procedure {:inline 1} CreateAccount(addr_val: Value, addr_exists: [Address]bool)
+returns (addr_exists': [Address]bool)
 {
   var addr: Address;
   addr := a#Address(addr_val);
-  assert !Address_Exists[addr];
-  Address_Exists[addr] := true;
+  assert !addr_exists[addr];
+  addr_exists' := addr_exists[addr := true];
 }
 
 
 // everything below is auto generated
-
-const unique Test3_T: TypeName;
-const unique Test3_T_f: FieldName;
-const unique Test3_T_g: FieldName;
-
-procedure {:inline 1} Pack_Test3_T(v0: Value, v1: Value) returns (v: Value)
-{
-    assert is#Integer(v0);
-    assert is#Integer(v1);
-    v := Map(DefaultMap[Field(Test3_T_f) := v0][Field(Test3_T_g) := v1]);
-}
-
-procedure {:inline 1} Unpack_Test3_T(v: Value) returns (v0: Value, v1: Value)
-{
-    assert is#Map(v);
-    v0 := m#Map(v)[Field(Test3_T_f)];
-    v1 := m#Map(v)[Field(Test3_T_g)];
-}
-
-procedure {:inline 1} Eq_Test3_T(v1: Value, v2: Value) returns (res: Value)
-{
-    var b0: Value;
-    var b1: Value;
-    assert is#Map(v1) && is#Map(v2);
-    call b0 := Eq_int(m#Map(v1)[Field(Test3_T_f)], m#Map(v1)[Field(Test3_T_f)]);
-    call b1 := Eq_int(m#Map(v1)[Field(Test3_T_g)], m#Map(v1)[Field(Test3_T_g)]);
-    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
-}
-
-procedure {:inline 1} Neq_Test3_T(v1: Value, v2: Value) returns (res: Value)
-{
-    var res_val: Value;
-    var res_bool: bool;
-    assert is#Map(v1) && is#Map(v2);
-    call res_val := Eq_Test3_T(v1, v2);
-    res := Boolean(!b#Boolean(res_val));
-}
 
 const unique t0_LocalName: LocalName;
 const unique t1_LocalName: LocalName;
@@ -412,48 +393,8 @@ const unique t20_LocalName: LocalName;
 const unique t21_LocalName: LocalName;
 const unique t22_LocalName: LocalName;
 const unique t23_LocalName: LocalName;
-const unique t24_LocalName: LocalName;
-const unique t25_LocalName: LocalName;
-const unique t26_LocalName: LocalName;
-const unique t27_LocalName: LocalName;
-const unique t28_LocalName: LocalName;
-const unique t29_LocalName: LocalName;
-const unique t30_LocalName: LocalName;
-const unique t31_LocalName: LocalName;
-const unique t32_LocalName: LocalName;
-const unique t33_LocalName: LocalName;
-const unique t34_LocalName: LocalName;
-const unique t35_LocalName: LocalName;
-const unique t36_LocalName: LocalName;
-const unique t37_LocalName: LocalName;
-const unique t38_LocalName: LocalName;
-const unique t39_LocalName: LocalName;
-const unique t40_LocalName: LocalName;
-const unique t41_LocalName: LocalName;
-const unique t42_LocalName: LocalName;
-const unique t43_LocalName: LocalName;
-const unique t44_LocalName: LocalName;
-const unique t45_LocalName: LocalName;
-const unique t46_LocalName: LocalName;
-const unique t47_LocalName: LocalName;
-const unique t48_LocalName: LocalName;
-const unique t49_LocalName: LocalName;
-const unique t50_LocalName: LocalName;
-const unique t51_LocalName: LocalName;
-const unique t52_LocalName: LocalName;
-const unique t53_LocalName: LocalName;
-const unique t54_LocalName: LocalName;
-const unique t55_LocalName: LocalName;
-const unique t56_LocalName: LocalName;
-const unique t57_LocalName: LocalName;
-const unique t58_LocalName: LocalName;
-const unique t59_LocalName: LocalName;
-const unique t60_LocalName: LocalName;
-const unique t61_LocalName: LocalName;
-const unique t62_LocalName: LocalName;
-const unique t63_LocalName: LocalName;
 
-procedure {:inline 1} IsPrefix0(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
+procedure {:inline 1} IsPrefixMax(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
 {
     if (srcPath == dstPath) {
         isPrefix := true;
@@ -464,18 +405,7 @@ procedure {:inline 1} IsPrefix0(dstPath: Path, srcPath: Path) returns (isPrefix:
     }
 }
 
-procedure {:inline 1} IsPrefixMax(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
-{
-    if (srcPath == dstPath) {
-        isPrefix := true;
-    } else if (srcPath == Nil()) {
-        isPrefix := false;
-    } else {
-        call isPrefix := IsPrefix0(dstPath, p#Cons(srcPath));
-    }
-}
-
-procedure {:inline 1} UpdateValue0(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
+procedure {:inline 1} UpdateValueMax(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
 {
     var e: Edge;
     var v': Value;
@@ -486,269 +416,411 @@ procedure {:inline 1} UpdateValue0(srcPath: Path, srcValue: Value, dstPath: Path
     }
 }
 
-procedure {:inline 1} UpdateValueMax(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
-{
-    var e: Edge;
-    var v': Value;
-    if (srcPath == dstPath) {
-        dstValue' := srcValue;
-    } else {
-        call v' := UpdateValue0(srcPath, srcValue, Cons(dstPath, e), m#Map(dstValue)[e]);
-        dstValue' := Map(m#Map(dstValue)[e := v']);
-    }
-}
-
-procedure Test3_test3 (c: CreationTime, arg0: Value, rs_Test3_T: ResourceStore) returns (rs_Test3_T': ResourceStore)
+procedure TestArithmetic_add_two_number (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value, ret1: Value)
+ensures !abort_flag;
 {
     // declare local variables
-    var t0: Value; // bool
-    var t1: Value; // Test3_T
-    var t2: Reference; // Test3_T_ref
-    var t3: Reference; // int_ref
-    var t4: Reference; // int_ref
-    var t5: Reference; // int_ref
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
     var t6: Value; // int
     var t7: Value; // int
     var t8: Value; // int
     var t9: Value; // int
-    var t10: Value; // Test3_T
-    var t11: Reference; // Test3_T_ref
-    var t12: Value; // bool
-    var t13: Reference; // Test3_T_ref
-    var t14: Reference; // int_ref
-    var t15: Reference; // Test3_T_ref
-    var t16: Reference; // int_ref
-    var t17: Value; // int
-    var t18: Reference; // int_ref
-    var t19: Reference; // Test3_T_ref
-    var t20: Reference; // int_ref
-    var t21: Reference; // int_ref
-    var t22: Reference; // Test3_T_ref
-    var t23: Reference; // int_ref
-    var t24: Reference; // int_ref
-    var t25: Reference; // int_ref
-    var t26: Value; // int
-    var t27: Reference; // int_ref
-    var t28: Value; // int
-    var t29: Value; // bool
-    var t30: Value; // int
-    var t31: Value; // int
-    var t32: Value; // bool
-    var t33: Value; // bool
-    var t34: Value; // int
-    var t35: Value; // int
-    var t36: Value; // int
-    var t37: Value; // bool
-    var t38: Value; // bool
-    var t39: Value; // int
-    var t40: Value; // int
-    var t41: Value; // int
-    var t42: Value; // bool
-    var t43: Value; // bool
-    var t44: Value; // int
-    var t45: Value; // int
-    var t46: Value; // int
-    var t47: Value; // bool
-    var t48: Value; // bool
-    var t49: Value; // int
 
     // declare a new creation time for calls inside this function
     var c': CreationTime;
     assume c' > c;
+    assume !abort_flag;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
     // assign arguments to locals so they can be modified
     t0 := arg0;
+    t1 := arg1;
 
     // assign ResourceStores to locals so they can be modified
-    rs_Test3_T' := rs_Test3_T;
+    addr_exists' := addr_exists;
 
     // bytecode translation starts here
-    call t8 := LdConst(0);
+    call t4 := CopyOrMoveValue(t0);
 
-    call t9 := LdConst(0);
+    call t5 := CopyOrMoveValue(t1);
 
-    call t10 := Pack_Test3_T(t8, t9);
+    call t6 := Add(t4, t5);
 
-    call t1 := CopyOrMoveValue(t10);
+    call t2 := CopyOrMoveValue(t6);
 
-    call t11 := BorrowLoc(c, t1_LocalName, t1);
+    call t7 := LdConst(3);
 
-    call t2 := CopyOrMoveRef(t11);
+    call t3 := CopyOrMoveValue(t7);
 
-    call t12 := CopyOrMoveValue(t0);
+    call t8 := CopyOrMoveValue(t3);
 
-    if (!b#Boolean(t12)) { goto Label_12; }
+    call t9 := CopyOrMoveValue(t2);
 
-    call t13 := CopyOrMoveRef(t2);
+    ret0 := t8;
+    ret1 := t9;
+    return;
 
-    call t14 := BorrowField(t13, Test3_T_f);
+}
+procedure TestArithmetic_multiple_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value) returns (addr_exists': [Address]bool, ret0: Value)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // int
 
-    call t3 := CopyOrMoveRef(t14);
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
 
-    goto Label_15;
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
+    assume is#Integer(arg2);
 
-Label_12:
-    call t15 := CopyOrMoveRef(t2);
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+    t2 := arg2;
 
-    call t16 := BorrowField(t15, Test3_T_g);
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
 
-    call t3 := CopyOrMoveRef(t16);
+    // bytecode translation starts here
+    call t4 := CopyOrMoveValue(t0);
 
-Label_15:
-    call t17 := LdConst(10);
+    call t5 := CopyOrMoveValue(t1);
 
-    call t18 := CopyOrMoveRef(t3);
+    call t6 := Add(t4, t5);
 
-    call t18 := WriteRef(t18, t17);
+    call t7 := CopyOrMoveValue(t2);
 
-    call t2 := DeepUpdateReference(t18, t2);
-    call t3 := DeepUpdateReference(t18, t3);
-    call t4 := DeepUpdateReference(t18, t4);
-    call t5 := DeepUpdateReference(t18, t5);
-    call t11 := DeepUpdateReference(t18, t11);
-    call t13 := DeepUpdateReference(t18, t13);
-    call t14 := DeepUpdateReference(t18, t14);
-    call t15 := DeepUpdateReference(t18, t15);
-    call t16 := DeepUpdateReference(t18, t16);
-    call t19 := DeepUpdateReference(t18, t19);
-    call t20 := DeepUpdateReference(t18, t20);
-    call t21 := DeepUpdateReference(t18, t21);
-    call t22 := DeepUpdateReference(t18, t22);
-    call t23 := DeepUpdateReference(t18, t23);
-    call t24 := DeepUpdateReference(t18, t24);
-    call t25 := DeepUpdateReference(t18, t25);
-    call t27 := DeepUpdateReference(t18, t27);
-    call rs_Test3_T' := DeepUpdateGlobal(Test3_T, t18, rs_Test3_T');
-    call t0 := DeepUpdateLocal(c, t0_LocalName, t18, t0);
-    call t1 := DeepUpdateLocal(c, t1_LocalName, t18, t1);
-    call t6 := DeepUpdateLocal(c, t6_LocalName, t18, t6);
-    call t7 := DeepUpdateLocal(c, t7_LocalName, t18, t7);
-    call t8 := DeepUpdateLocal(c, t8_LocalName, t18, t8);
-    call t9 := DeepUpdateLocal(c, t9_LocalName, t18, t9);
-    call t10 := DeepUpdateLocal(c, t10_LocalName, t18, t10);
-    call t12 := DeepUpdateLocal(c, t12_LocalName, t18, t12);
-    call t26 := DeepUpdateLocal(c, t26_LocalName, t18, t26);
-    call t28 := DeepUpdateLocal(c, t28_LocalName, t18, t28);
-    call t29 := DeepUpdateLocal(c, t29_LocalName, t18, t29);
-    call t30 := DeepUpdateLocal(c, t30_LocalName, t18, t30);
-    call t31 := DeepUpdateLocal(c, t31_LocalName, t18, t31);
-    call t32 := DeepUpdateLocal(c, t32_LocalName, t18, t32);
-    call t33 := DeepUpdateLocal(c, t33_LocalName, t18, t33);
-    call t34 := DeepUpdateLocal(c, t34_LocalName, t18, t34);
-    call t35 := DeepUpdateLocal(c, t35_LocalName, t18, t35);
-    call t36 := DeepUpdateLocal(c, t36_LocalName, t18, t36);
-    call t37 := DeepUpdateLocal(c, t37_LocalName, t18, t37);
-    call t38 := DeepUpdateLocal(c, t38_LocalName, t18, t38);
-    call t39 := DeepUpdateLocal(c, t39_LocalName, t18, t39);
-    call t40 := DeepUpdateLocal(c, t40_LocalName, t18, t40);
-    call t41 := DeepUpdateLocal(c, t41_LocalName, t18, t41);
-    call t42 := DeepUpdateLocal(c, t42_LocalName, t18, t42);
-    call t43 := DeepUpdateLocal(c, t43_LocalName, t18, t43);
-    call t44 := DeepUpdateLocal(c, t44_LocalName, t18, t44);
-    call t45 := DeepUpdateLocal(c, t45_LocalName, t18, t45);
-    call t46 := DeepUpdateLocal(c, t46_LocalName, t18, t46);
-    call t47 := DeepUpdateLocal(c, t47_LocalName, t18, t47);
-    call t48 := DeepUpdateLocal(c, t48_LocalName, t18, t48);
-    call t49 := DeepUpdateLocal(c, t49_LocalName, t18, t49);
+    call t8 := Mul(t6, t7);
 
-    call t19 := CopyOrMoveRef(t2);
+    call t3 := CopyOrMoveValue(t8);
 
-    call t20 := BorrowField(t19, Test3_T_f);
+    call t9 := CopyOrMoveValue(t3);
 
-    call t21 := FreezeRef(t20);
+    ret0 := t9;
+    return;
 
-    call t4 := CopyOrMoveRef(t21);
+}
+procedure TestArithmetic_bool_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // bool
+    var t3: Value; // bool
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // bool
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // bool
+    var t10: Value; // bool
+    var t11: Value; // int
+    var t12: Value; // int
+    var t13: Value; // bool
+    var t14: Value; // int
+    var t15: Value; // int
+    var t16: Value; // bool
+    var t17: Value; // bool
+    var t18: Value; // bool
+    var t19: Value; // bool
+    var t20: Value; // bool
+    var t21: Value; // bool
+    var t22: Value; // int
 
-    call t22 := CopyOrMoveRef(t2);
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
 
-    call t23 := BorrowField(t22, Test3_T_g);
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
-    call t24 := FreezeRef(t23);
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
 
-    call t5 := CopyOrMoveRef(t24);
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
 
-    call t25 := CopyOrMoveRef(t4);
+    // bytecode translation starts here
+    call t4 := CopyOrMoveValue(t0);
 
-    call t26 := ReadRef(t25);
+    call t5 := CopyOrMoveValue(t1);
 
-    call t6 := CopyOrMoveValue(t26);
+    call t6 := Gt(t4, t5);
 
-    call t27 := CopyOrMoveRef(t5);
+    call t7 := CopyOrMoveValue(t0);
 
-    call t28 := ReadRef(t27);
+    call t8 := CopyOrMoveValue(t1);
 
-    call t7 := CopyOrMoveValue(t28);
+    call t9 := Ge(t7, t8);
 
-    call t29 := CopyOrMoveValue(t0);
+    call t10 := And(t6, t9);
 
-    if (!b#Boolean(t29)) { goto Label_49; }
+    call t2 := CopyOrMoveValue(t10);
 
-    call t30 := CopyOrMoveValue(t6);
+    call t11 := CopyOrMoveValue(t0);
 
-    call t31 := LdConst(10);
+    call t12 := CopyOrMoveValue(t1);
 
-    call t32 := Eq_int(t30, t31);
+    call t13 := Lt(t11, t12);
 
-    call t33 := Not(t32);
+    call t14 := CopyOrMoveValue(t0);
 
-    if (!b#Boolean(t33)) { goto Label_41; }
+    call t15 := CopyOrMoveValue(t1);
 
-    call t34 := LdConst(42);
+    call t16 := Le(t14, t15);
 
-    assert false;
+    call t17 := Or(t13, t16);
 
-Label_41:
-    call t35 := CopyOrMoveValue(t7);
+    call t3 := CopyOrMoveValue(t17);
 
-    call t36 := LdConst(0);
+    call t18 := CopyOrMoveValue(t2);
 
-    call t37 := Eq_int(t35, t36);
+    call t19 := CopyOrMoveValue(t3);
 
-    call t38 := Not(t37);
+    call t20 := Neq_bool(t18, t19);
 
-    if (!b#Boolean(t38)) { goto Label_48; }
+    call t21 := Not(t20);
 
-    call t39 := LdConst(42);
+    if (!b#Boolean(t21)) { goto Label_23; }
 
-    assert false;
-
-Label_48:
-    goto Label_63;
-
-Label_49:
-    call t40 := CopyOrMoveValue(t6);
-
-    call t41 := LdConst(0);
-
-    call t42 := Eq_int(t40, t41);
-
-    call t43 := Not(t42);
-
-    if (!b#Boolean(t43)) { goto Label_56; }
-
-    call t44 := LdConst(42);
+    call t22 := LdConst(42);
 
     assert false;
 
-Label_56:
-    call t45 := CopyOrMoveValue(t7);
+Label_23:
+    return;
 
-    call t46 := LdConst(10);
+}
+procedure TestArithmetic_arithmetic_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value, ret1: Value)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // int
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // int
+    var t13: Value; // int
+    var t14: Value; // int
+    var t15: Value; // int
+    var t16: Value; // bool
+    var t17: Value; // bool
+    var t18: Value; // int
+    var t19: Value; // int
+    var t20: Value; // int
 
-    call t47 := Eq_int(t45, t46);
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
 
-    call t48 := Not(t47);
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+    assume is#Integer(arg1);
 
-    if (!b#Boolean(t48)) { goto Label_63; }
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
 
-    call t49 := LdConst(42);
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := LdConst(6);
+
+    call t4 := LdConst(4);
+
+    call t5 := Add(t3, t4);
+
+    call t6 := LdConst(1);
+
+    call t7 := Sub(t5, t6);
+
+    call t8 := LdConst(2);
+
+    call t9 := Mul(t7, t8);
+
+    call t10 := LdConst(3);
+
+    call t11 := Div(t9, t10);
+
+    call t12 := LdConst(4);
+
+    call t13 := Mod(t11, t12);
+
+    call t2 := CopyOrMoveValue(t13);
+
+    call t14 := CopyOrMoveValue(t2);
+
+    call t15 := LdConst(2);
+
+    call t16 := Eq_int(t14, t15);
+
+    call t17 := Not(t16);
+
+    if (!b#Boolean(t17)) { goto Label_19; }
+
+    call t18 := LdConst(42);
 
     assert false;
 
-Label_63:
+Label_19:
+    call t19 := CopyOrMoveValue(t2);
+
+    call t20 := CopyOrMoveValue(t0);
+
+    ret0 := t19;
+    ret1 := t20;
+    return;
+
+}
+procedure TestArithmetic_overflow (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := LdConst(9223372036854775807);
+
+    call t0 := CopyOrMoveValue(t2);
+
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := LdConst(1);
+
+    call t5 := Add(t3, t4);
+
+    call t1 := CopyOrMoveValue(t5);
+
+    return;
+
+}
+procedure TestArithmetic_underflow (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := LdConst(0);
+
+    call t0 := CopyOrMoveValue(t2);
+
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := LdConst(1);
+
+    call t5 := Sub(t3, t4);
+
+    call t1 := CopyOrMoveValue(t5);
+
+    return;
+
+}
+procedure TestArithmetic_div_by_zero (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+ensures !abort_flag;
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := LdConst(0);
+
+    call t0 := CopyOrMoveValue(t2);
+
+    call t3 := LdConst(1);
+
+    call t4 := CopyOrMoveValue(t0);
+
+    call t5 := Div(t3, t4);
+
+    call t1 := CopyOrMoveValue(t5);
+
     return;
 
 }
