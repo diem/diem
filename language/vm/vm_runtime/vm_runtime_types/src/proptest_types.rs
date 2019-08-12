@@ -56,11 +56,11 @@ impl Value {
 
 impl Arbitrary for Value {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::nested_strategy(3, 50, 10).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 /// Strategies for Type
@@ -99,9 +99,9 @@ impl Type {
 
 impl Arbitrary for Type {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::nested_strategy(3, 20, 10).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }

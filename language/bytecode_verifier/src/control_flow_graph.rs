@@ -128,38 +128,6 @@ impl VMControlFlowGraph {
 const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl ControlFlowGraph for VMControlFlowGraph {
-    fn num_blocks(&self) -> u16 {
-        self.blocks.len() as u16
-    }
-
-    fn block_id_of_offset(&self, code_offset: CodeOffset) -> Option<BlockId> {
-        let mut index = None;
-
-        for (block_id, block) in &self.blocks {
-            if block.entry >= code_offset && block.exit <= code_offset {
-                index = Some(*block_id);
-            }
-        }
-
-        index
-    }
-
-    fn block_of_id(&self, block_id: BlockId) -> Option<&BasicBlock> {
-        if self.blocks.contains_key(&block_id) {
-            Some(&self.blocks[&block_id])
-        } else {
-            None
-        }
-    }
-
-    fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock> {
-        self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
-    }
-
-    fn entry_block_id(&self) -> BlockId {
-        ENTRY_BLOCK_ID
-    }
-
     fn new(code: &[Bytecode]) -> Self {
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
@@ -190,5 +158,37 @@ impl ControlFlowGraph for VMControlFlowGraph {
 
         assert_eq!(entry, code.len() as CodeOffset);
         cfg
+    }
+
+    fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock> {
+        self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
+    }
+
+    fn block_id_of_offset(&self, code_offset: CodeOffset) -> Option<BlockId> {
+        let mut index = None;
+
+        for (block_id, block) in &self.blocks {
+            if block.entry >= code_offset && block.exit <= code_offset {
+                index = Some(*block_id);
+            }
+        }
+
+        index
+    }
+
+    fn block_of_id(&self, block_id: BlockId) -> Option<&BasicBlock> {
+        if self.blocks.contains_key(&block_id) {
+            Some(&self.blocks[&block_id])
+        } else {
+            None
+        }
+    }
+
+    fn num_blocks(&self) -> u16 {
+        self.blocks.len() as u16
+    }
+
+    fn entry_block_id(&self) -> BlockId {
+        ENTRY_BLOCK_ID
     }
 }

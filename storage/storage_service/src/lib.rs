@@ -215,6 +215,18 @@ impl StorageService {
 }
 
 impl Storage for StorageService {
+    fn save_transactions(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: SaveTransactionsRequest,
+        sink: grpcio::UnarySink<SaveTransactionsResponse>,
+    ) {
+        debug!("[GRPC] Storage::save_transactions");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.save_transactions_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
@@ -248,18 +260,6 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::get_account_state_with_proof_by_state_root");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_account_state_with_proof_by_state_root_inner(req);
-        provide_grpc_response(resp, ctx, sink);
-    }
-
-    fn save_transactions(
-        &mut self,
-        ctx: grpcio::RpcContext,
-        req: SaveTransactionsRequest,
-        sink: grpcio::UnarySink<SaveTransactionsResponse>,
-    ) {
-        debug!("[GRPC] Storage::save_transactions");
-        let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.save_transactions_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 

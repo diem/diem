@@ -57,9 +57,9 @@ prop_compose! {
 #[cfg(any(test, feature = "testing"))]
 impl Arbitrary for ValidatorChangeEventWithProof<Ed25519Signature> {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_validator_change_event_with_proof().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }

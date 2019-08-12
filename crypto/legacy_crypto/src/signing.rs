@@ -345,11 +345,11 @@ fn public_key_strategy() -> impl Strategy<Value = PublicKey> {
 
 impl Arbitrary for PublicKey {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         public_key_strategy().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl From<&PrivateKey> for PublicKey {

@@ -42,12 +42,12 @@ prop_compose! {
 
 impl Arbitrary for ByteArray {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     #[inline]
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         arb_byte_array().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl WriteOp {
@@ -62,11 +62,11 @@ impl WriteOp {
 
 impl Arbitrary for WriteOp {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![Self::deletion_strategy(), Self::value_strategy()].boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl WriteSet {
@@ -82,8 +82,6 @@ impl WriteSet {
 
 impl Arbitrary for WriteSet {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // XXX there's no checking for repeated access paths here, nor in write_set. Is that
         // important? Not sure.
@@ -96,6 +94,8 @@ impl Arbitrary for WriteSet {
             })
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl RawTransaction {
@@ -143,11 +143,11 @@ impl RawTransaction {
 
 impl Arbitrary for RawTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::strategy_impl(any::<AccountAddress>(), any::<TransactionPayload>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl SignatureCheckedTransaction {
@@ -193,23 +193,23 @@ impl SignatureCheckedTransaction {
 
 impl Arbitrary for SignatureCheckedTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::strategy_impl(keypair_strategy(), any::<TransactionPayload>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 /// This `Arbitrary` impl only generates valid signed transactions. TODO: maybe add invalid ones?
 impl Arbitrary for SignedTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         any::<SignatureCheckedTransaction>()
             .prop_map(|txn| txn.into_inner())
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl TransactionPayload {
@@ -235,17 +235,15 @@ prop_compose! {
 
 impl Arbitrary for TransactionStatus {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_status().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for TransactionPayload {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // Most transactions in practice will be programs, but other parts of the system should
         // at least not choke on write set strategies so introduce them with decent probability.
@@ -256,12 +254,12 @@ impl Arbitrary for TransactionPayload {
         ]
         .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for Program {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // XXX This should eventually be an actually valid program, maybe?
         // How should we generate random modules?
@@ -274,12 +272,12 @@ impl Arbitrary for Program {
             .prop_map(|(code, modules, args)| Program::new(code, modules, args))
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for TransactionArgument {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
             any::<u64>().prop_map(TransactionArgument::U64),
@@ -289,6 +287,8 @@ impl Arbitrary for TransactionArgument {
         ]
         .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 prop_compose! {
@@ -303,8 +303,6 @@ prop_compose! {
 
 impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
     type Parameters = SizeRange;
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
         (any::<LedgerInfo>(), Just(num_validators_range))
             .prop_flat_map(|(ledger_info, num_validators_range)| {
@@ -322,6 +320,8 @@ impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
             })
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 prop_compose! {
@@ -337,11 +337,11 @@ prop_compose! {
 
 impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_update_to_latest_ledger_response().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 #[allow(clippy::implicit_hasher)]
@@ -412,11 +412,11 @@ impl ContractEvent {
 
 impl Arbitrary for ContractEvent {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         ContractEvent::strategy_impl(any::<AccessPath>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl TransactionToCommit {
@@ -464,11 +464,11 @@ impl TransactionToCommit {
 
 impl Arbitrary for TransactionToCommit {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         TransactionToCommit::strategy_impl(keypair_strategy().boxed()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWithProof> {
@@ -530,9 +530,9 @@ fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWit
 
 impl Arbitrary for TransactionListWithProof {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_list_with_proof().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }

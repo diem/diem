@@ -45,10 +45,10 @@ impl FromIterator<u8> for NibblePath {
 
 impl Arbitrary for NibblePath {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_nibble_path().boxed()
     }
+    type Strategy = BoxedStrategy<Self>;
 }
 
 prop_compose! {

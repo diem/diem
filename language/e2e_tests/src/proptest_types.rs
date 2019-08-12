@@ -5,14 +5,14 @@ use crate::account::{Account, AccountData};
 use proptest::prelude::*;
 
 impl Arbitrary for Account {
-    type Strategy = fn() -> Account;
     type Parameters = ();
-
     fn arbitrary_with(_params: ()) -> Self::Strategy {
         // Provide Account::new as the canonical strategy. This means that no shrinking will happen,
         // but that's fine as accounts have nothing to shrink inside them anyway.
         Account::new as Self::Strategy
     }
+
+    type Strategy = fn() -> Account;
 }
 
 impl AccountData {

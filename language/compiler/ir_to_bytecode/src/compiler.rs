@@ -651,16 +651,6 @@ impl<'a> Scope for ModuleScope<'a> {
         Ok(fd_idx)
     }
 
-    /// Compute the index of the next field definition
-    fn get_next_field_definition_index(&mut self) -> Result<FieldDefinitionIndex> {
-        let idx = self.module.field_defs.len();
-        if idx >= FIELDS_MAX_SIZE {
-            bail!("Max number of fields reached")
-        }
-        let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
-        Ok(fd_idx)
-    }
-
     fn publish_field_def(&mut self, field_def: FieldDefinition) -> Result<FieldDefinitionIndex> {
         let fd_idx = self.get_next_field_definition_index()?;
         self.module.field_defs.push(field_def);
@@ -729,6 +719,16 @@ impl<'a> Scope for ModuleScope<'a> {
         self.compilation_scope.get_imported_module_handle(name)
     }
 
+    /// Compute the index of the next field definition
+    fn get_next_field_definition_index(&mut self) -> Result<FieldDefinitionIndex> {
+        let idx = self.module.field_defs.len();
+        if idx >= FIELDS_MAX_SIZE {
+            bail!("Max number of fields reached")
+        }
+        let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
+        Ok(fd_idx)
+    }
+
     fn get_struct_def(&self, name: &str) -> Result<(bool, StructDefinitionIndex)> {
         match self.struct_definitions.get(name) {
             None => bail!("No struct definition for name {}", name),
@@ -758,6 +758,10 @@ impl<'a> Scope for ModuleScope<'a> {
                 struct_name
             ),
         }
+    }
+
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+        self.module.get_string_at(idx)
     }
 
     fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex> {
@@ -811,10 +815,6 @@ impl<'a> Scope for ModuleScope<'a> {
 
         let fh = self.module.get_function_at(fh_idx)?;
         self.module.get_function_signature_at(fh.signature)
-    }
-
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
-        self.module.get_string_at(idx)
     }
 
     fn get_name(&self) -> Result<String> {
@@ -1002,6 +1002,10 @@ impl<'a> Scope for ScriptScope<'a> {
         }
     }
 
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+        self.script.get_string_at(idx)
+    }
+
     fn get_field_def(
         &self,
         _sh_idx: StructHandleIndex,
@@ -1020,10 +1024,6 @@ impl<'a> Scope for ScriptScope<'a> {
         name: &str,
     ) -> Result<&FunctionSignature> {
         self.compilation_scope.get_function_signature(mh_idx, name)
-    }
-
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
-        self.script.get_string_at(idx)
     }
 
     fn get_name(&self) -> Result<String> {
