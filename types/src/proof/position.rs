@@ -256,9 +256,22 @@ pub struct FrozenSubtreeSiblingIterator {
 }
 
 impl FrozenSubtreeSiblingIterator {
+    /// Constructs a new `FrozenSubtreeSiblingIterator` for an accumulator with given number of
+    /// leaves.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `num_leaves == 0` or `num_leaves > 2^63`.
     pub fn new(num_leaves: u64) -> Self {
-        assert_ne!(num_leaves, 0);
-        assert!(num_leaves <= 1 << 63);
+        assert_ne!(
+            num_leaves, 0,
+            "Subtree sibling is undefined for empty accumulator.",
+        );
+        assert!(
+            num_leaves <= 1 << 63,
+            "An accumulator can have at most 2^63 leaves. Provided num_leaves: {}.",
+            num_leaves,
+        );
         Self {
             current_num_leaves: num_leaves,
             current_level: 0,
