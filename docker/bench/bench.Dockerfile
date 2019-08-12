@@ -27,7 +27,7 @@ COPY docker/bench/bench_init.sh /opt/libra/bin/
 RUN chmod +x /opt/libra/bin/bench_init.sh
 
 # Metrics
-EXPOSE 14297
+EXPOSE 9101
 
 # Define MINT_KEY, AC_HOST and AC_DEBUG environment variables when running
 ENTRYPOINT ["/opt/libra/bin/bench_init.sh"]
