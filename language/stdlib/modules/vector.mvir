@@ -4,9 +4,9 @@ module Vector {
 
   native struct T;
 
-  native public length(v: &R#Self.T): u64;
+  native public length(v: &Self.T): u64;
 
-  public is_empty(v: &R#Self.T): bool {
+  public is_empty(v: &Self.T): bool {
     return Self.length(move(v)) == 0;
   }
 

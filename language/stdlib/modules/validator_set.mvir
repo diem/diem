@@ -6,16 +6,16 @@ module ValidatorSet {
         // TODO: Replace this with generic array once Move supports generic collections.
         array_size: u64,
         // Pubkey list. Since we don't have array for now, use hard coded fields instead.
-        key0: V#Self.ValidatorPublicKeys,
-        key1: V#Self.ValidatorPublicKeys,
-        key2: V#Self.ValidatorPublicKeys,
-        key3: V#Self.ValidatorPublicKeys,
-        key4: V#Self.ValidatorPublicKeys,
-        key5: V#Self.ValidatorPublicKeys,
-        key6: V#Self.ValidatorPublicKeys,
-        key7: V#Self.ValidatorPublicKeys,
-        key8: V#Self.ValidatorPublicKeys,
-        key9: V#Self.ValidatorPublicKeys,
+        key0: Self.ValidatorPublicKeys,
+        key1: Self.ValidatorPublicKeys,
+        key2: Self.ValidatorPublicKeys,
+        key3: Self.ValidatorPublicKeys,
+        key4: Self.ValidatorPublicKeys,
+        key5: Self.ValidatorPublicKeys,
+        key6: Self.ValidatorPublicKeys,
+        key7: Self.ValidatorPublicKeys,
+        key8: Self.ValidatorPublicKeys,
+        key9: Self.ValidatorPublicKeys,
     }
 
     struct ValidatorPublicKeys {
@@ -27,18 +27,18 @@ module ValidatorSet {
 
     publish_validator_set(
         size: u64,
-        key0: V#Self.ValidatorPublicKeys,
-        key1: V#Self.ValidatorPublicKeys,
-        key2: V#Self.ValidatorPublicKeys,
-        key3: V#Self.ValidatorPublicKeys,
-        key4: V#Self.ValidatorPublicKeys,
-        key5: V#Self.ValidatorPublicKeys,
-        key6: V#Self.ValidatorPublicKeys,
-        key7: V#Self.ValidatorPublicKeys,
-        key8: V#Self.ValidatorPublicKeys,
-        key9: V#Self.ValidatorPublicKeys
+        key0: Self.ValidatorPublicKeys,
+        key1: Self.ValidatorPublicKeys,
+        key2: Self.ValidatorPublicKeys,
+        key3: Self.ValidatorPublicKeys,
+        key4: Self.ValidatorPublicKeys,
+        key5: Self.ValidatorPublicKeys,
+        key6: Self.ValidatorPublicKeys,
+        key7: Self.ValidatorPublicKeys,
+        key8: Self.ValidatorPublicKeys,
+        key9: Self.ValidatorPublicKeys
     ) {
-        let set: R#Self.T;
+        let set: Self.T;
         // We only support at most 10 validator keys for now. Will get rid of of that
         assert(copy(size) <= 10, 42);
         set = T {
@@ -63,8 +63,8 @@ module ValidatorSet {
         consensus_public_key: bytearray,
         network_signing_public_key: bytearray,
         network_identity_public_key: bytearray
-    ): V#Self.ValidatorPublicKeys {
-        let key: V#Self.ValidatorPublicKeys;
+    ): Self.ValidatorPublicKeys {
+        let key: Self.ValidatorPublicKeys;
         key = ValidatorPublicKeys {
             account_address: move(account_address),
             consensus_public_key: move(consensus_public_key),
