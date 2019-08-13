@@ -251,7 +251,6 @@ impl<T: Payload> SafetyRules<T> {
     }
 
     /// Clones the up-to-date state of consensus (for monitoring / debugging purposes)
-    #[allow(dead_code)]
     pub fn consensus_state(&self) -> ConsensusState {
         self.state.clone()
     }

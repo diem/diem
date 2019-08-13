@@ -91,7 +91,6 @@ pub struct ChainedBftSMR<T> {
     initial_data: Option<RecoveryData<T>>,
 }
 
-#[allow(dead_code)]
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
         author: Author,
@@ -118,6 +117,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         }
     }
 
+    #[cfg(test)]
     pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
         self.block_store.clone()
     }

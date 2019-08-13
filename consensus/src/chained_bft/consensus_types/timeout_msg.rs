@@ -369,7 +369,6 @@ impl PacemakerTimeoutCertificate {
     }
 
     /// Returns the timeouts that certify the PacemakerTimeoutCertificate
-    #[allow(dead_code)]
     pub fn timeouts(&self) -> &Vec<PacemakerTimeout> {
         &self.timeouts
     }

@@ -57,7 +57,6 @@ impl Display for QuorumCert {
     }
 }
 
-#[allow(dead_code)]
 impl QuorumCert {
     pub fn new(
         block_id: HashValue,
