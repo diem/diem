@@ -43,6 +43,10 @@ macro_rules! with_loaded_vm {
         let mut $vm =
             TransactionExecutor::new(&$module_cache, &data_cache, TransactionMetadata::default());
         $vm.turn_off_gas_metering();
-        $vm.execution_stack.push_frame(entry_func);
+        match $vm.execution_stack.push_frame(entry_func) {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => panic!("Unexpected Runtime Error: {:?}", e),
+            Err(e) => panic!("Unexpected ICE: {:?}", e),
+        }
     };
 }

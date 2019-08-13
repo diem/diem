@@ -197,6 +197,8 @@ pub enum ExecutionStatus {
     ArithmeticError(ArithmeticErrorType),
     DynamicReferenceError(DynamicReferenceErrorType),
     DuplicateModuleName,
+    ExecutionStackOverflow,
+    CallStackOverflow,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -1072,6 +1074,12 @@ impl IntoProto for ExecutionStatus {
                 aborted.set_aborted_error_code(err_code);
                 exec_status.set_aborted(aborted)
             }
+            ExecutionStatus::ExecutionStackOverflow => {
+                exec_status.set_runtime_status(RuntimeStatus::ExecutionStackOverflow)
+            }
+            ExecutionStatus::CallStackOverflow => {
+                exec_status.set_runtime_status(RuntimeStatus::CallStackOverflow)
+            }
         };
         exec_status
     }
@@ -1116,6 +1124,10 @@ impl FromProto for ExecutionStatus {
                 ProtoRuntimeStatus::UnknownRuntimeStatus => {
                     bail_err!(DecodingError::UnknownRuntimeStatusEncountered)
                 }
+                ProtoRuntimeStatus::ExecutionStackOverflow => {
+                    Ok(ExecutionStatus::ExecutionStackOverflow)
+                }
+                ProtoRuntimeStatus::CallStackOverflow => Ok(ExecutionStatus::CallStackOverflow),
             }
         } else if proto_execution_status.has_arithmetic_error() {
             let err = proto_execution_status

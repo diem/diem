@@ -176,7 +176,10 @@ fn test_simple_instruction_transition() {
     let data_cache = FakeDataCache::new();
     let mut vm =
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
-    vm.execution_stack.push_frame(entry_func);
+    vm.execution_stack
+        .push_frame(entry_func)
+        .unwrap()
+        .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(
         &mut vm,
@@ -358,7 +361,10 @@ fn test_arith_instructions() {
     let mut vm =
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
 
-    vm.execution_stack.push_frame(entry_func);
+    vm.execution_stack
+        .push_frame(entry_func)
+        .unwrap()
+        .expect("push to empty execution stack should succeed");
 
     test_binop_instruction(
         &mut vm,
@@ -664,7 +670,10 @@ fn test_call() {
     let data_cache = FakeDataCache::new();
     let mut vm =
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
-    vm.execution_stack.push_frame(fake_func);
+    vm.execution_stack
+        .push_frame(fake_func)
+        .unwrap()
+        .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(
         &mut vm,
@@ -726,7 +735,10 @@ fn test_transaction_info() {
     let data_cache = FakeDataCache::new();
     let mut vm = TransactionExecutor::new(module_cache, &data_cache, txn_info);
 
-    vm.execution_stack.push_frame(entry_func);
+    vm.execution_stack
+        .push_frame(entry_func)
+        .unwrap()
+        .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(
         &mut vm,
