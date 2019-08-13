@@ -53,8 +53,8 @@ rusty_fork_test! {
         let mut faucet_account = bm.load_faucet_account(&faucet_key_file_path);
         let mut pairwise_generator = PairwiseTransferTxnGenerator::new();
         let results = measure_throughput(&mut bm, &mut pairwise_generator, &mut faucet_account, num_accounts, num_rounds, num_epochs);
-        let req_throughput_seq: Vec<_> = results.iter().map(|x| x.0).collect();
-        let txn_throughput_seq: Vec<_> = results.iter().map(|x| x.1).collect();
+        let req_throughput_seq: Vec<_> = results.iter().map(|x| x.req_throughput()).collect();
+        let txn_throughput_seq: Vec<_> = results.iter().map(|x| x.txn_throughput()).collect();
         calculate_avg_std(&req_throughput_seq, &"REQ_throughput");
         calculate_avg_std(&txn_throughput_seq, &"TXN_throughput");
     }
