@@ -233,7 +233,7 @@ where
     /// `internal_node`. Returns the newly inserted node with its [`NodeKey`].
     fn insert_at_internal_node(
         mut node_key: NodeKey,
-        mut internal_node: InternalNode,
+        internal_node: InternalNode,
         version: Version,
         nibble_iter: &mut NibbleIterator,
         blob: AccountStateBlob,
@@ -260,16 +260,18 @@ where
         };
 
         // Reuse the current `InternalNode` in memory to create a new internal node.
-        internal_node.set_child(
+        let mut children: Children = internal_node.into();
+        children.insert(
             child_index,
             Child::new(new_child_node.hash(), version, new_child_node.is_leaf()),
         );
+        let new_internal_node = InternalNode::new(children);
 
         node_key.set_version(version);
 
         // Cache this new internal node.
-        tree_cache.put_node(node_key.clone(), internal_node.clone().into())?;
-        Ok((node_key, internal_node.into()))
+        tree_cache.put_node(node_key.clone(), new_internal_node.clone().into())?;
+        Ok((node_key, new_internal_node.into()))
     }
 
     /// Helper function for recursive insertion into the subtree that starts from the
