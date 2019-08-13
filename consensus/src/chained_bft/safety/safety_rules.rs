@@ -3,7 +3,6 @@
 
 use crate::{
     chained_bft::{
-        block_storage::BlockReader,
         common::{Payload, Round},
         consensus_types::{block::Block, quorum_cert::QuorumCert},
     },
@@ -98,17 +97,6 @@ pub enum ProposalReject {
         last_vote_round: Round,
         proposal_round: Round,
     },
-
-    /// Did not find a parent for the proposed block
-    #[fail(
-        display = "Proposal for {} at round {} error: parent {} not found",
-        proposal_id, proposal_round, parent_id
-    )]
-    ParentNotFound {
-        proposal_id: HashValue,
-        proposal_round: Round,
-        parent_id: HashValue,
-    },
 }
 
 /// The state required to guarantee safety of the protocol.
@@ -184,21 +172,17 @@ impl ConsensusState {
 /// SafetyRules is responsible for two things that are critical for the safety of the consensus:
 /// 1) voting rules,
 /// 2) commit rules.
-/// The only dependency is a block tree, which is queried for ancestry relationships between
-/// the blocks and their QCs.
 /// SafetyRules is NOT THREAD SAFE (should be protected outside via e.g., RwLock).
 /// The commit decisions are returned to the caller as result of learning about a new QuorumCert.
-pub struct SafetyRules<T> {
-    // To query about the relationships between blocks and QCs.
-    block_tree: Arc<dyn BlockReader<Payload = T>>,
+pub struct SafetyRules {
     // Keeps the state.
     state: ConsensusState,
 }
 
-impl<T: Payload> SafetyRules<T> {
+impl SafetyRules {
     /// Constructs a new instance of SafetyRules given the BlockTree and ConsensusState.
-    pub fn new(block_tree: Arc<dyn BlockReader<Payload = T>>, state: ConsensusState) -> Self {
-        Self { block_tree, state }
+    pub fn new(state: ConsensusState) -> Self {
+        Self { state }
     }
 
     /// Learn about a new quorum certificate. Several things can happen as a result of that:
@@ -209,36 +193,31 @@ impl<T: Payload> SafetyRules<T> {
     /// committed block, might panic otherwise.
     /// The update function is invoked whenever a system learns about a potentially high QC.
     pub fn update(&mut self, qc: &QuorumCert) {
-        //TODO: remove
         // Preferred block rule: choose the highest 2-chain head.
-        if let Some(one_chain_head) = self.block_tree.get_block(qc.certified_block_id()) {
-            if let Some(two_chain_head) = self.block_tree.get_block(one_chain_head.parent_id()) {
-                if two_chain_head.round() >= self.state.preferred_block_round() {
-                    self.state.set_preferred_block_round(two_chain_head.round());
-                }
-            }
+        if qc.certified_parent_block_round() > self.state.preferred_block_round() {
+            self.state
+                .set_preferred_block_round(qc.certified_parent_block_round());
         }
     }
 
     /// Check if a one-chain at round r+2 causes a commit at round r and return the committed
-    /// block at round r if possible
-    pub fn commit_rule_for_certified_block(
+    /// block id at round r if possible
+    fn commit_rule_for_certified_block(
         &self,
-        one_chain_head: Arc<Block<T>>,
-    ) -> Option<Arc<Block<T>>> {
-        if let Some(two_chain_head) = self.block_tree.get_block(one_chain_head.parent_id()) {
-            if let Some(three_chain_head) = self.block_tree.get_block(two_chain_head.parent_id()) {
-                // We're using a so-called 3-chain commit rule: B0 (as well as its prefix)
-                // can be committed if there exist certified blocks B1 and B2 that satisfy:
-                // 1) B0 <- B1 <- B2 <--
-                // 2) round(B0) + 1 = round(B1), and
-                // 3) round(B1) + 1 = round(B2).
-                if three_chain_head.round() + 1 == two_chain_head.round()
-                    && two_chain_head.round() + 1 == one_chain_head.round()
-                {
-                    return Some(three_chain_head);
-                }
-            }
+        certified_block_qc: &QuorumCert,
+        certified_block_round: u64,
+    ) -> Option<HashValue> {
+        // We're using a so-called 3-chain commit rule: B0 (as well as its prefix)
+        // can be committed if there exist certified blocks B1 and B2 that satisfy:
+        // 1) B0 <- B1 <- B2 <--
+        // 2) round(B0) + 1 = round(B1), and
+        // 3) round(B1) + 1 = round(B2).
+
+        if certified_block_qc.certified_parent_block_round() + 1
+            == certified_block_qc.certified_block_round()
+            && certified_block_qc.certified_block_round() + 1 == certified_block_round
+        {
+            return Some(certified_block_qc.certified_parent_block_id());
         }
         None
     }
@@ -261,7 +240,7 @@ impl<T: Payload> SafetyRules<T> {
     /// sent).
     /// Requires that all the ancestors of the block are available for at least up to the last
     /// committed block, might panic otherwise.
-    pub fn voting_rule(
+    pub fn voting_rule<T: Payload>(
         &mut self,
         proposed_block: Arc<Block<T>>,
     ) -> Result<VoteInfo, ProposalReject> {
@@ -272,37 +251,18 @@ impl<T: Payload> SafetyRules<T> {
             });
         }
 
-        let parent_block = match self.block_tree.get_block(proposed_block.parent_id()) {
-            Some(b) => b,
-            None => {
-                return Err(ProposalReject::ParentNotFound {
-                    proposal_id: proposed_block.id(),
-                    proposal_round: proposed_block.round(),
-                    parent_id: proposed_block.parent_id(),
-                });
-            }
-        };
-
-        let parent_block_round = parent_block.round();
-        //TODO: remove after hashtree is removed.
-        assert_eq!(
-            parent_block_round,
-            proposed_block.quorum_cert().certified_block_round()
-        );
-
-        let respects_preferred_block = parent_block_round >= self.state.preferred_block_round();
+        let respects_preferred_block = proposed_block.quorum_cert().certified_block_round()
+            >= self.state.preferred_block_round();
         if respects_preferred_block {
             self.state.set_last_vote_round(proposed_block.round());
 
             // If the vote for the given proposal is gathered into QC, then this QC might eventually
             // commit another block following the rules defined in
             // `commit_rule_for_certified_block()` function.
-            let potential_commit =
-                self.commit_rule_for_certified_block(Arc::clone(&proposed_block));
-            let potential_commit_id = match potential_commit {
-                None => None,
-                Some(commit_block) => Some(commit_block.id()),
-            };
+            let potential_commit_id = self.commit_rule_for_certified_block(
+                proposed_block.quorum_cert(),
+                proposed_block.round(),
+            );
 
             Ok(VoteInfo {
                 proposal_id: proposed_block.id(),

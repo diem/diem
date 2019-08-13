@@ -193,10 +193,7 @@ impl NodeSetup {
             1,
             true,
         );
-        let safety_rules = Arc::new(RwLock::new(SafetyRules::new(
-            block_store.clone(),
-            consensus_state,
-        )));
+        let safety_rules = Arc::new(RwLock::new(SafetyRules::new(consensus_state)));
 
         let (pacemaker, new_rounds_receiver) =
             Self::create_pacemaker(executor.clone(), time_service.clone());
