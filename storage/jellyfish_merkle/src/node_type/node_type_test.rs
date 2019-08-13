@@ -7,6 +7,7 @@ use crypto::{
     HashValue,
 };
 use proptest::prelude::*;
+use std::panic;
 use types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
@@ -82,6 +83,29 @@ fn test_encode_decode() {
 }
 
 #[test]
+fn test_internal_validity() {
+    let result = panic::catch_unwind(|| {
+        let children = Children::default();
+        InternalNode::new(children)
+    });
+    assert!(result.is_err());
+
+    let result = panic::catch_unwind(|| {
+        let mut children = Children::default();
+        children.insert(
+            Nibble::from(1),
+            Child::new(
+                HashValue::random(),
+                0,    /* version */
+                true, /* is_leaf */
+            ),
+        );
+        InternalNode::new(children);
+    });
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_leaf_hash() {
     {
         let address = HashValue::random();
@@ -97,15 +121,17 @@ proptest! {
     #[test]
     fn two_leaves_test1(index1 in (0..8u8).prop_map(Nibble::from), index2 in (8..16u8).prop_map(Nibble::from)) {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
         let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
-        internal_node.set_child(index1, Child::new(hash1, 0 /* verison */, true));
-        internal_node.set_child(index2, Child::new(hash2, 1 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
+        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
+        let internal_node = InternalNode::new(children);
+
         // Internal node will have a structure below
         //
         //              root
@@ -134,15 +160,17 @@ proptest! {
     #[test]
     fn two_leaves_test2(index1 in (4..6u8).prop_map(Nibble::from), index2 in (6..8u8).prop_map(Nibble::from)) {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
         let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
-        internal_node.set_child(index1, Child::new(hash1, 0 /* verison */, true));
-        internal_node.set_child(index2, Child::new(hash2, 1 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
+        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
+        let internal_node = InternalNode::new(children);
+
         // Internal node will have a structure below
         //
         //              root
@@ -155,7 +183,6 @@ proptest! {
         //              / \
         //             /   \
         //        leaf1     leaf2
-
         let hash_x1 = hash_internal(hash1, hash2);
         let hash_x2 = hash_internal(*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x1);
 
@@ -209,7 +236,7 @@ proptest! {
     #[test]
     fn three_leaves_test1(index1 in (0..4u8).prop_map(Nibble::from), index2 in (4..8u8).prop_map(Nibble::from), index3 in (8..16u8).prop_map(Nibble::from)) {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
         let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
@@ -219,9 +246,10 @@ proptest! {
         let hash2 = HashValue::random();
         let hash3 = HashValue::random();
 
-        internal_node.set_child(index1, Child::new(hash1, 0 /* verison */, true));
-        internal_node.set_child(index2, Child::new(hash2, 1 /* verison */, true));
-        internal_node.set_child(index3, Child::new(hash3, 2 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
+        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
+        children.insert(index3, Child::new(hash3, 2 /* verison */, true));
+        let internal_node = InternalNode::new(children);
         // Internal node will have a structure below
         //
         //               root
@@ -231,7 +259,6 @@ proptest! {
         //            / \
         //           /   \
         //      leaf1     leaf2
-
         let hash_x = hash_internal(hash1, hash2);
         let root_hash = hash_internal(hash_x, hash3);
         prop_assert_eq!(internal_node.hash(), root_hash);
@@ -261,7 +288,7 @@ proptest! {
     #[test]
     fn mixed_nodes_test(index1 in (0..2u8).prop_map(Nibble::from), index2 in (8..16u8).prop_map(Nibble::from)) {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
         let internal2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), 2.into()).0;
@@ -272,10 +299,11 @@ proptest! {
         let hash2 = HashValue::random();
         let hash3 = HashValue::random();
         let hash4 = HashValue::random();
-        internal_node.set_child(index1, Child::new(hash1, 0, true));
-        internal_node.set_child(2.into(), Child::new(hash2, 1, false));
-        internal_node.set_child(7.into(), Child::new(hash3, 2, false));
-        internal_node.set_child(index2, Child::new(hash4, 3, true));
+        children.insert(index1, Child::new(hash1, 0, true));
+        children.insert(2.into(), Child::new(hash2, 1, false));
+        children.insert(7.into(), Child::new(hash3, 2, false));
+        children.insert(index2, Child::new(hash4, 3, true));
+        let internal_node = InternalNode::new(children);
         // Internal node (B) will have a structure below
         //
         //                   B (root hash)
@@ -382,7 +410,7 @@ fn test_internal_hash_and_proof() {
     // non-leaf case 1
     {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let index1 = Nibble::from(4);
         let index2 = Nibble::from(15);
@@ -400,8 +428,9 @@ fn test_internal_hash_and_proof() {
             index2,
         )
         .0;
-        internal_node.set_child(index1, Child::new(hash1, 0 /* version */, false));
-        internal_node.set_child(index2, Child::new(hash2, 1 /* version */, false));
+        children.insert(index1, Child::new(hash1, 0 /* version */, false));
+        children.insert(index2, Child::new(hash2, 1 /* version */, false));
+        let internal_node = InternalNode::new(children);
         // Internal node (B) will have a structure below
         //
         //              root
@@ -514,7 +543,7 @@ fn test_internal_hash_and_proof() {
     // non-leaf case 2
     {
         let internal_node_key = random_63nibbles_node_key();
-        let mut internal_node = InternalNode::new(Children::default());
+        let mut children = Children::default();
 
         let index1 = Nibble::from(0);
         let index2 = Nibble::from(7);
@@ -533,8 +562,9 @@ fn test_internal_hash_and_proof() {
         )
         .0;
 
-        internal_node.set_child(index1, Child::new(hash1, 0 /* version */, false));
-        internal_node.set_child(index2, Child::new(hash2, 1 /* version */, false));
+        children.insert(index1, Child::new(hash1, 0 /* version */, false));
+        children.insert(index2, Child::new(hash2, 1 /* version */, false));
+        let internal_node = InternalNode::new(children);
         // Internal node will have a structure below
         //
         //                     root

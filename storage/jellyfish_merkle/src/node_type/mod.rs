@@ -256,6 +256,12 @@ impl From<InternalNode> for Node {
     }
 }
 
+impl From<InternalNode> for Children {
+    fn from(node: InternalNode) -> Self {
+        node.children
+    }
+}
+
 impl From<LeafNode> for Node {
     fn from(node: LeafNode) -> Self {
         Node::Leaf(node)
@@ -265,12 +271,19 @@ impl From<LeafNode> for Node {
 impl InternalNode {
     /// Creates a new Internal node.
     pub fn new(children: Children) -> Self {
+        // Assert the internal node must have >= 1 children. If it only has one chlid, it cannot be
+        // a leaf node. Otherwise the leaf node should be a child of this internal node's parent.
+        assert!(!children.is_empty());
+        if children.len() == 1 {
+            assert!(
+                !children
+                    .values()
+                    .next()
+                    .expect("Must have 1 element")
+                    .is_leaf
+            )
+        }
         Self { children }
-    }
-
-    /// Sets the `n`-th child.
-    pub fn set_child(&mut self, n: Nibble, child: Child) {
-        self.children.insert(n, child);
     }
 
     /// Gets the `n`-th child.
