@@ -1,29 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    coordinator::{ExecutorProxyTrait, SyncStatus},
-    PeerId, StateSyncClient, StateSynchronizer,
-};
-use bytes::Bytes;
-use config::config::NodeConfig;
+use crate::{coordinator::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer};
 use config_builder::util::get_test_config;
 use crypto::HashValue;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
-use futures::{executor::block_on, future::TryFutureExt, stream::StreamExt, Future, FutureExt};
+use futures::{executor::block_on, stream::StreamExt, Future, FutureExt};
 use network::{
-    proto::{ConsensusMsg, RespondChunk},
+    proto::GetChunkResponse,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        Event, RpcError, CONSENSUS_RPC_PROTOCOL,
+        STATE_SYNCHRONIZER_MSG_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
 use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, SigningKey};
 use parity_multiaddr::Multiaddr;
 use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -43,9 +37,76 @@ use types::{
 };
 use vm_genesis::{encode_transfer_program, GENESIS_KEYPAIR};
 
-#[derive(Default)]
+type MockRpcHandler =
+    Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
+
 pub struct MockExecutorProxy {
+    peer_id: PeerId,
+    handler: MockRpcHandler,
     version: AtomicU64,
+}
+
+impl MockExecutorProxy {
+    fn new(peer_id: PeerId, handler: MockRpcHandler) -> Self {
+        Self {
+            peer_id,
+            handler,
+            version: AtomicU64::new(0),
+        }
+    }
+
+    fn mock_ledger_info(
+        peer_id: PeerId,
+        version: u64,
+    ) -> LedgerInfoWithSignatures<Ed25519Signature> {
+        let ledger_info = LedgerInfo::new(
+            version,
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            0,
+        );
+        let mut signatures = HashMap::new();
+        let private_key = Ed25519PrivateKey::genesis();
+        let signature = private_key.sign_message(&HashValue::zero());
+        signatures.insert(peer_id, signature);
+        LedgerInfoWithSignatures::new(ledger_info, signatures)
+    }
+
+    fn mock_chunk_response(&self, version: u64) -> GetChunkResponse {
+        let target = Self::mock_ledger_info(self.peer_id, version + 1);
+
+        let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
+        let receiver = AccountAddress::new([0xff; 32]);
+        let program = encode_transfer_program(&receiver, 1);
+        let transaction = get_test_signed_txn(
+            sender.into(),
+            version + 1,
+            GENESIS_KEYPAIR.0.clone(),
+            GENESIS_KEYPAIR.1.clone(),
+            Some(program),
+        );
+
+        let txn_info =
+            TransactionInfo::new(HashValue::zero(), HashValue::zero(), HashValue::zero(), 0);
+        let accumulator_proof = AccumulatorProof::new(vec![]);
+        let txns = TransactionListWithProof::new(
+            vec![(
+                SignedTransaction::from_proto(transaction).unwrap(),
+                txn_info,
+            )],
+            None,
+            Some(0),
+            Some(accumulator_proof),
+            None,
+        );
+
+        let mut resp = GetChunkResponse::new();
+        resp.set_txn_list_with_proof(txns.into_proto());
+        resp.set_ledger_info_with_sigs(target.into_proto());
+        resp
+    }
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
@@ -61,32 +122,16 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         self.version.fetch_add(1, Ordering::Relaxed);
         async move { Ok(ExecuteChunkResponse::new()) }.boxed()
     }
-}
 
-pub fn gen_txn_list(sequence_number: u64) -> TransactionListWithProof {
-    let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
-    let receiver = AccountAddress::new([0xff; 32]);
-    let program = encode_transfer_program(&receiver, 1);
-    let transaction = get_test_signed_txn(
-        sender.into(),
-        sequence_number,
-        GENESIS_KEYPAIR.0.clone(),
-        GENESIS_KEYPAIR.1.clone(),
-        Some(program),
-    );
-
-    let txn_info = TransactionInfo::new(HashValue::zero(), HashValue::zero(), HashValue::zero(), 0);
-    let accumulator_proof = AccumulatorProof::new(vec![]);
-    TransactionListWithProof::new(
-        vec![(
-            SignedTransaction::from_proto(transaction).unwrap(),
-            txn_info,
-        )],
-        None,
-        Some(0),
-        Some(accumulator_proof),
-        None,
-    )
+    fn get_chunk(
+        &self,
+        known_version: u64,
+        _: u64,
+        _: LedgerInfoWithSignatures<Ed25519Signature>,
+    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
+        let response = (self.handler)(self.mock_chunk_response(known_version));
+        async move { response }.boxed()
+    }
 }
 
 struct SynchronizerEnv {
@@ -97,25 +142,14 @@ struct SynchronizerEnv {
 }
 
 impl SynchronizerEnv {
-    fn new() -> Self {
-        let handler = Box::new(|| -> Result<TransactionListWithProof> { Ok(gen_txn_list(0)) });
-        Self::new_with(handler, None)
-    }
-
-    fn new_with(
-        handler: Box<dyn Fn() -> Result<TransactionListWithProof> + Send + 'static>,
-        opt_config: Option<NodeConfig>,
-    ) -> Self {
-        let mut runtime = Builder::new().build().unwrap();
-        let config = opt_config.unwrap_or_else(|| {
-            let (config_inner, _) = get_test_config();
-            config_inner
-        });
+    fn new(handler: MockRpcHandler) -> Self {
+        let runtime = Builder::new().build().unwrap();
+        let config = get_test_config().0;
         let peers = vec![PeerId::random(), PeerId::random()];
 
         // setup network
         let addr: Multiaddr = "/memory/0".parse().unwrap();
-        let protocols = vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)];
+        let protocols = vec![ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL)];
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
@@ -146,14 +180,14 @@ impl SynchronizerEnv {
         .into_iter()
         .collect();
 
-        let (_, (sender_b, mut events_b), _, listener_addr) =
+        let (_, _, (sender_b, mut events_b), listener_addr) =
             NetworkBuilder::new(runtime.executor(), peers[1], addr.clone())
                 .signing_keys((b_signing_private_key, b_signing_public_key))
                 .identity_keys((b_identity_private_key, b_identity_public_key))
                 .trusted_peers(trusted_peers.clone())
                 .transport(TransportType::Memory)
-                .consensus_protocols(protocols.clone())
-                .rpc_protocols(protocols.clone())
+                .direct_send_protocols(protocols.clone())
+                .state_sync_protocols(protocols.clone())
                 .build();
 
         let (sender_a, mut events_a) =
@@ -163,53 +197,32 @@ impl SynchronizerEnv {
                 .identity_keys((a_identity_private_key, a_identity_public_key))
                 .trusted_peers(trusted_peers.clone())
                 .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
-                .consensus_protocols(protocols.clone())
-                .rpc_protocols(protocols)
+                .direct_send_protocols(protocols.clone())
+                .state_sync_protocols(protocols)
                 .build()
-                .1;
+                .2;
 
         // await peer discovery
         block_on(events_a.next()).unwrap().unwrap();
         block_on(events_b.next()).unwrap().unwrap();
 
+        let default_handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
         // create synchronizers
-        let synchronizers = vec![
+        let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_a,
+                events_a,
                 &config,
-                MockExecutorProxy::default(),
+                MockExecutorProxy::new(peers[0], default_handler),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_b,
+                events_b,
                 &config,
-                MockExecutorProxy::default(),
+                MockExecutorProxy::new(peers[1], handler),
             ),
         ];
-        let clients = synchronizers
-            .iter()
-            .map(|s| s.create_client(&config))
-            .collect();
-
-        let rpc_handler = async move {
-            while let Some(event) = events_b.next().await {
-                if let Ok(Event::RpcRequest((_, _, callback))) = event {
-                    match handler() {
-                        Ok(txn_list) => {
-                            let mut response_msg = ConsensusMsg::new();
-                            let mut response = RespondChunk::new();
-                            response.set_txn_list_with_proof(txn_list.into_proto());
-                            response_msg.set_respond_chunk(response);
-                            let response_data = Bytes::from(response_msg.write_to_bytes().unwrap());
-                            callback.send(Ok(response_data)).unwrap();
-                        }
-                        Err(err) => {
-                            callback.send(Err(RpcError::ApplicationError(err))).unwrap();
-                        }
-                    }
-                }
-            }
-        };
-        runtime.spawn(rpc_handler.boxed().unit_error().compat());
+        let clients = synchronizers.iter().map(|s| s.create_client()).collect();
 
         Self {
             peers,
@@ -219,62 +232,38 @@ impl SynchronizerEnv {
         }
     }
 
-    fn sync_to(&self, peer_id: usize, version: u64) -> SyncStatus {
-        let ledger_info = LedgerInfo::new(
-            version,
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            0,
-        );
-        let mut signatures = HashMap::new();
-        let private_key = Ed25519PrivateKey::genesis();
-        let signature = private_key.sign_message(&HashValue::zero());
-        signatures.insert(self.peers[1], signature);
-        let target = LedgerInfoWithSignatures::new(ledger_info, signatures);
+    fn sync_to(&self, peer_id: usize, version: u64) -> bool {
+        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
         block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 }
 
 #[test]
-fn test_basic_flow() {
-    let env = SynchronizerEnv::new();
+fn test_basic_catch_up() {
+    let handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
+    let env = SynchronizerEnv::new(handler);
 
     // test small sequential syncs
     for version in 1..5 {
-        let status = env.sync_to(0, version);
-        assert_eq!(status, SyncStatus::Finished);
+        assert!(env.sync_to(0, version));
     }
     // test batch sync for multiple transactions
-    let status = env.sync_to(0, 10);
-    assert_eq!(status, SyncStatus::Finished);
+    assert!(env.sync_to(0, 10));
 }
 
 #[test]
-fn test_download_failure() {
-    // create handler that causes errors
-    let handler = Box::new(|| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
-
-    let env = SynchronizerEnv::new_with(handler, None);
-    let status = env.sync_to(0, 5);
-    assert_eq!(status, SyncStatus::DownloadFailed);
-}
-
-#[test]
-fn test_download_retry() {
+fn test_flaky_peer_sync() {
     // create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
-    let handler = Box::new(move || -> Result<TransactionListWithProof> {
+    let handler = Box::new(move |resp| -> Result<GetChunkResponse> {
         let fail_request = attempt.load(Ordering::Relaxed) == 0;
         attempt.fetch_add(1, Ordering::Relaxed);
         if fail_request {
             bail!("chunk fetch failed")
         } else {
-            Ok(gen_txn_list(0))
+            Ok(resp)
         }
     });
-    let env = SynchronizerEnv::new_with(handler, None);
-    let status = env.sync_to(0, 1);
-    assert_eq!(status, SyncStatus::Finished);
+    let env = SynchronizerEnv::new(handler);
+    assert!(env.sync_to(0, 1));
 }

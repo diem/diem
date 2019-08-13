@@ -8,12 +8,9 @@ use failure::Result;
 use futures::Future;
 use nextgen_crypto::ed25519::*;
 use serde::{Deserialize, Serialize};
-use state_synchronizer::SyncStatus;
 use std::{pin::Pin, sync::Arc};
 use types::{
-    ledger_info::LedgerInfoWithSignatures,
-    transaction::{TransactionListWithProof, Version},
-    validator_set::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures, transaction::Version, validator_set::ValidatorSet,
 };
 
 /// A structure that specifies the result of the execution.
@@ -113,19 +110,7 @@ pub trait StateComputer: Send + Sync {
         commit: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    /// Synchronize to a commit that not present locally.
-    fn sync_to(
-        &self,
-        commit: QuorumCert,
-    ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>>;
-
-    /// Get a chunk of transactions as a batch
-    fn get_chunk(
-        &self,
-        start_version: u64,
-        target_version: u64,
-        batch_size: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
+    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
 }
 
 pub trait StateMachineReplication {

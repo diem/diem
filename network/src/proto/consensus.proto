@@ -15,9 +15,7 @@ message ConsensusMsg {
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
     TimeoutMsg timeout_msg = 5;
-    RequestChunk request_chunk = 6;
-    RespondChunk respond_chunk = 7;
-    SyncInfo sync_info = 8;
+    SyncInfo sync_info = 6;
   }
 }
 
@@ -155,11 +153,3 @@ message RespondBlock {
   // The responded block.
   repeated Block blocks = 2;
 }
-
-message RequestChunk {
-  uint64 start_version = 1;
-  uint64 target_version = 2;
-  uint64 batch_size = 3;
-}
-
-message RespondChunk { types.TransactionListWithProof txn_list_with_proof = 1; }

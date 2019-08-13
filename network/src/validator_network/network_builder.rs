@@ -427,14 +427,14 @@ impl NetworkBuilder {
             .consensus_protocols
             .iter()
             .map(|p| (p.clone(), consensus_tx.clone()));
-        // TODO: Add this after integration with State Synchronizer is complete.
-        let _state_sync_handlers = self
+
+        let state_sync_handlers = self
             .state_sync_protocols
             .iter()
             .map(|p| (p.clone(), state_sync_tx.clone()));
         let upstream_handlers = mempool_handlers
             .chain(consensus_handlers)
-            // .chain(state_sync_handlers)
+            .chain(state_sync_handlers)
             .collect();
 
         let validator_network = NetworkProvider::new(

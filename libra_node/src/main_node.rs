@@ -259,14 +259,16 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let (
         (mempool_network_sender, mempool_network_events),
         (consensus_network_sender, consensus_network_events),
-        (_state_sync_network_sender, _state_sync_network_events),
+        (state_sync_network_sender, state_sync_network_events),
         network,
     ) = setup_network(node_config);
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 
-    // TODO: Migrate to use state_sync_network_sender.
-    let state_synchronizer =
-        StateSynchronizer::bootstrap(consensus_network_sender.clone(), &node_config);
+    let state_synchronizer = StateSynchronizer::bootstrap(
+        state_sync_network_sender,
+        state_sync_network_events,
+        &node_config,
+    );
 
     let mut mempool = None;
     let mut consensus = None;
@@ -284,7 +286,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             node_config,
             consensus_network_sender,
             consensus_network_events,
-            state_synchronizer.create_client(&node_config),
+            state_synchronizer.create_client(),
         );
         consensus_provider
             .start()

@@ -21,10 +21,7 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
-        network::{
-            BlockRetrievalRequest, BlockRetrievalResponse, ChunkRetrievalRequest,
-            ConsensusNetworkImpl,
-        },
+        network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         persistent_storage::PersistentStorage,
         safety::{safety_rules::SafetyRules, vote_msg::VoteMsg},
         sync_manager::{SyncManager, SyncMgrContext},
@@ -856,24 +853,6 @@ impl<T: Payload> EventProcessor<T> {
             .send(BlockRetrievalResponse { status, blocks })
         {
             error!("Failed to return the requested block: {:?}", e);
-        }
-    }
-
-    /// Retrieve the chunk from storage and send it back.
-    /// We'll also try to add the QuorumCert into block store if it's for a existing block and
-    /// potentially commit.
-    pub async fn process_chunk_retrieval(&self, request: ChunkRetrievalRequest) {
-        let response = self
-            .sync_manager
-            .get_chunk(
-                request.start_version,
-                request.target_version,
-                request.batch_size,
-            )
-            .await;
-
-        if let Err(e) = request.response_sender.send(response) {
-            error!("Failed to return the requested chunk: {:?}", e);
         }
     }
 

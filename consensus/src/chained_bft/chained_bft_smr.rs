@@ -15,9 +15,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{
-            BlockRetrievalRequest, ChunkRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers,
-        },
+        network::{BlockRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers},
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
         safety::{safety_rules::SafetyRules, vote_msg::VoteMsg},
     },
@@ -34,7 +32,6 @@ use futures::{
     stream::StreamExt,
 };
 use nextgen_crypto::ed25519::*;
-use state_synchronizer::SyncStatus;
 use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};
@@ -43,7 +40,6 @@ use futures::sink::SinkExt;
 use logger::prelude::*;
 use std::{
     sync::{Arc, RwLock},
-    thread,
     time::Duration,
 };
 use tokio::runtime::{Runtime, TaskExecutor};
@@ -298,16 +294,6 @@ impl<T: Payload> ChainedBftSMR<T> {
         }
     }
 
-    async fn process_chunk_retrievals(
-        mut receiver: channel::Receiver<ChunkRetrievalRequest>,
-        event_processor: ConcurrentEventProcessor<T>,
-    ) {
-        while let Some(request) = receiver.next().await {
-            let guard = event_processor.read().compat().await.unwrap();
-            guard.process_chunk_retrieval(request).await;
-        }
-    }
-
     fn start_event_processing(
         &self,
         event_processor: ConcurrentEventProcessor<T>,
@@ -347,16 +333,6 @@ impl<T: Payload> ChainedBftSMR<T> {
         executor.spawn(
             Self::process_block_retrievals(
                 network_receivers.block_retrieval,
-                event_processor.clone(),
-            )
-            .boxed()
-            .unit_error()
-            .compat(),
-        );
-
-        executor.spawn(
-            Self::process_chunk_retrievals(
-                network_receivers.chunk_retrieval,
                 event_processor.clone(),
             )
             .boxed()
@@ -436,17 +412,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 // make sure we sync to the root state in case we're not
                 let status = block_on(state_computer.sync_to(initial_data.root_ledger_info()));
                 match status {
-                    Ok(SyncStatus::Finished) => break,
-                    Ok(SyncStatus::DownloadFailed) => {
-                        warn!("DownloadFailed, we may not establish connection with peers yet, sleep and retry");
-                        // we can remove this when we start to handle NewPeer/LostPeer events.
-                        thread::sleep(Duration::from_secs(2));
-                    }
-                    Ok(e) => panic!(
-                    "state synchronizer failure: {:?}, this validator will be killed as it can not \
+                    Ok(true) => break,
+                    Ok(false) => panic!(
+                    "state synchronizer failure, this validator will be killed as it can not \
                  recover from this error.  After the validator is restarted, synchronization will \
                  be retried.",
-                    e
                 ),
                     Err(e) => panic!(
                     "state synchronizer failure: {:?}, this validator will be killed as it can not \
