@@ -4,7 +4,7 @@
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction;
 use config::{
-    config::{BaseConfig, KeyPairs, NodeConfig, NodeConfigHelpers, VMPublishingOption},
+    config::{BaseConfig, KeyPairs, NodeConfig, NodeConfigHelpers, RoleType, VMPublishingOption},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
@@ -64,7 +64,6 @@ impl SwarmConfig {
         is_ipv4: bool,
         key_seed: Option<[u8; 32]>,
         output_dir: &Path,
-        static_ports: bool,
     ) -> Result<Self> {
         // Generate trusted peer configs + their private keys.
         template.base.data_dir_path = output_dir.into();
@@ -85,40 +84,10 @@ impl SwarmConfig {
             &trusted_peers_config,
         )?;
 
+        let num_full_nodes = topology.num_full_nodes();
         let mut configs = Vec::new();
         // Generate configs for all nodes.
         for (node_id, addrs) in &seed_peers_config.seed_peers {
-            let key_file_name = format!("{}.node.keys.toml", node_id.clone());
-
-            let base_config = BaseConfig::new(
-                node_id.clone(),
-                template.base.role.clone(),
-                KeyPairs::default(),
-                key_file_name.into(),
-                template.base.data_dir_path.clone(),
-                trusted_peers_file.clone(),
-                template.base.trusted_peers.clone(),
-                template.base.node_sync_retries,
-                template.base.node_sync_channel_buffer_size,
-                template.base.node_async_log_chan_size,
-            );
-            let mut config = NodeConfig {
-                base: base_config,
-                metrics: template.metrics.clone(),
-                execution: template.execution.clone(),
-                admission_control: template.admission_control.clone(),
-                debug_interface: template.debug_interface.clone(),
-                storage: template.storage.clone(),
-                network: template.network.clone(),
-                consensus: template.consensus.clone(),
-                mempool: template.mempool.clone(),
-                state_sync: template.state_sync.clone(),
-                log_collector: template.log_collector.clone(),
-                vm_config: template.vm_config.clone(),
-                secret_service: template.secret_service.clone(),
-            };
-
-            config.base.peer_id = node_id.clone();
             // serialize keypairs on independent {node}.node.keys.toml file
             // this is because the peer_keypairs field is skipped during (de)serialization
             let private_keys = peers_private_keys
@@ -131,24 +100,33 @@ impl SwarmConfig {
                 )
                 .1;
             let peer_keypairs = KeyPairs::load(private_keys);
-            let key_file_name = format!("{}.node.keys.toml", config.base.peer_id);
-
-            config.base.peer_keypairs_file = key_file_name.into();
-            peer_keypairs.save_config(&output_dir.join(&config.base.peer_keypairs_file));
-            if !static_ports {
-                NodeConfigHelpers::randomize_config_ports(&mut config);
-            }
-
-            // create subdirectory for storage: <node_id>/db, unless provided directly
-            config.storage.dir = config.storage.dir.join(node_id).join("db");
+            let mut validator_config = Self::get_config_by_role(
+                &template,
+                RoleType::Validator,
+                &node_id,
+                &peer_keypairs,
+                &output_dir,
+                &template.storage.dir,
+            );
 
             // If listen address is different from advertised address, we need to set it
             // appropriately below.
-            config.network.listen_address = addrs[0].clone();
-            config.network.advertised_address = addrs[0].clone();
+            validator_config.network.listen_address = addrs[0].clone();
+            validator_config.network.advertised_address = addrs[0].clone();
 
-            config.vm_config.publishing_options = VMPublishingOption::Open;
-            configs.push(config);
+            for _ in 0..num_full_nodes {
+                let full_node_config = Self::get_config_by_role(
+                    &template,
+                    RoleType::FullNode,
+                    &node_id,
+                    &peer_keypairs,
+                    &output_dir,
+                    &template.storage.dir,
+                );
+                configs.push(full_node_config);
+            }
+
+            configs.push(validator_config);
         }
         if prune_seed_peers_for_discovery {
             seed_peers_config.seed_peers = seed_peers_config
@@ -162,7 +140,7 @@ impl SwarmConfig {
         let configs = configs
             .into_iter()
             .map(|config| {
-                let file_name = format!("{}.node.config.toml", config.base.peer_id);
+                let file_name = format!("{}.node.config.toml", Self::get_alias(&config));
                 let config_file = output_dir.join(file_name);
                 (config_file, config)
             })
@@ -190,12 +168,78 @@ impl SwarmConfig {
     pub fn get_trusted_peers_config(&self) -> &(PathBuf, TrustedPeersConfig) {
         &self.trusted_peers
     }
+
+    pub fn get_config_by_role(
+        template: &NodeConfig,
+        role: RoleType,
+        node_id: &str,
+        peer_keypairs: &KeyPairs,
+        output_dir: &Path,
+        dir: &PathBuf,
+    ) -> NodeConfig {
+        let key_file_name = format!("{}.node.keys.toml", node_id.to_string());
+
+        let role_string = match role {
+            RoleType::Validator => "validator".to_string(),
+            RoleType::FullNode => "full_node".to_string(),
+        };
+
+        let base_config = BaseConfig::new(
+            node_id.to_string(),
+            role_string,
+            KeyPairs::default(),
+            key_file_name.into(),
+            template.base.data_dir_path.clone(),
+            template.base.trusted_peers_file.clone(),
+            template.base.trusted_peers.clone(),
+            template.base.node_sync_retries,
+            template.base.node_sync_channel_buffer_size,
+            template.base.node_async_log_chan_size,
+        );
+        let mut config = NodeConfig {
+            base: base_config,
+            metrics: template.metrics.clone(),
+            execution: template.execution.clone(),
+            admission_control: template.admission_control.clone(),
+            debug_interface: template.debug_interface.clone(),
+            storage: template.storage.clone(),
+            network: template.network.clone(),
+            consensus: template.consensus.clone(),
+            mempool: template.mempool.clone(),
+            state_sync: template.state_sync.clone(),
+            log_collector: template.log_collector.clone(),
+            vm_config: template.vm_config.clone(),
+            secret_service: template.secret_service.clone(),
+        };
+
+        config.base.peer_id = node_id.to_string();
+        NodeConfigHelpers::randomize_config_ports(&mut config);
+
+        let alias = Self::get_alias(&config);
+        let key_file_name = format!("{}.node.keys.toml", alias);
+        config.storage.dir = dir.join(alias).join("db");
+
+        config.base.peer_keypairs_file = key_file_name.into();
+        peer_keypairs.save_config(&output_dir.join(&config.base.peer_keypairs_file));
+        config.vm_config.publishing_options = VMPublishingOption::Open;
+
+        config
+    }
+
+    pub fn get_alias(config: &NodeConfig) -> String {
+        match config.base.get_role() {
+            RoleType::Validator => format!("validator_{}", config.base.peer_id),
+            RoleType::FullNode => format!(
+                "full_node_{}_{}",
+                config.base.peer_id, config.admission_control.admission_control_service_port
+            ),
+        }
+    }
 }
 
 pub struct SwarmConfigBuilder {
     topology: LibraSwarmTopology,
     template_path: PathBuf,
-    static_ports: bool,
     output_dir: PathBuf,
     force_discovery: bool,
     is_ipv4: bool,
@@ -208,7 +252,6 @@ impl Default for SwarmConfigBuilder {
         SwarmConfigBuilder {
             topology: LibraSwarmTopology::create_validator_network(1),
             template_path: "config/data/configs/node.config.toml".into(),
-            static_ports: false,
             output_dir: "configs".into(),
             force_discovery: false,
             is_ipv4: false,
@@ -222,16 +265,6 @@ impl Default for SwarmConfigBuilder {
 impl SwarmConfigBuilder {
     pub fn new() -> SwarmConfigBuilder {
         SwarmConfigBuilder::default()
-    }
-
-    pub fn randomize_ports(&mut self) -> &mut Self {
-        self.static_ports = false;
-        self
-    }
-
-    pub fn static_ports(&mut self) -> &mut Self {
-        self.static_ports = true;
-        self
     }
 
     pub fn with_base<P: AsRef<Path>>(&mut self, base_template_path: P) -> &mut Self {
@@ -331,7 +364,6 @@ impl SwarmConfigBuilder {
             self.is_ipv4,
             self.key_seed,
             &self.output_dir,
-            self.static_ports,
         )
     }
 }
