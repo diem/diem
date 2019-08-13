@@ -44,11 +44,11 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-/// The length of the Ed25519PrivateKey.
+/// The length of the BLS12381PrivateKey.
 pub const BLS12381_PRIVATE_KEY_LENGTH: usize = 32;
-/// The length of the Ed25519PublicKey.
+/// The length of the BLS12381PublicKey.
 pub const BLS12381_PUBLIC_KEY_LENGTH: usize = threshold_crypto::PK_SIZE;
-/// The length of the Ed25519Signature.
+/// The length of the BLS12381Signature.
 pub const BLS12381_SIGNATURE_LENGTH: usize = threshold_crypto::SIG_SIZE;
 
 // type alias for this unwieldy type.
@@ -101,6 +101,7 @@ impl SigningKey for BLS12381PrivateKey {
 }
 
 impl Uniform for BLS12381PrivateKey {
+    // TODO check Fr value size and which bits should be set.
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
