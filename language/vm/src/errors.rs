@@ -53,6 +53,8 @@ pub enum VMErrorKind {
     CodeSerializerError(BinaryError),
     CodeDeserializerError(BinaryError),
     Verification(Vec<VerificationStatus>),
+    ExecutionStackOverflow,
+    CallStackOverflow,
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -810,6 +812,8 @@ impl From<&VMErrorKind> for VMStatus {
             VMErrorKind::CodeSerializerError(err) => return VMStatus::from(err),
             VMErrorKind::CodeDeserializerError(err) => return VMStatus::from(err),
             VMErrorKind::Verification(statuses) => return statuses.iter().collect(),
+            VMErrorKind::ExecutionStackOverflow => ExecutionStatus::ExecutionStackOverflow,
+            VMErrorKind::CallStackOverflow => ExecutionStatus::CallStackOverflow,
         };
         VMStatus::Execution(err)
     }

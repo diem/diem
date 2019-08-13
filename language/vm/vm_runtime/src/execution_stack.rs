@@ -5,10 +5,15 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     frame::Frame,
     loaded_data::function::{FunctionRef, FunctionReference},
+    IndexKind,
 };
 use std::{fmt, marker::PhantomData};
 use vm::errors::*;
 use vm_runtime_types::value::{Local, MutVal};
+
+// TODO Determine stack size limits based on gas limit
+const EXECUTION_STACK_SIZE_LIMIT: u64 = 1024;
+const FUNCTION_STACK_SIZE_LIMIT: u64 = 1024;
 
 pub struct ExecutionStack<'alloc, 'txn, P>
 where
@@ -40,8 +45,15 @@ where
     pub fn push_call(&mut self, function: FunctionRef<'txn>) -> VMResult<()> {
         let callee_arg_size = function.arg_count();
         let args = self.popn(callee_arg_size as u16)?;
-        self.function_stack.push(Frame::new(function, args));
-        Ok(Ok(()))
+        if self.function_stack.len() < (FUNCTION_STACK_SIZE_LIMIT as usize) {
+            self.function_stack.push(Frame::new(function, args));
+            Ok(Ok(()))
+        } else {
+            Ok(Err(VMRuntimeError {
+                loc: self.location()?,
+                err: VMErrorKind::CallStackOverflow,
+            }))
+        }
     }
 
     pub fn pop_call(&mut self) -> VMResult<()> {
@@ -75,8 +87,16 @@ where
         Ok(self.top_frame()?.into())
     }
 
-    pub fn push(&mut self, value: Local) {
-        self.stack.push(value)
+    pub fn push(&mut self, value: Local) -> VMResult<()> {
+        if self.stack.len() < (EXECUTION_STACK_SIZE_LIMIT as usize) {
+            self.stack.push(value);
+            Ok(Ok(()))
+        } else {
+            Ok(Err(VMRuntimeError {
+                loc: self.location()?,
+                err: VMErrorKind::ExecutionStackOverflow,
+            }))
+        }
     }
 
     pub fn peek(&self) -> Result<&Local, VMInvariantViolation> {
@@ -88,10 +108,21 @@ where
 
     pub fn peek_at(&self, index: usize) -> Result<&Local, VMInvariantViolation> {
         let size = self.stack.len();
-        Ok(self
-            .stack
-            .get(size - index - 1)
-            .ok_or(VMInvariantViolation::EmptyValueStack)?)
+        if let Some(valid_index) = size
+            .checked_sub(index)
+            .and_then(|index| index.checked_sub(1))
+        {
+            Ok(self
+                .stack
+                .get(valid_index)
+                .ok_or(VMInvariantViolation::EmptyValueStack)?)
+        } else {
+            Err(VMInvariantViolation::IndexOutOfBounds(
+                IndexKind::LocalPool,
+                size,
+                index,
+            ))
+        }
     }
 
     pub fn pop(&mut self) -> Result<Local, VMInvariantViolation> {
@@ -134,8 +165,16 @@ where
         &self.stack
     }
 
-    pub fn push_frame(&mut self, func: FunctionRef<'txn>) {
-        self.function_stack.push(Frame::new(func, vec![]));
+    pub fn push_frame(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
+        if self.function_stack.len() < (FUNCTION_STACK_SIZE_LIMIT as usize) {
+            self.function_stack.push(Frame::new(func, vec![]));
+            Ok(Ok(()))
+        } else {
+            Ok(Err(VMRuntimeError {
+                loc: self.location()?,
+                err: VMErrorKind::CallStackOverflow,
+            }))
+        }
     }
 }
 

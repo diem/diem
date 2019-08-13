@@ -239,6 +239,8 @@ enum RuntimeStatus {
     // The sender is trying to publish a module named `M`, but the sender's account already contains
     // a module with this name.
     DuplicateModuleName = 15;
+    ExecutionStackOverflow = 16;
+    CallStackOverflow = 17;
 }
 
 // user-defined abort error code number
