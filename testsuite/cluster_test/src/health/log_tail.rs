@@ -126,29 +126,33 @@ impl AwsLogTail {
         events
     }
 
-    fn log_start_offset_sec() -> u64 {
-        let default = 8;
+    fn log_start_offset_sec() -> Option<u64> {
         match env::var("LOG_START_OFFSET") {
-            Ok(s) => s.parse().expect("LOG_START_OFFSET env is not a number"),
-            Err(..) => default,
+            Ok(s) => Some(s.parse().expect("LOG_START_OFFSET env is not a number")),
+            Err(..) => None,
         }
     }
 
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
-        let timestamp = unix_timestamp_now();
-        let timestamp = timestamp - Duration::from_secs(Self::log_start_offset_sec());
         let stream_name = match env::var("KINESIS_STREAM") {
-            Err(..) => format!("{}-RecipientStream", aws.workplace()),
+            Err(..) => format!("JsonEvents-{}-{}", aws.region(), aws.workplace()),
             Ok(s) => s,
+        };
+        let (shard_iterator_type, timestamp) = match Self::log_start_offset_sec() {
+            Some(offset) => {
+                let timestamp = unix_timestamp_now() - Duration::from_secs(offset);
+                ("AT_TIMESTAMP", Some(timestamp.as_secs() as f64))
+            }
+            None => ("LATEST", None),
         };
         let response = aws
             .kc()
             .get_shard_iterator(GetShardIteratorInput {
                 shard_id: "0".into(),
-                shard_iterator_type: "AT_TIMESTAMP".into(),
+                shard_iterator_type: shard_iterator_type.into(),
                 stream_name,
                 starting_sequence_number: None,
-                timestamp: Some(timestamp.as_secs() as f64),
+                timestamp,
             })
             .sync()?;
         if let Some(shard_iterator) = response.shard_iterator {
@@ -164,7 +168,7 @@ impl AwsLogTail {
 impl AwsLogThread {
     fn run(mut self) {
         let startup_timeout_sec = match env::var("STARTUP_TIMEOUT") {
-            Err(..) => 5u64,
+            Err(..) => 50u64,
             Ok(v) => v.parse().expect("Failed to parse STARTUP_TIMEOUT env"),
         };
         let startup_deadline = Instant::now() + Duration::from_secs(startup_timeout_sec);

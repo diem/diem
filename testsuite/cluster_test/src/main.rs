@@ -2,6 +2,7 @@ use clap::{App, Arg, ArgGroup, ArgMatches};
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
+    deployment::DeploymentManager,
     experiments::{Experiment, RebootRandomValidators},
     health::{AwsLogTail, HealthCheckRunner},
 };
@@ -28,10 +29,13 @@ pub fn main() {
         runner.tail_logs();
     } else if matches.is_present(ARG_HEALTH_CHECK) {
         runner.run_health_check();
+    } else if matches.is_present(ARG_WIPE_ALL_DB) {
+        runner.wipe_all_db();
     }
 }
 
 struct ClusterTestRunner {
+    aws: Aws,
     logs: AwsLogTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
@@ -56,6 +60,7 @@ impl ClusterTestRunner {
         );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
         Self {
+            aws,
             logs,
             cluster,
             health_check_runner,
@@ -64,12 +69,19 @@ impl ClusterTestRunner {
 
     /// Run experiments every EXPERIMENT_INTERVAL seconds until fails
     pub fn run_experiments_in_loop(&mut self) {
+        let mut deployment_manager = DeploymentManager::new(self.aws.clone(), self.cluster.clone());
         let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
             Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
             Err(..) => 15,
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
         loop {
+            if deployment_manager.redeploy_if_needed() {
+                println!("Waiting for 60 seconds to allow ECS to restart tasks...");
+                thread::sleep(Duration::from_secs(60));
+                println!("Waiting until all validators healthy after deployment");
+                self.wait_until_all_healthy();
+            }
             self.run_single_experiment();
             thread::sleep(experiment_interval);
         }
@@ -183,10 +195,41 @@ impl ClusterTestRunner {
         }
     }
 
+    fn wait_until_all_healthy(&mut self) {
+        let wait_deadline = Instant::now() + Duration::from_secs(10 * 60);
+        for instance in self.cluster.instances() {
+            self.health_check_runner.invalidate(instance.short_hash());
+        }
+        loop {
+            let now = Instant::now();
+            if now > wait_deadline {
+                panic!("Validators did not become healthy after deployment");
+            }
+            let deadline = now + HEALTH_POLL_INTERVAL;
+            let events = self.logs.recv_all_until_deadline(deadline);
+            if self.health_check_runner.run(&events).is_empty() {
+                break;
+            }
+        }
+    }
+
     fn tail_logs(self) {
         for log in self.logs.event_receiver {
             println!("{:?}", log);
         }
+    }
+
+    fn wipe_all_db(self) {
+        println!("Going to wipe db on all validators in cluster!");
+        println!("Waiting 10 seconds before proceed");
+        thread::sleep(Duration::from_secs(10));
+        println!("Starting...");
+        for instance in self.cluster.instances() {
+            instance
+                .run_cmd(vec!["sudo", "rm", "-rf", "/data/libra/"])
+                .expect("Failed to wipe");
+        }
+        println!("Done");
     }
 }
 
@@ -196,8 +239,10 @@ const ARG_TAIL_LOGS: &str = "tail-logs";
 const ARG_HEALTH_CHECK: &str = "health-check";
 const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
+const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
 
 fn arg_matches() -> ArgMatches<'static> {
+    let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
     let run = Arg::with_name(ARG_RUN).long("--run");
     let run_once = Arg::with_name(ARG_RUN_ONCE).long("--run-once");
     let workplace = Arg::with_name(ARG_WORKPLACE)
@@ -209,12 +254,25 @@ fn arg_matches() -> ArgMatches<'static> {
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
     // This grouping requires one and only one action (tail logs, run test, etc)
     let action_group = ArgGroup::with_name("action")
-        .args(&[ARG_TAIL_LOGS, ARG_RUN, ARG_RUN_ONCE, ARG_HEALTH_CHECK])
+        .args(&[
+            ARG_TAIL_LOGS,
+            ARG_RUN,
+            ARG_RUN_ONCE,
+            ARG_HEALTH_CHECK,
+            ARG_WIPE_ALL_DB,
+        ])
         .required(true);
 
     App::new("cluster_test")
         .author("Libra Association <opensource@libra.org>")
         .group(action_group)
-        .args(&[workplace, run, run_once, tail_logs, health_check])
+        .args(&[
+            workplace,
+            run,
+            run_once,
+            tail_logs,
+            health_check,
+            wipe_all_db,
+        ])
         .get_matches()
 }
