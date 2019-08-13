@@ -6,10 +6,7 @@ use crate::chained_bft::{
     common::Round,
     consensus_types::block::{block_test, Block},
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
-    test_utils::{
-        build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
-        TreeInserter,
-    },
+    test_utils::{build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
 };
 use cached::{cached_key, SizedCache};
 use crypto::HashValue;
@@ -76,7 +73,7 @@ proptest! {
 
         let block_tree = build_empty_tree_with_custom_signing(first_signer.clone());
         let mut inserter = TreeInserter::new(block_tree.clone());
-        let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+        let mut safety_rules = SafetyRules::new(ConsensusState::default());
 
         // This commit_candidate tracks the commit that would get
         // committed if the current block would get a QC
@@ -156,7 +153,7 @@ fn test_initial_state() {
     // Start from scratch, verify the state
     let block_tree = build_empty_tree();
 
-    let safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+    let safety_rules = SafetyRules::new(ConsensusState::default());
     let state = safety_rules.consensus_state();
     assert_eq!(state.last_vote_round(), 0);
     assert_eq!(state.preferred_block_round(), block_tree.root().round());
@@ -167,7 +164,7 @@ fn test_preferred_block_rule() {
     // Preferred block is the highest 2-chain head.
     let block_tree = build_empty_tree();
     let mut inserter = TreeInserter::new(block_tree.clone());
-    let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default());
 
     // build a tree of the following form:
     //             _____    _____
@@ -232,7 +229,7 @@ fn test_preferred_block_rule() {
 fn test_voting() {
     let block_tree = build_empty_tree();
     let mut inserter = TreeInserter::new(block_tree.clone());
-    let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default());
 
     // build a tree of the following form:
     //             _____    __________
@@ -310,48 +307,6 @@ fn test_voting() {
             preferred_block_round: 4,
         })
     );
-
-    // Verify that the voting rules return ParentNotFound for cases the parent is not there.
-    let dummy_parent = Arc::new(Block::make_block(
-        a1.as_ref(),
-        vec![100],
-        100,
-        123,
-        placeholder_certificate_for_block(
-            vec![block_tree.signer()],
-            a1.id(),
-            a1.round(),
-            a1.quorum_cert().certified_block_id(),
-            a1.quorum_cert().certified_block_round(),
-            a1.quorum_cert().certified_parent_block_id(),
-            a1.quorum_cert().certified_parent_block_round(),
-        ),
-        block_tree.signer(),
-    ));
-    let dummy_block = Arc::new(Block::make_block(
-        dummy_parent.as_ref(),
-        vec![100],
-        dummy_parent.round() + 1,
-        123,
-        placeholder_certificate_for_block(
-            vec![block_tree.signer()],
-            dummy_parent.id(),
-            dummy_parent.round(),
-            dummy_parent.quorum_cert().certified_block_id(),
-            dummy_parent.quorum_cert().certified_block_round(),
-            dummy_parent.quorum_cert().certified_parent_block_id(),
-            dummy_parent.quorum_cert().certified_parent_block_round(),
-        ),
-        block_tree.signer(),
-    ));
-    assert_eq!(
-        safety_rules.voting_rule(dummy_block.clone()),
-        Err(ProposalReject::ParentNotFound {
-            proposal_id: dummy_block.id(),
-            proposal_round: dummy_block.round(),
-            parent_id: dummy_parent.id(),
-        })
-    );
 }
 
 #[test]
@@ -359,7 +314,7 @@ fn test_voting() {
 fn test_voting_potential_commit_id() {
     let block_tree = build_empty_tree();
     let mut inserter = TreeInserter::new(block_tree.clone());
-    let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default());
 
     // build a tree of the following form:
     //            _____
@@ -406,7 +361,7 @@ fn test_voting_potential_commit_id() {
 fn test_commit_rule_consecutive_rounds() {
     let block_tree = build_empty_tree();
     let mut inserter = TreeInserter::new(block_tree.clone());
-    let safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
+    let safety_rules = SafetyRules::new(ConsensusState::default());
 
     // build a tree of the following form:
     //             ___________
@@ -426,27 +381,27 @@ fn test_commit_rule_consecutive_rounds() {
     let a4 = inserter.insert_block(a3.as_ref(), 6);
 
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a1.clone()),
+        safety_rules.commit_rule_for_certified_block(a1.quorum_cert(), a1.round()),
         None
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(b1.clone()),
+        safety_rules.commit_rule_for_certified_block(b1.quorum_cert(), b1.round()),
         None
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(b2.clone()),
+        safety_rules.commit_rule_for_certified_block(b2.quorum_cert(), b2.round()),
         None
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a2.clone()),
+        safety_rules.commit_rule_for_certified_block(a2.quorum_cert(), a2.round()),
         None
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a3.clone()),
+        safety_rules.commit_rule_for_certified_block(a3.quorum_cert(), a3.round()),
         None
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a4.clone()),
-        Some(a2)
+        safety_rules.commit_rule_for_certified_block(a4.quorum_cert(), a4.round()),
+        Some(a2.id())
     );
 }

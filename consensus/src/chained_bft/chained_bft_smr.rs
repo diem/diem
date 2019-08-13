@@ -482,10 +482,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 true,
             );
 
-            let safety_rules = Arc::new(RwLock::new(SafetyRules::new(
-                block_store.clone(),
-                consensus_state,
-            )));
+            let safety_rules = Arc::new(RwLock::new(SafetyRules::new(consensus_state)));
 
             let (external_timeout_sender, external_timeout_receiver) =
                 channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
