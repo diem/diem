@@ -225,7 +225,7 @@ where
         // A block must carry a QC to its parent.
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
-        checked_precondition!(parent_block.height() < std::u64::MAX);
+        checked_precondition!(parent_block.height() < std::u64::MAX - 1);
         Block::new_internal(
             payload,
             parent_block.id(),
