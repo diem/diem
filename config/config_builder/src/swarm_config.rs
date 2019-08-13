@@ -98,7 +98,6 @@ impl SwarmConfig {
                 template.base.data_dir_path.clone(),
                 trusted_peers_file.clone(),
                 template.base.trusted_peers.clone(),
-                template.base.node_sync_batch_size,
                 template.base.node_sync_retries,
                 template.base.node_sync_channel_buffer_size,
                 template.base.node_async_log_chan_size,

@@ -10,10 +10,9 @@ use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use logger::prelude::*;
 use nextgen_crypto::ed25519::*;
-use state_synchronizer::SyncStatus;
 use std::pin::Pin;
 use termion::color::*;
-use types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
+use types::ledger_info::LedgerInfoWithSignatures;
 
 pub struct MockStateComputer {
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures<Ed25519Signature>>,
@@ -54,10 +53,7 @@ impl StateComputer for MockStateComputer {
         future::ok(()).boxed()
     }
 
-    fn sync_to(
-        &self,
-        commit: QuorumCert,
-    ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
+    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
@@ -67,15 +63,6 @@ impl StateComputer for MockStateComputer {
         self.commit_callback
             .unbounded_send(commit.ledger_info().clone())
             .expect("Fail to notify about sync");
-        future::ok(SyncStatus::Finished).boxed()
-    }
-
-    fn get_chunk(
-        &self,
-        _: u64,
-        _: u64,
-        _: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
-        future::err(format_err!("not implemented")).boxed()
+        async { Ok(true) }.boxed()
     }
 }

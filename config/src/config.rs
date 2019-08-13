@@ -102,9 +102,6 @@ pub struct BaseConfig {
     #[serde(skip)]
     pub trusted_peers: TrustedPeersConfig,
 
-    // Size of chunks to request when performing restart sync to catchup
-    pub node_sync_batch_size: u64,
-
     // Number of retries per chunk download
     pub node_sync_retries: usize,
 
@@ -127,7 +124,6 @@ impl Default for BaseConfig {
             temp_data_dir: None,
             trusted_peers_file: "trusted_peers.config.toml".to_string(),
             trusted_peers: TrustedPeersConfig::default(),
-            node_sync_batch_size: 1000,
             node_sync_retries: 7,
             node_sync_channel_buffer_size: 10,
             node_async_log_chan_size: 256,
@@ -275,8 +271,6 @@ impl BaseConfig {
         trusted_peers_file: String,
         trusted_peers: TrustedPeersConfig,
 
-        node_sync_batch_size: u64,
-
         node_sync_retries: usize,
 
         node_sync_channel_buffer_size: u64,
@@ -292,7 +286,6 @@ impl BaseConfig {
             temp_data_dir: None,
             trusted_peers_file,
             trusted_peers,
-            node_sync_batch_size,
             node_sync_retries,
             node_sync_channel_buffer_size,
             node_async_log_chan_size,
@@ -320,7 +313,6 @@ impl Clone for BaseConfig {
             temp_data_dir: None,
             trusted_peers_file: self.trusted_peers_file.clone(),
             trusted_peers: self.trusted_peers.clone(),
-            node_sync_batch_size: self.node_sync_batch_size,
             node_sync_retries: self.node_sync_retries,
             node_sync_channel_buffer_size: self.node_sync_channel_buffer_size,
             node_async_log_chan_size: self.node_async_log_chan_size,
@@ -622,15 +614,17 @@ impl Default for MempoolConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct StateSyncConfig {
-    pub address: String,
-    pub service_port: u16,
+    // Size of chunk to request for state synchronization
+    pub chunk_limit: u64,
+    // interval used for checking state synchronization progress
+    pub tick_interval_ms: u64,
 }
 
 impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
-            address: "localhost".to_string(),
-            service_port: 6186,
+            chunk_limit: 1000,
+            tick_interval_ms: 10,
         }
     }
 }
@@ -823,7 +817,6 @@ impl NodeConfigHelpers {
         config.mempool.mempool_service_port = get_available_port();
         config.network.advertised_address = randomize_tcp_port(&config.network.advertised_address);
         config.network.listen_address = randomize_tcp_port(&config.network.listen_address);
-        config.state_sync.service_port = get_available_port();
         config.secret_service.secret_service_port = get_available_port();
         config.storage.port = get_available_port();
     }

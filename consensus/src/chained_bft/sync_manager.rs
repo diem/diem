@@ -18,7 +18,6 @@ use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
-use state_synchronizer::SyncStatus;
 use std::{
     clone::Clone,
     result::Result,
@@ -26,7 +25,7 @@ use std::{
     time::{Duration, Instant},
 };
 use termion::color::*;
-use types::{account_address::AccountAddress, transaction::TransactionListWithProof};
+use types::account_address::AccountAddress;
 
 /// SyncManager is responsible for fetching dependencies and 'catching up' for given qc/ledger info
 pub struct SyncManager<T> {
@@ -104,18 +103,6 @@ where
         )
         .await?;
         Ok(())
-    }
-
-    /// Get a chunk of transactions as a batch
-    pub async fn get_chunk(
-        &self,
-        start_version: u64,
-        target_version: u64,
-        batch_size: u64,
-    ) -> failure::Result<TransactionListWithProof> {
-        self.state_computer
-            .get_chunk(start_version, target_version, batch_size)
-            .await
     }
 
     pub async fn execute_and_insert_block(
@@ -237,12 +224,11 @@ where
             .sync_to(highest_ledger_info.clone())
             .await
         {
-            Ok(SyncStatus::Finished) => (),
-            Ok(e) => panic!(
-                "state synchronizer failure: {:?}, this validator will be killed as it can not \
+            Ok(true) => (),
+            Ok(false) => panic!(
+                "state synchronizer failure, this validator will be killed as it can not \
                  recover from this error.  After the validator is restarted, synchronization will \
                  be retried.",
-                e
             ),
             Err(e) => panic!(
                 "state synchronizer failure: {:?}, this validator will be killed as it can not \

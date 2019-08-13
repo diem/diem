@@ -6,7 +6,7 @@
 use crate::{
     error::NetworkError,
     interface::{NetworkNotification, NetworkRequest},
-    proto::{ConsensusMsg, RequestBlock, RequestChunk, RespondBlock, RespondChunk},
+    proto::{ConsensusMsg, RequestBlock, RespondBlock},
     protocols::{
         direct_send::Message,
         rpc::{self, error::RpcError},
@@ -148,38 +148,6 @@ impl ConsensusNetworkSender {
 
         if res_msg_enum.has_respond_block() {
             Ok(res_msg_enum.take_respond_block())
-        } else {
-            // TODO: context
-            Err(RpcError::InvalidRpcResponse)
-        }
-    }
-
-    /// Send a RequestChunk RPC request to remote peer `recipient`. Returns the
-    /// future `RespondChunk` returned by the remote peer.
-    ///
-    /// The rpc request can be canceled at any point by dropping the returned
-    /// future.
-    pub async fn request_chunk(
-        &mut self,
-        recipient: PeerId,
-        req_msg: RequestChunk,
-        timeout: Duration,
-    ) -> Result<RespondChunk, RpcError> {
-        let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
-        let mut req_msg_enum = ConsensusMsg::new();
-        req_msg_enum.set_request_chunk(req_msg);
-
-        let mut res_msg_enum = rpc::utils::unary_rpc(
-            self.inner.clone(),
-            recipient,
-            protocol,
-            req_msg_enum,
-            timeout,
-        )
-        .await?;
-
-        if res_msg_enum.has_respond_chunk() {
-            Ok(res_msg_enum.take_respond_chunk())
         } else {
             // TODO: context
             Err(RpcError::InvalidRpcResponse)

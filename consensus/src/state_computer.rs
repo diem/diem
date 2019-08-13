@@ -16,11 +16,11 @@ use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use logger::prelude::*;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
-use state_synchronizer::{StateSyncClient, SyncStatus};
+use state_synchronizer::StateSyncClient;
 use std::{pin::Pin, sync::Arc, time::Instant};
 use types::{
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus},
+    transaction::{SignedTransaction, TransactionStatus},
 };
 
 /// Basic communication with the Execution module;
@@ -161,24 +161,10 @@ impl StateComputer for ExecutionProxy {
     }
 
     /// Synchronize to a commit that not present locally.
-    fn sync_to(
-        &self,
-        commit: QuorumCert,
-    ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
+    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
         self.synchronizer
             .sync_to(commit.ledger_info().clone())
-            .boxed()
-    }
-
-    fn get_chunk(
-        &self,
-        start_version: u64,
-        target_version: u64,
-        batch_size: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
-        self.synchronizer
-            .get_chunk(start_version, target_version, batch_size)
             .boxed()
     }
 }

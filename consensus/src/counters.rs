@@ -189,9 +189,6 @@ pub static ref PENDING_VOTES: IntGauge = OP_COUNTERS.gauge("pending_votes");
 /// Count of the pending inbound block requests
 pub static ref PENDING_BLOCK_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_block_requests");
 
-/// Count of the pending inbound chunk requests
-pub static ref PENDING_CHUNK_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_chunk_requests");
-
 /// Count of the pending inbound new round messages
 pub static ref PENDING_NEW_ROUND_MESSAGES: IntGauge = OP_COUNTERS.gauge("pending_new_round_messages");
 
