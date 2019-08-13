@@ -385,6 +385,10 @@ impl LibraDB {
         // Persist.
         let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
         self.commit(sealed_cs)?;
+        // Once everything is successfully persisted, update the latest in-memory ledger info.
+        if let Some(x) = ledger_info_with_sigs {
+            self.ledger_store.set_latest_ledger_info(x.clone());
+        }
 
         // Only increment counter if commit succeeds and there are at least one transaction written
         // to the storage. That's also when we'd inform the pruner thread to work.
@@ -578,7 +582,7 @@ impl LibraDB {
     /// This is used by the executor module internally.
     pub fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>> {
         // Get the latest ledger info. Return None if not bootstrapped.
-        let ledger_info_with_sigs = match self.ledger_store.get_latest_ledger_info_option()? {
+        let ledger_info_with_sigs = match self.ledger_store.get_latest_ledger_info_option() {
             Some(x) => x,
             None => return Ok(None),
         };
