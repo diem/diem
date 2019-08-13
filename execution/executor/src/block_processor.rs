@@ -93,7 +93,7 @@ where
         committed_timestamp_usecs: u64,
         previous_state_root_hash: HashValue,
         previous_frozen_subtrees_in_accumulator: Vec<HashValue>,
-        previous_num_elements_in_accumulator: u64,
+        previous_num_leaves_in_accumulator: u64,
         last_committed_block_id: HashValue,
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
@@ -105,7 +105,7 @@ where
             committed_state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
             committed_transaction_accumulator: Rc::new(Accumulator::new(
                 previous_frozen_subtrees_in_accumulator,
-                previous_num_elements_in_accumulator,
+                previous_num_leaves_in_accumulator,
             )),
             block_tree: BlockTree::new(last_committed_block_id),
             blocks_to_store: VecDeque::new(),
@@ -299,7 +299,7 @@ where
         info!(
             "Local version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
-            self.committed_transaction_accumulator.num_elements() - 1,
+            self.committed_transaction_accumulator.num_leaves() - 1,
             txn_list_with_proof.first_transaction_version,
             txn_list_with_proof.transaction_and_infos.len(),
         );
@@ -316,7 +316,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_transaction_accumulator.num_elements(),
+            self.committed_transaction_accumulator.num_leaves(),
             self.committed_state_tree.root_hash(),
             &self.committed_state_tree,
         );
@@ -381,7 +381,7 @@ where
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
         let num_txns = txns_to_commit.len() as u64;
-        let ledger_info_to_commit = if self.committed_transaction_accumulator.num_elements()
+        let ledger_info_to_commit = if self.committed_transaction_accumulator.num_leaves()
             + num_txns
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
@@ -434,7 +434,7 @@ where
             txn_list_with_proof.first_transaction_version,
         )?;
 
-        let num_committed_txns = self.committed_transaction_accumulator.num_elements();
+        let num_committed_txns = self.committed_transaction_accumulator.num_leaves();
         if txn_list_with_proof.transaction_and_infos.is_empty() {
             return Ok((0, num_committed_txns /* first_version */));
         }
@@ -521,7 +521,7 @@ where
             .as_ref()
             .expect("This block must have signatures.");
         let version = ledger_info_with_sigs.ledger_info().version();
-        let num_txns_in_accumulator = last_block.clone_transaction_accumulator().num_elements();
+        let num_txns_in_accumulator = last_block.clone_transaction_accumulator().num_leaves();
         assert_eq!(
             version + 1,
             num_txns_in_accumulator,
@@ -602,7 +602,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_transaction_accumulator.num_elements(),
+            self.committed_transaction_accumulator.num_leaves(),
             self.committed_state_tree.root_hash(),
             &previous_state_tree,
         );
@@ -641,7 +641,7 @@ where
             Ok(output) => {
                 let accumulator = output.clone_transaction_accumulator();
                 let root_hash = accumulator.root_hash();
-                let version = accumulator.num_elements() - 1;
+                let version = accumulator.num_leaves() - 1;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to

@@ -67,7 +67,7 @@ where
         let (
             state_root_hash,
             frozen_subtrees_in_accumulator,
-            num_elements_in_accumulator,
+            num_leaves_in_accumulator,
             committed_timestamp_usecs,
             committed_block_id,
         ) = match startup_info {
@@ -107,7 +107,7 @@ where
                             committed_timestamp_usecs,
                             state_root_hash,
                             frozen_subtrees_in_accumulator,
-                            num_elements_in_accumulator,
+                            num_leaves_in_accumulator,
                             committed_block_id,
                             storage_read_client,
                             storage_write_client,
