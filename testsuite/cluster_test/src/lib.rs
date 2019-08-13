@@ -1,5 +1,6 @@
 pub mod aws;
 pub mod cluster;
+pub mod deployment;
 pub mod effects;
 pub mod experiments;
 pub mod health;
