@@ -5,7 +5,7 @@ use crate::{
     output_tee::{OutputTee, OutputTeeGuard},
     utils,
 };
-use config::config::NodeConfig;
+use config::config::{NodeConfig, RoleType};
 use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
@@ -64,7 +64,7 @@ impl LibraNode {
         tee_logs: bool,
     ) -> Result<Self> {
         let peer_id = config.base.peer_id.clone();
-        let log = logdir.join(format!("{}.log", peer_id));
+        let log = logdir.join(format!("{}.log", SwarmConfig::get_alias(&config)));
         let log_file = File::create(&log)?;
         let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
         node_command
@@ -230,7 +230,8 @@ pub struct LibraSwarm {
     // Output log, LibraNodes' config file, libradb etc, into this dir.
     pub dir: Option<LibraSwarmDir>,
     // Maps the peer id of a node to the LibraNode struct
-    pub nodes: HashMap<String, LibraNode>,
+    pub validator_nodes: HashMap<String, LibraNode>,
+    pub full_nodes: Vec<LibraNode>,
     pub config: SwarmConfig,
     tee_logs: bool,
 }
@@ -322,13 +323,13 @@ impl LibraSwarm {
             .with_topology(topology)
             .with_base(base)
             .with_output_dir(&dir)
-            .with_faucet_keypair(faucet_account_keypair)
-            .randomize_ports();
+            .with_faucet_keypair(faucet_account_keypair);
         let config = config_builder.build().unwrap();
 
         let mut swarm = Self {
             dir: Some(dir),
-            nodes: HashMap::new(),
+            validator_nodes: HashMap::new(),
+            full_nodes: vec![],
             config,
             tee_logs,
         };
@@ -342,7 +343,14 @@ impl LibraSwarm {
                 tee_logs,
             )
             .unwrap();
-            swarm.nodes.insert(node.peer_id(), node);
+            match node_config.base.get_role() {
+                RoleType::Validator => {
+                    swarm.validator_nodes.insert(node.peer_id(), node);
+                }
+                RoleType::FullNode => {
+                    swarm.full_nodes.push(node);
+                }
+            }
         }
 
         swarm.wait_for_startup()?;
@@ -355,7 +363,7 @@ impl LibraSwarm {
 
     fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
-        if self.nodes.len() == 1 {
+        if self.validator_nodes.len() == 1 {
             return Ok(());
         }
 
@@ -365,12 +373,13 @@ impl LibraSwarm {
             debug!("Wait for connectivity attempt: {}", i);
 
             if self
-                .nodes
+                .validator_nodes
                 .values()
-                .all(|node| node.check_connectivity(self.nodes.len() as i64 - 1))
+                .all(|node| node.check_connectivity(self.validator_nodes.len() as i64 - 1))
             {
                 return Ok(());
             }
+            // TODO check full node connectivity for full nodes
 
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
@@ -380,11 +389,15 @@ impl LibraSwarm {
 
     fn wait_for_startup(&mut self) -> std::result::Result<(), SwarmLaunchFailure> {
         let num_attempts = 120;
-        let mut done = vec![false; self.nodes.len()];
-
+        let mut done = vec![false; self.validator_nodes.len() + self.full_nodes.len()];
         for i in 0..num_attempts {
             debug!("Wait for startup attempt: {} of {}", i, num_attempts);
-            for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
+            for (node, done) in self
+                .validator_nodes
+                .values_mut()
+                .chain(self.full_nodes.iter_mut())
+                .zip(done.iter_mut())
+            {
                 if *done {
                     continue;
                 }
@@ -422,12 +435,12 @@ impl LibraSwarm {
     pub fn wait_for_all_nodes_to_catchup(&mut self) -> bool {
         let num_attempts = 60;
         let last_committed_round_str = "consensus{op=committed_blocks_count}";
-        let mut done = vec![false; self.nodes.len()];
+        let mut done = vec![false; self.validator_nodes.len()];
 
         let mut last_committed_round = 0;
         // First, try to retrieve the max value across all the committed rounds
         debug!("Calculating max committed round across the validators.");
-        for node in self.nodes.values() {
+        for node in self.validator_nodes.values() {
             match node.get_metric(last_committed_round_str) {
                 Some(val) => {
                     debug!("\tNode {} last committed round = {}", node.peer_id, val);
@@ -448,7 +461,7 @@ impl LibraSwarm {
                 "Wait for catchup, target_commit_round = {}, attempt: {} of {}",
                 last_committed_round, i, num_attempts
             );
-            for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
+            for (node, done) in self.validator_nodes.values_mut().zip(done.iter_mut()) {
                 if *done {
                     continue;
                 }
@@ -488,14 +501,29 @@ impl LibraSwarm {
         false
     }
 
-    /// Vector with the public AC ports of the validators.
-    pub fn get_validators_public_ports(&self) -> Vec<u16> {
-        self.nodes.values().map(|node| node.ac_port()).collect()
+    /// A specific public AC port of a validator or a full node.
+    pub fn get_ac_port(&self, index: usize, role: RoleType) -> u16 {
+        match role {
+            RoleType::Validator => *self
+                .validator_nodes
+                .values()
+                .map(|node| node.ac_port())
+                .collect::<Vec<u16>>()
+                .get(index)
+                .unwrap(),
+            RoleType::FullNode => *self
+                .full_nodes
+                .iter()
+                .map(|node| node.ac_port())
+                .collect::<Vec<u16>>()
+                .get(index)
+                .unwrap(),
+        }
     }
 
     /// Vector with the peer ids of the validators in the swarm.
     pub fn get_validators_ids(&self) -> Vec<String> {
-        self.nodes.keys().cloned().collect()
+        self.validator_nodes.keys().cloned().collect()
     }
 
     /// Vector with the debug ports of all the validators in the swarm.
@@ -508,11 +536,11 @@ impl LibraSwarm {
     }
 
     pub fn get_validator(&self, peer_id: &str) -> Option<&LibraNode> {
-        self.nodes.get(peer_id)
+        self.validator_nodes.get(peer_id)
     }
 
     pub fn kill_node(&mut self, peer_id: &str) {
-        self.nodes.remove(peer_id);
+        self.validator_nodes.remove(peer_id);
     }
 
     pub fn add_node(
@@ -547,7 +575,7 @@ impl LibraSwarm {
                 .unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
-                self.nodes.insert(peer_id, node);
+                self.validator_nodes.insert(peer_id, node);
                 return self.wait_for_connectivity();
             }
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));

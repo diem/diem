@@ -5,6 +5,7 @@ use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, IntoProtoBytes, RawTransactionBytes,
     TransactionArgument, TransactionPayload,
 };
+use config::config::RoleType;
 use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{swarm::LibraSwarm, utils};
 use nextgen_crypto::{ed25519::*, SigningKey};
@@ -13,15 +14,15 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 
 fn setup_env(
-    num_nodes: usize,
+    topology: LibraSwarmTopology,
     client_port_index: usize,
     template_path: Option<String>,
+    role: RoleType,
 ) -> (LibraSwarm, ClientProxy) {
     ::logger::init_for_e2e_testing();
 
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
-    let topology = LibraSwarmTopology::create_validator_network(num_nodes);
 
     let swarm = LibraSwarm::launch_swarm(
         topology,
@@ -31,10 +32,7 @@ fn setup_env(
         None, /* config_dir */
         template_path,
     );
-    let port = *swarm
-        .get_validators_public_ports()
-        .get(client_port_index)
-        .unwrap();
+    let port = swarm.get_ac_port(client_port_index, role);
     let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
     let client_proxy = ClientProxy::new(
         "localhost",
@@ -61,7 +59,12 @@ fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
 ) -> (LibraSwarm, ClientProxy) {
-    setup_env(num_nodes, client_port_index, None)
+    setup_env(
+        LibraSwarmTopology::create_validator_network(num_nodes),
+        client_port_index,
+        None,
+        RoleType::Validator,
+    )
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
@@ -322,9 +325,10 @@ fn test_basic_state_synchronization() {
 #[test]
 fn test_full_node() {
     let (mut _swarm, mut client_proxy) = setup_env(
-        1,
+        LibraSwarmTopology::create_uniform_network(1, 2),
         0,
-        Some("config/data/configs/full_node.config.toml".to_string()),
+        None,
+        RoleType::FullNode,
     );
     assert_eq!(
         Decimal::from_f64(1000.0),

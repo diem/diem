@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use config::config::RoleType;
 use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{client, swarm::LibraSwarm};
 use std::path::Path;
@@ -74,7 +75,7 @@ fn main() {
     let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
     if args.start_client {
         let client = client::InteractiveClient::new_with_inherit_io(
-            *swarm.get_validators_public_ports().get(0).unwrap(),
+            swarm.get_ac_port(0, RoleType::Validator),
             Path::new(&faucet_key_file_path),
             &tmp_mnemonic_file.into_temp_path(),
             swarm.get_trusted_peers_config_path(),
