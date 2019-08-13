@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
+    bls12381::{
+        BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature, BLS12381_PRIVATE_KEY_LENGTH,
+        BLS12381_PUBLIC_KEY_LENGTH, BLS12381_SIGNATURE_LENGTH,
+    },
     traits::*,
     unit_tests::uniform_keypair_strategy,
 };
@@ -41,6 +44,24 @@ proptest! {
             prop_assert_eq!(Some(keypair.public_key), deserialized.ok());
         }
     }
+
+    #[test]
+    fn test_keys_custom_serialisation(
+        keypair in uniform_keypair_strategy::<BLS12381PrivateKey, BLS12381PublicKey>()
+    ) {
+        {
+            let serialized: &[u8] = &(keypair.private_key.to_bytes());
+            prop_assert_eq!(serialized.len(), BLS12381_PRIVATE_KEY_LENGTH);
+            let deserialized = BLS12381PrivateKey::try_from(serialized);
+            prop_assert_eq!(Some(keypair.private_key), deserialized.ok());
+        }
+        {
+            let serialized: &[u8] = &(keypair.public_key.to_bytes());
+            prop_assert_eq!(serialized.len(), BLS12381_PUBLIC_KEY_LENGTH);
+            let deserialized = BLS12381PublicKey::try_from(serialized);
+            prop_assert_eq!(Some(keypair.public_key), deserialized.ok());
+        }
+    }
 }
 
 proptest! {
@@ -53,8 +74,9 @@ proptest! {
     ) {
         let signature = keypair.private_key.sign_message(&hash);
         let serialized = serialize(&signature).unwrap();
+        prop_assert_eq!(serialized.len(), BLS12381_SIGNATURE_LENGTH);
         let deserialized = deserialize::<BLS12381Signature>(&serialized).unwrap();
-        assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
+        prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
     }
 
     #[test]

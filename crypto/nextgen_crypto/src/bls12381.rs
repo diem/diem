@@ -43,53 +43,41 @@ use pairing::{
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
-use threshold_crypto;
 
-// type alias for this unwieldy type
+/// The length of the Ed25519PrivateKey.
+pub const BLS12381_PRIVATE_KEY_LENGTH: usize = 32;
+/// The length of the Ed25519PublicKey.
+pub const BLS12381_PUBLIC_KEY_LENGTH: usize = threshold_crypto::PK_SIZE;
+/// The length of the Ed25519Signature.
+pub const BLS12381_SIGNATURE_LENGTH: usize = threshold_crypto::SIG_SIZE;
+
+// type alias for this unwieldy type.
 type ThresholdBLSPrivateKey =
     threshold_crypto::serde_impl::SerdeSecret<threshold_crypto::SecretKey>;
 
-/// A BLS12-381 private key
+/// A BLS12-381 private key.
 #[derive(Serialize, Deserialize, SilentDisplay, SilentDebug)]
 pub struct BLS12381PrivateKey(ThresholdBLSPrivateKey);
 
-/// A BLS12-381 public key
+/// A BLS12-381 public key.
 #[derive(Clone, Hash, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct BLS12381PublicKey(threshold_crypto::PublicKey);
 
-/// A BLS12-381 signature
+/// A BLS12-381 signature.
 #[derive(Clone, Hash, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct BLS12381Signature(threshold_crypto::Signature);
 
 impl BLS12381PublicKey {
-    /// Serializes a BLS12381PublicKey
-    pub fn to_bytes(&self) -> [u8; threshold_crypto::PK_SIZE] {
+    /// Serializes a BLS12381PublicKey.
+    pub fn to_bytes(&self) -> [u8; BLS12381_PUBLIC_KEY_LENGTH] {
         self.0.to_bytes()
     }
 }
 
 impl BLS12381Signature {
-    /// Serializes a BLS12381Signature
-    pub fn to_bytes(&self) -> [u8; threshold_crypto::SIG_SIZE] {
+    /// Serializes a BLS12381Signature.
+    pub fn to_bytes(&self) -> [u8; BLS12381_SIGNATURE_LENGTH] {
         self.0.to_bytes()
-    }
-}
-
-impl BLS12381PrivateKey {
-    #[allow(dead_code)]
-    /// Deserialize a [`BLS12381PrivateKey`]. This method DOES NOT check for key validity.
-    fn from_bytes_unchecked(
-        mut fr_repr: [u64; 4usize],
-    ) -> std::result::Result<BLS12381PrivateKey, CryptoMaterialError> {
-        // let mut fr_repr: [u64; 4usize] = rng.gen();
-        // Since field modulus is 381-bit prime, drop the 3 highest-order bits
-        fr_repr[3] &= 0x1FFF_FFFF_FFFF_FFFF;
-        let mut fr = Fr::from_repr(FrRepr(fr_repr)).unwrap();
-        Ok(BLS12381PrivateKey(
-            threshold_crypto::serde_impl::SerdeSecret(threshold_crypto::SecretKey::from_mut(
-                &mut fr,
-            )),
-        ))
     }
 }
 
@@ -139,7 +127,10 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
     type Error = CryptoMaterialError;
 
     fn try_from(bytes: &[u8]) -> std::result::Result<BLS12381PrivateKey, CryptoMaterialError> {
-        // first we deserialize raw bytes, which may or may not work
+        if bytes.len() != 32 {
+            return Err(CryptoMaterialError::WrongLengthError);
+        }
+        // First we deserialize raw bytes, which may or may not work.
         let key_res = deserialize::<BLS12381PrivateKey>(bytes);
         // Note that the underlying implementation of SerdeSecret checks for validation during
         // deserialization. Also, we don't need to check for validity of the derived PublicKey, as a
@@ -149,16 +140,16 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
     }
 }
 impl ValidKey for BLS12381PrivateKey {
-    // TODO(ladi): implement!
     fn to_bytes(&self) -> Vec<u8> {
-        unimplemented!("ask ladi!")
+        // This is expected to succeed as we just return the bytes of an existing key.
+        bincode::serialize(&self.0).unwrap()
     }
 }
 
 impl Genesis for BLS12381PrivateKey {
     fn genesis() -> Self {
-        let mut buf = [0u8; threshold_crypto::PK_SIZE];
-        buf[threshold_crypto::PK_SIZE - 1] = 1;
+        let mut buf = [0u8; BLS12381_PRIVATE_KEY_LENGTH];
+        buf[BLS12381_PRIVATE_KEY_LENGTH - 1] = 1;
         Self::try_from(buf.as_ref()).unwrap()
     }
 }
@@ -187,7 +178,7 @@ impl From<&BLS12381PrivateKey> for BLS12381PublicKey {
 impl PublicKey for BLS12381PublicKey {
     type PrivateKeyMaterial = BLS12381PrivateKey;
     fn length() -> usize {
-        threshold_crypto::PK_SIZE
+        BLS12381_PUBLIC_KEY_LENGTH
     }
 }
 
@@ -205,11 +196,18 @@ impl TryFrom<&[u8]> for BLS12381PublicKey {
     type Error = CryptoMaterialError;
 
     fn try_from(bytes: &[u8]) -> std::result::Result<BLS12381PublicKey, CryptoMaterialError> {
-        // first we deserialize raw bytes, which may or may not work
-        let key_res = deserialize::<BLS12381PublicKey>(bytes);
-        // TODO: call some validation! For now we just put in a
-        // very conspicuous useless lambda
-        key_res.or(Err(CryptoMaterialError::DeserializationError))
+        if bytes.len() != BLS12381_PUBLIC_KEY_LENGTH {
+            return Err(CryptoMaterialError::WrongLengthError);
+        }
+        let mut byte_array = [0u8; BLS12381_PUBLIC_KEY_LENGTH];
+        byte_array.copy_from_slice(&bytes[..BLS12381_PUBLIC_KEY_LENGTH]);
+        // Note that the underlying implementation of threshold_crypto::PublicKey::from_bytes checks
+        // for validation during deserialization.
+        let pub_key = threshold_crypto::PublicKey::from_bytes(byte_array);
+        match pub_key {
+            Ok(key) => Ok(BLS12381PublicKey(key)),
+            Err(_) => Err(CryptoMaterialError::DeserializationError),
+        }
     }
 }
 
@@ -259,10 +257,10 @@ impl TryFrom<&[u8]> for BLS12381Signature {
 
     fn try_from(bytes: &[u8]) -> std::result::Result<BLS12381Signature, CryptoMaterialError> {
         let l = bytes.len();
-        if l > threshold_crypto::SIG_SIZE {
+        if l > BLS12381_SIGNATURE_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
         }
-        let mut tmp = [0u8; threshold_crypto::SIG_SIZE];
+        let mut tmp = [0u8; BLS12381_SIGNATURE_LENGTH];
         tmp[..l].copy_from_slice(&bytes[..l]);
         let sig = threshold_crypto::Signature::from_bytes(&tmp)
             .map_err(|_err| CryptoMaterialError::ValidationError)?;
