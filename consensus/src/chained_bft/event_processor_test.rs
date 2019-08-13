@@ -60,7 +60,6 @@ use types::{
 };
 
 /// Auxiliary struct that is setting up node environment for the test.
-#[allow(dead_code)]
 struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
@@ -71,6 +70,7 @@ struct NodeSetup {
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
     pacemaker: Arc<dyn Pacemaker>,
+    #[allow(dead_code)]
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 

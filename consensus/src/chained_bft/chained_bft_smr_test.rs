@@ -18,8 +18,7 @@ use channel;
 use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-#[allow(unused_imports)]
-use nextgen_crypto::ed25519::{compat, *};
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::sync::Arc;
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
