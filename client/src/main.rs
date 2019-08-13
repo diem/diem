@@ -14,7 +14,7 @@ use structopt::StructOpt;
 )]
 struct Args {
     /// Admission Control port to connect to.
-    #[structopt(short = "p", long = "port", default_value = "30307")]
+    #[structopt(short = "p", long = "port", default_value = "8000")]
     pub port: String,
     /// Host address/name to connect to.
     #[structopt(short = "a", long = "host")]
@@ -52,10 +52,10 @@ struct Args {
 fn main() -> std::io::Result<()> {
     let _logger = set_default_global_logger(false /* async */, None);
     crash_handler::setup_panic_handler();
-
-    let (commands, alias_to_cmd) = get_commands();
-
     let args = Args::from_args();
+
+    let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
+
     let faucet_account_file = args.faucet_account_file.unwrap_or_else(|| "".to_string());
 
     let mut client_proxy = ClientProxy::new(
@@ -94,7 +94,10 @@ fn main() -> std::io::Result<()> {
         match readline {
             Ok(line) => {
                 let params = parse_cmd(&line);
-                match alias_to_cmd.get(params[0]) {
+                if params.is_empty() {
+                    continue;
+                }
+                match alias_to_cmd.get(&params[0]) {
                     Some(cmd) => cmd.execute(&mut client_proxy, &params),
                     None => match params[0] {
                         "quit" | "q!" => break,

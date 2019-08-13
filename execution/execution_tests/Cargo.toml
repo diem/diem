@@ -1,0 +1,34 @@
+[package]
+name = "execution_tests"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures01 = { package = "futures", version = "0.1.26" }
+grpcio = "0.4.4"
+tempfile = "3.1.0"
+
+config = { path = "../../config" }
+config_builder = { path = "../../config/config_builder" }
+crypto = { path = "../../crypto/legacy_crypto" }
+execution_client = { path = "../execution_client" }
+execution_proto = { path = "../execution_proto" }
+execution_service = { path = "../execution_service" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+grpc_helpers = { path = "../../common/grpc_helpers" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
+proto_conv = { path = "../../common/proto_conv" }
+storage_client = { path = "../../storage/storage_client" }
+storage_proto = { path = "../../storage/storage_proto" }
+storage_service = { path = "../../storage/storage_service" }
+types = { path = "../../types" }
+vm_genesis = { path = "../../language/vm/vm_genesis" }
+
+[dev-dependencies]
+rand = "0.6.5"
+nextgen_crypto = { path = "../../crypto/nextgen_crypto", features = ["testing"] }

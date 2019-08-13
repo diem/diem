@@ -1,3 +1,5 @@
+//! account: bob, 1000000
+
 import 0x0.LibraAccount;
 
 main() {
@@ -9,7 +11,7 @@ main() {
     let recipient_new_balance: u64;
 
     sender_addr = get_txn_sender();
-    recipient_addr = 0x42;
+    recipient_addr = {{bob}};
     sender_original_balance = LibraAccount.balance(copy(sender_addr));
     recipient_original_balance = LibraAccount.balance(copy(recipient_addr));
     LibraAccount.pay_from_sender(copy(recipient_addr), 5);
@@ -21,6 +23,3 @@ main() {
 
     return;
 }
-
-// check: Execution(MissingData)
-// TODO: current testing setup does not support this scenario

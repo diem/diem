@@ -16,6 +16,8 @@ pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use failure::prelude::*;
+use lazy_static::lazy_static;
+use metrics::OpMetrics;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
@@ -25,6 +27,10 @@ use std::{
     marker::PhantomData,
     path::Path,
 };
+
+lazy_static! {
+    static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("schemadb");
+}
 
 /// Type alias to `rocksdb::ColumnFamilyOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ColumnFamilyOptions = rocksdb::ColumnFamilyOptions;
@@ -265,7 +271,19 @@ impl DB {
 
         self.inner
             .write_opt(&db_batch, &default_write_options())
-            .map_err(convert_rocksdb_err)
+            .map_err(convert_rocksdb_err)?;
+
+        for (cf_name, key, write_op) in &batch.rows {
+            match write_op {
+                WriteOp::Value(value) => OP_COUNTER.observe(
+                    &format!("db_put_bytes_{}", cf_name),
+                    (key.len() + value.len()) as f64,
+                ),
+                WriteOp::Deletion => OP_COUNTER.inc(&format!("db_delete_{}", cf_name)),
+            };
+        }
+
+        Ok(())
     }
 
     fn get_cf_handle(&self, cf_name: &str) -> Result<&CFHandle> {

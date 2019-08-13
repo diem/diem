@@ -15,7 +15,7 @@ COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
 COPY . /libra
-RUN cargo build -p client --release
+RUN cargo build --release -p libra_node -p client -p benchmark
 
 ### Production Image ###
 FROM debian:stretch
@@ -25,8 +25,7 @@ RUN apt-get update && apt-get install -y python3-pip nano net-tools tcpdump ipro
     && apt-get clean && rm -r /var/lib/apt/lists/*
 
 # RUN apt-get install python3
-# TODO: Move to requirements.txt
-RUN pip3 install flask flask_limiter gunicorn pexpect
+RUN pip3 install -r requirements.txt
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc /libra/client/data/wallet/
 
@@ -39,11 +38,11 @@ COPY docker/mint/server.py /opt/libra/bin
 # Mint proxy listening address
 EXPOSE 8000
 
-# Define TRUSTED_PEERS, MINT_KEY, AC_HOST and AC_PORT environment variables when running
-CMD cd /opt/libra/etc && echo "$TRUSTED_PEERS" > trusted_peers.config.toml && echo "$MINT_KEY" | \
+# Define MINT_KEY, AC_HOST and AC_PORT environment variables when running
+CMD cd /opt/libra/etc && echo "$MINT_KEY" | \
     base64 -d > mint.key && \
     cd /opt/libra/bin && \
-    gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
+    exec gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
 
 
 ARG BUILD_DATE

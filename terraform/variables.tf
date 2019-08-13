@@ -15,24 +15,22 @@ variable "ssh_priv_key_file" {
 variable "ssh_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow SSH access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "ssh_sources_ipv6" {
   type        = list(string)
   description = "List of IPv6 CIDR blocks from which to allow SSH access"
-  default     = ["::/0"]
 }
 
 variable "api_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow API access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "image_repo" {
   type        = string
   description = "Docker image repository to use for validator"
+  default     = "docker.libra.org/validator"
 }
 
 variable "image_tag" {
@@ -48,21 +46,12 @@ variable "peer_ids" {
 
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
-  default     = "m5.large"
+  default     = "c5d.large"
 }
 
-variable "faucet_image_repo" {
-  description = "Docker image repository to use for faucet server"
-}
-
-variable "faucet_log_level" {
-  description = "Log level for faucet to pass to gunicorn"
-  default     = "info"
-}
-
-variable "faucet_image_tag" {
-  description = "Docker image tag to use for faucet server"
-  default     = "latest"
+variable "validator_ebs_size" {
+  description = "Size of validator EBS volume in GB"
+  default     = 30
 }
 
 variable "zone_id" {

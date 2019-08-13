@@ -26,11 +26,13 @@ impl CompiledScriptMut {
     /// This is intended mainly for test code. Production code will typically use
     /// [`CompiledScript::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ScriptSerializer::new(1, 0);
-        let mut temp: Vec<u8> = Vec::new();
+        let mut temp = BinaryData::new();
         ser.serialize(&mut temp, self)?;
-        ser.serialize_header(binary)?;
-        binary.append(&mut temp);
+        ser.serialize_header(&mut binary_data)?;
+        binary_data.extend(temp.as_inner())?;
+        *binary = binary_data.into_inner();
         Ok(())
     }
 }
@@ -49,11 +51,13 @@ impl CompiledModuleMut {
     /// This is intended mainly for test code. Production code will typically use
     /// [`CompiledModule::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ModuleSerializer::new(1, 0);
-        let mut temp: Vec<u8> = Vec::new();
+        let mut temp = BinaryData::new();
         ser.serialize(&mut temp, self)?;
-        ser.serialize_header(binary)?;
-        binary.append(&mut temp);
+        ser.serialize_header(&mut binary_data)?;
+        binary_data.extend(temp.as_inner())?;
+        *binary = binary_data.into_inner();
         Ok(())
     }
 }
@@ -111,18 +115,44 @@ fn check_index_in_binary(index: usize) -> Result<u32> {
     Ok(index as u32)
 }
 
-fn serialize_table(binary: &mut Vec<u8>, kind: TableType, offset: u32, count: u32) {
+fn unchecked_serialize_table(
+    binary: &mut BinaryData,
+    kind: TableType,
+    offset: u32,
+    count: u32,
+) -> Result<()> {
     if count != 0 {
-        binary.push(kind as u8);
-        write_u32(binary, offset);
-        write_u32(binary, count);
+        binary.push(kind as u8)?;
+        write_u32(binary, offset)?;
+        write_u32(binary, count)?;
     }
+    Ok(())
 }
 
-fn serialize_magic(binary: &mut Vec<u8>) {
-    for byte in &BinaryConstants::LIBRA_MAGIC {
-        binary.push(*byte);
+fn checked_serialize_table(
+    binary: &mut BinaryData,
+    kind: TableType,
+    start: u32,
+    offset: u32,
+    length: u32,
+) -> Result<()> {
+    if let Some(start_offset) = start.checked_add(offset) {
+        unchecked_serialize_table(binary, kind, start_offset, length)?;
+    } else {
+        bail!(
+            "binary size ({}) cannot exceed {}",
+            binary.len(),
+            usize::max_value(),
+        );
     }
+    Ok(())
+}
+
+fn serialize_magic(binary: &mut BinaryData) -> Result<()> {
+    for byte in &BinaryConstants::LIBRA_MAGIC {
+        binary.push(*byte)?;
+    }
+    Ok(())
 }
 
 /// Trait to access tables for both `CompiledScript` and `CompiledModule`,
@@ -220,9 +250,10 @@ impl CommonTables for CompiledModuleMut {
 /// A `ModuleHandle` gets serialized as follows:
 /// - `ModuleHandle.address` as a ULEB128 (index into the `AddressPool`)
 /// - `ModuleHandle.name` as a ULEB128 (index into the `StringPool`)
-fn serialize_module_handle(binary: &mut Vec<u8>, module_handle: &ModuleHandle) {
-    write_u16_as_uleb128(binary, module_handle.address.0);
-    write_u16_as_uleb128(binary, module_handle.name.0);
+fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle) -> Result<()> {
+    write_u16_as_uleb128(binary, module_handle.address.0)?;
+    write_u16_as_uleb128(binary, module_handle.name.0)?;
+    Ok(())
 }
 
 /// Serializes a `StructHandle`.
@@ -230,15 +261,12 @@ fn serialize_module_handle(binary: &mut Vec<u8>, module_handle: &ModuleHandle) {
 /// A `StructHandle` gets serialized as follows:
 /// - `StructHandle.module` as a ULEB128 (index into the `ModuleHandle` table)
 /// - `StructHandle.name` as a ULEB128 (index into the `StringPool`)
-/// - `StructHandle.is_resource` as a 1 byte boolean (0 for false, 1 for true)
-fn serialize_struct_handle(binary: &mut Vec<u8>, struct_handle: &StructHandle) {
-    write_u16_as_uleb128(binary, struct_handle.module.0);
-    write_u16_as_uleb128(binary, struct_handle.name.0);
-    if struct_handle.is_resource {
-        binary.push(1);
-    } else {
-        binary.push(0);
-    }
+/// - `StructHandle.is_nominal_resource` as a 1 byte boolean (0 for false, 1 for true)
+fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
+    write_u16_as_uleb128(binary, struct_handle.module.0)?;
+    write_u16_as_uleb128(binary, struct_handle.name.0)?;
+    serialize_nominal_resource_flag(binary, struct_handle.is_nominal_resource)?;
+    serialize_kinds(binary, &struct_handle.type_parameters)
 }
 
 /// Serializes a `FunctionHandle`.
@@ -247,10 +275,14 @@ fn serialize_struct_handle(binary: &mut Vec<u8>, struct_handle: &StructHandle) {
 /// - `FunctionHandle.module` as a ULEB128 (index into the `ModuleHandle` table)
 /// - `FunctionHandle.name` as a ULEB128 (index into the `StringPool`)
 /// - `FunctionHandle.signature` as a ULEB128 (index into the `FunctionSignaturePool`)
-fn serialize_function_handle(binary: &mut Vec<u8>, function_handle: &FunctionHandle) {
-    write_u16_as_uleb128(binary, function_handle.module.0);
-    write_u16_as_uleb128(binary, function_handle.name.0);
-    write_u16_as_uleb128(binary, function_handle.signature.0);
+fn serialize_function_handle(
+    binary: &mut BinaryData,
+    function_handle: &FunctionHandle,
+) -> Result<()> {
+    write_u16_as_uleb128(binary, function_handle.module.0)?;
+    write_u16_as_uleb128(binary, function_handle.name.0)?;
+    write_u16_as_uleb128(binary, function_handle.signature.0)?;
+    Ok(())
 }
 
 /// Serializes a `String`.
@@ -258,15 +290,15 @@ fn serialize_function_handle(binary: &mut Vec<u8>, function_handle: &FunctionHan
 /// A `String` gets serialized as follows:
 /// - `String` size as a ULEB128
 /// - `String` bytes - *exact format to be defined, Rust utf8 right now*
-fn serialize_string(binary: &mut Vec<u8>, string: &str) -> Result<()> {
+fn serialize_string(binary: &mut BinaryData, string: &str) -> Result<()> {
     let bytes = string.as_bytes();
     let len = bytes.len();
     if len > u32::max_value() as usize {
         bail!("string size ({}) cannot exceed {}", len, u32::max_value())
     }
-    write_u32_as_uleb128(binary, len as u32);
+    write_u32_as_uleb128(binary, len as u32)?;
     for byte in bytes {
-        binary.push(*byte);
+        binary.push(*byte)?;
     }
     Ok(())
 }
@@ -276,7 +308,7 @@ fn serialize_string(binary: &mut Vec<u8>, string: &str) -> Result<()> {
 /// A `ByteArray` gets serialized as follows:
 /// - `ByteArray` size as a ULEB128
 /// - `ByteArray` bytes in increasing index order
-fn serialize_byte_array(binary: &mut Vec<u8>, byte_array: &ByteArray) -> Result<()> {
+fn serialize_byte_array(binary: &mut BinaryData, byte_array: &ByteArray) -> Result<()> {
     let bytes = byte_array.as_bytes();
     let len = bytes.len();
     if len > u32::max_value() as usize {
@@ -286,9 +318,9 @@ fn serialize_byte_array(binary: &mut Vec<u8>, byte_array: &ByteArray) -> Result<
             u32::max_value()
         )
     }
-    write_u32_as_uleb128(binary, len as u32);
+    write_u32_as_uleb128(binary, len as u32)?;
     for byte in bytes {
-        binary.push(*byte);
+        binary.push(*byte)?;
     }
     Ok(())
 }
@@ -297,9 +329,9 @@ fn serialize_byte_array(binary: &mut Vec<u8>, byte_array: &ByteArray) -> Result<
 ///
 /// A `AccountAddress` gets serialized as follows:
 /// - 32 bytes in increasing index order
-fn serialize_address(binary: &mut Vec<u8>, address: &AccountAddress) -> Result<()> {
+fn serialize_address(binary: &mut BinaryData, address: &AccountAddress) -> Result<()> {
     for byte in address.as_ref() {
-        binary.push(*byte);
+        binary.push(*byte)?;
     }
     Ok(())
 }
@@ -310,10 +342,27 @@ fn serialize_address(binary: &mut Vec<u8>, address: &AccountAddress) -> Result<(
 /// - `StructDefinition.handle` as a ULEB128 (index into the `ModuleHandle` table)
 /// - `StructDefinition.field_count` as a ULEB128 (number of fields defined in the type)
 /// - `StructDefinition.fields` as a ULEB128 (index into the `FieldDefinition` table)
-fn serialize_struct_definition(binary: &mut Vec<u8>, struct_definition: &StructDefinition) {
-    write_u16_as_uleb128(binary, struct_definition.struct_handle.0);
-    write_u16_as_uleb128(binary, struct_definition.field_count);
-    write_u16_as_uleb128(binary, struct_definition.fields.0);
+fn serialize_struct_definition(
+    binary: &mut BinaryData,
+    struct_definition: &StructDefinition,
+) -> Result<()> {
+    write_u16_as_uleb128(binary, struct_definition.struct_handle.0)?;
+    match &struct_definition.field_information {
+        StructFieldInformation::Native => {
+            binary.push(SerializedNativeStructFlag::NATIVE as u8)?;
+            write_u16_as_uleb128(binary, 0)?;
+            write_u16_as_uleb128(binary, 0)?;
+        }
+        StructFieldInformation::Declared {
+            field_count,
+            fields,
+        } => {
+            binary.push(SerializedNativeStructFlag::DECLARED as u8)?;
+            write_u16_as_uleb128(binary, *field_count)?;
+            write_u16_as_uleb128(binary, fields.0)?;
+        }
+    };
+    Ok(())
 }
 
 /// Serializes a `FieldDefinition`.
@@ -322,24 +371,28 @@ fn serialize_struct_definition(binary: &mut Vec<u8>, struct_definition: &StructD
 /// - `FieldDefinition.struct_` as a ULEB128 (index into the `StructHandle` table)
 /// - `StructDefinition.name` as a ULEB128 (index into the `StringPool` table)
 /// - `StructDefinition.signature` as a ULEB128 (index into the `TypeSignaturePool`)
-fn serialize_field_definition(binary: &mut Vec<u8>, field_definition: &FieldDefinition) {
-    write_u16_as_uleb128(binary, field_definition.struct_.0);
-    write_u16_as_uleb128(binary, field_definition.name.0);
-    write_u16_as_uleb128(binary, field_definition.signature.0);
+fn serialize_field_definition(
+    binary: &mut BinaryData,
+    field_definition: &FieldDefinition,
+) -> Result<()> {
+    write_u16_as_uleb128(binary, field_definition.struct_.0)?;
+    write_u16_as_uleb128(binary, field_definition.name.0)?;
+    write_u16_as_uleb128(binary, field_definition.signature.0)?;
+    Ok(())
 }
 
 /// Serializes a `FunctionDefinition`.
 ///
 /// A `FunctionDefinition` gets serialized as follows:
 /// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
-/// - `StructDefinition.flags` 1 byte for the flags of the function
-/// - `StructDefinition.code` a variable size stream for the `CodeUnit`
+/// - `FunctionDefinition.flags` 1 byte for the flags of the function
+/// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
 fn serialize_function_definition(
-    binary: &mut Vec<u8>,
+    binary: &mut BinaryData,
     function_definition: &FunctionDefinition,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, function_definition.function.0);
-    binary.push(function_definition.flags);
+    write_u16_as_uleb128(binary, function_definition.function.0)?;
+    binary.push(function_definition.flags)?;
     serialize_code_unit(binary, &function_definition.code)
 }
 
@@ -348,8 +401,8 @@ fn serialize_function_definition(
 /// A `TypeSignature` gets serialized as follows:
 /// - `SignatureType::TYPE_SIGNATURE` as 1 byte
 /// - The `SignatureToken` as a blob
-fn serialize_type_signature(binary: &mut Vec<u8>, signature: &TypeSignature) -> Result<()> {
-    binary.push(SignatureType::TYPE_SIGNATURE as u8);
+fn serialize_type_signature(binary: &mut BinaryData, signature: &TypeSignature) -> Result<()> {
+    binary.push(SignatureType::TYPE_SIGNATURE as u8)?;
     serialize_signature_token(binary, &signature.0)
 }
 
@@ -359,10 +412,14 @@ fn serialize_type_signature(binary: &mut Vec<u8>, signature: &TypeSignature) -> 
 /// - `SignatureType::FUNCTION_SIGNATURE` as 1 byte
 /// - The vector of `SignatureToken`s for the return values
 /// - The vector of `SignatureToken`s for the arguments
-fn serialize_function_signature(binary: &mut Vec<u8>, signature: &FunctionSignature) -> Result<()> {
-    binary.push(SignatureType::FUNCTION_SIGNATURE as u8);
+fn serialize_function_signature(
+    binary: &mut BinaryData,
+    signature: &FunctionSignature,
+) -> Result<()> {
+    binary.push(SignatureType::FUNCTION_SIGNATURE as u8)?;
     serialize_signature_tokens(binary, &signature.return_types)?;
-    serialize_signature_tokens(binary, &signature.arg_types)
+    serialize_signature_tokens(binary, &signature.arg_types)?;
+    serialize_kinds(binary, &signature.type_parameters)
 }
 
 /// Serializes a `LocalsSignature`.
@@ -370,13 +427,13 @@ fn serialize_function_signature(binary: &mut Vec<u8>, signature: &FunctionSignat
 /// A `LocalsSignature` gets serialized as follows:
 /// - `SignatureType::LOCAL_SIGNATURE` as 1 byte
 /// - The vector of `SignatureToken`s for locals
-fn serialize_locals_signature(binary: &mut Vec<u8>, signature: &LocalsSignature) -> Result<()> {
-    binary.push(SignatureType::LOCAL_SIGNATURE as u8);
+fn serialize_locals_signature(binary: &mut BinaryData, signature: &LocalsSignature) -> Result<()> {
+    binary.push(SignatureType::LOCAL_SIGNATURE as u8)?;
     serialize_signature_tokens(binary, &signature.0)
 }
 
 /// Serializes a slice of `SignatureToken`s.
-fn serialize_signature_tokens(binary: &mut Vec<u8>, tokens: &[SignatureToken]) -> Result<()> {
+fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]) -> Result<()> {
     let len = tokens.len();
     if len > u8::max_value() as usize {
         bail!(
@@ -385,7 +442,7 @@ fn serialize_signature_tokens(binary: &mut Vec<u8>, tokens: &[SignatureToken]) -
             u8::max_value(),
         )
     }
-    binary.push(len as u8);
+    binary.push(len as u8)?;
     for token in tokens {
         serialize_signature_token(binary, token)?;
     }
@@ -396,44 +453,211 @@ fn serialize_signature_tokens(binary: &mut Vec<u8>, tokens: &[SignatureToken]) -
 ///
 /// A `SignatureToken` gets serialized as a variable size blob depending on composition.
 /// Values for types are defined in `SerializedType`.
-fn serialize_signature_token(binary: &mut Vec<u8>, token: &SignatureToken) -> Result<()> {
+fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) -> Result<()> {
     match token {
-        SignatureToken::Bool => binary.push(SerializedType::BOOL as u8),
-        SignatureToken::U64 => binary.push(SerializedType::INTEGER as u8),
-        SignatureToken::String => binary.push(SerializedType::STRING as u8),
-        SignatureToken::ByteArray => binary.push(SerializedType::BYTEARRAY as u8),
-        SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8),
-        SignatureToken::Struct(idx) => {
-            binary.push(SerializedType::STRUCT as u8);
-            write_u16_as_uleb128(binary, idx.0);
+        SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
+        SignatureToken::U64 => binary.push(SerializedType::INTEGER as u8)?,
+        SignatureToken::String => binary.push(SerializedType::STRING as u8)?,
+        SignatureToken::ByteArray => binary.push(SerializedType::BYTEARRAY as u8)?,
+        SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
+        SignatureToken::Struct(idx, types) => {
+            binary.push(SerializedType::STRUCT as u8)?;
+            write_u16_as_uleb128(binary, idx.0)?;
+            serialize_signature_tokens(binary, types)?;
         }
         SignatureToken::Reference(boxed_token) => {
-            binary.push(SerializedType::REFERENCE as u8);
-            serialize_signature_token(binary, boxed_token.deref())?
+            binary.push(SerializedType::REFERENCE as u8)?;
+            serialize_signature_token(binary, boxed_token.deref())?;
         }
         SignatureToken::MutableReference(boxed_token) => {
-            binary.push(SerializedType::MUTABLE_REFERENCE as u8);
-            serialize_signature_token(binary, boxed_token.deref())?
+            binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
+            serialize_signature_token(binary, boxed_token.deref())?;
         }
+        SignatureToken::TypeParameter(idx) => {
+            binary.push(SerializedType::TYPE_PARAMETER as u8)?;
+            write_u16_as_uleb128(binary, *idx)?;
+        }
+    }
+    Ok(())
+}
+
+fn serialize_nominal_resource_flag(
+    binary: &mut BinaryData,
+    is_nominal_resource: bool,
+) -> Result<()> {
+    binary.push(if is_nominal_resource {
+        SerializedNominalResourceFlag::NOMINAL_RESOURCE
+    } else {
+        SerializedNominalResourceFlag::NORMAL_STRUCT
+    } as u8)?;
+    Ok(())
+}
+
+fn serialize_kind(binary: &mut BinaryData, kind: Kind) -> Result<()> {
+    binary.push(match kind {
+        Kind::All => SerializedKind::ALL,
+        Kind::Resource => SerializedKind::RESOURCE,
+        Kind::Unrestricted => SerializedKind::UNRESTRICTED,
+    } as u8)?;
+    Ok(())
+}
+
+fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
+    write_u32_as_uleb128(binary, kinds.len() as u32)?;
+    for kind in kinds {
+        serialize_kind(binary, *kind)?;
     }
     Ok(())
 }
 
 /// Serializes a `CodeUnit`.
 ///
-/// A `CodeUnit` is serialized as the lst firld of a `FunctionDefinition`.
+/// A `CodeUnit` is serialized as the code field of a `FunctionDefinition`.
 /// A `CodeUnit` gets serialized as follows:
 /// - `CodeUnit.max_stack_size` as a ULEB128
 /// - `CodeUnit.locals` as a ULEB128 (index into the `LocalSignaturePool`)
 /// - `CodeUnit.code` as variable size byte stream for the bytecode
-fn serialize_code_unit(binary: &mut Vec<u8>, code: &CodeUnit) -> Result<()> {
-    write_u16_as_uleb128(binary, code.max_stack_size);
-    write_u16_as_uleb128(binary, code.locals.0);
+fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
+    write_u16_as_uleb128(binary, code.max_stack_size)?;
+    write_u16_as_uleb128(binary, code.locals.0)?;
     serialize_code(binary, &code.code)
 }
 
+/// Serializes a single `Bytecode` instruction into a vector
+pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) -> Result<()> {
+    let mut binary_data = BinaryData::from(binary.clone());
+    serialize_instruction_inner(&mut binary_data, opcode)?;
+    *binary = binary_data.into_inner();
+    Ok(())
+}
+
+/// Serializes a single `Bytecode` instruction.
+fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Result<()> {
+    let res = match opcode {
+        Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
+        Bytecode::Pop => binary.push(Opcodes::POP as u8),
+        Bytecode::Ret => binary.push(Opcodes::RET as u8),
+        Bytecode::BrTrue(code_offset) => {
+            binary.push(Opcodes::BR_TRUE as u8)?;
+            write_u16(binary, *code_offset)
+        }
+        Bytecode::BrFalse(code_offset) => {
+            binary.push(Opcodes::BR_FALSE as u8)?;
+            write_u16(binary, *code_offset)
+        }
+        Bytecode::Branch(code_offset) => {
+            binary.push(Opcodes::BRANCH as u8)?;
+            write_u16(binary, *code_offset)
+        }
+        Bytecode::LdConst(value) => {
+            binary.push(Opcodes::LD_CONST as u8)?;
+            write_u64(binary, *value)
+        }
+        Bytecode::LdAddr(address_idx) => {
+            binary.push(Opcodes::LD_ADDR as u8)?;
+            write_u16_as_uleb128(binary, address_idx.0)
+        }
+        Bytecode::LdByteArray(byte_array_idx) => {
+            binary.push(Opcodes::LD_BYTEARRAY as u8)?;
+            write_u16_as_uleb128(binary, byte_array_idx.0)
+        }
+        Bytecode::LdStr(string_idx) => {
+            binary.push(Opcodes::LD_STR as u8)?;
+            write_u16_as_uleb128(binary, string_idx.0)
+        }
+        Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
+        Bytecode::LdFalse => binary.push(Opcodes::LD_FALSE as u8),
+        Bytecode::CopyLoc(local_idx) => {
+            binary.push(Opcodes::COPY_LOC as u8)?;
+            binary.push(*local_idx)
+        }
+        Bytecode::MoveLoc(local_idx) => {
+            binary.push(Opcodes::MOVE_LOC as u8)?;
+            binary.push(*local_idx)
+        }
+        Bytecode::StLoc(local_idx) => {
+            binary.push(Opcodes::ST_LOC as u8)?;
+            binary.push(*local_idx)
+        }
+        Bytecode::BorrowLoc(local_idx) => {
+            binary.push(Opcodes::BORROW_LOC as u8)?;
+            binary.push(*local_idx)
+        }
+        Bytecode::BorrowField(field_idx) => {
+            binary.push(Opcodes::BORROW_FIELD as u8)?;
+            write_u16_as_uleb128(binary, field_idx.0)
+        }
+        Bytecode::Call(method_idx, types_idx) => {
+            binary.push(Opcodes::CALL as u8)?;
+            write_u16_as_uleb128(binary, method_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::Pack(class_idx, types_idx) => {
+            binary.push(Opcodes::PACK as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::Unpack(class_idx, types_idx) => {
+            binary.push(Opcodes::UNPACK as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
+        Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
+        Bytecode::Add => binary.push(Opcodes::ADD as u8),
+        Bytecode::Sub => binary.push(Opcodes::SUB as u8),
+        Bytecode::Mul => binary.push(Opcodes::MUL as u8),
+        Bytecode::Mod => binary.push(Opcodes::MOD as u8),
+        Bytecode::Div => binary.push(Opcodes::DIV as u8),
+        Bytecode::BitOr => binary.push(Opcodes::BIT_OR as u8),
+        Bytecode::BitAnd => binary.push(Opcodes::BIT_AND as u8),
+        Bytecode::Xor => binary.push(Opcodes::XOR as u8),
+        Bytecode::Or => binary.push(Opcodes::OR as u8),
+        Bytecode::And => binary.push(Opcodes::AND as u8),
+        Bytecode::Not => binary.push(Opcodes::NOT as u8),
+        Bytecode::Eq => binary.push(Opcodes::EQ as u8),
+        Bytecode::Neq => binary.push(Opcodes::NEQ as u8),
+        Bytecode::Lt => binary.push(Opcodes::LT as u8),
+        Bytecode::Gt => binary.push(Opcodes::GT as u8),
+        Bytecode::Le => binary.push(Opcodes::LE as u8),
+        Bytecode::Ge => binary.push(Opcodes::GE as u8),
+        Bytecode::Abort => binary.push(Opcodes::ABORT as u8),
+        Bytecode::GetTxnGasUnitPrice => binary.push(Opcodes::GET_TXN_GAS_UNIT_PRICE as u8),
+        Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
+        Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),
+        Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
+        Bytecode::Exists(class_idx, types_idx) => {
+            binary.push(Opcodes::EXISTS as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::BorrowGlobal(class_idx, types_idx) => {
+            binary.push(Opcodes::BORROW_GLOBAL as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
+        Bytecode::MoveFrom(class_idx, types_idx) => {
+            binary.push(Opcodes::MOVE_FROM as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::MoveToSender(class_idx, types_idx) => {
+            binary.push(Opcodes::MOVE_TO as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
+        Bytecode::EmitEvent => binary.push(Opcodes::EMIT_EVENT as u8),
+        Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
+        Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
+    };
+    res?;
+    Ok(())
+}
+
 /// Serializes a `Bytecode` stream. Serialization of the function body.
-fn serialize_code(binary: &mut Vec<u8>, code: &[Bytecode]) -> Result<()> {
+fn serialize_code(binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
     let code_size = code.len();
     if code_size > u16::max_value() as usize {
         bail!(
@@ -442,122 +666,18 @@ fn serialize_code(binary: &mut Vec<u8>, code: &[Bytecode]) -> Result<()> {
             u16::max_value(),
         )
     }
-    write_u16(binary, code_size as u16);
+    write_u16(binary, code_size as u16)?;
     for opcode in code {
-        match opcode {
-            Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
-            Bytecode::Pop => binary.push(Opcodes::POP as u8),
-            Bytecode::Ret => binary.push(Opcodes::RET as u8),
-            Bytecode::BrTrue(code_offset) => {
-                binary.push(Opcodes::BR_TRUE as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::BrFalse(code_offset) => {
-                binary.push(Opcodes::BR_FALSE as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::Branch(code_offset) => {
-                binary.push(Opcodes::BRANCH as u8);
-                write_u16(binary, *code_offset);
-            }
-            Bytecode::LdConst(value) => {
-                binary.push(Opcodes::LD_CONST as u8);
-                write_u64(binary, *value);
-            }
-            Bytecode::LdAddr(address_idx) => {
-                binary.push(Opcodes::LD_ADDR as u8);
-                write_u16_as_uleb128(binary, address_idx.0);
-            }
-            Bytecode::LdByteArray(byte_array_idx) => {
-                binary.push(Opcodes::LD_BYTEARRAY as u8);
-                write_u16_as_uleb128(binary, byte_array_idx.0);
-            }
-            Bytecode::LdStr(string_idx) => {
-                binary.push(Opcodes::LD_STR as u8);
-                write_u16_as_uleb128(binary, string_idx.0);
-            }
-            Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
-            Bytecode::LdFalse => binary.push(Opcodes::LD_FALSE as u8),
-            Bytecode::CopyLoc(local_idx) => {
-                binary.push(Opcodes::COPY_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::MoveLoc(local_idx) => {
-                binary.push(Opcodes::MOVE_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::StLoc(local_idx) => {
-                binary.push(Opcodes::ST_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::BorrowLoc(local_idx) => {
-                binary.push(Opcodes::LD_REF_LOC as u8);
-                binary.push(*local_idx);
-            }
-            Bytecode::BorrowField(field_idx) => {
-                binary.push(Opcodes::LD_REF_FIELD as u8);
-                write_u16_as_uleb128(binary, field_idx.0);
-            }
-            Bytecode::Call(method_idx) => {
-                binary.push(Opcodes::CALL as u8);
-                write_u16_as_uleb128(binary, method_idx.0);
-            }
-            Bytecode::Pack(class_idx) => {
-                binary.push(Opcodes::PACK as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::Unpack(class_idx) => {
-                binary.push(Opcodes::UNPACK as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
-            Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
-            Bytecode::Add => binary.push(Opcodes::ADD as u8),
-            Bytecode::Sub => binary.push(Opcodes::SUB as u8),
-            Bytecode::Mul => binary.push(Opcodes::MUL as u8),
-            Bytecode::Mod => binary.push(Opcodes::MOD as u8),
-            Bytecode::Div => binary.push(Opcodes::DIV as u8),
-            Bytecode::BitOr => binary.push(Opcodes::BIT_OR as u8),
-            Bytecode::BitAnd => binary.push(Opcodes::BIT_AND as u8),
-            Bytecode::Xor => binary.push(Opcodes::XOR as u8),
-            Bytecode::Or => binary.push(Opcodes::OR as u8),
-            Bytecode::And => binary.push(Opcodes::AND as u8),
-            Bytecode::Not => binary.push(Opcodes::NOT as u8),
-            Bytecode::Eq => binary.push(Opcodes::EQ as u8),
-            Bytecode::Neq => binary.push(Opcodes::NEQ as u8),
-            Bytecode::Lt => binary.push(Opcodes::LT as u8),
-            Bytecode::Gt => binary.push(Opcodes::GT as u8),
-            Bytecode::Le => binary.push(Opcodes::LE as u8),
-            Bytecode::Ge => binary.push(Opcodes::GE as u8),
-            Bytecode::Assert => binary.push(Opcodes::ASSERT as u8),
-            Bytecode::GetTxnGasUnitPrice => binary.push(Opcodes::GET_TXN_GAS_UNIT_PRICE as u8),
-            Bytecode::GetTxnMaxGasUnits => binary.push(Opcodes::GET_TXN_MAX_GAS_UNITS as u8),
-            Bytecode::GetGasRemaining => binary.push(Opcodes::GET_GAS_REMAINING as u8),
-            Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
-            Bytecode::Exists(class_idx) => {
-                binary.push(Opcodes::EXISTS as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::BorrowGlobal(class_idx) => {
-                binary.push(Opcodes::BORROW_REF as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
-            Bytecode::MoveFrom(class_idx) => {
-                binary.push(Opcodes::MOVE_FROM as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::MoveToSender(class_idx) => {
-                binary.push(Opcodes::MOVE_TO as u8);
-                write_u16_as_uleb128(binary, class_idx.0);
-            }
-            Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
-            Bytecode::EmitEvent => binary.push(Opcodes::EMIT_EVENT as u8),
-            Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
-            Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
-        }
+        serialize_instruction_inner(binary, opcode)?;
     }
     Ok(())
+}
+
+/// Compute the table size with a check for underflow
+fn checked_calculate_table_size(binary: &mut BinaryData, start: u32) -> Result<u32> {
+    let offset = check_index_in_binary(binary.len())?;
+    checked_assume!(offset >= start, "table start must be before end");
+    Ok(offset - start)
 }
 
 impl CommonSerializer {
@@ -579,74 +699,102 @@ impl CommonSerializer {
     }
 
     /// Common binary header serialization.
-    fn serialize_header(&mut self, binary: &mut Vec<u8>) -> Result<u32> {
-        serialize_magic(binary);
-        binary.push(self.major_version);
-        binary.push(self.minor_version);
-        binary.push(self.table_count);
+    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<u32> {
+        serialize_magic(binary)?;
+        binary.push(self.major_version)?;
+        binary.push(self.minor_version)?;
+        binary.push(self.table_count)?;
 
-        let start_offset = check_index_in_binary(binary.len())? + u32::from(self.table_count) * 9;
+        let start_offset;
+        if let Some(table_count_op) = self.table_count.checked_mul(9) {
+            if let Some(checked_start_offset) =
+                check_index_in_binary(binary.len())?.checked_add(u32::from(table_count_op))
+            {
+                start_offset = checked_start_offset;
+            } else {
+                bail!(
+                    "binary size ({}) cannot exceed {}",
+                    binary.len(),
+                    usize::max_value()
+                );
+            }
+        } else {
+            bail!(
+                "binary size ({}) cannot exceed {}",
+                binary.len(),
+                usize::max_value()
+            );
+        }
 
-        serialize_table(
+        checked_serialize_table(
             binary,
             TableType::MODULE_HANDLES,
-            self.module_handles.0 + start_offset,
+            self.module_handles.0,
+            start_offset,
             self.module_handles.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::STRUCT_HANDLES,
-            self.struct_handles.0 + start_offset,
+            self.struct_handles.0,
+            start_offset,
             self.struct_handles.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::FUNCTION_HANDLES,
-            self.function_handles.0 + start_offset,
+            self.function_handles.0,
+            start_offset,
             self.function_handles.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::TYPE_SIGNATURES,
-            self.type_signatures.0 + start_offset,
+            self.type_signatures.0,
+            start_offset,
             self.type_signatures.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::FUNCTION_SIGNATURES,
-            self.function_signatures.0 + start_offset,
+            self.function_signatures.0,
+            start_offset,
             self.function_signatures.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::LOCALS_SIGNATURES,
-            self.locals_signatures.0 + start_offset,
+            self.locals_signatures.0,
+            start_offset,
             self.locals_signatures.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::STRING_POOL,
-            self.string_pool.0 + start_offset,
+            self.string_pool.0,
+            start_offset,
             self.string_pool.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::ADDRESS_POOL,
-            self.address_pool.0 + start_offset,
+            self.address_pool.0,
+            start_offset,
             self.address_pool.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::BYTE_ARRAY_POOL,
-            self.byte_array_pool.0 + start_offset,
+            self.byte_array_pool.0,
+            start_offset,
             self.byte_array_pool.1,
-        );
+        )?;
         Ok(start_offset)
     }
 
     fn serialize_common<T: CommonTables>(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         tables: &T,
     ) -> Result<()> {
         self.serialize_module_handles(binary, tables.get_module_handles())?;
@@ -664,16 +812,16 @@ impl CommonSerializer {
     /// Serializes `ModuleHandle` table.
     fn serialize_module_handles(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         module_handles: &[ModuleHandle],
     ) -> Result<()> {
         if !module_handles.is_empty() {
             self.table_count += 1;
             self.module_handles.0 = check_index_in_binary(binary.len())?;
             for module_handle in module_handles {
-                serialize_module_handle(binary, module_handle);
+                serialize_module_handle(binary, module_handle)?;
             }
-            self.module_handles.1 = check_index_in_binary(binary.len())? - self.module_handles.0;
+            self.module_handles.1 = checked_calculate_table_size(binary, self.module_handles.0)?;
         }
         Ok(())
     }
@@ -681,16 +829,16 @@ impl CommonSerializer {
     /// Serializes `StructHandle` table.
     fn serialize_struct_handles(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         struct_handles: &[StructHandle],
     ) -> Result<()> {
         if !struct_handles.is_empty() {
             self.table_count += 1;
             self.struct_handles.0 = check_index_in_binary(binary.len())?;
             for struct_handle in struct_handles {
-                serialize_struct_handle(binary, struct_handle);
+                serialize_struct_handle(binary, struct_handle)?;
             }
-            self.struct_handles.1 = check_index_in_binary(binary.len())? - self.struct_handles.0;
+            self.struct_handles.1 = checked_calculate_table_size(binary, self.struct_handles.0)?;
         }
         Ok(())
     }
@@ -698,30 +846,30 @@ impl CommonSerializer {
     /// Serializes `FunctionHandle` table.
     fn serialize_function_handles(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         function_handles: &[FunctionHandle],
     ) -> Result<()> {
         if !function_handles.is_empty() {
             self.table_count += 1;
             self.function_handles.0 = check_index_in_binary(binary.len())?;
             for function_handle in function_handles {
-                serialize_function_handle(binary, function_handle);
+                serialize_function_handle(binary, function_handle)?;
             }
             self.function_handles.1 =
-                check_index_in_binary(binary.len())? - self.function_handles.0;
+                checked_calculate_table_size(binary, self.function_handles.0)?;
         }
         Ok(())
     }
 
     /// Serializes `StringPool`.
-    fn serialize_strings(&mut self, binary: &mut Vec<u8>, strings: &[String]) -> Result<()> {
+    fn serialize_strings(&mut self, binary: &mut BinaryData, strings: &[String]) -> Result<()> {
         if !strings.is_empty() {
             self.table_count += 1;
             self.string_pool.0 = check_index_in_binary(binary.len())?;
             for string in strings {
                 serialize_string(binary, string)?;
             }
-            self.string_pool.1 = check_index_in_binary(binary.len())? - self.string_pool.0;
+            self.string_pool.1 = checked_calculate_table_size(binary, self.string_pool.0)?;;
         }
         Ok(())
     }
@@ -729,7 +877,7 @@ impl CommonSerializer {
     /// Serializes `ByteArrayPool`.
     fn serialize_byte_arrays(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         byte_arrays: &[ByteArray],
     ) -> Result<()> {
         if !byte_arrays.is_empty() {
@@ -738,7 +886,7 @@ impl CommonSerializer {
             for byte_array in byte_arrays {
                 serialize_byte_array(binary, byte_array)?;
             }
-            self.byte_array_pool.1 = check_index_in_binary(binary.len())? - self.byte_array_pool.0;
+            self.byte_array_pool.1 = checked_calculate_table_size(binary, self.byte_array_pool.0)?;;
         }
         Ok(())
     }
@@ -746,7 +894,7 @@ impl CommonSerializer {
     /// Serializes `AddressPool`.
     fn serialize_addresses(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         addresses: &[AccountAddress],
     ) -> Result<()> {
         if !addresses.is_empty() {
@@ -755,7 +903,7 @@ impl CommonSerializer {
             for address in addresses {
                 serialize_address(binary, address)?;
             }
-            self.address_pool.1 = check_index_in_binary(binary.len())? - self.address_pool.0;
+            self.address_pool.1 = checked_calculate_table_size(binary, self.address_pool.0)?;
         }
         Ok(())
     }
@@ -763,7 +911,7 @@ impl CommonSerializer {
     /// Serializes `TypeSignaturePool` table.
     fn serialize_type_signatures(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         signatures: &[TypeSignature],
     ) -> Result<()> {
         if !signatures.is_empty() {
@@ -772,7 +920,7 @@ impl CommonSerializer {
             for signature in signatures {
                 serialize_type_signature(binary, signature)?;
             }
-            self.type_signatures.1 = check_index_in_binary(binary.len())? - self.type_signatures.0;
+            self.type_signatures.1 = checked_calculate_table_size(binary, self.type_signatures.0)?;
         }
         Ok(())
     }
@@ -780,7 +928,7 @@ impl CommonSerializer {
     /// Serializes `FunctionSignaturePool` table.
     fn serialize_function_signatures(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         signatures: &[FunctionSignature],
     ) -> Result<()> {
         if !signatures.is_empty() {
@@ -790,7 +938,7 @@ impl CommonSerializer {
                 serialize_function_signature(binary, signature)?;
             }
             self.function_signatures.1 =
-                check_index_in_binary(binary.len())? - self.function_signatures.0;
+                checked_calculate_table_size(binary, self.function_signatures.0)?;;
         }
         Ok(())
     }
@@ -798,7 +946,7 @@ impl CommonSerializer {
     /// Serializes `LocalSignaturePool` table.
     fn serialize_locals_signatures(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         signatures: &[LocalsSignature],
     ) -> Result<()> {
         if !signatures.is_empty() {
@@ -808,7 +956,7 @@ impl CommonSerializer {
                 serialize_locals_signature(binary, signature)?;
             }
             self.locals_signatures.1 =
-                check_index_in_binary(binary.len())? - self.locals_signatures.0;
+                checked_calculate_table_size(binary, self.locals_signatures.0)?;
         }
         Ok(())
     }
@@ -824,49 +972,52 @@ impl ModuleSerializer {
         }
     }
 
-    fn serialize(&mut self, binary: &mut Vec<u8>, module: &CompiledModuleMut) -> Result<()> {
+    fn serialize(&mut self, binary: &mut BinaryData, module: &CompiledModuleMut) -> Result<()> {
         self.common.serialize_common(binary, module)?;
         self.serialize_struct_definitions(binary, &module.struct_defs)?;
         self.serialize_field_definitions(binary, &module.field_defs)?;
         self.serialize_function_definitions(binary, &module.function_defs)
     }
 
-    fn serialize_header(&mut self, binary: &mut Vec<u8>) -> Result<()> {
+    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
         let start_offset = self.common.serialize_header(binary)?;
-        serialize_table(
+        checked_serialize_table(
             binary,
             TableType::STRUCT_DEFS,
-            self.struct_defs.0 + start_offset,
+            self.struct_defs.0,
+            start_offset,
             self.struct_defs.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::FIELD_DEFS,
-            self.field_defs.0 + start_offset,
+            self.field_defs.0,
+            start_offset,
             self.field_defs.1,
-        );
-        serialize_table(
+        )?;
+        checked_serialize_table(
             binary,
             TableType::FUNCTION_DEFS,
-            self.function_defs.0 + start_offset,
+            self.function_defs.0,
+            start_offset,
             self.function_defs.1,
-        );
+        )?;
         Ok(())
     }
 
     /// Serializes `StructDefinition` table.
     fn serialize_struct_definitions(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         struct_definitions: &[StructDefinition],
     ) -> Result<()> {
         if !struct_definitions.is_empty() {
             self.common.table_count += 1;
             self.struct_defs.0 = check_index_in_binary(binary.len())?;
             for struct_definition in struct_definitions {
-                serialize_struct_definition(binary, struct_definition);
+                serialize_struct_definition(binary, struct_definition)?;
             }
-            self.struct_defs.1 = check_index_in_binary(binary.len())? - self.struct_defs.0;
+            self.struct_defs.1 = checked_calculate_table_size(binary, self.struct_defs.0)?;
         }
         Ok(())
     }
@@ -874,16 +1025,16 @@ impl ModuleSerializer {
     /// Serializes `FieldDefinition` table.
     fn serialize_field_definitions(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         field_definitions: &[FieldDefinition],
     ) -> Result<()> {
         if !field_definitions.is_empty() {
             self.common.table_count += 1;
             self.field_defs.0 = check_index_in_binary(binary.len())?;
             for field_definition in field_definitions {
-                serialize_field_definition(binary, field_definition);
+                serialize_field_definition(binary, field_definition)?;
             }
-            self.field_defs.1 = check_index_in_binary(binary.len())? - self.field_defs.0;
+            self.field_defs.1 = checked_calculate_table_size(binary, self.field_defs.0)?;
         }
         Ok(())
     }
@@ -891,7 +1042,7 @@ impl ModuleSerializer {
     /// Serializes `FunctionDefinition` table.
     fn serialize_function_definitions(
         &mut self,
-        binary: &mut Vec<u8>,
+        binary: &mut BinaryData,
         function_definitions: &[FunctionDefinition],
     ) -> Result<()> {
         if !function_definitions.is_empty() {
@@ -900,7 +1051,7 @@ impl ModuleSerializer {
             for function_definition in function_definitions {
                 serialize_function_definition(binary, function_definition)?;
             }
-            self.function_defs.1 = check_index_in_binary(binary.len())? - self.function_defs.0;
+            self.function_defs.1 = checked_calculate_table_size(binary, self.function_defs.0)?;
         }
         Ok(())
     }
@@ -914,28 +1065,29 @@ impl ScriptSerializer {
         }
     }
 
-    fn serialize(&mut self, binary: &mut Vec<u8>, script: &CompiledScriptMut) -> Result<()> {
+    fn serialize(&mut self, binary: &mut BinaryData, script: &CompiledScriptMut) -> Result<()> {
         self.common.serialize_common(binary, script)?;
         self.serialize_main(binary, &script.main)
     }
 
-    fn serialize_header(&mut self, binary: &mut Vec<u8>) -> Result<()> {
+    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
         let start_offset = self.common.serialize_header(binary)?;
-        serialize_table(
+        checked_serialize_table(
             binary,
             TableType::MAIN,
-            self.main.0 + start_offset,
+            self.main.0,
+            start_offset,
             self.main.1,
-        );
+        )?;
         Ok(())
     }
 
     /// Serializes the main function.
-    fn serialize_main(&mut self, binary: &mut Vec<u8>, main: &FunctionDefinition) -> Result<()> {
+    fn serialize_main(&mut self, binary: &mut BinaryData, main: &FunctionDefinition) -> Result<()> {
         self.common.table_count += 1;
         self.main.0 = check_index_in_binary(binary.len())?;
         serialize_function_definition(binary, main)?;
-        self.main.1 = check_index_in_binary(binary.len())? - self.main.0;
+        self.main.1 = checked_calculate_table_size(binary, self.main.0)?;
         Ok(())
     }
 }

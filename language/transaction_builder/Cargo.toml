@@ -1,0 +1,26 @@
+[package]
+name = "transaction_builder"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+types = { path = "../../types" }
+vm = { path = "../vm" }
+hex = "0.3.2"
+structopt = { version = "0.2.15", optional = true }
+serde_json = { version = "1.0.40", optional = true }
+proto_conv = { path = "../../common/proto_conv", optional = true }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}
+
+[features]
+build-binary = ["structopt", "serde_json", "proto_conv"]
+
+[[bin]]
+name = "transaction_builder"
+path = "src/bin/main.rs"
+required-features = ["build-binary"]

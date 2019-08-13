@@ -4,8 +4,9 @@
 use crate::{
     chained_bft::{
         common::Author,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::proposer_election::ProposalInfo,
+        consensus_types::{
+            block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
+        },
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
         safety::vote_msg::VoteMsg,
         test_utils::{consensus_runtime, placeholder_ledger_info},
@@ -13,7 +14,7 @@ use crate::{
     state_replication::ExecutedState,
 };
 use channel;
-use crypto::{signing::generate_keypair, HashValue};
+use crypto::HashValue;
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -21,6 +22,7 @@ use network::{
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{
     collections::{HashMap, HashSet},
@@ -245,9 +247,9 @@ impl NetworkPlayground {
         true
     }
 
-    /// Returns true for any message other than new round
-    pub fn exclude_new_round(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        !msg_copy.1.has_new_round()
+    /// Returns true for any message other than timeout
+    pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        !msg_copy.1.has_timeout_msg()
     }
 
     /// Returns true for proposal messages only.
@@ -260,9 +262,14 @@ impl NetworkPlayground {
         msg_copy.1.has_vote()
     }
 
-    /// Returns true for new round messages only.
-    pub fn new_round_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_new_round()
+    /// Returns true for timeout messages only.
+    pub fn timeout_msg_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        msg_copy.1.has_timeout_msg()
+    }
+
+    /// Returns true for sync info messages only.
+    pub fn sync_info_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        msg_copy.1.has_sync_info()
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
@@ -321,13 +328,13 @@ fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
     let mut peers = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64, Author>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
     let mut signers = Vec::new();
-    for _ in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random();
+    for i in 0..num_nodes {
+        let random_validator_signer = ValidatorSigner::random([i as u8; 32]);
         author_to_public_keys.insert(
             random_validator_signer.author(),
             random_validator_signer.public_key(),
@@ -335,10 +342,7 @@ fn test_network_api() {
         peers.push(random_validator_signer.author());
         signers.push(random_validator_signer);
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -360,15 +364,19 @@ fn test_network_api() {
         HashValue::random(),
         ExecutedState::state_for_genesis(),
         1,
+        HashValue::random(),
+        0,
+        HashValue::random(),
+        0,
         peers[0],
         placeholder_ledger_info(),
         &signers[0],
     );
-    let proposal = ProposalInfo {
-        proposal: Block::make_genesis_block(),
-        proposer_info: ValidatorSigner::genesis().author(),
-        timeout_certificate: None,
-        highest_ledger_info: QuorumCert::certificate_for_genesis(),
+    let previous_block = Block::make_genesis_block();
+    let previous_qc = QuorumCert::certificate_for_genesis();
+    let proposal = ProposalMsg {
+        proposal: Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
+        sync_info: SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
     };
     block_on(async move {
         nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;
@@ -396,12 +404,12 @@ fn test_rpc() {
     let num_nodes = 2;
     let mut peers = Arc::new(Vec::new());
     let mut senders = Vec::new();
-    let mut receivers: Vec<NetworkReceivers<u64, Author>> = Vec::new();
+    let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
-    for _ in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random();
+    for i in 0..num_nodes {
+        let random_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([i as u8; 32]);
         author_to_public_keys.insert(
             random_validator_signer.author(),
             random_validator_signer.public_key(),
@@ -410,10 +418,7 @@ fn test_rpc() {
             .unwrap()
             .push(random_validator_signer.author());
     }
-    let validator = Arc::new(ValidatorVerifier::new(
-        author_to_public_keys,
-        peers.len() * 2 / 3 + 1,
-    ));
+    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -465,7 +470,7 @@ fn test_rpc() {
     let mut chunk_retrieval = receiver_1.chunk_retrieval;
     let on_request_chunk = async move {
         while let Some(request) = chunk_retrieval.next().await {
-            let keypair = generate_keypair();
+            let keypair = compat::generate_keypair(None);
             let proto_txn =
                 get_test_signed_txn(AccountAddress::random(), 0, keypair.0, keypair.1, None);
             let txn = SignedTransaction::from_proto(proto_txn).unwrap();
@@ -499,6 +504,10 @@ fn test_rpc() {
                     version: 0,
                 },
                 0,
+                HashValue::zero(),
+                0,
+                HashValue::zero(),
+                0,
             )
             .to_vec(),
         );
@@ -509,10 +518,14 @@ fn test_rpc() {
         target.set_state_id(HashValue::zero().into());
         target.set_round(0);
         target.set_signed_ledger_info(ledger_info_with_sigs);
+        target.set_parent_block_id(HashValue::zero().into());
+        target.set_parent_block_round(0);
+        target.set_grandparent_block_id(HashValue::zero().into());
+        target.set_grandparent_block_round(0);
         let mut req = RequestChunk::new();
         req.set_start_version(0);
         req.set_batch_size(1);
-        req.set_target(target);
+        req.set_target_version(target.version);
         let chunk = senders[0]
             .request_chunk(peers[1], req, Duration::from_secs(5))
             .await

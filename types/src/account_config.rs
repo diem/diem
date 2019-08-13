@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::unit_arg)]
+
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
@@ -13,6 +15,8 @@ use canonical_serialization::{
     SimpleDeserializer,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
 use std::{collections::BTreeMap, convert::TryInto};
 
 /// An account object. This is the top-level entry in global storage. We'll never need to create an
@@ -40,8 +44,10 @@ pub const HASH_MODULE_NAME: &str = "Hash";
 pub fn core_code_address() -> AccountAddress {
     AccountAddress::default()
 }
+
 pub fn association_address() -> AccountAddress {
-    AccountAddress::default()
+    AccountAddress::from_hex_literal("0xA550C18")
+        .expect("Parsing valid hex literal should always succeed")
 }
 
 pub fn coin_struct_tag() -> StructTag {
@@ -65,12 +71,14 @@ pub fn account_struct_tag() -> StructTag {
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
 #[derive(Debug, Default)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountResource {
     balance: u64,
     sequence_number: u64,
     authentication_key: ByteArray,
     sent_events_count: u64,
     received_events_count: u64,
+    delegated_withdrawal_capability: bool,
 }
 
 impl AccountResource {
@@ -81,6 +89,7 @@ impl AccountResource {
         authentication_key: ByteArray,
         sent_events_count: u64,
         received_events_count: u64,
+        delegated_withdrawal_capability: bool,
     ) -> Self {
         AccountResource {
             balance,
@@ -88,6 +97,7 @@ impl AccountResource {
             authentication_key,
             sent_events_count,
             received_events_count,
+            delegated_withdrawal_capability,
         }
     }
 
@@ -124,6 +134,11 @@ impl AccountResource {
     pub fn received_events_count(&self) -> u64 {
         self.received_events_count
     }
+
+    /// Return the delegated_withdrawal_capability field for the given AccountResource
+    pub fn delegated_withdrawal_capability(&self) -> bool {
+        self.delegated_withdrawal_capability
+    }
 }
 
 impl CanonicalSerialize for AccountResource {
@@ -133,6 +148,7 @@ impl CanonicalSerialize for AccountResource {
         serializer
             .encode_struct(&self.authentication_key)?
             .encode_u64(self.balance)?
+            .encode_bool(self.delegated_withdrawal_capability)?
             .encode_u64(self.received_events_count)?
             .encode_u64(self.sent_events_count)?
             .encode_u64(self.sequence_number)?;
@@ -144,6 +160,7 @@ impl CanonicalDeserialize for AccountResource {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let authentication_key = deserializer.decode_struct()?;
         let balance = deserializer.decode_u64()?;
+        let delegated_withdrawal_capability = deserializer.decode_bool()?;
         let received_events_count = deserializer.decode_u64()?;
         let sent_events_count = deserializer.decode_u64()?;
         let sequence_number = deserializer.decode_u64()?;
@@ -154,6 +171,7 @@ impl CanonicalDeserialize for AccountResource {
             authentication_key,
             sent_events_count,
             received_events_count,
+            delegated_withdrawal_capability,
         })
     }
 }

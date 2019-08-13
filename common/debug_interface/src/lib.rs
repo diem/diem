@@ -18,29 +18,20 @@ pub mod node_debug_service;
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {
     client: NodeDebugInterfaceClient,
-    address: String,
-    port: u16,
 }
 
 impl NodeDebugClient {
     pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
+        Self::from_socket_addr_str(&format!("{}:{}", address.as_ref(), port))
+    }
+
+    /// Create NodeDebugInterfaceClient from a valid socket address.
+    pub fn from_socket_addr_str<A: AsRef<str>>(socket_addr: A) -> Self {
         let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
-        let ch = ChannelBuilder::new(env).connect(&format!("{}:{}", address.as_ref(), port));
+        let ch = ChannelBuilder::new(env).connect(&socket_addr.as_ref());
         let client = NodeDebugInterfaceClient::new(ch);
 
-        Self {
-            client,
-            address: address.as_ref().to_owned(),
-            port,
-        }
-    }
-
-    pub fn get_address(&self) -> &str {
-        &self.address
-    }
-
-    pub fn get_port(&self) -> u16 {
-        self.port
+        Self { client }
     }
 
     pub fn get_node_metric<S: AsRef<str>>(&self, metric: S) -> Result<Option<i64>> {

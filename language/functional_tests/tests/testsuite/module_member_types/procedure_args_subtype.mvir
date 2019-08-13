@@ -1,6 +1,5 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 0, err: CallTypeMismatchError(3) }
 
-modules:
 module Test {
     public t(fr: &u64) {
         release(move(fr));
@@ -8,8 +7,10 @@ module Test {
      }
 }
 
-script:
-import Transaction.Test;
+//! new-transaction
+
+import {{default}}.Test;
+
 main() {
     let x: u64;
     x = 0;

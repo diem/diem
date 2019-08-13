@@ -24,11 +24,14 @@ use crate::{
 };
 use crypto::hash::CryptoHash;
 use failure::prelude::*;
+use nextgen_crypto::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use std::{cmp, mem, sync::Arc};
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::get_with_proof::UpdateToLatestLedgerRequest)]
 pub struct UpdateToLatestLedgerRequest {
     pub client_known_version: u64,
@@ -44,20 +47,50 @@ impl UpdateToLatestLedgerRequest {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[ProtoType(crate::proto::get_with_proof::UpdateToLatestLedgerResponse)]
-pub struct UpdateToLatestLedgerResponse {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpdateToLatestLedgerResponse<Sig> {
     pub response_items: Vec<ResponseItem>,
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
-    pub validator_change_events: Vec<ValidatorChangeEventWithProof>,
+    pub ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
+    pub validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
 }
 
-impl UpdateToLatestLedgerResponse {
+impl<Sig: Signature> IntoProto for UpdateToLatestLedgerResponse<Sig> {
+    type ProtoType = crate::proto::get_with_proof::UpdateToLatestLedgerResponse;
+
+    fn into_proto(self) -> Self::ProtoType {
+        let mut out = crate::proto::get_with_proof::UpdateToLatestLedgerResponse::new();
+        out.set_response_items(self.response_items.into_proto());
+        out.set_ledger_info_with_sigs(self.ledger_info_with_sigs.into_proto());
+        out.set_validator_change_events(self.validator_change_events.into_proto());
+        out
+    }
+}
+
+impl<Sig: Signature> FromProto for UpdateToLatestLedgerResponse<Sig> {
+    type ProtoType = crate::proto::get_with_proof::UpdateToLatestLedgerResponse;
+
+    fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
+        Ok(UpdateToLatestLedgerResponse {
+            response_items: <Vec<ResponseItem> as FromProto>::from_proto(
+                object.take_response_items(),
+            )?,
+            ledger_info_with_sigs: LedgerInfoWithSignatures::from_proto(
+                object.take_ledger_info_with_sigs(),
+            )?,
+            validator_change_events:
+                <Vec<ValidatorChangeEventWithProof<Sig>> as FromProto>::from_proto(
+                    object.take_validator_change_events(),
+                )?,
+        })
+    }
+}
+
+impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
     /// Constructor.
     pub fn new(
         response_items: Vec<ResponseItem>,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
-        validator_change_events: Vec<ValidatorChangeEventWithProof>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
+        validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
     ) -> Self {
         UpdateToLatestLedgerResponse {
             response_items,
@@ -73,7 +106,7 @@ impl UpdateToLatestLedgerResponse {
     /// verification.
     pub fn verify(
         &self,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
         request: &UpdateToLatestLedgerRequest,
     ) -> Result<()> {
         verify_update_to_latest_ledger_response(
@@ -88,12 +121,12 @@ impl UpdateToLatestLedgerResponse {
 
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
-pub fn verify_update_to_latest_ledger_response(
-    validator_verifier: Arc<ValidatorVerifier>,
+pub fn verify_update_to_latest_ledger_response<Sig: Signature>(
+    validator_verifier: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
-    ledger_info_with_sigs: &LedgerInfoWithSignatures,
+    ledger_info_with_sigs: &LedgerInfoWithSignatures<Sig>,
 ) -> Result<()> {
     let (ledger_info, signatures) = (
         ledger_info_with_sigs.ledger_info(),
@@ -110,7 +143,7 @@ pub fn verify_update_to_latest_ledger_response(
 
     // Verify ledger info signatures.
     if !(ledger_info.version() == 0 && signatures.is_empty()) {
-        validator_verifier.verify_aggregated_signature(ledger_info.hash(), signatures)?;
+        validator_verifier.batch_verify_aggregated_signature(ledger_info.hash(), signatures)?;
     }
 
     // Verify each sub response.
@@ -199,7 +232,7 @@ fn verify_response_item(
         ),
         // Request-response item types mismatch.
         _ => bail!(
-            "ResquestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
+            "RequestItem/ResponseItem types mismatch. request: {:?}, response: {:?}",
             mem::discriminant(req),
             mem::discriminant(res),
         ),
@@ -351,7 +384,8 @@ fn verify_get_txns_resp(
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
         account: AccountAddress,
@@ -480,7 +514,8 @@ impl IntoProto for RequestItem {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub enum ResponseItem {
     GetAccountTransactionBySequenceNumber {
         signed_transaction_with_proof: Option<SignedTransactionWithProof>,

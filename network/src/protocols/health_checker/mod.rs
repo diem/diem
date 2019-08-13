@@ -206,13 +206,10 @@ where
     async fn ping_peer(
         peer_id: PeerId,
         round: u64,
-        peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
+        mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         ping_timeout: Duration,
     ) -> (PeerId, u64, Result<(), NetworkError>) {
-        let ping_result = async move |mut peer_mgr_reqs_tx: PeerManagerRequestSender<
-            TSubstream,
-        >|
-                    -> Result<(), NetworkError> {
+        let ping_result = async move {
             // Request a new substream to peer.
             debug!(
                 "Opening a new substream with peer: {} for Ping",
@@ -226,7 +223,11 @@ where
             // Send Ping.
             debug!("Sending Ping to peer: {}", peer_id.short_str());
             substream
-                .send(Bytes::from(Ping::new().write_to_bytes().unwrap()))
+                .send(Bytes::from(
+                    Ping::new()
+                        .write_to_bytes()
+                        .expect("Protobuf serialization fails"),
+                ))
                 .await?;
             // Read Pong.
             debug!("Waiting for Pong from peer: {}", peer_id.short_str());
@@ -237,7 +238,7 @@ where
         (
             peer_id,
             round,
-            ping_result(peer_mgr_reqs_tx.clone())
+            ping_result
                 .boxed()
                 .compat()
                 .timeout(ping_timeout)
@@ -265,7 +266,11 @@ where
         // Send Pong.
         trace!("Sending Pong back");
         if let Err(err) = substream
-            .send(Bytes::from(Pong::new().write_to_bytes().unwrap()))
+            .send(Bytes::from(
+                Pong::new()
+                    .write_to_bytes()
+                    .expect("Protobuf serialization fails"),
+            ))
             .await
         {
             warn!(

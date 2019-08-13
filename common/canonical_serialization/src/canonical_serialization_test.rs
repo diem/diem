@@ -172,6 +172,27 @@ fn test_serialization_roundtrip() {
 }
 
 #[test]
+fn test_serialization_optional() {
+    let bar1: Option<u32> = Some(42);
+    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
+    serializer.encode_optional(&bar1).unwrap();
+    let serialized_bytes = serializer.get_output();
+
+    let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
+    let de_bar1: Option<u32> = deserializer.decode_optional().unwrap();
+    assert_eq!(de_bar1, bar1);
+
+    let bar2: Option<u32> = None;
+    let mut serializer2 = SimpleSerializer::<Vec<u8>>::new();
+    serializer2.encode_optional(&bar2).unwrap();
+    let serialized_bytes2 = serializer2.get_output();
+
+    let mut deserializer2 = SimpleDeserializer::new(&serialized_bytes2);
+    let de_bar2: Option<u32> = deserializer2.decode_optional().unwrap();
+    assert_eq!(de_bar2, bar2);
+}
+
+#[test]
 fn test_encode_vec() {
     let bar1 = Bar {
         a: 55,

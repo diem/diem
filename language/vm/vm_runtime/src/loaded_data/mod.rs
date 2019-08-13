@@ -6,5 +6,3 @@
 
 pub mod function;
 pub mod loaded_module;
-pub mod struct_def;
-pub mod types;

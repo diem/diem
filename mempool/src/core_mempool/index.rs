@@ -257,6 +257,10 @@ impl ParkingLotIndex {
     pub(crate) fn pop(&mut self) -> Option<TxnPointer> {
         self.data.iter().rev().next().cloned()
     }
+
+    pub(crate) fn size(&self) -> usize {
+        self.data.len()
+    }
 }
 
 /// Logical pointer to `MempoolTransaction`

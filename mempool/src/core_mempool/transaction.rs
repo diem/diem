@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proto::shared::mempool_status::MempoolAddTransactionStatus as ProtoMempoolAddTransactionStatus;
+use crate::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use failure::prelude::*;
 use proto_conv::{FromProto, IntoProto};
 use std::time::Duration;
@@ -56,68 +56,41 @@ pub enum TimelineState {
 
 /// Status of transaction insertion operation
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum MempoolAddTransactionStatus {
-    /// Transaction was successfully sent to Mempool
-    Valid,
-    /// The sender does not have enough balance for the transaction
-    InsufficientBalance,
-    /// Transaction sequence number is invalid(e.g. too old)
-    InvalidSeqNumber,
-    /// Mempool is full (reached max global capacity)
-    MempoolIsFull,
-    /// Account reached max capacity per account
-    TooManyTransactions,
-    /// Invalid update. Only gas price increase is allowed
-    InvalidUpdate,
+pub struct MempoolAddTransactionStatus {
+    /// Status code of the transaction insertion operation
+    pub code: MempoolAddTransactionStatusCode,
+    /// Message to give more details about the transaction insertion operation
+    pub message: String,
 }
 
+impl MempoolAddTransactionStatus {
+    /// Create a new MempoolAddTransactionStatus
+    pub fn new(code: MempoolAddTransactionStatusCode, message: String) -> Self {
+        Self { code, message }
+    }
+}
+
+//***********************************
+// Decoding/Encoding to Protobuffers
+//***********************************
 impl IntoProto for MempoolAddTransactionStatus {
     type ProtoType = crate::proto::shared::mempool_status::MempoolAddTransactionStatus;
 
     fn into_proto(self) -> Self::ProtoType {
-        match self {
-            MempoolAddTransactionStatus::Valid => ProtoMempoolAddTransactionStatus::Valid,
-            MempoolAddTransactionStatus::InsufficientBalance => {
-                ProtoMempoolAddTransactionStatus::InsufficientBalance
-            }
-            MempoolAddTransactionStatus::InvalidSeqNumber => {
-                ProtoMempoolAddTransactionStatus::InvalidSeqNumber
-            }
-            MempoolAddTransactionStatus::InvalidUpdate => {
-                ProtoMempoolAddTransactionStatus::InvalidUpdate
-            }
-            MempoolAddTransactionStatus::MempoolIsFull => {
-                ProtoMempoolAddTransactionStatus::MempoolIsFull
-            }
-            MempoolAddTransactionStatus::TooManyTransactions => {
-                ProtoMempoolAddTransactionStatus::TooManyTransactions
-            }
-        }
+        let mut mempool_add_transaction_status = Self::ProtoType::new();
+        mempool_add_transaction_status.set_message(self.message);
+        mempool_add_transaction_status.set_code(self.code);
+        mempool_add_transaction_status
     }
 }
 
 impl FromProto for MempoolAddTransactionStatus {
     type ProtoType = crate::proto::shared::mempool_status::MempoolAddTransactionStatus;
 
-    fn from_proto(object: Self::ProtoType) -> Result<Self> {
-        let ret = match object {
-            ProtoMempoolAddTransactionStatus::Valid => MempoolAddTransactionStatus::Valid,
-            ProtoMempoolAddTransactionStatus::InsufficientBalance => {
-                MempoolAddTransactionStatus::InsufficientBalance
-            }
-            ProtoMempoolAddTransactionStatus::InvalidSeqNumber => {
-                MempoolAddTransactionStatus::InvalidSeqNumber
-            }
-            ProtoMempoolAddTransactionStatus::InvalidUpdate => {
-                MempoolAddTransactionStatus::InvalidUpdate
-            }
-            ProtoMempoolAddTransactionStatus::MempoolIsFull => {
-                MempoolAddTransactionStatus::MempoolIsFull
-            }
-            ProtoMempoolAddTransactionStatus::TooManyTransactions => {
-                MempoolAddTransactionStatus::TooManyTransactions
-            }
-        };
-        Ok(ret)
+    fn from_proto(proto: Self::ProtoType) -> Result<Self> {
+        Ok(MempoolAddTransactionStatus::new(
+            proto.get_code(),
+            proto.get_message().to_string(),
+        ))
     }
 }

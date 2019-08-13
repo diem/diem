@@ -1,0 +1,8 @@
+main() {
+    // no return needed
+    abort 0;
+}
+
+// not: VerificationError
+
+// check: Aborted(0)

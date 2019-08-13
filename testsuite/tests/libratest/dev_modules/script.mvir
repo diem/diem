@@ -1,0 +1,13 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+import {{sender}}.MyModule;
+
+main(recipient: address, amount: u64) {
+  let coin: LibraCoin.T;
+  coin = LibraAccount.withdraw_from_sender(move(amount));
+  LibraAccount.deposit(move(recipient), MyModule.id(move(coin)));
+  return;
+}

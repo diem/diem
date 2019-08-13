@@ -41,7 +41,7 @@ Any public fields, functions, and methods should be documented with [Rustdoc](ht
 
 Example below:
 
-```
+```rust
 /// Represents (x, y) of a 2-dimensional grid
 ///
 /// A line is defined by 2 instances.
@@ -83,19 +83,19 @@ This file should contain:
 
 A template for readmes:
 
-```
+```markdown
 # Component Name
 
 [Summary line: Start with one sentence about this component.]
 
 ## Overview
 
-* Describe the purpose of this component and how the code in  
+* Describe the purpose of this component and how the code in
 this directory works.
-* Describe the interaction of the code in this directory with  
+* Describe the interaction of the code in this directory with
 the other components.
-* Describe the security model and assumptions about the crates  
-in this directory. Examples of how to describe the security  
+* Describe the security model and assumptions about the crates
+in this directory. Examples of how to describe the security
 assumptions will be added in the future.
 
 ## Implementation Details
@@ -143,7 +143,7 @@ Don't abuse the Deref trait to emulate inheritance between structs, and thus reu
 
 ### Comments
 
-We recommend that you use `//` and `///` comments rather than block comments `/* ... */` for uniformity and simpler grepping.  
+We recommend that you use `//` and `///` comments rather than block comments `/* ... */` for uniformity and simpler grepping.
 
 ### Cloning
 
@@ -151,7 +151,7 @@ If `x` is reference counted, prefer [`Arc::clone(x)`](https://doc.rust-lang.org/
 
 Also, if you are passing around [`Arc<T>`](https://doc.rust-lang.org/std/sync/struct.Arc.html) types, consider using a newtype wrapper:
 
-```
+```rust
 #[derive(Clone, Debug)]
 pub struct Foo(Arc<FooInner>);
 ```
@@ -190,7 +190,7 @@ Excluding test code, set field visibility to private as much as possible. Privat
 
 Public fields are most appropriate for [`struct`](https://doc.rust-lang.org/book/ch05-00-structs.html) types in the C spirit: compound, passive data structures without internal invariants.  Naming suggestions follow the guidance [here](https://rust-lang-nursery.github.io/api-guidelines/naming.html#getter-names-follow-rust-convention-c-getter) as shown below.
 
-```
+```rust
 struct Foo {
     size: usize,
     key_to_value: HashMap<u32, u32>
@@ -227,7 +227,7 @@ We currently use [slog](https://docs.rs/slog/) for logging.
 
 * [error!](https://docs.rs/slog/2.4.1/slog/macro.error.html) - Error-level messages have the highest urgency in [slog](https://docs.rs/slog/).  An unexpected error has occurred (e.g. exceeded the maximum number of retries to complete an RPC or inability to store data to local storage).
 * [warn!](https://docs.rs/slog/2.4.1/slog/macro.warn.html) - Warn-level messages help notify admins about automatically handled issues (e.g. retrying a failed network connection or receiving the same message multiple times, etc.).
-* [info!](https://docs.rs/slog/2.4.1/slog/macro.info.html) - Info-level messages are well suited for "one time" events (such as logging state on one-time startup and shutdown) or periodic events that are not frequently occurring - e.g. changing the validator set every day.  
+* [info!](https://docs.rs/slog/2.4.1/slog/macro.info.html) - Info-level messages are well suited for "one time" events (such as logging state on one-time startup and shutdown) or periodic events that are not frequently occurring - e.g. changing the validator set every day.
 * [debug!](https://docs.rs/slog/2.4.1/slog/macro.debug.html) - Debug-level messages can occur frequently (i.e. potentially > 1 message per second) and are not typically expected to be enabled in production.
 * [trace!](https://docs.rs/slog/2.4.1/slog/macro.trace.html) - Trace-level logging is typically only used for function entry/exit.
 
@@ -262,6 +262,45 @@ References:
 * [What is Property Based Testing?](https://hypothesis.works/articles/what-is-property-based-testing/) (includes a comparison with fuzzing)
 * [An introduction to property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing/)
 * [Choosing properties for property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing-2/)
+
+*Conditional compilation of tests*
+
+Libra [conditionally compiles](https://doc.rust-lang.org/stable/reference/conditional-compilation.html) code that is *only relevant for tests, but does not consist of tests* (unitary or otherwise). Examples of this include proptest strategies, implementations and derivations of specific traits (e.g. the occasional `Clone`), helper functions, etc. Since Cargo is [currently not equipped for activating features in benchmarks](https://github.com/rust-lang/cargo/issues/2911), we rely on two conditions to perform this conditional compilation:
+- the test flag, which is activated by dependent test code in the same crate as the conditional test-only code.
+- the "testing" custom feature, activated by dependent test code in another crate as the conditional test-only code (as below).
+
+As a consequence, it is recommended that you set up your test-only code in the following fashion. For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
+1. Define the "testing" flag in `foo_crate/Cargo.toml` and make it non-default:
+    ```
+    [features]
+    default = []
+    testing = []
+    ```
+2. Annotate your test-only helper `foo` with both the `test` flag (for in-crate callers) and the `"testing"` custom feature (for out-of-crate callers):
+    ```
+    #[cfg(any(test, feature = "testing"))]
+    fn foo() { ... }
+    ```
+3. Add a dev-dependency activating the "testing" feature to crates that import this test-only member:
+    ```
+    [dev-dependencies.foo_crate]
+    path = { "<same as the one in [dependencies]>"}
+    features = ["testing"]
+    ```
+4. (optional) Use `cfg_attr` to make test-only trait derivations conditional:
+    ```
+    #[cfg_attr(any(test, feature = "testing"), derive(FooTrait))]
+    #[derive(Debug, Display, ...)] // inconditional derivations
+    struct Foo { ... }
+    ```
+5. (optional) Set up feature transitivitity for crates that call crates that have test-only members. Let's say it's the case of `bar_crate`, which, through its test helpers, calls into `foo_crate` to use your test-only `foo`. Here's how you would set up `bar_crate/Cargo.toml`:
+    ```
+    [features]
+    default = []
+    testing = ["foo_crate/testing"]
+    ```
+
+*A final note on integration tests*: All tests that use conditional test-only elements in another crate need to activate the "testing" feature through the `[features]` section in their `Cargo.toml`. [Integration tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.html) can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for feature activation. In the Libra codebase, we therefore recommend that *integration tests which depend on test-only code in their tested crate* be extracted to their own crate. You can look at `language/vm/serializer_tests` for an example of such an extracted integration test.
 
 *Fuzzing*
 

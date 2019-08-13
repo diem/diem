@@ -13,32 +13,34 @@ import flask
 import pexpect
 
 
-def setup_app():
-    app = flask.Flask(__name__)
-    # If we have comma separated list take a random one
-    ac_hosts = os.environ['AC_HOST'].split(',')
-    ac_host = random.choice(ac_hosts)
-    ac_port = os.environ['AC_PORT']
-
-    print(sys.version, platform.python_version())
-    print("Connecting to ac on: {}:{}".format(ac_host, ac_port))
-
-    cmd = "/opt/libra/bin/client --host {} --port {} -m {} -s {}".format(
-        ac_host,
-        ac_port,
-        "/opt/libra/etc/mint.key",
-        "/opt/libra/etc/trusted_peers.config.toml")
-    app.client = pexpect.spawn(cmd)
-    app.client.expect("Please, input commands")
-    return app
-
-
-application = setup_app()
-
 MAX_MINT = 10 ** 19  # 10 trillion libras
 
 
-@application.route("/")
+def create_client():
+    if application.client is None or not application.client.isalive():
+        # If we have comma separated list take a random one
+        ac_hosts = os.environ['AC_HOST'].split(',')
+        ac_host = random.choice(ac_hosts)
+        ac_port = os.environ['AC_PORT']
+
+        print("Connecting to ac on: {}:{}".format(ac_host, ac_port))
+        cmd = "/opt/libra/bin/client --host {} --port {} -m {} -s {}".format(
+            ac_host,
+            ac_port,
+            "/opt/libra/etc/mint.key",
+            "/opt/libra/etc/trusted_peers.config.toml")
+
+        application.client = pexpect.spawn(cmd)
+        application.client.expect("Please, input commands")
+
+
+application = flask.Flask(__name__)
+application.client = None
+print(sys.version, platform.python_version())
+create_client()
+
+
+@application.route("/", methods=('POST',))
 def send_transaction():
     address = flask.request.args['address']
 
@@ -54,10 +56,16 @@ def send_transaction():
     if amount > MAX_MINT:
         return 'Exceeded max amount of {}'.format(MAX_MINT / (10 ** 6)), 400
 
-    application.client.sendline(
-        "a m {} {}".format(address, amount / (10 ** 6)))
-    application.client.expect("Mint request submitted", timeout=2)
+    try:
+        create_client()
+        application.client.sendline(
+            "a m {} {}".format(address, amount / (10 ** 6)))
+        application.client.expect("Mint request submitted", timeout=2)
 
-    application.client.sendline("a la")
-    application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
+        application.client.sendline("a la")
+        application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
+    except pexpect.exceptions.ExceptionPexpect:
+        application.client.terminate(True)
+        raise
+
     return application.client.match.groups()[0]

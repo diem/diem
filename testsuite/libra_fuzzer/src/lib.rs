@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use proptest::test_runner::TestRunner;
+use proptest_helpers::ValueGenerator;
 use std::{fmt, ops::Deref, str::FromStr};
 
 pub mod commands;
@@ -16,7 +16,7 @@ pub trait FuzzTargetImpl: Sync + Send + fmt::Debug {
     fn description(&self) -> &'static str;
 
     /// Generate a new example for this target to store in the corpus.
-    fn generate(&self, runner: &mut TestRunner) -> Vec<u8>;
+    fn generate(&self, gen: &mut ValueGenerator) -> Vec<u8>;
 
     /// Fuzz the target with this data. The fuzzer tests for panics or OOMs with this method.
     fn fuzz(&self, data: &[u8]);

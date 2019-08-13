@@ -5,13 +5,11 @@ mod bls12381_test;
 mod cross_test;
 mod ed25519_test;
 mod slip0010_test;
+mod x25519_test;
 
-use crate::{
-    test_utils::KeyPair,
-    traits::{SeedableCryptoRng, Uniform},
-};
+use crate::{test_utils::KeyPair, traits::Uniform};
 use proptest::prelude::*;
-use rand::rngs::StdRng;
+use rand::{rngs::StdRng, SeedableRng};
 use serde::Serialize;
 
 /// Produces a uniformly random keypair from a seed

@@ -32,6 +32,7 @@ resource "aws_instance" "prometheus" {
   ami                         = data.aws_ami.ecs.id
   instance_type               = "t3.medium"
   subnet_id                   = element(aws_subnet.testnet.*.id, 0)
+  depends_on                  = [aws_main_route_table_association.testnet]
   vpc_security_group_ids      = [aws_security_group.monitoring.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.libra.key_name
@@ -44,14 +45,15 @@ resource "aws_instance" "prometheus" {
     Workspace = terraform.workspace
   }
 
-  # TODO: Do this in user_data
   provisioner "remote-exec" {
     inline = [
       "sudo mkdir -p /data/prometheus && sudo chown 65534 /data/prometheus",
       "sudo mkdir -p /data/alertmanager && sudo chown 65534 /data/alertmanager",
       "sudo mkdir -p /data/grafana && sudo chown 472 /data/grafana",
-      "mkdir -p /tmp/grafana/provisioning/{datasources,dashboards,notifiers}",
-      "mkdir -p /tmp/grafana/dashboards",
+      "sudo mkdir -p /opt/{prometheus,alertmanager}",
+      "sudo mkdir -p /opt/grafana/dashboards",
+      "sudo mkdir -p /opt/grafana/provisioning/{datasources,dashboards,notifiers}",
+      "sudo chown -R ec2-user /opt/{prometheus,alertmanager,grafana}",
     ]
 
     connection {
@@ -72,7 +74,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     content     = data.template_file.prometheus_yml.rendered
-    destination = "/tmp/prometheus.yml"
+    destination = "/opt/prometheus/prometheus.yml"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -82,8 +84,8 @@ resource "null_resource" "prometheus" {
   }
 
   provisioner "file" {
-    source      = "templates/prometheus"
-    destination = "/tmp"
+    source      = "templates/prometheus/"
+    destination = "/opt/prometheus"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -98,7 +100,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     content     = data.template_file.alertmanager_yml.rendered
-    destination = "/tmp/alertmanager.yml"
+    destination = "/opt/alertmanager/alertmanager.yml"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -109,7 +111,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     content     = data.template_file.datasources_yml.rendered
-    destination = "/tmp/grafana/provisioning/datasources/prometheus.yml"
+    destination = "/opt/grafana/provisioning/datasources/prometheus.yml"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -120,7 +122,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     content     = file("templates/grafana-dashboards.yml")
-    destination = "/tmp/grafana/provisioning/dashboards/dashboards.yml"
+    destination = "/opt/grafana/provisioning/dashboards/dashboards.yml"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -131,7 +133,7 @@ resource "null_resource" "prometheus" {
 
   provisioner "file" {
     source      = "templates/dashboards"
-    destination = "/tmp/grafana/dashboards/libra"
+    destination = "/opt/grafana/dashboards/libra"
 
     connection {
       host        = aws_instance.prometheus.public_ip
@@ -163,22 +165,7 @@ resource "aws_ecs_task_definition" "prometheus" {
 
   volume {
     name      = "prometheus-config"
-    host_path = "/tmp/prometheus.yml"
-  }
-
-  volume {
-    name      = "prometheus-consoles"
-    host_path = "/tmp/prometheus/consoles"
-  }
-
-  volume {
-    name      = "prometheus-console-libs"
-    host_path = "/tmp/prometheus/console_libs"
-  }
-
-  volume {
-    name      = "prometheus-alerting-rules"
-    host_path = "/tmp/prometheus/alerting_rules"
+    host_path = "/opt/prometheus"
   }
 
   volume {
@@ -188,7 +175,7 @@ resource "aws_ecs_task_definition" "prometheus" {
 
   volume {
     name      = "alertmanager-config"
-    host_path = "/tmp/alertmanager.yml"
+    host_path = "/opt/alertmanager"
   }
 
   volume {
@@ -198,12 +185,12 @@ resource "aws_ecs_task_definition" "prometheus" {
 
   volume {
     name      = "grafana-provisioning"
-    host_path = "/tmp/grafana/provisioning"
+    host_path = "/opt/grafana/provisioning"
   }
 
   volume {
     name      = "grafana-dashboards"
-    host_path = "/tmp/grafana/dashboards"
+    host_path = "/opt/grafana/dashboards"
   }
 
   placement_constraints {

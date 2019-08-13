@@ -5,16 +5,14 @@ use crate::{
     account_address::AccountAddress,
     transaction::{Program, RawTransaction, SignedTransaction},
 };
-use crypto::{
-    signing::{generate_keypair, Signature},
-    utils::keypair_strategy,
-};
+use nextgen_crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 
 #[test]
 fn test_invalid_signature() {
-    let keypair = generate_keypair();
+    let keypair = compat::generate_keypair(None);
     let txn = SignedTransaction::from_proto(
         SignedTransaction::craft_signed_transaction_for_client(
             RawTransaction::new(
@@ -26,7 +24,7 @@ fn test_invalid_signature() {
                 std::time::Duration::new(0, 0),
             ),
             keypair.1,
-            Signature::from_compact(&[0; 64]).unwrap(),
+            Ed25519Signature::try_from(&[1u8; 64][..]).unwrap(),
         )
         .into_proto(),
     )
@@ -37,7 +35,7 @@ fn test_invalid_signature() {
 
 proptest! {
     #[test]
-    fn test_sig(raw_txn in any::<RawTransaction>(), (sk1, pk1) in keypair_strategy()) {
+    fn test_sig(raw_txn in any::<RawTransaction>(), (sk1, pk1) in compat::keypair_strategy()) {
         let txn = raw_txn.sign(&sk1, pk1).unwrap();
         let signed_txn = txn.into_inner();
         assert!(signed_txn.check_signature().is_ok());

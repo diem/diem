@@ -6,14 +6,19 @@ use crate::{
     code_cache::{module_adapter::FakeFetcher, module_cache::ModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
 };
-use ::compiler::{compiler, parser::parse_program};
+use assert_matches::assert_matches;
+use bytecode_verifier::VerifiedScript;
+use compiler::Compiler;
 use hex;
 use types::account_address::AccountAddress;
-use vm::file_format::*;
+use vm::{
+    file_format::*,
+    gas_schedule::{GasAlgebra, GasUnits},
+};
 use vm_cache_map::Arena;
 
-fn test_module(name: String) -> CompiledModule {
-    CompiledModuleMut {
+fn test_module(name: String) -> VerifiedModule {
+    let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             name: StringPoolIndex::new(0),
             address: AddressPoolIndex::new(0),
@@ -41,7 +46,7 @@ fn test_module(name: String) -> CompiledModule {
                 code: CodeUnit {
                     max_stack_size: 10,
                     locals: LocalsSignatureIndex::new(0),
-                    code: vec![Bytecode::Add],
+                    code: vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret],
                 },
             },
             FunctionDefinition {
@@ -59,10 +64,12 @@ fn test_module(name: String) -> CompiledModule {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                type_parameters: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                type_parameters: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -71,18 +78,19 @@ fn test_module(name: String) -> CompiledModule {
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test module should satisfy bounds checker")
+    .expect("test module should satisfy bounds checker");
+    VerifiedModule::new(compiled_module).expect("test module should satisfy bytecode verifier")
 }
 
-fn test_script() -> CompiledScript {
-    CompiledScriptMut {
+fn test_script() -> VerifiedScript {
+    let compiled_script = CompiledScriptMut {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
-                code: vec![],
+                code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
@@ -97,6 +105,11 @@ fn test_script() -> CompiledScript {
         ],
         struct_handles: vec![],
         function_handles: vec![
+            FunctionHandle {
+                name: StringPoolIndex::new(4),
+                signature: FunctionSignatureIndex::new(0),
+                module: ModuleHandleIndex::new(0),
+            },
             FunctionHandle {
                 name: StringPoolIndex::new(2),
                 signature: FunctionSignatureIndex::new(0),
@@ -113,10 +126,12 @@ fn test_script() -> CompiledScript {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                type_parameters: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                type_parameters: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -125,12 +140,14 @@ fn test_script() -> CompiledScript {
             "module".to_string(),
             "func1".to_string(),
             "func2".to_string(),
+            "main".to_string(),
         ],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
-    .expect("test script should satisfy bounds checker")
+    .expect("test script should satisfy bounds checker");
+    VerifiedScript::new(compiled_script).expect("test script should satisfy bytecode verifier")
 }
 
 #[test]
@@ -139,20 +156,26 @@ fn test_loader_one_module() {
     // two functions, each with different name and signature. This test will make sure that we
     // link the function handle with the right function definition within the same module.
     let module = test_module("module".to_string());
-    let mod_id = module.self_code_key();
+    let mod_id = module.self_id();
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
-    loaded_program.cache_module(module).unwrap();
-    let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap().unwrap();
+    loaded_program.cache_module(module);
+    let module_ref = loaded_program
+        .get_loaded_module(&mod_id)
+        .unwrap()
+        .unwrap()
+        .unwrap();
 
     // Get the function reference of the first two function handles.
     let func1_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(0))
         .unwrap()
+        .unwrap()
         .unwrap();
     let func2_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(1))
+        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -164,7 +187,10 @@ fn test_loader_one_module() {
 
     assert_eq!(func1_ref.arg_count(), 0);
     assert_eq!(func1_ref.return_count(), 0);
-    assert_eq!(func1_ref.code_definition(), vec![Bytecode::Add].as_slice());
+    assert_eq!(
+        func1_ref.code_definition(),
+        vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+    );
 
     assert_eq!(func2_ref.arg_count(), 1);
     assert_eq!(func2_ref.return_count(), 0);
@@ -178,18 +204,20 @@ fn test_loader_cross_modules() {
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
-    loaded_program.cache_module(module).unwrap();
+    loaded_program.cache_module(module);
 
     let owned_entry_module = script.into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
     let func1 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .unwrap()
         .unwrap()
         .unwrap();
     let func2 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -200,7 +228,10 @@ fn test_loader_cross_modules() {
 
     assert_eq!(func1.arg_count(), 0);
     assert_eq!(func1.return_count(), 0);
-    assert_eq!(func1.code_definition(), vec![Bytecode::Add].as_slice());
+    assert_eq!(
+        func1.code_definition(),
+        vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+    );
 
     assert_eq!(func2.arg_count(), 1);
     assert_eq!(func2.return_count(), 0);
@@ -212,29 +243,33 @@ fn test_cache_with_storage() {
     let allocator = Arena::new();
 
     let owned_entry_module = test_script().into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
+    println!("MODULE: {}", entry_module.as_module());
 
     let vm_cache = VMModuleCache::new(&allocator);
 
     // Function is not defined locally.
     assert!(vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .unwrap()
         .unwrap()
         .is_none());
 
     {
-        let fetcher = FakeFetcher::new(vec![test_module("module".to_string())]);
+        let fetcher = FakeFetcher::new(vec![test_module("module".to_string()).into_inner()]);
         let mut block_cache = BlockModuleCache::new(&vm_cache, fetcher);
 
         // Make sure the block cache fetches the code from the view.
         let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .unwrap()
             .unwrap()
             .unwrap();
         let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+            .unwrap()
             .unwrap()
             .unwrap();
 
@@ -245,7 +280,10 @@ fn test_cache_with_storage() {
 
         assert_eq!(func1.arg_count(), 0);
         assert_eq!(func1.return_count(), 0);
-        assert_eq!(func1.code_definition(), vec![Bytecode::Add].as_slice());
+        assert_eq!(
+            func1.code_definition(),
+            vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+        );
 
         assert_eq!(func2.arg_count(), 1);
         assert_eq!(func2.return_count(), 0);
@@ -255,11 +293,13 @@ fn test_cache_with_storage() {
         block_cache.storage.clear();
 
         let func1 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .unwrap()
             .unwrap()
             .unwrap();
         let func2 = block_cache
-            .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+            .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+            .unwrap()
             .unwrap()
             .unwrap();
 
@@ -270,7 +310,10 @@ fn test_cache_with_storage() {
 
         assert_eq!(func1.arg_count(), 0);
         assert_eq!(func1.return_count(), 0);
-        assert_eq!(func1.code_definition(), vec![Bytecode::Add].as_slice());
+        assert_eq!(
+            func1.code_definition(),
+            vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+        );
 
         assert_eq!(func2.arg_count(), 1);
         assert_eq!(func2.return_count(), 0);
@@ -280,11 +323,13 @@ fn test_cache_with_storage() {
     // Even if the block cache goes out of scope, we should still be able to read the fetched
     // definition
     let func1 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .unwrap()
         .unwrap()
         .unwrap();
     let func2 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
+        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -295,7 +340,10 @@ fn test_cache_with_storage() {
 
     assert_eq!(func1.arg_count(), 0);
     assert_eq!(func1.return_count(), 0);
-    assert_eq!(func1.code_definition(), vec![Bytecode::Add].as_slice());
+    assert_eq!(
+        func1.code_definition(),
+        vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret].as_slice()
+    );
 
     assert_eq!(func2.arg_count(), 1);
     assert_eq!(func2.return_count(), 0);
@@ -309,7 +357,7 @@ fn test_multi_level_cache_write_back() {
 
     // Put an existing module in the cache.
     let module = test_module("existing_module".to_string());
-    vm_cache.cache_module(module).unwrap();
+    vm_cache.cache_module(module);
 
     // Create a new script that refers to both published and unpublished modules.
     let script = CompiledScriptMut {
@@ -319,7 +367,7 @@ fn test_multi_level_cache_write_back() {
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
-                code: vec![],
+                code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
@@ -341,6 +389,12 @@ fn test_multi_level_cache_write_back() {
         ],
         struct_handles: vec![],
         function_handles: vec![
+            // main
+            FunctionHandle {
+                name: StringPoolIndex::new(5),
+                signature: FunctionSignatureIndex::new(0),
+                module: ModuleHandleIndex::new(0),
+            },
             // Func2 defined in the new module
             FunctionHandle {
                 name: StringPoolIndex::new(4),
@@ -359,10 +413,12 @@ fn test_multi_level_cache_write_back() {
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![],
+                type_parameters: vec![],
             },
             FunctionSignature {
                 return_types: vec![],
                 arg_types: vec![SignatureToken::U64],
+                type_parameters: vec![],
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
@@ -372,16 +428,18 @@ fn test_multi_level_cache_write_back() {
             "existing_module".to_string(),
             "func1".to_string(),
             "func2".to_string(),
+            "main".to_string(),
         ],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
     .freeze()
     .expect("test script should satisfy bounds checker");
+    let script = VerifiedScript::new(script).expect("test script should satisfy bytecode verifier");
 
     let owned_entry_module = script.into_module();
-    let loaded_main = LoadedModule::new(owned_entry_module).unwrap();
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX).unwrap();
+    let loaded_main = LoadedModule::new(owned_entry_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
 
     {
@@ -391,27 +449,27 @@ fn test_multi_level_cache_write_back() {
 
             // We should be able to read existing modules in both cache.
             let func1_vm_ref = vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
                 .unwrap()
                 .unwrap();
             let func1_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
                 .unwrap()
                 .unwrap();
             assert_eq!(func1_vm_ref, func1_txn_ref);
 
-            txn_cache
-                .cache_module(test_module("module".to_string()))
-                .unwrap();
+            txn_cache.cache_module(test_module("module".to_string()));
 
             // We should not read the new module in the vm cache, but we should read it from the txn
             // cache.
             assert!(vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .unwrap()
                 .unwrap()
                 .is_none());
             let func2_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+                .unwrap()
                 .unwrap()
                 .unwrap();
             assert_eq!(func2_txn_ref.arg_count(), 1);
@@ -423,14 +481,13 @@ fn test_multi_level_cache_write_back() {
         }
 
         // Drop the transactional arena
-        vm_cache
-            .reclaim_cached_module(txn_allocator.into_vec())
-            .unwrap();
+        vm_cache.reclaim_cached_module(txn_allocator.into_vec());
     }
 
     // After reclaiming we should see it from the
     let func2_ref = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(0))
+        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
+        .unwrap()
         .unwrap()
         .unwrap();
     assert_eq!(func2_ref.arg_count(), 1);
@@ -438,14 +495,16 @@ fn test_multi_level_cache_write_back() {
     assert_eq!(func2_ref.code_definition(), vec![Bytecode::Ret].as_slice());
 }
 
-// TODO: What this function does is way beyond its name suggests.
-//       Fix it and code depending on it.
-fn parse_modules(s: String) -> Vec<CompiledModule> {
-    let address = AccountAddress::default();
-    let parsed_program = parse_program(&s).unwrap();
-
-    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
-    compiled_program.modules
+fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
+    let compiler = Compiler {
+        code: s.as_ref(),
+        skip_stdlib_deps: true,
+        ..Compiler::default()
+    };
+    compiler
+        .into_compiled_program()
+        .expect("Failed to compile program")
+        .modules
 }
 
 #[test]
@@ -453,27 +512,29 @@ fn test_same_module_struct_resolution() {
     let allocator = Arena::new();
     let vm_cache = VMModuleCache::new(&allocator);
 
-    let code = String::from(
-        "
+    let code = "
         modules:
         module M1 {
             struct X {}
-            struct T { i: u64, x: V#Self.X }
+            struct T { i: u64, x: Self.X }
         }
         script:
         main() {
             return;
         }
-        ",
-    );
+        ";
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key = CodeKey::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache.get_loaded_module(&code_key).unwrap().unwrap();
-        let gas = GasMeter::new(100_000_000);
+        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
+        let module_ref = block_cache
+            .get_loaded_module(&module_id)
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
@@ -505,7 +566,7 @@ fn test_multi_module_struct_resolution() {
         }}
         module M2 {{
             import 0x{0}.M1;
-            struct T {{ i: u64, x: V#M1.X }}
+            struct T {{ i: u64, x: M1.X }}
         }}
         script:
         main() {{
@@ -515,14 +576,18 @@ fn test_multi_module_struct_resolution() {
         hex::encode(AccountAddress::default())
     );
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(&code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key_2 = CodeKey::new(AccountAddress::default(), "M2".to_string());
-        let module2_ref = block_cache.get_loaded_module(&code_key_2).unwrap().unwrap();
+        let module_id_2 = ModuleId::new(AccountAddress::default(), "M2".to_string());
+        let module2_ref = block_cache
+            .get_loaded_module(&module_id_2)
+            .unwrap()
+            .unwrap()
+            .unwrap();
 
-        let gas = GasMeter::new(100_000_000);
+        let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
@@ -540,26 +605,28 @@ fn test_field_offset_resolution() {
     let allocator = Arena::new();
     let vm_cache = VMModuleCache::new(&allocator);
 
-    let code = String::from(
-        "
+    let code = "
         modules:
         module M1 {
             struct X { f: u64, g: bool}
-            struct T { i: u64, x: V#Self.X, y: u64 }
+            struct T { i: u64, x: Self.X, y: u64 }
         }
         script:
         main() {
             return;
         }
-        ",
-    );
+        ";
 
-    let module = parse_modules(code);
+    let module = parse_and_compile_modules(code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let code_key = CodeKey::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache.get_loaded_module(&code_key).unwrap().unwrap();
+        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
+        let module_ref = block_cache
+            .get_loaded_module(&module_id)
+            .unwrap()
+            .unwrap()
+            .unwrap();
 
         let f_idx = module_ref.field_defs_table.get("f").unwrap();
         assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
@@ -576,4 +643,52 @@ fn test_field_offset_resolution() {
         let y_idx = module_ref.field_defs_table.get("y").unwrap();
         assert_eq!(module_ref.get_field_offset(*y_idx).unwrap(), 2);
     }
+}
+
+#[test]
+fn test_dependency_fails_verification() {
+    let allocator = Arena::new();
+    let vm_cache = VMModuleCache::new(&allocator);
+
+    // This module has a struct inside a resource, which should fail verification. But assume that
+    // it made its way onto the chain somehow (e.g. there was a bug in an older version of the
+    // bytecode verifier).
+    let code = "
+    modules:
+    module Test {
+        resource R1 { }
+        struct S1 { r1: Self.R1 }
+
+        public new_S1(): Self.S1 {
+            let s: Self.S1;
+            let r: Self.R1;
+            r = R1 {};
+            s = S1 { r1: move(r) };
+            return move(s);
+        }
+    }
+
+    script:
+    main() {
+    }
+    ";
+
+    let module = parse_and_compile_modules(code);
+    let fetcher = FakeFetcher::new(module);
+    let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
+
+    let module_id = ModuleId::new(AccountAddress::default(), "Test".to_string());
+    let VMRuntimeError { err, .. } = block_cache
+        .get_loaded_module(&module_id)
+        .unwrap()
+        .unwrap_err();
+    let errors = match err {
+        VMErrorKind::Verification(errors) => errors,
+        other => panic!("Unexpected error: {:?}", other),
+    };
+    assert_matches!(
+        &errors[0],
+        VerificationStatus::Dependency(module_id, _)
+            if module_id.address() == &AccountAddress::default() && module_id.name() == "Test"
+    );
 }

@@ -1,0 +1,17 @@
+module A {
+    resource T{v: u64}
+
+    public A2() {
+        let sender: address;
+        let t: Self.T;
+        let t_ref: &mut Self.T;
+        sender = get_txn_sender();
+        t_ref = borrow_global<T>(copy(sender));
+        t = move_from<T>(move(sender));
+        release(move(t_ref));
+        return;
+    }
+}
+
+// check: VerificationError
+// check: GlobalReferenceError

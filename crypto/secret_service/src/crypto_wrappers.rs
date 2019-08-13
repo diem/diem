@@ -7,7 +7,6 @@
 use core::convert::TryFrom;
 use crypto::hash::HashValue;
 use crypto_derive::SilentDebug;
-use derive_deref::Deref;
 use failure::prelude::*;
 use nextgen_crypto::{
     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
@@ -15,10 +14,19 @@ use nextgen_crypto::{
     traits::*,
 };
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 /// KeyID value is a handler to the secret key and a simple wrapper around the hash value.
-#[derive(Clone, PartialEq, Eq, Hash, Deref)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KeyID(pub HashValue);
+
+impl Deref for KeyID {
+    type Target = HashValue;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 ///////////////////////////////////////////////////////////////////
 // Declarations pulled from crypto/src/unit_tests/cross_test.rs  //
@@ -140,6 +148,7 @@ impl SigningKey for GenericPrivateKey {
 
 impl Signature for GenericSignature {
     type VerifyingKeyMaterial = GenericPublicKey;
+    type SigningKeyMaterial = GenericPrivateKey;
 
     fn verify(&self, message: &HashValue, public_key: &GenericPublicKey) -> Result<()> {
         self.verify_arbitrary_msg(message.as_ref(), public_key)

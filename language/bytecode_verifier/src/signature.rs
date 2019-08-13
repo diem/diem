@@ -115,7 +115,7 @@ pub(crate) fn check_signature_refs(
 ) -> Option<VMStaticViolation> {
     let type_signature = view.type_signature();
     let token = type_signature.token();
-    let kind = token.kind();
+    let kind = token.signature_token_kind();
     match kind {
         SignatureTokenKind::Reference | SignatureTokenKind::MutableReference => Some(
             VMStaticViolation::InvalidFieldDefReference(token.as_inner().clone(), kind),
@@ -132,14 +132,14 @@ pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStaticViolatio
     let inner_token_opt = match token {
         Reference(token) => Some(token),
         MutableReference(token) => Some(token),
-        Bool | U64 | String | ByteArray | Address | Struct(_) => None,
+        Bool | U64 | String | ByteArray | Address | Struct(_, _) | TypeParameter(_) => None,
     };
     if let Some(inner_token) = inner_token_opt {
         if inner_token.is_reference() {
             return Some(VMStaticViolation::InvalidSignatureToken(
                 token.clone(),
-                token.kind(),
-                inner_token.kind(),
+                token.signature_token_kind(),
+                inner_token.signature_token_kind(),
             ));
         }
     }

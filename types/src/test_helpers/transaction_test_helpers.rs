@@ -14,22 +14,23 @@ use crate::{
     transaction_helpers::get_signed_transactions_digest,
     write_set::WriteSet,
 };
-use crypto::{hash::CryptoHash, signing::sign_message, PrivateKey, PublicKey};
+use crypto::hash::CryptoHash;
+use nextgen_crypto::{ed25519::*, traits::*};
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
 
-const MAX_GAS_AMOUNT: u64 = 10_000;
+const MAX_GAS_AMOUNT: u64 = 100_000;
 const MAX_GAS_PRICE: u64 = 1;
 
 // Test helper for transaction creation
 pub fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     program: Option<Program>,
     expiration_time: u64,
     gas_unit_price: u64,
@@ -45,12 +46,12 @@ pub fn get_test_signed_transaction(
 
     let bytes = raw_txn.write_to_bytes().unwrap();
     let hash = RawTransactionBytes(&bytes).hash();
-    let signature = sign_message(hash, &private_key).unwrap();
+    let signature = private_key.sign_message(&hash);
 
     let mut signed_txn = ProtoSignedTransaction::new();
     signed_txn.set_raw_txn_bytes(bytes);
-    signed_txn.set_sender_public_key(public_key.to_slice().to_vec());
-    signed_txn.set_sender_signature(signature.to_compact().to_vec());
+    signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
+    signed_txn.set_sender_signature(signature.to_bytes().to_vec());
     signed_txn
 }
 
@@ -58,8 +59,8 @@ pub fn get_test_signed_transaction(
 pub fn get_test_unchecked_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     program: Option<Program>,
     expiration_time: u64,
     gas_unit_price: u64,
@@ -75,7 +76,7 @@ pub fn get_test_unchecked_transaction(
 
     let bytes = raw_txn.write_to_bytes().unwrap();
     let hash = RawTransactionBytes(&bytes).hash();
-    let signature = sign_message(hash, &private_key).unwrap();
+    let signature = private_key.sign_message(&hash);
 
     SignedTransaction::craft_signed_transaction_for_client(
         RawTransaction::from_proto(raw_txn).unwrap(),
@@ -89,8 +90,8 @@ pub fn get_test_unchecked_transaction(
 pub fn get_test_signed_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     program: Option<Program>,
 ) -> ProtoSignedTransaction {
     let expiration_time = SystemTime::now()
@@ -113,8 +114,8 @@ pub fn get_test_signed_txn(
 pub fn get_test_unchecked_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     program: Option<Program>,
 ) -> SignedTransaction {
     let expiration_time = SystemTime::now()
@@ -141,8 +142,8 @@ pub fn placeholder_script() -> Program {
 pub fn get_write_set_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     write_set: Option<WriteSet>,
 ) -> SignatureCheckedTransaction {
     let write_set = write_set.unwrap_or_default();
@@ -156,10 +157,10 @@ pub fn create_signed_transactions_block(
     sender: AccountAddress,
     starting_sequence_number: u64,
     num_transactions_in_block: u64,
-    priv_key: &PrivateKey,
-    pub_key: &PublicKey,
-    validator_priv_key: &PrivateKey,
-    validator_pub_key: &PublicKey,
+    priv_key: &Ed25519PrivateKey,
+    pub_key: &Ed25519PublicKey,
+    validator_priv_key: &Ed25519PrivateKey,
+    validator_pub_key: &Ed25519PublicKey,
 ) -> SignedTransactionsBlock {
     let mut signed_txns_block = SignedTransactionsBlock::new();
     for i in starting_sequence_number..(starting_sequence_number + num_transactions_in_block) {
@@ -168,15 +169,15 @@ pub fn create_signed_transactions_block(
             sender,
             i, /* seq_number */
             priv_key.clone(),
-            *pub_key,
+            pub_key.clone(),
             None,
         ));
     }
 
     let message = get_signed_transactions_digest(&signed_txns_block.transactions);
-    let signature = sign_message(message, &validator_priv_key).unwrap();
-    signed_txns_block.set_validator_signature(signature.to_compact().to_vec());
-    signed_txns_block.set_validator_public_key(validator_pub_key.to_slice().to_vec());
+    let signature = validator_priv_key.sign_message(&message);
+    signed_txns_block.set_validator_signature(signature.to_bytes().to_vec());
+    signed_txns_block.set_validator_public_key(validator_pub_key.to_bytes().to_vec());
 
     signed_txns_block
 }

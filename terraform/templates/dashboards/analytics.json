@@ -14,7 +14,7 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": 11,
   "links": [],
   "panels": [
@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(executor{op='num_accounts'})",
+          "expr": "max(storage_gauge{op='state_blobs_created'}) - max(storage_gauge{op='state_blobs_retired'})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Num Accounts Created",

@@ -5,6 +5,7 @@
 //! root(LedgerInfo) to leaf(TransactionInfo).
 
 use crate::{
+    change_set::ChangeSet,
     errors::LibraDbError,
     schema::{
         ledger_info::LedgerInfoSchema, transaction_accumulator::TransactionAccumulatorSchema,
@@ -18,7 +19,8 @@ use crypto::{
 };
 use failure::prelude::*;
 use itertools::Itertools;
-use schemadb::{ReadOptions, SchemaBatch, DB};
+use nextgen_crypto::ed25519::*;
+use schemadb::{ReadOptions, DB};
 use std::sync::Arc;
 use types::{
     ledger_info::LedgerInfoWithSignatures,
@@ -43,19 +45,24 @@ impl LedgerStore {
     /// Note: ledger infos and signatures are only available at the last version of each earlier
     /// epoch and at the latest version of current epoch.
     #[cfg(test)]
-    fn get_ledger_infos(&self, start_version: Version) -> Result<Vec<LedgerInfoWithSignatures>> {
+    fn get_ledger_infos(
+        &self,
+        start_version: Version,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_version)?;
         Ok(iter.map(|kv| Ok(kv?.1)).collect::<Result<Vec<_>>>()?)
     }
 
-    pub fn get_latest_ledger_info_option(&self) -> Result<Option<LedgerInfoWithSignatures>> {
+    pub fn get_latest_ledger_info_option(
+        &self,
+    ) -> Result<Option<LedgerInfoWithSignatures<Ed25519Signature>>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek_to_last();
         Ok(iter.next().transpose()?.map(|kv| kv.1))
     }
 
-    pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+    pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures<Ed25519Signature>> {
         self.get_latest_ledger_info_option()?
             .ok_or_else(|| LibraDbError::NotFound(String::from("Genesis LedgerInfo")).into())
     }
@@ -109,12 +116,12 @@ impl LedgerStore {
         &self,
         first_version: u64,
         txn_infos: &[TransactionInfo],
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<HashValue> {
         // write txn_info
         (first_version..first_version + txn_infos.len() as u64)
             .zip_eq(txn_infos.iter())
-            .map(|(version, txn_info)| batch.put::<TransactionInfoSchema>(&version, txn_info))
+            .map(|(version, txn_info)| cs.batch.put::<TransactionInfoSchema>(&version, txn_info))
             .collect::<Result<()>>()?;
 
         // write hash of txn_info into the accumulator
@@ -126,18 +133,18 @@ impl LedgerStore {
         )?;
         writes
             .iter()
-            .map(|(pos, hash)| batch.put::<TransactionAccumulatorSchema>(pos, hash))
+            .map(|(pos, hash)| cs.batch.put::<TransactionAccumulatorSchema>(pos, hash))
             .collect::<Result<()>>()?;
         Ok(root_hash)
     }
 
-    /// Write `ledger_info` to `batch`.
+    /// Write `ledger_info` to `cs`.
     pub fn put_ledger_info(
         &self,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
-        batch: &mut SchemaBatch,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
+        cs: &mut ChangeSet,
     ) -> Result<()> {
-        batch.put::<LedgerInfoSchema>(
+        cs.batch.put::<LedgerInfoSchema>(
             &ledger_info_with_sigs.ledger_info().version(),
             ledger_info_with_sigs,
         )

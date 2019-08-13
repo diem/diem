@@ -2,20 +2,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::signing::generate_keypair;
 use itertools::Itertools;
-use rand::{thread_rng, Rng};
+use nextgen_crypto::ed25519::compat;
+use rand::{
+    rngs::{OsRng, StdRng},
+    seq::SliceRandom,
+    thread_rng, Rng, SeedableRng,
+};
 use schemadb::schema::assert_encode_decode;
 use types::transaction::Version;
 
-fn row_with_arbitrary_validator(version: Version) -> (Key, Value) {
-    let (_private_key, public_key) = generate_keypair();
+fn row_with_arbitrary_validator(version: Version) -> (Key, ()) {
+    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let seed_buf: [u8; 32] = seed_rng.gen();
+    let mut rng = StdRng::from_seed(seed_buf);
+    let (_private_key, public_key) = compat::generate_keypair(&mut rng);
     (
         Key {
             version,
             public_key,
         },
-        Value,
+        (),
     )
 }
 
@@ -28,7 +35,7 @@ fn test_encode_decode() {
 #[test]
 fn test_order() {
     let mut versions: Vec<u64> = (0..1024).collect();
-    thread_rng().shuffle(&mut versions);
+    versions.shuffle(&mut thread_rng());
 
     let encoded_sorted: Vec<Vec<u8>> = versions
         .into_iter()

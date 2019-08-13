@@ -5,12 +5,12 @@ use failure;
 use libra_crypto::hkdf::HkdfError;
 use std::{convert, error::Error, fmt, io};
 
-/// We define our own Result type in order to not have to import the libra/common/failture_ext
+/// We define our own Result type in order to not have to import the libra/common/failure_ext
 pub type Result<T> = ::std::result::Result<T, WalletError>;
 
-/// Libra Wallet Error is a convenience enum for generating arbitarary WalletErrors. Currently, only
+/// Libra Wallet Error is a convenience enum for generating arbitrary WalletErrors. Currently, only
 /// the LibraWalletGeneric error is being used, but there are plans to add more specific errors as
-/// LibraWallet matures
+/// the Libra Wallet matures
 pub enum WalletError {
     /// generic error message
     LibraWalletGeneric(String),
@@ -23,7 +23,7 @@ impl Error for WalletError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             WalletError::LibraWalletGeneric(_) => None,
         }
@@ -40,7 +40,7 @@ impl fmt::Display for WalletError {
 
 impl fmt::Debug for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (self as &fmt::Display).fmt(f)
+        (self as &dyn fmt::Display).fmt(f)
     }
 }
 

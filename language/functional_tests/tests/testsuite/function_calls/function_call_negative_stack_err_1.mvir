@@ -1,0 +1,18 @@
+//check: VerificationError
+//check: NegativeStackSizeInsideBlock(0, 0)
+
+module Test {
+    public baz(k: u64, l: u64, m: u64) : u64 {
+        let z: u64;
+        z =  move(k) + move(l) + move(m);
+        return move(z);
+    }
+}
+
+//! new-transaction
+import {{default}}.Test;
+
+main() {
+    Test.baz();
+    return;
+}

@@ -4,9 +4,9 @@
 //! This file defines transaction store APIs that are related to committed signed transactions.
 
 use super::schema::signed_transaction::*;
-use crate::errors::LibraDbError;
+use crate::{change_set::ChangeSet, errors::LibraDbError};
 use failure::prelude::*;
-use schemadb::{SchemaBatch, DB};
+use schemadb::DB;
 use std::sync::Arc;
 use types::transaction::{SignedTransaction, Version};
 
@@ -31,9 +31,10 @@ impl TransactionStore {
         &self,
         version: Version,
         signed_transaction: &SignedTransaction,
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<()> {
-        batch.put::<SignedTransactionSchema>(&version, signed_transaction)
+        cs.batch
+            .put::<SignedTransactionSchema>(&version, signed_transaction)
     }
 }
 

@@ -15,7 +15,7 @@
   "description": "Top level view for Validator nodes + Faucet server",
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": 13,
   "iteration": 1560824948631,
   "links": [
@@ -188,7 +188,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(executor{op=\"num_accounts\"})",
+          "expr": "max(storage_gauge{op=\"state_blobs_created\"}) - max(storage_gauge{op=\"state_blobs_retired\"})",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -272,7 +272,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(storage{op=\"committed_txns\"})",
+          "expr": "max(storage_gauge{op=\"latest_transaction_version\"}) + 1",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -313,7 +313,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Rate of submit_transaction requsets accepted by AdmissionControl, per-instance view.",
+      "description": "Rate of submit_transaction requests accepted by AdmissionControl, per-instance view.",
       "fill": 5,
       "gridPos": {
         "h": 7,
@@ -934,7 +934,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"faucet\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")\n",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"faucet\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")\n",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -1471,7 +1471,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2134,7 +2134,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2812,7 +2812,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -3490,7 +3490,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -4168,7 +4168,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -4846,7 +4846,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -5524,7 +5524,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -6202,7 +6202,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -6880,7 +6880,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -7558,7 +7558,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -8058,8 +8058,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "stable",
-          "value": "stable"
+          "text": "dev",
+          "value": "dev"
         },
         "datasource": "Prometheus",
         "definition": "label_values(workspace)",

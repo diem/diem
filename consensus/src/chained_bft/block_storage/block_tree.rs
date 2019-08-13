@@ -9,12 +9,13 @@ use crate::{
     },
     counters,
     state_replication::{ExecutedState, StateComputeResult},
-    time_service::duration_since_epoch,
+    util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
 use crypto::HashValue;
 use logger::prelude::*;
 use mirai_annotations::checked_verify_eq;
+use nextgen_crypto::ed25519::*;
 use serde::Serialize;
 use std::{
     collections::{
@@ -61,7 +62,7 @@ pub struct BlockTree<T> {
     /// The vote digest is a hash that covers both the proposal id and the state id.
     /// Thus, the structure of `id_to_votes` is as follows:
     /// HashMap<proposed_block_id, HashMap<vote_digest, LedgerInfoWithSignatures>>
-    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures>>,
+    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures<Ed25519Signature>>>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -72,7 +73,7 @@ pub struct BlockTree<T> {
 
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize,
+    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
     pub(super) fn new(
         root: Block<T>,
@@ -302,6 +303,10 @@ where
                 vote_msg.executed_state(),
                 vote_msg.round(),
                 li_with_sig.clone(),
+                vote_msg.parent_block_id(),
+                vote_msg.parent_block_round(),
+                vote_msg.grandparent_block_id(),
+                vote_msg.grandparent_block_round(),
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc
@@ -433,7 +438,7 @@ where
 #[cfg(test)]
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize,
+    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {

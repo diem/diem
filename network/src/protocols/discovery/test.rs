@@ -4,9 +4,10 @@
 use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
-use crypto::{signing, x25519};
 use futures::future::{FutureExt, TryFutureExt};
 use memsocket::MemorySocket;
+use nextgen_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, *};
+use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
 
 fn get_random_seed() -> PeerInfo {
@@ -27,7 +28,7 @@ fn setup_discovery(
     address: Multiaddr,
     seed_peer_id: PeerId,
     seed_peer_info: PeerInfo,
-    signer: Signer,
+    signer: Signer<Ed25519PrivateKey>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
     channel::Receiver<PeerManagerRequest<MemorySocket>>,
@@ -88,15 +89,18 @@ async fn expect_address_update(
     }
 }
 
-fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, Signer) {
-    let (signing_priv_key, signing_pub_key) = signing::generate_keypair();
-    let (_, identity_pub_key) = x25519::generate_keypair();
+fn generate_network_pub_keys_and_signer(
+    peer_id: PeerId,
+) -> (NetworkPublicKeys, Signer<Ed25519PrivateKey>) {
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (signing_priv_key, _) = compat::generate_keypair(&mut rng);
+    let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
     (
         NetworkPublicKeys {
-            signing_public_key: signing_pub_key,
+            signing_public_key: signing_priv_key.public_key().clone().into(),
             identity_public_key: identity_pub_key,
         },
-        Signer::new(peer_id, signing_pub_key, signing_priv_key),
+        Signer::new(peer_id, signing_priv_key.into()),
     )
 }
 

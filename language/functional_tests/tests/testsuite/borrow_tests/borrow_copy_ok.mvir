@@ -1,13 +1,11 @@
-modules:
-
 module B {
     struct T {g: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T{g: move(g)};
     }
 
-    public t(this: &V#Self.T) {
+    public t(this: &Self.T) {
         let g: &u64;
         let y: u64;
         g = &copy(this).g;
@@ -17,13 +15,13 @@ module B {
     }
 }
 
-script:
+//! new-transaction
 
-import Transaction.B;
+import {{default}}.B;
 
 main() {
-    let x: V#B.T;
-    let y: &V#B.T;
+    let x: B.T;
+    let y: &B.T;
     x = B.new(5);
     y = &x;
     B.t(move(y));

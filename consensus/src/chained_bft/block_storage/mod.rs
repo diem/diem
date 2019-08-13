@@ -21,11 +21,11 @@ use types::validator_verifier::VerifyError;
 
 #[derive(Debug, PartialEq, Fail)]
 /// The possible reasons for failing to retrieve a block by id from a given peer.
-#[allow(dead_code)]
 #[derive(Clone)]
 pub enum BlockRetrievalFailure {
     /// Could not find a given author
     #[fail(display = "Unknown author: {:?}", author)]
+    #[allow(dead_code)]
     UnknownAuthor { author: Author },
 
     /// Any sort of a network failure (should probably have an enum for network failures).
@@ -34,6 +34,7 @@ pub enum BlockRetrievalFailure {
 
     /// The remote peer did not recognize the given block id.
     #[fail(display = "Block id {:?} not recognized by the peer", block_id)]
+    #[allow(dead_code)]
     UnknownBlockId { block_id: HashValue },
 
     /// Cannot retrieve a block from itself
@@ -49,7 +50,6 @@ pub enum BlockRetrievalFailure {
     InvalidResponse,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Fail)]
 /// Status after trying to insert a block into the BlockStore
 pub enum InsertError {
@@ -66,8 +66,11 @@ pub enum InsertError {
     #[fail(display = "InvalidBlockRound")]
     InvalidBlockRound,
     /// The block's timestamp is not greater than that of the parent.
-    #[fail(display = "InvalidTiemstamp")]
+    #[fail(display = "InvalidTimestamp")]
     NonIncreasingTimestamp,
+    /// The NIL block's timestamp is not equal to that of the parent.
+    #[fail(display = "InvalidNilBlockTimestamp")]
+    InvalidNilBlockTimestamp,
     /// The block is not newer than the root of the tree.
     #[fail(display = "OldBlock")]
     OldBlock,

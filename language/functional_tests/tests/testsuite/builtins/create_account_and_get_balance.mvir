@@ -4,7 +4,7 @@ import 0x0.LibraCoin;
 main() {
     let addr2: address;
     let account_exists: bool;
-    let ten_coins: R#LibraCoin.T;
+    let ten_coins: LibraCoin.T;
     let account2_balance: u64;
 
     addr2 = 0x0111111111111111111111101111111111111011111111111111111111101110;

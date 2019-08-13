@@ -38,6 +38,14 @@ impl Position {
         self.0
     }
 
+    pub fn from_postorder_index(index: u64) -> Self {
+        Self::from_inorder_index(treebits::postorder_to_inorder(index))
+    }
+
+    pub fn to_postorder_index(self) -> u64 {
+        treebits::inorder_to_postorder(self.to_inorder_index())
+    }
+
     pub fn get_parent(self) -> Self {
         Self::from_inorder_index(treebits::parent(self.0))
     }
@@ -199,10 +207,10 @@ impl Iterator for FrozenSubTreeIterator {
         }
 
         // Find the remaining biggest full subtree.
-        // The MSB of the bitmap represents it. For example for a tree of 0x1010=10 leaves, the
-        // biggest and leftmost full subtree has 0x1000=8 leaves, which can be got by smearing all
-        // bits after MSB with 1-bits (got 0x1111), right shift once (got 0x0111) and add 1 (got
-        // 0x1000=8). At the same time, we also observe that the in-order numbering of a full
+        // The MSB of the bitmap represents it. For example for a tree of 0b1010=10 leaves, the
+        // biggest and leftmost full subtree has 0b1000=8 leaves, which can be got by smearing all
+        // bits after MSB with 1-bits (got 0b1111), right shift once (got 0b0111) and add 1 (got
+        // 0b1000=8). At the same time, we also observe that the in-order numbering of a full
         // subtree root is (num_leaves - 1) greater than that of the leftmost leaf, and also
         // (num_leaves - 1) less than that of the rightmost leaf.
         let root_offset = treebits::smear_ones_for_u64(self.bitmap) >> 1;
@@ -215,5 +223,67 @@ impl Iterator for FrozenSubTreeIterator {
         self.seen_leaves += num_leaves;
 
         Some(root)
+    }
+}
+
+/// `FrozenSubtreeSiblingIterator` yields the "siblings" of given frozen subtrees. The frozen
+/// subtrees can be combined with these siblings to compute the hash of a bigger accumulator. For
+/// example, given an accumulator with 10 leaves, this iterator generates the sequence of positions
+/// of `A`, `B`, `C`, ....
+///
+/// ```text
+///                          o
+///                         / \
+///                       /     \
+///                     /         \
+///                   /             \
+///                 o                 C
+///               /   \
+///             /       \
+///           /           \
+///         o               o
+///       /   \            / \
+///      /     \          /   \
+///     o       o        o     B
+///    / \     / \      / \
+///   o   o   o   o   o    A
+///  / \ / \ / \ / \ / \
+///  o o o o o o o o o o
+/// ```
+pub struct FrozenSubtreeSiblingIterator {
+    current_num_leaves: u64,
+    current_level: u32,
+}
+
+impl FrozenSubtreeSiblingIterator {
+    pub fn new(num_leaves: u64) -> Self {
+        assert_ne!(num_leaves, 0);
+        assert!(num_leaves <= 1 << 63);
+        Self {
+            current_num_leaves: num_leaves,
+            current_level: 0,
+        }
+    }
+}
+
+impl Iterator for FrozenSubtreeSiblingIterator {
+    type Item = Position;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // If the current level has even number of leaves, we do not need a sibling at this level.
+        while self.current_num_leaves % 2 == 0 {
+            self.current_num_leaves >>= 1;
+            self.current_level += 1;
+        }
+        if self.current_level >= 63 {
+            return None;
+        }
+
+        // Otherwise, there should be a sibling next to the rightmost leaf.
+        let ret = Some(Position::from_inorder_index(
+            treebits::node_from_level_and_pos(self.current_level, self.current_num_leaves),
+        ));
+        self.current_num_leaves += 1;
+        ret
     }
 }

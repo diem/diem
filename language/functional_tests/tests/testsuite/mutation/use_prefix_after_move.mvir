@@ -1,29 +1,31 @@
-modules:
 module B {
     struct T{g: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T{g: move(g)};
     }
 
-    public t(this: &mut V#Self.T) {
+    public t(this: &mut Self.T) {
         let g: &mut u64;
         g = &mut move(this).g;
         *move(g) = 3;
         return;
     }
 }
+
+//! new-transaction
+
 module A {
     import Transaction.B;
-    struct T{f: V#B.T}
+    struct T{f: B.T}
 
-    public new(f: V#B.T): V#Self.T {
+    public new(f: B.T): Self.T {
         return T{f: move(f)};
     }
 
-    public t(this: &mut V#Self.T) {
-        let ref1: &mut V#B.T;
-        let ok: V#B.T;
+    public t(this: &mut Self.T) {
+        let ref1: &mut B.T;
+        let ok: B.T;
         ref1 = &mut move(this).f;
         B.t(copy(ref1));
         ok = *move(ref1);
@@ -31,13 +33,15 @@ module A {
     }
 }
 
-script:
-import Transaction.A;
-import Transaction.B;
+//! new-transaction
+
+import {{default}}.A;
+import {{default}}.B;
+
 main() {
-    let b: V#B.T;
-    let x: V#A.T;
-    let x_ref: &mut V#A.T;
+    let b: B.T;
+    let x: A.T;
+    let x_ref: &mut A.T;
     b = B.new(0);
     x = A.new(move(b));
     x_ref = &mut x;

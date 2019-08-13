@@ -1,4 +1,4 @@
-//! no-execute
+//! no-run: runtime
 
 // Multiple payee example. This is written in a slightly verbose way to
 // emphasize the ability to split a `LibraCoin.T` resource. The more concise
@@ -7,8 +7,8 @@
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 main(payee1: address, amount1: u64, payee2: address, amount2: u64) {
-  let coin1: R#LibraCoin.T;
-  let coin2: R#LibraCoin.T;
+  let coin1: LibraCoin.T;
+  let coin2: LibraCoin.T;
   let total: u64;
 
   total = move(amount1) + copy(amount2);

@@ -35,7 +35,6 @@ use bincode::{deserialize, serialize};
 use core::convert::TryFrom;
 use crypto::hash::HashValue;
 use crypto_derive::{SilentDebug, SilentDisplay};
-use derive_deref::Deref;
 use failure::prelude::*;
 use pairing::{
     bls12_381::{Fr, FrRepr},
@@ -43,6 +42,7 @@ use pairing::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 use threshold_crypto;
 
 // type alias for this unwieldy type
@@ -50,15 +50,15 @@ type ThresholdBLSPrivateKey =
     threshold_crypto::serde_impl::SerdeSecret<threshold_crypto::SecretKey>;
 
 /// A BLS12-381 private key
-#[derive(Serialize, Deserialize, Deref, SilentDisplay, SilentDebug)]
+#[derive(Serialize, Deserialize, SilentDisplay, SilentDebug)]
 pub struct BLS12381PrivateKey(ThresholdBLSPrivateKey);
 
 /// A BLS12-381 public key
-#[derive(Clone, Hash, Serialize, Deserialize, Deref, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct BLS12381PublicKey(threshold_crypto::PublicKey);
 
 /// A BLS12-381 signature
-#[derive(Clone, Hash, Serialize, Deserialize, Deref, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct BLS12381Signature(threshold_crypto::Signature);
 
 impl BLS12381PublicKey {
@@ -115,7 +115,7 @@ impl SigningKey for BLS12381PrivateKey {
 impl Uniform for BLS12381PrivateKey {
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
-        R: SeedableCryptoRng,
+        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
         let mut fr_repr: [u64; 4usize] = rng.gen();
         // Since field modulus is 381-bit prime, drop the 3 highest-order bits
@@ -160,6 +160,14 @@ impl Genesis for BLS12381PrivateKey {
         let mut buf = [0u8; threshold_crypto::PK_SIZE];
         buf[threshold_crypto::PK_SIZE - 1] = 1;
         Self::try_from(buf.as_ref()).unwrap()
+    }
+}
+
+impl Deref for BLS12381PublicKey {
+    type Target = threshold_crypto::PublicKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -211,12 +219,21 @@ impl ValidKey for BLS12381PublicKey {
     }
 }
 
+impl Deref for BLS12381PrivateKey {
+    type Target = ThresholdBLSPrivateKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 //////////////////////
 // Signature Traits //
 //////////////////////
 
 impl Signature for BLS12381Signature {
     type VerifyingKeyMaterial = BLS12381PublicKey;
+    type SigningKeyMaterial = BLS12381PrivateKey;
 
     /// Checks that `signature` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &BLS12381PublicKey) -> Result<()> {
@@ -250,5 +267,13 @@ impl TryFrom<&[u8]> for BLS12381Signature {
         let sig = threshold_crypto::Signature::from_bytes(&tmp)
             .map_err(|_err| CryptoMaterialError::ValidationError)?;
         Ok(BLS12381Signature(sig))
+    }
+}
+
+impl Deref for BLS12381Signature {
+    type Target = threshold_crypto::Signature;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

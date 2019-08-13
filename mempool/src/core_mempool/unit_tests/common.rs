@@ -1,11 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{CoreMempool, MempoolAddTransactionStatus, TimelineState, TxnPointer};
+use crate::{
+    core_mempool::{CoreMempool, TimelineState, TxnPointer},
+    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
+};
 use config::config::NodeConfigHelpers;
-use crypto::signing::generate_keypair_for_testing;
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use nextgen_crypto::ed25519::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashSet, iter::FromIterator};
 use types::{
@@ -27,8 +30,8 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct TestTransaction {
-    address: usize,
-    sequence_number: u64,
+    pub(crate) address: usize,
+    pub(crate) sequence_number: u64,
     gas_price: u64,
 }
 
@@ -78,7 +81,7 @@ impl TestTransaction {
         let mut seed: [u8; 32] = [0u8; 32];
         seed[..4].copy_from_slice(&[1, 2, 3, 4]);
         let mut rng: StdRng = StdRng::from_seed(seed);
-        let (privkey, pubkey) = generate_keypair_for_testing(&mut rng);
+        let (privkey, pubkey) = compat::generate_keypair(&mut rng);
         raw_txn
             .sign(&privkey, pubkey)
             .expect("Failed to sign raw transaction.")
@@ -105,9 +108,15 @@ pub(crate) fn add_txns_to_mempool(
 }
 
 pub(crate) fn add_txn(pool: &mut CoreMempool, transaction: TestTransaction) -> Result<()> {
-    let txn = transaction.make_signed_transaction();
-    match pool.add_txn(txn.clone(), 0, 0, 1000, TimelineState::NotReady) {
-        MempoolAddTransactionStatus::Valid => Ok(()),
+    add_signed_txn(pool, transaction.make_signed_transaction())
+}
+
+pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransaction) -> Result<()> {
+    match pool
+        .add_txn(transaction, 0, 0, 1000, TimelineState::NotReady)
+        .code
+    {
+        MempoolAddTransactionStatusCode::Valid => Ok(()),
         _ => Err(format_err!("insertion failure")),
     }
 }
@@ -135,4 +144,11 @@ impl ConsensusMock {
             .collect();
         block
     }
+}
+
+pub(crate) fn exist_in_metrics_cache(mempool: &CoreMempool, txn: &SignedTransaction) -> bool {
+    mempool
+        .metrics_cache
+        .get(&(txn.sender(), txn.sequence_number()))
+        .is_some()
 }

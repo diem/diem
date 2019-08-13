@@ -6,7 +6,7 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
         common::Author,
-        liveness::proposer_election::ProposalInfo,
+        consensus_types::proposal_msg::ProposalMsg,
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         safety::vote_msg::VoteMsg,
@@ -18,6 +18,7 @@ use channel;
 use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::sync::Arc;
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
@@ -34,13 +35,13 @@ use types::ledger_info::LedgerInfoWithSignatures;
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
     author: Author,
-    signer: ValidatorSigner,
-    validator: Arc<ValidatorVerifier>,
+    signer: ValidatorSigner<Ed25519PrivateKey>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
     smr_id: usize,
-    smr: ChainedBftSMR<TestPayload, Author>,
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
+    smr: ChainedBftSMR<TestPayload>,
+    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
@@ -50,8 +51,8 @@ impl SMRNode {
     fn start(
         quorum_size: usize,
         playground: &mut NetworkPlayground,
-        signer: ValidatorSigner,
-        validator: Arc<ValidatorVerifier>,
+        signer: ValidatorSigner<Ed25519PrivateKey>,
+        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
         peers: Arc<Vec<Author>>,
         proposer: Vec<Author>,
         smr_id: usize,
@@ -80,7 +81,7 @@ impl SMRNode {
 
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
-            pacemaker_initial_timeout: Duration::from_secs(1),
+            pacemaker_initial_timeout: Duration::from_secs(3),
             contiguous_rounds: 2,
             max_block_size: 50,
         };
@@ -95,7 +96,8 @@ impl SMRNode {
             storage.clone(),
             initial_data,
         );
-        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (commit_cb_sender, commit_cb_receiver) =
+            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
         let mut mp = MockTransactionManager::new();
         let commit_receiver = mp.take_commit_receiver();
         let mempool = Arc::new(mp);
@@ -155,15 +157,12 @@ impl SMRNode {
             );
             signers.push(random_validator_signer);
         }
-        let validator_verifier =
-            Arc::new(ValidatorVerifier::new(author_to_public_keys, quorum_size));
-        let peers: Arc<Vec<Author>> = Arc::new(
-            signers
-                .clone()
-                .into_iter()
-                .map(|signer| signer.author())
-                .collect(),
+        let validator_verifier = Arc::new(
+            ValidatorVerifier::new_with_quorum_size(author_to_public_keys, quorum_size)
+                .expect("Invalid quorum_size."),
         );
+        let peers: Arc<Vec<Author>> =
+            Arc::new(signers.iter().map(|signer| signer.author()).collect());
         let proposer = {
             match proposer_type {
                 FixedProposer => vec![peers[0]],
@@ -189,13 +188,16 @@ impl SMRNode {
     }
 }
 
-fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSignatures) {
+fn verify_finality_proof(
+    node: &SMRNode,
+    ledger_info_with_sig: &LedgerInfoWithSignatures<Ed25519Signature>,
+) {
     let ledger_info_hash = ledger_info_with_sig.ledger_info().hash();
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
             Ok(()),
             node.validator
-                .verify_signature(*author, ledger_info_hash, signature)
+                .verify_signature(*author, ledger_info_hash, &(signature.clone().into()))
         );
     }
 }
@@ -215,8 +217,7 @@ fn basic_start_test() {
         let mut msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal =
-            ProposalInfo::<Vec<u64>, Author>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
         assert_eq!(first_proposal.proposal.height(), 1);
         assert_eq!(first_proposal.proposal.parent_id(), genesis.id());
         assert_eq!(
@@ -280,10 +281,9 @@ fn basic_full_round() {
         let mut broadcast_proposals_2 = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let next_proposal = ProposalInfo::<Vec<u64>, Author>::from_proto(
-            broadcast_proposals_2[0].1.take_proposal(),
-        )
-        .unwrap();
+        let next_proposal =
+            ProposalMsg::<Vec<u64>>::from_proto(broadcast_proposals_2[0].1.take_proposal())
+                .unwrap();
         assert_eq!(next_proposal.proposal.round(), 2);
         assert_eq!(next_proposal.proposal.height(), 2);
     });
@@ -303,7 +303,7 @@ fn basic_commit_and_restart() {
 
         for round in 0..num_rounds {
             let _proposals = playground
-                .wait_for_messages(1, NetworkPlayground::exclude_new_round)
+                .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                 .await;
 
             // A proposal is carrying a QC that commits a block of round - 3.
@@ -343,7 +343,7 @@ fn basic_commit_and_restart() {
         // This message is for proposal with round 11 to delivery the QC, but not gather the QC
         // so after restart, proposer will propose round 11 again.
         playground
-            .wait_for_messages(1, NetworkPlayground::exclude_new_round)
+            .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
             .await;
     });
     // create a new playground to avoid polling potential vote messages in previous one.
@@ -362,7 +362,7 @@ fn basic_commit_and_restart() {
             // reject round 11 depends on whether it voted for before restart.
             loop {
                 let msg = playground
-                    .wait_for_messages(1, NetworkPlayground::exclude_new_round)
+                    .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                     .await;
                 if msg[0].1.has_vote() {
                     round += 1;
@@ -478,7 +478,7 @@ fn block_retrieval_with_timeout() {
         // Block RPC and wait until timeout for current round
         playground.drop_message_for(&nodes[2].author, nodes[0].author);
         playground
-            .wait_for_messages(1, NetworkPlayground::new_round_only)
+            .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
             .await;
         // Unblock RPC
         playground.stop_drop_message_for(&nodes[2].author, &nodes[0].author);
@@ -610,7 +610,7 @@ fn state_sync_on_timeout() {
         // (node 0 cannot send to anyone).  Note that there are 6 messages waited on
         // since 2 can timeout 2x while waiting for 1 to timeout.
         playground
-            .wait_for_messages(6, NetworkPlayground::new_round_only)
+            .wait_for_messages(6, NetworkPlayground::timeout_msg_only)
             .await;
 
         let mut node2_commits = vec![];
@@ -626,5 +626,171 @@ fn state_sync_on_timeout() {
                 .consensus_block_id(),
         );
         assert_eq!(node2_commits[0], proposals[6]);
+    });
+}
+
+#[test]
+/// Verify that in case a node receives timeout message from a remote peer that is lagging behind,
+/// then this node sends a sync info, which helps the remote to properly catch up.
+fn sync_info_sent_if_remote_stale() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+    // This test depends on the fixed proposer on nodes[0]
+    // We're going to drop messages from 0 to 2: as a result we expect node 2 to broadcast timeout
+    // messages, for which node 1 should respond with sync_info, which should eventually
+    // help node 2 to catch up.
+    let mut nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer);
+    block_on(async move {
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+        // Don't want to receive timeout messages from 2 until 1 has some real stuff to contribute.
+        playground.drop_message_for(&nodes[2].author, nodes[1].author);
+        for _ in 0..10 {
+            playground
+                .wait_for_messages(1, NetworkPlayground::proposals_only)
+                .await;
+            playground
+                .wait_for_messages(1, NetworkPlayground::votes_only)
+                .await;
+        }
+
+        // Wait for some timeout message from 2 to {0, 1}.
+        playground.stop_drop_message_for(&nodes[2].author, &nodes[1].author);
+        playground
+            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .await;
+        // Now wait for a sync info message from 1 to 2.
+        playground
+            .wait_for_messages(1, NetworkPlayground::sync_info_only)
+            .await;
+
+        let node2_commit = nodes[2]
+            .commit_cb_receiver
+            .next()
+            .await
+            .unwrap()
+            .ledger_info()
+            .consensus_block_id();
+
+        // Close node 1 channel for new commit callbacks and iterate over all its commits: we should
+        // find the node 2 commit there.
+        let mut found = false;
+        nodes[1].commit_cb_receiver.close();
+        while let Ok(Some(node1_commit)) = nodes[1].commit_cb_receiver.try_next() {
+            let node1_commit_id = node1_commit.ledger_info().consensus_block_id();
+            if node1_commit_id == node2_commit {
+                found = true;
+                break;
+            }
+        }
+
+        assert_eq!(found, true);
+    });
+}
+
+#[test]
+/// Verify that a QC can be formed by aggregating the votes piggybacked by TimeoutMsgs
+fn aggregate_timeout_votes() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+
+    // The proposer node[0] sends its proposal to nodes 1 and 2, which cannot respond back,
+    // because their messages are dropped.
+    // Upon timeout nodes 1 and 2 are sending timeout messages with attached votes for the original
+    // proposal: both can then aggregate the QC for the first proposal.
+    let nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer);
+    block_on(async move {
+        playground.drop_message_for(&nodes[1].author, nodes[0].author);
+        playground.drop_message_for(&nodes[2].author, nodes[0].author);
+
+        // Node 0 sends proposals to nodes 1 and 2
+        let mut msg = playground
+            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .await;
+        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
+        let proposal_id = first_proposal.proposal.id();
+        playground.drop_message_for(&nodes[0].author, nodes[1].author);
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+
+        // Wait for the timeout messages sent by 1 and 2 to each other
+        playground
+            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .await;
+
+        // Node 0 cannot form a QC
+        assert_eq!(
+            nodes[0]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_round(),
+            0
+        );
+        // Nodes 1 and 2 form a QC and move to the next round.
+        // Wait for the timeout messages from 1 and 2
+        playground
+            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .await;
+
+        assert_eq!(
+            nodes[1]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_id(),
+            proposal_id
+        );
+        assert_eq!(
+            nodes[2]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_id(),
+            proposal_id
+        );
+    });
+}
+
+#[test]
+/// Verify that the NIL blocks formed during timeouts can be used to form commit chains.
+fn chain_with_nil_blocks() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+
+    // The proposer node[0] sends 3 proposals, after that its proposals are dropped and it cannot
+    // communicate with nodes 1 and 2. Nodes 1 and 2 should be able to commit the 3 proposal
+    // via NIL blocks commit chain.
+    let nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer);
+    block_on(async move {
+        // Wait for the first 3 proposals (each one sent to two nodes).
+        playground
+            .wait_for_messages(2 * 3, NetworkPlayground::proposals_only)
+            .await;
+        playground.drop_message_for(&nodes[0].author, nodes[1].author);
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+
+        // After the first timeout nodes 1 and 2 should have last_proposal votes and
+        // they can generate its QC independently.
+        // Upon the second timeout nodes 1 and 2 send NIL block_1 with a QC to last_proposal.
+        // Upon the third timeout nodes 1 and 2 send NIL block_2 with a QC to NIL block_1.
+        // G <- p1 <- p2 <- p3 <- NIL1 <- NIL2
+        playground
+            .wait_for_messages(4 * 3, NetworkPlayground::timeout_msg_only)
+            .await;
+        // We can't guarantee the timing of the last timeout processing, the only thing we can
+        // look at is that HQC round is at least 4.
+        assert!(
+            nodes[2]
+                .smr
+                .block_store()
+                .unwrap()
+                .highest_quorum_cert()
+                .certified_block_round()
+                >= 4
+        );
+
+        assert!(nodes[2].smr.block_store().unwrap().root().round() >= 1)
     });
 }

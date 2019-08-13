@@ -25,19 +25,23 @@ use crypto::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher,
         SignedTransactionHasher, TransactionInfoHasher,
     },
-    signing, HashValue, PrivateKey, PublicKey, Signature,
+    HashValue,
 };
 use failure::prelude::*;
+use nextgen_crypto::{ed25519::*, traits::*};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
 mod program;
+mod transaction_argument;
 
 pub use program::{Program, TransactionArgument, SCRIPT_HASH_LENGTH};
 use protobuf::well_known_types::UInt64Value;
 use std::ops::Deref;
+pub use transaction_argument::parse_as_transaction_argument;
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 
@@ -112,12 +116,12 @@ impl RawTransaction {
     /// For a transaction that has just been signed, its signature is expected to be valid.
     pub fn sign(
         self,
-        private_key: &PrivateKey,
-        public_key: PublicKey,
+        private_key: &Ed25519PrivateKey,
+        public_key: Ed25519PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
         let raw_txn_bytes = self.clone().into_proto_bytes()?;
         let hash = RawTransactionBytes(&raw_txn_bytes).hash();
-        let signature = signing::sign_message(hash, private_key)?;
+        let signature = private_key.sign_message(&hash);
         Ok(SignatureCheckedTransaction(SignedTransaction {
             raw_txn: self,
             public_key,
@@ -245,10 +249,10 @@ pub struct SignedTransaction {
 
     /// Sender's public key. When checking the signature, we first need to check whether this key
     /// is indeed the pre-image of the pubkey hash stored under sender's account.
-    public_key: PublicKey,
+    public_key: Ed25519PublicKey,
 
     /// Signature of the transaction that correspond to the public key
-    signature: Signature,
+    signature: Ed25519Signature,
 
     // The original raw bytes from the protobuf are also stored here so that we use
     // these bytes when generating the canonical serialization of the SignedTransaction struct
@@ -306,8 +310,8 @@ impl fmt::Debug for SignedTransaction {
 impl SignedTransaction {
     pub fn craft_signed_transaction_for_client(
         raw_txn: RawTransaction,
-        public_key: PublicKey,
-        signature: Signature,
+        public_key: Ed25519PublicKey,
+        signature: Ed25519Signature,
     ) -> SignedTransaction {
         SignedTransaction {
             raw_txn: raw_txn.clone(),
@@ -318,12 +322,12 @@ impl SignedTransaction {
         }
     }
 
-    pub fn public_key(&self) -> PublicKey {
-        self.public_key
+    pub fn public_key(&self) -> Ed25519PublicKey {
+        self.public_key.clone()
     }
 
-    pub fn signature(&self) -> Signature {
-        self.signature
+    pub fn signature(&self) -> Ed25519Signature {
+        self.signature.clone()
     }
 
     pub fn sender(&self) -> AccountAddress {
@@ -362,7 +366,7 @@ impl SignedTransaction {
     /// the signature is valid.
     pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
         let hash = RawTransactionBytes(&self.raw_txn_bytes).hash();
-        signing::verify_message(hash, &self.signature, &self.public_key)?;
+        self.public_key.verify_signature(&hash, &self.signature)?;
         Ok(SignatureCheckedTransaction(self))
     }
 
@@ -411,8 +415,8 @@ impl FromProto for SignedTransaction {
 
         let t = SignedTransaction {
             raw_txn: RawTransaction::from_proto(proto_raw_transaction)?,
-            public_key: PublicKey::from_slice(txn.get_sender_public_key())?,
-            signature: Signature::from_compact(txn.get_sender_signature())?,
+            public_key: Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
+            signature: Ed25519Signature::try_from(txn.get_sender_signature())?,
             raw_txn_bytes: txn.raw_txn_bytes,
         };
 
@@ -428,8 +432,8 @@ impl IntoProto for SignedTransaction {
     fn into_proto(self) -> Self::ProtoType {
         let mut transaction = Self::ProtoType::new();
         transaction.set_raw_txn_bytes(self.raw_txn_bytes);
-        transaction.set_sender_public_key(self.public_key.to_slice().to_vec());
-        transaction.set_sender_signature(self.signature.to_compact().to_vec());
+        transaction.set_sender_public_key(self.public_key.to_bytes().to_vec());
+        transaction.set_sender_signature(self.signature.to_bytes().to_vec());
         transaction
     }
 }
@@ -442,7 +446,8 @@ impl IntoProto for SignatureCheckedTransaction {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct SignedTransactionWithProof {
     pub version: Version,
     pub signed_transaction: SignedTransaction,
@@ -550,8 +555,8 @@ impl CanonicalSerialize for SignedTransaction {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_variable_length_bytes(&self.raw_txn_bytes)?
-            .encode_variable_length_bytes(&self.public_key.to_slice())?
-            .encode_variable_length_bytes(&self.signature.to_compact())?;
+            .encode_variable_length_bytes(&self.public_key.to_bytes())?
+            .encode_variable_length_bytes(&self.signature.to_bytes())?;
         Ok(())
     }
 }
@@ -570,8 +575,8 @@ impl CanonicalDeserialize for SignedTransaction {
 
         Ok(SignedTransaction {
             raw_txn: RawTransaction::from_proto(proto_raw_transaction)?,
-            public_key: PublicKey::from_slice(&public_key_bytes)?,
-            signature: Signature::from_compact(&signature_bytes)?,
+            public_key: Ed25519PublicKey::try_from(&public_key_bytes[..]).unwrap(),
+            signature: Ed25519Signature::try_from(&signature_bytes[..]).unwrap(),
             raw_txn_bytes,
         })
     }
@@ -669,7 +674,8 @@ impl TransactionOutput {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::transaction_info::TransactionInfo)]
 pub struct TransactionInfo {
     /// The hash of this transaction.

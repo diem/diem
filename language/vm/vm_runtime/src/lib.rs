@@ -111,16 +111,13 @@ mod frame;
 mod gas_meter;
 mod move_vm;
 mod process_txn;
-mod proptest_types;
 mod runtime;
-mod value_serializer;
 
 pub mod code_cache;
 pub mod data_cache;
 pub mod identifier;
 pub mod loaded_data;
 pub mod txn_executor;
-pub mod value;
 
 #[cfg(feature = "instruction_synthesis")]
 pub mod execution_stack;

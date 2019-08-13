@@ -1,0 +1,34 @@
+//check: VerificationError
+//check: PositiveStackSizeAtBlockEnd(0)
+
+//check: VerificationError
+//check: NegativeStackSizeInsideBlock(13, 13)
+
+module A {
+    public parity(u: u64): u64 * bool {
+        return copy(u), (move(u) % 2 == 0);
+    }
+
+    public takes_bool(b: bool): u64 {
+        if (move(b)) { return 1;}
+        else { return 0;}
+    }
+
+    public eat_stack(v: u64) {
+        return;
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let k: u64;
+    let ans: u64;
+    let e: u64;
+    k = 100;
+    ans = A.takes_bool(A.parity(move(k)));
+    assert(move(ans) == true, 42);
+    (A.eat_stack(), A.eat_stack());
+    return;
+}

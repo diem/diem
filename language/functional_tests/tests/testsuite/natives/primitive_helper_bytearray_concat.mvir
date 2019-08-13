@@ -1,0 +1,41 @@
+import 0x0.BytearrayUtil;
+
+main() {
+    let a1: bytearray;
+    let b1: bytearray;
+    let o1: bytearray;
+    let expected_o1: bytearray;
+
+    let a2: bytearray;
+    let b2: bytearray;
+    let o2: bytearray;
+    let expected_o2: bytearray;
+
+    let a3: bytearray;
+    let b3: bytearray;
+    let o3: bytearray;
+    let expected_o3: bytearray;
+
+    a1 = h"6162";
+    b1 = h"bac1ac";
+    expected_o1 = h"6162bac1ac";
+
+    o1 = BytearrayUtil.bytearray_concat(move(a1), move(b1));
+    assert(move(o1) == move(expected_o1), 42);
+
+    a2 = h"";
+    b2 = h"bac1ac";
+    expected_o2 = h"bac1ac";
+
+    o2 = BytearrayUtil.bytearray_concat(move(a2), move(b2));
+    assert(move(o2) == move(expected_o2), 42);
+
+    a3 = h"deadbeef";
+    b3 = h"";
+    expected_o3 = h"deadbeef";
+
+    o3 = BytearrayUtil.bytearray_concat(move(a3), move(b3));
+    assert(move(o3) == move(expected_o3), 42);
+
+    return;
+}

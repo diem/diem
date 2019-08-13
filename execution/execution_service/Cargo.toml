@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 futures01 = { package = "futures", version = "0.1.26" }
-futures03 = { package = "futures-preview", version = "=0.3.0-alpha.16", features = ["compat"] }
+futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17", features = ["compat"] }
 grpcio = "0.4.4"
 
 config = { path = "../../config" }
@@ -22,12 +22,4 @@ types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
-tempfile = "3.0.7"
-
-config = { path = "../../config" }
-config_builder = { path = "../../config/config_builder" }
-crypto = { path = "../../crypto/legacy_crypto" }
-execution_client = { path = "../execution_client" }
-storage_proto = { path = "../../storage/storage_proto" }
-storage_service = { path = "../../storage/storage_service" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+types = { path = "../../types", features = ["testing"] }

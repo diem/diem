@@ -6,7 +6,10 @@ use crate::chained_bft::{
     common::Round,
     consensus_types::block::{block_test, Block},
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
-    test_utils::{build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
+    test_utils::{
+        build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
+        TreeInserter,
+    },
 };
 use cached::{cached_key, SizedCache};
 use crypto::HashValue;
@@ -16,7 +19,7 @@ use std::{
     hash::{Hash, Hasher},
     sync::Arc,
 };
-use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
+use types::validator_signer::ValidatorSigner;
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
@@ -56,20 +59,22 @@ cached_key! {
 proptest! {
     #[test]
     fn test_blocks_commits_safety_rules(
-        (keypairs, blocks) in block_test::block_forest_and_its_keys(
+        (mut keypairs, blocks) in block_test::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
             50)
     ) {
-        let (priv_key, pub_key) = keypairs.first().expect("several keypairs generated");
-        let signer = ValidatorSigner::new(AccountAddress::from(*pub_key), *pub_key, priv_key.clone());
+        let first_key = keypairs.pop().expect("several keys");
+        let first_signer = ValidatorSigner::new(None, first_key);
+        let mut qc_signers = vec![first_signer.clone()];
 
-        let mut qc_signers = vec![];
-        for (priv_key, pub_key) in keypairs {
-            qc_signers.push(ValidatorSigner::new(AccountAddress::from(pub_key), pub_key, priv_key.clone()));
+        for priv_key in keypairs {
+            let signer = ValidatorSigner::new(None, priv_key);
+            qc_signers.push(signer);
         }
-        let block_tree = build_empty_tree_with_custom_signing(signer.clone());
+
+        let block_tree = build_empty_tree_with_custom_signing(first_signer.clone());
         let mut inserter = TreeInserter::new(block_tree.clone());
         let mut safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
 
@@ -90,7 +95,7 @@ proptest! {
                 continue;
             }
 
-            let insert_res = inserter.insert_pre_made_block(block.clone(), &signer, qc_signers.clone());
+            let insert_res = inserter.insert_pre_made_block(block.clone(), &first_signer, qc_signers.iter().collect());
             let id_and_qc = |ref block: Arc<Block<Vec<usize>>>| { (block.id(), block.quorum_cert().clone()) };
             let (inserted_id, inserted_qc) = id_and_qc(insert_res.clone());
             safety_rules.update(&inserted_qc);
@@ -154,7 +159,6 @@ fn test_initial_state() {
     let safety_rules = SafetyRules::new(block_tree.clone(), ConsensusState::default());
     let state = safety_rules.consensus_state();
     assert_eq!(state.last_vote_round(), 0);
-    assert_eq!(state.last_committed_round(), block_tree.root().round());
     assert_eq!(state.preferred_block_round(), block_tree.root().round());
 }
 
@@ -304,6 +308,48 @@ fn test_voting() {
         safety_rules.voting_rule(b4.clone()),
         Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
+        })
+    );
+
+    // Verify that the voting rules return ParentNotFound for cases the parent is not there.
+    let dummy_parent = Arc::new(Block::make_block(
+        a1.as_ref(),
+        vec![100],
+        100,
+        123,
+        placeholder_certificate_for_block(
+            vec![block_tree.signer()],
+            a1.id(),
+            a1.round(),
+            a1.quorum_cert().certified_block_id(),
+            a1.quorum_cert().certified_block_round(),
+            a1.quorum_cert().certified_parent_block_id(),
+            a1.quorum_cert().certified_parent_block_round(),
+        ),
+        block_tree.signer(),
+    ));
+    let dummy_block = Arc::new(Block::make_block(
+        dummy_parent.as_ref(),
+        vec![100],
+        dummy_parent.round() + 1,
+        123,
+        placeholder_certificate_for_block(
+            vec![block_tree.signer()],
+            dummy_parent.id(),
+            dummy_parent.round(),
+            dummy_parent.quorum_cert().certified_block_id(),
+            dummy_parent.quorum_cert().certified_block_round(),
+            dummy_parent.quorum_cert().certified_parent_block_id(),
+            dummy_parent.quorum_cert().certified_parent_block_round(),
+        ),
+        block_tree.signer(),
+    ));
+    assert_eq!(
+        safety_rules.voting_rule(dummy_block.clone()),
+        Err(ProposalReject::ParentNotFound {
+            proposal_id: dummy_block.id(),
+            proposal_round: dummy_block.round(),
+            parent_id: dummy_parent.id(),
         })
     );
 }

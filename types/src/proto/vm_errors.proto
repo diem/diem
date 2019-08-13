@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package types;
 
+import "language_storage.proto";
+
 // The statuses and errors produced by the VM can be categorized into a
 // couple different types:
 // 1. Validation Statuses: all the errors that can (/should) be
@@ -83,12 +85,15 @@ message VMVerificationStatus {
     enum StatusKind {
         SCRIPT = 0;
         MODULE = 1;
+        DEPENDENCY = 2;
     }
     StatusKind status_kind = 1;
-    // For StatusKind::SCRIPT this is ignored.
+    // For StatusKind::SCRIPT and DEPENDENCY this is ignored.
     uint32 module_idx = 2;
     VMVerificationErrorKind error_kind = 3;
     string message = 4;
+    // For StatusKind::SCRIPT and MODULE this is ignored.
+    ModuleId dependency_id = 5;
 }
 
 // When a code module/script is published it is verified. These are the
@@ -97,74 +102,77 @@ enum VMVerificationErrorKind {
     // Likewise default to a unknown verification error
     UnknownVerificationError = 0;
     IndexOutOfBounds = 1;
-    RangeOutOfBounds = 2;
-    InvalidSignatureToken = 3;
-    InvalidFieldDefReference = 4;
-    RecursiveStructDefinition = 5;
-    InvalidResourceField = 6;
-    InvalidFallThrough = 7;
-    JoinFailure = 8;
-    NegativeStackSizeWithinBlock = 9;
-    UnbalancedStack = 10;
-    InvalidMainFunctionSignature = 11;
-    DuplicateElement = 12;
-    InvalidModuleHandle = 13;
-    UnimplementedHandle = 14;
-    InconsistentFields = 15;
-    UnusedFields = 16;
-    LookupFailed = 17;
-    VisibilityMismatch = 18;
-    TypeResolutionFailure = 19;
-    TypeMismatch = 20;
-    MissingDependency = 21;
-    PopReferenceError = 22;
-    PopResourceError = 23;
-    ReleaseRefTypeMismatchError = 24;
-    BrTypeMismatchError = 25;
-    AssertTypeMismatchError = 26;
-    StLocTypeMismatchError = 27;
-    StLocUnsafeToDestroyError = 28;
-    RetUnsafeToDestroyError = 29;
-    RetTypeMismatchError = 30;
-    FreezeRefTypeMismatchError = 31;
-    FreezeRefExistsMutableBorrowError = 32;
-    BorrowFieldTypeMismatchError = 33;
-    BorrowFieldBadFieldError = 34;
-    BorrowFieldExistsMutableBorrowError = 35;
-    CopyLocUnavailableError = 36;
-    CopyLocResourceError = 37;
-    CopyLocExistsBorrowError = 38;
-    MoveLocUnavailableError = 39;
-    MoveLocExistsBorrowError = 40;
-    BorrowLocReferenceError = 41;
-    BorrowLocUnavailableError = 42;
-    BorrowLocExistsBorrowError = 43;
-    CallTypeMismatchError = 44;
-    CallBorrowedMutableReferenceError = 45;
-    PackTypeMismatchError = 46;
-    UnpackTypeMismatchError = 47;
-    ReadRefTypeMismatchError = 48;
-    ReadRefResourceError = 49;
-    ReadRefExistsMutableBorrowError = 50;
-    WriteRefTypeMismatchError = 51;
-    WriteRefResourceError = 52;
-    WriteRefExistsBorrowError = 53;
-    WriteRefNoMutableReferenceError = 54;
-    IntegerOpTypeMismatchError = 55;
-    BooleanOpTypeMismatchError = 56;
-    EqualityOpTypeMismatchError = 57;
-    ExistsResourceTypeMismatchError = 58;
-    BorrowGlobalTypeMismatchError = 59;
-    BorrowGlobalNoResourceError = 60;
-    MoveFromTypeMismatchError = 61;
-    MoveFromNoResourceError = 62;
-    MoveToSenderTypeMismatchError = 63;
-    MoveToSenderNoResourceError = 64;
-    CreateAccountTypeMismatchError = 65;
+    CodeUnitIndexOutOfBounds = 2;
+    RangeOutOfBounds = 3;
+    InvalidSignatureToken = 4;
+    InvalidFieldDefReference = 5;
+    RecursiveStructDefinition = 6;
+    InvalidResourceField = 7;
+    InvalidFallThrough = 8;
+    JoinFailure = 9;
+    NegativeStackSizeWithinBlock = 10;
+    UnbalancedStack = 11;
+    InvalidMainFunctionSignature = 12;
+    DuplicateElement = 13;
+    InvalidModuleHandle = 14;
+    UnimplementedHandle = 15;
+    InconsistentFields = 16;
+    UnusedFields = 17;
+    LookupFailed = 18;
+    VisibilityMismatch = 19;
+    TypeResolutionFailure = 20;
+    TypeMismatch = 21;
+    MissingDependency = 22;
+    PopReferenceError = 23;
+    PopResourceError = 24;
+    ReleaseRefTypeMismatchError = 25;
+    BrTypeMismatchError = 26;
+    AbortTypeMismatchError = 27;
+    StLocTypeMismatchError = 28;
+    StLocUnsafeToDestroyError = 29;
+    RetUnsafeToDestroyError = 30;
+    RetTypeMismatchError = 31;
+    FreezeRefTypeMismatchError = 32;
+    FreezeRefExistsMutableBorrowError = 33;
+    BorrowFieldTypeMismatchError = 34;
+    BorrowFieldBadFieldError = 35;
+    BorrowFieldExistsMutableBorrowError = 36;
+    CopyLocUnavailableError = 37;
+    CopyLocResourceError = 38;
+    CopyLocExistsBorrowError = 39;
+    MoveLocUnavailableError = 40;
+    MoveLocExistsBorrowError = 41;
+    BorrowLocReferenceError = 42;
+    BorrowLocUnavailableError = 43;
+    BorrowLocExistsBorrowError = 44;
+    CallTypeMismatchError = 45;
+    CallBorrowedMutableReferenceError = 46;
+    PackTypeMismatchError = 47;
+    UnpackTypeMismatchError = 48;
+    ReadRefTypeMismatchError = 49;
+    ReadRefResourceError = 50;
+    ReadRefExistsMutableBorrowError = 51;
+    WriteRefTypeMismatchError = 52;
+    WriteRefResourceError = 53;
+    WriteRefExistsBorrowError = 54;
+    WriteRefNoMutableReferenceError = 55;
+    IntegerOpTypeMismatchError = 56;
+    BooleanOpTypeMismatchError = 57;
+    EqualityOpTypeMismatchError = 58;
+    ExistsResourceTypeMismatchError = 59;
+    ExistsNoResourceError = 60;
+    BorrowGlobalTypeMismatchError = 61;
+    BorrowGlobalNoResourceError = 62;
+    MoveFromTypeMismatchError = 63;
+    MoveFromNoResourceError = 64;
+    MoveToSenderTypeMismatchError = 65;
+    MoveToSenderNoResourceError = 66;
+    CreateAccountTypeMismatchError = 67;
+    GlobalReferenceError = 68;
     // The self address of a module the transaction is publishing is not the sender address
-    ModuleAddressDoesNotMatchSender = 66;
+    ModuleAddressDoesNotMatchSender = 69;
     // The module does not have any module handles. Each module or script must have at least one module handle.
-    NoModuleHandles = 67;
+    NoModuleHandles = 70;
 }
 
 // These are errors that the VM might raise if a violation of internal
@@ -179,6 +187,7 @@ enum VMInvariantViolationError {
     LinkerError = 6;
     LocalReferenceError = 7;
     StorageError = 8;
+    InternalTypeError = 9;
 }
 
 // Errors that can arise from binary decoding (deserialization)
@@ -227,9 +236,9 @@ enum RuntimeStatus {
     DuplicateModuleName = 15;
 }
 
-// user-defined assertion error code number
-message AssertionFailure {
-    uint64 assertion_error_code = 1;
+// user-defined abort error code number
+message Aborted {
+    uint64 aborted_error_code = 1;
 }
 
 message ArithmeticError {
@@ -258,7 +267,7 @@ message DynamicReferenceError {
 message ExecutionStatus {
     oneof execution_status {
         RuntimeStatus runtime_status = 1;
-        AssertionFailure assertion_failure = 2;
+        Aborted aborted = 2;
         ArithmeticError arithmetic_error = 3;
         DynamicReferenceError reference_error = 4;
     }

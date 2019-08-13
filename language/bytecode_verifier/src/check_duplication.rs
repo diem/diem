@@ -10,11 +10,11 @@
 //! - all struct and function handles pointing to IMPLEMENTED_MODULE_INDEX have a definition
 use std::{collections::HashSet, hash::Hash};
 use vm::{
-    access::{BaseAccess, ModuleAccess},
+    access::ModuleAccess,
     errors::{VMStaticViolation, VerificationError},
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
-        StructHandleIndex, TableIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -80,9 +80,12 @@ impl<'a> DuplicationChecker<'a> {
                 err: VMStaticViolation::DuplicateElement,
             })
         }
-        if let Some(idx) =
-            Self::first_duplicate_element(self.module.struct_handles().map(|x| (x.module, x.name)))
-        {
+        if let Some(idx) = Self::first_duplicate_element(
+            self.module
+                .struct_handles()
+                .iter()
+                .map(|x| (x.module, x.name)),
+        ) {
             errors.push(VerificationError {
                 kind: IndexKind::StructHandle,
                 idx,
@@ -90,7 +93,10 @@ impl<'a> DuplicationChecker<'a> {
             })
         }
         if let Some(idx) = Self::first_duplicate_element(
-            self.module.function_handles().map(|x| (x.module, x.name)),
+            self.module
+                .function_handles()
+                .iter()
+                .map(|x| (x.module, x.name)),
         ) {
             errors.push(VerificationError {
                 kind: IndexKind::FunctionHandle,
@@ -99,7 +105,7 @@ impl<'a> DuplicationChecker<'a> {
             })
         }
         if let Some(idx) =
-            Self::first_duplicate_element(self.module.struct_defs().map(|x| x.struct_handle))
+            Self::first_duplicate_element(self.module.struct_defs().iter().map(|x| x.struct_handle))
         {
             errors.push(VerificationError {
                 kind: IndexKind::StructDefinition,
@@ -108,7 +114,7 @@ impl<'a> DuplicationChecker<'a> {
             })
         }
         if let Some(idx) =
-            Self::first_duplicate_element(self.module.function_defs().map(|x| x.function))
+            Self::first_duplicate_element(self.module.function_defs().iter().map(|x| x.function))
         {
             errors.push(VerificationError {
                 kind: IndexKind::FunctionDefinition,
@@ -116,9 +122,9 @@ impl<'a> DuplicationChecker<'a> {
                 err: VMStaticViolation::DuplicateElement,
             })
         }
-        if let Some(idx) =
-            Self::first_duplicate_element(self.module.field_defs().map(|x| (x.struct_, x.name)))
-        {
+        if let Some(idx) = Self::first_duplicate_element(
+            self.module.field_defs().iter().map(|x| (x.struct_, x.name)),
+        ) {
             errors.push(VerificationError {
                 kind: IndexKind::FieldDefinition,
                 idx,
@@ -132,12 +138,19 @@ impl<'a> DuplicationChecker<'a> {
         // (3) there are no unused fields.
         let mut start_field_index: usize = 0;
         let mut idx_opt = None;
-        for (idx, struct_def) in self.module.struct_defs().enumerate() {
-            if FieldDefinitionIndex::new(start_field_index as u16) != struct_def.fields {
+        for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
+            let (field_count, fields) = match struct_def.field_information {
+                StructFieldInformation::Native => continue,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => (field_count, fields),
+            };
+            if FieldDefinitionIndex::new(start_field_index as u16) != fields {
                 idx_opt = Some(idx);
                 break;
             }
-            let next_start_field_index = start_field_index + struct_def.field_count as usize;
+            let next_start_field_index = start_field_index + field_count as usize;
             let all_fields_match = (start_field_index..next_start_field_index).all(|i| {
                 struct_def.struct_handle
                     == self
@@ -167,7 +180,7 @@ impl<'a> DuplicationChecker<'a> {
 
         // Check that each struct definition is pointing to module handle with index
         // IMPLEMENTED_MODULE_INDEX.
-        if let Some(idx) = self.module.struct_defs().position(|x| {
+        if let Some(idx) = self.module.struct_defs().iter().position(|x| {
             self.module.struct_handle_at(x.struct_handle).module
                 != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
         }) {
@@ -179,7 +192,7 @@ impl<'a> DuplicationChecker<'a> {
         }
         // Check that each function definition is pointing to module handle with index
         // IMPLEMENTED_MODULE_INDEX.
-        if let Some(idx) = self.module.function_defs().position(|x| {
+        if let Some(idx) = self.module.function_defs().iter().position(|x| {
             self.module.function_handle_at(x.function).module
                 != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
         }) {
@@ -191,8 +204,12 @@ impl<'a> DuplicationChecker<'a> {
         }
         // Check that each struct handle with module handle index IMPLEMENTED_MODULE_INDEX is
         // implemented.
-        let implemented_struct_handles: HashSet<StructHandleIndex> =
-            self.module.struct_defs().map(|x| x.struct_handle).collect();
+        let implemented_struct_handles: HashSet<StructHandleIndex> = self
+            .module
+            .struct_defs()
+            .iter()
+            .map(|x| x.struct_handle)
+            .collect();
         if let Some(idx) = (0..self.module.struct_handles().len()).position(|x| {
             let y = StructHandleIndex::new(x as u16);
             self.module.struct_handle_at(y).module
@@ -207,8 +224,12 @@ impl<'a> DuplicationChecker<'a> {
         }
         // Check that each function handle with module handle index IMPLEMENTED_MODULE_INDEX is
         // implemented.
-        let implemented_function_handles: HashSet<FunctionHandleIndex> =
-            self.module.function_defs().map(|x| x.function).collect();
+        let implemented_function_handles: HashSet<FunctionHandleIndex> = self
+            .module
+            .function_defs()
+            .iter()
+            .map(|x| x.function)
+            .collect();
         if let Some(idx) = (0..self.module.function_handles().len()).position(|x| {
             let y = FunctionHandleIndex::new(x as u16);
             self.module.function_handle_at(y).module
@@ -227,11 +248,11 @@ impl<'a> DuplicationChecker<'a> {
 
     fn first_duplicate_element<T>(iter: T) -> Option<usize>
     where
-        T: Iterator,
+        T: IntoIterator,
         T::Item: Eq + Hash,
     {
         let mut uniq = HashSet::new();
-        for (i, x) in iter.enumerate() {
+        for (i, x) in iter.into_iter().enumerate() {
             if !uniq.insert(x) {
                 return Some(i);
             }

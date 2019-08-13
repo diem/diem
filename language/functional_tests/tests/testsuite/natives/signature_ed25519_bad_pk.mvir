@@ -1,24 +1,22 @@
 import 0x0.Signature;
 
 main() {
-    let signature: bytearray;
-    let public_key: bytearray;
     let message: bytearray;
+    let public_key: bytearray;
+    let signature: bytearray;
 
     let output: bool;
     let expected_output: bool;
 
-    signature = b"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    public_key = b"7013b6ed7dde3cfb1251db1b04ae9cd7853480284085693590a75def645a926d";
-    message = b"0000000000000000000000000000000000000000000000000000000000000000";
+    signature = h"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
+    // Alter the last byte of the public key.
+    public_key = h"7013b6ed7dde3cfb1251db1b04ae9cd7853480284085693590a75def645a9260";
+    message = h"0000000000000000000000000000000000000000000000000000000000000000";
 
-    output = Signature.ed25519_verify(copy(signature), copy(public_key), copy(message));
+    output = Signature.ed25519_verify(move(signature), move(public_key), move(message));
     expected_output = false;
 
     assert(move(output) == move(expected_output), 42);
 
     return;
 }
-
-// check: LinkerError
-// TODO: fix it

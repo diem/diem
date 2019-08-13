@@ -5,10 +5,8 @@ use crate::{
     chained_bft::{
         block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::{
-            new_round_msg::NewRoundMsg,
-            proposer_election::{ProposalInfo, ProposerInfo},
+        consensus_types::{
+            block::Block, proposal_msg::ProposalMsg, sync_info::SyncInfo, timeout_msg::TimeoutMsg,
         },
         safety::vote_msg::VoteMsg,
     },
@@ -27,6 +25,7 @@ use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock, RespondChunk},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
+use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::{
@@ -34,9 +33,12 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::{transaction::TransactionListWithProof, validator_verifier::ValidatorVerifier};
+use types::{
+    account_address::AccountAddress, transaction::TransactionListWithProof,
+    validator_verifier::ValidatorVerifier,
+};
 
-/// The response sent back from event_processor for the BlockRetrievalRequest.
+/// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
 pub struct BlockRetrievalResponse<T> {
     pub status: BlockRetrievalStatus,
@@ -69,6 +71,7 @@ impl<T: Payload> BlockRetrievalResponse<T> {
 
 /// BlockRetrievalRequest carries a block id for the requested block as well as the
 /// oneshot sender to deliver the response.
+#[derive(Debug)]
 pub struct BlockRetrievalRequest<T> {
     pub block_id: HashValue,
     pub num_blocks: u64,
@@ -77,25 +80,23 @@ pub struct BlockRetrievalRequest<T> {
 
 /// Represents a request to get up to batch_size transactions starting from start_version
 /// with the oneshot sender to deliver the response.
+#[derive(Debug)]
 pub struct ChunkRetrievalRequest {
     pub start_version: u64,
-    pub target: QuorumCert,
+    pub target_version: u64,
     pub batch_size: u64,
     pub response_sender: oneshot::Sender<Result<TransactionListWithProof, failure::Error>>,
 }
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
-/// 1. proposals
-/// 2. votes
-/// 3. block retrieval requests (the request carries a oneshot sender for returning the Block)
-/// 4. pacemaker timeouts
 /// Will be returned by the networking trait upon startup.
-pub struct NetworkReceivers<T, P> {
-    pub proposals: channel::Receiver<ProposalInfo<T, P>>,
+pub struct NetworkReceivers<T> {
+    pub proposals: channel::Receiver<ProposalMsg<T>>,
     pub votes: channel::Receiver<VoteMsg>,
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
-    pub new_rounds: channel::Receiver<NewRoundMsg>,
+    pub timeout_msgs: channel::Receiver<TimeoutMsg>,
     pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
+    pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -109,7 +110,7 @@ pub struct ConsensusNetworkImpl {
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
 impl Clone for ConsensusNetworkImpl {
@@ -132,7 +133,7 @@ impl ConsensusNetworkImpl {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier>,
+        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -147,18 +148,16 @@ impl ConsensusNetworkImpl {
     }
 
     /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start<T: Payload, P: ProposerInfo>(
-        &mut self,
-        executor: &TaskExecutor,
-    ) -> NetworkReceivers<T, P> {
+    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T> {
         let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
         let (block_request_tx, block_request_rx) =
             channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
         let (chunk_request_tx, chunk_request_rx) =
             channel::new(1_024, &counters::PENDING_CHUNK_REQUESTS);
-        let (new_round_tx, new_round_rx) =
+        let (timeout_msg_tx, timeout_msg_rx) =
             channel::new(1_024, &counters::PENDING_NEW_ROUND_MESSAGES);
+        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
         let network_events = self
             .network_events
             .take()
@@ -176,7 +175,8 @@ impl ConsensusNetworkImpl {
                 vote_tx,
                 block_request_tx,
                 chunk_request_tx,
-                new_round_tx,
+                timeout_msg_tx,
+                sync_info_tx,
                 all_events,
                 validator,
             }
@@ -189,8 +189,9 @@ impl ConsensusNetworkImpl {
             proposals: proposal_rx,
             votes: vote_rx,
             block_retrieval: block_request_rx,
-            new_rounds: new_round_rx,
+            timeout_msgs: timeout_msg_rx,
             chunk_retrieval: chunk_request_rx,
+            sync_info_msgs: sync_info_rx,
         }
     }
 
@@ -248,10 +249,7 @@ impl ConsensusNetworkImpl {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal<T: Payload, P: ProposerInfo>(
-        &mut self,
-        proposal: ProposalInfo<T, P>,
-    ) {
+    pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
         let mut msg = ConsensusMsg::new();
         msg.set_proposal(proposal.into_proto());
         self.broadcast(msg).await
@@ -302,29 +300,48 @@ impl ConsensusNetworkImpl {
         }
     }
 
-    /// Broadcasts new round (including timeout) messages to all validators
-    pub async fn broadcast_new_round(&mut self, new_round_msg: NewRoundMsg) {
+    /// Broadcasts timeout message to all validators
+    pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
         let mut msg = ConsensusMsg::new();
-        msg.set_new_round(new_round_msg.into_proto());
+        msg.set_timeout_msg(timeout_msg.into_proto());
         self.broadcast(msg).await
+    }
+
+    /// Sends the given sync info to the given author.
+    /// The future is fulfilled as soon as the message is added to the internal network channel
+    /// (does not indicate whether the message is delivered or sent out).
+    pub async fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
+        if recipient == self.author {
+            error!("An attempt to deliver sync info msg to itself: ignore.");
+            return;
+        }
+        let mut msg = ConsensusMsg::new();
+        msg.set_sync_info(sync_info.into_proto());
+        let mut network_sender = self.network_sender.clone();
+        if let Err(e) = network_sender.send_to(recipient, msg).await {
+            warn!(
+                "Failed to send a sync info msg to peer {:?}: {:?}",
+                recipient, e
+            );
+        }
     }
 }
 
-struct NetworkTask<T, P, S> {
-    proposal_tx: channel::Sender<ProposalInfo<T, P>>,
+struct NetworkTask<T, S> {
+    proposal_tx: channel::Sender<ProposalMsg<T>>,
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
-    new_round_tx: channel::Sender<NewRoundMsg>,
+    timeout_msg_tx: channel::Sender<TimeoutMsg>,
+    sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
-    validator: Arc<ValidatorVerifier>,
+    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
 }
 
-impl<T, P, S> NetworkTask<T, P, S>
+impl<T, S> NetworkTask<T, S>
 where
     S: Stream<Item = Result<Event<ConsensusMsg>, failure::Error>> + Unpin,
     T: Payload,
-    P: ProposerInfo,
 {
     pub async fn run(mut self) {
         while let Some(Ok(message)) = self.all_events.next().await {
@@ -334,8 +351,10 @@ where
                         self.process_proposal(&mut msg).await
                     } else if msg.has_vote() {
                         self.process_vote(&mut msg).await
-                    } else if msg.has_new_round() {
-                        self.process_new_round(&mut msg).await
+                    } else if msg.has_timeout_msg() {
+                        self.process_timeout_msg(&mut msg).await
+                    } else if msg.has_sync_info() {
+                        self.process_sync_info(&mut msg, peer_id).await
                     } else {
                         warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
@@ -368,7 +387,7 @@ where
     }
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalInfo::<T, P>::from_proto(msg.take_proposal())?;
+        let proposal = ProposalMsg::<T>::from_proto(msg.take_proposal())?;
         proposal.verify(self.validator.as_ref()).map_err(|e| {
             security_log(SecurityEvent::InvalidConsensusProposal)
                 .error(&e)
@@ -395,16 +414,36 @@ where
         Ok(())
     }
 
-    async fn process_new_round<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let new_round = NewRoundMsg::from_proto(msg.take_new_round())?;
-        new_round.verify(self.validator.as_ref()).map_err(|e| {
+    async fn process_timeout_msg<'a>(
+        &'a mut self,
+        msg: &'a mut ConsensusMsg,
+    ) -> failure::Result<()> {
+        let timeout_msg = TimeoutMsg::from_proto(msg.take_timeout_msg())?;
+        timeout_msg.verify(self.validator.as_ref()).map_err(|e| {
             security_log(SecurityEvent::InvalidConsensusRound)
                 .error(&e)
-                .data(&new_round)
+                .data(&timeout_msg)
                 .log();
             e
         })?;
-        self.new_round_tx.send(new_round).await?;
+        self.timeout_msg_tx.send(timeout_msg).await?;
+        Ok(())
+    }
+
+    async fn process_sync_info<'a>(
+        &'a mut self,
+        msg: &'a mut ConsensusMsg,
+        peer: AccountAddress,
+    ) -> failure::Result<()> {
+        let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
+        sync_info.verify(self.validator.as_ref()).map_err(|e| {
+            security_log(SecurityEvent::InvalidSyncInfoMsg)
+                .error(&e)
+                .data(&sync_info)
+                .log();
+            e
+        })?;
+        self.sync_info_tx.send((sync_info, peer)).await?;
         Ok(())
     }
 
@@ -413,19 +452,15 @@ where
         msg: &'a mut ConsensusMsg,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
     ) -> failure::Result<()> {
-        let mut req = msg.take_request_chunk();
+        let req = msg.take_request_chunk();
         debug!(
             "Received request_chunk RPC for start version: {} target: {:?} batch_size: {}",
-            req.start_version,
-            req.get_target(),
-            req.batch_size
+            req.start_version, req.target_version, req.batch_size
         );
         let (tx, rx) = oneshot::channel();
-        let target = QuorumCert::from_proto(req.take_target())?;
-        target.verify(self.validator.as_ref())?;
         let request = ChunkRetrievalRequest {
             start_version: req.start_version,
-            target,
+            target_version: req.target_version,
             batch_size: req.batch_size,
             response_sender: tx,
         };

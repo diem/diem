@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::*;
+use super::error;
 use backtrace::Backtrace;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use serde::Serialize;
@@ -35,6 +35,9 @@ pub enum SecurityEvent {
 
     /// Consensus received an invalid new round message
     InvalidConsensusRound,
+
+    /// Consensus received an invalid sync info message
+    InvalidSyncInfoMsg,
 
     /// A block being committed or executed is invalid
     InvalidBlock,

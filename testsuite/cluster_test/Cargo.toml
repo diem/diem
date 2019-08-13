@@ -1,0 +1,20 @@
+[package]
+name = "cluster_test"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+rand = "0.6.5"
+rusoto_core = "0.40.0"
+rusoto_kinesis = "0.40.0"
+rusoto_ec2 = "0.40.0"
+flate2 = { version = "1.0", features = ["rust_backend"], default-features = false }
+serde_json = "1.0"
+regex = "1.1.9"
+clap = "2.32"
+termion = "1.5.3"
+itertools = "0.8.0"

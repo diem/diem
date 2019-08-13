@@ -1,20 +1,22 @@
-modules:
 module Test {
     struct T{fint: u64, fv: bool}
 
-    public t1(fint: u64, fv: bool): V#Self.T {
+    public t1(fint: u64, fv: bool): Self.T {
         return T{fint: move(fint), fv: move(fv)};
     }
 
-    public t2(fint: u64): V#Self.T {
+    public t2(fint: u64): Self.T {
         return T{fint:  move(fint), fv: false};
     }
 }
-script:
-import Transaction.Test;
+
+//! new-transaction
+
+import {{default}}.Test;
+
 main() {
-    let t1: V#Test.T;
-    let t2: V#Test.T;
+    let t1: Test.T;
+    let t2: Test.T;
     t1 = Test.t1(0, false);
     t2 = Test.t2(0);
     return;

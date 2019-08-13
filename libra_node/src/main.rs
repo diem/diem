@@ -20,7 +20,7 @@ fn register_signals(term: Arc<AtomicBool>) {
         let thread = std::thread::current();
         unsafe {
             signal_hook::register(*signal, move || {
-                term_clone.store(true, Ordering::Relaxed);
+                term_clone.store(true, Ordering::Release);
                 thread.unpark();
             })
             .expect("failed to register signal handler");
@@ -29,16 +29,16 @@ fn register_signals(term: Arc<AtomicBool>) {
 }
 
 fn main() {
-    let (config, _logger, _args) = setup_executable(
+    let (mut config, _logger, _args) = setup_executable(
         "Libra single node".to_string(),
         vec![ARG_PEER_ID, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
     );
-    let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&config);
+    let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&mut config);
 
     let term = Arc::new(AtomicBool::new(false));
     register_signals(Arc::clone(&term));
 
-    while !term.load(Ordering::Relaxed) {
+    while !term.load(Ordering::Acquire) {
         std::thread::park();
     }
 }

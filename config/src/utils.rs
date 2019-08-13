@@ -75,7 +75,7 @@ where
             let mut hash = [0u8; SCRIPT_HASH_LENGTH];
             let decoded_hash =
                 hex::decode(s).expect("Unable to decode script hash from configuration file.");
-            assert!(decoded_hash.len() == SCRIPT_HASH_LENGTH);
+            assert_eq!(decoded_hash.len(), SCRIPT_HASH_LENGTH);
             hash.copy_from_slice(decoded_hash.as_slice());
             hash
         })

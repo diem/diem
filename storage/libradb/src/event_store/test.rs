@@ -3,14 +3,14 @@
 
 use super::*;
 use crate::LibraDB;
-use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, utils::keypair_strategy};
+use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use itertools::Itertools;
 use proptest::{
     collection::{hash_set, vec},
     prelude::*,
     strategy::Union,
 };
-use rand::{Rng, StdRng};
+use rand::Rng;
 use std::collections::HashMap;
 use tempfile::tempdir;
 use types::{
@@ -19,9 +19,13 @@ use types::{
 };
 
 fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashValue {
-    let mut batch = SchemaBatch::new();
-    let root_hash = store.put_events(version, events, &mut batch).unwrap();
-    store.db.write_schemas(batch).unwrap();
+    let mut cs = ChangeSet::new();
+    let root_hash = store.put_events(version, events, &mut cs).unwrap();
+    store.db.write_schemas(cs.batch).unwrap();
+    assert_eq!(
+        cs.counter_bumps.get(LedgerCounter::EventsCreated),
+        events.len()
+    );
 
     root_hash
 }
@@ -31,9 +35,9 @@ fn test_put_empty() {
     let tmp_dir = tempdir().unwrap();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.event_store;
-    let mut batch = SchemaBatch::new();
+    let mut cs = ChangeSet::new();
     assert_eq!(
-        store.put_events(0, &[], &mut batch).unwrap(),
+        store.put_events(0, &[], &mut cs).unwrap(),
         *ACCUMULATOR_PLACEHOLDER_HASH
     );
 }
@@ -207,11 +211,11 @@ fn test_get_events_by_access_path_impl(
     let db = LibraDB::new(&tmp_dir);
     let store = &db.event_store;
 
-    let mut batch = SchemaBatch::new();
+    let mut cs = ChangeSet::new();
     event_batches.iter().enumerate().for_each(|(ver, events)| {
-        store.put_events(ver as u64, events, &mut batch).unwrap();
+        store.put_events(ver as u64, events, &mut cs).unwrap();
     });
-    db.commit(batch);
+    store.db.write_schemas(cs.batch);
     let ledger_version_plus_one = event_batches.len() as u64;
 
     // Calculate expected event sequence per access_path.

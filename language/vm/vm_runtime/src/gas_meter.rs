@@ -8,11 +8,12 @@ use crate::{
 };
 use types::account_address::ADDRESS_LENGTH;
 use vm::{access::ModuleAccess, errors::*, file_format::Bytecode, gas_schedule::*};
+use vm_runtime_types::value::Local;
 
 /// Holds the state of the gas meter.
 pub struct GasMeter {
     // The current amount of gas that is left ("unburnt gas") in the gas meter.
-    current_gas_left: GasUnits,
+    current_gas_left: GasUnits<GasCarrier>,
 
     // We need to disable and enable gas metering for both the prologue and epilogue of the Account
     // contract. The VM will then internally unset/set this flag before executing either of them.
@@ -24,7 +25,7 @@ pub struct GasMeter {
 // to report errors properly from these accesses.
 impl GasMeter {
     /// Create a new gas meter with starting gas amount `gas_amount`
-    pub fn new(gas_amount: GasUnits) -> Self {
+    pub fn new(gas_amount: GasUnits<GasCarrier>) -> Self {
         GasMeter {
             current_gas_left: gas_amount,
             meter_on: true,
@@ -38,7 +39,7 @@ impl GasMeter {
     /// cutoff, after which we start charging at a greater rate.
     pub fn charge_transaction_gas<'alloc, 'txn, P>(
         &mut self,
-        transaction_size: u64,
+        transaction_size: AbstractMemorySize<GasCarrier>,
         stk: &ExecutionStack<'alloc, 'txn, P>,
     ) -> VMResult<()>
     where
@@ -51,8 +52,9 @@ impl GasMeter {
 
     /// Queries the internal state of the gas meter to determine if it has at
     /// least `needed_gas` amount of gas.
-    pub fn has_gas(&self, needed_gas: GasUnits) -> bool {
-        self.current_gas_left >= needed_gas
+    pub fn has_gas(&self, needed_gas: GasUnits<GasCarrier>) -> bool {
+        self.current_gas_left
+            .app(&needed_gas, |curr_gas, needed_gas| curr_gas >= needed_gas)
     }
 
     /// Disables metering of gas.
@@ -78,7 +80,7 @@ impl GasMeter {
         &mut self,
         instr: &Bytecode,
         stk: &ExecutionStack<'alloc, 'txn, P>,
-        memory_size: AbstractMemorySize,
+        memory_size: AbstractMemorySize<GasCarrier>,
     ) -> VMResult<()>
     where
         'alloc: 'txn,
@@ -98,8 +100,8 @@ impl GasMeter {
         &mut self,
         instr: &Bytecode,
         stk: &ExecutionStack<'alloc, 'txn, P>,
-        memory_size: AbstractMemorySize,
-    ) -> VMResult<GasUnits>
+        memory_size: AbstractMemorySize<GasCarrier>,
+    ) -> VMResult<GasUnits<GasCarrier>>
     where
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
@@ -126,7 +128,7 @@ impl GasMeter {
             | Bytecode::LdFalse
             | Bytecode::LdConst(_)
             | Bytecode::Branch(_)
-            | Bytecode::Assert
+            | Bytecode::Abort
             | Bytecode::Pop
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)
@@ -139,26 +141,26 @@ impl GasMeter {
             | Bytecode::Ge
             | Bytecode::EmitEvent
             | Bytecode::FreezeRef => {
-                let default_gas = static_cost_instr(instr, 1);
+                let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }
             Bytecode::LdAddr(_) => {
-                let size = ADDRESS_LENGTH as AbstractMemorySize;
+                let size = AbstractMemorySize::new(ADDRESS_LENGTH as GasCarrier);
                 let default_gas = static_cost_instr(instr, size);
                 Self::gas_of(default_gas)
             }
             Bytecode::LdByteArray(idx) => {
                 let byte_array_ref = stk.top_frame()?.module().byte_array_at(*idx);
-                let byte_array_len = byte_array_ref.len() as AbstractMemorySize;
-                let byte_array_len = words_in(byte_array_len as AbstractMemorySize);
+                let byte_array_len = AbstractMemorySize::new(byte_array_ref.len() as GasCarrier);
+                let byte_array_len = words_in(byte_array_len);
                 let default_gas = static_cost_instr(instr, byte_array_len);
                 Self::gas_of(default_gas)
             }
             // We charge by the length of the string being stored on the stack.
             Bytecode::LdStr(idx) => {
                 let string_ref = stk.top_frame()?.module().string_at(*idx);
-                let str_len = string_ref.len() as AbstractMemorySize;
-                let str_len = words_in(str_len as AbstractMemorySize);
+                let str_len = AbstractMemorySize::new(string_ref.len() as GasCarrier);
+                let str_len = words_in(str_len);
                 let default_gas = static_cost_instr(instr, str_len);
                 Self::gas_of(default_gas)
             }
@@ -182,59 +184,83 @@ impl GasMeter {
             // value stack.  Because of this, the cost of the instruction is not dependent upon the
             // size of the value being returned.
             Bytecode::Ret => {
-                let default_gas = static_cost_instr(instr, 1);
+                let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }
-            Bytecode::Call(call_idx) => {
+            Bytecode::Call(call_idx, _) => {
                 let self_module = &stk.top_frame()?.module();
-                let function_ref = stk
+                let function_ref = try_runtime!(stk
                     .module_cache
-                    .resolve_function_ref(self_module, *call_idx)?
-                    .ok_or(VMInvariantViolation::LinkerError)?;
+                    .resolve_function_ref(self_module, *call_idx))
+                .ok_or(VMInvariantViolation::LinkerError)?;
                 if function_ref.is_native() {
-                    0 // This will be costed at the call site/by the native function
+                    GasUnits::new(0) // This will be costed at the call site/by the native function
                 } else {
-                    let call_size = function_ref.arg_count();
-                    let call_gas = static_cost_instr(instr, call_size as u64);
+                    let call_size = AbstractMemorySize::new(function_ref.arg_count() as GasCarrier);
+                    let call_gas = static_cost_instr(instr, call_size);
                     Self::gas_of(call_gas)
                 }
             }
-            Bytecode::Unpack(_) => {
+            Bytecode::Unpack(_, _) => {
                 let size = stk.peek()?.size();
                 Self::gas_of(static_cost_instr(instr, size))
             }
-            Bytecode::Pack(struct_idx) => {
-                let struct_def = &stk.top_frame()?.module().module.struct_def_at(*struct_idx);
+            Bytecode::Pack(struct_idx, _) => {
+                let struct_def = &stk.top_frame()?.module().struct_def_at(*struct_idx);
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
                 // the struct.
-                let arg_count = struct_def.field_count;
-                let total_size = u64::from(arg_count) + STRUCT_SIZE;
+                let member_count = struct_def.declared_field_count()?;
+                let arg_count = AbstractMemorySize::new(u64::from(member_count));
+
+                let total_size = arg_count.add(*STRUCT_SIZE);
                 let new_gas = static_cost_instr(instr, total_size);
                 Self::gas_of(new_gas)
             }
             Bytecode::WriteRef => {
                 // Get a reference to the value that we are going to write
                 let write_val = stk.peek_at(1)?;
-                // Get the size of this value and charge accordingly
+                // Grab the reference that's going to be written to
+                let ref_val = stk.peek()?;
+                // Get the size of this value and charge accordingly.
                 let size = write_val.size();
-                let default_gas = static_cost_instr(instr, size);
+                let mut default_gas = static_cost_instr(instr, size);
+                // Determine if the reference is global. If so charge for any expansion of global
+                // memory along with the write operation that will be incurred.
+                if let Local::GlobalRef(_) = ref_val {
+                    // Charge for any memory expansion
+                    let new_val_size = ref_val.size();
+                    let size_difference = if new_val_size.app(&size, |new_vl_size, size| new_vl_size > size) {
+                        new_val_size.sub(size)
+                    } else {
+                        // The difference is always >= 0
+                        AbstractMemorySize::new(0)
+                    };
+                    default_gas.memory_gas = default_gas.memory_gas
+                        // Charge for the iops on global memory
+                        .add(size.mul(*GLOBAL_MEMORY_PER_BYTE_WRITE_COST))
+                        // Charge for any memory expansion
+                        .add(size_difference.mul(*GLOBAL_MEMORY_PER_BYTE_COST));
+                };
                 Self::gas_of(default_gas)
             }
             | Bytecode::ReadRef => {
+                // NB: We don't charge for reads from global memory: we charge once for the read
+                // from global memory that is performed by a BorrowGlobal operation. After this,
+                // all ReadRefs will be reading from local cache and we don't need to distinguish.
                 let size = stk.peek()?.size();
                 let default_gas = static_cost_instr(instr, size);
                 Self::gas_of(default_gas)
             }
             | Bytecode::BorrowLoc(_)
             | Bytecode::BorrowField(_) => {
-                let default_gas = static_cost_instr(instr, 1);
+                let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }
-            Bytecode::CreateAccount => Self::gas_of(static_cost_instr(instr, DEFAULT_ACCOUNT_SIZE)),
+            Bytecode::CreateAccount => Self::gas_of(static_cost_instr(instr, *DEFAULT_ACCOUNT_SIZE)),
             // Releasing a reference is not dependent on the size of the underlying data
             Bytecode::ReleaseRef => {
-                Self::gas_of(static_cost_instr(instr, 1))
+                Self::gas_of(static_cost_instr(instr, AbstractMemorySize::new(1)))
             }
             // Note that we charge twice for these operations; once at the start of
             // `execute_single_instruction` we charge once with size 1. This then covers the cost
@@ -244,21 +270,21 @@ impl GasMeter {
             //
             // Borrowing a global causes a read of the underlying data. Therefore the cost is
             // dependent on the size of the data being borrowed.
-            Bytecode::BorrowGlobal(_)
+            Bytecode::BorrowGlobal(_, _)
             // In the process of determining if a resource exists, we need to load/read that
             // memory. We therefore need to charge for this query based on the size of the data
             // being accessed.
-            | Bytecode::Exists(_)
+            | Bytecode::Exists(_, _)
             // A MoveFrom does not trigger a write to memory. But it does push the value of that
             // size onto the stack. So we charge based upon the size of the instruction.
-            | Bytecode::MoveFrom(_)
+            | Bytecode::MoveFrom(_, _)
             // A MoveToSender causes a write of the resource to storage. We therefore charge based
             // on the size of the resource being moved.
-            | Bytecode::MoveToSender(_) => {
-                let mem_size = if memory_size > 1 {
-                    memory_size - 1
+            | Bytecode::MoveToSender(_, _) => {
+                let mem_size = if memory_size.get() > 1 {
+                    memory_size.sub(AbstractMemorySize::new(1))
                 } else {
-                    0 // We already charged for size 1
+                    AbstractMemorySize::new(0) // We already charged for size 1
                 };
                 Self::gas_of(static_cost_instr(instr, mem_size))
             }
@@ -270,7 +296,7 @@ impl GasMeter {
     ///
     /// This method is used by the `GetGasRemaining` bytecode instruction to get the current
     /// amount of gas remaining at the point of call.
-    pub fn remaining_gas(&self) -> GasUnits {
+    pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
         self.current_gas_left
     }
 
@@ -278,7 +304,7 @@ impl GasMeter {
     /// left in the internal state, an `OutOfGasError` is returned.
     pub fn consume_gas<'alloc, 'txn, P>(
         &mut self,
-        gas_amount: GasUnits,
+        gas_amount: GasUnits<GasCarrier>,
         stk: &ExecutionStack<'alloc, 'txn, P>,
     ) -> VMResult<()>
     where
@@ -288,12 +314,15 @@ impl GasMeter {
         if !self.meter_on {
             return Ok(Ok(()));
         }
-        if self.current_gas_left >= gas_amount {
-            self.current_gas_left -= gas_amount;
+        if self
+            .current_gas_left
+            .app(&gas_amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
+        {
+            self.current_gas_left = self.current_gas_left.sub(gas_amount);
             Ok(Ok(()))
         } else {
             // Zero out the internal gas state
-            self.current_gas_left = 0;
+            self.current_gas_left = GasUnits::new(0);
             let location = stk.location().unwrap_or_default();
             Ok(Err(VMRuntimeError {
                 loc: location,
@@ -306,7 +335,7 @@ impl GasMeter {
     ///
     /// This is used internally for converting from a `GasCost` which is a triple of numbers
     /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
-    fn gas_of(gas_cost: GasCost) -> GasUnits {
-        gas_cost.instruction_gas + gas_cost.memory_gas + gas_cost.stack_gas
+    fn gas_of(gas_cost: GasCost) -> GasUnits<GasCarrier> {
+        gas_cost.instruction_gas.add(gas_cost.memory_gas)
     }
 }

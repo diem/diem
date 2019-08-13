@@ -1,3 +1,6 @@
+//! account: bob, 1000000
+//! account: carol, 1000000
+
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 
@@ -8,16 +11,16 @@ main() {
     let struct1_original_balance: u64;
     let struct2_original_balance: u64;
     let struct3_original_balance: u64;
-    let five_coins1: R#LibraCoin.T;
-    let fc_ref: &mut R#LibraCoin.T;
-    let five_coins2: R#LibraCoin.T;
+    let five_coins1: LibraCoin.T;
+    let fc_ref: &mut LibraCoin.T;
+    let five_coins2: LibraCoin.T;
     let struct1_new_balance: u64;
     let struct2_new_balance: u64;
     let struct3_new_balance: u64;
 
     addr1 = get_txn_sender();
-    addr2 = 0x42;
-    addr3 = 0x43;
+    addr2 = {{bob}};
+    addr3 = {{carol}};
 
     struct1_original_balance = LibraAccount.balance(copy(addr1));
     struct2_original_balance = LibraAccount.balance(copy(addr2));
@@ -39,6 +42,3 @@ main() {
     assert(copy(struct3_new_balance) == copy(struct3_original_balance) + 5, 43);
     return;
 }
-
-// check: Execution(MissingData)
-// TODO: current testing setup does not support this scenario

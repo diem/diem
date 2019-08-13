@@ -15,40 +15,54 @@ data "aws_ami" "ecs" {
 }
 
 locals {
+  ebs_types = ["t2", "t3", "m5", "c5"]
+
   cpu_by_instance = {
-    "t2.large"    = 2048
-    "t2.medium"   = 2048
-    "t3.medium"   = 2048
-    "m5.large"    = 2048
-    "m5.xlarge"   = 4096
-    "m5.2xlarge"  = 8192
-    "m5.4xlarge"  = 16384
-    "m5.12xlarge" = 49152
-    "m5.24xlarge" = 98304
-    "c5.large"    = 2048
-    "c5.xlarge"   = 4096
-    "c5.2xlarge"  = 8192
-    "c5.4xlarge"  = 16384
-    "c5.9xlarge"  = 36864
-    "c5.18xlarge" = 73728
+    "t2.large"     = 2048
+    "t2.medium"    = 2048
+    "t3.medium"    = 2048
+    "m5.large"     = 2048
+    "m5.xlarge"    = 4096
+    "m5.2xlarge"   = 8192
+    "m5.4xlarge"   = 16384
+    "m5.12xlarge"  = 49152
+    "m5.24xlarge"  = 98304
+    "c5.large"     = 2048
+    "c5d.large"    = 2048
+    "c5.xlarge"    = 4096
+    "c5d.xlarge"   = 4096
+    "c5.2xlarge"   = 8192
+    "c5d.2xlarge"  = 8192
+    "c5.4xlarge"   = 16384
+    "c5d.4xlarge"  = 16384
+    "c5.9xlarge"   = 36864
+    "c5d.9xlarge"  = 36864
+    "c5.18xlarge"  = 73728
+    "c5d.18xlarge" = 73728
   }
 
   mem_by_instance = {
-    "t2.medium"   = 3943
-    "t2.large"    = 7975
-    "t3.medium"   = 3884
-    "m5.large"    = 7680
-    "m5.xlarge"   = 15576
-    "m5.2xlarge"  = 31368
-    "m5.4xlarge"  = 62950
-    "m5.12xlarge" = 189283
-    "m5.24xlarge" = 378652
-    "c5.large"    = 3704
-    "c5.xlarge"   = 7624
-    "c5.2xlarge"  = 15464
-    "c5.4xlarge"  = 31142
-    "c5.9xlarge"  = 70341
-    "c5.18xlarge" = 140768
+    "t2.medium"    = 3943
+    "t2.large"     = 7975
+    "t3.medium"    = 3884
+    "m5.large"     = 7680
+    "m5.xlarge"    = 15576
+    "m5.2xlarge"   = 31368
+    "m5.4xlarge"   = 62950
+    "m5.12xlarge"  = 189283
+    "m5.24xlarge"  = 378652
+    "c5.large"     = 3704
+    "c5d.large"    = 3704
+    "c5.xlarge"    = 7624
+    "c5d.xlarge"   = 7624
+    "c5.2xlarge"   = 15464
+    "c5d.2xlarge"  = 15464
+    "c5.4xlarge"   = 31142
+    "c5d.4xlarge"  = 31142
+    "c5.9xlarge"   = 70341
+    "c5d.9xlarge"  = 70341
+    "c5.18xlarge"  = 140768
+    "c5d.18xlarge" = 140768
   }
 }
 
@@ -69,11 +83,36 @@ resource "aws_cloudwatch_log_metric_filter" "log_metric_filter" {
   }
 }
 
+resource "random_id" "bucket" {
+  byte_length = 8
+}
+
+resource "aws_s3_bucket" "config" {
+  bucket = "libra-${terraform.workspace}-${random_id.bucket.hex}"
+  region = var.region
+}
+
+resource "aws_s3_bucket_public_access_block" "config" {
+  bucket                  = aws_s3_bucket.config.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_object" "trusted_peers" {
+  bucket = aws_s3_bucket.config.id
+  key    = "trusted_peers.config.toml"
+  source = "${var.validator_set}/trusted_peers.config.toml"
+  etag   = filemd5("${var.validator_set}/trusted_peers.config.toml")
+}
+
 data "template_file" "user_data" {
   template = file("templates/ec2_user_data.sh")
 
   vars = {
-    ecs_cluster = aws_ecs_cluster.testnet.name
+    ecs_cluster   = aws_ecs_cluster.testnet.name
+    trusted_peers = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.trusted_peers.id}"
   }
 }
 
@@ -92,16 +131,20 @@ resource "aws_instance" "validator" {
     aws_subnet.testnet.*.id,
     count.index % length(data.aws_availability_zones.available.names),
   )
+  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy_attachment.ecs_extra]
   vpc_security_group_ids      = [aws_security_group.validator.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
   iam_instance_profile        = aws_iam_instance_profile.ecsInstanceRole.name
   user_data                   = local.user_data
 
-  root_block_device {
-    volume_type = "io1"
-    volume_size = 100
-    iops        = 5000 # max 50iops/gb
+  dynamic "root_block_device" {
+    for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
+    content {
+      volume_type = "io1"
+      volume_size = var.validator_ebs_size
+      iops        = var.validator_ebs_size * 50 # max 50iops/gb
+    }
   }
 
   tags = {
@@ -110,6 +153,7 @@ resource "aws_instance" "validator" {
     Workspace = terraform.workspace
     PeerId    = var.peer_ids[count.index]
   }
+
 }
 
 data "local_file" "keys" {
@@ -129,11 +173,20 @@ resource "aws_secretsmanager_secret_version" "validator" {
   secret_string = element(data.local_file.keys.*.content, count.index)
 }
 
+data "template_file" "node_config" {
+  count    = length(var.peer_ids)
+  template = file("${var.validator_set}/node.config.toml")
+
+  vars = {
+    self_ip = element(aws_instance.validator.*.private_ip, count.index)
+  }
+}
+
 data "template_file" "seed_peers" {
   template = file("templates/seed_peers.config.toml")
 
   vars = {
-    validators = join(",", formatlist("%s:%s", var.peer_ids, aws_instance.validator.*.private_ip))
+    validators = join(",", formatlist("%s:%s", slice(var.peer_ids, 0, 3), slice(aws_instance.validator.*.private_ip, 0, 3)))
   }
 }
 
@@ -146,9 +199,8 @@ data "template_file" "ecs_task_definition" {
     image_version = local.image_version
     cpu           = local.cpu_by_instance[var.validator_type]
     mem           = local.mem_by_instance[var.validator_type]
-    self_ip       = element(aws_instance.validator.*.private_ip, count.index)
+    node_config   = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
     seed_peers    = jsonencode(data.template_file.seed_peers.rendered)
-    trusted_peers = jsonencode(file("${var.validator_set}/trusted_peers.config.toml"))
     genesis_blob  = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
     peer_id       = var.peer_ids[count.index]
     secret        = element(aws_secretsmanager_secret.validator.*.arn, count.index)
@@ -172,6 +224,11 @@ resource "aws_ecs_task_definition" "validator" {
   volume {
     name      = "libra-data"
     host_path = "/data/libra"
+  }
+
+  volume {
+    name      = "trusted-peers"
+    host_path = "/opt/libra/trusted_peers.config.toml"
   }
 
   placement_constraints {

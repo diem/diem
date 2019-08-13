@@ -6,6 +6,7 @@ use failure::Fail;
 use std::{fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
+    language_storage::ModuleId,
     transaction::TransactionStatus,
     vm_error::{VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus},
 };
@@ -36,7 +37,7 @@ pub struct Location {}
 pub enum VMErrorKind {
     ArithmeticError,
     TypeError,
-    AssertionFailure(u64),
+    Aborted(u64),
     OutOfGasError,
     GlobalRefAlreadyReleased,
     MissingReleaseRef,
@@ -51,6 +52,7 @@ pub enum VMErrorKind {
     ValueDeserializerError,
     CodeSerializerError(BinaryError),
     CodeDeserializerError(BinaryError),
+    Verification(Vec<VerificationStatus>),
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -60,6 +62,8 @@ pub enum VerificationStatus {
     /// A verification error was detected in a module. The first element is the index of the module
     /// in the transaction.
     Module(u16, VerificationError),
+    /// A verification error was detected in a dependency of a module.
+    Dependency(ModuleId, VerificationError),
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -85,6 +89,12 @@ pub enum VMStaticViolation {
         _0, _1, _2
     )]
     IndexOutOfBounds(IndexKind, usize, usize),
+
+    #[fail(
+        display = "Index out of bounds for '{}' at code offset {} (expected 0..{}, found {})",
+        _0, _1, _2, _3
+    )]
+    CodeUnitIndexOutOfBounds(IndexKind, usize, usize, usize),
 
     #[fail(
         display = "Range out of bounds for '{}' (expected 0..{}, found {}..{})",
@@ -170,8 +180,8 @@ pub enum VMStaticViolation {
     #[fail(display = "Unable to verify BrTrue/BrFalse at offset {}", _0)]
     BrTypeMismatchError(usize),
 
-    #[fail(display = "Unable to verify Assert at offset {}", _0)]
-    AssertTypeMismatchError(usize),
+    #[fail(display = "Unable to verify Abort at offset {}", _0)]
+    AbortTypeMismatchError(usize),
 
     #[fail(display = "Unable to verify StLoc at offset {}", _0)]
     StLocTypeMismatchError(usize),
@@ -269,6 +279,9 @@ pub enum VMStaticViolation {
     #[fail(display = "Unable to verify Exists at offset {}", _0)]
     ExistsResourceTypeMismatchError(usize),
 
+    #[fail(display = "Unable to verify Exists at offset {}", _0)]
+    ExistsNoResourceError(usize),
+
     #[fail(display = "Unable to verify BorrowGlobal at offset {}", _0)]
     BorrowGlobalTypeMismatchError(usize),
 
@@ -289,6 +302,9 @@ pub enum VMStaticViolation {
 
     #[fail(display = "Unable to verify MoveToSender at offset {}", _0)]
     CreateAccountTypeMismatchError(usize),
+
+    #[fail(display = "Illegal global operation at offset {}", _0)]
+    GlobalReferenceError(usize),
 }
 
 #[derive(Clone, Debug, Eq, Fail, Ord, PartialEq, PartialOrd)]
@@ -315,6 +331,8 @@ pub enum VMInvariantViolation {
     LocalReferenceError,
     #[fail(display = "Failed to get response from storage")]
     StorageError,
+    #[fail(display = "Internal runtime type error due to incorrect bytecode verification")]
+    InternalTypeError,
 }
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
@@ -430,24 +448,24 @@ pub fn convert_prologue_runtime_error(
     use VMErrorKind::*;
     match err.err {
         // Invalid authentication key
-        AssertionFailure(EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
+        Aborted(EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
             VMStatus::Validation(VMValidationStatus::InvalidAuthKey)
         }
         // Sequence number too old
-        AssertionFailure(ESEQUENCE_NUMBER_TOO_OLD) => {
+        Aborted(ESEQUENCE_NUMBER_TOO_OLD) => {
             VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld)
         }
         // Sequence number too new
-        AssertionFailure(ESEQUENCE_NUMBER_TOO_NEW) => {
+        Aborted(ESEQUENCE_NUMBER_TOO_NEW) => {
             VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew)
         }
         // Sequence number too new
-        AssertionFailure(EACCOUNT_DOES_NOT_EXIST) => {
+        Aborted(EACCOUNT_DOES_NOT_EXIST) => {
             let error_msg = format!("sender address: {}", txn_sender);
             VMStatus::Validation(VMValidationStatus::SendingAccountDoesNotExist(error_msg))
         }
         // Can't pay for transaction gas deposit/fee
-        AssertionFailure(ECANT_PAY_GAS_DEPOSIT) => {
+        Aborted(ECANT_PAY_GAS_DEPOSIT) => {
             VMStatus::Validation(VMValidationStatus::InsufficientBalanceForTransactionFee)
         }
         _ => err.into(),
@@ -495,6 +513,7 @@ impl From<&VMInvariantViolation> for VMStatus {
                 VMInvariantViolationError::LocalReferenceError
             }
             VMInvariantViolation::StorageError => VMInvariantViolationError::StorageError,
+            VMInvariantViolation::InternalTypeError => VMInvariantViolationError::InternalTypeError,
         };
         VMStatus::InvariantViolation(err)
     }
@@ -506,6 +525,9 @@ impl From<&VerificationError> for VMVerificationError {
         match error.err {
             VMStaticViolation::IndexOutOfBounds(_, _, _) => {
                 VMVerificationError::IndexOutOfBounds(message)
+            }
+            VMStaticViolation::CodeUnitIndexOutOfBounds(_, _, _, _) => {
+                VMVerificationError::CodeUnitIndexOutOfBounds(message)
             }
             VMStaticViolation::RangeOutOfBounds(_, _, _, _) => {
                 VMVerificationError::RangeOutOfBounds(message)
@@ -571,8 +593,8 @@ impl From<&VerificationError> for VMVerificationError {
             VMStaticViolation::BrTypeMismatchError(_) => {
                 VMVerificationError::BrTypeMismatchError(message)
             }
-            VMStaticViolation::AssertTypeMismatchError(_) => {
-                VMVerificationError::AssertTypeMismatchError(message)
+            VMStaticViolation::AbortTypeMismatchError(_) => {
+                VMVerificationError::AbortTypeMismatchError(message)
             }
             VMStaticViolation::StLocTypeMismatchError(_) => {
                 VMVerificationError::StLocTypeMismatchError(message)
@@ -670,6 +692,9 @@ impl From<&VerificationError> for VMVerificationError {
             VMStaticViolation::ExistsResourceTypeMismatchError(_) => {
                 VMVerificationError::ExistsResourceTypeMismatchError(message)
             }
+            VMStaticViolation::ExistsNoResourceError(_) => {
+                VMVerificationError::ExistsNoResourceError(message)
+            }
             VMStaticViolation::BorrowGlobalTypeMismatchError(_) => {
                 VMVerificationError::BorrowGlobalTypeMismatchError(message)
             }
@@ -691,6 +716,9 @@ impl From<&VerificationError> for VMVerificationError {
             VMStaticViolation::CreateAccountTypeMismatchError(_) => {
                 VMVerificationError::CreateAccountTypeMismatchError(message)
             }
+            VMStaticViolation::GlobalReferenceError(_) => {
+                VMVerificationError::GlobalReferenceError(message)
+            }
         }
     }
 }
@@ -701,6 +729,9 @@ impl From<&VerificationStatus> for VMVerificationStatus {
             VerificationStatus::Script(err) => VMVerificationStatus::Script(err.into()),
             VerificationStatus::Module(module_idx, err) => {
                 VMVerificationStatus::Module(*module_idx, err.into())
+            }
+            VerificationStatus::Dependency(dependency_id, err) => {
+                VMVerificationStatus::Dependency(dependency_id.clone(), err.into())
             }
         }
     }
@@ -723,7 +754,7 @@ impl From<&VMErrorKind> for VMStatus {
             VMErrorKind::ArithmeticError => {
                 ExecutionStatus::ArithmeticError(ArithmeticErrorType::Underflow)
             }
-            VMErrorKind::AssertionFailure(err_code) => ExecutionStatus::AssertionFailure(*err_code),
+            VMErrorKind::Aborted(err_code) => ExecutionStatus::Aborted(*err_code),
             VMErrorKind::OutOfGasError => ExecutionStatus::OutOfGas,
             VMErrorKind::TypeError => ExecutionStatus::TypeError,
             VMErrorKind::GlobalRefAlreadyReleased => ExecutionStatus::DynamicReferenceError(
@@ -745,8 +776,11 @@ impl From<&VMErrorKind> for VMStatus {
             VMErrorKind::ValueSerializerError => ExecutionStatus::ValueSerializationError,
             VMErrorKind::ValueDeserializerError => ExecutionStatus::ValueDeserializationError,
             VMErrorKind::DuplicateModuleName => ExecutionStatus::DuplicateModuleName,
+            // The below errors already have top-level VMStatus variants associated with them, so
+            // return those.
             VMErrorKind::CodeSerializerError(err) => return VMStatus::from(err),
             VMErrorKind::CodeDeserializerError(err) => return VMStatus::from(err),
+            VMErrorKind::Verification(statuses) => return statuses.iter().collect(),
         };
         VMStatus::Execution(err)
     }

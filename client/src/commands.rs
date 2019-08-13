@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_commands::AccountCommand, client_proxy::ClientProxy, query_commands::QueryCommand,
-    transfer_commands::TransferCommand,
+    account_commands::AccountCommand, client_proxy::ClientProxy, dev_commands::DevCommand,
+    query_commands::QueryCommand, transfer_commands::TransferCommand,
 };
 
 use failure::prelude::*;
@@ -54,15 +54,20 @@ pub fn is_address(data: &str) -> bool {
 
 /// Returns all the commands available, as well as the reverse index from the aliases to the
 /// commands.
-pub fn get_commands() -> (
+pub fn get_commands(
+    include_dev: bool,
+) -> (
     Vec<Arc<dyn Command>>,
     HashMap<&'static str, Arc<dyn Command>>,
 ) {
-    let commands: Vec<Arc<dyn Command>> = vec![
+    let mut commands: Vec<Arc<dyn Command>> = vec![
         Arc::new(AccountCommand {}),
         Arc::new(QueryCommand {}),
         Arc::new(TransferCommand {}),
     ];
+    if include_dev {
+        commands.push(Arc::new(DevCommand {}));
+    }
     let mut alias_to_cmd = HashMap::new();
     for command in &commands {
         for alias in command.get_aliases() {
@@ -74,8 +79,7 @@ pub fn get_commands() -> (
 
 /// Parse a cmd string, the first element in the returned vector is the command to run
 pub fn parse_cmd(cmd_str: &str) -> Vec<&str> {
-    let input = &cmd_str[..];
-    input.trim().split(' ').map(str::trim).collect()
+    cmd_str.split_ascii_whitespace().collect()
 }
 
 /// Print the help message for all sub commands.

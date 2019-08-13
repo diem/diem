@@ -7,17 +7,18 @@ publish = false
 edition = "2018"
 
 [dependencies]
-chrono = "0.4.6"
-futures = "0.1.25"
-futures-preview = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["compat"] }
+chrono = "0.4.7"
+futures = "0.1.28"
+futures-preview = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
 grpcio = "0.4.3"
 grpcio-sys = "0.4.4"
 lazy_static = "1.3.0"
 lru-cache = "0.1.1"
-protobuf = "2.6"
-tokio = "0.1.16"
+protobuf = "~2.7"
+tokio = "0.1.22"
 ttl_cache = "0.4.2"
 
+bounded-executor = { path = "../common/bounded-executor" }
 config = { path = "../config" }
 crypto = { path = "../crypto/legacy_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
@@ -25,6 +26,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
@@ -32,10 +34,10 @@ vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 rand = "0.6.5"
-tempfile = "3.0.6"
+tempfile = "3.1.0"
 channel = { path = "../common/channel" }
-
 storage_service = { path = "../storage/storage_service" }
+types = { path = "../types", features = ["testing"] }
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }

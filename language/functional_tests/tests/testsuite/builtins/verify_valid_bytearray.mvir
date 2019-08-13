@@ -1,6 +1,6 @@
 main() {
     let byte_array: bytearray;
-    byte_array = b"deadbeefdeadbeef";
-    assert(move(byte_array) == b"deadbeefdeadbeef", 42);
+    byte_array = h"deadbeefdeadbeef";
+    assert(move(byte_array) == h"deadbeefdeadbeef", 42);
     return;
 }

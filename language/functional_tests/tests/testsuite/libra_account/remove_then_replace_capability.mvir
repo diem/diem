@@ -1,0 +1,27 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+  let sender: address;
+  let cap: LibraAccount.WithdrawalCapability;
+  let coin: LibraCoin.T;
+
+  sender = get_txn_sender();
+
+  // by default, an account has not delegated its withdrawal capability
+  assert(!LibraAccount.delegated_withdrawal_capability(copy(sender)), 50);
+
+  // extracting the capability should flip the flag
+  cap = LibraAccount.extract_sender_withdrawal_capability();
+  assert(LibraAccount.delegated_withdrawal_capability(copy(sender)), 51);
+
+  // restoring the capability should flip the flag back
+  LibraAccount.restore_withdrawal_capability(move(cap));
+  assert(!LibraAccount.delegated_withdrawal_capability(copy(sender)), 52);
+
+  // and the sender should be able to withdraw once again
+  coin = LibraAccount.withdraw_from_sender(100);
+  LibraAccount.deposit(move(sender), move(coin));
+
+  return;
+}

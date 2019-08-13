@@ -1,12 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::QuorumCert, state_synchronizer::SyncStatus};
+use crate::chained_bft::QuorumCert;
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
 use futures::Future;
+use nextgen_crypto::ed25519::*;
 use serde::{Deserialize, Serialize};
+use state_synchronizer::SyncStatus;
 use std::{pin::Pin, sync::Arc};
 use types::{
     ledger_info::LedgerInfoWithSignatures,
@@ -108,7 +110,7 @@ pub trait StateComputer: Send + Sync {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures,
+        commit: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Synchronize to a commit that not present locally.

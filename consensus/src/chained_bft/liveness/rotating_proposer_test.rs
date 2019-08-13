@@ -1,33 +1,24 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::Author,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::{
-            proposer_election::{ProposalInfo, ProposerElection},
-            rotating_proposer_election::RotatingProposer,
-        },
-        test_utils::consensus_runtime,
+use crate::chained_bft::{
+    consensus_types::{
+        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
     },
-    stream_utils::start_event_processing_loop,
+    liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
 };
-use futures::{executor::block_on, SinkExt, StreamExt};
+use nextgen_crypto::ed25519::*;
 use std::sync::Arc;
 use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 1));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -36,7 +27,7 @@ fn test_rotating_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -45,11 +36,9 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -58,11 +47,9 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             3,
@@ -71,42 +58,36 @@ fn test_rotating_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
-
-        assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
-            vec![good_proposal, next_good_proposal],
-        );
-        assert_eq!(pe.is_valid_proposer(chosen_author, 1), None);
-        assert_eq!(
-            pe.is_valid_proposer(another_author, 1),
-            Some(another_author)
-        );
-        assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
-        assert_eq!(pe.is_valid_proposer(another_author, 2), None);
-        assert_eq!(pe.get_valid_proposers(1), vec![another_author]);
-        assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
-    });
+    assert_eq!(
+        pe.process_proposal(good_proposal.clone()),
+        Some(good_proposal)
+    );
+    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(
+        pe.process_proposal(next_good_proposal.clone()),
+        Some(next_good_proposal)
+    );
+    assert_eq!(pe.is_valid_proposer(chosen_author, 1), None);
+    assert_eq!(
+        pe.is_valid_proposer(another_author, 1),
+        Some(another_author)
+    );
+    assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
+    assert_eq!(pe.is_valid_proposer(another_author, 2), None);
+    assert_eq!(pe.get_valid_proposers(1), vec![another_author]);
+    assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
 }
 
 #[test]
 fn test_rotating_proposer_with_three_contiguous_rounds() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(proposers, 3));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let pe: Arc<dyn ProposerElection<u32>> = Arc::new(RotatingProposer::new(proposers, 3));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -115,7 +96,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -124,11 +105,9 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -137,11 +116,9 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             3,
@@ -150,38 +127,33 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
-
-        assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
-            vec![good_proposal, next_good_proposal],
-        );
-        assert_eq!(pe.is_valid_proposer(another_author, 1), None);
-        assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
-        assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
-        assert_eq!(pe.is_valid_proposer(another_author, 2), None);
-        assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
-        assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
-    });
+    assert_eq!(
+        pe.process_proposal(good_proposal.clone()),
+        Some(good_proposal)
+    );
+    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(
+        pe.process_proposal(next_good_proposal.clone()),
+        Some(next_good_proposal)
+    );
+    assert_eq!(pe.is_valid_proposer(another_author, 1), None);
+    assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
+    assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
+    assert_eq!(pe.is_valid_proposer(another_author, 2), None);
+    assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
+    assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
 }
 
 #[test]
 fn test_fixed_proposer() {
-    let runtime = consensus_runtime();
-
-    let chosen_validator_signer = ValidatorSigner::random();
+    let chosen_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([0u8; 32]);
     let chosen_author = chosen_validator_signer.author();
-    let another_validator_signer = ValidatorSigner::random();
+    let another_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let mut pe = Arc::new(RotatingProposer::<u32, Author>::new(vec![chosen_author], 1));
-    let (mut tx, rx) = start_event_processing_loop(&mut pe, runtime.executor());
+    let pe: Arc<dyn ProposerElection<u32>> =
+        Arc::new(RotatingProposer::new(vec![chosen_author], 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is
     // from the chosen author.
@@ -190,7 +162,7 @@ fn test_fixed_proposer() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = ProposalInfo {
+    let good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             1,
@@ -199,11 +171,9 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let bad_proposal = ProposalInfo {
+    let bad_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -212,11 +182,9 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &another_validator_signer,
         ),
-        proposer_info: another_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    let next_good_proposal = ProposalInfo {
+    let next_good_proposal = ProposalMsg {
         proposal: Block::make_block(
             &genesis_block,
             2,
@@ -225,21 +193,18 @@ fn test_fixed_proposer() {
             quorum_cert.clone(),
             &chosen_validator_signer,
         ),
-        proposer_info: chosen_author,
-        timeout_certificate: None,
-        highest_ledger_info: quorum_cert.clone(),
+        sync_info: SyncInfo::new(quorum_cert.clone(), quorum_cert.clone(), None),
     };
-    block_on(async move {
-        tx.send(good_proposal.clone()).await.unwrap();
-        tx.send(bad_proposal.clone()).await.unwrap();
-        tx.send(next_good_proposal.clone()).await.unwrap();
-
-        assert_eq!(
-            rx.take(2).collect::<Vec<_>>().await,
-            vec![good_proposal, next_good_proposal],
-        );
-        assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
-        assert_eq!(pe.is_valid_proposer(another_author, 1), None);
-        assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
-    });
+    assert_eq!(
+        pe.process_proposal(good_proposal.clone()),
+        Some(good_proposal)
+    );
+    assert_eq!(pe.process_proposal(bad_proposal.clone()), None);
+    assert_eq!(
+        pe.process_proposal(next_good_proposal.clone()),
+        Some(next_good_proposal)
+    );
+    assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
+    assert_eq!(pe.is_valid_proposer(another_author, 1), None);
+    assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
 }

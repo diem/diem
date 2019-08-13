@@ -18,7 +18,7 @@ fn main() {
     config.save_config(CONFIG_LOCATION);
 
     // Generate a genesis blob used for vm tests.
-    let genesis_txn = encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1);
+    let genesis_txn = encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone());
     let mut file = File::create(GENESIS_LOCATION).unwrap();
     file.write_all(&genesis_txn.into_proto_bytes().unwrap())
         .unwrap();

@@ -16,6 +16,7 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkRes
 use failure::prelude::*;
 use futures::channel::oneshot;
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use scratchpad::{Accumulator, ProofRead, SparseMerkleTree};
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
@@ -280,7 +281,7 @@ where
     fn execute_and_commit_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Result<()> {
         if ledger_info_with_sigs.ledger_info().timestamp_usecs() <= self.committed_timestamp_usecs {
             warn!(
@@ -313,17 +314,17 @@ where
             .unzip();
 
         // Construct a StateView and pass the transactions to VM.
-        let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            db_root_hash,
+            self.committed_transaction_accumulator.num_elements(),
+            self.committed_state_tree.root_hash(),
             &self.committed_state_tree,
         );
         let vm_outputs = {
             let time = std::time::Instant::now();
             let out = V::execute_block(transactions.clone(), &self.vm_config, &state_view);
             OP_COUNTERS.observe(
-                "vm_execute_block_time_us",
+                "vm_execute_chunk_time_us",
                 time.elapsed().as_micros() as f64,
             );
             out
@@ -379,8 +380,9 @@ where
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
+        let num_txns = txns_to_commit.len() as u64;
         let ledger_info_to_commit = if self.committed_transaction_accumulator.num_elements()
-            + txns_to_commit.len() as u64
+            + num_txns
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
@@ -419,13 +421,13 @@ where
         Ok(())
     }
 
-    /// Verifies the proofs using provided ledger info. Also verifies that the version of the first
-    /// transaction matches the lastest committed transaction. If the first few transaction happens
+    /// Verifies proofs using provided ledger info. Also verifies that the version of the first
+    /// transaction matches the latest committed transaction. If the first few transaction happens
     /// to be older, returns how many need to be skipped and the first version to be committed.
     fn verify_chunk(
         &self,
         txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Result<(u64, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
@@ -531,16 +533,16 @@ where
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let time = std::time::Instant::now();
+            let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
+            OP_COUNTERS.observe(
+                "storage_save_transactions.count",
+                txns_to_commit.len() as f64,
+            );
             self.storage_write_client.save_transactions(
                 txns_to_commit,
                 version + 1 - num_txns_to_commit, /* first_version */
                 Some(ledger_info_with_sigs.clone()),
             )?;
-            OP_COUNTERS.observe(
-                "storage_save_transactions_time_us",
-                time.elapsed().as_micros() as f64,
-            );
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", num_accounts_created);
@@ -598,17 +600,25 @@ where
             .expect("Block to execute should exist.");
 
         // Construct a StateView and pass the transactions to VM.
-        let db_root_hash = self.committed_state_tree.root_hash();
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            db_root_hash,
+            self.committed_transaction_accumulator.num_elements(),
+            self.committed_state_tree.root_hash(),
             &previous_state_tree,
         );
-        let vm_outputs = V::execute_block(
-            block_to_execute.transactions().to_vec(),
-            &self.vm_config,
-            &state_view,
-        );
+        let vm_outputs = {
+            let time = std::time::Instant::now();
+            let out = V::execute_block(
+                block_to_execute.transactions().to_vec(),
+                &self.vm_config,
+                &state_view,
+            );
+            OP_COUNTERS.observe(
+                "vm_execute_block_time_us",
+                time.elapsed().as_micros() as f64,
+            );
+            out
+        };
 
         let status: Vec<_> = vm_outputs
             .iter()

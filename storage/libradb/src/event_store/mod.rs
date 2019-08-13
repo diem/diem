@@ -7,7 +7,9 @@
 
 use super::LibraDB;
 use crate::{
+    change_set::ChangeSet,
     errors::LibraDbError,
+    ledger_counters::LedgerCounter,
     schema::{
         event::EventSchema, event_accumulator::EventAccumulatorSchema,
         event_by_access_path::EventByAccessPathSchema,
@@ -19,7 +21,7 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use schemadb::{schema::ValueCodec, ReadOptions, SchemaBatch, DB};
+use schemadb::{schema::ValueCodec, ReadOptions, DB};
 use std::sync::Arc;
 use types::{
     access_path::AccessPath,
@@ -113,7 +115,7 @@ impl EventStore {
                 // from the most recent end, for limited tries.
                 // TODO: Optimize: Physical store use reverse order.
                 let mut n_try_recent = 10;
-                #[cfg(test)]
+                #[cfg(any(test, feature = "testing"))]
                 let mut n_try_recent = 1;
                 while seq > 0 && n_try_recent > 0 {
                     seq -= 1;
@@ -188,15 +190,18 @@ impl EventStore {
         &self,
         version: u64,
         events: &[ContractEvent],
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<HashValue> {
+        cs.counter_bumps
+            .bump(LedgerCounter::EventsCreated, events.len());
+
         // EventSchema and EventByAccessPathSchema updates
         events
             .iter()
             .enumerate()
             .map(|(idx, event)| {
-                batch.put::<EventSchema>(&(version, idx as u64), event)?;
-                batch.put::<EventByAccessPathSchema>(
+                cs.batch.put::<EventSchema>(&(version, idx as u64), event)?;
+                cs.batch.put::<EventByAccessPathSchema>(
                     &(event.access_path().clone(), event.sequence_number()),
                     &(version, idx as u64),
                 )?;
@@ -209,7 +214,10 @@ impl EventStore {
         let (root_hash, writes) = EmptyAccumulator::append(&EmptyReader, 0, &event_hashes)?;
         writes
             .into_iter()
-            .map(|(pos, hash)| batch.put::<EventAccumulatorSchema>(&(version, pos), &hash))
+            .map(|(pos, hash)| {
+                cs.batch
+                    .put::<EventAccumulatorSchema>(&(version, pos), &hash)
+            })
             .collect::<Result<()>>()?;
 
         Ok(root_hash)

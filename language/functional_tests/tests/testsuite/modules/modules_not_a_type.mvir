@@ -1,14 +1,7 @@
-// check: VerificationError { kind: StructHandle, idx: 0, err: UnimplementedHandle }
+// check: no struct handle with module handle index 0 named M
 
-modules:
 module M {
-    public no(x: V#Self.M) {
+    public no(x: Self.M) {
         return;
     }
-}
-
-script:
-import Transaction.M;
-main() {
-    return;
 }

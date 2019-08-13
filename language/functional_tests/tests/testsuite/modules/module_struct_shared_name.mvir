@@ -1,15 +1,16 @@
-modules:
 module M {
     struct M { }
-    public new(): V#Self.M {
+    public new(): Self.M {
         return M{ };
     }
 }
 
-script:
-import Transaction.M;
+//! new-transaction
+
+import {{default}}.M;
+
 main() {
-    let x: V#M.M;
+    let x: M.M;
     x = M.new();
     return;
 }

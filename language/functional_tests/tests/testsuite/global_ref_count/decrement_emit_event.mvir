@@ -1,13 +1,12 @@
-modules:
 module Test {
     resource T { i: u64 }
     struct Event { }
     public test() {
-        let t: R#Self.T;
-        let t_ref: &mut R#Self.T;
+        let t: Self.T;
+        let t_ref: &mut Self.T;
         let i_ref: &mut u64;
         let sender: address;
-        let event: V#Self.Event;
+        let event: Self.Event;
         let event_id: bytearray;
 
         t = T { i: 0 };
@@ -17,7 +16,7 @@ module Test {
         t_ref = borrow_global<T>(copy(sender));
         i_ref = &mut copy(t_ref).i;
         event = Event { };
-        event_id = b"69";
+        event_id = h"69";
         emit_event(move(i_ref), move(event_id), move(event));
         release(move(t_ref));
 
@@ -26,8 +25,10 @@ module Test {
         return;
     }
 }
-script:
-import Transaction.Test;
+
+//! new-transaction
+
+import {{default}}.Test;
 main() {
     Test.test();
     return;

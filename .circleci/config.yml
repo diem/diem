@@ -1,9 +1,8 @@
-version: 2
-jobs:
-  build:
-    docker:
-      - image: circleci/rust:stretch
-    resource_class: xlarge
+version: 2.1
+
+commands:
+  env_setup:
+    description: Environment Setup
     steps:
       - checkout
       - run:
@@ -23,9 +22,21 @@ jobs:
           command: |
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
+
+jobs:
+  build:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: 2xlarge
+    steps:
+      - env_setup
+      - run:
+          name: Git Hooks and Checks
+          command: ./scripts/git-checks.sh
       - run:
           name: Linting
           command: |
+            ./scripts/nightly_features.sh
             ./scripts/clippy.sh
             cargo fmt -- --check
       - run:
@@ -36,10 +47,46 @@ jobs:
           command: RUST_BACKTRACE=1 cargo test --all --exclude testsuite
       - run:
           name: Run All End to End Tests
-          command: RUST_BACKTRACE=1 RUST_TEST_THREADS=2 cargo test --package testsuite
-      - setup_remote_docker:
-          docker_layer_caching: true
+          command: RUST_BACKTRACE=1 cargo test --package testsuite
+  audit:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: xlarge
+    steps:
+      - env_setup
       - run:
-          name: Build Docker Image
+          name: Cargo Audit
           command: |
-            docker build -f docker/validator/validator.Dockerfile . --tag libra_e2e --build-arg GIT_REV="$(git rev-parse HEAD)" --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            cargo install --force cargo-audit
+            cargo generate-lockfile
+            cargo audit
+  terraform:
+    docker:
+      - image: hashicorp/terraform
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Terraform init
+          command: terraform init
+          working_directory: terraform/
+      - run:
+          name: Terraform validate
+          command: terraform validate
+          working_directory: terraform/
+
+workflows:
+  commit-workflow:
+    jobs:
+      - build
+      - terraform
+
+  scheduled-workflow:
+    triggers:
+      - schedule:
+          cron: "14 14 * * *"
+          filters:
+            branches:
+              only: master
+    jobs:
+      - audit

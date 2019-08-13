@@ -14,6 +14,14 @@
 //! }
 //! ```
 
+// This is really annoying. The `error!` and other macros in `slog_scope` depend on the
+// `slog_error!` and other macros exported by `slog`. They need to be exported into the environment
+// for the `slog_scope` macros to pick them up. However if you use `#[macro_use]` then the linter
+// complains about unused imports. Ugh.
+#[allow(unused_imports)]
+#[macro_use]
+extern crate slog;
+
 mod collector_serializer;
 mod glog_format;
 mod http_local_slog_drain;
@@ -26,7 +34,7 @@ use crate::{
     http_local_slog_drain::HttpLocalSlogDrain, http_log_client::HttpLogClient,
     kv_categorizer::ErrorCategorizer,
 };
-use crossbeam::atomic::ArcCell;
+use arc_swap::ArcSwap;
 use failure::prelude::*;
 use glog_format::GlogFormat;
 use lazy_static::lazy_static;
@@ -120,8 +128,8 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref GLOBAL_LOG_COLLECTOR: ArcCell<Logger> =
-        ArcCell::new(Arc::new(Logger::root(Discard, o!())));
+    static ref GLOBAL_LOG_COLLECTOR: ArcSwap<Logger> =
+        ArcSwap::from(Arc::new(Logger::root(Discard, o!())));
 }
 
 #[derive(Clone, Debug)]
@@ -136,7 +144,7 @@ pub enum LoggerType {
 pub fn set_global_log_collector(collector: LoggerType, is_async: bool, chan_size: Option<usize>) {
     // Log collector should be available at this time.
     let log_collector = get_log_collector(collector, is_async, chan_size).unwrap();
-    GLOBAL_LOG_COLLECTOR.set(Arc::new(log_collector));
+    GLOBAL_LOG_COLLECTOR.store(Arc::new(log_collector));
 }
 
 /// Create and setup default global logger following the env-logger conventions,
@@ -190,7 +198,7 @@ pub fn with_logger<F, R>(f: F) -> R
 where
     F: FnOnce(&Logger) -> R,
 {
-    f(&(*GLOBAL_LOG_COLLECTOR.get()))
+    f(&(*GLOBAL_LOG_COLLECTOR.load()))
 }
 
 /// Log a critical level message using current log collector

@@ -249,49 +249,25 @@ fn turn_off_right_most_n_bits(v: u64, n: u32) -> u64 {
 ///
 /// post_order_index(1) == 2
 /// post_order_index(4) == 3
-pub fn post_order_index(node: u64) -> u64 {
+pub fn inorder_to_postorder(node: u64) -> u64 {
     let children = children_of_node(node);
     let left_nodes = nodes_to_left_of(node);
 
     children + left_nodes
 }
 
-/// Defines an order for the nodes optimized for writing to disk. In this order
-/// all of the nodes with the same level(node)/levels_to_collapse and a common
-/// parent will share the same Disk Write Order. The Disk Write Order
-/// of a node will be greater than that of any of it's children. In this tree:
-/// ```text
-///      3
-///     /  \
-///    /    \
-///   1      5
-///  / \    / \
-/// 0   2  4   6
-/// ```
-/// With `levels_to_collapse=2`, 0, 1, 2 have a DWO of 0; 4,5,6 a DWO of 1.
-/// 3 will have a DWO of 4 to account for the fact that the nodes with DWOs of
-/// 2 and 3 will have parents that have a DWO of 4.
-pub fn disk_write_order(node: u64, levels_to_collapse: u32) -> u64 {
-    let new_level = level(node) / levels_to_collapse;
-    let new_pos = pos_counting_from_left(node)
-        >> (levels_to_collapse - 1 - (level(node) - new_level * levels_to_collapse));
-    let children_this_level = children_from_level_nary(new_level, levels_to_collapse);
-
-    (1 + new_pos) * children_this_level + new_pos + (new_pos >> u64::from(levels_to_collapse))
-}
-
-/// In a perfect (2^levels_to_collapse)-ary tree, how many children are there in
-/// level `level`
-pub fn children_from_level_nary(level: u32, levels_to_collapse: u32) -> u64 {
-    if level == 0 {
-        0
-    } else {
-        let two_pow_levels_collapse = 1u64 << levels_to_collapse;
-        // (2^level)^levels_to_collapse = 2^(level*levels_to_collapse)
-        let two_pow_levels_collapse_times_level = 1u64 << (level * levels_to_collapse);
-
-        // Sum[a^n, {n, 1, x}] = (a (a^x-1))/(a-1)
-        (two_pow_levels_collapse * (two_pow_levels_collapse_times_level - 1))
-            / (two_pow_levels_collapse - 1)
+pub fn postorder_to_inorder(mut node: u64) -> u64 {
+    // The number of nodes in a full binary tree with height `n` is `2^n - 1`.
+    let mut full_binary_size = !0u64;
+    let mut bitmap = 0u64;
+    for i in (0..64).rev() {
+        if node >= full_binary_size {
+            node -= full_binary_size;
+            bitmap |= 1 << i;
+        }
+        full_binary_size >>= 1;
     }
+    let level = node as u32;
+    let pos = bitmap >> level;
+    node_from_level_and_pos(level, pos)
 }

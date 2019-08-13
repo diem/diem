@@ -1,0 +1,225 @@
+modules:
+module ApprovalGroup {
+    import 0x0.Signature;
+
+    resource T {
+        // we do not have collection support in move now, so illustrate
+        // using 2 out-of 3
+
+        // for simplicity just use the plain public key here. We could
+        // also use the hash here as how auth key works
+        pk1: bytearray,
+        pk2: bytearray,
+        pk3: bytearray,
+
+        // the threshold policy
+        threshold: u64,
+
+        // Recipient address whitelist policy ...
+
+    }
+
+    // create a new approval group
+    public create(pk1: bytearray,
+               pk2: bytearray,
+               pk3: bytearray): Self.T {
+        return T {
+            pk1: move(pk1),
+            pk2: move(pk2),
+            pk3: move(pk3),
+            threshold: 2
+        };
+    }
+
+    // evaluate whether the approval group can exercise its authority
+    // right now only the threshold policy is checked
+    public has_authority(group: &Self.T,
+                      pk1: bytearray,
+                      sig1: bytearray,
+                      pk2: bytearray,
+                      sig2: bytearray,
+                      hash: bytearray): bool {
+        let result1: bool;
+        let result2: bool;
+        assert(copy(pk1) != copy(pk2), 1000);
+
+        result1 = Self.verify_sig(copy(group), move(pk1), move(sig1), copy(hash));
+        result2 = Self.verify_sig(move(group), move(pk2), move(sig2), move(hash));
+        return (move(result1) && move(result2));
+    }
+
+    // helper function to evaluate the threshold policy
+    verify_sig(group: &Self.T, pk: bytearray, sig: bytearray, hash: bytearray): bool {
+        let result: bool;
+        if ((copy(pk) == *& copy(group).pk1) ||
+            (copy(pk) == *& copy(group).pk2) ||
+            (copy(pk) == *& copy(group).pk3)) {
+            result = Signature.ed25519_verify(move(sig), move(pk), move(hash));
+        } else {
+            result = false;
+        }
+        release(move(group));
+        return move(result);
+    }
+
+}
+
+module ColdWallet {
+    import 0x0.AddressUtil;
+    import 0x0.U64Util;
+    import 0x0.BytearrayUtil;
+    import 0x0.Hash;
+    import 0x0.LibraCoin;
+    import 0x0.LibraAccount;
+    import Transaction.ApprovalGroup;
+
+    resource T {
+        balance: LibraCoin.T,
+        sequence_num: u64,
+        genesis_group: ApprovalGroup.T,
+    }
+
+    // This struct is unused, only intended to define the format of a transaction
+    // the serialization of the transaction is the concatnation of all the fields
+    struct transaction {
+
+        // The address that is going to be paid
+        payee: address,
+        // The amount of LibraCoin.T sent
+        amount: u64
+    }
+
+    // create a new ColdWallet with a dafault genesis group
+    public create(genesis_group: ApprovalGroup.T) {
+        let zero_balance: LibraCoin.T;
+        let wallet: Self.T;
+        zero_balance = LibraCoin.zero();
+        wallet = T {
+            balance: move(zero_balance),
+            sequence_num: 0,
+            genesis_group: move(genesis_group)
+        };
+        move_to_sender<T>(move(wallet));
+        return;
+    }
+
+    public publish(self: Self.T) {
+        move_to_sender<T>(move(self));
+        return;
+    }
+
+    // deposit money into a payee's cold wallet
+    public deposit(payee: address, to_deposit: LibraCoin.T) {
+
+        let payee_wallet_ref: &mut Self.T;
+        // Load the payee's account
+        payee_wallet_ref = borrow_global<T>(move(payee));
+        // Deposit the `to_deposit` coin
+        LibraCoin.deposit(&mut move(payee_wallet_ref).balance, move(to_deposit));
+        return;
+    }
+
+    // withdraw money from this wallet, and send to a payee account
+    // Note that this implementation moves the fund into the payee's Libra account, without assuming
+    // there's a cold wallet module under that account
+    public withdraw_from_payer(payer: address,
+                            payee: address,
+                            amount: u64,
+                            pk1: bytearray,
+                            sig1: bytearray,
+                            pk2: bytearray,
+                            sig2: bytearray) {
+
+        let payer_ref: &mut Self.T;
+        let transaction_bytes: bytearray;
+        let prefix: bytearray;
+        let hash: bytearray;
+        let seq: u64;
+        let withdraw_amount: LibraCoin.T;
+        let has_authority: bool;
+        let account_balance: u64;
+
+        payer_ref = borrow_global<T>(copy(payer));
+        account_balance = LibraCoin.value(&copy(payer_ref).balance);
+        assert(copy(amount) <= move(account_balance), 1001);
+
+        // obtain the expected serialization of the transaction struct
+        transaction_bytes = Self.get_transaction_bytes(copy(payer), copy(payee), copy(amount), copy(payer_ref));
+
+
+        hash = Hash.sha3_256(move(transaction_bytes));
+
+        has_authority = ApprovalGroup.has_authority(&copy(payer_ref).genesis_group,
+                                                         move(pk1), move(sig1),
+                                                         move(pk2), move(sig2), move(hash));
+        // check to see if genesis group has authority to approve
+        if (move(has_authority)) {
+            // bump the sequence number
+            seq = *&copy(payer_ref).sequence_num;
+            *(&mut copy(payer_ref).sequence_num) = move(seq) + 1;
+
+            withdraw_amount = LibraCoin.withdraw(&mut copy(payer_ref).balance, move(amount));
+            LibraAccount.deposit(move(payee), move(withdraw_amount));
+
+        } else {
+            // how to handle error?
+
+        }
+        release(move(payer_ref));
+        return;
+    }
+
+    // helper to get the expected serialization of a transaction
+    // serialization format: 'prefix' || payee_address || amount || sequence_number
+    get_transaction_bytes(payer: address, payee: address, amount: u64, wallet: &mut Self.T): bytearray {
+        let constant: bytearray;
+        let prefix: bytearray;
+        let payer_bytes: bytearray;
+        let payee_bytes: bytearray;
+        let amount_bytes: bytearray;
+        let seq_bytes: bytearray;
+        let first_two: bytearray;
+        let first_three: bytearray;
+        let transaction_bytes: bytearray;
+
+        // TODO: consider moving into resource
+        // TODO: move doesn't support string now. As a workaround,
+        // TODO: the prefix is the hex encoding of "coldwallet.transaction"
+        constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
+        payer_bytes = AddressUtil.address_to_bytes(move(payer));
+        prefix = BytearrayUtil.bytearray_concat(move(payer_bytes), move(constant));
+        
+        payee_bytes = AddressUtil.address_to_bytes(move(payee));
+        amount_bytes = U64Util.u64_to_bytes(move(amount));
+        seq_bytes = U64Util.u64_to_bytes(*&move(wallet).sequence_num);
+        first_two = BytearrayUtil.bytearray_concat(move(prefix), move(payee_bytes));
+        first_three = BytearrayUtil.bytearray_concat(move(first_two), move(amount_bytes));
+        transaction_bytes = BytearrayUtil.bytearray_concat(move(first_three), move(seq_bytes));
+        return move(transaction_bytes);
+    }
+ }
+
+script:
+main() {
+    return;
+}
+
+//! new-transaction
+import Transaction.ApprovalGroup;
+import Transaction.ColdWallet;
+main() {
+    let genesis_group: ApprovalGroup.T;
+    let pk1: bytearray;
+    let pk2: bytearray;
+    let pk3: bytearray;
+    let wallet : ColdWallet.T;
+
+    pk1 = h"1234";
+    pk2 = h"5678";
+    pk3 = h"abc123";
+
+    genesis_group = ApprovalGroup.create(move(pk1), move(pk2), move(pk3));
+    ColdWallet.create(move(genesis_group));
+
+    return;
+}

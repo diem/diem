@@ -15,7 +15,6 @@ use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
-use crypto::{signing, x25519};
 use futures::{
     channel::mpsc,
     compat::Future01CompatExt,
@@ -33,8 +32,10 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use parity_multiaddr::Multiaddr;
 use protobuf::Message;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
 use types::PeerId;
@@ -57,27 +58,32 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     );
 
     // Setup keys for dialer.
-    let (dialer_signing_private_key, dialer_signing_public_key) = signing::generate_keypair();
-    let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (dialer_signing_private_key, dialer_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (dialer_identity_private_key, dialer_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Setup keys for listener.
-    let (listener_signing_private_key, listener_signing_public_key) = signing::generate_keypair();
-    let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
+    let (listener_signing_private_key, listener_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (listener_identity_private_key, listener_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Setup trusted peers.
     let trusted_peers: HashMap<_, _> = vec![
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key,
-                identity_public_key: dialer_identity_public_key,
+                signing_public_key: dialer_signing_public_key.clone().into(),
+                identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key,
-                identity_public_key: listener_identity_public_key,
+                signing_public_key: listener_signing_public_key.clone().into(),
+                identity_public_key: listener_identity_public_key.clone(),
             },
         ),
     ]
@@ -162,7 +168,6 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::new();
     let proposal = msg.mut_proposal();
-    proposal.set_proposer(PeerId::random().into());
     let block = proposal.mut_proposed_block();
     block.set_payload(vec![0u8; msg_len].into());
     msg
@@ -180,27 +185,32 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     );
 
     // Setup keys for dialer.
-    let (dialer_signing_private_key, dialer_signing_public_key) = signing::generate_keypair();
-    let (dialer_identity_private_key, dialer_identity_public_key) = x25519::generate_keypair();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (dialer_signing_private_key, dialer_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (dialer_identity_private_key, dialer_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Setup keys for listener.
-    let (listener_signing_private_key, listener_signing_public_key) = signing::generate_keypair();
-    let (listener_identity_private_key, listener_identity_public_key) = x25519::generate_keypair();
+    let (listener_signing_private_key, listener_signing_public_key) =
+        compat::generate_keypair(&mut rng);
+    let (listener_identity_private_key, listener_identity_public_key) =
+        x25519::compat::generate_keypair(&mut rng);
 
     // Setup trusted peers.
     let trusted_peers: HashMap<_, _> = vec![
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key,
-                identity_public_key: dialer_identity_public_key,
+                signing_public_key: dialer_signing_public_key.clone().into(),
+                identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key,
-                identity_public_key: listener_identity_public_key,
+                signing_public_key: listener_signing_public_key.clone().into(),
+                identity_public_key: listener_identity_public_key.clone(),
             },
         ),
     ]

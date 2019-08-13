@@ -17,6 +17,6 @@ pub use self::{
     outbound::{negotiate_outbound_interactive, negotiate_outbound_select},
 };
 
-static PROTOCOL_INTERACTIVE: &'static [u8] = b"/libra/protocol-interactive/1.0.0";
-static PROTOCOL_SELECT: &'static [u8] = b"/libra/protocol-select/1.0.0";
-static PROTOCOL_NOT_SUPPORTED: &'static [u8] = b"not supported";
+static PROTOCOL_INTERACTIVE: &[u8] = b"/libra/protocol-interactive/1.0.0";
+static PROTOCOL_SELECT: &[u8] = b"/libra/protocol-select/1.0.0";
+static PROTOCOL_NOT_SUPPORTED: &[u8] = b"not supported";

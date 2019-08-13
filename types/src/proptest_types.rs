@@ -4,6 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::{account_received_event_path, account_sent_event_path},
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     contract_event::ContractEvent,
@@ -19,14 +20,13 @@ use crate::{
     vm_error::VMStatus,
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use crypto::{
-    hash::CryptoHash,
-    signing::{sign_message, PrivateKey as OldPrivateKey, PublicKey as OldPublicKey},
-    utils::{keypair_strategy as gen_keypair_strategy, keypair_strategy},
-    HashValue, Signature,
+use crypto::{hash::CryptoHash, HashValue};
+use nextgen_crypto::{
+    ed25519::{compat::keypair_strategy, *},
+    traits::*,
 };
 use proptest::{
-    collection::{hash_map, hash_set, vec, SizeRange},
+    collection::{hash_map, vec, SizeRange},
     option,
     prelude::*,
     strategy::Union,
@@ -42,12 +42,12 @@ prop_compose! {
 
 impl Arbitrary for ByteArray {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     #[inline]
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         arb_byte_array().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl WriteOp {
@@ -62,11 +62,11 @@ impl WriteOp {
 
 impl Arbitrary for WriteOp {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![Self::deletion_strategy(), Self::value_strategy()].boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl WriteSet {
@@ -82,8 +82,6 @@ impl WriteSet {
 
 impl Arbitrary for WriteSet {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // XXX there's no checking for repeated access paths here, nor in write_set. Is that
         // important? Not sure.
@@ -96,6 +94,8 @@ impl Arbitrary for WriteSet {
             })
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl RawTransaction {
@@ -143,41 +143,41 @@ impl RawTransaction {
 
 impl Arbitrary for RawTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::strategy_impl(any::<AccountAddress>(), any::<TransactionPayload>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl SignatureCheckedTransaction {
     // This isn't an Arbitrary impl because this doesn't generate *any* possible SignedTransaction,
     // just one kind of them.
     pub fn program_strategy(
-        keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::program_strategy())
     }
 
-    pub fn write_set_stratedy(
-        keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
+    pub fn write_set_strategy(
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::write_set_strategy())
     }
 
-    pub fn genesis_stratedy(
-        keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
+    pub fn genesis_strategy(
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(keypair_strategy, TransactionPayload::genesis_strategy())
     }
 
     fn strategy_impl(
-        keypair_strategy: impl Strategy<Value = (OldPrivateKey, OldPublicKey)>,
+        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
     ) -> impl Strategy<Value = Self> {
         (keypair_strategy, payload_strategy)
             .prop_flat_map(|(keypair, payload)| {
-                let address = AccountAddress::from(keypair.1);
+                let address = AccountAddress::from_public_key(&keypair.1);
                 (
                     Just(keypair),
                     RawTransaction::strategy_impl(Just(address), Just(payload)),
@@ -193,23 +193,23 @@ impl SignatureCheckedTransaction {
 
 impl Arbitrary for SignatureCheckedTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
-        Self::strategy_impl(gen_keypair_strategy(), any::<TransactionPayload>()).boxed()
+        Self::strategy_impl(keypair_strategy(), any::<TransactionPayload>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 /// This `Arbitrary` impl only generates valid signed transactions. TODO: maybe add invalid ones?
 impl Arbitrary for SignedTransaction {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         any::<SignatureCheckedTransaction>()
             .prop_map(|txn| txn.into_inner())
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl TransactionPayload {
@@ -235,17 +235,15 @@ prop_compose! {
 
 impl Arbitrary for TransactionStatus {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_status().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for TransactionPayload {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // Most transactions in practice will be programs, but other parts of the system should
         // at least not choke on write set strategies so introduce them with decent probability.
@@ -256,12 +254,12 @@ impl Arbitrary for TransactionPayload {
         ]
         .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for Program {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         // XXX This should eventually be an actually valid program, maybe?
         // How should we generate random modules?
@@ -274,12 +272,12 @@ impl Arbitrary for Program {
             .prop_map(|(code, modules, args)| Program::new(code, modules, args))
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl Arbitrary for TransactionArgument {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
             any::<u64>().prop_map(TransactionArgument::U64),
@@ -289,22 +287,22 @@ impl Arbitrary for TransactionArgument {
         ]
         .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 prop_compose! {
     fn arb_validator_signature_for_hash(hash: HashValue)(
         hash in Just(hash),
         (private_key, public_key) in keypair_strategy(),
-    ) -> (AccountAddress, Signature) {
-        let signature = sign_message(hash, &private_key).unwrap();
-        (AccountAddress::from(public_key), signature)
+    ) -> (AccountAddress, Ed25519Signature) {
+        let signature = private_key.sign_message(&hash);
+        (AccountAddress::from_public_key(&public_key), signature)
     }
 }
 
-impl Arbitrary for LedgerInfoWithSignatures {
+impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
     type Parameters = SizeRange;
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
         (any::<LedgerInfo>(), Just(num_validators_range))
             .prop_flat_map(|(ledger_info, num_validators_range)| {
@@ -322,26 +320,28 @@ impl Arbitrary for LedgerInfoWithSignatures {
             })
             .boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 prop_compose! {
     fn arb_update_to_latest_ledger_response()(
         response_items in vec(any::<ResponseItem>(), 0..10),
-        ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
-        validator_change_events in vec(any::<ValidatorChangeEventWithProof>(), 0..10),
-    ) -> UpdateToLatestLedgerResponse {
+        ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
+        validator_change_events in vec(any::<ValidatorChangeEventWithProof<Ed25519Signature>>(), 0..10),
+    ) -> UpdateToLatestLedgerResponse<Ed25519Signature> {
         UpdateToLatestLedgerResponse::new(
             response_items, ledger_info_with_sigs, validator_change_events)
     }
 }
 
-impl Arbitrary for UpdateToLatestLedgerResponse {
+impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_update_to_latest_ledger_response().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 #[allow(clippy::implicit_hasher)]
@@ -367,19 +367,16 @@ pub fn renumber_events(
 
 pub fn arb_txn_to_commit_batch(
     num_accounts: usize,
-    num_event_paths: usize,
     num_transactions: usize,
 ) -> impl Strategy<Value = Vec<TransactionToCommit>> {
     (
-        vec(gen_keypair_strategy(), num_accounts),
-        hash_set(any::<Vec<u8>>(), num_event_paths),
+        vec(keypair_strategy(), num_accounts),
         Just(num_transactions),
     )
-        .prop_flat_map(|(keypairs, event_paths, num_transactions)| {
+        .prop_flat_map(|(keypairs, num_transactions)| {
             let keypair_strategy = Union::new(keypairs.into_iter().map(Just)).boxed();
-            let event_path_strategy = Union::new(event_paths.into_iter().map(Just));
             vec(
-                TransactionToCommit::strategy_impl(keypair_strategy, event_path_strategy),
+                TransactionToCommit::strategy_impl(keypair_strategy),
                 num_transactions,
             )
         })
@@ -415,17 +412,16 @@ impl ContractEvent {
 
 impl Arbitrary for ContractEvent {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         ContractEvent::strategy_impl(any::<AccessPath>()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 impl TransactionToCommit {
     fn strategy_impl(
-        keypair_strategy: BoxedStrategy<(OldPrivateKey, OldPublicKey)>,
-        event_path_strategy: impl Strategy<Value = Vec<u8>>,
+        keypair_strategy: BoxedStrategy<(Ed25519PrivateKey, Ed25519PublicKey)>,
     ) -> impl Strategy<Value = Self> {
         // signed_txn
         let txn_strategy = SignatureCheckedTransaction::strategy_impl(
@@ -436,11 +432,15 @@ impl TransactionToCommit {
         // acccount_states
         let address_strategy = keypair_strategy
             .clone()
-            .prop_map(|(_, public_key)| AccountAddress::from(public_key));
+            .prop_map(|(_, public_key)| AccountAddress::from_public_key(&public_key));
         let account_states_strategy =
             hash_map(address_strategy.clone(), any::<AccountStateBlob>(), 1..10);
 
         // events
+        let event_path_strategy = prop_oneof![
+            Just(account_sent_event_path()),
+            Just(account_received_event_path()),
+        ];
         let access_path_strategy = (address_strategy, event_path_strategy)
             .prop_map(|(address, path)| AccessPath::new(address, path));
         let events_strategy = vec(ContractEvent::strategy_impl(access_path_strategy), 0..10);
@@ -464,11 +464,11 @@ impl TransactionToCommit {
 
 impl Arbitrary for TransactionToCommit {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        TransactionToCommit::strategy_impl(gen_keypair_strategy().boxed(), any::<Vec<u8>>()).boxed()
+        TransactionToCommit::strategy_impl(keypair_strategy().boxed()).boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }
 
 fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWithProof> {
@@ -530,9 +530,9 @@ fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWit
 
 impl Arbitrary for TransactionListWithProof {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_list_with_proof().boxed()
     }
+
+    type Strategy = BoxedStrategy<Self>;
 }

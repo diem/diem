@@ -1,13 +1,11 @@
-modules:
-
 module M {
     struct T {v: u64}
 
-    public new(v: u64): V#Self.T {
+    public new(v: u64): Self.T {
         return T{v: move(v)};
     }
 
-    public value(this: &V#Self.T) : u64 {
+    public value(this: &Self.T) : u64 {
         let f: &u64;
         //borrow of move
         f = &move(this).v;
@@ -15,13 +13,13 @@ module M {
     }
 }
 
-script:
+//! new-transaction
 
-import Transaction.M;
+import {{default}}.M;
 
 main() {
-    let x: V#M.T;
-    let x_ref:  &V#M.T;
+    let x: M.T;
+    let x_ref:  &M.T;
     let y: u64;
     x = M.new(5);
     x_ref = &x;

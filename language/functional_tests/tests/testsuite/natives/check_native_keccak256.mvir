@@ -5,9 +5,9 @@ main() {
     let output: bytearray;
     let expected_output: bytearray;
 
-    input = b"616263";
+    input = h"616263";
     output = Hash.keccak256(copy(input));
-    expected_output = b"4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45";
+    expected_output = h"4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45";
 
     assert(move(output) == move(expected_output), 42);
 

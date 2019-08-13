@@ -1,4 +1,4 @@
-//! no-execute
+//! no-run: runtime
 
 // Simple peer-peer payment example.
 
@@ -13,11 +13,7 @@ main(payee: address, amount: u64) {
   // be at the beginning of the procedure. Declaration and initialization of
   // variables are separate operations, but the bytecode verifier will prevent
   // any attempt to use an uninitialized variable.
-  let coin: R#LibraCoin.T;
-  // The R# part of the type above is one of two *kind annotation* R# and V#
-  // (shorthand for "Resource" and "unrestricted Value"). These annotations
-  // must match the kind of the type declaration (e.g., does the LibraCoin
-  // module declare `resource T` or `struct T`?).
+  let coin: LibraCoin.T;
 
   // Acquire a LibraCoin.T resource with value `amount` from the sender's
   // account.  This will fail if the sender's balance is less than `amount`.

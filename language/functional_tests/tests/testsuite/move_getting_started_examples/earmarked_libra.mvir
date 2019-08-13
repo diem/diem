@@ -1,7 +1,6 @@
 // NOTE: this module appears in the "Getting Started With Move" guide on the Libra website.
 // Any changes to this code should also be reflected there.
 
-modules:
 // A module for earmarking a coin for a specific recipient
 module EarmarkedLibraCoin {
   import 0x0.LibraCoin;
@@ -9,14 +8,14 @@ module EarmarkedLibraCoin {
   // A wrapper containing a Libra coin and the address of the recipient the
   // coin is earmarked for.
   resource T {
-    coin: R#LibraCoin.T,
+    coin: LibraCoin.T,
     recipient: address
   }
 
   // Create a new earmarked coin with the given `recipient`.
   // Publish the coin under the transaction sender's account address.
-  public create(coin: R#LibraCoin.T, recipient: address) {
-    let t: R#Self.T;
+  public create(coin: LibraCoin.T, recipient: address) {
+    let t: Self.T;
 
     // Construct or "pack" a new resource of type T. Only procedures of the
     // `EarmarkedLibraCoin` module can create an `EarmarkedLibraCoin.T`.
@@ -33,9 +32,9 @@ module EarmarkedLibraCoin {
   }
 
   // Allow the transaction sender to claim a coin that was earmarked for her.
-  public claim_for_recipient(earmarked_coin_address: address): R#Self.T {
-    let t: R#Self.T;
-    let t_ref: &R#Self.T;
+  public claim_for_recipient(earmarked_coin_address: address): Self.T {
+    let t: Self.T;
+    let t_ref: &Self.T;
     let sender: address;
 
     // Remove the earmarked coin resource published under `earmarked_coin_address`.
@@ -55,10 +54,8 @@ module EarmarkedLibraCoin {
   }
 
   // Allow the creator of the earmarked coin to reclaim it.
-  public claim_for_creator(): R#Self.T {
-    let t: R#Self.T;
-    let coin: R#LibraCoin.T;
-    let recipient: address;
+  public claim_for_creator(): Self.T {
+    let t: Self.T;
     let sender: address;
 
     sender = get_txn_sender();
@@ -68,8 +65,8 @@ module EarmarkedLibraCoin {
   }
 
   // Extract the Libra coin from its wrapper and return it to the caller.
-  public unwrap(t: R#Self.T): R#LibraCoin.T {
-    let coin: R#LibraCoin.T;
+  public unwrap(t: Self.T): LibraCoin.T {
+    let coin: LibraCoin.T;
     let recipient: address;
 
     // This "unpacks" a resource type by destroying the outer resource, but
@@ -83,14 +80,16 @@ module EarmarkedLibraCoin {
 
 // TODO: lines below this are tests
 
-script:
+//! new-transaction
+
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
-import Transaction.EarmarkedLibraCoin;
+import {{default}}.EarmarkedLibraCoin;
+
 main() {
   let recipient_address: address;
-  let coin: R#LibraCoin.T;
-  let earmarked_coin: R#EarmarkedLibraCoin.T;
+  let coin: LibraCoin.T;
+  let earmarked_coin: EarmarkedLibraCoin.T;
   let sender: address;
 
   recipient_address = 0xb0b;

@@ -1,23 +1,25 @@
-modules:
 module A {
     import 0x0.LibraCoin;
-    resource A { c: R#LibraCoin.T }
-    public new(c: R#LibraCoin.T): R#Self.A {
+    resource A { c: LibraCoin.T }
+    public new(c: LibraCoin.T): Self.A {
         return A { c: move(c) };
     }
-    public destroy_a(a: R#Self.A) {
-        let c: R#LibraCoin.T;
+    public destroy_a(a: Self.A) {
+        let c: LibraCoin.T;
         A { c } = move(a);
         LibraCoin.destroy_zero(move(c));
         return;
     }
 }
-script:
-import Transaction.A;
+
+//! new-transaction
+
+import {{default}}.A;
 import 0x0.LibraCoin;
+
 main() {
-    let zero_resource: R#LibraCoin.T;
-    let s: R#A.A;
+    let zero_resource: LibraCoin.T;
+    let s: A.A;
     zero_resource = LibraCoin.zero();
     s = A.new(move(zero_resource));
     A.destroy_a(move(s));

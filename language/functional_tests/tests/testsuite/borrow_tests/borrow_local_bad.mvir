@@ -1,23 +1,22 @@
-modules:
-
 module A {
     struct T{v: u64}
 
-    public new(u: u64) : V#Self.T {
+    public new(u: u64) : Self.T {
         return T{u: move(u)};
     }
 
-    public value(this: V#Self.T): u64 {
+    public value(this: Self.T): u64 {
         let f: &u64;
         f = &(&mut this).v;
         return *move(f);
     }
 }
 
-script:
-import Transaction.A;
+//! new-transaction
+
+import {{default}}.A;
 main() {
-    let x: V#A.T ; 
+    let x: A.T;
     let x_ref: u64;
     x = A.new(5);
     x_ref = A.value(move(x));

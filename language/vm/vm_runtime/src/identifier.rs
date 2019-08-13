@@ -7,17 +7,14 @@ use types::{
     account_address::AccountAddress,
     language_storage::{ResourceKey, StructTag},
 };
-use vm::{
-    access::{BaseAccess, ModuleAccess},
-    file_format::{CompiledModule, StructDefinitionIndex},
-};
+use vm::{access::ModuleAccess, file_format::StructDefinitionIndex};
 
 #[cfg(test)]
 #[path = "unit_tests/identifier_prop_tests.rs"]
 mod identifier_prop_tests;
 
 /// Get the StructTag for a StructDefinition defined in a published module.
-pub fn resource_storage_key(module: &CompiledModule, idx: StructDefinitionIndex) -> StructTag {
+pub fn resource_storage_key(module: &impl ModuleAccess, idx: StructDefinitionIndex) -> StructTag {
     let resource = module.struct_def_at(idx);
     let res_handle = module.struct_handle_at(resource.struct_handle);
     let res_module = module.module_handle_at(res_handle.module);

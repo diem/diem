@@ -1,0 +1,15 @@
+import 0x0.AddressUtil;
+
+main() {
+    let output: bytearray;
+    let expected_output: bytearray;
+    let addr : address;
+    addr = 0x0111111111111111111111111111111111111011111111111111111111111110;
+
+    expected_output = h"0111111111111111111111111111111111111011111111111111111111111110";
+
+    output = AddressUtil.address_to_bytes(move(addr));
+    assert(move(output) == move(expected_output), 42);
+
+    return;
+}

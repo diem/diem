@@ -7,12 +7,13 @@ edition = "2018"
 
 [dependencies]
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-byteorder = "1.3.1"
+byteorder = "1.3.2"
 hex = "0.3.2"
 lazy_static = "1.3"
 proptest = "0.9.3"
 sha-1 = "0.8"
 structopt = "0.2.15"
+proptest_helpers = { path = "../../common/proptest_helpers" }
 proto_conv = { path = "../../common/proto_conv" }
 canonical_serialization = { path = "../../common/canonical_serialization" }
 
@@ -20,8 +21,18 @@ canonical_serialization = { path = "../../common/canonical_serialization" }
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
+vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 
 [dev-dependencies]
-datatest = "0.3.1"
+datatest = "0.3.5"
 stats_alloc = "0.1.8"
 rusty-fork = "0.2.2"
+
+types = { path = "../../types", features = ["testing"] }
+vm = { path = "../../language/vm", features = ["testing"] }
+vm_runtime = { path = "../../language/vm/vm_runtime", features = ["testing"] }
+vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
+
+[features]
+default = ["testing"]
+testing = ["types/testing", "vm/testing", "vm_runtime/testing", "vm_runtime_types/testing"]

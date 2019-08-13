@@ -5,7 +5,7 @@ use admission_control_proto::proto::admission_control_grpc::{
     create_admission_control, AdmissionControlClient,
 };
 use admission_control_service::admission_control_service::AdmissionControlService;
-use config::config::NodeConfig;
+use config::config::{NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use execution_proto::proto::execution_grpc;
@@ -24,8 +24,10 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use nextgen_crypto::ed25519::*;
+use state_synchronizer::StateSynchronizer;
 use std::{
-    cmp::max,
+    cmp::min,
     convert::{TryFrom, TryInto},
     sync::Arc,
     thread,
@@ -39,9 +41,10 @@ use vm_validator::vm_validator::VMValidator;
 
 pub struct LibraHandle {
     _ac: ServerHandle,
-    _mempool: MempoolRuntime,
-    _network_runtime: Runtime,
-    consensus: Box<dyn ConsensusProvider>,
+    _mempool: Option<MempoolRuntime>,
+    _state_synchronizer: StateSynchronizer,
+    _network: Runtime,
+    consensus: Option<Box<dyn ConsensusProvider>>,
     _execution: ServerHandle,
     _storage: ServerHandle,
     _debug: ServerHandle,
@@ -49,7 +52,9 @@ pub struct LibraHandle {
 
 impl Drop for LibraHandle {
     fn drop(&mut self) {
-        self.consensus.stop();
+        if let Some(consensus) = &mut self.consensus {
+            consensus.stop();
+        }
     }
 }
 
@@ -57,17 +62,22 @@ fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
     let env = Arc::new(
         EnvBuilder::new()
             .name_prefix("grpc-ac-")
-            .cq_count(unsafe { max(grpcio_sys::gpr_cpu_num_cores() as usize / 2, 2) })
+            .cq_count(unsafe { min(grpcio_sys::gpr_cpu_num_cores() as usize * 2, 32) })
             .build(),
     );
     let port = config.admission_control.admission_control_service_port;
 
     // Create mempool client
-    let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
-    let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-    let mempool_client = Arc::new(MempoolClient::new(
-        ChannelBuilder::new(env2).connect(&connection_str),
-    ));
+    let mempool_client = match config.base.get_role() {
+        RoleType::FullNode => None,
+        RoleType::Validator => {
+            let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
+            let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
+            Some(Arc::new(MempoolClient::new(
+                ChannelBuilder::new(env2).connect(&connection_str),
+            )))
+        }
+    };
 
     // Create storage read client
     let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
@@ -109,6 +119,7 @@ fn setup_executor(config: &NodeConfig) -> ::grpcio::Server {
         Arc::clone(&client_env),
         &config.storage.address,
         config.storage.port,
+        config.storage.grpc_max_receive_len,
     ));
 
     let handle = ExecutionService::new(storage_read_client, storage_write_client, config);
@@ -136,7 +147,7 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
 }
 
 pub fn setup_network(
-    config: &NodeConfig,
+    config: &mut NodeConfig,
 ) -> (
     (MempoolNetworkSender, MempoolNetworkEvents),
     (ConsensusNetworkSender, ConsensusNetworkEvents),
@@ -173,7 +184,10 @@ pub fn setup_network(
         .into_iter()
         .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
         .collect();
-    let network_signing_keypair = config.base.peer_keypairs.get_network_signing_keypair();
+    let network_signing_private = config.base.peer_keypairs.take_network_signing_private()
+        .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
+
+    let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
     let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
     let (
         (mempool_network_sender, mempool_network_events),
@@ -187,7 +201,7 @@ pub fn setup_network(
         })
         .advertised_address(advertised_addr)
         .seed_peers(seed_peers)
-        .signing_keys(network_signing_keypair)
+        .signing_keys((network_signing_private, network_signing_public))
         .identity_keys(network_identity_keypair)
         .trusted_peers(trusted_peers)
         .discovery_interval_ms(config.network.discovery_interval_ms)
@@ -211,7 +225,7 @@ pub fn setup_network(
     )
 }
 
-pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, LibraHandle) {
+pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
     crash_handler::setup_panic_handler();
 
     let mut instant = Instant::now();
@@ -229,45 +243,58 @@ pub fn setup_environment(node_config: &NodeConfig) -> (AdmissionControlClient, L
     );
 
     instant = Instant::now();
-    let (
-        (mempool_network_sender, mempool_network_events),
-        (consensus_network_sender, consensus_network_events),
-        network_runtime,
-    ) = setup_network(&node_config);
-    debug!("Network started in {} ms", instant.elapsed().as_millis());
-
-    instant = Instant::now();
     let (ac_server, ac_client) = setup_ac(&node_config);
     let ac = ServerHandle::setup(ac_server);
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
     instant = Instant::now();
-    let mempool =
-        MempoolRuntime::bootstrap(&node_config, mempool_network_sender, mempool_network_events);
-    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+    let (
+        (mempool_network_sender, mempool_network_events),
+        (consensus_network_sender, consensus_network_events),
+        network,
+    ) = setup_network(node_config);
+    debug!("Network started in {} ms", instant.elapsed().as_millis());
+
+    let state_synchronizer =
+        StateSynchronizer::bootstrap(consensus_network_sender.clone(), &node_config);
+
+    let mut mempool = None;
+    let mut consensus = None;
+    if let RoleType::Validator = node_config.base.get_role() {
+        instant = Instant::now();
+        mempool = Some(MempoolRuntime::bootstrap(
+            &node_config,
+            mempool_network_sender,
+            mempool_network_events,
+        ));
+        debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+
+        instant = Instant::now();
+        let mut consensus_provider = make_consensus_provider(
+            node_config,
+            consensus_network_sender,
+            consensus_network_events,
+            state_synchronizer.create_client(&node_config),
+        );
+        consensus_provider
+            .start()
+            .expect("Failed to start consensus. Can't proceed.");
+        consensus = Some(consensus_provider);
+        debug!("Consensus started in {} ms", instant.elapsed().as_millis());
+    }
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port));
-
-    instant = Instant::now();
-    let mut consensus_provider = make_consensus_provider(
-        &node_config,
-        consensus_network_sender,
-        consensus_network_events,
-    );
-    consensus_provider
-        .start()
-        .expect("Failed to start consensus. Can't proceed.");
-    debug!("Consensus started in {} ms", instant.elapsed().as_millis());
+    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
     let libra_handle = LibraHandle {
         _ac: ac,
         _mempool: mempool,
-        _network_runtime: network_runtime,
-        consensus: consensus_provider,
+        _state_synchronizer: state_synchronizer,
+        _network: network,
+        consensus,
         _execution: execution,
         _storage: storage,
         _debug: debug_if,

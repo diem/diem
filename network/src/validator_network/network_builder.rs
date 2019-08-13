@@ -25,12 +25,12 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use crypto::{
-    x25519::{X25519PrivateKey, X25519PublicKey},
-    PrivateKey, PublicKey,
-};
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
+use nextgen_crypto::{
+    ed25519::*,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
@@ -38,6 +38,7 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::TaskExecutor;
+use tokio_retry::strategy::ExponentialBackoff;
 use tokio_timer::Interval;
 use types::{validator_signer::ValidatorSigner, PeerId};
 
@@ -53,6 +54,9 @@ pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
 pub const PING_FAILURES_TOLERATED: u64 = 10;
 pub const MAX_CONCURRENT_NETWORK_REQS: u32 = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: u32 = 100;
+pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
+pub const CONSENSUS_INBOUND_MSG_TIMOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const MEMPOOL_INBOUND_MSG_TIMOUT_MS: u64 = 60 * 1000; // 1 minute
 
 /// The type of the transport layer, i.e., running on memory or TCP stream,
 /// with or without Noise encryption
@@ -88,12 +92,15 @@ pub struct NetworkBuilder {
     ping_failures_tolerated: u64,
     connectivity_check_interval_ms: u64,
     inbound_rpc_timeout_ms: u64,
+    consensus_inbound_msg_timout_ms: u64,
+    mempool_inbound_msg_timout_ms: u64,
     max_concurrent_outbound_rpcs: u32,
     max_concurrent_inbound_rpcs: u32,
     max_concurrent_network_reqs: u32,
     max_concurrent_network_notifs: u32,
-    signing_keys: Option<(PrivateKey, PublicKey)>,
-    identity_keys: Option<(X25519PrivateKey, X25519PublicKey)>,
+    max_connection_delay_ms: u64,
+    signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
+    identity_keys: Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>,
 }
 
 impl NetworkBuilder {
@@ -119,10 +126,13 @@ impl NetworkBuilder {
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
             inbound_rpc_timeout_ms: INBOUND_RPC_TIMEOUT_MS,
+            consensus_inbound_msg_timout_ms: CONSENSUS_INBOUND_MSG_TIMOUT_MS,
+            mempool_inbound_msg_timout_ms: MEMPOOL_INBOUND_MSG_TIMOUT_MS,
             max_concurrent_outbound_rpcs: MAX_CONCURRENT_OUTBOUND_RPCS,
             max_concurrent_inbound_rpcs: MAX_CONCURRENT_INBOUND_RPCS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
+            max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keys: None,
             identity_keys: None,
         }
@@ -150,13 +160,16 @@ impl NetworkBuilder {
     }
 
     /// Set signing keys of local node.
-    pub fn signing_keys(&mut self, keys: (PrivateKey, PublicKey)) -> &mut Self {
+    pub fn signing_keys(&mut self, keys: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
         self.signing_keys = Some(keys);
         self
     }
 
     /// Set identity keys of local node.
-    pub fn identity_keys(&mut self, keys: (X25519PrivateKey, X25519PublicKey)) -> &mut Self {
+    pub fn identity_keys(
+        &mut self,
+        keys: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    ) -> &mut Self {
         self.identity_keys = Some(keys);
         self
     }
@@ -253,6 +266,13 @@ impl NetworkBuilder {
         self
     }
 
+    /// The maximum duration (in milliseconds) we should wait before dialing a peer we should
+    /// connect to.
+    pub fn max_connection_delay_ms(&mut self, max_connection_delay_ms: u64) -> &mut Self {
+        self.max_connection_delay_ms = max_connection_delay_ms;
+        self
+    }
+
     /// Set the size of the channels between different network actors.
     pub fn channel_size(&mut self, channel_size: usize) -> &mut Self {
         self.channel_size = channel_size;
@@ -306,7 +326,7 @@ impl NetworkBuilder {
     ) {
         let identity = Identity::new(self.peer_id, self.supported_protocols());
         // Build network based on the transport type
-        let own_identity_keys = self.identity_keys.take().unwrap();
+        let own_identity_keys = self.identity_keys.take().expect("Identity keys not set");
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
             TransportType::Memory => self.build_with_transport(build_memory_transport(identity)),
@@ -340,11 +360,15 @@ impl NetworkBuilder {
         // Construct Mempool and Consensus network interfaces
         let (network_reqs_tx, network_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
-        let (mempool_tx, mempool_rx) =
-            channel::new(self.channel_size, &counters::PENDING_MEMPOOL_NETWORK_EVENTS);
-        let (consensus_tx, consensus_rx) = channel::new(
+        let (mempool_tx, mempool_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_MEMPOOL_NETWORK_EVENTS,
+            Duration::from_millis(self.consensus_inbound_msg_timout_ms),
+        );
+        let (consensus_tx, consensus_rx) = channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
+            Duration::from_millis(self.mempool_inbound_msg_timout_ms),
         );
 
         let mempool_network_sender = MempoolNetworkSender::new(network_reqs_tx.clone());
@@ -473,6 +497,7 @@ impl NetworkBuilder {
 
         // Initialize and start RPC actor.
         let rpc = Rpc::new(
+            self.executor.clone(),
             rpc_reqs_rx,
             pm_rpc_notifs_rx,
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
@@ -493,13 +518,16 @@ impl NetworkBuilder {
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
             pm_conn_mgr_notifs_rx,
             conn_mgr_reqs_rx,
+            ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
+            self.max_connection_delay_ms,
         );
         self.executor
             .spawn(conn_mgr.start().boxed().unit_error().compat());
 
         // Setup signer from keys.
-        let (signing_private_key, signing_public_key) = self.signing_keys.take().unwrap();
-        let signer = ValidatorSigner::new(self.peer_id, signing_public_key, signing_private_key);
+        let (signing_private_key, _signing_public_key) =
+            self.signing_keys.take().expect("Signing keys not set");
+        let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Initialize and start Discovery actor.
         let discovery = Discovery::new(
             self.peer_id,

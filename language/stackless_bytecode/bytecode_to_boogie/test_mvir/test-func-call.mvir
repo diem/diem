@@ -1,0 +1,24 @@
+module TestFuncCall {
+
+
+	public f(x: u64) : u64 {
+		return move(x)+1;
+	}
+
+	public g(x: u64) : u64 {
+		return move(x)+2;
+	}
+
+	public h(b: bool) : u64 {
+		let x: u64;
+		let y: u64;
+		x = 3;
+		if (copy(b)) {
+			y = Self.f(move(x));
+		} else {
+		    y = Self.g(move(x));
+		}
+		assert((copy(b) && (copy(y) == 4)) || (!copy(b) && (copy(y) == 5)), 42);
+		return move(y);
+	}
+}

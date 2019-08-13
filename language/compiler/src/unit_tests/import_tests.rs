@@ -1,15 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod testutils;
-use super::*;
-use testutils::{compile_module_string_with_stdlib, compile_script_string_with_stdlib};
+use crate::unit_tests::testutils::{
+    compile_module_string_with_stdlib, compile_script_string_with_stdlib,
+};
 
 #[test]
 fn compile_script_with_imports() {
     let code = String::from(
         "
-        import 0x0000000000000000000000000000000000000000000000000000000000000001.LibraCoin;
+        import 0x0000000000000000000000000000000000000000000000000000000000000000.LibraCoin;
 
         main() {
             let x: u64;
@@ -29,20 +29,20 @@ fn compile_module_with_imports() {
     let code = String::from(
         "
         module Foobar {
-            import 0x1.LibraCoin;
+            import 0x0.LibraCoin;
 
             resource FooCoin { value: u64 }
 
-            public value(this: &R#Self.FooCoin): u64 {
+            public value(this: &Self.FooCoin): u64 {
                 let value_ref: &u64;
                 value_ref = &move(this).value;
                 return *move(value_ref);
             }
 
-            public deposit(this: &mut R#Self.FooCoin, check: R#Self.FooCoin) {
+            public deposit(this: &mut Self.FooCoin, check: Self.FooCoin) {
                 let value_ref: &mut u64;
                 let value: u64;
-                let check_ref: &R#Self.FooCoin;
+                let check_ref: &Self.FooCoin;
                 let check_value: u64;
                 let new_value: u64;
                 let i: u64;

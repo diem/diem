@@ -10,33 +10,44 @@
 // Used in other crates for testing.
 pub mod mock_genesis;
 // Used in this and other crates for testing.
+#[cfg(any(test, feature = "testing"))]
 pub mod test_helper;
 
 pub mod errors;
-
-mod event_store;
-mod ledger_store;
 pub mod schema;
+
+mod change_set;
+mod event_store;
+mod ledger_counters;
+mod ledger_store;
+mod pruner;
 mod state_store;
+mod system_store;
 mod transaction_store;
 
 #[cfg(test)]
 mod libradb_test;
 
 use crate::{
-    errors::LibraDbError, event_store::EventStore, ledger_store::LedgerStore, schema::*,
-    state_store::StateStore, transaction_store::TransactionStore,
+    change_set::{ChangeSet, SealedChangeSet},
+    errors::LibraDbError,
+    event_store::EventStore,
+    ledger_counters::LedgerCounters,
+    ledger_store::LedgerStore,
+    pruner::Pruner,
+    schema::*,
+    state_store::StateStore,
+    system_store::SystemStore,
+    transaction_store::TransactionStore,
 };
-use crypto::{
-    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
-    HashValue,
-};
+use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use logger::prelude::*;
 use metrics::OpMetrics;
-use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, SchemaBatch, DB, DEFAULT_CF_NAME};
+use nextgen_crypto::ed25519::*;
+use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::ExecutorStartupInfo;
 use types::{
@@ -78,9 +89,14 @@ pub struct LibraDB {
     transaction_store: TransactionStore,
     state_store: StateStore,
     event_store: EventStore,
+    system_store: SystemStore,
+    pruner: Pruner,
 }
 
 impl LibraDB {
+    /// Config parameter for the pruner.
+    const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
+
     /// This creates an empty LibraDB instance on disk or opens one if it already exists.
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
         let cf_opts_map: ColumnFamilyOptionsMap = [
@@ -88,12 +104,16 @@ impl LibraDB {
                 /* LedgerInfo CF = */ DEFAULT_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
-            (ACCOUNT_STATE_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
+            (
+                JELLYFISH_MERKLE_NODE_CF_NAME,
+                ColumnFamilyOptions::default(),
+            ),
+            (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
+            (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
-            (STATE_MERKLE_NODE_CF_NAME, ColumnFamilyOptions::default()),
             (
                 TRANSACTION_ACCUMULATOR_CF_NAME,
                 ColumnFamilyOptions::default(),
@@ -124,6 +144,8 @@ impl LibraDB {
             ledger_store: LedgerStore::new(Arc::clone(&db)),
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
+            system_store: SystemStore::new(Arc::clone(&db)),
+            pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
         }
     }
 
@@ -155,7 +177,7 @@ impl LibraDB {
             .get_transaction_info_with_proof(version, ledger_version)?;
         let (account_state_blob, sparse_merkle_proof) = self
             .state_store
-            .get_account_state_with_proof_by_state_root(address, txn_info.state_root_hash())?;
+            .get_account_state_with_proof_by_version(address, version)?;
         Ok(AccountStateWithProof::new(
             version,
             account_state_blob,
@@ -312,13 +334,16 @@ impl LibraDB {
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.
     ///
+    /// `first_version` is the version of the first transaction in `txns_to_commit`.
     /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
     /// it carries is generated after the `txns_to_commit` are applied.
+    /// Note that even if `txns_to_commit` is empty, `frist_version` is checked to be
+    /// `ledger_info_with_sigs.ledger_info.version + 1` if `ledger_info_with_sigs` is not `None`.
     pub fn save_transactions(
         &self,
         txns_to_commit: &[TransactionToCommit],
         first_version: Version,
-        ledger_info_with_sigs: &Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: &Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Result<()> {
         let num_txns = txns_to_commit.len() as u64;
         // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
@@ -328,34 +353,21 @@ impl LibraDB {
             "txns_to_commit is empty while ledger_info_with_sigs is None.",
         );
 
-        let cur_state_root_hash = if first_version == 0 {
-            *SPARSE_MERKLE_PLACEHOLDER_HASH
-        } else {
-            self.ledger_store
-                .get_transaction_info(first_version - 1)?
-                .state_root_hash()
-        };
-
         if let Some(x) = ledger_info_with_sigs {
-            let last_version = x.ledger_info().version();
+            let claimed_last_version = x.ledger_info().version();
             ensure!(
-                first_version + num_txns - 1 == last_version,
+                claimed_last_version + 1 == first_version + num_txns,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
-                last_version
+                claimed_last_version,
             );
         }
 
         // Gather db mutations to `batch`.
-        let mut batch = SchemaBatch::new();
+        let mut cs = ChangeSet::new();
 
-        let new_root_hash = self.save_transactions_impl(
-            txns_to_commit,
-            first_version,
-            cur_state_root_hash,
-            &mut batch,
-        )?;
+        let new_root_hash = self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
 
         // If expected ledger info is provided, verify result root hash and save the ledger info.
         if let Some(x) = ledger_info_with_sigs {
@@ -367,13 +379,26 @@ impl LibraDB {
                 expected_root_hash,
             );
 
-            self.ledger_store.put_ledger_info(x, &mut batch)?;
+            self.ledger_store.put_ledger_info(x, &mut cs)?;
         }
 
         // Persist.
-        self.commit(batch)?;
-        // Only increment counter if commit(batch) succeeds.
-        OP_COUNTER.inc_by("committed_txns", txns_to_commit.len());
+        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
+        self.commit(sealed_cs)?;
+
+        // Only increment counter if commit succeeds and there are at least one transaction written
+        // to the storage. That's also when we'd inform the pruner thread to work.
+        if num_txns > 0 {
+            let last_version = first_version + num_txns - 1;
+            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
+            OP_COUNTER.set("latest_transaction_version", last_version as usize);
+            counters
+                .expect("Counters should be bumped with transactions being saved.")
+                .bump_op_counters();
+
+            self.pruner.wake(last_version);
+        }
+
         Ok(())
     }
 
@@ -381,8 +406,7 @@ impl LibraDB {
         &self,
         txns_to_commit: &[TransactionToCommit],
         first_version: u64,
-        cur_state_root_hash: HashValue,
-        mut batch: &mut SchemaBatch,
+        mut cs: &mut ChangeSet,
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
@@ -391,17 +415,15 @@ impl LibraDB {
             .iter()
             .map(|txn_to_commit| txn_to_commit.account_states().clone())
             .collect::<Vec<_>>();
-        let state_root_hashes = self.state_store.put_account_state_sets(
-            account_state_sets,
-            cur_state_root_hash,
-            &mut batch,
-        )?;
+        let state_root_hashes =
+            self.state_store
+                .put_account_state_sets(account_state_sets, first_version, &mut cs)?;
 
         // Event updates. Gather event accumulator root hashes.
         let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.event_store
-                    .put_events(ver, txn_to_commit.events(), &mut batch)
+                    .put_events(ver, txn_to_commit.events(), &mut cs)
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -409,7 +431,7 @@ impl LibraDB {
         zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.transaction_store
-                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut batch)
+                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
             })
             .collect::<Result<()>>()?;
         let txn_hashes = txns_to_commit
@@ -434,7 +456,7 @@ impl LibraDB {
 
         let new_root_hash =
             self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut batch)?;
+                .put_transaction_infos(first_version, &txn_infos, &mut cs)?;
 
         Ok(new_root_hash)
     }
@@ -448,8 +470,8 @@ impl LibraDB {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
 
@@ -542,13 +564,13 @@ impl LibraDB {
     /// Merkle tree root hash.
     ///
     /// This is used by the executor module internally.
-    pub fn get_account_state_with_proof_by_state_root(
+    pub fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         self.state_store
-            .get_account_state_with_proof_by_state_root(address, state_root)
+            .get_account_state_with_proof_by_version(address, version)
     }
 
     /// Gets information needed from storage during the startup of the executor module.
@@ -638,10 +660,36 @@ impl LibraDB {
     }
 
     // ================================== Private APIs ==================================
-    /// Write the whole schema batch including all data necessary to mutate the ledge
-    /// state of some transaction by leveraging rocksdb atomicity support.
-    fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)?;
+    /// Convert a `ChangeSet` to `SealedChangeSet`.
+    ///
+    /// Specifically, counter increases are added to current counter values and converted to DB
+    /// alternations.
+    fn seal_change_set(
+        &self,
+        first_version: Version,
+        num_txns: Version,
+        mut cs: ChangeSet,
+    ) -> Result<(SealedChangeSet, Option<LedgerCounters>)> {
+        // Avoid reading base counter values when not necessary.
+        let counters = if num_txns > 0 {
+            Some(self.system_store.bump_ledger_counters(
+                first_version,
+                first_version + num_txns - 1,
+                cs.counter_bumps,
+                &mut cs.batch,
+            )?)
+        } else {
+            None
+        };
+
+        Ok((SealedChangeSet { batch: cs.batch }, counters))
+    }
+
+    /// Write the whole schema batch including all data necessary to mutate the ledger
+    /// state of some transaction by leveraging rocksdb atomicity support. Also committed are the
+    /// LedgerCounters.
+    fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
+        self.db.write_schemas(sealed_cs.batch)?;
 
         match self.db.get_approximate_sizes_cf() {
             Ok(cf_sizes) => {
@@ -665,12 +713,7 @@ impl LibraDB {
     ) -> Result<u64> {
         let (account_state_blob, _proof) = self
             .state_store
-            .get_account_state_with_proof_by_state_root(
-                address,
-                self.ledger_store
-                    .get_transaction_info(version)?
-                    .state_root_hash(),
-            )?;
+            .get_account_state_with_proof_by_version(address, version)?;
 
         // If an account does not exist, we treat it as if it has sequence number 0.
         Ok(get_account_resource_or_default(&account_state_blob)?.sequence_number())

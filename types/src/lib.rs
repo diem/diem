@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(test)]
-
 pub mod access_path;
 pub mod account_address;
 pub mod account_config;
@@ -13,6 +11,7 @@ pub mod get_with_proof;
 pub mod language_storage;
 pub mod ledger_info;
 pub mod proof;
+#[cfg(any(test, feature = "testing"))]
 pub mod proptest_types;
 pub mod proto;
 pub mod test_helpers;
@@ -27,9 +26,6 @@ pub mod vm_error;
 pub mod write_set;
 
 pub use account_address::AccountAddress as PeerId;
-
-#[cfg(test)]
-extern crate test;
 
 #[cfg(test)]
 mod unit_tests;

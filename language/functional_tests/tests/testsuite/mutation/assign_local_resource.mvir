@@ -2,9 +2,9 @@
 
 import 0x0.LibraCoin;
 main() {
-    let resource1: R#LibraCoin.T;
-    let resource_ref: &mut R#LibraCoin.T;
-    let resource2: R#LibraCoin.T;
+    let resource1: LibraCoin.T;
+    let resource_ref: &mut LibraCoin.T;
+    let resource2: LibraCoin.T;
 
     resource1 = LibraCoin.zero();
     resource_ref  = &mut resource1;

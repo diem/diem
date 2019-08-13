@@ -1,0 +1,16 @@
+import 0x0.U64Util;
+
+main() {
+    let output: bytearray;
+    let expected_output: bytearray;
+    let i: u64;
+    i = 12345;
+
+    // Output is little endian.
+    expected_output = h"3930000000000000";
+
+    output = U64Util.u64_to_bytes(move(i));
+    assert(move(output) == move(expected_output), 42);
+
+    return;
+}

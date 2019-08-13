@@ -3,43 +3,6 @@
 
 //! Provides an mpsc (multi-producer single-consumer) channel wrapped in an
 //! [`IntGauge`](metrics::IntGauge)
-//!
-//! The original futures mpsc channels has the behavior that each cloned sender gets a guaranteed
-//! slot. There are cases in our codebase that senders need to be cloned to work with combinators
-//! like `buffer_unordered`. The bounded mpsc channels turn to be unbounded in this way.  There are
-//! great discussions in this [PR](https://github.com/rust-lang-nursery/futures-rs/pull/984). The
-//! argument of the current behavior is to have only local limit on each sender, and relies on
-//! global coordination for the number of cloned senders.  However, this isn't really feasible in
-//! some cases. One solution that came up from the discussion is to have poll_flush call poll_ready
-//! (instead of a noop) to make sure the current sender task isn't parked.  For the case that a new
-//! cloned sender tries to send a message to a full channel, send executes poll_ready, start_send
-//! and poll_flush. The first poll_ready would return Ready because maybe_parked initiated as
-//! false. start_send then pushes the message to the internal message queue and parks the sender
-//! task.  poll_flush calls poll_ready again, and this time, it would return Pending because the
-//! sender task is parked. So the send will block until the receiver removes more messages from the
-//! queue and that sender's task is unparked.
-//! [This PR](https://github.com/rust-lang-nursery/futures-rs/pull/1671) is supposed to fix this in
-//! futures 0.3. It'll be consistent once it's merged.
-//!
-//! This change does have some implications though.
-//! 1. When the channel size is 0, it becomes synchronous. `send` won't finish until the item is
-//! taken from the receiver.
-//! 2. `send` may fail if the receiver drops after receiving the item.
-//!
-//! let (tx, rx) = channel::new_test(1);
-//! let f_tx = async move {
-//!     block_on(tx.send(1)).unwrap();
-//! };
-//! let f_rx = async move {
-//!     let item = block_on(rx.next()).unwrap();
-//!     assert_eq!(item, 1);
-//! };
-//! block_on(join(f_tx, f_rx)).unwrap();
-//!
-//! For the example above, `tx.send` could fail. Because send has three steps - poll_ready,
-//! start_send and poll_flush. After start_send, the rx can receive the item, but if rx gets
-//! dropped before poll_flush, it'll trigger disconnected send error. That's why the disconnected
-//! error is converted to an Ok in poll_flush.
 
 use futures::{
     channel::mpsc,
@@ -47,102 +10,158 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
+use logger::prelude::*;
 use metrics::IntGauge;
-use std::pin::Pin;
+use std::{
+    pin::Pin,
+    time::{Duration, Instant},
+};
 
 #[cfg(test)]
 mod test;
 
-/// Wrapper around a value with an `IntGauge`
-/// It is used to gauge the number of elements in a `mpsc::channel`
-#[derive(Clone)]
-pub struct WithGauge<T> {
-    gauge: IntGauge,
+const MAX_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// Wrapper around a value with an entry timestamp
+/// It is used to measure the time waiting in the `mpsc::channel`.
+pub struct WithEntryTimestamp<T> {
+    entry_time: Instant,
     value: T,
 }
 
+impl<T> WithEntryTimestamp<T> {
+    fn new(value: T) -> Self {
+        Self {
+            entry_time: Instant::now(),
+            value,
+        }
+    }
+}
+
 /// Similar to `mpsc::Sender`, but with an `IntGauge`
-pub type Sender<T> = WithGauge<mpsc::Sender<T>>;
+pub struct Sender<T> {
+    inner: mpsc::Sender<WithEntryTimestamp<T>>,
+    gauge: IntGauge,
+}
+
+impl<T> Clone for Sender<T> {
+    fn clone(&self) -> Self {
+        Sender {
+            inner: self.inner.clone(),
+            gauge: self.gauge.clone(),
+        }
+    }
+}
+
 /// Similar to `mpsc::Receiver`, but with an `IntGauge`
-pub type Receiver<T> = WithGauge<mpsc::Receiver<T>>;
+pub struct Receiver<T> {
+    inner: mpsc::Receiver<WithEntryTimestamp<T>>,
+    gauge: IntGauge,
+    timeout: Duration,
+}
 
 /// `Sender` implements `Sink` in the same way as `mpsc::Sender`, but it increments the
 /// associated `IntGauge` when it sends a message successfully.
 impl<T> Sink<T> for Sender<T> {
-    type SinkError = mpsc::SendError;
+    type Error = mpsc::SendError;
 
-    fn poll_ready(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        (*self).value.poll_ready(cx)
+    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        (*self).inner.poll_ready(cx)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, msg: T) -> Result<(), Self::SinkError> {
+    fn start_send(mut self: Pin<&mut Self>, msg: T) -> Result<(), Self::Error> {
         self.gauge.inc();
-        (*self).value.start_send(msg).map_err(|e| {
-            self.gauge.dec();
-            e
-        })?;
+        (*self)
+            .inner
+            .start_send(WithEntryTimestamp::new(msg))
+            .map_err(|e| {
+                self.gauge.dec();
+                e
+            })?;
         Ok(())
     }
 
-    // `poll_flush` would block if `poll_ready` returns pending, which means the channel is at
-    // capacity and the sender task is parked.
-    fn poll_flush(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        match (*self).value.poll_ready(cx) {
-            Poll::Ready(Err(ref e)) if e.is_disconnected() => {
-                // If the receiver disconnected, we consider the sink to be flushed.
-                Poll::Ready(Ok(()))
-            }
-            x => x,
-        }
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
     }
 
-    fn poll_close(
-        mut self: Pin<&mut Self>,
-        _: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        self.value.disconnect();
-        Poll::Ready(Ok(()))
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Pin::new(&mut self.inner).poll_close(cx)
+    }
+}
+
+impl<T> Sender<T> {
+    pub fn try_send(&mut self, msg: T) -> Result<(), mpsc::SendError> {
+        self.gauge.inc();
+        (*self)
+            .inner
+            .try_send(WithEntryTimestamp::new(msg))
+            .map_err(|e| {
+                self.gauge.dec();
+                e.into_send_error()
+            })
     }
 }
 
 impl<T> FusedStream for Receiver<T> {
     fn is_terminated(&self) -> bool {
-        self.value.is_terminated()
+        self.inner.is_terminated()
     }
 }
 
 /// `Receiver` implements `Stream` in the same way as `mpsc::Stream`, but it decrements the
 /// associated `IntGauge` when it gets polled successfully.
-impl<T> Stream for Receiver<T> {
+impl<T> Stream for Receiver<T>
+where
+    T: std::fmt::Debug,
+{
     type Item = T;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<T>> {
-        let poll = Pin::new(&mut self.value).poll_next(cx);
-        if let Poll::Ready(Some(_)) = poll {
-            self.gauge.dec();
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            match Pin::new(&mut self.inner).poll_next(cx) {
+                Poll::Ready(Some(msg)) => {
+                    self.gauge.dec();
+                    // If the message times out, it gets dropped
+                    if Instant::now().duration_since(msg.entry_time) > self.timeout {
+                        warn!("Message dropped due to timeout: {:?}", msg.value);
+                        continue;
+                    } else {
+                        return Poll::Ready(Some(msg.value));
+                    }
+                }
+                Poll::Ready(None) => {
+                    return Poll::Ready(None);
+                }
+                Poll::Pending => {
+                    return Poll::Pending;
+                }
+            }
         }
-        poll
     }
 }
 
 /// Similar to `mpsc::channel`, `new` creates a pair of `Sender` and `Receiver`
 pub fn new<T>(size: usize, gauge: &IntGauge) -> (Sender<T>, Receiver<T>) {
+    new_with_timeout(size, gauge, MAX_TIMEOUT)
+}
+
+pub fn new_with_timeout<T>(
+    size: usize,
+    gauge: &IntGauge,
+    timeout: Duration,
+) -> (Sender<T>, Receiver<T>) {
     gauge.set(0);
     let (sender, receiver) = mpsc::channel(size);
     (
-        WithGauge {
+        Sender {
+            inner: sender,
             gauge: gauge.clone(),
-            value: sender,
         },
-        WithGauge {
+        Receiver {
+            inner: receiver,
             gauge: gauge.clone(),
-            value: receiver,
+            timeout,
         },
     )
 }
@@ -154,4 +173,8 @@ lazy_static::lazy_static! {
 
 pub fn new_test<T>(size: usize) -> (Sender<T>, Receiver<T>) {
     new(size, &TEST_COUNTER)
+}
+
+pub fn new_test_with_timeout<T>(size: usize, timeout: Duration) -> (Sender<T>, Receiver<T>) {
+    new_with_timeout(size, &TEST_COUNTER, timeout)
 }

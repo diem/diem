@@ -1,6 +1,21 @@
 #!/bin/bash
 
+if [ -e /dev/nvme1n1 ]; then
+	mkfs.ext4 /dev/nvme1n1
+	cat >> /etc/fstab <<-EOF
+	/dev/nvme1n1  /data  ext4  defaults,noatime  0  2
+	EOF
+	mkdir /data
+	mount /data
+fi
+
+mkdir -p /opt/libra
+
+yum -y install awscli
+aws s3 cp ${trusted_peers} /opt/libra/trusted_peers.config.toml
+
 echo ECS_CLUSTER=${ecs_cluster} >> /etc/ecs/ecs.config
+systemctl try-restart ecs --no-block
 
 curl -o /tmp/node_exporter.rpm https://copr-be.cloud.fedoraproject.org/results/ibotty/prometheus-exporters/epel-7-x86_64/00935314-golang-github-prometheus-node_exporter/golang-github-prometheus-node_exporter-0.18.1-6.el7.x86_64.rpm
 yum install -y /tmp/node_exporter.rpm

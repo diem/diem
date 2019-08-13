@@ -3,27 +3,38 @@
 
 use crate::{
     checker::{check, run_filecheck, Directive},
-    evaluator::{EvaluationResult, Stage, Status},
+    evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
 };
 
 #[test]
 fn parse_directives() {
-    assert!(Directive::try_parse("abc").unwrap().is_none());
-    Directive::try_parse("// check: abc").unwrap().unwrap();
-    Directive::try_parse("  // check: abc").unwrap().unwrap();
-    Directive::try_parse("//not: foo").unwrap().unwrap();
-    Directive::try_parse("// stage: parser").unwrap().unwrap();
+    for s in &[
+        "abc",
+        "// not a directive",
+        "//",
+        "// stage:   runtime  bad  ",
+        "// stage: bad stage",
+        "// stage: ",
+    ] {
+        s.parse::<Directive>().unwrap_err();
+    }
 
-    Directive::try_parse("// stage: compiler").unwrap().unwrap();
-    Directive::try_parse("// stage: verifier").unwrap().unwrap();
-    Directive::try_parse("// stage: runtime").unwrap().unwrap();
-    Directive::try_parse("// stage:   runtime  ")
-        .unwrap()
-        .unwrap();
-
-    Directive::try_parse("// stage:   runtime  bad  ").unwrap_err();
-    Directive::try_parse("// stage: bad stage").unwrap_err();
-    Directive::try_parse("// stage: ").unwrap_err();
+    for s in &[
+        "// check: abc",
+        "  // check: abc",
+        "//not: foo",
+        "// sameln: abc",
+        "// nextln: abc",
+        "// unordered: abc",
+        "// regex: X=aaa",
+        "// stage: parser",
+        "// stage: compiler",
+        "// stage: verifier",
+        "// stage: runtime",
+        "// stage:   runtime  ",
+    ] {
+        s.parse::<Directive>().unwrap();
+    }
 }
 
 #[rustfmt::skip]
@@ -41,22 +52,11 @@ fn filecheck() {
     ").unwrap_err();
 }
 
-macro_rules! eval_result {
-    ($status: expr, $($stage: expr, $output: expr),* $(,)*) => {
-        {
-            EvaluationResult {
-                stages: vec![$(($stage, $output.to_string())),*],
-                status: $status,
-            }
-        }
-    };
-}
-
 fn make_directives(s: &str) -> Vec<Directive> {
     s.lines()
         .filter_map(|s| {
-            if let Ok(directive) = Directive::try_parse(s) {
-                return directive;
+            if let Ok(directive) = s.parse::<Directive>() {
+                return Some(directive);
             }
             None
         })
@@ -66,13 +66,19 @@ fn make_directives(s: &str) -> Vec<Directive> {
 #[rustfmt::skip]
 #[test]
 fn check_basic() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Compiler, "foo",
-        Stage::Verifier, "baz",
-        Stage::Runtime, "bar"
-    );
-
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Transaction,
+            EvaluationOutput::Stage(Stage::Compiler),
+            EvaluationOutput::Output("foo".to_string()),
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+            EvaluationOutput::Stage(Stage::Runtime),
+            EvaluationOutput::Output("bar".to_string()),
+        ],
+        status: Status::Success,
+    };
+    
     check(&res, &make_directives(r"
         // check: foo
         // stage: runtime
@@ -104,11 +110,16 @@ fn check_basic() {
 #[rustfmt::skip]
 #[test]
 fn check_match_twice() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Compiler, "foo",
-        Stage::Verifier, "bar",
-    );
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Transaction,
+            EvaluationOutput::Stage(Stage::Compiler),
+            EvaluationOutput::Output("foo".to_string()),
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+        ],
+        status: Status::Success,
+    };
 
     check(&res, &make_directives(r"
         // check: foo
@@ -126,10 +137,14 @@ fn check_match_twice() {
 #[rustfmt::skip]
 #[test]
 fn check_no_stage() {
-    let res = eval_result!(
-        Status::Success,
-        Stage::Verifier, "",
-    );
+    let res = EvaluationResult {
+        outputs: vec![
+            EvaluationOutput::Transaction,
+            EvaluationOutput::Stage(Stage::Verifier),
+            EvaluationOutput::Output("baz".to_string()),
+        ],
+        status: Status::Success,
+    };
 
     check(&res, &make_directives(r"
         // stage: verifier

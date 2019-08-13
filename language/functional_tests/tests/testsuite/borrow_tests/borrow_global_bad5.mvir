@@ -1,0 +1,14 @@
+module A {
+    resource T{v: u64}
+
+    public A5(b: bool) {
+        let t_ref: &mut Self.T;
+        if (move(b)) {
+            t_ref = borrow_global<T>(get_txn_sender());
+        }
+        return;
+    }
+}
+
+// check: VerificationError
+// check: JoinFailure

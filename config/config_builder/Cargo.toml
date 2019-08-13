@@ -10,14 +10,18 @@ edition = "2018"
 bincode = "1.1.1"
 clap = "2.32"
 hex = "0.3.2"
-serde = { version = "1.0.91", features = ["derive"] }
-tempfile = "3.0.6"
+rand = "0.6.5"
+serde = { version = "1.0.96", features = ["derive"] }
+tempfile = "3.1.0"
 toml = "0.4"
 
 config = { path = ".." }
-crypto = { path = "../../crypto/legacy_crypto" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 generate_keypair = { path = "../generate_keypair" }
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 types = { path = "../../types" }
 vm_genesis = { path = "../../language/vm/vm_genesis" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}

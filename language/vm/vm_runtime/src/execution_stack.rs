@@ -5,12 +5,10 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     frame::Frame,
     loaded_data::function::{FunctionRef, FunctionReference},
-    value::{Local, MutVal, Value},
 };
-use move_ir_natives::dispatch::{Result as NativeResult, StackAccessor};
 use std::{fmt, marker::PhantomData};
-use types::byte_array::ByteArray;
 use vm::errors::*;
+use vm_runtime_types::value::{Local, MutVal};
 
 pub struct ExecutionStack<'alloc, 'txn, P>
 where
@@ -107,7 +105,7 @@ where
     where
         Option<T>: From<MutVal>,
     {
-        let top = self.pop()?.value().and_then(std::convert::Into::into);
+        let top = self.pop()?.value_as();
         Ok(top.ok_or(VMRuntimeError {
             loc: self.location()?,
             err: VMErrorKind::TypeError,
@@ -149,22 +147,5 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Stack: {:?}", self.stack)?;
         writeln!(f, "Current Frames: {:?}", self.function_stack)
-    }
-}
-
-impl<'alloc, 'txn, P> StackAccessor for &mut ExecutionStack<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    fn get_byte_array(&mut self) -> NativeResult<ByteArray> {
-        match self.pop()?.value() {
-            Some(v) => match MutVal::try_own(v) {
-                Ok(Value::ByteArray(arr)) => Ok(arr),
-                Err(err) => Err(err.into()),
-                _ => Err(VMStaticViolation::TypeMismatch.into()),
-            },
-            None => Err(VMStaticViolation::TypeMismatch.into()),
-        }
     }
 }

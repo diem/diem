@@ -4,8 +4,6 @@
 //! The traits `IntoProto` and `FromProto` describes conversion from Rust type to corresponding
 //! Protobuf type, or vice versa.
 
-#![feature(specialization)]
-
 pub mod test_helper;
 
 use failure::prelude::*;

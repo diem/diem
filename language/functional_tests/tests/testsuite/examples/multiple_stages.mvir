@@ -1,9 +1,10 @@
-modules:
 module M {
     public foo(x: u64): u64 {
         return copy(x)*2;
     }
 }
+
+//! new-transaction
 
 module N {
     public bar(x: u64): u64 {
@@ -11,9 +12,10 @@ module N {
     }
 }
 
-script:
-import Transaction.M;
-import Transaction.N;
+//! new-transaction
+
+import {{default}}.M;
+import {{default}}.N;
 
 main() {
     let x: u64;
@@ -27,16 +29,13 @@ main() {
 // The following directives check that
 //     1) There are two function definitions in the compiled module.
 //     2) There are no verification errors.
-//     3) There is an AssertionFailure in the transaction output.
+//     3) There is an Aborted in the transaction output.
 
-// stage: compiler
 // check: CompiledModule
 // check: FunctionDefinition
 // check: CompiledModule
 // check: FunctionDefinition
 
-// stage: verifier
 // not: VerificationError
 
-// stage: runtime
-// check: AssertionFailure
+// check: Aborted(42)

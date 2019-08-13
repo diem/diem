@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, MempoolAddTransactionStatus, TimelineState},
+    core_mempool::{CoreMempool, TimelineState},
     OP_COUNTERS,
 };
+use bounded_executor::BoundedExecutor;
 use config::config::{MempoolConfig, NodeConfig};
 use failure::prelude::*;
 use futures::sync::mpsc::UnboundedSender;
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, join_all},
+    future::join_all,
     FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use logger::prelude::*;
@@ -28,7 +29,7 @@ use std::{
 };
 use storage_client::StorageRead;
 use tokio::{
-    runtime::{Builder, Runtime},
+    runtime::{Builder, Runtime, TaskExecutor},
     timer::Interval,
 };
 use types::{transaction::SignedTransaction, PeerId};
@@ -207,13 +208,6 @@ async fn process_incoming_transactions<V>(
 ) where
     V: TransactionValidation,
 {
-    let validations = join_all(
-        transactions
-            .iter()
-            .map(|t| smp.validator.validate_transaction(t.clone()).compat()),
-    )
-    .await;
-
     let account_states = join_all(
         transactions
             .iter()
@@ -221,14 +215,35 @@ async fn process_incoming_transactions<V>(
     )
     .await;
 
-    let mut mempool = smp
-        .mempool
-        .lock()
-        .expect("[shared mempool] failed to acquire mempool lock");
-
-    for (idx, transaction) in transactions.into_iter().enumerate() {
-        if let Ok(None) = validations[idx] {
+    // eagerly filter out transactions that were already committed
+    let transactions: Vec<_> = transactions
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, t)| {
             if let Ok((sequence_number, balance)) = account_states[idx] {
+                if t.sequence_number() >= sequence_number {
+                    return Some((t, sequence_number, balance));
+                }
+            }
+            None
+        })
+        .collect();
+
+    let validations = join_all(
+        transactions
+            .iter()
+            .map(|t| smp.validator.validate_transaction(t.0.clone()).compat()),
+    )
+    .await;
+
+    {
+        let mut mempool = smp
+            .mempool
+            .lock()
+            .expect("[shared mempool] failed to acquire mempool lock");
+
+        for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
+            if let Ok(None) = validations[idx] {
                 let gas_cost = transaction.max_gas_amount();
                 let insertion_result = mempool.add_txn(
                     transaction,
@@ -237,9 +252,15 @@ async fn process_incoming_transactions<V>(
                     balance,
                     TimelineState::NonQualified,
                 );
-                if insertion_result == MempoolAddTransactionStatus::Valid {
-                    OP_COUNTERS.inc(&format!("smp.transactions.success.{:?}", peer_id));
-                }
+                OP_COUNTERS.inc(&format!(
+                    "smp.transactions.status.{:?}.{:?}",
+                    insertion_result.code, peer_id
+                ));
+            } else {
+                OP_COUNTERS.inc(&format!(
+                    "smp.transactions.status.validation_failed.{:?}",
+                    peer_id
+                ));
             }
         }
     }
@@ -276,92 +297,78 @@ where
 }
 
 /// This task handles inbound network events.
-async fn inbound_network_task<V>(smp: SharedMempool<V>, network_events: MempoolNetworkEvents)
-where
+async fn inbound_network_task<V>(
+    smp: SharedMempool<V>,
+    executor: TaskExecutor,
+    mut network_events: MempoolNetworkEvents,
+) where
     V: TransactionValidation,
 {
     let peer_info = smp.peer_info.clone();
     let subscribers = smp.subscribers.clone();
-    let max_inbound_syncs = smp.config.shared_mempool_max_concurrent_inbound_syncs;
 
-    // Handle the NewPeer/LostPeer events immediatedly, since they are not async
-    // and we don't want to buffer them or let them get reordered. The inbound
-    // direct-send messages are placed in a bounded FuturesUnordered queue and
-    // allowed to execute concurrently. The .buffer_unordered() also correctly
-    // handles back-pressure, so if mempool is slow the back-pressure will
-    // propagate down to network.
-    let f_inbound_network_task = network_events
-        .filter_map(move |network_event| {
-            trace!("SharedMempoolEvent::NetworkEvent::{:?}", network_event);
-            match network_event {
-                Ok(network_event) => match network_event {
-                    Event::NewPeer(peer_id) => {
-                        OP_COUNTERS.inc("smp.event.new_peer");
-                        new_peer(&peer_info, peer_id);
-                        notify_subscribers(
-                            SharedMempoolNotification::PeerStateChange,
-                            &subscribers,
-                        );
-                        future::ready(None)
-                    }
-                    Event::LostPeer(peer_id) => {
-                        OP_COUNTERS.inc("smp.event.lost_peer");
-                        lost_peer(&peer_info, peer_id);
-                        notify_subscribers(
-                            SharedMempoolNotification::PeerStateChange,
-                            &subscribers,
-                        );
-                        future::ready(None)
-                    }
-                    // Pass through messages to next combinator
-                    Event::Message((peer_id, msg)) => future::ready(Some((peer_id, msg))),
-                    _ => {
-                        security_log(SecurityEvent::InvalidNetworkEventMP)
-                            .error("UnexpectedNetworkEvent")
-                            .data(&network_event)
-                            .log();
-                        unreachable!("Unexpected network event")
-                    }
-                },
-                Err(e) => {
-                    security_log(SecurityEvent::InvalidNetworkEventMP)
-                        .error(&e)
-                        .log();
-                    future::ready(None)
+    // Use a BoundedExecutor to restrict only `workers_available` concurrent
+    // worker tasks that can process incoming transactions.
+    let workers_available = smp.config.shared_mempool_max_concurrent_inbound_syncs;
+    let bounded_executor = BoundedExecutor::new(workers_available, executor);
+
+    while let Some(event) = network_events.next().await {
+        trace!("SharedMempoolEvent::NetworkEvent::{:?}", event);
+        match event {
+            Ok(network_event) => match network_event {
+                Event::NewPeer(peer_id) => {
+                    OP_COUNTERS.inc("smp.event.new_peer");
+                    new_peer(&peer_info, peer_id);
+                    notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
-            }
-        })
-        // Run max_inbound_syncs number of `process_incoming_transactions` concurrently
-        .for_each_concurrent(
-            max_inbound_syncs, /* limit */
-            move |(peer_id, mut msg)| {
-                OP_COUNTERS.inc("smp.event.message");
-                let transactions: Vec<_> = msg
-                    .take_transactions()
-                    .into_iter()
-                    .filter_map(|txn| match SignedTransaction::from_proto(txn) {
-                        Ok(t) => Some(t),
-                        Err(e) => {
-                            security_log(SecurityEvent::InvalidTransactionMP)
-                                .error(&e)
-                                .data(&msg)
-                                .log();
-                            None
-                        }
-                    })
-                    .collect();
-                OP_COUNTERS.inc_by(
-                    &format!("smp.transactions.received.{:?}", peer_id),
-                    transactions.len(),
-                );
-
-                process_incoming_transactions(smp.clone(), peer_id, transactions)
+                Event::LostPeer(peer_id) => {
+                    OP_COUNTERS.inc("smp.event.lost_peer");
+                    lost_peer(&peer_info, peer_id);
+                    notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
+                }
+                Event::Message((peer_id, mut msg)) => {
+                    OP_COUNTERS.inc("smp.event.message");
+                    let transactions: Vec<_> = msg
+                        .take_transactions()
+                        .into_iter()
+                        .filter_map(|txn| match SignedTransaction::from_proto(txn) {
+                            Ok(t) => Some(t),
+                            Err(e) => {
+                                security_log(SecurityEvent::InvalidTransactionMP)
+                                    .error(&e)
+                                    .data(&msg)
+                                    .log();
+                                None
+                            }
+                        })
+                        .collect();
+                    OP_COUNTERS.inc_by(
+                        &format!("smp.transactions.received.{:?}", peer_id),
+                        transactions.len(),
+                    );
+                    bounded_executor
+                        .spawn(process_incoming_transactions(
+                            smp.clone(),
+                            peer_id,
+                            transactions,
+                        ))
+                        .await;
+                }
+                _ => {
+                    security_log(SecurityEvent::InvalidNetworkEventMP)
+                        .error("UnexpectedNetworkEvent")
+                        .data(&network_event)
+                        .log();
+                    unreachable!("Unexpected network event")
+                }
             },
-        );
-
-    // drive the inbound futures to completion
-    f_inbound_network_task.await;
-
+            Err(e) => {
+                security_log(SecurityEvent::InvalidNetworkEventMP)
+                    .error(&e)
+                    .log();
+            }
+        }
+    }
     crit!("SharedMempool inbound_network_task terminated");
 }
 
@@ -433,7 +440,7 @@ where
     );
 
     executor.spawn(
-        inbound_network_task(smp, network_events)
+        inbound_network_task(smp, executor.clone(), network_events)
             .boxed()
             .unit_error()
             .compat(),

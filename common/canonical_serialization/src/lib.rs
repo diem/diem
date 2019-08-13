@@ -17,7 +17,7 @@
 //! rules are:
 //! (All unsigned integers are encoded in little-endian representation unless specified otherwise)
 //!
-//! 1. The encoding of an unsigned 64-bit integer is defined as its little endian representation
+//! 1. The encoding of an unsigned 64-bit integer is defined as its little-endian representation
 //!    in 8 bytes
 //!
 //! 2. The encoding of an item (byte array) is defined as:
@@ -76,9 +76,13 @@ pub trait CanonicalSerializer {
         Ok(self)
     }
 
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
+
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self>;
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
+
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self>;
 
     fn encode_u8(&mut self, v: u8) -> Result<&mut Self>;
 
@@ -132,9 +136,9 @@ where
 
     /// Create a SimpleSerializer on the fly and serialize `object`
     pub fn serialize(object: &impl CanonicalSerialize) -> Result<W> {
-        let mut serialzier = Self::default();
-        object.serialize(&mut serialzier)?;
-        Ok(serialzier.get_output())
+        let mut serializer = Self::default();
+        object.serialize(&mut serializer)?;
+        Ok(serializer.get_output())
     }
 
     /// Consume the SimpleSerializer and return the output
@@ -147,6 +151,19 @@ impl<W> CanonicalSerializer for SimpleSerializer<W>
 where
     W: std::io::Write,
 {
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self> {
+        match v.as_ref() {
+            Some(val) => {
+                self.encode_bool(true)?;
+                self.encode_struct(val)?;
+            }
+            None => {
+                self.encode_bool(false)?;
+            }
+        }
+        Ok(self)
+    }
+
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self> {
         self.output.write_u64::<Endianness>(v)?;
         Ok(self)
@@ -154,6 +171,11 @@ where
 
     fn encode_u32(&mut self, v: u32) -> Result<&mut Self> {
         self.output.write_u32::<Endianness>(v)?;
+        Ok(self)
+    }
+
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self> {
+        self.output.write_u16::<Endianness>(v)?;
         Ok(self)
     }
 
@@ -245,9 +267,13 @@ pub trait CanonicalDeserializer {
         T::deserialize(self)
     }
 
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>>;
+
     fn decode_u64(&mut self) -> Result<u64>;
 
     fn decode_u32(&mut self) -> Result<u32>;
+
+    fn decode_u16(&mut self) -> Result<u16>;
 
     fn decode_u8(&mut self) -> Result<u8>;
 
@@ -296,6 +322,14 @@ impl<'a> SimpleDeserializer<'a> {
 }
 
 impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>> {
+        if self.decode_bool()? {
+            Ok(Some(T::deserialize(self)?))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn decode_u64(&mut self) -> Result<u64> {
         let num = self.raw_bytes.read_u64::<Endianness>()?;
         Ok(num)
@@ -303,6 +337,11 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
 
     fn decode_u32(&mut self) -> Result<u32> {
         let num = self.raw_bytes.read_u32::<Endianness>()?;
+        Ok(num)
+    }
+
+    fn decode_u16(&mut self) -> Result<u16> {
+        let num = self.raw_bytes.read_u16::<Endianness>()?;
         Ok(num)
     }
 
@@ -412,6 +451,19 @@ where
         Self: Sized,
     {
         deserializer.decode_vec()
+    }
+}
+
+impl CanonicalSerialize for u16 {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_u16(*self)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for u16 {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        deserializer.decode_u16()
     }
 }
 

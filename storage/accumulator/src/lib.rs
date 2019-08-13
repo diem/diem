@@ -55,11 +55,14 @@
 //!
 //! # Position and Physical Representation
 //! As a Merkle Accumulator tree expands to the right and upwards, we number newly frozen nodes
-//! monotonically. (One way to do it is simply to use in-order index of nodes.) We call the
-//! stated numbers identifying nodes below simply "Position".
+//! monotonically. One way to do it is simply to use in-order index of nodes, and this is what
+//! we do for the in-memory representation. We call the stated numbers identifying nodes below
+//! simply "Position", and unless otherwise stated, this is the in-order position.
 //!
-//! And with that we can map a Merkle Accumulator into a key-value storage: key is the position of a
-//! node, value is hash value it carries.
+//! For writing to disk however, we write all the children of a node before the parent.
+//! Thus for disk write order, it is more convenient to use the post-order position as an index.
+//! And with that we can map a Merkle Accumulator into a key-value storage: key is the post-order
+//! position of a node, and the value is hash value it carries.
 //!
 //! We store only Frozen nodes, and generate non-Frozen nodes on the fly when accessing the tree.
 //! This way, the physical representation of the tree is append-only, i.e. once written to physical
@@ -68,33 +71,33 @@
 //! Here is what we persist for the logical tree in the above example:
 //!
 //! ```text
-//!          Fzn2(3)
+//!          Fzn2(6)
 //!         /      \
 //!        /        \
-//!    Fzn1(1)       Fzn3(5)
+//!    Fzn1(2)       Fzn3(5)
 //!   /     \       /     \
-//!  L0(0)  L1(2)  L2(4)  L3(6)  L4(8)
+//!  L0(0)  L1(1)  L2(3)  L3(4)  L4(7)
 //! ```
 //!
 //! When the next leaf node is persisted, the physical representation will be:
 //!
 //! ```text
-//!          Fzn2(3)
+//!          Fzn2(6)
 //!         /      \
 //!        /        \
-//!    Fzn1(1)       Fzn3(5)       Fzn4(9)
+//!    Fzn1(2)       Fzn3(5)       Fzn4(9)
 //!   /     \       /     \       /      \
-//!  L0(0)  L1(2)  L2(4)  L3(6)  L4(8)   L5(10)
+//!  L0(0)  L1(1)  L2(3)  L3(4)  L4(7)   L5(8)
 //! ```
 //!
-//! The numbering corresponds to the in-order traversal of the tree.
+//! The numbering corresponds to the post-order traversal of the tree.
 //!
 //! To think in key-value pairs:
 //! ```text
 //! |<-key->|<--value-->|
 //! |   0   | hash_L0   |
-//! |   1   | hash_Fzn1 |
-//! |   2   | hash_L1   |
+//! |   1   | hash_L1   |
+//! |   2   | hash_Fzn1 |
 //! |  ...  |   ...     |
 //! ```
 

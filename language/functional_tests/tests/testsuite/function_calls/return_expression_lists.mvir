@@ -1,0 +1,23 @@
+module A {
+    public foo(t: u64): u64 * u64 {
+        let k: u64;
+        if (copy(t) % 2 == 0) {
+            k = 2 * copy(t);
+        } else {
+            k = 3 * copy(t);
+        }
+        return (move(t), move(k) + 1);
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let y: u64;
+    let z: u64;
+    y, z = A.foo(10);
+    assert(move(y) == 10, 42);
+    assert(move(z) == 21, 42);
+    return;
+}

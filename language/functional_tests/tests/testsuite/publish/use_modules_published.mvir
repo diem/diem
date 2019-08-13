@@ -1,0 +1,76 @@
+//! account: alice
+//! account: bob
+//! account: carol
+//! account: dave
+
+
+
+//! sender: alice
+module M {
+    public foo(): u64 {
+        return 5;
+    }
+}
+
+
+//! new-transaction
+//! sender: bob
+
+module M {
+    public bar(): u64 {
+        return 7;
+    }
+}
+
+//! new-transaction
+//! sender: carol
+
+module M {
+    import {{alice}}.M as M1;
+    import {{bob}}.M as M2;
+
+    public run() {
+        let x: u64;
+        x = M1.foo();
+        assert(move(x) == 5, 42);
+        x = M2.bar();
+        assert(move(x) == 7, 42);
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{carol}}.M;
+
+main() {
+    M.run();
+    return;
+}
+
+//! new-transaction
+//! sender: dave
+
+module M {
+    public baz(): u64 {
+        return 9;
+    }
+}
+
+//! new-transaction
+//! sender: dave
+
+import {{alice}}.M as M1;
+import {{bob}}.M as M2;
+import {{dave}}.M as M3;
+
+main() {
+    let x: u64;
+    x = M1.foo();
+    assert(move(x) == 5, 42);
+    x = M2.bar();
+    assert(move(x) == 7, 42);
+    x = M3.baz();
+    assert(move(x) == 9, 42);
+    return;
+}

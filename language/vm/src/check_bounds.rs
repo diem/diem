@@ -6,7 +6,7 @@ use crate::{
     file_format::{
         Bytecode, CompiledModuleMut, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionSignature, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
-        StructHandle, TypeSignature,
+        StructFieldInformation, StructHandle, TypeSignature,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -139,6 +139,29 @@ where
     }
 }
 
+#[inline]
+fn check_code_unit_bounds_impl<T, I>(
+    pool: &[T],
+    bytecode_offset: usize,
+    idx: I,
+) -> Option<VMStaticViolation>
+where
+    I: ModuleIndex,
+{
+    let idx = idx.into_index();
+    let len = pool.len();
+    if idx >= len {
+        Some(VMStaticViolation::CodeUnitIndexOutOfBounds(
+            I::KIND,
+            bytecode_offset,
+            len,
+            idx,
+        ))
+    } else {
+        None
+    }
+}
+
 impl BoundsCheck for &ModuleHandle {
     #[inline]
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
@@ -184,7 +207,13 @@ impl BoundsCheck for &StructDefinition {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_handle),
-            module.check_field_range(self.field_count, self.fields),
+            match &self.field_information {
+                StructFieldInformation::Native => None,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => module.check_field_range(*field_count, *fields),
+            },
         ]
         .into_iter()
         .flatten()
@@ -281,26 +310,42 @@ impl FunctionDefinition {
         let code_len = code.len();
 
         code.iter()
-            .filter_map(|bytecode| {
+            .enumerate()
+            .filter_map(|(bytecode_offset, bytecode)| {
                 use self::Bytecode::*;
 
                 match bytecode {
                     // Instructions that refer to other pools.
-                    LdAddr(idx) => check_bounds_impl(&module.address_pool, *idx),
-                    LdByteArray(idx) => check_bounds_impl(&module.byte_array_pool, *idx),
-                    LdStr(idx) => check_bounds_impl(&module.string_pool, *idx),
-                    BorrowField(idx) => check_bounds_impl(&module.field_defs, *idx),
-                    Call(idx) => check_bounds_impl(&module.function_handles, *idx),
-                    Pack(idx) | Unpack(idx) | Exists(idx) | BorrowGlobal(idx) | MoveFrom(idx)
-                    | MoveToSender(idx) => check_bounds_impl(&module.struct_defs, *idx),
+                    LdAddr(idx) => {
+                        check_code_unit_bounds_impl(&module.address_pool, bytecode_offset, *idx)
+                    }
+                    LdByteArray(idx) => {
+                        check_code_unit_bounds_impl(&module.byte_array_pool, bytecode_offset, *idx)
+                    }
+                    LdStr(idx) => {
+                        check_code_unit_bounds_impl(&module.string_pool, bytecode_offset, *idx)
+                    }
+                    BorrowField(idx) => {
+                        check_code_unit_bounds_impl(&module.field_defs, bytecode_offset, *idx)
+                    }
+                    Call(idx, _) => {
+                        check_code_unit_bounds_impl(&module.function_handles, bytecode_offset, *idx)
+                    } // FIXME: check bounds for type actuals?
+                    Pack(idx, _)
+                    | Unpack(idx, _)
+                    | Exists(idx, _)
+                    | BorrowGlobal(idx, _)
+                    | MoveFrom(idx, _)
+                    | MoveToSender(idx, _) => {
+                        check_code_unit_bounds_impl(&module.struct_defs, bytecode_offset, *idx)
+                    }
                     // Instructions that refer to this code block.
                     BrTrue(offset) | BrFalse(offset) | Branch(offset) => {
-                        // XXX IndexOutOfBounds seems correct, but IndexKind::CodeDefinition
-                        // (and LocalPool) feel wrong. Reconsider this at some point.
                         let offset = *offset as usize;
                         if offset >= code_len {
-                            Some(VMStaticViolation::IndexOutOfBounds(
+                            Some(VMStaticViolation::CodeUnitIndexOutOfBounds(
                                 IndexKind::CodeDefinition,
+                                bytecode_offset,
                                 code_len,
                                 offset,
                             ))
@@ -312,8 +357,9 @@ impl FunctionDefinition {
                     CopyLoc(idx) | MoveLoc(idx) | StLoc(idx) | BorrowLoc(idx) => {
                         let idx = *idx as usize;
                         if idx >= locals_len {
-                            Some(VMStaticViolation::IndexOutOfBounds(
+                            Some(VMStaticViolation::CodeUnitIndexOutOfBounds(
                                 IndexKind::LocalPool,
+                                bytecode_offset,
                                 locals_len,
                                 idx,
                             ))
@@ -326,7 +372,7 @@ impl FunctionDefinition {
                     // bytecode gets added.
                     FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse
                     | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
-                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Assert
+                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
                     | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
                     | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
                     | GetTxnPublicKey => None,

@@ -5,12 +5,13 @@
 
 use crate::file_format::{
     AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
-    FunctionHandle, FunctionSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex,
-    SignatureToken, StringPoolIndex, StructDefinition, StructHandle, StructHandleIndex, TableIndex,
-    TypeSignature, TypeSignatureIndex,
+    FunctionHandle, FunctionSignatureIndex, Kind, MemberCount, ModuleHandle, ModuleHandleIndex,
+    SignatureToken, StringPoolIndex, StructDefinition, StructFieldInformation, StructHandle,
+    StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
 };
 use proptest::{
     collection::{vec, SizeRange},
+    option,
     prelude::*,
     sample::Index as PropIndex,
 };
@@ -21,7 +22,7 @@ mod functions;
 mod signature;
 
 use functions::{FnDefnMaterializeState, FunctionDefinitionGen};
-use signature::{FunctionSignatureGen, SignatureTokenGen};
+use signature::{FunctionSignatureGen, KindGen, SignatureTokenGen};
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;
@@ -115,14 +116,21 @@ impl CompiledModuleStrategyGen {
         );
         let owned_type_sigs_strat = vec(SignatureTokenGen::owned_strategy(), 1..=self.size);
         let function_signatures_strat = vec(
-            FunctionSignatureGen::strategy(self.member_count.clone(), self.member_count.clone()),
+            FunctionSignatureGen::strategy(
+                self.member_count.clone(),
+                self.member_count.clone(),
+                self.member_count.clone(),
+            ),
             1..=self.size,
         );
 
         // The number of PropIndex instances in each tuple represents the number of pointers out
         // from an instance of that particular kind of node.
         let module_handles_strat = vec(any::<(PropIndex, PropIndex)>(), 1..=self.size);
-        let struct_handles_strat = vec(any::<(PropIndex, PropIndex, bool)>(), 1..=self.size);
+        let struct_handles_strat = vec(
+            any::<(PropIndex, PropIndex, bool, Vec<Kind>)>(),
+            1..=self.size,
+        );
         let function_handles_strat = vec(any::<(PropIndex, PropIndex, PropIndex)>(), 1..=self.size);
         let struct_defs_strat = vec(
             StructDefinitionGen::strategy(self.member_count.clone()),
@@ -130,6 +138,7 @@ impl CompiledModuleStrategyGen {
         );
         let function_defs_strat = vec(
             FunctionDefinitionGen::strategy(
+                self.member_count.clone(),
                 self.member_count.clone(),
                 self.member_count.clone(),
                 self.code_len,
@@ -227,15 +236,20 @@ impl CompiledModuleStrategyGen {
 
                     let struct_handles: Vec<_> = struct_handles
                         .into_iter()
-                        .map(|(module_idx, name_idx, is_resource)| StructHandle {
-                            module: ModuleHandleIndex::new(
-                                module_idx.index(module_handles_len) as TableIndex
-                            ),
-                            name: StringPoolIndex::new(
-                                name_idx.index(string_pool_len) as TableIndex
-                            ),
-                            is_resource,
-                        })
+                        .map(
+                            |(module_idx, name_idx, is_nominal_resource, type_parameters)| {
+                                StructHandle {
+                                    module: ModuleHandleIndex::new(
+                                        module_idx.index(module_handles_len) as TableIndex,
+                                    ),
+                                    name: StringPoolIndex::new(
+                                        name_idx.index(string_pool_len) as TableIndex
+                                    ),
+                                    is_nominal_resource,
+                                    type_parameters,
+                                }
+                            },
+                        )
                         .collect();
 
                     let function_handles: Vec<_> = function_handles
@@ -369,15 +383,16 @@ impl StDefnMaterializeState {
         )
     }
 
-    fn is_resource(&self, signature: &SignatureToken) -> bool {
+    fn contains_nominal_resource(&self, signature: &SignatureToken) -> bool {
         use SignatureToken::*;
 
         match signature {
-            Struct(struct_handle_index) => {
-                self.struct_handles[struct_handle_index.0 as usize].is_resource
+            Struct(struct_handle_index, targs) => {
+                self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
+                    || targs.iter().any(|t| self.contains_nominal_resource(t))
             }
-            Reference(token) | MutableReference(token) => self.is_resource(token),
-            Bool | U64 | ByteArray | String | Address => false,
+            Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
+            Bool | U64 | ByteArray | String | Address | TypeParameter(_) => false,
         }
     }
 }
@@ -385,11 +400,12 @@ impl StDefnMaterializeState {
 #[derive(Clone, Debug)]
 struct StructDefinitionGen {
     name_idx: PropIndex,
-    // the is_resource field of generated struct handle is set to true if
-    // either any of the fields is a resource or self.is_resource is true
-    is_resource: bool,
+    // the is_nominal_resource field of generated struct handle is set to true if
+    // either any of the fields contains a resource or self.is_nominal_resource is true
+    is_nominal_resource: bool,
+    type_parameters: Vec<KindGen>,
     is_public: bool,
-    field_defs: Vec<FieldDefinitionGen>,
+    field_defs: Option<Vec<FieldDefinitionGen>>,
 }
 
 impl StructDefinitionGen {
@@ -397,49 +413,89 @@ impl StructDefinitionGen {
         (
             any::<PropIndex>(),
             any::<bool>(),
+            // TODO: how to not hard-code the number?
+            vec(KindGen::strategy(), 0..10),
             any::<bool>(),
             // XXX 0..4 is the default member_count in CompiledModule -- is 0 (structs without
             // fields) possible?
-            vec(FieldDefinitionGen::strategy(), member_count),
+            option::of(vec(FieldDefinitionGen::strategy(), member_count)),
         )
-            .prop_map(|(name_idx, is_resource, is_public, field_defs)| Self {
-                name_idx,
-                is_resource,
-                is_public,
-                field_defs,
-            })
+            .prop_map(
+                |(name_idx, is_nominal_resource, type_parameters, is_public, field_defs)| Self {
+                    name_idx,
+                    is_nominal_resource,
+                    type_parameters,
+                    is_public,
+                    field_defs,
+                },
+            )
     }
 
     fn materialize(self, state: &mut StDefnMaterializeState) -> StructDefinition {
         let sh_idx = state.next_struct_handle();
         state.owned_type_indexes.advance_to(&Some(sh_idx));
+        let struct_handle = sh_idx;
 
-        // Each struct defines one or more fields. The collect() is to work around the borrow
-        // checker -- it's annoying.
-        let field_defs: Vec<_> = self
-            .field_defs
-            .into_iter()
-            .map(|field| field.materialize(sh_idx, state))
-            .collect();
-        let is_resource = self.is_resource
-            || field_defs
-                .iter()
-                .any(|x| state.is_resource(&state.type_signatures[x.signature.0 as usize].0));
+        match self.field_defs {
+            None => {
+                let is_nominal_resource = self.is_nominal_resource;
+                let handle = StructHandle {
+                    // 0 represents the current module
+                    module: ModuleHandleIndex::new(0),
+                    name: StringPoolIndex::new(
+                        self.name_idx.index(state.string_pool_len) as TableIndex
+                    ),
+                    is_nominal_resource,
+                    type_parameters: self
+                        .type_parameters
+                        .into_iter()
+                        .map(|kind| kind.materialize())
+                        .collect(),
+                };
+                state.add_struct_handle(handle);
+                let field_information = StructFieldInformation::Native;
+                StructDefinition {
+                    struct_handle,
+                    field_information,
+                }
+            }
+            Some(field_defs_gen) => {
+                // Each struct defines one or more fields. The collect() is to work around the
+                // borrow checker -- it's annoying.
+                let field_defs: Vec<_> = field_defs_gen
+                    .into_iter()
+                    .map(|field| field.materialize(sh_idx, state))
+                    .collect();
+                let is_nominal_resource = self.is_nominal_resource
+                    || field_defs.iter().any(|field| {
+                        let field_sig = &state.type_signatures[field.signature.0 as usize].0;
+                        state.contains_nominal_resource(field_sig)
+                    });
+                let (field_count, fields) = state.add_field_defs(field_defs);
 
-        let (field_count, fields) = state.add_field_defs(field_defs);
-
-        let handle = StructHandle {
-            // 0 represents the current module
-            module: ModuleHandleIndex::new(0),
-            name: StringPoolIndex::new(self.name_idx.index(state.string_pool_len) as TableIndex),
-            is_resource,
-        };
-        state.add_struct_handle(handle);
-
-        StructDefinition {
-            struct_handle: sh_idx,
-            field_count,
-            fields,
+                let handle = StructHandle {
+                    // 0 represents the current module
+                    module: ModuleHandleIndex::new(0),
+                    name: StringPoolIndex::new(
+                        self.name_idx.index(state.string_pool_len) as TableIndex
+                    ),
+                    is_nominal_resource,
+                    type_parameters: self
+                        .type_parameters
+                        .into_iter()
+                        .map(|kind| kind.materialize())
+                        .collect(),
+                };
+                state.add_struct_handle(handle);
+                let field_information = StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                };
+                StructDefinition {
+                    struct_handle,
+                    field_information,
+                }
+            }
         }
     }
 }

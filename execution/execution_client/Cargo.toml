@@ -11,5 +11,9 @@ grpcio = "0.4.4"
 
 execution_proto = { path = "../execution_proto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 types = { path = "../../types" }
 proto_conv = { path = "../../common/proto_conv" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }

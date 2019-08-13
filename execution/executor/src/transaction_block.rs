@@ -10,6 +10,7 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
 use logger::prelude::*;
+use nextgen_crypto::ed25519::*;
 use scratchpad::{Accumulator, SparseMerkleTree};
 use std::{
     collections::{HashMap, HashSet},
@@ -46,7 +47,7 @@ pub struct TransactionBlock {
 
     /// The signatures on this block. Not all committed blocks will have signatures, if multiple
     /// blocks are committed at once.
-    ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+    ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
 
     /// The response for `execute_block` request.
     execute_response: Option<ExecuteBlockResponse>,
@@ -92,7 +93,7 @@ impl TransactionBlock {
     }
 
     /// Returns the signatures on this block.
-    pub fn ledger_info_with_sigs(&self) -> &Option<LedgerInfoWithSignatures> {
+    pub fn ledger_info_with_sigs(&self) -> &Option<LedgerInfoWithSignatures<Ed25519Signature>> {
         &self.ledger_info_with_sigs
     }
 
@@ -186,7 +187,7 @@ impl TransactionBlock {
 
 impl Block for TransactionBlock {
     type Output = ProcessedVMOutput;
-    type Signature = LedgerInfoWithSignatures;
+    type Signature = LedgerInfoWithSignatures<Ed25519Signature>;
 
     fn is_committed(&self) -> bool {
         self.committed

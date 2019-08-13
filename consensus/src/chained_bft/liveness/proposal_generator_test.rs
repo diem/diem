@@ -10,7 +10,7 @@ use crate::{
             build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },
     },
-    mock_time_service::SimulatedTimeService,
+    util::mock_time_service::SimulatedTimeService,
 };
 use futures::executor::block_on;
 use std::{
@@ -78,11 +78,15 @@ fn test_proposal_generation_parent() {
         a1.id(),
         block_store.get_state_for_block(a1.id()).unwrap(),
         a1.round(),
+        a1.quorum_cert().certified_parent_block_id(),
+        a1.quorum_cert().certified_parent_block_round(),
+        a1.quorum_cert().certified_grandparent_block_id(),
+        a1.quorum_cert().certified_grandparent_block_round(),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_on(block_store.insert_vote_and_qc(vote_msg_a1, 1));
+    block_store.insert_vote_and_qc(vote_msg_a1, 1);
     let a1_child_res =
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
@@ -95,12 +99,16 @@ fn test_proposal_generation_parent() {
         b1.id(),
         block_store.get_state_for_block(b1.id()).unwrap(),
         b1.round(),
+        b1.quorum_cert().certified_parent_block_id(),
+        b1.quorum_cert().certified_parent_block_round(),
+        b1.quorum_cert().certified_grandparent_block_id(),
+        b1.quorum_cert().certified_grandparent_block_round(),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
     );
 
-    block_on(block_store.insert_vote_and_qc(vote_msg_b1, 1));
+    block_store.insert_vote_and_qc(vote_msg_b1, 1);
     let b1_child_res =
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
@@ -126,11 +134,15 @@ fn test_old_proposal_generation() {
         a1.id(),
         block_store.get_state_for_block(a1.id()).unwrap(),
         a1.round(),
+        a1.quorum_cert().certified_parent_block_id(),
+        a1.quorum_cert().certified_parent_block_round(),
+        a1.quorum_cert().certified_grandparent_block_id(),
+        a1.quorum_cert().certified_grandparent_block_round(),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_on(block_store.insert_vote_and_qc(vote_msg_a1, 1));
+    block_store.insert_vote_and_qc(vote_msg_a1, 1);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
     assert_eq!(

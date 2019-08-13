@@ -1,0 +1,25 @@
+import 0x0.Signature;
+
+main() {
+    let bitmap: bytearray;
+    let signatures: bytearray;
+    let public_keys: bytearray;
+    let message: bytearray;
+
+    let output: u64;
+    let expected_output: u64;
+
+    // This is "11000000000000000000000000000000" in hex denoting that we have two signatures which should be verified
+    // against the first two public keys, respectively.
+    bitmap = h"c0000000";
+    signatures = h"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b70362d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
+    public_keys = h"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    message = h"0000000000000000000000000000000000000000000000000000000000000000";
+
+    output = Signature.ed25519_threshold_verify(move(bitmap), move(signatures), move(public_keys), move(message));
+    expected_output = 2;
+
+    assert(move(output) == move(expected_output), 42);
+
+    return;
+}

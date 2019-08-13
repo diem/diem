@@ -7,7 +7,7 @@ use crate::{
     chained_bft::{block_storage::BlockReader, common::Payload},
     counters,
     state_replication::TxnManager,
-    time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
+    util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
 use logger::prelude::*;
 use std::{
@@ -68,7 +68,7 @@ pub struct ProposalGenerator<T> {
 impl<T: Payload> ProposalGenerator<T> {
     pub fn new(
         block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
-        txn_manager: Arc<TxnManager<Payload = T>>,
+        txn_manager: Arc<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
         enforce_increasing_timestamps: bool,
@@ -81,6 +81,24 @@ impl<T: Payload> ProposalGenerator<T> {
             enforce_increasing_timestamps,
             last_round_generated: Mutex::new(0),
         }
+    }
+
+    /// Creates a NIL block proposal extending the highest certified block from the block store.
+    pub fn generate_nil_block(&self, round: Round) -> Result<Block<T>, ProposalGenerationError> {
+        let hqc_block = self.block_store.highest_certified_block();
+        if hqc_block.round() >= round {
+            // The given round is too low.
+            return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
+        }
+        let hqc_block_qc = self
+            .block_store
+            .get_quorum_cert_for_block(hqc_block.id())
+            .ok_or_else(|| ProposalGenerationError::GivenRoundTooLow(hqc_block.round()))?;
+        Ok(Block::make_nil_block(
+            hqc_block.as_ref(),
+            round,
+            hqc_block_qc.as_ref().clone(),
+        ))
     }
 
     /// The function generates a new proposal block: the returned future is fulfilled when the

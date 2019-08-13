@@ -9,7 +9,7 @@ use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
         FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StringPoolIndex,
-        StructDefinitionIndex, TableIndex,
+        StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -49,34 +49,66 @@ pub struct ApplyCodeUnitBoundsContext<'a> {
 }
 
 macro_rules! new_bytecode {
-    ($dst_len: expr, $offset: expr, $idx_type: ident, $bytecode_ident: tt) => {{
+    ($dst_len: expr, $bytecode_idx: expr, $offset: expr, $idx_type: ident, $bytecode_ident: tt) => {{
         let dst_len = $dst_len;
         let new_idx = (dst_len + $offset) as TableIndex;
         (
             $bytecode_ident($idx_type::new(new_idx)),
-            VMStaticViolation::IndexOutOfBounds($idx_type::KIND, dst_len, new_idx as usize),
+            VMStaticViolation::CodeUnitIndexOutOfBounds(
+                $idx_type::KIND,
+                $bytecode_idx,
+                dst_len,
+                new_idx as usize,
+            ),
+        )
+    }};
+}
+
+macro_rules! struct_bytecode {
+    ($dst_len: expr, $bytecode_idx: expr, $offset: expr, $idx_type: ident, $bytecode_ident: tt) => {{
+        let dst_len = $dst_len;
+        let new_idx = (dst_len + $offset) as TableIndex;
+        (
+            // TODO: check this again once generics is implemented
+            $bytecode_ident($idx_type::new(new_idx), NO_TYPE_ACTUALS),
+            VMStaticViolation::CodeUnitIndexOutOfBounds(
+                $idx_type::KIND,
+                $bytecode_idx,
+                dst_len,
+                new_idx as usize,
+            ),
         )
     }};
 }
 
 macro_rules! code_bytecode {
-    ($code_len: expr, $offset: expr, $bytecode_ident: tt) => {{
+    ($code_len: expr, $bytecode_idx: expr, $offset: expr, $bytecode_ident: tt) => {{
         let code_len = $code_len;
         let new_idx = code_len + $offset;
         (
             $bytecode_ident(new_idx as CodeOffset),
-            VMStaticViolation::IndexOutOfBounds(IndexKind::CodeDefinition, code_len, new_idx),
+            VMStaticViolation::CodeUnitIndexOutOfBounds(
+                IndexKind::CodeDefinition,
+                $bytecode_idx,
+                code_len,
+                new_idx,
+            ),
         )
     }};
 }
 
 macro_rules! locals_bytecode {
-    ($locals_len: expr, $offset: expr, $bytecode_ident: tt) => {{
+    ($locals_len: expr, $bytecode_idx: expr, $offset: expr, $bytecode_ident: tt) => {{
         let locals_len = $locals_len;
         let new_idx = locals_len + $offset;
         (
             $bytecode_ident(new_idx as LocalIndex),
-            VMStaticViolation::IndexOutOfBounds(IndexKind::LocalPool, locals_len, new_idx),
+            VMStaticViolation::CodeUnitIndexOutOfBounds(
+                IndexKind::LocalPool,
+                $bytecode_idx,
+                locals_len,
+                new_idx,
+            ),
         )
     }};
 }
@@ -127,13 +159,11 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
             )
         };
 
-        let mut interesting: Vec<&mut Bytecode> = self.module.function_defs[idx]
-            .code
-            .code
-            .iter_mut()
-            .filter(|bytecode| is_interesting(*bytecode))
+        let code = &mut self.module.function_defs[idx].code.code;
+        let interesting_offsets: Vec<usize> = (0..code.len())
+            .filter(|bytecode_idx| is_interesting(&code[*bytecode_idx]))
             .collect();
-        let to_mutate = pick_slice_idxs(interesting.len(), &mutations);
+        let to_mutate = pick_slice_idxs(interesting_offsets.len(), &mutations);
 
         // These have to be computed upfront because self.module is being mutated below.
         let address_pool_len = self.module.address_pool.len();
@@ -146,60 +176,110 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         mutations
             .iter()
             .zip(to_mutate)
-            .map(|(mutation, bytecode_idx)| {
+            .map(|(mutation, interesting_offsets_idx)| {
+                let bytecode_idx = interesting_offsets[interesting_offsets_idx];
                 let offset = mutation.offset;
                 use Bytecode::*;
 
-                let (new_bytecode, err) = match interesting[bytecode_idx] {
-                    LdAddr(_) => new_bytecode!(address_pool_len, offset, AddressPoolIndex, LdAddr),
-                    LdStr(_) => new_bytecode!(string_pool_len, offset, StringPoolIndex, LdStr),
-                    LdByteArray(_) => {
-                        new_bytecode!(byte_array_pool_len, offset, ByteArrayPoolIndex, LdByteArray)
-                    }
-                    BorrowField(_) => {
-                        new_bytecode!(field_defs_len, offset, FieldDefinitionIndex, BorrowField)
-                    }
-                    Call(_) => {
-                        new_bytecode!(function_handles_len, offset, FunctionHandleIndex, Call)
-                    }
-                    Pack(_) => new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Pack),
-                    Unpack(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Unpack)
-                    }
-                    Exists(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, Exists)
-                    }
-                    BorrowGlobal(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, BorrowGlobal)
-                    }
-                    MoveFrom(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, MoveFrom)
-                    }
-                    MoveToSender(_) => {
-                        new_bytecode!(struct_defs_len, offset, StructDefinitionIndex, MoveToSender)
-                    }
-                    BrTrue(_) => code_bytecode!(code_len, offset, BrTrue),
-                    BrFalse(_) => code_bytecode!(code_len, offset, BrFalse),
-                    Branch(_) => code_bytecode!(code_len, offset, Branch),
-                    CopyLoc(_) => locals_bytecode!(locals_len, offset, CopyLoc),
-                    MoveLoc(_) => locals_bytecode!(locals_len, offset, MoveLoc),
-                    StLoc(_) => locals_bytecode!(locals_len, offset, StLoc),
-                    BorrowLoc(_) => locals_bytecode!(locals_len, offset, BorrowLoc),
+                let (new_bytecode, err) = match code[bytecode_idx] {
+                    LdAddr(_) => new_bytecode!(
+                        address_pool_len,
+                        bytecode_idx,
+                        offset,
+                        AddressPoolIndex,
+                        LdAddr
+                    ),
+                    LdStr(_) => new_bytecode!(
+                        string_pool_len,
+                        bytecode_idx,
+                        offset,
+                        StringPoolIndex,
+                        LdStr
+                    ),
+                    LdByteArray(_) => new_bytecode!(
+                        byte_array_pool_len,
+                        bytecode_idx,
+                        offset,
+                        ByteArrayPoolIndex,
+                        LdByteArray
+                    ),
+                    BorrowField(_) => new_bytecode!(
+                        field_defs_len,
+                        bytecode_idx,
+                        offset,
+                        FieldDefinitionIndex,
+                        BorrowField
+                    ),
+                    Call(_, _) => struct_bytecode!(
+                        function_handles_len,
+                        bytecode_idx,
+                        offset,
+                        FunctionHandleIndex,
+                        Call
+                    ),
+                    Pack(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        Pack
+                    ),
+                    Unpack(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        Unpack
+                    ),
+                    Exists(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        Exists
+                    ),
+                    BorrowGlobal(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowGlobal
+                    ),
+                    MoveFrom(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveFrom
+                    ),
+                    MoveToSender(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToSender
+                    ),
+                    BrTrue(_) => code_bytecode!(code_len, bytecode_idx, offset, BrTrue),
+                    BrFalse(_) => code_bytecode!(code_len, bytecode_idx, offset, BrFalse),
+                    Branch(_) => code_bytecode!(code_len, bytecode_idx, offset, Branch),
+                    CopyLoc(_) => locals_bytecode!(locals_len, bytecode_idx, offset, CopyLoc),
+                    MoveLoc(_) => locals_bytecode!(locals_len, bytecode_idx, offset, MoveLoc),
+                    StLoc(_) => locals_bytecode!(locals_len, bytecode_idx, offset, StLoc),
+                    BorrowLoc(_) => locals_bytecode!(locals_len, bytecode_idx, offset, BorrowLoc),
 
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
                     FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse
                     | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
-                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Assert
+                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
                     | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
                     | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
-                    | GetTxnPublicKey => panic!(
-                        "Bytecode has no internal index: {:?}",
-                        interesting[bytecode_idx]
-                    ),
+                    | GetTxnPublicKey => {
+                        panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
+                    }
                 };
 
-                *interesting[bytecode_idx] = new_bytecode;
+                code[bytecode_idx] = new_bytecode;
 
                 VerificationError {
                     kind: IndexKind::FunctionDefinition,
@@ -215,15 +295,30 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
     use Bytecode::*;
 
     match bytecode {
-        LdAddr(_) | LdStr(_) | LdByteArray(_) | BorrowField(_) | Call(_) | Pack(_) | Unpack(_)
-        | Exists(_) | BorrowGlobal(_) | MoveFrom(_) | MoveToSender(_) | BrTrue(_) | BrFalse(_)
-        | Branch(_) | CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) => true,
+        LdAddr(_)
+        | LdStr(_)
+        | LdByteArray(_)
+        | BorrowField(_)
+        | Call(_, _)
+        | Pack(_, _)
+        | Unpack(_, _)
+        | Exists(_, _)
+        | BorrowGlobal(_, _)
+        | MoveFrom(_, _)
+        | MoveToSender(_, _)
+        | BrTrue(_)
+        | BrFalse(_)
+        | Branch(_)
+        | CopyLoc(_)
+        | MoveLoc(_)
+        | StLoc(_)
+        | BorrowLoc(_) => true,
 
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.
         FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
         | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt
-        | Gt | Le | Ge | Assert | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
+        | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
         | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
         | GetTxnPublicKey => false,
     }

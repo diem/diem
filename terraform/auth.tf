@@ -24,6 +24,23 @@ resource "aws_iam_role_policy_attachment" "ecsInstanceRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
 
+data "aws_iam_policy_document" "ecs_extra" {
+  statement {
+    actions = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${aws_s3_bucket.config.id}/${aws_s3_bucket_object.trusted_peers.id}"]
+  }
+}
+
+resource "aws_iam_policy" "ecs_extra" {
+  name = "${terraform.workspace}-ECS-extra"
+  policy = data.aws_iam_policy_document.ecs_extra.json
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_extra" {
+  role = aws_iam_role.ecsInstanceRole.name
+  policy_arn = aws_iam_policy.ecs_extra.arn
+}
+
 resource "aws_iam_instance_profile" "ecsInstanceRole" {
   name = "${terraform.workspace}-ecsInstanceRole"
   role = aws_iam_role.ecsInstanceRole.name

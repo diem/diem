@@ -9,15 +9,50 @@ mod unit_tests;
 
 mod growing_subset;
 mod repeat_vec;
+mod value_generator;
 
-pub use crate::{growing_subset::GrowingSubset, repeat_vec::RepeatVec};
+pub use crate::{
+    growing_subset::GrowingSubset, repeat_vec::RepeatVec, value_generator::ValueGenerator,
+};
 
+use crossbeam::thread;
 use proptest::sample::Index as PropIndex;
 use proptest_derive::Arbitrary;
 use std::{
+    any::Any,
     collections::BTreeSet,
     ops::{Deref, Index as OpsIndex},
 };
+
+/// Creates a new thread with a larger stack size.
+///
+/// Generating some proptest values can overflow the stack. This allows test authors to work around
+/// this limitation.
+///
+/// This is expected to be used with closure-style proptest invocations:
+///
+/// ```
+/// use proptest::prelude::*;
+/// use proptest_helpers::with_stack_size;
+///
+/// with_stack_size(4 * 1024 * 1024, || proptest!(|(x in 0usize..128)| {
+///     // assertions go here
+///     prop_assert!(x >= 0 && x < 128);
+/// }));
+/// ```
+pub fn with_stack_size<'a, F, T>(size: usize, f: F) -> Result<T, Box<dyn Any + 'static + Send>>
+where
+    F: FnOnce() -> T + Send + 'a,
+    T: Send + 'a,
+{
+    thread::scope(|s| {
+        let handle = s.builder().stack_size(size).spawn(|_| f()).map_err(|err| {
+            let any: Box<dyn Any + 'static + Send> = Box::new(err);
+            any
+        })?;
+        handle.join()
+    })?
+}
 
 /// Given a maximum value `max` and a list of [`Index`](proptest::sample::Index) instances, picks
 /// integers in the range `[0, max)` uniformly randomly and without duplication.

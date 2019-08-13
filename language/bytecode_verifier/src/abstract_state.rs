@@ -1,16 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the abstract state over which abstract interpretation is executed.
-use crate::{nonce::Nonce, partition::Partition};
+//! This module defines the abstract state for the type and memory safety analysis.
+use crate::{
+    absint::{AbstractDomain, JoinResult},
+    nonce::Nonce,
+    partition::Partition,
+};
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{FieldDefinitionIndex, LocalIndex};
+use vm::file_format::{FieldDefinitionIndex, Kind, LocalIndex, StructDefinitionIndex};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AbstractValue {
     Reference(Nonce),
-    Value(bool, BTreeSet<Nonce>),
+    Value(Kind, BTreeSet<Nonce>),
 }
 
 impl AbstractValue {
@@ -28,7 +32,8 @@ impl AbstractValue {
     pub fn is_unrestricted_value(&self) -> bool {
         match self {
             AbstractValue::Reference(_) => false,
-            AbstractValue::Value(is_resource, _) => !*is_resource,
+            AbstractValue::Value(Kind::Unrestricted, _) => true,
+            AbstractValue::Value(Kind::All, _) | AbstractValue::Value(Kind::Resource, _) => false,
         }
     }
 
@@ -39,8 +44,24 @@ impl AbstractValue {
         }
     }
 
-    pub fn full_value(is_resource: bool) -> Self {
-        AbstractValue::Value(is_resource, BTreeSet::new())
+    pub fn is_safe_to_destroy(&self) -> bool {
+        match self {
+            AbstractValue::Reference(_)
+            | AbstractValue::Value(Kind::All, _)
+            | AbstractValue::Value(Kind::Resource, _) => false,
+            AbstractValue::Value(Kind::Unrestricted, borrowed_nonces) => borrowed_nonces.is_empty(),
+        }
+    }
+
+    pub fn full_value(kind: Kind) -> Self {
+        AbstractValue::Value(kind, BTreeSet::new())
+    }
+
+    pub fn extract_nonce(&self) -> Option<&Nonce> {
+        match self {
+            AbstractValue::Reference(nonce) => Some(nonce),
+            AbstractValue::Value(_, _) => None,
+        }
     }
 }
 
@@ -53,20 +74,17 @@ enum BorrowInfo {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AbstractState {
     locals: BTreeMap<LocalIndex, AbstractValue>,
+    globals: BTreeMap<StructDefinitionIndex, BTreeSet<Nonce>>,
     borrows: BTreeMap<Nonce, BorrowInfo>,
     partition: Partition,
 }
 
-#[derive(Debug)]
-pub enum JoinResult {
-    Unchanged,
-    Changed(AbstractState),
-    Error,
-}
-
 impl AbstractState {
     /// create a new abstract state
-    pub fn new(locals: BTreeMap<LocalIndex, AbstractValue>) -> Self {
+    pub fn new(
+        locals: BTreeMap<LocalIndex, AbstractValue>,
+        globals: BTreeMap<StructDefinitionIndex, BTreeSet<Nonce>>,
+    ) -> Self {
         let borrows = BTreeMap::new();
         let mut partition = Partition::default();
         for value in locals.values() {
@@ -76,6 +94,7 @@ impl AbstractState {
         }
         AbstractState {
             locals,
+            globals,
             borrows,
             partition,
         }
@@ -89,6 +108,11 @@ impl AbstractState {
     /// returns local@idx
     pub fn local(&self, idx: LocalIndex) -> &AbstractValue {
         &self.locals[&idx]
+    }
+
+    /// returns global@idx
+    pub fn global(&mut self, idx: StructDefinitionIndex) -> &BTreeSet<Nonce> {
+        self.globals.entry(idx).or_insert_with(BTreeSet::new)
     }
 
     /// removes local@idx
@@ -111,14 +135,25 @@ impl AbstractState {
         self.locals[&idx].is_value()
     }
 
+    /// Return true if self may safely be destroyed
+    pub fn is_safe_to_destroy(&self) -> bool {
+        self.locals.values().all(|x| x.is_safe_to_destroy())
+            && self.globals.values().all(|x| x.is_empty())
+    }
+
+    /// Return true if local@idx may safely be destroyed
+    pub fn is_local_safe_to_destroy(&self, idx: LocalIndex) -> bool {
+        self.local(idx).is_safe_to_destroy()
+    }
+
     /// destroys local@idx
-    /// call only if self.is_safe_to_destroy(idx) returns true
+    /// call only if self.is_local_safe_to_destroy(idx) returns true
     pub fn destroy_local(&mut self, idx: LocalIndex) {
         let local = self.locals.remove(&idx).unwrap();
         match local {
             AbstractValue::Reference(nonce) => self.destroy_nonce(nonce),
-            AbstractValue::Value(is_resource, borrowed_nonces) => {
-                checked_verify!(!is_resource && borrowed_nonces.is_empty());
+            AbstractValue::Value(kind, borrowed_nonces) => {
+                checked_verify!(kind == Kind::Unrestricted && borrowed_nonces.is_empty());
             }
         }
     }
@@ -133,6 +168,7 @@ impl AbstractState {
     pub fn destroy_nonce(&mut self, nonce: Nonce) {
         let mut nonce_set = BTreeSet::new();
         let mut new_locals = BTreeMap::new();
+        let mut new_globals = BTreeMap::new();
         let mut new_borrows = BTreeMap::new();
 
         if let Some(borrow_info) = self.borrows.remove(&nonce) {
@@ -148,22 +184,32 @@ impl AbstractState {
         }
 
         for (x, value) in &self.locals {
-            if let AbstractValue::Value(is_resource, y) = value {
+            if let AbstractValue::Value(kind, y) = value {
                 if y.contains(&nonce) {
                     let mut y_restrict = y.clone();
                     y_restrict.remove(&nonce);
                     new_locals.insert(
                         x.clone(),
                         AbstractValue::Value(
-                            *is_resource,
+                            *kind,
                             y_restrict.union(&nonce_set).cloned().collect(),
                         ),
                     );
                 } else {
-                    new_locals.insert(x.clone(), AbstractValue::Value(*is_resource, y.clone()));
+                    new_locals.insert(x.clone(), AbstractValue::Value(*kind, y.clone()));
                 }
             } else {
                 new_locals.insert(x.clone(), value.clone());
+            }
+        }
+
+        for (x, y) in &self.globals {
+            if y.contains(&nonce) {
+                let mut y_restrict = y.clone();
+                y_restrict.remove(&nonce);
+                new_globals.insert(x.clone(), y_restrict.union(&nonce_set).cloned().collect());
+            } else {
+                new_globals.insert(x.clone(), y.clone());
             }
         }
 
@@ -215,6 +261,7 @@ impl AbstractState {
         }
 
         self.locals = new_locals;
+        self.globals = new_globals;
         self.borrows = new_borrows;
         self.partition.remove_nonce(nonce);
     }
@@ -325,6 +372,14 @@ impl AbstractState {
         }
     }
 
+    /// update self to reflect a borrow of a value global@idx by new_nonce
+    pub fn borrow_from_global_value(&mut self, idx: StructDefinitionIndex, new_nonce: Nonce) {
+        self.globals
+            .entry(idx)
+            .or_insert_with(BTreeSet::new)
+            .insert(new_nonce);
+    }
+
     /// update self to reflect a borrow from each nonce in to_borrow_from by new_nonce
     pub fn borrow_from_nonces(&mut self, to_borrow_from: &BTreeSet<Nonce>, new_nonce: Nonce) {
         for x in to_borrow_from {
@@ -341,7 +396,7 @@ impl AbstractState {
     }
 
     /// returns the canonical representation of self
-    pub fn construct_canonical_state(self) -> Self {
+    pub fn construct_canonical_state(&self) -> Self {
         let mut values = BTreeMap::new();
         let mut references = BTreeMap::new();
         Self::split_locals(&self.locals, &mut values, &mut references);
@@ -352,11 +407,15 @@ impl AbstractState {
             nonce_map.insert(y, Nonce::new(x as usize));
             locals.insert(x, AbstractValue::Reference(Nonce::new(x as usize)));
         }
-        for (x, (is_resource, nonce_set)) in values {
+        for (x, (kind, nonce_set)) in values {
             locals.insert(
                 x,
-                AbstractValue::Value(is_resource, Self::map_nonce_set(&nonce_map, &nonce_set)),
+                AbstractValue::Value(kind, Self::map_nonce_set(&nonce_map, &nonce_set)),
             );
+        }
+        let mut globals = BTreeMap::new();
+        for (x, nonce_set) in &self.globals {
+            globals.insert(x.clone(), Self::map_nonce_set(&nonce_map, &nonce_set));
         }
         let mut borrows = BTreeMap::new();
         for (x, borrow_info) in &self.borrows {
@@ -383,116 +442,9 @@ impl AbstractState {
 
         AbstractState {
             locals,
+            globals,
             borrows,
             partition,
-        }
-    }
-
-    /// attempts to join state to self and returns the result
-    /// both self.is_canonical() and state.is_canonical() must be true
-    pub fn join(&self, state: &AbstractState) -> JoinResult {
-        // A join failure occurs in each of the following situations:
-        // - an unrestricted value is borrowed along one path but unavailable along the other
-        // - a value that is not unrestricted, i.e., either reference or resource, is available
-        //   along one path but not the other
-        if Self::unrestricted_borrowed_value_unavailable(self, state)
-            || Self::unrestricted_borrowed_value_unavailable(state, self)
-        {
-            return JoinResult::Error;
-        }
-        if self
-            .locals
-            .keys()
-            .filter(|x| !self.locals[x].is_unrestricted_value())
-            .collect::<BTreeSet<_>>()
-            != state
-                .locals
-                .keys()
-                .filter(|x| !state.locals[x].is_unrestricted_value())
-                .collect::<BTreeSet<_>>()
-        {
-            return JoinResult::Error;
-        }
-
-        let mut values1 = BTreeMap::new();
-        let mut references1 = BTreeMap::new();
-        Self::split_locals(&self.locals, &mut values1, &mut references1);
-        let mut values2 = BTreeMap::new();
-        let mut references2 = BTreeMap::new();
-        Self::split_locals(&state.locals, &mut values2, &mut references2);
-        checked_verify!(references1 == references2);
-
-        let mut locals = BTreeMap::new();
-        for (x, y) in &references1 {
-            locals.insert(x.clone(), AbstractValue::Reference(y.clone()));
-        }
-        for (x, (is_resource1, nonce_set1)) in &values1 {
-            if let Some((is_resource2, nonce_set2)) = values2.get(x) {
-                checked_verify!(is_resource1 == is_resource2);
-                locals.insert(
-                    x.clone(),
-                    AbstractValue::Value(
-                        *is_resource1,
-                        nonce_set1.union(nonce_set2).cloned().collect(),
-                    ),
-                );
-            }
-        }
-
-        let mut borrows = BTreeMap::new();
-        for (x, borrow_info) in &self.borrows {
-            if state.borrows.contains_key(x) {
-                match borrow_info {
-                    BorrowInfo::BorrowedBy(y1) => match &state.borrows[x] {
-                        BorrowInfo::BorrowedBy(y2) => {
-                            borrows.insert(
-                                x.clone(),
-                                BorrowInfo::BorrowedBy(y1.union(y2).cloned().collect()),
-                            );
-                        }
-                        BorrowInfo::FieldsBorrowedBy(w2) => {
-                            borrows.insert(
-                                x.clone(),
-                                BorrowInfo::BorrowedBy(Self::get_union_of_sets(y1, w2)),
-                            );
-                        }
-                    },
-                    BorrowInfo::FieldsBorrowedBy(w1) => match &state.borrows[x] {
-                        BorrowInfo::BorrowedBy(y2) => {
-                            borrows.insert(
-                                x.clone(),
-                                BorrowInfo::BorrowedBy(Self::get_union_of_sets(y2, w1)),
-                            );
-                        }
-                        BorrowInfo::FieldsBorrowedBy(w2) => {
-                            borrows.insert(
-                                x.clone(),
-                                BorrowInfo::FieldsBorrowedBy(Self::get_union_of_maps(w1, w2)),
-                            );
-                        }
-                    },
-                }
-            } else {
-                borrows.insert(x.clone(), borrow_info.clone());
-            }
-        }
-        for (x, borrow_info) in &state.borrows {
-            if !borrows.contains_key(x) {
-                borrows.insert(x.clone(), borrow_info.clone());
-            }
-        }
-
-        let partition = self.partition.join(&state.partition);
-
-        let next_state = AbstractState {
-            locals,
-            borrows,
-            partition,
-        };
-        if next_state == *self {
-            JoinResult::Unchanged
-        } else {
-            JoinResult::Changed(next_state)
         }
     }
 
@@ -548,7 +500,7 @@ impl AbstractState {
 
     fn split_locals(
         locals: &BTreeMap<LocalIndex, AbstractValue>,
-        values: &mut BTreeMap<LocalIndex, (bool, BTreeSet<Nonce>)>,
+        values: &mut BTreeMap<LocalIndex, (Kind, BTreeSet<Nonce>)>,
         references: &mut BTreeMap<LocalIndex, Nonce>,
     ) {
         for (x, y) in locals {
@@ -556,8 +508,8 @@ impl AbstractState {
                 AbstractValue::Reference(nonce) => {
                     references.insert(x.clone(), nonce.clone());
                 }
-                AbstractValue::Value(is_resource, nonces) => {
-                    values.insert(x.clone(), (*is_resource, nonces.clone()));
+                AbstractValue::Value(kind, nonces) => {
+                    values.insert(x.clone(), (*kind, nonces.clone()));
                 }
             }
         }
@@ -599,5 +551,122 @@ impl AbstractState {
             index_to_nonce_set.insert(x.clone(), y.clone());
         }
         index_to_nonce_set
+    }
+}
+
+impl AbstractDomain for AbstractState {
+    /// attempts to join state to self and returns the result
+    /// both self.is_canonical() and state.is_canonical() must be true
+    fn join(&mut self, state: &AbstractState) -> JoinResult {
+        // A join failure occurs in each of the following situations:
+        // - an unrestricted value is borrowed along one path but unavailable along the other
+        // - a value that is not unrestricted, i.e., either reference or resource, is available
+        //   along one path but not the other
+        if Self::unrestricted_borrowed_value_unavailable(self, state)
+            || Self::unrestricted_borrowed_value_unavailable(state, self)
+        {
+            return JoinResult::Error;
+        }
+        if self
+            .locals
+            .keys()
+            .filter(|x| !self.locals[x].is_unrestricted_value())
+            .collect::<BTreeSet<_>>()
+            != state
+                .locals
+                .keys()
+                .filter(|x| !state.locals[x].is_unrestricted_value())
+                .collect::<BTreeSet<_>>()
+        {
+            return JoinResult::Error;
+        }
+
+        let mut values1 = BTreeMap::new();
+        let mut references1 = BTreeMap::new();
+        Self::split_locals(&self.locals, &mut values1, &mut references1);
+        let mut values2 = BTreeMap::new();
+        let mut references2 = BTreeMap::new();
+        Self::split_locals(&state.locals, &mut values2, &mut references2);
+        checked_verify!(references1 == references2);
+
+        let mut locals = BTreeMap::new();
+        for (x, y) in &references1 {
+            locals.insert(x.clone(), AbstractValue::Reference(y.clone()));
+        }
+        for (x, (kind1, nonce_set1)) in &values1 {
+            if let Some((kind2, nonce_set2)) = values2.get(x) {
+                checked_verify!(kind1 == kind2);
+                locals.insert(
+                    x.clone(),
+                    AbstractValue::Value(*kind1, nonce_set1.union(nonce_set2).cloned().collect()),
+                );
+            }
+        }
+
+        let mut globals = self.globals.clone();
+        for (x, y) in &state.globals {
+            globals
+                .entry(*x)
+                .and_modify(|nonce_set| *nonce_set = y.union(nonce_set).cloned().collect())
+                .or_insert_with(|| y.clone());
+        }
+
+        let mut borrows = BTreeMap::new();
+        for (x, borrow_info) in &self.borrows {
+            if state.borrows.contains_key(x) {
+                match borrow_info {
+                    BorrowInfo::BorrowedBy(y1) => match &state.borrows[x] {
+                        BorrowInfo::BorrowedBy(y2) => {
+                            borrows.insert(
+                                x.clone(),
+                                BorrowInfo::BorrowedBy(y1.union(y2).cloned().collect()),
+                            );
+                        }
+                        BorrowInfo::FieldsBorrowedBy(w2) => {
+                            borrows.insert(
+                                x.clone(),
+                                BorrowInfo::BorrowedBy(Self::get_union_of_sets(y1, w2)),
+                            );
+                        }
+                    },
+                    BorrowInfo::FieldsBorrowedBy(w1) => match &state.borrows[x] {
+                        BorrowInfo::BorrowedBy(y2) => {
+                            borrows.insert(
+                                x.clone(),
+                                BorrowInfo::BorrowedBy(Self::get_union_of_sets(y2, w1)),
+                            );
+                        }
+                        BorrowInfo::FieldsBorrowedBy(w2) => {
+                            borrows.insert(
+                                x.clone(),
+                                BorrowInfo::FieldsBorrowedBy(Self::get_union_of_maps(w1, w2)),
+                            );
+                        }
+                    },
+                }
+            } else {
+                borrows.insert(x.clone(), borrow_info.clone());
+            }
+        }
+        for (x, borrow_info) in &state.borrows {
+            if !borrows.contains_key(x) {
+                borrows.insert(x.clone(), borrow_info.clone());
+            }
+        }
+
+        let partition = self.partition.join(&state.partition);
+
+        let next_state = AbstractState {
+            locals,
+            globals,
+            borrows,
+            partition,
+        };
+        if next_state == *self {
+            JoinResult::Unchanged
+        } else {
+            *self = next_state;
+            JoinResult::Changed
+        }
     }
 }

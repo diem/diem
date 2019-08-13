@@ -1,0 +1,113 @@
+//! account: alice
+//! account: bob
+//! account: carol
+
+//! sender: alice
+module SillyColdWallet {
+    import 0x0.LibraAccount;
+    import 0x0.LibraCoin;
+
+    resource T {
+        cap: LibraAccount.WithdrawalCapability,
+        owner: address,
+    }
+
+    public publish(cap: LibraAccount.WithdrawalCapability, owner: address) {
+        let t: Self.T;
+
+        t = T { cap: move(cap), owner: move(owner) };
+        move_to_sender<T>(move(t));
+        return;
+    }
+
+    public withdraw(wallet_address: address, amount: u64): LibraCoin.T {
+        let wallet_ref: &mut Self.T;
+
+        wallet_ref = borrow_global<T>(move(wallet_address));
+        if (*&copy(wallet_ref).owner == get_txn_sender()) {
+            return LibraAccount.withdraw_with_capability(&move(wallet_ref).cap, move(amount));
+        } else {
+            abort(77);
+        }
+    }
+}
+
+//! new-transaction
+//! sender: alice
+import {{alice}}.SillyColdWallet;
+import 0x0.LibraAccount;
+
+// create a cold wallet for Bob that withdraws from Alice's account
+main() {
+    let cap: LibraAccount.WithdrawalCapability;
+
+    cap = LibraAccount.extract_sender_withdrawal_capability();
+    SillyColdWallet.publish(move(cap), {{bob}});
+
+    return;
+}
+
+
+//! new-transaction
+//! sender: bob
+import {{alice}}.SillyColdWallet;
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+// use the cold wallet that Alice created to move funds into Bob's account
+main() {
+    let alice_initial_balance: u64;
+    let coin: LibraCoin.T;
+
+    alice_initial_balance = LibraAccount.balance({{alice}});
+    coin = SillyColdWallet.withdraw({{alice}}, 1000);
+    LibraAccount.deposit(get_txn_sender(), move(coin));
+
+    // the withdraw should have debited Alice's account
+    assert(move(alice_initial_balance) - 1000 == LibraAccount.balance({{alice}}), 10);
+
+    return;
+}
+
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+// check that Alice can no longer withdraw from her account
+main() {
+    let coin: LibraCoin.T;
+
+    coin = LibraAccount.withdraw_from_sender(1000);
+    LibraAccount.deposit(get_txn_sender(), move(coin));
+    return;
+}
+
+// should fail with insufficient privileges error
+// check: Execution(Aborted(11))
+
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+// check that Bob can still withdraw from his normal account
+main() {
+    let coin: LibraCoin.T;
+
+    coin = LibraAccount.withdraw_from_sender(1000);
+    LibraAccount.deposit(get_txn_sender(), move(coin));
+    return;
+}
+
+
+//! new-transaction
+//! sender: carol
+import 0x0.LibraAccount;
+
+// check that other users can still pay into Alice's account in the normal way
+main() {
+    LibraAccount.pay_from_sender({{alice}}, 1000);
+}

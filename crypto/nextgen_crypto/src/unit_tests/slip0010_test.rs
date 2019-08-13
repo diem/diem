@@ -17,6 +17,54 @@ fn test_slip0010_vectors() {
     }
 }
 
+// Testing for key path validity.
+#[test]
+fn test_slip_paths() {
+    let valid_paths = vec![
+        "m",
+        "m/0",
+        "m/2147483647",
+        "m/0/2147483647/0",
+        "m/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0",
+    ];
+
+    let invalid_paths = vec![
+        "",
+        "\\",
+        "/",
+        "\nm",
+        "0",
+        "-1",
+        "1",
+        "2147483648",
+        "-2147483647",
+        "0/m",
+        "/m",
+        "m/",
+        "/m/1",
+        "m/1/",
+        "m/+0",
+        "m/0.0",
+        "m/-1",
+        "m/2147483648",
+        "M",
+        "m/1/m",
+        "m/ 1",
+        "m/1*2",
+        "m/4294967295",
+        "m/4294967296",
+        "m/m",
+    ];
+
+    for path in valid_paths.iter() {
+        assert!(Slip0010::is_valid_path(path));
+    }
+
+    for path in invalid_paths.iter() {
+        assert!(!Slip0010::is_valid_path(path));
+    }
+}
+
 // Test Vectors for SLIP 0010 (ed25519) from https://github.com/satoshilabs/slips/blob/master/slip-0010.md
 #[allow(dead_code)]
 struct Test<'a> {

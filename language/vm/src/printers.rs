@@ -319,15 +319,23 @@ impl fmt::Display for CompiledModule {
         for struct_def in &inner.struct_defs {
             write!(f, "\n\t{{")?;
             display_struct_definition(struct_def, inner, f)?;
-            let f_start_idx = struct_def.fields;
-            let f_end_idx = f_start_idx.0 as u16 + struct_def.field_count;
-            for idx in f_start_idx.0 as u16..f_end_idx {
-                let field_def = match inner.field_defs.get(idx as usize) {
-                    None => panic!("bad field definition index {}", idx),
-                    Some(f) => f,
-                };
-                write!(f, "\n\t\t")?;
-                display_field_definition(field_def, inner, f)?;
+            match &struct_def.field_information {
+                StructFieldInformation::Native => write!(f, "native")?,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => {
+                    let f_start_idx = *fields;
+                    let f_end_idx = f_start_idx.0 as u16 + *field_count;
+                    for idx in f_start_idx.0 as u16..f_end_idx {
+                        let field_def = match inner.field_defs.get(idx as usize) {
+                            None => panic!("bad field definition index {}", idx),
+                            Some(f) => f,
+                        };
+                        write!(f, "\n\t\t")?;
+                        display_field_definition(field_def, inner, f)?;
+                    }
+                }
             }
             write!(f, "}},")?;
         }
@@ -401,7 +409,7 @@ fn display_struct_handle<T: TableAccess>(
     write!(
         f,
         "{} ",
-        if struct_.is_resource {
+        if struct_.is_nominal_resource {
             "resource"
         } else {
             "struct"
@@ -561,6 +569,24 @@ fn display_locals_signature<T: TableAccess>(
     Ok(())
 }
 
+fn display_type_parameters<T: TableAccess>(
+    types: &[SignatureToken],
+    tables: &T,
+    f: &mut fmt::Formatter,
+) -> fmt::Result {
+    if types.is_empty() {
+        return Ok(());
+    }
+    write!(f, "<")?;
+    for (i, t) in types.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        display_signature_token(t, tables, f)?;
+    }
+    write!(f, ">")
+}
+
 fn display_signature_token<T: TableAccess>(
     token: &SignatureToken,
     tables: &T,
@@ -572,8 +598,9 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::String => write!(f, "String"),
         SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
-        SignatureToken::Struct(idx) => {
-            display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)
+        SignatureToken::Struct(idx, types) => {
+            display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)?;
+            display_type_parameters(&types, tables, f)
         }
         SignatureToken::Reference(token) => {
             write!(f, "&")?;
@@ -583,6 +610,7 @@ fn display_signature_token<T: TableAccess>(
             write!(f, "&mut ")?;
             display_signature_token(token, tables, f)
         }
+        SignatureToken::TypeParameter(idx) => write!(f, "T{}", idx),
     }
 }
 
@@ -613,8 +641,14 @@ fn display_bytecode<T: TableAccess>(
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }
-        Bytecode::Call(idx) => {
-            write!(f, "Call(")?;
+        Bytecode::Call(idx, types_idx) => {
+            write!(f, "Call")?;
+            display_type_parameters(
+                &tables.get_locals_signature_at(*types_idx).unwrap().0,
+                tables,
+                f,
+            )?;
+            write!(f, "(")?;
             display_function_handle(tables.get_function_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }

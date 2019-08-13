@@ -5,11 +5,14 @@ use crate::{
     common::NetworkPublicKeys,
     protocols::identity::{exchange_identity, Identity},
 };
-use crypto::x25519::{X25519PrivateKey, X25519PublicKey};
 use logger::prelude::*;
 use netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},
     transport::{boxed, memory, tcp, TransportExt},
+};
+use nextgen_crypto::{
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    ValidKey,
 };
 use noise::NoiseConfig;
 use std::{
@@ -28,7 +31,7 @@ fn identity_key_to_peer_id(
     remote_static_key: &[u8],
 ) -> Option<PeerId> {
     for (peer_id, public_keys) in trusted_peers.read().unwrap().iter() {
-        if public_keys.identity_public_key.as_bytes() == remote_static_key {
+        if public_keys.identity_public_key.to_bytes() == remote_static_key {
             return Some(*peer_id);
         }
     }
@@ -38,7 +41,7 @@ fn identity_key_to_peer_id(
 
 pub fn build_memory_noise_transport(
     own_identity: Identity,
-    identity_keypair: (X25519PrivateKey, X25519PublicKey),
+    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
@@ -111,7 +114,7 @@ pub fn build_memory_transport(
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
     own_identity: Identity,
-    identity_keypair: (X25519PrivateKey, X25519PublicKey),
+    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let tcp_transport = tcp::TcpTransport::default();

@@ -4,7 +4,7 @@
 //! Rpc protocol errors
 
 use crate::peer_manager::PeerManagerError;
-use failure::{self, Fail};
+use failure::{self, err_msg, Fail};
 use futures::channel::{mpsc, oneshot};
 use protobuf::error::ProtobufError;
 use std::io;
@@ -45,6 +45,9 @@ pub enum RpcError {
 
     #[fail(display = "Error setting timeout: {:?}", _0)]
     TimerError(#[fail(cause)] timer::Error),
+
+    #[fail(display = "Unknown tokio::timer Error variant: {}", _0)]
+    UnknownTimerError(#[fail(cause)] failure::Error),
 }
 
 impl From<io::Error> for RpcError {
@@ -57,7 +60,8 @@ impl From<PeerManagerError> for RpcError {
     fn from(err: PeerManagerError) -> Self {
         match err {
             PeerManagerError::NotConnected(peer_id) => RpcError::NotConnected(peer_id),
-            _ => unreachable!("open_substream only returns NotConnected errors"),
+            PeerManagerError::IoError(err) => RpcError::IoError(err),
+            _ => unreachable!("open_substream only returns NotConnected or IoError"),
         }
     }
 }
@@ -89,7 +93,7 @@ impl From<timer::timeout::Error<RpcError>> for RpcError {
         } else if err.is_inner() {
             err.into_inner().unwrap()
         } else {
-            unreachable!("tokio timeout Error only has 3 cases; the above if cases are therefore exhaustive.")
+            RpcError::UnknownTimerError(err_msg(err))
         }
     }
 }

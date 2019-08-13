@@ -44,7 +44,7 @@ use crate::{
         account_received_event_path, account_resource_path, account_sent_event_path,
         association_address,
     },
-    language_storage::{CodeKey, ResourceKey, StructTag},
+    language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
 use canonical_serialization::{
@@ -54,6 +54,7 @@ use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
@@ -247,10 +248,10 @@ lazy_static! {
     Deserialize,
     Ord,
     PartialOrd,
-    Arbitrary,
     FromProto,
     IntoProto,
 )]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::access_path::AccessPath)]
 pub struct AccessPath {
     pub address: AccountAddress,
@@ -322,14 +323,14 @@ impl AccessPath {
         }
     }
 
-    fn code_access_path_vec(key: &CodeKey) -> Vec<u8> {
+    fn code_access_path_vec(key: &ModuleId) -> Vec<u8> {
         let mut root = vec![];
         root.push(Self::CODE_TAG);
         root.append(&mut key.hash().to_vec());
         root
     }
 
-    pub fn code_access_path(key: &CodeKey) -> AccessPath {
+    pub fn code_access_path(key: &ModuleId) -> AccessPath {
         let path = AccessPath::code_access_path_vec(key);
         AccessPath {
             address: *key.address(),

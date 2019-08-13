@@ -1,0 +1,12 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+module MyModule {
+  import 0x0.LibraCoin;
+
+  // The identity function for coins: takes a LibraCoin.T as input and hands it back
+  public id(c: LibraCoin.T): LibraCoin.T {
+    return move(c);
+  }
+
+}

@@ -1,20 +1,21 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: BorrowLocExistsBorrowError(14) }
-modules:
+// check: VerificationError
+// check: BorrowLocExistsBorrowError
+
 module Tester {
     struct T{v: u64}
 
-    public new(v: u64): V#Self.T  {
+    public new(v: u64): Self.T  {
         return T{v: move(v)};
     }
 
-    public update(t: &mut V#Self.T) {
+    public update(t: &mut Self.T) {
         let vref: &mut u64;
         vref = &mut move(t).v;
         *move(vref) = 1;
         return;
     }
 
-    public vref(this: &mut V#Self.T): &u64 {
+    public vref(this: &mut Self.T): &u64 {
         let r: &u64;
         r = &copy(this).v;
         release(move(this));
@@ -22,13 +23,15 @@ module Tester {
     }
 }
 
-script:
-import Transaction.Tester;
+//! new-transaction
+
+import {{default}}.Tester;
+
 main() {
-    let t: V#Tester.T;
-    let tt: &mut V#Tester.T;
+    let t: Tester.T;
+    let tt: &mut Tester.T;
     let vref_before: &u64;
-    let ref_t: &mut V#Tester.T;
+    let ref_t: &mut Tester.T;
     let vref_after: &u64;
     t = Tester.new(0);
     tt = &mut t;

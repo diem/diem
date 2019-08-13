@@ -21,9 +21,9 @@ use crypto::{
         CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
         GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
-    signing::generate_keypair,
     HashValue,
 };
+use nextgen_crypto::ed25519::*;
 use proptest::{collection::vec, prelude::*};
 
 #[test]
@@ -355,9 +355,9 @@ fn test_verify_account_state_and_event() {
     let txn_info0_hash = b"hellohello".test_only_hash();
     let txn_info1_hash = b"worldworld".test_only_hash();
 
-    let (privkey, pubkey) = generate_keypair();
+    let (privkey, pubkey) = compat::generate_keypair(None);
     let txn2_hash = RawTransaction::new(
-        AccountAddress::from(pubkey),
+        AccountAddress::from_public_key(&pubkey),
         /* sequence_number = */ 0,
         Program::new(vec![], vec![], vec![]),
         /* max_gas_amount = */ 0,

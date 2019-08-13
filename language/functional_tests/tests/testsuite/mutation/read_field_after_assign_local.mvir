@@ -1,16 +1,15 @@
 // check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefExistsBorrowError(8) }
 
-modules:
 module Tester {
     struct T{v: u64}
 
-    public new(v: u64): V#Self.T  {
+    public new(v: u64): Self.T  {
         return T{v: move(v)};
     }
 
-    public replace(t: &mut V#Self.T) {
+    public replace(t: &mut Self.T) {
         let t_v: &mut u64;
-        let new_t: V#Self.T;
+        let new_t: Self.T;
 
         t_v = &mut copy(t).v;
         new_t = Self.new(1);
@@ -22,11 +21,13 @@ module Tester {
 
 }
 
-script:
-import Transaction.Tester;
+//! new-transaction
+
+import {{default}}.Tester;
+
 main() {
-    let t: V#Tester.T;
-    let ref_t: &mut V#Tester.T;
+    let t: Tester.T;
+    let ref_t: &mut Tester.T;
     t = Tester.new(0);
     ref_t = &mut t;
     Tester.replace(move(ref_t));

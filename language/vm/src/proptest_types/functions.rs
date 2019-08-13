@@ -6,9 +6,12 @@ use crate::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex,
+        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
-    proptest_types::signature::{FunctionSignatureGen, SignatureTokenGen},
+    proptest_types::{
+        signature::{FunctionSignatureGen, SignatureTokenGen},
+        TableSize,
+    },
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -39,18 +42,21 @@ pub struct FnDefnMaterializeState {
 impl FnDefnMaterializeState {
     #[inline]
     fn add_function_signature(&mut self, sig: FunctionSignature) -> FunctionSignatureIndex {
+        precondition!(self.function_signatures.len() < TableSize::max_value() as usize);
         self.function_signatures.push(sig);
         FunctionSignatureIndex::new((self.function_signatures.len() - 1) as TableIndex)
     }
 
     #[inline]
     fn add_locals_signature(&mut self, sig: LocalsSignature) -> LocalsSignatureIndex {
+        precondition!(self.locals_signatures.len() < TableSize::max_value() as usize);
         self.locals_signatures.push(sig);
         LocalsSignatureIndex::new((self.locals_signatures.len() - 1) as TableIndex)
     }
 
     #[inline]
     fn add_function_handle(&mut self, handle: FunctionHandle) -> FunctionHandleIndex {
+        precondition!(self.function_handles.len() < TableSize::max_value() as usize);
         self.function_handles.push(handle);
         FunctionHandleIndex::new((self.function_handles.len() - 1) as TableIndex)
     }
@@ -68,13 +74,18 @@ impl FunctionDefinitionGen {
     pub fn strategy(
         return_count: impl Into<SizeRange>,
         arg_count: impl Into<SizeRange>,
+        kind_count: impl Into<SizeRange>,
         code_len: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
         let return_count = return_count.into();
         let arg_count = arg_count.into();
         (
             any::<PropIndex>(),
-            FunctionSignatureGen::strategy(return_count.clone(), arg_count.clone()),
+            FunctionSignatureGen::strategy(
+                return_count.clone(),
+                arg_count.clone(),
+                kind_count.into(),
+            ),
             any::<bool>(),
             CodeUnitGen::strategy(arg_count, code_len),
         )
@@ -87,6 +98,13 @@ impl FunctionDefinitionGen {
     }
 
     pub fn materialize(self, state: &mut FnDefnMaterializeState) -> FunctionDefinition {
+        // This precondition should never fail because the table size cannot be greater
+        // than TableSize::max_value()
+        checked_precondition!(
+            state.function_signatures.len() < TableSize::max_value() as usize
+                && state.locals_signatures.len() < TableSize::max_value() as usize
+                && state.function_handles.len() < TableSize::max_value() as usize
+        );
         let signature = self.signature.materialize(state.struct_handles_len);
 
         let handle = FunctionHandle {
@@ -134,6 +152,7 @@ impl CodeUnitGen {
     }
 
     fn materialize(self, state: &mut FnDefnMaterializeState) -> CodeUnit {
+        precondition!(state.locals_signatures.len() < TableSize::max_value() as usize);
         let locals_signature = LocalsSignature(
             self.locals_signature
                 .into_iter()
@@ -172,13 +191,13 @@ enum BytecodeGen {
     LdStr(PropIndex),
     LdByteArray(PropIndex),
     BorrowField(PropIndex),
-    Call(PropIndex),
-    Pack(PropIndex),
-    Unpack(PropIndex),
-    Exists(PropIndex),
-    BorrowGlobal(PropIndex),
-    MoveFrom(PropIndex),
-    MoveToSender(PropIndex),
+    Call(PropIndex, PropIndex),
+    Pack(PropIndex, PropIndex),
+    Unpack(PropIndex, PropIndex),
+    Exists(PropIndex, PropIndex),
+    BorrowGlobal(PropIndex, PropIndex),
+    MoveFrom(PropIndex, PropIndex),
+    MoveToSender(PropIndex, PropIndex),
     BrTrue(PropIndex),
     BrFalse(PropIndex),
     Branch(PropIndex),
@@ -200,13 +219,15 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(LdStr),
             any::<PropIndex>().prop_map(LdByteArray),
             any::<PropIndex>().prop_map(BorrowField),
-            any::<PropIndex>().prop_map(Call),
-            any::<PropIndex>().prop_map(Pack),
-            any::<PropIndex>().prop_map(Unpack),
-            any::<PropIndex>().prop_map(Exists),
-            any::<PropIndex>().prop_map(BorrowGlobal),
-            any::<PropIndex>().prop_map(MoveFrom),
-            any::<PropIndex>().prop_map(MoveToSender),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Call(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Pack(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Exists(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
+                .prop_map(|(idx, types)| BorrowGlobal(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| MoveFrom(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
+                .prop_map(|(idx, types)| MoveToSender(idx, types)),
             any::<PropIndex>().prop_map(BrTrue),
             any::<PropIndex>().prop_map(BrFalse),
             any::<PropIndex>().prop_map(Branch),
@@ -267,27 +288,41 @@ impl BytecodeGen {
                     idx.index(state.field_defs_len) as TableIndex
                 ))
             }
-            BytecodeGen::Call(idx) => Bytecode::Call(FunctionHandleIndex::new(
-                idx.index(state.function_handles_len) as TableIndex,
-            )),
-            BytecodeGen::Pack(idx) => Bytecode::Pack(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::Unpack(idx) => Bytecode::Unpack(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::Exists(idx) => Bytecode::Exists(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::BorrowGlobal(idx) => Bytecode::BorrowGlobal(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::MoveFrom(idx) => Bytecode::MoveFrom(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::MoveToSender(idx) => Bytecode::MoveToSender(StructDefinitionIndex::new(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
+            BytecodeGen::Call(idx, _types_idx) => Bytecode::Call(
+                FunctionHandleIndex::new(idx.index(state.function_handles_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::Pack(idx, _types_idx) => Bytecode::Pack(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::Unpack(idx, _types_idx) => Bytecode::Unpack(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::Exists(idx, _types_idx) => Bytecode::Exists(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::BorrowGlobal(idx, _types_idx) => Bytecode::BorrowGlobal(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::MoveFrom(idx, _types_idx) => Bytecode::MoveFrom(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::MoveToSender(idx, _types_idx) => Bytecode::MoveToSender(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
             BytecodeGen::BrTrue(idx) => Bytecode::BrTrue(idx.index(code_len) as CodeOffset),
             BytecodeGen::BrFalse(idx) => Bytecode::BrFalse(idx.index(code_len) as CodeOffset),
             BytecodeGen::Branch(idx) => Bytecode::Branch(idx.index(code_len) as CodeOffset),
@@ -356,7 +391,7 @@ impl BytecodeGen {
             Gt,
             Le,
             Ge,
-            Assert,
+            Abort,
             GetTxnGasUnitPrice,
             GetTxnMaxGasUnits,
             GetTxnSenderAddress,

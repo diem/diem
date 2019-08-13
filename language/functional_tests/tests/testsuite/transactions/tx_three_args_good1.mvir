@@ -1,0 +1,9 @@
+// (u64, u64, address) args to main(u64, u64, address) is good
+
+//! args: 3, 5, {{default}}
+
+main(x: u64, y: u64, addr: address) {
+    assert(copy(x) + copy(y) == 8, 42);
+    assert(copy(addr) == {{default}}, 42);
+    return;
+}

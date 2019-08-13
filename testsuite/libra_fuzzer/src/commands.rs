@@ -3,7 +3,7 @@
 
 use crate::FuzzTarget;
 use failure::prelude::*;
-use proptest::test_runner::{Config, TestRunner};
+use proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
     env,
@@ -24,12 +24,12 @@ pub fn make_corpus(
     debug: bool,
 ) -> Result<()> {
     // TODO: Allow custom proptest configs?
-    let mut runner = TestRunner::new(Config::default());
+    let mut gen = ValueGenerator::new();
 
     let mut sha1 = Sha1::new();
 
     for _ in 0..num_items {
-        let result = target.generate(&mut runner);
+        let result = target.generate(&mut gen);
 
         // Use the SHA-1 of the result as the file name.
         sha1.input(&result);
