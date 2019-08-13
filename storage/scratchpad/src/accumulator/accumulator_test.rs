@@ -8,15 +8,15 @@ use crypto::{
 };
 use types::proof::TestAccumulatorInternalNode;
 
-// Computes the root hash of an accumulator with given elements.
-fn compute_root_hash_naive(elements: &[HashValue]) -> HashValue {
-    if elements.is_empty() {
+// Computes the root hash of an accumulator with given leaves.
+fn compute_root_hash_naive(leaves: &[HashValue]) -> HashValue {
+    if leaves.is_empty() {
         return *ACCUMULATOR_PLACEHOLDER_HASH;
     }
 
-    let mut current_level = elements.to_vec();
+    let mut current_level = leaves.to_vec();
     current_level.resize(
-        elements.len().next_power_of_two(),
+        leaves.len().next_power_of_two(),
         *ACCUMULATOR_PLACEHOLDER_HASH,
     );
 
@@ -44,29 +44,29 @@ fn compute_root_hash_naive(elements: &[HashValue]) -> HashValue {
     current_level.remove(0)
 }
 
-// Helper function to create a list of elements.
-fn create_elements(nums: std::ops::Range<usize>) -> Vec<HashValue> {
+// Helper function to create a list of leaves.
+fn create_leaves(nums: std::ops::Range<usize>) -> Vec<HashValue> {
     nums.map(|x| x.to_be_bytes().test_only_hash()).collect()
 }
 
 #[test]
 fn test_accumulator_append() {
-    // expected_root_hashes[i] is the root hash of an accumulator that has the first i elements.
+    // expected_root_hashes[i] is the root hash of an accumulator that has the first i leaves.
     let expected_root_hashes: Vec<HashValue> = (0..100)
         .map(|x| {
-            let elements = create_elements(0..x);
-            compute_root_hash_naive(&elements)
+            let leaves = create_leaves(0..x);
+            compute_root_hash_naive(&leaves)
         })
         .collect();
 
-    let elements = create_elements(0..100);
+    let leaves = create_leaves(0..100);
     let mut accumulator = Accumulator::<TestOnlyHasher>::default();
-    // Append the elements one at a time and check the root hashes match.
-    for (i, (element, expected_root_hash)) in
-        itertools::zip_eq(elements.into_iter(), expected_root_hashes.into_iter()).enumerate()
+    // Append the leaves one at a time and check the root hashes match.
+    for (i, (leaf, expected_root_hash)) in
+        itertools::zip_eq(leaves.into_iter(), expected_root_hashes.into_iter()).enumerate()
     {
         assert_eq!(accumulator.root_hash(), expected_root_hash);
-        assert_eq!(accumulator.num_elements(), i as u64);
-        accumulator = accumulator.append(vec![element]);
+        assert_eq!(accumulator.num_leaves(), i as u64);
+        accumulator = accumulator.append(vec![leaf]);
     }
 }
