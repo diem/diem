@@ -557,7 +557,10 @@ impl<T: Payload> EventProcessor<T> {
         self.network.send_vote(vote_msg, recipients).await;
     }
 
-    async fn wait_before_vote_if_needed(&self, block_timestamp_us: u64) {
+    async fn wait_before_vote_if_needed(
+        &self,
+        block_timestamp_us: u64,
+    ) -> Result<(), WaitingError> {
         let current_round_deadline = self.pacemaker.current_round_deadline();
         if self.enforce_increasing_timestamps {
             match wait_if_possible(
@@ -591,7 +594,6 @@ impl<T: Payload> EventProcessor<T> {
                                     current_round_deadline);
                             counters::VOTE_FAILURE_WAIT_MS.observe(0.0);
                             counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
-                            return;
                         }
                         WaitingError::WaitFailed {
                             current_duration_since_epoch,
@@ -605,12 +607,13 @@ impl<T: Payload> EventProcessor<T> {
                             counters::VOTE_FAILURE_WAIT_MS
                                 .observe(wait_duration.as_millis() as f64);
                             counters::VOTE_WAIT_FAILED_COUNT.inc();
-                            return;
                         }
                     };
+                    return Err(waiting_error);
                 }
             }
         }
+        Ok(())
     }
 
     /// The function generates a VoteMsg for a given proposed_block:
@@ -641,7 +644,7 @@ impl<T: Payload> EventProcessor<T> {
             return Err(InsertError::InvalidBlockRound.into());
         }
         self.wait_before_vote_if_needed(block.timestamp_usecs())
-            .await;
+            .await?;
 
         let vote_info = self
             .safety_rules
