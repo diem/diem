@@ -114,6 +114,7 @@ impl EventStore {
                 // Queries tend to base on very recent ledger infos, so first try to linear search
                 // from the most recent end, for limited tries.
                 // TODO: Optimize: Physical store use reverse order.
+                let mut n_try_recent = 10;
                 #[cfg(any(test, feature = "testing"))]
                 let mut n_try_recent = 1;
                 while seq > 0 && n_try_recent > 0 {
