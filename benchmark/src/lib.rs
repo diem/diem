@@ -61,6 +61,58 @@ pub struct Benchmarker {
     submit_rate: u64,
 }
 
+/// Summary of the results of playing TXNs with Benchmarker.
+#[derive(Debug)]
+pub struct BenchSummary {
+    /// Number of TXNs submitted to AC.
+    num_submitted: usize,
+    /// Number of TXNs accepted by AC.
+    num_accepted: usize,
+    /// Number of TXNs committed in Libra.
+    num_committed: usize,
+    /// Duration to submit TXNs.
+    submit_duration_ms: u128,
+    /// Duration to wait TXNs committed.
+    wait_duration_ms: u128,
+}
+
+impl BenchSummary {
+    /// Calcuate average number of accepted TXNs per second.
+    pub fn req_throughput(&self) -> f64 {
+        assert!(self.submit_duration_ms > 0);
+        let throughput = self.num_accepted as f64 * 1000f64 / self.submit_duration_ms as f64;
+        debug!(
+            "req_throughput est = {} txns / {} ms = {:.2} rps.",
+            self.num_accepted, self.submit_duration_ms, throughput,
+        );
+        throughput
+    }
+
+    /// Calcuate average number of committed TXNs per second.
+    pub fn txn_throughput(&self) -> f64 {
+        assert!(self.submit_duration_ms > 0 || self.wait_duration_ms > 0);
+        let running_duration_ms = self.running_duration_ms();
+        let throughput = self.num_committed as f64 * 1000f64 / running_duration_ms;
+        debug!(
+            "txn_throughput est = {} txns / {} ms = {:.2} rps.",
+            self.num_committed, running_duration_ms, throughput,
+        );
+        throughput
+    }
+
+    pub fn running_duration_ms(&self) -> f64 {
+        (self.submit_duration_ms + self.wait_duration_ms) as f64
+    }
+
+    pub fn has_rejected_txns(&self) -> bool {
+        self.num_submitted - self.num_accepted > 0
+    }
+
+    pub fn has_uncommitted_txns(&self) -> bool {
+        self.num_accepted - self.num_committed > 0
+    }
+}
+
 impl Benchmarker {
     /// Construct Benchmarker with a vector of AC clients, stagger time range, and submission rate.
     pub fn new(
@@ -130,19 +182,19 @@ impl Benchmarker {
         // Disable client staggering for mint operations.
         let stagger_range_ms = self.stagger_range_ms;
         self.stagger_range_ms = 1;
-        let (num_accepted, num_committed, _, _) = self.submit_requests_and_wait_txns_committed(
+        let result = self.submit_requests_and_wait_txns_committed(
             mint_requests,
             std::slice::from_mut(faucet_account),
             Some(std::u64::MAX), /* Flood minting TXNs. */
         );
         self.stagger_range_ms = stagger_range_ms;
         // We stop immediately if any minting fails.
-        if num_accepted != mint_requests.len() || num_accepted - num_committed > 0 {
+        if result.has_rejected_txns() || result.has_uncommitted_txns() {
             panic!(
                 "{} of {} mint transaction(s) accepted, and {} failed",
-                num_accepted,
+                result.num_accepted,
                 mint_requests.len(),
-                num_accepted - num_committed,
+                result.num_accepted - result.num_committed,
             )
         }
     }
@@ -325,28 +377,18 @@ impl Benchmarker {
         requests: &[Request],
         senders: &mut [AccountData],
         submit_rate: Option<u64>,
-    ) -> (usize, usize, u128, u128) {
+    ) -> BenchSummary {
         let rate = submit_rate.unwrap_or(self.submit_rate);
-        let (num_txns_accepted, submit_duration_ms) = self.submit_requests(requests, rate);
+        let (num_accepted, submit_duration_ms) = self.submit_requests(requests, rate);
         let (sync_sequence_numbers, wait_duration_ms) = self.wait_txns_committed(senders);
         let (num_committed, _) = self.check_txn_results(senders, &sync_sequence_numbers);
-        (
-            num_txns_accepted,
+        BenchSummary {
+            num_submitted: requests.len(),
+            num_accepted,
             num_committed,
             submit_duration_ms,
             wait_duration_ms,
-        )
-    }
-
-    /// Calcuate average committed transactions per second.
-    fn calculate_throughput(num_txns: usize, duration_ms: u128, prefix: &str) -> f64 {
-        assert!(duration_ms > 0);
-        let throughput = num_txns as f64 * 1000f64 / duration_ms as f64;
-        debug!(
-            "{} throughput est = {} txns / {} ms = {:.2} rps.",
-            prefix, num_txns, duration_ms, throughput,
-        );
-        throughput
+        }
     }
 
     /// Similar to submit_requests_and_wait_txns_committed but with timing.
@@ -366,20 +408,14 @@ impl Benchmarker {
         &mut self,
         requests: &[Request],
         senders: &mut [AccountData],
-    ) -> (f64, f64) {
-        let (num_accepted, num_committed, submit_duration_ms, wait_duration_ms) =
-            self.submit_requests_and_wait_txns_committed(requests, senders, None);
-        let request_throughput =
-            Self::calculate_throughput(num_accepted, submit_duration_ms, "REQ");
-        let running_duration_ms = submit_duration_ms + wait_duration_ms;
-        let txn_throughput = Self::calculate_throughput(num_committed, running_duration_ms, "TXN");
-
-        OP_COUNTER.set("submit_duration_ms", submit_duration_ms as usize);
-        OP_COUNTER.set("wait_duration_ms", wait_duration_ms as usize);
-        OP_COUNTER.set("running_duration_ms", running_duration_ms as usize);
-        OP_COUNTER.set("request_throughput", request_throughput as usize);
-        OP_COUNTER.set("txn_throughput", txn_throughput as usize);
-
-        (request_throughput, txn_throughput)
+        submit_rate: Option<u64>,
+    ) -> BenchSummary {
+        let result = self.submit_requests_and_wait_txns_committed(requests, senders, submit_rate);
+        OP_COUNTER.set("submit_duration_ms", result.submit_duration_ms as usize);
+        OP_COUNTER.set("wait_duration_ms", result.wait_duration_ms as usize);
+        OP_COUNTER.set("running_duration_ms", result.running_duration_ms() as usize);
+        OP_COUNTER.set("request_throughput", result.req_throughput() as usize);
+        OP_COUNTER.set("txn_throughput", result.txn_throughput() as usize);
+        result
     }
 }

@@ -4,7 +4,7 @@
 use crate::{
     load_generator::{gen_repeated_requests, LoadGenerator},
     ruben_opt::RubenOpt,
-    Benchmarker,
+    BenchSummary, Benchmarker,
 };
 use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
 use client::AccountData;
@@ -75,7 +75,7 @@ pub fn measure_throughput<T: LoadGenerator + ?Sized>(
     num_accounts: u64,
     num_rounds: u64,
     num_epochs: u64,
-) -> std::vec::Vec<(f64, f64)> {
+) -> std::vec::Vec<BenchSummary> {
     // Generate testing accounts.
     let mut accounts: Vec<AccountData> = generator.gen_accounts(num_accounts);
     bm.register_accounts(&accounts);
@@ -85,15 +85,17 @@ pub fn measure_throughput<T: LoadGenerator + ?Sized>(
     bm.mint_accounts(&mint_txns, faucet_account);
 
     // Submit testing TXNs and measure throughput.
-    let mut txn_throughput_seq = vec![];
+    let mut results = vec![];
+    let mut throughput_seq = vec![];
     for _ in 0..num_epochs {
         let repeated_txn_reqs = gen_repeated_requests(generator, &mut accounts, num_rounds);
-        let txn_throughput = bm.measure_txn_throughput(&repeated_txn_reqs, &mut accounts);
-        txn_throughput_seq.push(txn_throughput);
+        let result = bm.measure_txn_throughput(&repeated_txn_reqs, &mut accounts, None);
+        throughput_seq.push((result.req_throughput(), result.txn_throughput()));
+        results.push(result);
     }
     info!(
-        "{} epoch(s) of REQ/TXN throughput = {:?}",
-        num_epochs, txn_throughput_seq
+        "{} epoch(s) of REQ/TXN throughputs: {:?}",
+        num_epochs, throughput_seq,
     );
-    txn_throughput_seq
+    results
 }
