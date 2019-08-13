@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nibble::{arb_internal_nibble_path, skip_common_prefix, NibblePath};
+use crate::nibble::{arb_internal_nibble_path, skip_common_prefix, Nibble, NibblePath};
 use proptest::prelude::*;
 
 #[test]
@@ -42,10 +42,10 @@ fn test_empty_nibble_path() {
 fn test_get_nibble() {
     let bytes = vec![0x12, 0x34];
     let nibble_path = NibblePath::new(bytes);
-    assert_eq!(nibble_path.get_nibble(0), 0x01);
-    assert_eq!(nibble_path.get_nibble(1), 0x02);
-    assert_eq!(nibble_path.get_nibble(2), 0x03);
-    assert_eq!(nibble_path.get_nibble(3), 0x04);
+    assert_eq!(nibble_path.get_nibble(0), Nibble::from(0x01));
+    assert_eq!(nibble_path.get_nibble(1), Nibble::from(0x02));
+    assert_eq!(nibble_path.get_nibble(2), Nibble::from(0x03));
+    assert_eq!(nibble_path.get_nibble(3), Nibble::from(0x04));
 }
 
 #[test]
@@ -53,9 +53,9 @@ fn test_nibble_iterator() {
     let bytes = vec![0x12, 0x30];
     let nibble_path = NibblePath::new_odd(bytes);
     let mut iter = nibble_path.nibbles();
-    assert_eq!(iter.next().unwrap(), 0x01);
-    assert_eq!(iter.next().unwrap(), 0x02);
-    assert_eq!(iter.next().unwrap(), 0x03);
+    assert_eq!(iter.next().unwrap(), Nibble::from(0x01));
+    assert_eq!(iter.next().unwrap(), Nibble::from(0x02));
+    assert_eq!(iter.next().unwrap(), Nibble::from(0x03));
     assert_eq!(iter.next(), None);
 }
 
@@ -100,13 +100,13 @@ fn test_visited_nibble_iter() {
     let bytes = vec![0x12, 0x34, 0x56];
     let nibble_path = NibblePath::new(bytes.clone());
     let mut iter = nibble_path.nibbles();
-    assert_eq!(iter.next().unwrap(), 0x01);
-    assert_eq!(iter.next().unwrap(), 0x02);
-    assert_eq!(iter.next().unwrap(), 0x03);
+    assert_eq!(iter.next().unwrap(), 0x01.into());
+    assert_eq!(iter.next().unwrap(), 0x02.into());
+    assert_eq!(iter.next().unwrap(), 0x03.into());
     let mut visited_nibble_iter = iter.visited_nibbles();
-    assert_eq!(visited_nibble_iter.next().unwrap(), 0x01);
-    assert_eq!(visited_nibble_iter.next().unwrap(), 0x02);
-    assert_eq!(visited_nibble_iter.next().unwrap(), 0x03);
+    assert_eq!(visited_nibble_iter.next().unwrap(), 0x01.into());
+    assert_eq!(visited_nibble_iter.next().unwrap(), 0x02.into());
+    assert_eq!(visited_nibble_iter.next().unwrap(), 0x03.into());
 }
 
 #[test]
@@ -169,11 +169,11 @@ proptest! {
     #[test]
     fn test_push(
         nibble_path in arb_internal_nibble_path(),
-        nibble in 0..16u8
+        nibble in any::<Nibble>()
     ) {
         let mut new_nibble_path = nibble_path.clone();
         new_nibble_path.push(nibble);
-        let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
+        let mut nibbles: Vec<Nibble> = nibble_path.nibbles().collect();
         nibbles.push(nibble);
         let nibble_path2 = nibbles.into_iter().collect();
         prop_assert_eq!(new_nibble_path, nibble_path2);
@@ -181,7 +181,7 @@ proptest! {
 
     #[test]
     fn test_pop(mut nibble_path in any::<NibblePath>()) {
-        let mut nibbles: Vec<u8> = nibble_path.nibbles().collect();
+        let mut nibbles: Vec<Nibble> = nibble_path.nibbles().collect();
         let nibble_from_nibbles = nibbles.pop();
         let nibble_from_nibble_path = nibble_path.pop();
         let nibble_path2 = nibbles.into_iter().collect();
@@ -207,8 +207,8 @@ proptest! {
         let remaining_nibble_path = nibble_iter.remaining_nibbles().get_nibble_path();
         let visited_iter = visited_nibble_path.nibbles();
         let remaining_iter = remaining_nibble_path.nibbles();
-        prop_assert_eq!(visited_nibbles, visited_iter.collect::<Vec<u8>>());
-        prop_assert_eq!(nibble_iter.collect::<Vec<u8>>(), remaining_iter.collect::<Vec<_>>());
+        prop_assert_eq!(visited_nibbles, visited_iter.collect::<Vec<Nibble>>());
+        prop_assert_eq!(nibble_iter.collect::<Vec<Nibble>>(), remaining_iter.collect::<Vec<_>>());
    }
 
    #[test]

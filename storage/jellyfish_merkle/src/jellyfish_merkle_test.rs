@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::nibble::Nibble;
 use crypto::HashValue;
 use mock_tree_store::MockTreeStore;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -77,11 +78,11 @@ fn test_insert_at_leaf_with_internal_created() {
     let leaf2 = Node::new_leaf(key2, value2);
     let mut children = HashMap::new();
     children.insert(
-        0,
+        Nibble::from(0),
         Child::new(leaf1.hash(), 1 /* version */, true /* is_leaf */),
     );
     children.insert(
-        15,
+        Nibble::from(15),
         Child::new(leaf2.hash(), 1 /* version */, true /* is_leaf */),
     );
     let internal = Node::new_internal(children);
@@ -90,12 +91,12 @@ fn test_insert_at_leaf_with_internal_created() {
         leaf1.clone().into()
     );
     assert_eq!(
-        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, 0 /* index */))
+        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(0)))
             .unwrap(),
         leaf1.into()
     );
     assert_eq!(
-        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, 15 /* index */))
+        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(15)))
             .unwrap(),
         leaf2.into()
     );
@@ -139,11 +140,11 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
     let internal = {
         let mut children = HashMap::new();
         children.insert(
-            0,
+            Nibble::from(0),
             Child::new(leaf1.hash(), 1 /* version */, true /* is_leaf */),
         );
         children.insert(
-            1,
+            Nibble::from(1),
             Child::new(leaf2.hash(), 1 /* version */, true /* is_leaf */),
         );
         Node::new_internal(children)
@@ -152,7 +153,7 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
     let root_internal = {
         let mut children = HashMap::new();
         children.insert(
-            0,
+            Nibble::from(0),
             Child::new(
                 internal.hash(),
                 1,     /* version */
@@ -167,12 +168,12 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
         leaf1.clone().into()
     );
     assert_eq!(
-        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, 0 /* index */),)
+        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(0)))
             .unwrap(),
         leaf1.clone().into()
     );
     assert_eq!(
-        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, 1 /* index */),)
+        db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(1)))
             .unwrap(),
         leaf2.clone().into()
     );

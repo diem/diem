@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod node_type_test;
 
-use crate::nibble::NibblePath;
+use crate::nibble::{Nibble, NibblePath};
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{
@@ -74,7 +74,7 @@ impl NodeKey {
     }
 
     /// Generates a child node_key based on this node key.
-    pub fn gen_child_node_key(&self, version: Version, n: u8) -> Self {
+    pub fn gen_child_node_key(&self, version: Version, n: Nibble) -> Self {
         let mut node_nibble_path = self.nibble_path().clone();
         node_nibble_path.push(n);
         Self::new(version, node_nibble_path)
@@ -138,7 +138,7 @@ impl Child {
 
 /// [`Children`] is just a collection of children belonging to a [`InternalNode`], indexed from 0 to
 /// 15, inclusive.
-pub(crate) type Children = HashMap<u8, Child>;
+pub(crate) type Children = HashMap<Nibble, Child>;
 
 /// Represents a 4-level subtree with 16 children at the bottom level. Theoretically, this reduces
 /// IOPS to query a tree by 4x since we compress 4 levels in a standard Merkle tree into 1 node.
@@ -269,13 +269,12 @@ impl InternalNode {
     }
 
     /// Sets the `n`-th child.
-    pub fn set_child(&mut self, n: u8, child: Child) {
-        assert!(n < 16);
+    pub fn set_child(&mut self, n: Nibble, child: Child) {
         self.children.insert(n, child);
     }
 
     /// Gets the `n`-th child.
-    pub fn child(&self, n: u8) -> Option<&Child> {
+    pub fn child(&self, n: Nibble) -> Option<&Child> {
         self.children.get(&n)
     }
 
@@ -290,7 +289,8 @@ impl InternalNode {
     pub fn generate_bitmaps(&self) -> (u16, u16) {
         let mut existence_bitmap = 0;
         let mut leaf_bitmap = 0;
-        for (i, child) in self.children.iter() {
+        for (nibble, child) in self.children.iter() {
+            let i = u8::from(*nibble);
             existence_bitmap |= 1u16 << i;
             leaf_bitmap |= (child.is_leaf as u16) << i;
         }
@@ -327,12 +327,12 @@ impl InternalNode {
         } else if range_existence_bitmap.count_ones() == 1 && (range_leaf_bitmap != 0 || width == 1)
         {
             // Only 1 leaf child under this subtree or reach the lowest level
-            let only_child_index = range_existence_bitmap.trailing_zeros() as u8;
+            let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
             self.child(only_child_index)
                 .unwrap_or_else(|| {
                     panic!(
                         "Corrupted internal node: existence_bitmap indicates \
-                         the existence of a non-exist child at index {}",
+                         the existence of a non-exist child at index {:x}",
                         only_child_index
                     )
                 })
@@ -371,10 +371,9 @@ impl InternalNode {
     pub fn get_child_with_siblings(
         &self,
         node_key: &NodeKey,
-        n: u8,
+        n: Nibble,
     ) -> (Option<NodeKey>, Vec<HashValue>) {
         let mut siblings = vec![];
-        assert!(n < 16);
         let (existence_bitmap, leaf_bitmap) = self.generate_bitmaps();
 
         // Nibble height from 3 to 0.
@@ -385,7 +384,7 @@ impl InternalNode {
             // Get the index of the first child belonging to the same subtree whose root, let's say
             // `r` is at height `h` that the n-th child belongs to.
             // Note:  `child_half_start` will be always equal to `n` at height 0.
-            let child_half_start = (0xff << h) & n;
+            let child_half_start = (0xff << h) & u8::from(n);
             // Get the index of the first child belonging to the subtree whose root is the sibling
             // of `r` at height `h`.
             let sibling_half_start = child_half_start ^ (1 << h);
@@ -412,7 +411,7 @@ impl InternalNode {
                 // Even this leaf child is not the n-th child, it should be returned instead of
                 // `None` because it's existence indirectly proves the n-th child doesn't exist.
                 // Please read proof format for details.
-                let only_child_index = range_existence_bitmap.trailing_zeros() as u8;
+                let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
                 return (
                     {
                         let only_child_version = self
@@ -420,7 +419,7 @@ impl InternalNode {
                             .unwrap_or_else(|| {
                                 panic!(
                                     "Corrupted internal node: child_bitmap indicates \
-                                     the existence of a non-exist child at index {}",
+                                     the existence of a non-exist child at index {:x}",
                                     only_child_index
                                 )
                             })
@@ -469,7 +468,7 @@ impl Node {
     }
 
     /// Creates the [`Internal`](Node::Internal) variant.
-    pub fn new_internal(children: HashMap<u8, Child>) -> Self {
+    pub fn new_internal(children: Children) -> Self {
         Node::Internal(InternalNode::new(children))
     }
 
