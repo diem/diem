@@ -45,6 +45,9 @@ pub enum SecurityEvent {
     /// Network identified an invalid peer
     InvalidNetworkPeer,
 
+    /// Network discovery received an invalid DiscoveryMsg
+    InvalidDiscoveryMsg,
+
     /// Error for testing
     #[cfg(test)]
     TestError,
