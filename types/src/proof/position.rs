@@ -75,6 +75,11 @@ impl Position {
         treebits::level(self.0)
     }
 
+    // Compute the position given the level and the pos count on this level.
+    pub fn from_level_and_pos(level: u32, pos: u64) -> Self {
+        Self::from_inorder_index(treebits::node_from_level_and_pos(level, pos))
+    }
+
     // Given the position, return the leaf index counting from the left
     pub fn to_leaf_index(self) -> u64 {
         treebits::pos_counting_from_left(self.0)

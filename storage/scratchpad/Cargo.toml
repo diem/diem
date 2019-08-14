@@ -10,8 +10,10 @@ edition = "2018"
 itertools = "0.8.0"
 
 crypto = { path = "../../crypto/legacy_crypto" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
 types = { path = "../../types" }
 
 [dev-dependencies]
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+proptest = "0.9.4"
+
 types = { path = "../../types", features = ["testing"] }
