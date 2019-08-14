@@ -372,3 +372,15 @@ fn test_nested_tuples() {
     let bad_output: Result<(u32, u32)> = deserializer.decode_tuple2();
     assert!(bad_output.is_err());
 }
+
+#[test]
+fn test_strings() {
+    let input: &'static str = "Hello, World!";
+    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
+    serializer.encode_string(input).unwrap();
+    let serialized_bytes = serializer.get_output();
+
+    let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
+    let output: Result<String> = deserializer.decode_string();
+    assert_eq!(output.unwrap(), input);
+}
