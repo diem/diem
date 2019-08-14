@@ -15,12 +15,12 @@ fn put_account_state_set(
     store: &StateStore,
     account_state_set: Vec<(AccountAddress, AccountStateBlob)>,
     version: Version,
-    expected_nodes_created: usize,
-    expected_nodes_retired: usize,
-    expected_blobs_retired: usize,
+    expected_new_internals: usize,
+    expected_stale_internals: usize,
+    expected_stale_leaves: usize,
 ) -> HashValue {
     let mut cs = ChangeSet::new();
-    let blobs_created = account_state_set.len();
+    let expected_new_leaves = account_state_set.len();
     let root = store
         .put_account_state_sets(
             vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
@@ -30,20 +30,20 @@ fn put_account_state_set(
         .unwrap()[0];
     store.db.write_schemas(cs.batch).unwrap();
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StateNodesCreated),
-        expected_nodes_created
+        cs.counter_bumps.get(LedgerCounter::NewStateInternals),
+        expected_new_internals
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StateNodesRetired),
-        expected_nodes_retired
+        cs.counter_bumps.get(LedgerCounter::StaleStateInternals),
+        expected_stale_internals
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StateBlobsCreated),
-        blobs_created
+        cs.counter_bumps.get(LedgerCounter::NewStateLeaves),
+        expected_new_leaves
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StateBlobsRetired),
-        expected_blobs_retired
+        cs.counter_bumps.get(LedgerCounter::StaleStateLeaves),
+        expected_stale_leaves
     );
 
     root
