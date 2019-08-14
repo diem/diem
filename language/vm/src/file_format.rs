@@ -328,6 +328,16 @@ pub struct FunctionDefinition {
     pub function: FunctionHandleIndex,
     /// Flags for this function (private, public, native, etc.)
     pub flags: u8,
+    /// List of nominal resources (declared in this module) that the procedure might access
+    /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
+    /// This list of acquires grants the borrow checker the ability to statically verify the safety
+    /// of references into global storage
+    ///
+    /// Not in the signature as it is not needed outside of the declaring module
+    ///
+    /// Note, there is no LocalsSignatureIndex with each struct definition index, as global
+    /// resources cannot currently take type arguments
+    pub acquires_global_resources: Vec<StructDefinitionIndex>,
     /// Code for this function.
     #[cfg_attr(
         any(test, feature = "testing"),

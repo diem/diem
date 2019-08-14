@@ -1381,6 +1381,7 @@ impl<S: Scope + Sized> Compiler<S> {
         Ok(FunctionDefinition {
             function: fh_idx,
             flags: CodeUnit::PUBLIC,
+            acquires_global_resources: vec![],
             code,
         })
     }
@@ -1637,6 +1638,8 @@ impl<S: Scope + Sized> Compiler<S> {
         let func_def = FunctionDefinition {
             function: fh_idx,
             flags,
+            // TODO needs to be parsed and added to the IR
+            acquires_global_resources: vec![],
             code: CodeUnit::default(), // TODO: eliminate usage of default
         };
 

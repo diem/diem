@@ -45,6 +45,7 @@ fn fake_script() -> VerifiedScript {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
+            acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
@@ -554,6 +555,7 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         .map(|(i, _)| FunctionDefinition {
             function: FunctionHandleIndex::new(i as u16),
             flags: CodeUnit::PUBLIC,
+            acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(i as u16),

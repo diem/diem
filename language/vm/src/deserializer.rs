@@ -809,12 +809,26 @@ fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionD
     let function = read_uleb_u16_internal(cursor)?;
 
     let flags = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+    let acquires_global_resources = load_struct_definition_indices(cursor)?;
     let code_unit = load_code_unit(cursor)?;
     Ok(FunctionDefinition {
         function: FunctionHandleIndex(function),
         flags,
+        acquires_global_resources,
         code: code_unit,
     })
+}
+
+/// Deserializes a `Vec<StructDefinitionIndex>`.
+fn load_struct_definition_indices(
+    cursor: &mut Cursor<&[u8]>,
+) -> BinaryLoaderResult<Vec<StructDefinitionIndex>> {
+    let len = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+    let mut indices = vec![];
+    for _ in 0..len {
+        indices.push(StructDefinitionIndex(read_uleb_u16_internal(cursor)?));
+    }
+    Ok(indices)
 }
 
 /// Deserializes a `CodeUnit`.

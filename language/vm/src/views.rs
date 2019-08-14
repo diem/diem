@@ -373,6 +373,19 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
     pub fn code(&self) -> &'a CodeUnit {
         &self.function_def.code
     }
+
+    pub fn acquires_global_resources(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = StructDefinitionView<'a, T>> {
+        let module = self.module;
+        self.function_def
+            .acquires_global_resources
+            .iter()
+            .map(move |idx| {
+                let def = module.struct_def_at(*idx);
+                StructDefinitionView::new(module, def)
+            })
+    }
 }
 
 pub struct TypeSignatureView<'a, T> {
