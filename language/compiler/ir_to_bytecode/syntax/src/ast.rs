@@ -190,6 +190,11 @@ pub struct Function {
     pub visibility: FunctionVisibility,
     /// The type signature
     pub signature: FunctionSignature,
+    /// List of nominal resources (declared in this module) that the procedure might access
+    /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
+    /// This list of acquires grants the borrow checker the ability to statically verify the safety
+    /// of references into global storage
+    pub acquires: Vec<StructName>,
     /// Annotations on the function
     pub annotations: Vec<FunctionAnnotation>,
     /// The code for the procedure
@@ -744,6 +749,7 @@ impl Function {
         visibility: FunctionVisibility,
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
+        acquires: Vec<StructName>,
         annotations: Vec<FunctionAnnotation>,
         body: FunctionBody,
     ) -> Self {
@@ -751,6 +757,7 @@ impl Function {
         Function {
             visibility,
             signature,
+            acquires,
             annotations,
             body,
         }
