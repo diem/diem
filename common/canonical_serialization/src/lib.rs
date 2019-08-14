@@ -105,6 +105,8 @@ pub trait CanonicalSerializer {
 
     fn encode_vec<T: CanonicalSerialize>(&mut self, v: &[T]) -> Result<&mut Self>;
 
+    fn encode_string(&mut self, s: &str) -> Result<&mut Self>;
+
     fn encode_tuple2<T0: CanonicalSerialize, T1: CanonicalSerialize>(
         &mut self,
         v: &(T0, T1),
@@ -262,6 +264,11 @@ where
         Ok(self)
     }
 
+    fn encode_string(&mut self, s: &str) -> Result<&mut Self> {
+        // String::as_bytes returns the UTF-8 encoded byte array
+        self.encode_variable_length_bytes(s.as_bytes())
+    }
+
     fn encode_tuple2<T0: CanonicalSerialize, T1: CanonicalSerialize>(
         &mut self,
         v: &(T0, T1),
@@ -303,6 +310,8 @@ pub trait CanonicalDeserializer {
     ) -> Result<BTreeMap<K, V>>;
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>>;
+
+    fn decode_string(&mut self) -> Result<String>;
 
     fn decode_tuple2<T0: CanonicalDeserialize, T1: CanonicalDeserialize>(
         &mut self,
@@ -447,6 +456,10 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
             vec.push(v);
         }
         Ok(vec)
+    }
+
+    fn decode_string(&mut self) -> Result<String> {
+        Ok(String::from_utf8(self.decode_variable_length_bytes()?)?)
     }
 
     fn decode_tuple2<T0: CanonicalDeserialize, T1: CanonicalDeserialize>(
@@ -607,6 +620,22 @@ impl CanonicalDeserialize for BTreeMap<Vec<u8>, Vec<u8>> {
         Self: Sized,
     {
         Ok(deserializer.decode_btreemap()?)
+    }
+}
+
+impl CanonicalSerialize for &str {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_string(self)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for String {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(deserializer.decode_string()?)
     }
 }
 
