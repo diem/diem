@@ -68,11 +68,11 @@ impl StateStore {
             JellyfishMerkleTree::new(self).put_blob_sets(blob_sets, first_version)?;
 
         cs.counter_bumps.bump(
-            LedgerCounter::StateNodesCreated,
+            LedgerCounter::NewStateInternals,
             tree_update_batch.node_batch.len(),
         );
         cs.counter_bumps.bump(
-            LedgerCounter::StateBlobsCreated,
+            LedgerCounter::NewStateLeaves,
             tree_update_batch.num_new_leaves,
         );
         tree_update_batch
@@ -82,11 +82,11 @@ impl StateStore {
             .collect::<Result<Vec<()>>>()?;
 
         cs.counter_bumps.bump(
-            LedgerCounter::StateNodesRetired,
+            LedgerCounter::StaleStateInternals,
             tree_update_batch.stale_node_index_batch.len(),
         );
         cs.counter_bumps.bump(
-            LedgerCounter::StateBlobsRetired,
+            LedgerCounter::StaleStateLeaves,
             tree_update_batch.num_stale_leaves,
         );
         tree_update_batch
