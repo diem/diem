@@ -1634,12 +1634,16 @@ impl<S: Scope + Sized> Compiler<S> {
             FunctionBody::Move { .. } => 0,
             FunctionBody::Native => CodeUnit::NATIVE,
         };
+        let mut acquires_global_resources = vec![];
+        for name in function.acquires.iter() {
+            let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
+            acquires_global_resources.push(def_idx)
+        }
 
         let func_def = FunctionDefinition {
             function: fh_idx,
             flags,
-            // TODO needs to be parsed and added to the IR
-            acquires_global_resources: vec![],
+            acquires_global_resources,
             code: CodeUnit::default(), // TODO: eliminate usage of default
         };
 

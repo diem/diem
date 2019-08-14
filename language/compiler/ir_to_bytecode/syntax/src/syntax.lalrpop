@@ -377,6 +377,14 @@ ReturnType: Vec<Type> = {
     }
 }
 
+AcquireList: Vec<StructName> = {
+    "acquires" <s: StructName> <al: ("*" <StructName>)*> => {
+        let mut al = al;
+        al.insert(0, s);
+        al
+    }
+}
+
 FunctionDecl : (FunctionName, Function) = {
   <f: MoveFunctionDecl> => (f.0, f.1),
   <f: NativeFunctionDecl> => (f.0, f.1),
@@ -384,6 +392,7 @@ FunctionDecl : (FunctionName, Function) = {
 
 MoveFunctionDecl : (FunctionName, Function) = {
     <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+    <acquires: AcquireList?>
     <annotations: (FunctionAnnotation)*>
     <locals_body: FunctionBlock> => {
         let (locals, body) = locals_body;
@@ -391,6 +400,7 @@ MoveFunctionDecl : (FunctionName, Function) = {
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
+            acquires.unwrap_or_else(Vec::new),
             annotations,
             FunctionBody::Move{locals: locals, code: body},
         ))
@@ -398,11 +408,14 @@ MoveFunctionDecl : (FunctionName, Function) = {
 }
 
 NativeFunctionDecl: (FunctionName, Function) = {
-    <nat: NativeTag> <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?> ";" => {
+    <nat: NativeTag> <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+        <acquires: AcquireList?>
+        ";" => {
         (FunctionName::new(n), Function::new(
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
+            acquires.unwrap_or_else(Vec::new),
             vec![],
             FunctionBody::Native,
         ))
@@ -443,6 +456,7 @@ pub Program : Program = {
                 vec![],
                 vec![],
                 vec![],
+                vec![],
                 FunctionBody::Move {
                     locals: vec![],
                     code: Block::new(vec![return_stmt]),
@@ -460,6 +474,7 @@ pub Script : Script = {
             Function::new(
                 FunctionVisibility::Public,
                 args,
+                vec![],
                 vec![],
                 vec![],
                 FunctionBody::Move{ locals: locals, code: body },
