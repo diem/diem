@@ -103,10 +103,13 @@ where
             command_receiver,
             committed_timestamp_usecs,
             committed_state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
-            committed_transaction_accumulator: Rc::new(Accumulator::new(
-                previous_frozen_subtrees_in_accumulator,
-                previous_num_leaves_in_accumulator,
-            )),
+            committed_transaction_accumulator: Rc::new(
+                Accumulator::new(
+                    previous_frozen_subtrees_in_accumulator,
+                    previous_num_leaves_in_accumulator,
+                )
+                .expect("The startup info read from storage should be valid."),
+            ),
             block_tree: BlockTree::new(last_committed_block_id),
             blocks_to_store: VecDeque::new(),
             storage_read_client,
