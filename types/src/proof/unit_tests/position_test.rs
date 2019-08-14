@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proof::{
-    position::*,
-    treebits::{pos_counting_from_left, NodeDirection},
-};
+use crate::proof::{position::*, treebits::pos_counting_from_left};
 
 /// Position is marked with in-order-traversal sequence.
 ///
@@ -95,63 +92,25 @@ fn test_position_get_next_sibling() {
 }
 
 #[test]
-fn test_position_get_direction() {
-    assert_eq!(
-        Position::from_inorder_index(5).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(6).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(2).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(11).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(13).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(14).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(10).get_direction_for_self(),
-        NodeDirection::Right
-    );
-    assert_eq!(
-        Position::from_inorder_index(1).get_direction_for_self(),
-        NodeDirection::Left
-    );
-    assert_eq!(
-        Position::from_inorder_index(0).get_direction_for_self(),
-        NodeDirection::Left
-    );
-    assert_eq!(
-        Position::from_inorder_index(3).get_direction_for_self(),
-        NodeDirection::Left
-    );
-    assert_eq!(
-        Position::from_inorder_index(8).get_direction_for_self(),
-        NodeDirection::Left
-    );
-    assert_eq!(
-        Position::from_inorder_index(12).get_direction_for_self(),
-        NodeDirection::Left
-    );
+fn test_position_is_left_child() {
+    assert!(!Position::from_inorder_index(5).is_left_child());
+    assert!(!Position::from_inorder_index(6).is_left_child());
+    assert!(!Position::from_inorder_index(2).is_left_child());
+    assert!(!Position::from_inorder_index(11).is_left_child());
+    assert!(!Position::from_inorder_index(13).is_left_child());
+    assert!(!Position::from_inorder_index(14).is_left_child());
+    assert!(!Position::from_inorder_index(10).is_left_child());
+
+    assert!(Position::from_inorder_index(1).is_left_child());
+    assert!(Position::from_inorder_index(0).is_left_child());
+    assert!(Position::from_inorder_index(3).is_left_child());
+    assert!(Position::from_inorder_index(8).is_left_child());
+    assert!(Position::from_inorder_index(12).is_left_child());
 }
 
 #[test]
-fn test_position_get_direction_from_root() {
-    assert_eq!(
-        Position::from_inorder_index(7).get_direction_for_self(),
-        NodeDirection::Left
-    );
+fn test_position_is_left_child_from_root() {
+    assert!(Position::from_inorder_index(7).is_left_child());
 }
 
 #[test]

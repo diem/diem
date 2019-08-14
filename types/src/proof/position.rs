@@ -65,9 +65,12 @@ impl Position {
         Self::from_inorder_index(treebits::right_child(self.0))
     }
 
-    // Note: if self is root, the direction will overflow (and will always be left)
-    pub fn get_direction_for_self(self) -> treebits::NodeDirection {
-        treebits::direction_from_parent(self.0)
+    /// Whether this position is a left child of its parent.
+    pub fn is_left_child(self) -> bool {
+        match treebits::direction_from_parent(self.0) {
+            treebits::NodeDirection::Left => true,
+            treebits::NodeDirection::Right => false,
+        }
     }
 
     // The level start from 0 counting from the leaf level

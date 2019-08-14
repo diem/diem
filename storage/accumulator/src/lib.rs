@@ -104,9 +104,7 @@
 use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use failure::prelude::*;
 use std::marker::PhantomData;
-use types::proof::{
-    position::Position, treebits::NodeDirection, AccumulatorProof, MerkleTreeInternalNode,
-};
+use types::proof::{position::Position, AccumulatorProof, MerkleTreeInternalNode};
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -243,7 +241,7 @@ where
 
         // first node may be a right child, in that case pair it with its existing sibling
         let (first_pos, first_hash) = iter.peek().expect("Current level is empty");
-        if first_pos.get_direction_for_self() == NodeDirection::Right {
+        if !first_pos.is_left_child() {
             parent_level.push((
                 first_pos.get_parent(),
                 Self::hash_internal_node(self.reader.get(first_pos.get_sibling())?, *first_hash),
