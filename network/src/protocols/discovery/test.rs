@@ -10,7 +10,7 @@ use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
 
-fn get_random_seed() -> PeerInfo {
+fn gen_peer_info() -> PeerInfo {
     let mut peer_info = PeerInfo::new();
     peer_info.set_epoch(1);
     peer_info.mut_addrs().push(
@@ -20,6 +20,13 @@ fn get_random_seed() -> PeerInfo {
             .into(),
     );
     peer_info
+}
+
+fn gen_full_node_payload() -> FullNodePayload {
+    let mut payload = FullNodePayload::new();
+    payload.set_epoch(1);
+    payload.set_dns_seed_addr(b"example.com"[..].into());
+    payload
 }
 
 fn setup_discovery(
@@ -64,7 +71,8 @@ fn setup_discovery(
 }
 
 fn get_addrs(note: &Note) -> Vec<Multiaddr> {
-    let peer_info: PeerInfo = protobuf::parse_from_bytes(note.get_peer_info()).unwrap();
+    let signed_peer_info = note.get_signed_peer_info();
+    let peer_info: PeerInfo = protobuf::parse_from_bytes(signed_peer_info.get_peer_info()).unwrap();
     let mut addrs = vec![];
     for addr in peer_info.get_addrs() {
         addrs.push(Multiaddr::try_from(addr.clone()).unwrap());
@@ -114,7 +122,8 @@ fn inbound() {
     let address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(peer_id);
     // Setup seed.
-    let mut seed_peer_info = get_random_seed();
+    let mut seed_peer_info = gen_peer_info();
+    let seed_peer_payload = gen_full_node_payload();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, seed_signer) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
@@ -166,7 +175,12 @@ fn inbound() {
         // peer to the connectivity manager.
         let peer_id_other = PeerId::random();
         let address_other = Multiaddr::from_str("/ip4/172.29.52.192/tcp/8080").unwrap();
-        let seed_note = create_note(&seed_signer, seed_peer_id, seed_peer_info.clone());
+        let seed_note = create_note(
+            &seed_signer,
+            seed_peer_id,
+            seed_peer_info.clone(),
+            seed_peer_payload.clone(),
+        );
         let (pub_keys_other, signer_other) = generate_network_pub_keys_and_signer(peer_id_other);
         trusted_peers
             .write()
@@ -177,7 +191,8 @@ fn inbound() {
             let addrs = peer_info.mut_addrs();
             addrs.clear();
             addrs.push(address_other.as_ref().into());
-            create_note(&signer_other, peer_id_other, peer_info)
+            let full_node_payload = gen_full_node_payload();
+            create_note(&signer_other, peer_id_other, peer_info, full_node_payload)
         };
         let mut msg = DiscoveryMsg::new();
         msg.mut_notes().push(note_other.clone());
@@ -219,7 +234,12 @@ fn inbound() {
             seed_peer_info
                 .mut_addrs()
                 .push(new_seed_addr.as_ref().into());
-            let seed_note = create_note(&seed_signer, seed_peer_id, seed_peer_info);
+            let seed_note = create_note(
+                &seed_signer,
+                seed_peer_id,
+                seed_peer_info,
+                seed_peer_payload,
+            );
             msg.mut_notes().push(seed_note);
             dialer_substream
                 .send(msg.write_to_bytes().unwrap().into())
@@ -245,7 +265,7 @@ fn outbound() {
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(peer_id);
     // Setup seed.
     let seed_peer_id = PeerId::random();
-    let seed_peer_info = get_random_seed();
+    let seed_peer_info = gen_peer_info();
     let (seed_pub_keys, _) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
         vec![(seed_peer_id, seed_pub_keys), (peer_id, self_pub_keys)]
