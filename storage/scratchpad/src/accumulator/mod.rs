@@ -53,13 +53,11 @@ impl<H> Accumulator<H>
 where
     H: CryptoHasher,
 {
-    /// Constructs a new accumulator with roots of existing frozen subtrees. At the beginning this
-    /// will be an empty vector and `num_leaves` will be zero. Later if we restart and the
-    /// storage have persisted some transactions, we will load them from storage.
-    pub fn new(frozen_subtree_roots: Vec<HashValue>, num_leaves: u64) -> Self {
-        assert_eq!(
-            frozen_subtree_roots.len(),
-            num_leaves.count_ones() as usize,
+    /// Constructs a new accumulator with roots of existing frozen subtrees. Returns error if the
+    /// number of frozen subtree roots does not match the number of leaves.
+    pub fn new(frozen_subtree_roots: Vec<HashValue>, num_leaves: u64) -> Result<Self> {
+        ensure!(
+            frozen_subtree_roots.len() == num_leaves.count_ones() as usize,
             "The number of frozen subtrees does not match the number of leaves. \
              frozen_subtree_roots.len(): {}. num_leaves: {}.",
             frozen_subtree_roots.len(),
@@ -68,12 +66,12 @@ where
 
         let root_hash = Self::compute_root_hash(&frozen_subtree_roots, num_leaves);
 
-        Accumulator {
+        Ok(Self {
             frozen_subtree_roots,
             num_leaves,
             root_hash,
             phantom: PhantomData,
-        }
+        })
     }
 
     /// Appends a list of new leaves to an existing accumulator. Since the accumulator is
@@ -87,7 +85,9 @@ where
             num_leaves += 1;
         }
 
-        Self::new(frozen_subtree_roots, num_leaves)
+        Self::new(frozen_subtree_roots, num_leaves).expect(
+            "Appending leaves to a valid accumulator should create another valid accumulator.",
+        )
     }
 
     /// Appends one leaf. This will update `frozen_subtree_roots` to store new frozen root nodes
@@ -301,6 +301,6 @@ where
     H: CryptoHasher,
 {
     fn default() -> Self {
-        Accumulator::new(vec![], 0)
+        Accumulator::new(vec![], 0).expect("Constructing empty accumulator should work.")
     }
 }
