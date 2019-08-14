@@ -25,7 +25,7 @@
 //! assert!(signature.verify(&hashed_message, &public_key).is_ok());
 //! ```
 //! **Note**: The above example generates a private key using a private function intended only for
-//! testing purposes. Production code should find an alternate means for secure key generation.
+//! testing purposes. Production code should generate the key according to the spec [draft-irtf-cfrg-bls-signature-00](https://tools.ietf.org/id/draft-irtf-cfrg-bls-signature-00.html#keygen).
 //!
 //! This module is not currently used, but could be included in the future for improved
 //! performance in consensus.
@@ -100,16 +100,36 @@ impl SigningKey for BLS12381PrivateKey {
     }
 }
 
+/// r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+/// For BLS12-381 curve parameters see [draft-yonezawa-pairing-friendly-curves-02](https://tools.ietf.org/html/draft-yonezawa-pairing-friendly-curves-02#section-4.2.2).
+const MODULUS_R: FrRepr = FrRepr([
+    0xffff_ffff_0000_0001,
+    0x53bd_a402_fffe_5bfe,
+    0x3339_d808_09a1_d805,
+    0x73ed_a753_299d_7d48,
+]);
+
 impl Uniform for BLS12381PrivateKey {
-    // TODO check Fr value size and which bits should be set.
+    /// This method generates a private signing key for BLS.
+    /// It samples a random 255 bits number and checks whether this number is smaller than the
+    /// modulu r, if so, it uses the number to compose a secret key, otherwise it retries.
+    /// This method should be used for testing purposes only, production code should generate
+    /// the key according to the spec [draft-irtf-cfrg-bls-signature-00](https://tools.ietf.org/id/draft-irtf-cfrg-bls-signature-00.html#keygen).
     fn generate_for_testing<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
-        let mut fr_repr: [u64; 4usize] = rng.gen();
-        // Since field modulus is 381-bit prime, drop the 3 highest-order bits
-        fr_repr[3] &= 0x1FFF_FFFF_FFFF_FFFF;
-        let mut fr = Fr::from_repr(FrRepr(fr_repr)).unwrap();
+        let mut fr;
+        loop {
+            let mut fr_repr: [u64; 4usize] = rng.gen();
+            fr_repr[3] &= 0x7FFF_FFFF_FFFF_FFFF;
+
+            // stop sampling if the resulting number is less than the modulus r
+            if FrRepr(fr_repr) < MODULUS_R {
+                fr = Fr::from_repr(FrRepr(fr_repr)).unwrap();
+                break;
+            }
+        }
         BLS12381PrivateKey(threshold_crypto::serde_impl::SerdeSecret(
             threshold_crypto::SecretKey::from_mut(&mut fr),
         ))
