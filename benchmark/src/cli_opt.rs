@@ -70,9 +70,6 @@ pub struct RubenOpt {
     // Options for creating Benchmarker.
     #[structopt(flatten)]
     pub bench_opt: BenchOpt,
-    /// TODO: Discard this option. Debug interface address in the form of ip_address:port.
-    #[structopt(short = "d", long = "debug_address")]
-    pub debug_address: Option<String>,
     /// Number of accounts to create in Libra.
     #[structopt(short = "n", long = "num_accounts", default_value = "32")]
     pub num_accounts: u64,
