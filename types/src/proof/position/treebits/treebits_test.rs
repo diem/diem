@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proof::treebits::*;
+use super::*;
 
 fn slow_nodes_to_left_of(node: u64) -> u64 {
     let ret_add = if node == right_child(parent(node)) {

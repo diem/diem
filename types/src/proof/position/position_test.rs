@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proof::{position::*, treebits::pos_counting_from_left};
+use crate::proof::position::{treebits::pos_counting_from_left, *};
 
 /// Position is marked with in-order-traversal sequence.
 ///

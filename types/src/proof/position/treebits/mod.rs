@@ -15,6 +15,10 @@
 //!
 //! This module can answer questions like "what is the level of 5"
 //! (`level(5)=1`), "what is the right child of 3" `right_child(3)=5`
+
+#[cfg(test)]
+mod treebits_test;
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum NodeDirection {
     Left,
@@ -126,7 +130,8 @@ pub fn smear_ones_for_u64(v: u64) -> u64 {
 ///
 /// But expanding the series this can be computed non-recursively
 /// sum 2^n, n=1 to x = 2^(x+1) - 2
-pub fn children_from_level(level: u32) -> u64 {
+#[cfg(test)]
+fn children_from_level(level: u32) -> u64 {
     (1u64 << (level + 1)) - 2
 }
 
