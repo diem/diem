@@ -67,6 +67,7 @@ pub struct FunctionDefinitionGen {
     name: PropIndex,
     signature: FunctionSignatureGen,
     is_public: bool,
+    acquires: Vec<PropIndex>,
     code: CodeUnitGen,
 }
 
@@ -75,6 +76,7 @@ impl FunctionDefinitionGen {
         return_count: impl Into<SizeRange>,
         arg_count: impl Into<SizeRange>,
         kind_count: impl Into<SizeRange>,
+        acquires_count: impl Into<SizeRange>,
         code_len: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
         let return_count = return_count.into();
@@ -87,12 +89,14 @@ impl FunctionDefinitionGen {
                 kind_count.into(),
             ),
             any::<bool>(),
+            vec(any::<PropIndex>(), acquires_count.into()),
             CodeUnitGen::strategy(arg_count, code_len),
         )
-            .prop_map(|(name, signature, is_public, code)| Self {
+            .prop_map(|(name, signature, is_public, acquires, code)| Self {
                 name,
                 signature,
                 is_public,
+                acquires,
                 code,
             })
     }
@@ -115,7 +119,11 @@ impl FunctionDefinitionGen {
             signature: state.add_function_signature(signature),
         };
         let function_handle = state.add_function_handle(handle);
-
+        let acquires_global_resources = self
+            .acquires
+            .into_iter()
+            .map(|idx| StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex))
+            .collect();
         FunctionDefinition {
             function: function_handle,
             // XXX is this even correct?
@@ -125,6 +133,7 @@ impl FunctionDefinitionGen {
                 // No qualifiers.
                 0
             },
+            acquires_global_resources,
             code: self.code.materialize(state),
         }
     }

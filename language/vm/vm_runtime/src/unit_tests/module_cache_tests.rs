@@ -43,6 +43,7 @@ fn test_module(name: String) -> VerifiedModule {
             FunctionDefinition {
                 function: FunctionHandleIndex::new(0),
                 flags: CodeUnit::PUBLIC,
+                acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
                     locals: LocalsSignatureIndex::new(0),
@@ -52,6 +53,7 @@ fn test_module(name: String) -> VerifiedModule {
             FunctionDefinition {
                 function: FunctionHandleIndex::new(1),
                 flags: CodeUnit::PUBLIC,
+                acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
                     locals: LocalsSignatureIndex::new(0),
@@ -87,6 +89,7 @@ fn test_script() -> VerifiedScript {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
+            acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),
@@ -364,6 +367,7 @@ fn test_multi_level_cache_write_back() {
         main: FunctionDefinition {
             function: FunctionHandleIndex::new(0),
             flags: CodeUnit::PUBLIC,
+            acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
                 locals: LocalsSignatureIndex(0),

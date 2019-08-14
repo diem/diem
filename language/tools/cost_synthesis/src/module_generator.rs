@@ -120,6 +120,8 @@ impl ModuleBuilder {
             .map(|(i, sig)| FunctionDefinition {
                 function: FunctionHandleIndex::new(i as u16),
                 flags: CodeUnit::PUBLIC,
+                // TODO this needs to be generated
+                acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 20,
                     locals: LocalsSignatureIndex(i as u16),

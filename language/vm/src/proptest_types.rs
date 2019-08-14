@@ -141,6 +141,7 @@ impl CompiledModuleStrategyGen {
                 self.member_count.clone(),
                 self.member_count.clone(),
                 self.member_count.clone(),
+                self.member_count.clone(),
                 self.code_len,
             ),
             1..=self.size,

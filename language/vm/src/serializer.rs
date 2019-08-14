@@ -393,7 +393,28 @@ fn serialize_function_definition(
 ) -> Result<()> {
     write_u16_as_uleb128(binary, function_definition.function.0)?;
     binary.push(function_definition.flags)?;
+    serialize_struct_definition_indices(binary, &function_definition.acquires_global_resources)?;
     serialize_code_unit(binary, &function_definition.code)
+}
+
+/// Serializes a `Vec<StructDefinitionIndex>`.
+fn serialize_struct_definition_indices(
+    binary: &mut BinaryData,
+    indices: &[StructDefinitionIndex],
+) -> Result<()> {
+    let len = indices.len();
+    if len > u8::max_value() as usize {
+        bail!(
+            "acquires_global_resources size ({}) cannot exceed {}",
+            len,
+            u8::max_value(),
+        )
+    }
+    binary.push(len as u8)?;
+    for def_idx in indices {
+        write_u16_as_uleb128(binary, def_idx.0)?;
+    }
+    Ok(())
 }
 
 /// Serializes a `TypeSignature`.
