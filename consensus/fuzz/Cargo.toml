@@ -1,0 +1,50 @@
+
+[package]
+name = "consensus-fuzz"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+config = { path = "../../config" }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+lazy_static = "1.3.0"
+tokio = "0.1.22"
+network = { path = "../../network" }
+bytes = "0.4.12"
+protobuf = "2.6"
+rand = "0.6.5"
+
+types = {version = "0.1.0", path = "../../types"}
+proto_conv = { path = "../../common/proto_conv" }
+channel = { path = "../../common/channel" }
+nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
+
+[dependencies.consensus]
+path = ".."
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_consensus_proposal"
+path = "fuzz_targets/fuzz_consensus_proposal.rs"
+
+[[bin]]
+name = "fuzz_consensus_vote"
+path = "fuzz_targets/fuzz_consensus_vote.rs"
+
+[[bin]]
+name = "fuzz_consensus_timeout"
+path = "fuzz_targets/fuzz_consensus_timeout.rs"
+
+[[bin]]
+name ="test_consensus_proposal"
+path = "bin/proposal.rs"

@@ -94,6 +94,9 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         hash: HashValue,
         signature: &PublicKey::SignatureMaterial,
     ) -> std::result::Result<(), VerifyError> {
+        if cfg!(fuzzing) {
+            return Ok(());
+        }
         let public_key = self.author_to_public_keys.get(&author);
         match public_key {
             None => Err(VerifyError::UnknownAuthor),

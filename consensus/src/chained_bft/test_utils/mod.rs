@@ -201,12 +201,15 @@ pub fn placeholder_certificate_for_block(
 }
 
 pub fn consensus_runtime() -> runtime::Runtime {
-    set_simple_logger("consensus");
-    let capture = OutputCapture::grab();
-    runtime::Builder::new()
-        .after_start(move || capture.apply())
-        .build()
-        .expect("Failed to create Tokio runtime!")
+    let mut r = runtime::Builder::new();
+    if cfg!(fuzzing) {
+        r.core_threads(1);
+    } else {
+        set_simple_logger("consensus");
+        let capture = OutputCapture::grab();
+        r.after_start(move || capture.apply());
+    }
+    r.build().expect("Failed to create Tokio runtime!")
 }
 
 pub fn with_smr_id(id: String) -> impl Fn() {

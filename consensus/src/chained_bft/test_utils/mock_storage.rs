@@ -16,6 +16,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+#[cfg(fuzzing)]
+use crate::chained_bft::test_utils::TestPayload;
+#[cfg(fuzzing)]
+use lazy_static::lazy_static;
+
 pub struct MockSharedStorage<T> {
     // Safety state
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
@@ -79,6 +84,39 @@ impl<T: Payload> MockStorage<T> {
 
     pub fn start_for_testing() -> (Arc<Self>, RecoveryData<T>) {
         Self::start(&NodeConfigHelpers::get_single_node_test_config(false))
+    }
+}
+
+#[cfg(fuzzing)]
+lazy_static! {
+    static ref GENESIS_BLOCK_FUZZING: Block<TestPayload> = Block::make_genesis_block();
+    static ref GENESIS_QC_FUZZING: QuorumCert = QuorumCert::certificate_for_genesis();
+}
+
+#[cfg(fuzzing)]
+impl MockStorage<TestPayload> {
+    pub fn start_for_fuzzing() -> (Arc<Self>, RecoveryData<TestPayload>) {
+        let shared_storage = Arc::new(MockSharedStorage {
+            block: Mutex::new(HashMap::new()),
+            qc: Mutex::new(HashMap::new()),
+            state: Mutex::new(ConsensusState::default()),
+            highest_timeout_certificates: Mutex::new(HighestTimeoutCertificates::new(None, None)),
+        });
+        let storage = MockStorage {
+            shared_storage: Arc::clone(&shared_storage),
+        };
+
+        // The current assumption is that the genesis block version is 0.
+        storage
+            .save_tree(
+                vec![GENESIS_BLOCK_FUZZING.clone()],
+                vec![GENESIS_QC_FUZZING.clone()],
+            )
+            .unwrap();
+        (
+            Arc::new(Self::new(shared_storage)),
+            storage.get_recovery_data().unwrap(),
+        )
     }
 }
 

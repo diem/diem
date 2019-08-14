@@ -47,10 +47,14 @@ impl StateComputer for MockStateComputer {
         &self,
         commit: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        self.commit_callback
-            .unbounded_send(commit)
-            .expect("Fail to notify about commit.");
-        future::ok(()).boxed()
+        if cfg!(fuzzing) {
+            return future::ok(()).boxed();
+        } else {
+            self.commit_callback
+                .unbounded_send(commit)
+                .expect("Fail to notify about commit.");
+            future::ok(()).boxed()
+        }
     }
 
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
@@ -60,9 +64,13 @@ impl StateComputer for MockStateComputer {
             Fg(Reset),
             commit.ledger_info().ledger_info().consensus_block_id()
         );
-        self.commit_callback
-            .unbounded_send(commit.ledger_info().clone())
-            .expect("Fail to notify about sync");
-        async { Ok(true) }.boxed()
+        if cfg!(fuzzing) {
+            return async { Ok(true) }.boxed();
+        } else {
+            self.commit_callback
+                .unbounded_send(commit.ledger_info().clone())
+                .expect("Fail to notify about sync");
+            async { Ok(true) }.boxed()
+        }
     }
 }

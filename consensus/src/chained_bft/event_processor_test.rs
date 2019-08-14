@@ -60,18 +60,18 @@ use types::{
 };
 
 /// Auxiliary struct that is setting up node environment for the test.
-struct NodeSetup {
-    author: Author,
-    block_store: Arc<BlockStore<TestPayload>>,
-    event_processor: EventProcessor<TestPayload>,
-    new_rounds_receiver: channel::Receiver<NewRoundEvent>,
-    storage: Arc<MockStorage<TestPayload>>,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
-    proposer_author: Author,
-    peers: Arc<Vec<Author>>,
-    pacemaker: Arc<dyn Pacemaker>,
+pub struct NodeSetup {
+    pub author: Author,
+    pub block_store: Arc<BlockStore<TestPayload>>,
+    pub event_processor: EventProcessor<TestPayload>,
+    pub new_rounds_receiver: channel::Receiver<NewRoundEvent>,
+    pub storage: Arc<MockStorage<TestPayload>>,
+    pub signer: ValidatorSigner<Ed25519PrivateKey>,
+    pub proposer_author: Author,
+    pub peers: Arc<Vec<Author>>,
+    pub pacemaker: Arc<dyn Pacemaker>,
     #[allow(dead_code)]
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
+    pub commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl NodeSetup {
@@ -102,12 +102,20 @@ impl NodeSetup {
         let highest_certified_round = 0;
         let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+
+        #[cfg(fuzzing)]
+        let storage = MockStorage::<TestPayload>::start_for_fuzzing()
+            .0
+            .persistent_liveness_storage();
+        #[cfg(not(fuzzing))]
+        let storage = MockStorage::<TestPayload>::start_for_testing()
+            .0
+            .persistent_liveness_storage();
+
         (
             Arc::new(LocalPacemaker::new(
                 executor,
-                MockStorage::<TestPayload>::start_for_testing()
-                    .0
-                    .persistent_liveness_storage(),
+                storage,
                 time_interval,
                 0,
                 highest_certified_round,
@@ -131,6 +139,7 @@ impl NodeSetup {
         playground: &mut NetworkPlayground,
         executor: TaskExecutor,
         num_nodes: usize,
+        enforce_increasing_timestamps: bool,
     ) -> Vec<NodeSetup> {
         let mut signers = vec![];
         let mut peers = vec![];
@@ -145,26 +154,28 @@ impl NodeSetup {
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
             nodes.push(Self::new(
-                playground,
+                Some(playground),
                 executor.clone(),
                 signer.clone(),
                 proposer_author,
                 Arc::clone(&peers_ref),
                 storage,
                 initial_data,
+                enforce_increasing_timestamps,
             ));
         }
         nodes
     }
 
-    fn new(
-        playground: &mut NetworkPlayground,
+    pub fn new(
+        playground: Option<&mut NetworkPlayground>,
         executor: TaskExecutor,
         signer: ValidatorSigner<Ed25519PrivateKey>,
         proposer_author: Author,
         peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
+        enforce_increasing_timestamps: bool,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -172,7 +183,9 @@ impl NodeSetup {
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
         let author = signer.author();
 
-        playground.add_node(author, consensus_tx, network_reqs_rx);
+        if let Some(pp) = playground {
+            pp.add_node(author, consensus_tx, network_reqs_rx);
+        }
         let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
 
         let network = ConsensusNetworkImpl::new(
@@ -213,7 +226,7 @@ impl NodeSetup {
             network,
             storage.clone(),
             time_service,
-            true,
+            enforce_increasing_timestamps,
         );
         Self {
             author,
@@ -235,13 +248,14 @@ impl NodeSetup {
             .get_recovery_data()
             .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::new(
-            playground,
+            Some(playground),
             executor,
             self.signer,
             self.proposer_author,
             self.peers,
             self.storage,
             recover_data,
+            true,
         )
     }
 }
@@ -250,7 +264,7 @@ impl NodeSetup {
 fn basic_new_rank_event_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2, true);
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
@@ -335,7 +349,7 @@ fn process_successful_proposal_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2, true);
     let node = &nodes[1];
 
     let genesis = node.block_store.root();
@@ -382,7 +396,7 @@ fn process_old_proposal_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2, true);
     let node = &nodes[1];
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
@@ -442,7 +456,7 @@ fn process_round_mismatch_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -491,7 +505,7 @@ fn process_round_mismatch_test() {
 fn process_new_round_msg_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2, true);
     let non_proposer = nodes.pop().unwrap();
     let mut static_proposer = nodes.pop().unwrap();
 
@@ -572,7 +586,7 @@ fn process_proposer_mismatch_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2, true);
     let incorrect_proposer = nodes.pop().unwrap();
     let node = nodes.pop().unwrap();
     let genesis = node.block_store.root();
@@ -623,7 +637,7 @@ fn process_timeout_certificate_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -676,7 +690,7 @@ fn process_timeout_certificate_test() {
 fn process_votes_basic_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -713,7 +727,7 @@ fn process_votes_basic_test() {
 fn process_block_retrieval() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
 
@@ -803,7 +817,7 @@ fn process_block_retrieval() {
 fn basic_restart_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
     let node_mut = &mut node;
@@ -854,7 +868,7 @@ fn basic_restart_test() {
 fn nil_vote_on_timeout() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1, true)
         .pop()
         .unwrap();
     let genesis_id = node.block_store.root().id();

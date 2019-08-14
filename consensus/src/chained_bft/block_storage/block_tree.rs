@@ -435,7 +435,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, fuzzing))]
 impl<T> BlockTree<T>
 where
     T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,

@@ -7,12 +7,16 @@
 //! Currently, the only consensus protocol supported is LibraBFT (based on
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
-#![deny(missing_docs)]
+#![cfg_attr(not(fuzzing), deny(missing_docs))]
 #![feature(async_await)]
 #![recursion_limit = "128"]
 #[macro_use]
 extern crate failure;
 
+//#[cfg_attr(fuzzing, allow(missing_docs))]
+#[cfg(fuzzing)]
+pub mod chained_bft;
+#[cfg(not(fuzzing))]
 mod chained_bft;
 mod util;
 

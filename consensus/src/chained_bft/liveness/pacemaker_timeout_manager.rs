@@ -24,7 +24,7 @@ pub struct HighestTimeoutCertificates {
 }
 
 impl HighestTimeoutCertificates {
-    #[cfg(test)]
+    #[cfg(any(test, fuzzing))]
     pub fn new(
         highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate>,
         highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate>,

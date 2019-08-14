@@ -312,6 +312,9 @@ impl Signature for Ed25519Signature {
 
     /// Checks that `self` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &Ed25519PublicKey) -> Result<()> {
+        if cfg!(fuzzing) {
+            return Ok(());
+        }
         self.verify_arbitrary_msg(message.as_ref(), public_key)
     }
 
@@ -395,7 +398,7 @@ pub mod compat {
     #[cfg(any(test, feature = "testing"))]
     use proptest::{prelude::*, strategy::Strategy};
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "testing", fuzzing))]
     impl Clone for Ed25519PrivateKey {
         fn clone(&self) -> Self {
             let serialized: &[u8] = &(self.to_bytes());

@@ -20,7 +20,8 @@ use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
-use std::sync::Arc;
+use protobuf::Message as proto;
+use std::{io::prelude::*, sync::Arc};
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 
 use crate::chained_bft::{
@@ -33,18 +34,18 @@ use tokio::runtime;
 use types::ledger_info::LedgerInfoWithSignatures;
 
 /// Auxiliary struct that is preparing SMR for the test
-struct SMRNode {
-    author: Author,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
-    peers: Arc<Vec<Author>>,
-    proposer: Vec<Author>,
-    smr_id: usize,
-    smr: ChainedBftSMR<TestPayload>,
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
-    mempool: Arc<MockTransactionManager>,
-    mempool_notif_receiver: mpsc::Receiver<usize>,
-    storage: Arc<MockStorage<TestPayload>>,
+pub struct SMRNode {
+    pub author: Author,
+    pub signer: ValidatorSigner<Ed25519PrivateKey>,
+    pub validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    pub peers: Arc<Vec<Author>>,
+    pub proposer: Vec<Author>,
+    pub smr_id: usize,
+    pub smr: ChainedBftSMR<TestPayload>,
+    pub commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
+    pub mempool: Arc<MockTransactionManager>,
+    pub mempool_notif_receiver: mpsc::Receiver<usize>,
+    pub storage: Arc<MockStorage<TestPayload>>,
 }
 
 impl SMRNode {
@@ -140,7 +141,7 @@ impl SMRNode {
         )
     }
 
-    fn start_num_nodes(
+    pub fn start_num_nodes(
         num_nodes: usize,
         quorum_size: usize,
         playground: &mut NetworkPlayground,
@@ -793,4 +794,67 @@ fn chain_with_nil_blocks() {
 
         assert!(nodes[2].smr.block_store().unwrap().root().round() >= 1)
     });
+}
+
+#[test]
+#[ignore] // use to generate fuzzing corpus
+fn fuzzing_corpus() {
+    let dir = env!("CARGO_MANIFEST_DIR");
+    {
+        let runtime = consensus_runtime();
+        let mut playground = NetworkPlayground::new(runtime.executor());
+        let _nodes = SMRNode::start_num_nodes(2, 1, &mut playground, FixedProposer);
+        println!("1.)");
+        block_on(async move {
+            // wait for proposal
+            let mut proposals = playground
+                .wait_for_messages(1, NetworkPlayground::proposals_only)
+                .await;
+            let proposal = proposals.pop().unwrap();
+            println!("1. {:?}", proposal.1);
+
+            // save proposal to a file
+            let path = format!("{}/fuzz/corpus/proposal/proposal.bin", dir);
+            println!("saving file at {}", path);
+            let mut file = std::fs::File::create(path).unwrap();
+            file.write_all(&proposal.1.write_to_bytes().unwrap())
+                .unwrap();
+
+            // wait for vote
+            let votes = playground
+                .wait_for_messages(1, NetworkPlayground::votes_only)
+                .await;
+            println!("2. {:?}", votes[0].1);
+
+            // save vote to a file
+            let path = format!("{}/fuzz/corpus/vote/vote.bin", dir);
+            println!("saving file at {}", path);
+            let mut file = std::fs::File::create(path).unwrap();
+            file.write_all(&votes[0].1.write_to_bytes().unwrap())
+                .unwrap();
+        });
+    }
+
+    {
+        let runtime = consensus_runtime();
+        let mut playground = NetworkPlayground::new(runtime.executor());
+        let nodes = SMRNode::start_num_nodes(2, 1, &mut playground, FixedProposer);
+
+        block_on(async move {
+            // provoke timeout
+            playground.drop_message_for(&nodes[0].author, nodes[1].author);
+
+            // wait for vote
+            let timeouts = playground
+                .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
+                .await;
+
+            // save vote to a file
+            let path = format!("{}/fuzz/corpus/timeout/timeout.bin", dir);
+            println!("saving file at {}", path);
+            let mut file = std::fs::File::create(path).unwrap();
+            file.write_all(&timeouts[0].1.write_to_bytes().unwrap())
+                .unwrap();
+        });
+    }
 }

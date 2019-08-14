@@ -59,7 +59,7 @@ pub struct ExponentialTimeInterval {
 }
 
 impl ExponentialTimeInterval {
-    #[cfg(test)]
+    #[cfg(any(test, fuzzing))]
     pub fn fixed(duration: Duration) -> Self {
         Self::new(duration, 1.0, 0)
     }
@@ -193,6 +193,9 @@ impl LocalPacemakerInner {
         let timeout = self.setup_timeout();
         let mut sender = self.new_round_events_sender.clone();
         async move {
+            if cfg!(fuzzing) {
+                return;
+            }
             if let Err(e) = sender
                 .send(NewRoundEvent {
                     round,
@@ -307,7 +310,11 @@ impl LocalPacemakerInner {
             new_round
         );
         self.current_round = new_round;
-        self.create_new_round_task(best_reason).boxed()
+        if cfg!(fuzzing) {
+            future::ready::<()>(()).boxed()
+        } else {
+            self.create_new_round_task(best_reason).boxed()
+        }
     }
 
     /// Validate timeout certificate and update local state if it's correct
@@ -359,13 +366,14 @@ impl LocalPacemaker {
 
         let inner_ref = Arc::clone(&inner);
         let timeout_processing_loop = async move {
-            // To jump start the execution return the new round event for the current round.
-            inner_ref
-                .write()
-                .unwrap()
-                .create_new_round_task(NewRoundReason::QCReady)
-                .await;
-
+            if !cfg!(fuzzing) {
+                // To jump start the execution return the new round event for the current round.
+                inner_ref
+                    .write()
+                    .unwrap()
+                    .create_new_round_task(NewRoundReason::QCReady)
+                    .await;
+            }
             // Start the loop of processing local timeouts
             while let Some(round) = local_timeouts_receiver.next().await {
                 Self::process_local_timeout(Arc::clone(&inner_ref), round).await;
