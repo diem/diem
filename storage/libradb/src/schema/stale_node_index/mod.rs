@@ -4,7 +4,7 @@
 //! This module defines the physical storage schema for information related to outdated state
 //! Jellyfish Merkle tree nodes, which are ready to be pruned after being old enough.
 //!
-//! A record in this data set has 3 pieces of information:
+//! An index entry in this data set has 2 pieces of information:
 //!     1. The version since which a node (in another data set) becomes stale, meaning,
 //! replaced by an updated node.
 //!     2. The node_key to identify the stale node.

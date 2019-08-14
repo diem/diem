@@ -6,8 +6,7 @@
 
 use crate::{
     schema::{
-        jellyfish_merkle_node::JellyfishMerkleNodeSchema,
-        retired_state_record::StaleNodeIndexSchema,
+        jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
     OP_COUNTER,
 };

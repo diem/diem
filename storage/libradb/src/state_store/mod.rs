@@ -10,8 +10,7 @@ use crate::{
     change_set::ChangeSet,
     ledger_counters::LedgerCounter,
     schema::{
-        jellyfish_merkle_node::JellyfishMerkleNodeSchema,
-        retired_state_record::StaleNodeIndexSchema,
+        jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
 };
 use crypto::{hash::CryptoHash, HashValue};
