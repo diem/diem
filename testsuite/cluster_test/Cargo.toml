@@ -16,7 +16,7 @@ rusoto_ecr = "0.40.0"
 rusoto_ecs = "0.40.0"
 flate2 = { version = "1.0", features = ["rust_backend"], default-features = false }
 serde_json = "1.0"
-regex = "1.1.9"
+regex = "1.2.1"
 clap = "2.32"
 termion = "1.5.3"
 itertools = "0.8.0"

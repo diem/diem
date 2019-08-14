@@ -23,13 +23,13 @@ canonical_serialization = { path = "../../../../common/canonical_serialization" 
 nextgen_crypto = { path = "../../../../crypto/nextgen_crypto" }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 
-[dev-dependencies]
-types = { path = "../../../../types", features = ["testing"] }
-
 [dependencies.prometheus]
 version  = "0.4.2"
 default-features = false
 features = ["push"]
+
+[dev-dependencies]
+types = { path = "../../../../types", features = ["testing"] }
 
 [features]
 instruction_synthesis = []
