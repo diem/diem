@@ -15,7 +15,7 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
-use futures::{Future, FutureExt, SinkExt, StreamExt, TryFutureExt};
+use futures::{future, Future, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use logger::prelude::*;
 use std::{
     cmp,
@@ -298,7 +298,7 @@ impl LocalPacemakerInner {
                 new_round,
                 Fg(Reset)
             );
-            return async {}.boxed();
+            return future::ready(()).boxed();
         }
         assert!(
             new_round > self.current_round,
@@ -421,7 +421,7 @@ impl Pacemaker for LocalPacemaker {
         if tc_round_updated || qc_round_updated {
             return guard.update_current_round();
         }
-        async {}.boxed()
+        future::ready(()).boxed()
     }
 
     /// The function is invoked upon receiving a remote timeout message from another validator.
@@ -436,6 +436,6 @@ impl Pacemaker for LocalPacemaker {
         {
             return guard.update_current_round();
         }
-        async {}.boxed()
+        future::ready(()).boxed()
     }
 }

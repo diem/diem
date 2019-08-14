@@ -12,7 +12,7 @@ use execution_proto::proto::{
     execution_grpc::ExecutionClient,
 };
 use failure::Result;
-use futures::{compat::Future01CompatExt, Future, FutureExt};
+use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use logger::prelude::*;
 use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
@@ -113,7 +113,7 @@ impl StateComputer for ExecutionProxy {
                 }
                     .boxed()
             }
-            Err(e) => async move { Err(e.into()) }.boxed(),
+            Err(e) => future::err(e.into()).boxed(),
         }
     }
 
@@ -156,7 +156,7 @@ impl StateComputer for ExecutionProxy {
                 }
                     .boxed()
             }
-            Err(e) => async move { Err(e.into()) }.boxed(),
+            Err(e) => future::err(e.into()).boxed(),
         }
     }
 
