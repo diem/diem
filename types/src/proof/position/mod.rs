@@ -24,7 +24,9 @@
 //! Note2: The level of tree counts from leaf level, start from 0
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
-use super::treebits;
+#[cfg(test)]
+mod position_test;
+mod treebits;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Position(u64);
