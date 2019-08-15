@@ -350,9 +350,7 @@ fn process_successful_proposal_test() {
             node.block_store.signer(),
         );
         let proposal_id = proposal.id();
-        node.event_processor
-            .process_winning_proposal(proposal)
-            .await;
+        node.event_processor.process_proposed_block(proposal).await;
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only)
             .await;
@@ -402,12 +400,8 @@ fn process_old_proposal_test() {
     );
     let old_block_id = old_block.id();
     block_on(async move {
-        node.event_processor
-            .process_winning_proposal(new_block)
-            .await;
-        node.event_processor
-            .process_winning_proposal(old_block)
-            .await;
+        node.event_processor.process_proposed_block(new_block).await;
+        node.event_processor.process_proposed_block(old_block).await;
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only)
             .await;
@@ -460,7 +454,9 @@ fn process_round_mismatch_test() {
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
-            node.event_processor.process_proposal(bad_proposal).await,
+            node.event_processor
+                .pre_process_proposal(bad_proposal)
+                .await,
             None
         );
         let good_proposal = ProposalMsg::<TestPayload> {
@@ -469,7 +465,7 @@ fn process_round_mismatch_test() {
         };
         assert_eq!(
             node.event_processor
-                .process_proposal(good_proposal.clone())
+                .pre_process_proposal(good_proposal.clone())
                 .await,
             Some(good_proposal.proposal)
         );
@@ -590,7 +586,9 @@ fn process_proposer_mismatch_test() {
             sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         };
         assert_eq!(
-            node.event_processor.process_proposal(bad_proposal).await,
+            node.event_processor
+                .pre_process_proposal(bad_proposal)
+                .await,
             None
         );
         let good_proposal = ProposalMsg::<TestPayload> {
@@ -600,7 +598,7 @@ fn process_proposer_mismatch_test() {
 
         assert_eq!(
             node.event_processor
-                .process_proposal(good_proposal.clone())
+                .pre_process_proposal(good_proposal.clone())
                 .await,
             Some(good_proposal.proposal)
         );
@@ -644,7 +642,7 @@ fn process_timeout_certificate_test() {
         };
         assert_eq!(
             node.event_processor
-                .process_proposal(skip_round_proposal.clone())
+                .pre_process_proposal(skip_round_proposal.clone())
                 .await,
             Some(skip_round_proposal.proposal)
         );
@@ -654,7 +652,7 @@ fn process_timeout_certificate_test() {
         };
         assert_eq!(
             node.event_processor
-                .process_proposal(old_good_proposal.clone())
+                .pre_process_proposal(old_good_proposal.clone())
                 .await,
             None
         );
@@ -724,7 +722,7 @@ fn process_block_retrieval() {
         .process_certificates(block.round() - 1, None, None);
 
     block_on(async move {
-        node.event_processor.process_winning_proposal(block).await;
+        node.event_processor.process_proposed_block(block).await;
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
@@ -816,7 +814,7 @@ fn basic_restart_test() {
                 .process_certificates(proposal.round() - 1, None, None);
             node_mut
                 .event_processor
-                .process_winning_proposal(proposal)
+                .process_proposed_block(proposal)
                 .await;
         }
     });
