@@ -2332,13 +2332,6 @@ impl<S: Scope + Sized> Compiler<S> {
                         function_frame.push()?;
                         Ok(VecDeque::new())
                     }
-                    Builtin::EmitEvent => {
-                        code.code.push(Bytecode::EmitEvent);
-                        function_frame.pop()?;
-                        function_frame.pop()?;
-                        function_frame.pop()?;
-                        Ok(VecDeque::new())
-                    }
                     Builtin::MoveFrom(name) => {
                         let (is_always_resource, def_idx) =
                             self.scope.get_struct_def(name.name_ref())?;

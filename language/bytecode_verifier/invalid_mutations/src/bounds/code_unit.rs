@@ -273,7 +273,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
                     | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
                     | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-                    | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
+                    | GetTxnSenderAddress | CreateAccount | GetTxnSequenceNumber
                     | GetTxnPublicKey => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
                     }
@@ -319,7 +319,6 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
         | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt
         | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-        | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
-        | GetTxnPublicKey => false,
+        | GetTxnSenderAddress | CreateAccount | GetTxnSequenceNumber | GetTxnPublicKey => false,
     }
 }

@@ -321,9 +321,7 @@ lazy_static! {
             (LdByteArray(ByteArrayPoolIndex::new(0)), 56, 1),
             (Gt, 46, 1),
             (Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 73, 1),
-            // TODO/XXX: Need to get the cost for this still
-            (EmitEvent, 1, 1),
-            ];
+        ];
         CostTable::new(instrs)
     };
 }

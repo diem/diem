@@ -68,5 +68,4 @@ pub enum StacklessBytecode {
     BrFalse(CodeOffset, TempIndex), // if(!t) goto code_offset
 
     Abort(TempIndex), // abort t
-    EmitEvent(TempIndex, TempIndex, TempIndex),
 }

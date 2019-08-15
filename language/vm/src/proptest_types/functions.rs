@@ -405,7 +405,6 @@ impl BytecodeGen {
             GetTxnMaxGasUnits,
             GetTxnSenderAddress,
             CreateAccount,
-            EmitEvent,
             GetTxnSequenceNumber,
             GetTxnPublicKey,
         ];

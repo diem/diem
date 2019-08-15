@@ -152,7 +152,6 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::GetTxnSequenceNumber
             | Bytecode::GetTxnSenderAddress => 1,
             Bytecode::CreateAccount => -1,
-            Bytecode::EmitEvent => -3,
 
             Bytecode::LdByteArray(_) => 1,
         }

@@ -139,7 +139,6 @@ impl GasMeter {
             | Bytecode::GetTxnSenderAddress
             | Bytecode::GetTxnSequenceNumber
             | Bytecode::Ge
-            | Bytecode::EmitEvent
             | Bytecode::FreezeRef => {
                 let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)

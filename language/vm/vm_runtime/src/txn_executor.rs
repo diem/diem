@@ -611,12 +611,6 @@ where
                     let top = try_runtime!(self.execution_stack.pop_as::<bool>());
                     self.execution_stack.push(Local::bool(!top));
                 }
-                Bytecode::EmitEvent => {
-                    // EmitEvent is deprecated. Keep the popping here just to pass type check.
-                    self.execution_stack.pop()?;
-                    self.execution_stack.pop()?;
-                    self.execution_stack.pop()?;
-                }
                 Bytecode::GetGasRemaining => {
                     self.execution_stack
                         .push(Local::u64(self.gas_meter.remaining_gas().get()));

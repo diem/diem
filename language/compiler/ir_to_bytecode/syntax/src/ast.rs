@@ -264,8 +264,6 @@ pub enum Builtin {
     GetTxnSequenceNumber,
     /// Returns the unit of gas remain to be used for now.
     GetGasRemaining,
-    /// Emit an event
-    EmitEvent,
 
     /// Publishing,
     /// Initialize a previously empty address by publishing a resource of type Account
@@ -1133,7 +1131,6 @@ impl fmt::Display for Builtin {
         match self {
             Builtin::CreateAccount => write!(f, "create_account"),
             Builtin::Release => write!(f, "release"),
-            Builtin::EmitEvent => write!(f, "log"),
             Builtin::Exists(t) => write!(f, "exists<{}>", t),
             Builtin::BorrowGlobal(t) => write!(f, "borrow_global<{}>", t),
             Builtin::GetHeight => write!(f, "get_height"),

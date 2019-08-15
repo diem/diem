@@ -166,10 +166,9 @@ pub enum Opcodes {
     MOVE_FROM               = 0x2F,
     MOVE_TO                 = 0x30,
     CREATE_ACCOUNT          = 0x31,
-    EMIT_EVENT              = 0x32,
-    GET_TXN_SEQUENCE_NUMBER = 0x33,
-    GET_TXN_PUBLIC_KEY      = 0x34,
-    FREEZE_REF              = 0x35,
+    GET_TXN_SEQUENCE_NUMBER = 0x32,
+    GET_TXN_PUBLIC_KEY      = 0x33,
+    FREEZE_REF              = 0x34,
 }
 
 /// Upper limit on the binary size

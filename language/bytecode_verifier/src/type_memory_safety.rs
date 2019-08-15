@@ -786,20 +786,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     Err(VMStaticViolation::CreateAccountTypeMismatchError(offset))
                 }
             }
-
-            Bytecode::EmitEvent => {
-                // TODO: EmitEvent is currently unimplemented
-                //       following is a workaround to skip the check
-                // However, the nonce must still be destroyed to ensure the type checker does not
-                // complain
-                self.stack.pop();
-                self.stack.pop();
-                let ref_operand = self.stack.pop().unwrap();
-                if let Some(ref_operand_nonce) = ref_operand.value.extract_nonce() {
-                    state.destroy_nonce(ref_operand_nonce.clone());
-                }
-                Ok(())
-            }
         }
     }
 }
