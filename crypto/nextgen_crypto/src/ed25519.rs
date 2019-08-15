@@ -40,11 +40,11 @@ use serde::{de, export, ser};
 use std::fmt;
 
 /// The length of the Ed25519PrivateKey
-const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
 /// The length of the Ed25519PublicKey
-const ED25519_PUBLIC_KEY_LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
+pub const ED25519_PUBLIC_KEY_LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
 /// The length of the Ed25519Signature
-const ED25519_SIGNATURE_LENGTH: usize = ed25519_dalek::SIGNATURE_LENGTH;
+pub const ED25519_SIGNATURE_LENGTH: usize = ed25519_dalek::SIGNATURE_LENGTH;
 
 /// An Ed25519 private key
 #[derive(SilentDisplay, SilentDebug)]
@@ -232,9 +232,6 @@ impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
 // We deduce PublicKey from this
 impl PublicKey for Ed25519PublicKey {
     type PrivateKeyMaterial = Ed25519PrivateKey;
-    fn length() -> usize {
-        ED25519_PUBLIC_KEY_LENGTH
-    }
 }
 
 impl std::hash::Hash for Ed25519PublicKey {

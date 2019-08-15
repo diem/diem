@@ -178,9 +178,6 @@ impl From<&BLS12381PrivateKey> for BLS12381PublicKey {
 // we get the ability to do `pubkey.validate(msg, signature)`
 impl PublicKey for BLS12381PublicKey {
     type PrivateKeyMaterial = BLS12381PrivateKey;
-    fn length() -> usize {
-        BLS12381_PUBLIC_KEY_LENGTH
-    }
 }
 
 impl VerifyingKey for BLS12381PublicKey {

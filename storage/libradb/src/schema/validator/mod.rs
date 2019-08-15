@@ -14,7 +14,7 @@ use crate::schema::{ensure_slice_len_eq, VALIDATOR_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use core::convert::TryFrom;
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::Ed25519PublicKey, PublicKey};
+use nextgen_crypto::ed25519::{Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
@@ -36,7 +36,7 @@ impl KeyCodec<ValidatorSchema> for Key {
     fn encode_key(&self) -> Result<Vec<u8>> {
         let public_key_serialized = self.public_key.to_bytes();
         let mut encoded_key =
-            Vec::with_capacity(size_of::<Version>() + Ed25519PublicKey::length() * size_of::<u8>());
+            Vec::with_capacity(size_of::<Version>() + ED25519_PUBLIC_KEY_LENGTH * size_of::<u8>());
         encoded_key.write_u64::<BigEndian>(self.version)?;
         encoded_key.write_all(&public_key_serialized)?;
         Ok(encoded_key)
