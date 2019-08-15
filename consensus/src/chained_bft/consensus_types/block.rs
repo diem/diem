@@ -231,7 +231,7 @@ where
         // "height" and "round" values are always same, the check
         // "parent_block.height() <= std::u64::MAX - 2" ensures that
         // the max "height" is consistent with max "round"
-        // (consensus/src/chained_bft/consensus_types/block.rs:336).
+        // (consensus/src/chained_bft/consensus_types/block.rs: "pub fn round").
         checked_precondition!(parent_block.height() <= std::u64::MAX - 2);
         Block::new_internal(
             payload,
@@ -256,7 +256,7 @@ where
         // "height" and "round" values are always same, the check
         // "parent_block.height() <= std::u64::MAX - 2" ensures that
         // the max "height" is consistent with max "round"
-        // (consensus/src/chained_bft/consensus_types/block.rs:336).
+        // (consensus/src/chained_bft/consensus_types/block.rs: "pub fn round").
         checked_precondition!(parent_block.height() <= std::u64::MAX - 2);
 
         let payload = T::default();
@@ -348,7 +348,8 @@ where
         // "std::u64::MAX" as they are reset to 0 periodically.
         // The assumption that round numbers do not exceed "std::u64::MAX - 2" helps verify the
         // precondition guarding addition overflow caused by the 3 chain safety rule
-        // (consensus/src/chained_bft/block_storage/block_store.rs:234).
+        // (consensus/src/chained_bft/block_storage/block_store.rs: "pub fn
+        // need_sync_for_quorum_cert").
         assumed_postcondition!(self.round <= std::u64::MAX - 2);
         self.round
     }

@@ -370,7 +370,8 @@ impl PacemakerTimeoutCertificate {
         // a value close to "std::u64::MAX" as they are reset to 0 periodically.
         // The assumption that round numbers do not exceed "std::u64::MAX - 2" helps verify the
         // precondition guarding addition overflow caused by the 3 chain safety rule
-        // (consensus/src/chained_bft/block_storage/block_store.rs:234).
+        // (consensus/src/chained_bft/block_storage/block_store.rs: "pub fn
+        // need_sync_for_quorum_cert").
         assumed_postcondition!(self.round <= std::u64::MAX - 2);
         self.round
     }
