@@ -1,9 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
-use cli::client_proxy::ClientProxy;
+use cli::{
+    client_proxy::ClientProxy, AccountAddress, CryptoHash, IntoProtoBytes, RawTransactionBytes,
+    TransactionArgument, TransactionPayload,
+};
 use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{swarm::LibraSwarm, utils};
+use nextgen_crypto::{ed25519::*, SigningKey};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -337,4 +341,102 @@ fn test_full_node() {
     client_proxy.create_next_account(false).unwrap();
     let response = client_proxy.mint_coins(&["mint", "0", "1"], false);
     assert!(response.is_err());
+}
+
+#[test]
+fn test_external_transaction_signer() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+
+    // generate key pair
+    let mut seed: [u8; 32] = [0u8; 32];
+    seed[..4].copy_from_slice(&[1, 2, 3, 4]);
+    let key_pair = compat::generate_keypair(None);
+    let private_key = key_pair.0;
+    let public_key = key_pair.1;
+
+    // create transfer parameters
+    let sender_address = AccountAddress::from_public_key(&public_key);
+    let receiver_address = client_proxy
+        .get_account_address_from_parameter(
+            "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a",
+        )
+        .unwrap();
+    let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
+    let gas_unit_price = 123;
+    let max_gas_amount = 1000;
+
+    // mint to the sender address
+    client_proxy
+        .mint_coins(&["mintb", &format!("{}", sender_address), "10"], true)
+        .unwrap();
+
+    // prepare transfer transaction
+    let sequence_number = client_proxy
+        .get_sequence_number(&["sequence", &format!("{}", sender_address)])
+        .unwrap();
+
+    let unsigned_txn = client_proxy
+        .prepare_transfer_coins(
+            sender_address,
+            sequence_number,
+            receiver_address,
+            amount,
+            Some(gas_unit_price),
+            Some(max_gas_amount),
+        )
+        .unwrap();
+
+    assert_eq!(unsigned_txn.sender(), sender_address);
+
+    // extract the hash to sign from the raw transaction
+    let raw_bytes = unsigned_txn.clone().into_proto_bytes().unwrap();
+    let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
+
+    // sign the transaction with the private key
+    let signature = private_key.sign_message(&txn_hashvalue);
+
+    // submit the transaction
+    let submit_txn_result =
+        client_proxy.submit_signed_transaction(unsigned_txn, public_key, signature);
+
+    assert!(submit_txn_result.is_ok());
+
+    // query the transaction and check it contains the same values as requested
+    let submitted_signed_txn = client_proxy
+        .get_committed_txn_by_acc_seq(&[
+            "txn_acc_seq",
+            &format!("{}", sender_address),
+            &sequence_number.to_string(),
+            "false",
+        ])
+        .unwrap()
+        .unwrap()
+        .0;
+
+    assert_eq!(submitted_signed_txn.sender(), sender_address);
+    assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);
+    assert_eq!(submitted_signed_txn.gas_unit_price(), gas_unit_price);
+    assert_eq!(submitted_signed_txn.max_gas_amount(), max_gas_amount);
+    match submitted_signed_txn.payload() {
+        TransactionPayload::Program(program) => {
+            assert!(program.modules().is_empty(), "Modules should be empty.");
+            match program.args().len() {
+                2 => match (&program.args()[0], &program.args()[1]) {
+                    (
+                        TransactionArgument::Address(arg_receiver),
+                        TransactionArgument::U64(arg_amount),
+                    ) => {
+                        assert_eq!(arg_receiver.clone(), receiver_address);
+                        assert_eq!(arg_amount.clone(), amount);
+                    }
+                    _ => panic!(
+                        "The first argument for payment transaction must be recipient address \
+                         and the second argument must be amount."
+                    ),
+                },
+                _ => panic!("Signed transaction payload arguments must have two arguments."),
+            }
+        }
+        _ => panic!("Signed transaction payload expected to be of struct Program"),
+    }
 }

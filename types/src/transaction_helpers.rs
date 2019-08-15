@@ -26,6 +26,24 @@ pub fn get_signed_transactions_digest(signed_txns: &[ProtoSignedTransaction]) ->
     signatures.test_only_hash()
 }
 
+pub fn create_unsigned_txn(
+    program: Program,
+    sender_address: AccountAddress,
+    sender_sequence_number: u64,
+    max_gas_amount: u64,
+    gas_unit_price: u64,
+    txn_expiration: i64, // for compatibility with UTC's timestamp.
+) -> RawTransaction {
+    RawTransaction::new(
+        sender_address,
+        sender_sequence_number,
+        program,
+        max_gas_amount,
+        gas_unit_price,
+        std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
+    )
+}
+
 pub trait TransactionSigner {
     fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction>;
 }
@@ -40,13 +58,13 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
     gas_unit_price: u64,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
-    let raw_txn = RawTransaction::new(
+    let raw_txn = create_unsigned_txn(
+        program,
         sender_address,
         sender_sequence_number,
-        program,
         max_gas_amount,
         gas_unit_price,
-        std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
+        txn_expiration,
     );
     signer.sign_txn(raw_txn)
 }

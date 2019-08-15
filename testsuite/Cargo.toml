@@ -24,3 +24,4 @@ libra_swarm = { path = "../libra_swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config_builder = { path = "../config/config_builder" }
 tempfile = "3.1.0"
+nextgen_crypto = { path = "../crypto/nextgen_crypto" }

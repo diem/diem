@@ -39,8 +39,10 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    transaction::{parse_as_transaction_argument, Program, SignedTransaction, Version},
-    transaction_helpers::{create_signed_txn, TransactionSigner},
+    transaction::{
+        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
+    },
+    transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
 };
 
@@ -369,6 +371,28 @@ impl ClientProxy {
         })
     }
 
+    /// Prepare a transfer transaction: return the unsigned raw transaction
+    pub fn prepare_transfer_coins(
+        &mut self,
+        sender_address: AccountAddress,
+        sender_sequence_number: u64,
+        receiver_address: AccountAddress,
+        num_coins: u64,
+        gas_unit_price: Option<u64>,
+        max_gas_amount: Option<u64>,
+    ) -> Result<RawTransaction> {
+        let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+
+        Ok(create_unsigned_txn(
+            program,
+            sender_address,
+            sender_sequence_number,
+            max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+            gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
+            TX_EXPIRATION,
+        ))
+    }
+
     /// Transfers coins from sender to receiver.
     pub fn transfer_coins(
         &mut self,
@@ -517,6 +541,32 @@ impl ClientProxy {
         let mut file = NamedTempFile::new()?;
         file.write_all(&serde_json::to_vec(&dependencies)?)?;
         Ok(Some(file))
+    }
+
+    /// Submit a transaction to the network given the unsigned raw transaction, sender public key
+    /// and signature
+    pub fn submit_signed_transaction(
+        &mut self,
+        raw_txn: RawTransaction,
+        public_key: Ed25519PublicKey,
+        signature: Ed25519Signature,
+    ) -> Result<()> {
+        let signed_txn = SignedTransaction::craft_signed_transaction_for_client(
+            raw_txn,
+            public_key.clone(),
+            signature,
+        );
+
+        let mut req = SubmitTransactionRequest::new();
+        let sender_address = signed_txn.sender();
+        let sender_sequence = signed_txn.sequence_number();
+
+        req.set_signed_txn(signed_txn.into_proto());
+        self.client.submit_transaction(None, &req)?;
+        // blocking by default (until transaction completion)
+        self.wait_for_transaction(sender_address, sender_sequence + 1);
+
+        Ok(())
     }
 
     fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
@@ -943,7 +993,8 @@ impl ClientProxy {
         Ok(())
     }
 
-    fn convert_to_micro_libras(input: &str) -> Result<u64> {
+    /// convert number of Libras (main unit) given as string to number of micro Libras
+    pub fn convert_to_micro_libras(input: &str) -> Result<u64> {
         ensure!(!input.is_empty(), "Empty input not allowed for libra unit");
         // This is not supposed to panic as it is used as constant here.
         let max_value = Decimal::from_u64(std::u64::MAX).unwrap() / Decimal::new(1_000_000, 0);
