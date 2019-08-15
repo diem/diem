@@ -5,6 +5,8 @@ pub mod effects;
 pub mod experiments;
 pub mod health;
 pub mod instance;
+pub mod slack;
+pub mod suite;
 
 pub mod util {
     use std::time::{Duration, SystemTime};

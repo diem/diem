@@ -1,5 +1,8 @@
 use crate::{aws::Aws, cluster::Cluster};
-use rusoto_ecr::{DescribeImagesRequest, Ecr, ImageIdentifier};
+use failure::prelude::{bail, format_err};
+use rusoto_ecr::{
+    BatchGetImageRequest, DescribeImagesRequest, Ecr, ImageIdentifier, PutImageRequest,
+};
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
 use std::{env, fs, io::ErrorKind, thread, time::Duration};
 
@@ -12,6 +15,9 @@ pub struct DeploymentManager {
 }
 
 const LAST_DEPLOYED_FILE: &str = ".last_deployed_digest";
+const REPOSITORY_NAME: &str = "libra_e2e";
+pub const SOURCE_TAG: &str = "nightly";
+pub const TESTED_TAG: &str = "nightly_tested";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
@@ -36,18 +42,22 @@ impl DeploymentManager {
         }
     }
 
-    pub fn redeploy_if_needed(&mut self) -> bool {
+    pub fn latest_hash_changed(&self) -> Option<String> {
         let hash = self.latest_nightly_image_digest();
         if let Some(last) = &self.last_deployed_digest {
             if last == &hash {
                 println!(
                     "Last deployed digest matches latest digest we expect, not doing redeploy"
                 );
-                return false;
+                return None;
             }
         } else {
             println!("Last deployed digest unknown, re-deploying anyway");
         }
+        Some(hash)
+    }
+
+    pub fn redeploy(&mut self, hash: String) -> bool {
         println!("Will deploy with digest {}", hash);
         let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         if env::var("ALLOW_DEPLOY") == Ok("yes".to_string()) {
@@ -84,24 +94,63 @@ impl DeploymentManager {
 
     fn latest_nightly_image_digest(&self) -> String {
         let mut request = DescribeImagesRequest::default();
-        request.repository_name = "libra_e2e".into();
-        request.image_ids = Some(vec![ImageIdentifier {
-            image_digest: None,
-            image_tag: Some("cluster_test".into()),
-        }]);
+        request.repository_name = REPOSITORY_NAME.into();
+        request.image_ids = Some(vec![Self::nightly_image_id()]);
         let result = self
             .aws
             .ecr()
             .describe_images(request)
             .sync()
             .expect("Failed to find latest nightly image");
-        let mut images = result
+        let images = result
             .image_details
             .expect("No image_details in ECR response");
         if images.len() != 1 {
             panic!("Ecr returned {} images for libra_e2e:nightly", images.len());
         }
-        let image = images.remove(0);
+        let image = images.into_iter().next().unwrap();
         image.image_digest.expect("No image_digest")
+    }
+
+    fn nightly_image_id() -> ImageIdentifier {
+        ImageIdentifier {
+            image_digest: None,
+            image_tag: Some(SOURCE_TAG.to_string()),
+        }
+    }
+
+    pub fn tag_tested_image(&self, hash: String) -> failure::Result<()> {
+        let mut get_request = BatchGetImageRequest::default();
+        get_request.repository_name = REPOSITORY_NAME.to_string();
+        get_request.image_ids = vec![ImageIdentifier {
+            image_digest: Some(hash),
+            image_tag: None,
+        }];
+        let response = self
+            .aws
+            .ecr()
+            .batch_get_image(get_request)
+            .sync()
+            .map_err(|e| format_err!("Failed to get nightly image: {:?}", e))?;
+        let images = response
+            .images
+            .expect("No images in batch_get_image response");
+        if images.is_empty() {
+            bail!("batch_get_image returned {} images", images.len());
+        }
+        let image = images.into_iter().next().unwrap();
+        let manifest = image
+            .image_manifest
+            .expect("no manifest in batch_get_image response");
+        let mut put_request = PutImageRequest::default();
+        put_request.image_manifest = manifest;
+        put_request.repository_name = REPOSITORY_NAME.to_string();
+        put_request.image_tag = Some(TESTED_TAG.to_string());
+        self.aws
+            .ecr()
+            .put_image(put_request)
+            .sync()
+            .map_err(|e| format_err!("Failed to tag image: {:?}", e))?;
+        Ok(())
     }
 }
