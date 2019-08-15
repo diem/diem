@@ -49,10 +49,7 @@ use network::{
 };
 use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
 use types::{
     ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
@@ -193,7 +190,7 @@ impl NodeSetup {
             1,
             true,
         );
-        let safety_rules = Arc::new(RwLock::new(SafetyRules::new(consensus_state)));
+        let safety_rules = SafetyRules::new(consensus_state);
 
         let (pacemaker, new_rounds_receiver) =
             Self::create_pacemaker(executor.clone(), time_service.clone());
@@ -335,8 +332,8 @@ fn process_successful_proposal_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
-    let node = &nodes[1];
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let node = &mut nodes[1];
 
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
@@ -377,8 +374,8 @@ fn process_old_proposal_test() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
-    let node = &nodes[1];
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let node = &mut nodes[1];
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let new_block = Block::make_block(
@@ -702,7 +699,7 @@ fn process_votes_basic_test() {
 fn process_block_retrieval() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
 

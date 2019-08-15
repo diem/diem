@@ -35,10 +35,7 @@ use crate::{
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use nextgen_crypto::ed25519::*;
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;
 
@@ -57,7 +54,7 @@ pub struct EventProcessor<T> {
     pacemaker: Arc<dyn Pacemaker>,
     proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
-    safety_rules: Arc<RwLock<SafetyRules>>,
+    safety_rules: SafetyRules,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     network: ConsensusNetworkImpl,
@@ -66,7 +63,7 @@ pub struct EventProcessor<T> {
     time_service: Arc<dyn TimeService>,
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
-    last_vote_sent: Arc<RwLock<Option<(VoteMsg, Round)>>>,
+    last_vote_sent: Option<(VoteMsg, Round)>,
 }
 
 impl<T: Payload> EventProcessor<T> {
@@ -76,7 +73,7 @@ impl<T: Payload> EventProcessor<T> {
         pacemaker: Arc<dyn Pacemaker>,
         proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
-        safety_rules: Arc<RwLock<SafetyRules>>,
+        safety_rules: SafetyRules,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         network: ConsensusNetworkImpl,
@@ -104,7 +101,7 @@ impl<T: Payload> EventProcessor<T> {
             sync_manager,
             time_service,
             enforce_increasing_timestamps,
-            last_vote_sent: Arc::new(RwLock::new(None)),
+            last_vote_sent: None,
         }
     }
 
@@ -378,12 +375,7 @@ impl<T: Payload> EventProcessor<T> {
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
     pub async fn process_outgoing_pacemaker_timeout(&mut self, round: Round) {
-        let last_vote_round = self
-            .safety_rules
-            .read()
-            .unwrap()
-            .consensus_state()
-            .last_vote_round();
+        let last_vote_round = self.safety_rules.consensus_state().last_vote_round();
         warn!(
             "Round {} timed out and {}, expected round proposer was {:?}, broadcasting new round to all replicas",
             round,
@@ -391,17 +383,13 @@ impl<T: Payload> EventProcessor<T> {
             self.proposer_election.get_valid_proposers(round),
         );
 
-        let last_vote_sent = self.last_vote_sent.read().unwrap().as_ref().cloned();
-        let vote_msg_to_attach = match last_vote_sent.as_ref() {
+        let vote_msg_to_attach = match self.last_vote_sent.as_ref() {
             Some((vote, vote_round)) if (*vote_round == round) => Some(vote.clone()),
             _ => {
                 // Try to generate a NIL vote
                 match self.gen_nil_vote(round).await {
                     Ok(nil_vote_msg) => {
-                        self.last_vote_sent
-                            .write()
-                            .unwrap()
-                            .replace((nil_vote_msg.clone(), round));
+                        self.last_vote_sent.replace((nil_vote_msg.clone(), round));
                         Some(nil_vote_msg)
                     }
                     Err(e) => {
@@ -414,11 +402,7 @@ impl<T: Payload> EventProcessor<T> {
 
         // Stop voting at this round, persist the consensus state to support restarting from
         // a recent round (i.e. > the last vote round)  and then send the SyncInfo
-        let consensus_state = self
-            .safety_rules
-            .write()
-            .unwrap()
-            .increase_last_vote_round(round);
+        let consensus_state = self.safety_rules.increase_last_vote_round(round);
 
         if let Some(consensus_state) = consensus_state {
             if let Err(e) = self.storage.save_consensus_state(consensus_state) {
@@ -440,17 +424,17 @@ impl<T: Payload> EventProcessor<T> {
             .await;
     }
 
-    async fn gen_nil_vote(&self, round: Round) -> failure::Result<VoteMsg> {
+    async fn gen_nil_vote(&mut self, round: Round) -> failure::Result<VoteMsg> {
         let block = self.proposal_generator.generate_nil_block(round)?;
         self.execute_and_vote(block).await
     }
 
     async fn process_certificates(
-        &self,
+        &mut self,
         qc: &QuorumCert,
         tc: Option<&PacemakerTimeoutCertificate>,
     ) {
-        self.safety_rules.write().unwrap().update(qc);
+        self.safety_rules.update(qc);
 
         let mut highest_committed_proposal_round = None;
         if let Some(new_commit) = qc.committed_block_id() {
@@ -477,7 +461,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    async fn process_proposed_block(&self, proposal: Block<T>) {
+    async fn process_proposed_block(&mut self, proposal: Block<T>) {
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
         {
@@ -493,8 +477,6 @@ impl<T: Payload> EventProcessor<T> {
         };
 
         self.last_vote_sent
-            .write()
-            .unwrap()
             .replace((vote_msg.clone(), proposal_round));
         let recipients = self
             .proposer_election
@@ -569,7 +551,7 @@ impl<T: Payload> EventProcessor<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
+    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
         let block = self
             .sync_manager
             .execute_and_insert_block(proposed_block)
@@ -594,8 +576,6 @@ impl<T: Payload> EventProcessor<T> {
 
         let vote_info = self
             .safety_rules
-            .write()
-            .unwrap()
             .voting_rule(Arc::clone(&block))
             .map_err(|e| {
                 debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
@@ -636,7 +616,7 @@ impl<T: Payload> EventProcessor<T> {
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
-    pub async fn process_vote(&self, vote: VoteMsg, quorum_size: usize) {
+    pub async fn process_vote(&mut self, vote: VoteMsg, quorum_size: usize) {
         // Check whether this validator is a valid recipient of the vote.
         let next_round = vote.round() + 1;
         if self
@@ -667,7 +647,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2) pass the new QC to the pacemaker, which can generate a new round in return.
     /// The function returns an Option for a newly generate QuorumCert in case it's been
     /// successfully added with all its dependencies.
-    async fn add_vote(&self, vote: VoteMsg, quorum_size: usize) -> Option<Arc<QuorumCert>> {
+    async fn add_vote(&mut self, vote: VoteMsg, quorum_size: usize) -> Option<Arc<QuorumCert>> {
         let deadline = self.pacemaker.current_round_deadline();
         let preferred_peer = vote.author();
         // TODO [Reconfiguration] Verify epoch of the vote message.
@@ -800,6 +780,6 @@ impl<T: Payload> EventProcessor<T> {
     /// Inspect the current consensus state.
     #[cfg(test)]
     pub fn consensus_state(&self) -> ConsensusState {
-        self.safety_rules.read().unwrap().consensus_state()
+        self.safety_rules.consensus_state()
     }
 }

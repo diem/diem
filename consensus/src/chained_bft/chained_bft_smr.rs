@@ -37,10 +37,7 @@ use types::validator_signer::ValidatorSigner;
 use crate::chained_bft::common::Author;
 use config::config::ConsensusConfig;
 use logger::prelude::*;
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
 
 /// Consensus configuration derived from ConsensusConfig
@@ -268,7 +265,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 true,
             );
 
-            let safety_rules = Arc::new(RwLock::new(SafetyRules::new(consensus_state)));
+            let safety_rules = SafetyRules::new(consensus_state);
 
             let (external_timeout_sender, external_timeout_receiver) =
                 channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
