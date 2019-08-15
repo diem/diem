@@ -147,21 +147,6 @@ impl HashValue {
         HashValue { hash }
     }
 
-    /// Get the size of the hash.
-    pub fn len() -> usize {
-        HashValue::LENGTH
-    }
-
-    /// Get the last n bytes as a String.
-    pub fn last_n_bytes(&self, bytes: usize) -> String {
-        let mut string = String::from("HashValue(..");
-        for byte in &self.hash[(HashValue::LENGTH - bytes)..] {
-            string.push_str(&format!("{:02x}", byte));
-        }
-        string.push_str(")");
-        string
-    }
-
     // Intentionally not public.
     fn from_sha3(buffer: &[u8]) -> Self {
         let mut sha3 = Keccak::new_sha3_256();
