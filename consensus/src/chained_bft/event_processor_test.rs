@@ -834,18 +834,24 @@ fn basic_restart_test() {
 fn nil_vote_on_timeout() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
-        .pop()
-        .unwrap();
+    // It needs 2 nodes to test network message.
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let node = &mut nodes[0];
     let genesis_id = node.block_store.root().id();
     block_on(async move {
         // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
         // extends genesis
-        let timeout_msg = node
-            .event_processor
+        node.event_processor
             .process_outgoing_pacemaker_timeout(1)
-            .await
-            .unwrap();
+            .await;
+        let timeout_msg = TimeoutMsg::from_proto(
+            playground
+                .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
+                .await[0]
+                .1
+                .take_timeout_msg(),
+        )
+        .unwrap();
         assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
         let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
         assert_eq!(vote_msg.round(), 1);

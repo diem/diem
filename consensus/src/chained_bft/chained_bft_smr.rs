@@ -5,7 +5,6 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
         common::{Payload, Round},
-        consensus_types::{proposal_msg::ProposalMsg, timeout_msg::TimeoutMsg},
         event_processor::EventProcessor,
         liveness::{
             local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
@@ -15,9 +14,9 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{BlockRetrievalRequest, ConsensusNetworkImpl, NetworkReceivers},
+        network::{ConsensusNetworkImpl, NetworkReceivers},
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
-        safety::{safety_rules::SafetyRules, vote_msg::VoteMsg},
+        safety::safety_rules::SafetyRules,
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
@@ -29,12 +28,13 @@ use futures::{
     compat::Future01CompatExt,
     executor::block_on,
     future::{FutureExt, TryFutureExt},
+    select,
     stream::StreamExt,
 };
 use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
-use crate::chained_bft::{common::Author, consensus_types::sync_info::SyncInfo};
+use crate::chained_bft::common::Author;
 use config::config::ConsensusConfig;
 use logger::prelude::*;
 use std::{
@@ -42,8 +42,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::{Runtime, TaskExecutor};
-
-type ConcurrentEventProcessor<T> = futures_locks::RwLock<EventProcessor<T>>;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -157,159 +155,46 @@ impl<T: Payload> ChainedBftSMR<T> {
             self.config.contiguous_rounds,
         ))
     }
-
-    async fn process_new_round_events(
-        mut receiver: channel::Receiver<NewRoundEvent>,
-        event_processor: ConcurrentEventProcessor<T>,
-    ) {
-        while let Some(new_round_event) = receiver.next().await {
-            let guard = event_processor.read().compat().await.unwrap();
-            guard.process_new_round_event(new_round_event).await;
-        }
-    }
-
-    async fn process_proposal_msg(
-        mut receiver: channel::Receiver<ProposalMsg<T>>,
-        event_processor: ConcurrentEventProcessor<T>,
-    ) {
-        while let Some(proposal_info) = receiver.next().await {
-            let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_proposal_msg(proposal_info).await
-        }
-    }
-    async fn process_votes(
-        mut receiver: channel::Receiver<VoteMsg>,
-        event_processor: ConcurrentEventProcessor<T>,
-        quorum_size: usize,
-    ) {
-        while let Some(vote) = receiver.next().await {
-            let guard = event_processor.read().compat().await.unwrap();
-            guard.process_vote(vote, quorum_size).await;
-        }
-    }
-
-    async fn process_timeout_msg(
-        mut receiver: channel::Receiver<TimeoutMsg>,
-        event_processor: ConcurrentEventProcessor<T>,
-        quorum_size: usize,
-    ) {
-        while let Some(timeout_msg) = receiver.next().await {
-            let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_timeout_msg(timeout_msg, quorum_size).await;
-        }
-    }
-
-    async fn process_sync_info_msgs(
-        mut receiver: channel::Receiver<(SyncInfo, Author)>,
-        event_processor: ConcurrentEventProcessor<T>,
-    ) {
-        while let Some((sync_info, author)) = receiver.next().await {
-            let mut guard = event_processor.write().compat().await.unwrap();
-            guard.process_sync_info_msg(sync_info, author).await;
-        }
-    }
-
-    async fn process_outgoing_pacemaker_timeouts(
-        mut receiver: channel::Receiver<Round>,
-        event_processor: ConcurrentEventProcessor<T>,
-        mut network: ConsensusNetworkImpl,
-    ) {
-        while let Some(round) = receiver.next().await {
-            // Update the last voted round and generate the timeout message
-            let guard = event_processor.read().compat().await.unwrap();
-            let timeout_msg = guard.process_outgoing_pacemaker_timeout(round).await;
-            match timeout_msg {
-                Some(timeout_msg) => {
-                    network.broadcast_timeout_msg(timeout_msg).await;
-                }
-                None => {
-                    info!("Broadcast not sent as the processing of the timeout failed.  Will retry again on the next timeout.");
-                }
-            }
-        }
-    }
-
-    async fn process_block_retrievals(
-        mut receiver: channel::Receiver<BlockRetrievalRequest<T>>,
-        event_processor: ConcurrentEventProcessor<T>,
-    ) {
-        while let Some(request) = receiver.next().await {
-            let guard = event_processor.read().compat().await.unwrap();
-            guard.process_block_retrieval(request).await;
-        }
-    }
-
     fn start_event_processing(
         &self,
-        event_processor: ConcurrentEventProcessor<T>,
         executor: TaskExecutor,
-        new_round_events_receiver: channel::Receiver<NewRoundEvent>,
-        network_receivers: NetworkReceivers<T>,
-        pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        mut event_processor: EventProcessor<T>,
+        mut new_round_events_receiver: channel::Receiver<NewRoundEvent>,
+        mut network_receivers: NetworkReceivers<T>,
+        mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
     ) {
-        executor.spawn(
-            Self::process_new_round_events(new_round_events_receiver, event_processor.clone())
-                .boxed()
-                .unit_error()
-                .compat(),
-        );
-
-        executor.spawn(
-            Self::process_proposal_msg(network_receivers.proposals, event_processor.clone())
-                .boxed()
-                .unit_error()
-                .compat(),
-        );
-
-        executor.spawn(
-            Self::process_block_retrievals(
-                network_receivers.block_retrieval,
-                event_processor.clone(),
-            )
-            .boxed()
-            .unit_error()
-            .compat(),
-        );
-
-        executor.spawn(
-            Self::process_votes(
-                network_receivers.votes,
-                event_processor.clone(),
-                self.quorum_size,
-            )
-            .boxed()
-            .unit_error()
-            .compat(),
-        );
-
-        executor.spawn(
-            Self::process_timeout_msg(
-                network_receivers.timeout_msgs,
-                event_processor.clone(),
-                self.quorum_size,
-            )
-            .boxed()
-            .unit_error()
-            .compat(),
-        );
-
-        executor.spawn(
-            Self::process_outgoing_pacemaker_timeouts(
-                pacemaker_timeout_sender_rx,
-                event_processor.clone(),
-                self.network.clone(),
-            )
-            .boxed()
-            .unit_error()
-            .compat(),
-        );
-
-        executor.spawn(
-            Self::process_sync_info_msgs(network_receivers.sync_info_msgs, event_processor.clone())
-                .boxed()
-                .unit_error()
-                .compat(),
-        );
+        let quorum_size = self.quorum_size;
+        let fut = async move {
+            loop {
+                select! {
+                    new_round_event = new_round_events_receiver.select_next_some() => {
+                        event_processor.process_new_round_event(new_round_event).await;
+                    }
+                    proposal_msg = network_receivers.proposals.select_next_some() => {
+                        event_processor.process_proposal_msg(proposal_msg).await;
+                    }
+                    block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                        event_processor.process_block_retrieval(block_retrieval).await;
+                    }
+                    vote_msg = network_receivers.votes.select_next_some() => {
+                        event_processor.process_vote(vote_msg, quorum_size).await;
+                    }
+                    timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
+                        event_processor.process_timeout_msg(timeout_msg, quorum_size).await;
+                    }
+                    outgoing_timeout = pacemaker_timeout_sender_rx.select_next_some() => {
+                        event_processor.process_outgoing_pacemaker_timeout(outgoing_timeout).await;
+                    }
+                    sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
+                        event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
+                    }
+                    complete => {
+                        break;
+                    }
+                }
+            }
+        };
+        executor.spawn(fut.boxed().unit_error().compat());
     }
 }
 
@@ -401,7 +286,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             );
 
             let proposer_election = self.create_proposer_election();
-            let event_processor = futures_locks::RwLock::new(EventProcessor::new(
+            let event_processor = EventProcessor::new(
                 self.author,
                 Arc::clone(&block_store),
                 Arc::clone(&pacemaker),
@@ -414,11 +299,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 Arc::clone(&self.storage),
                 time_service.clone(),
                 true,
-            ));
+            );
 
             self.start_event_processing(
+                executor,
                 event_processor,
-                executor.clone(),
                 new_round_events_receiver,
                 network_receivers,
                 external_timeout_receiver,

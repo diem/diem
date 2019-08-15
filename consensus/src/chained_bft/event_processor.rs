@@ -377,7 +377,7 @@ impl<T: Payload> EventProcessor<T> {
     /// to ensure that the next proposer can make a proposal that can be voted on by all replicas.
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
-    pub async fn process_outgoing_pacemaker_timeout(&self, round: Round) -> Option<TimeoutMsg> {
+    pub async fn process_outgoing_pacemaker_timeout(&mut self, round: Round) {
         let last_vote_round = self
             .safety_rules
             .read()
@@ -423,19 +423,21 @@ impl<T: Payload> EventProcessor<T> {
         if let Some(consensus_state) = consensus_state {
             if let Err(e) = self.storage.save_consensus_state(consensus_state) {
                 error!("Failed to persist consensus state after increasing the last vote round due to {:?}", e);
-                return None;
+                return;
             }
         }
 
-        Some(TimeoutMsg::new(
-            SyncInfo::new(
-                self.block_store.highest_quorum_cert().as_ref().clone(),
-                self.block_store.highest_ledger_info().as_ref().clone(),
-                self.pacemaker.highest_timeout_certificate(),
-            ),
-            PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_to_attach),
-            self.block_store.signer(),
-        ))
+        self.network
+            .broadcast_timeout_msg(TimeoutMsg::new(
+                SyncInfo::new(
+                    self.block_store.highest_quorum_cert().as_ref().clone(),
+                    self.block_store.highest_ledger_info().as_ref().clone(),
+                    self.pacemaker.highest_timeout_certificate(),
+                ),
+                PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_to_attach),
+                self.block_store.signer(),
+            ))
+            .await;
     }
 
     async fn gen_nil_vote(&self, round: Round) -> failure::Result<VoteMsg> {
