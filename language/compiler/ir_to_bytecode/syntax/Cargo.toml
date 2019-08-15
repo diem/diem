@@ -9,7 +9,6 @@ build = "build.rs"
 
 [dependencies]
 codespan = "0.1.3"
-codespan-reporting = "0.1.4"
 hex = "0.3.2"
 lalrpop-util = "0.16.3"
 regex = "1.2.1"

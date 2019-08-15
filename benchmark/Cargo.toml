@@ -6,11 +6,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bincode = "1.1.4"
 clap = "2.33.0"
 futures = "0.1.28"
 grpcio = "0.4"
-itertools = "0.8.0"
 lazy_static = "1.2.0"
 protobuf = "~2.7"
 rand = "0.7.0"
@@ -23,7 +21,6 @@ admission_control_proto = { path = "../admission_control/admission_control_proto
 client = { path = "../client" }
 config = { path = "../config" }
 config_builder = { path = "../config/config_builder" }
-crypto = { path = "../crypto/legacy_crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }

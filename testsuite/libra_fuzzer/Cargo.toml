@@ -20,7 +20,6 @@ canonical_serialization = { path = "../../common/canonical_serialization" }
 # List out modules with data structures being fuzzed here.
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
-vm_runtime = { path = "../../language/vm/vm_runtime" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 
 [dev-dependencies]

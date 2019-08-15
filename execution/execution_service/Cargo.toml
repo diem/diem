@@ -18,7 +18,6 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
-types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]

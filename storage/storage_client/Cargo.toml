@@ -12,8 +12,6 @@ futures_01 = { version = "0.1.25", package = "futures" }
 grpcio = "0.4.4"
 protobuf = "~2.7"
 rand = "0.6.5"
-
-canonical_serialization = { path = "../../common/canonical_serialization" }
 crypto = { path = "../../crypto/legacy_crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 metrics = { path = "../../common/metrics" }

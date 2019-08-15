@@ -10,9 +10,7 @@ edition = "2018"
 futures = "0.1.28"
 
 config = { path = "../config" }
-crypto = { path = "../crypto/legacy_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 proto_conv = { path = "../common/proto_conv" }
 scratchpad = { path = "../storage/scratchpad" }
 state_view = { path = "../storage/state_view" }

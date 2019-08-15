@@ -17,7 +17,6 @@ admission_control_service = { path = "../admission_control/admission_control_ser
 config = { path = "../config" }
 consensus = { path = "../consensus" }
 crash_handler = { path = "../common/crash_handler" }
-crypto = { path = "../crypto/legacy_crypto" }
 debug_interface = { path = "../common/debug_interface" }
 logger = { path = "../common/logger" }
 executable_helpers = { path = "../common/executable_helpers" }
@@ -27,14 +26,11 @@ mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 execution_service = { path = "../execution/execution_service" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
 network = { path = "../network" }
-proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
