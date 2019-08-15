@@ -11,9 +11,7 @@ use crate::{
     },
     counters,
     state_replication::StateComputer,
-    util::mutex_map::MutexMap,
 };
-use crypto::HashValue;
 use failure::{self, Fail};
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
@@ -33,7 +31,6 @@ pub struct SyncManager<T> {
     storage: Arc<dyn PersistentStorage<T>>,
     network: ConsensusNetworkImpl,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
-    block_mutex_map: MutexMap<HashValue>,
 }
 
 /// Keeps the necessary context for `SyncMgr` to bring the missing information.
@@ -71,13 +68,11 @@ where
         // Prometheus if some conditions never happen.  Invoking get() function enforces creation.
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
-        let block_mutex_map = MutexMap::new();
         SyncManager {
             block_store,
             storage,
             network,
             state_computer,
-            block_mutex_map,
         }
     }
 
@@ -120,7 +115,6 @@ where
         &self,
         block: Block<T>,
     ) -> Result<Arc<Block<T>>, InsertError> {
-        let _guard = self.block_mutex_map.lock(block.id());
         // execute_and_insert_block has shortcut to return block if it exists
         self.block_store.execute_and_insert_block(block).await
     }
@@ -135,7 +129,6 @@ where
         preferred_peer: Author,
         deadline: Instant,
     ) -> Result<(), InsertError> {
-        let mut lock_set = self.block_mutex_map.new_lock_set();
         let mut pending = vec![];
         let network = self.network.clone();
         let mut retriever = BlockRetriever {
@@ -145,18 +138,6 @@ where
         };
         let mut retrieve_qc = qc.clone();
         loop {
-            if lock_set
-                .lock(retrieve_qc.certified_block_id())
-                .await
-                .is_err()
-            {
-                // This should not be possible because that would mean we have circular
-                // dependency between signed blocks
-                panic!(
-                    "Can not re-acquire lock for block {} during fetch_quorum_cert",
-                    retrieve_qc.certified_block_id()
-                );
-            }
             if self
                 .block_store
                 .block_exists(retrieve_qc.certified_block_id())
