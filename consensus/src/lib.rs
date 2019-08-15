@@ -9,7 +9,7 @@
 
 #![deny(missing_docs)]
 #![feature(async_await)]
-#![recursion_limit = "128"]
+#![recursion_limit = "512"]
 #[macro_use]
 extern crate failure;
 
