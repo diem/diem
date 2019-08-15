@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This file contains models of the vm crate's dependencies for use with MIRAI.
 
 pub mod types {

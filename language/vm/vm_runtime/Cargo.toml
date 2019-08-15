@@ -14,6 +14,7 @@ proptest = "0.9"
 rayon = "1.1"
 rental = "0.5.4"
 tiny-keccak = "1.5.0"
+mirai-annotations = "1.2.2"
 
 bytecode_verifier = { path = "../../bytecode_verifier" }
 canonical_serialization = { path = "../../../common/canonical_serialization" }
@@ -45,3 +46,4 @@ vm = { path = "../", features = ["testing"]}
 default = []
 instruction_synthesis = []
 testing = ["types/testing"]
+mirai-contracts = []

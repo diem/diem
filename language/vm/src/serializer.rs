@@ -869,7 +869,7 @@ impl CommonSerializer {
             for string in strings {
                 serialize_string(binary, string)?;
             }
-            self.string_pool.1 = checked_calculate_table_size(binary, self.string_pool.0)?;;
+            self.string_pool.1 = checked_calculate_table_size(binary, self.string_pool.0)?;
         }
         Ok(())
     }
@@ -886,7 +886,7 @@ impl CommonSerializer {
             for byte_array in byte_arrays {
                 serialize_byte_array(binary, byte_array)?;
             }
-            self.byte_array_pool.1 = checked_calculate_table_size(binary, self.byte_array_pool.0)?;;
+            self.byte_array_pool.1 = checked_calculate_table_size(binary, self.byte_array_pool.0)?;
         }
         Ok(())
     }
@@ -938,7 +938,7 @@ impl CommonSerializer {
                 serialize_function_signature(binary, signature)?;
             }
             self.function_signatures.1 =
-                checked_calculate_table_size(binary, self.function_signatures.0)?;;
+                checked_calculate_table_size(binary, self.function_signatures.0)?;
         }
         Ok(())
     }
