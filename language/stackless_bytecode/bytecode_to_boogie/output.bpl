@@ -417,7 +417,6 @@ procedure {:inline 1} UpdateValueMax(srcPath: Path, srcValue: Value, dstPath: Pa
 }
 
 procedure TestArithmetic_add_two_number (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value, ret1: Value)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -470,7 +469,6 @@ ensures !abort_flag;
 
 }
 procedure TestArithmetic_multiple_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value) returns (addr_exists': [Address]bool, ret0: Value)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -522,7 +520,6 @@ ensures !abort_flag;
 
 }
 procedure TestArithmetic_bool_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -617,7 +614,6 @@ Label_23:
 
 }
 procedure TestArithmetic_arithmetic_ops (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value, ret1: Value)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -708,7 +704,6 @@ Label_19:
 
 }
 procedure TestArithmetic_overflow (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -747,7 +742,6 @@ ensures !abort_flag;
 
 }
 procedure TestArithmetic_underflow (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int
@@ -786,7 +780,6 @@ ensures !abort_flag;
 
 }
 procedure TestArithmetic_div_by_zero (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
-ensures !abort_flag;
 {
     // declare local variables
     var t0: Value; // int

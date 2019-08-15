@@ -9,8 +9,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        FieldDefinitionIndex, FunctionDefinition, FunctionHandleIndex, SignatureToken,
-        StructDefinitionIndex, StructHandleIndex,
+        FieldDefinitionIndex, FunctionHandleIndex, SignatureToken, StructDefinitionIndex,
+        StructHandleIndex,
     },
     views::{
         FieldDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -46,6 +46,23 @@ impl<'a> BoogieTranslator<'a> {
         let mut res = String::from("\n\n// everything below is auto generated\n\n");
 
         // generate names and struct specific functions for all structs
+        res.push_str(&self.emit_struct_code());
+
+        // calculate maximum number of locals and generate this many local names
+        res.push_str(&self.generate_local_names());
+
+        // generate IsPrefix and UpdateValue to the max depth
+        res.push_str(&self.emit_stratified_functions());
+
+        // actual translation of stackless bytecode
+        for (idx, _) in self.module.function_defs().iter().enumerate() {
+            res.push_str(&self.translate_function(idx));
+        }
+        res
+    }
+
+    pub fn emit_struct_code(&mut self) -> String {
+        let mut res = String::new();
         for (i, _) in self.module.struct_handles().iter().enumerate() {
             let struct_handle_index = StructHandleIndex::new(i as u16);
             let struct_name = self.struct_name_from_handle_index(struct_handle_index);
@@ -66,8 +83,11 @@ impl<'a> BoogieTranslator<'a> {
                 self.get_struct_depth(&SignatureToken::Struct(struct_handle_index, vec![])),
             );
         }
+        res
+    }
 
-        // calculate maximum number of locals and generate this many local names
+    pub fn generate_local_names(&self) -> String {
+        let mut res = String::new();
         let max_local_num = self
             .stackless_bytecode
             .iter()
@@ -77,18 +97,6 @@ impl<'a> BoogieTranslator<'a> {
             res.push_str(&format!("const unique t{}_LocalName: LocalName;\n", i,));
         }
         res.push_str("\n");
-
-        // generate IsPrefix and UpdateValue to the max depth
-        res.push_str(&self.emit_stratified_functions());
-
-        // actual translation of stackless bytecode
-        for (idx, function_def) in self.module.function_defs().iter().enumerate() {
-            res.push_str(&self.translate_function(
-                idx,
-                function_def,
-                &self.stackless_bytecode[idx],
-            ));
-        }
         res
     }
 
@@ -109,178 +117,24 @@ impl<'a> BoogieTranslator<'a> {
         }
     }
 
-    pub fn translate_function(
-        &self,
-        idx: usize,
-        function_def: &'a FunctionDefinition,
-        code: &StacklessFunction,
-    ) -> String {
+    pub fn translate_function(&self, idx: usize) -> String {
         // potential optimization: keep track of all the structs that get modified globally and add
         // parameters and return values only for those resource stores
 
-        // identify all the branching targets so we can insert labels in front of them
         let mut res = String::new();
-        let mut branching_targets: BTreeSet<usize> = BTreeSet::new();
-        for bytecode in code.code.iter() {
-            match bytecode {
-                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
-                    branching_targets.insert(*target as usize);
-                }
-                _ => {}
-            }
-        }
-
         // generate function signature
-        let fun_name = self.function_name_from_definition_index(idx);
-        let function_handle = self.module.function_handle_at(function_def.function);
-        let function_signature = self.module.function_signature_at(function_handle.signature);
-        let num_args = function_signature.arg_types.len();
-        let mut args = String::new();
-        let mut rets = String::new();
-        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
-            args.push_str(&format!(
-                ", arg{}: {}",
-                i,
-                self.format_value_or_ref(&arg_type)
-            ));
-            if arg_type.is_mutable_reference() {
-                rets.push_str(&format!(
-                    ", t{}: {}",
-                    i,
-                    self.format_value_or_ref(&arg_type)
-                ));
-            }
-        }
-        for (i, return_type) in function_signature.return_types.iter().enumerate() {
-            rets.push_str(&format!(
-                ", ret{}: {}",
-                i,
-                self.format_value_or_ref(&return_type)
-            ));
-        }
-        for type_str in self.all_type_strs.iter() {
-            args.push_str(&format!(", rs_{}: ResourceStore", type_str));
-            rets.push_str(&format!(", rs_{}': ResourceStore", type_str));
-        }
-        res.push_str(&format!(
-            "procedure {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})\n",
-            fun_name, args, rets
-        ));
-        res.push_str("ensures !abort_flag;\n{\n");
-        res.push_str("    // declare local variables\n".into());
-
-        let mut ref_vars = BTreeSet::new(); // set of locals that are references
-        let mut val_vars = BTreeSet::new(); // set of locals that are not
-        let mut arg_assignment_str = String::new();
-        let mut arg_value_assumption_str = String::new();
-        for (i, local_type) in code.local_types.iter().enumerate() {
-            if i < num_args {
-                arg_assignment_str.push_str(&format!("    t{} := arg{};\n", i, i));
-                if !self.is_local_ref(i, idx) {
-                    arg_value_assumption_str.push_str(&format!(
-                        "    assume is#{}(arg{});\n",
-                        self.format_value_cons(local_type),
-                        i,
-                    ));
-                }
-            }
-            if SignatureTokenView::new(self.module, local_type).is_reference() {
-                ref_vars.insert(i);
-            } else {
-                val_vars.insert(i);
-            }
-            if i < num_args && local_type.is_mutable_reference() {
-                continue;
-            }
-            res.push_str(&format!(
-                "    var t{}: {}; // {}\n",
-                i,
-                self.format_value_or_ref(&local_type),
-                self.format_type(&local_type)
-            ));
-        }
-
-        res.push_str("\n    // declare a new creation time for calls inside this function\n");
-        res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
-        res.push_str("    assume !abort_flag;\n");
-        res.push_str("\n    // assume arguments are of correct types\n");
-        res.push_str(&arg_value_assumption_str);
-        res.push_str("\n    // assign arguments to locals so they can be modified\n");
-        res.push_str(&arg_assignment_str);
-        res.push_str("\n    // assign ResourceStores to locals so they can be modified\n");
-        for type_str in self.all_type_strs.iter() {
-            res.push_str(&format!("    rs_{}' := rs_{};\n", type_str, type_str));
-        }
-        res.push_str("    addr_exists' := addr_exists;\n");
-        res.push_str("\n    // bytecode translation starts here\n".into());
-        for (offset, bytecode) in code.code.iter().enumerate() {
-            // uncomment to print out bytecode for debugging purpose
-            // println!("{:?}", bytecode);
-
-            // insert labels for branching targets
-            if branching_targets.contains(&offset) {
-                res.push_str(&format!("Label_{}:\n", offset));
-            }
-            res.push_str(&self.translate_bytecode(bytecode, idx));
-            if let WriteRef(dest, src) = bytecode {
-                // update everything that might be related to the updated reference
-                for s in &ref_vars {
-                    if s == dest {
-                        continue;
-                    }
-                    res.push_str(&format!(
-                        "    call t{} := DeepUpdateReference(t{}, t{});\n",
-                        s, dest, s
-                    ));
-                }
-                for t in &self.all_type_strs {
-                    res.push_str(&format!(
-                        "    call rs_{}' := DeepUpdateGlobal({}, t{}, rs_{}');\n",
-                        t, t, dest, t
-                    ));
-                }
-                for s in &val_vars {
-                    if s == src {
-                        continue;
-                    }
-                    res.push_str(&format!(
-                        "    call t{} := DeepUpdateLocal(c, t{}_LocalName, t{}, t{});\n",
-                        s, s, dest, s
-                    ));
-                }
-                res.push_str("\n");
-            }
-            if let Call(_, _, args) = bytecode {
-                // update everything that might be related to the updated reference
-                for dest in args {
-                    if !self.is_local_mutable_ref(*dest, idx) {
-                        continue;
-                    }
-                    for s in &ref_vars {
-                        if s == dest {
-                            continue;
-                        }
-                        res.push_str(&format!(
-                            "    call t{} := DeepUpdateReference(t{}, t{});\n",
-                            s, dest, s
-                        ));
-                    }
-
-                    for s in &val_vars {
-                        res.push_str(&format!(
-                            "    call t{} := DeepUpdateLocal(c, t{}_LocalName, t{}, t{});\n",
-                            s, s, dest, s
-                        ));
-                    }
-                    res.push_str("\n");
-                }
-            }
-        }
-        res.push_str("}\n".into());
+        res.push_str(&self.generate_function_sig(idx, false, &None)); // no inline
+                                                                      // generate function body
+        res.push_str(&self.generate_function_body(idx, &None));
         res
     }
 
-    pub fn translate_bytecode(&self, bytecode: &StacklessBytecode, func_idx: usize) -> String {
+    pub fn translate_bytecode(
+        &self,
+        bytecode: &StacklessBytecode,
+        func_idx: usize,
+        arg_names: &Option<Vec<String>>,
+    ) -> String {
         let mut res = String::new();
         let stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
@@ -294,29 +148,55 @@ impl<'a> BoogieTranslator<'a> {
             )],
             MoveLoc(dest, src) => {
                 if self.is_local_ref(*dest, func_idx) {
-                    vec![format!("call t{} := CopyOrMoveRef(t{});", dest, src)]
+                    vec![format!(
+                        "call t{} := CopyOrMoveRef({});",
+                        dest,
+                        self.get_local_name(*src as usize, arg_names)
+                    )]
                 } else {
-                    vec![format!("call t{} := CopyOrMoveValue(t{});", dest, src)]
+                    vec![format!(
+                        "call t{} := CopyOrMoveValue({});",
+                        dest,
+                        self.get_local_name(*src as usize, arg_names)
+                    )]
                 }
             }
             CopyLoc(dest, src) => {
                 if self.is_local_ref(*dest, func_idx) {
-                    vec![format!("call t{} := CopyOrMoveRef(t{});", dest, src)]
+                    vec![format!(
+                        "call t{} := CopyOrMoveRef({});",
+                        dest,
+                        self.get_local_name(*src as usize, arg_names)
+                    )]
                 } else {
-                    vec![format!("call t{} := CopyOrMoveValue(t{});", dest, src)]
+                    vec![format!(
+                        "call t{} := CopyOrMoveValue({});",
+                        dest,
+                        self.get_local_name(*src as usize, arg_names)
+                    )]
                 }
             }
             StLoc(dest, src) => {
                 if self.is_local_ref(*dest as usize, func_idx) {
                     // TODO: release the scoop
-                    vec![format!("call t{} := CopyOrMoveRef(t{});", dest, src)]
+                    vec![format!(
+                        "call {} := CopyOrMoveRef(t{});",
+                        self.get_local_name(*dest as usize, arg_names),
+                        src
+                    )]
                 } else {
-                    vec![format!("call t{} := CopyOrMoveValue(t{});", dest, src)]
+                    vec![format!(
+                        "call {} := CopyOrMoveValue(t{});",
+                        self.get_local_name(*dest as usize, arg_names),
+                        src
+                    )]
                 }
             }
             BorrowLoc(dest, src) => vec![format!(
-                "call t{} := BorrowLoc(c, t{}_LocalName, t{});",
-                dest, src, src
+                "call t{} := BorrowLoc(c, t{}_LocalName, {});",
+                dest,
+                src,
+                self.get_local_name(*src as usize, arg_names)
             )],
             ReadRef(dest, src) => vec![format!("call t{} := ReadRef(t{});", dest, src)],
             WriteRef(dest, src) => {
@@ -468,6 +348,221 @@ impl<'a> BoogieTranslator<'a> {
         }
         res.push('\n');
         res
+    }
+
+    pub fn generate_function_sig(
+        &self,
+        idx: usize,
+        inline: bool,
+        arg_names: &Option<Vec<String>>,
+    ) -> String {
+        let mut res = String::new();
+        let function_def = &self.module.function_defs()[idx];
+        let fun_name = self.function_name_from_definition_index(idx);
+        let function_handle = self.module.function_handle_at(function_def.function);
+        let function_signature = self.module.function_signature_at(function_handle.signature);
+        let mut args = String::new();
+        let mut rets = String::new();
+        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
+            args.push_str(&format!(
+                ", {}: {}",
+                self.get_arg_name(i, arg_names),
+                self.format_value_or_ref(&arg_type)
+            ));
+            if arg_type.is_mutable_reference() {
+                rets.push_str(&format!(
+                    ", {}: {}",
+                    self.get_local_name(i, arg_names),
+                    self.format_value_or_ref(&arg_type)
+                ));
+            }
+        }
+        for (i, return_type) in function_signature.return_types.iter().enumerate() {
+            rets.push_str(&format!(
+                ", ret{}: {}",
+                i,
+                self.format_value_or_ref(&return_type)
+            ));
+        }
+        for type_str in self.all_type_strs.iter() {
+            args.push_str(&format!(", rs_{}: ResourceStore", type_str));
+            rets.push_str(&format!(", rs_{}': ResourceStore", type_str));
+        }
+
+        let inline_str = if inline { " {:inline 1}" } else { "" };
+        res.push_str(&format!(
+            "procedure{} {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})\n",
+            inline_str, fun_name, args, rets
+        ));
+        res
+    }
+
+    pub fn generate_function_body(&self, idx: usize, arg_names: &Option<Vec<String>>) -> String {
+        let mut res = String::new();
+        let function_def = &self.module.function_defs()[idx];
+        let code = &self.stackless_bytecode[idx];
+
+        res.push_str("{\n");
+        res.push_str("    // declare local variables\n".into());
+
+        let function_handle = self.module.function_handle_at(function_def.function);
+        let function_signature = self.module.function_signature_at(function_handle.signature);
+        let num_args = function_signature.arg_types.len();
+        let mut ref_vars = BTreeSet::new(); // set of locals that are references
+        let mut val_vars = BTreeSet::new(); // set of locals that are not
+        let mut arg_assignment_str = String::new();
+        let mut arg_value_assumption_str = String::new();
+        for (i, local_type) in code.local_types.iter().enumerate() {
+            if i < num_args {
+                arg_assignment_str.push_str(&format!(
+                    "    {} := {};\n",
+                    self.get_local_name(i, arg_names),
+                    self.get_arg_name(i, arg_names)
+                ));
+                if !self.is_local_ref(i, idx) {
+                    arg_value_assumption_str.push_str(&format!(
+                        "    assume is#{}({});\n",
+                        self.format_value_cons(local_type),
+                        self.get_arg_name(i, arg_names),
+                    ));
+                }
+            }
+            if SignatureTokenView::new(self.module, local_type).is_reference() {
+                ref_vars.insert(i);
+            } else {
+                val_vars.insert(i);
+            }
+            if i < num_args && local_type.is_mutable_reference() {
+                continue;
+            }
+            res.push_str(&format!(
+                "    var {}: {}; // {}\n",
+                self.get_local_name(i, arg_names),
+                self.format_value_or_ref(&local_type),
+                self.format_type(&local_type)
+            ));
+        }
+
+        res.push_str("\n    // declare a new creation time for calls inside this function\n");
+        res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
+        res.push_str("    assume !abort_flag;\n");
+        res.push_str("\n    // assume arguments are of correct types\n");
+        res.push_str(&arg_value_assumption_str);
+        res.push_str("\n    // assign arguments to locals so they can be modified\n");
+        res.push_str(&arg_assignment_str);
+        res.push_str("\n    // assign ResourceStores to locals so they can be modified\n");
+        for type_str in self.all_type_strs.iter() {
+            res.push_str(&format!("    rs_{}' := rs_{};\n", type_str, type_str));
+        }
+        res.push_str("    addr_exists' := addr_exists;\n");
+        res.push_str("\n    // bytecode translation starts here\n".into());
+
+        // identify all the branching targets so we can insert labels in front of them
+        let mut branching_targets: BTreeSet<usize> = BTreeSet::new();
+        for bytecode in code.code.iter() {
+            match bytecode {
+                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
+                    branching_targets.insert(*target as usize);
+                }
+                _ => {}
+            }
+        }
+
+        for (offset, bytecode) in code.code.iter().enumerate() {
+            // uncomment to print out bytecode for debugging purpose
+            // println!("{:?}", bytecode);
+
+            // insert labels for branching targets
+            if branching_targets.contains(&offset) {
+                res.push_str(&format!("Label_{}:\n", offset));
+            }
+            res.push_str(&self.translate_bytecode(bytecode, idx, arg_names));
+            if let WriteRef(dest, src) = bytecode {
+                // update everything that might be related to the updated reference
+                for s in &ref_vars {
+                    if s == dest {
+                        continue;
+                    }
+                    res.push_str(&format!(
+                        "    call {} := DeepUpdateReference({}, {});\n",
+                        self.get_local_name(*s, arg_names),
+                        self.get_local_name(*dest, arg_names),
+                        self.get_local_name(*s, arg_names)
+                    ));
+                }
+                for t in &self.all_type_strs {
+                    res.push_str(&format!(
+                        "    call rs_{}' := DeepUpdateGlobal({}, {}, rs_{}');\n",
+                        t,
+                        t,
+                        self.get_local_name(*dest, arg_names),
+                        t
+                    ));
+                }
+                for s in &val_vars {
+                    if s == src {
+                        continue;
+                    }
+                    res.push_str(&format!(
+                        "    call {} := DeepUpdateLocal(c, t{}_LocalName, {}, {});\n",
+                        self.get_local_name(*s, arg_names),
+                        s,
+                        self.get_local_name(*dest, arg_names),
+                        self.get_local_name(*s, arg_names)
+                    ));
+                }
+                res.push_str("\n");
+            }
+            if let Call(_, _, args) = bytecode {
+                // update everything that might be related to the updated reference
+                for dest in args {
+                    if !self.is_local_mutable_ref(*dest, idx) {
+                        continue;
+                    }
+                    for s in &ref_vars {
+                        if s == dest {
+                            continue;
+                        }
+                        res.push_str(&format!(
+                            "    call {} := DeepUpdateReference({}, {});\n",
+                            self.get_local_name(*s, arg_names),
+                            self.get_local_name(*dest, arg_names),
+                            self.get_local_name(*s, arg_names)
+                        ));
+                    }
+
+                    for s in &val_vars {
+                        res.push_str(&format!(
+                            "    call {} := DeepUpdateLocal(c, t{}_LocalName, {}, {});\n",
+                            self.get_local_name(*s, arg_names),
+                            s,
+                            self.get_local_name(*dest, arg_names),
+                            self.get_local_name(*s, arg_names)
+                        ));
+                    }
+                    res.push_str("\n");
+                }
+            }
+        }
+        res.push_str("}\n".into());
+        res
+    }
+
+    pub fn get_local_name(&self, idx: usize, arg_names: &Option<Vec<String>>) -> String {
+        if let Some(names) = arg_names {
+            if idx < names.len() {
+                return format!("new_{}", names[idx]);
+            }
+        }
+        format!("t{}", idx)
+    }
+
+    pub fn get_arg_name(&self, idx: usize, arg_names: &Option<Vec<String>>) -> String {
+        if let Some(names) = arg_names {
+            format!("old_{}", names[idx])
+        } else {
+            format!("arg{}", idx)
+        }
     }
 
     /*
