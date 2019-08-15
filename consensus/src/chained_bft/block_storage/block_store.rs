@@ -395,16 +395,9 @@ impl<T: Payload> BlockStore<T> {
         if parent.round() >= block.round() {
             return Err(InsertError::InvalidBlockRound);
         }
-        if self.enforce_increasing_timestamps {
-            // NIL blocks are supposed to have timestamps equal to their parents. Proposed blocks
-            // must have increasing timestamps.
-            if block.is_nil_block() {
-                if block.timestamp_usecs() != parent.timestamp_usecs() {
-                    return Err(InsertError::InvalidNilBlockTimestamp);
-                }
-            } else if block.timestamp_usecs() <= parent.timestamp_usecs() {
-                return Err(InsertError::NonIncreasingTimestamp);
-            }
+        if self.enforce_increasing_timestamps && block.timestamp_usecs() <= parent.timestamp_usecs()
+        {
+            return Err(InsertError::NonIncreasingTimestamp);
         }
         let parent_id = parent.id();
         match self.inner.read().unwrap().get_state_for_block(parent_id) {

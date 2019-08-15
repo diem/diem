@@ -68,9 +68,6 @@ pub enum InsertError {
     /// The block's timestamp is not greater than that of the parent.
     #[fail(display = "InvalidTimestamp")]
     NonIncreasingTimestamp,
-    /// The NIL block's timestamp is not equal to that of the parent.
-    #[fail(display = "InvalidNilBlockTimestamp")]
-    InvalidNilBlockTimestamp,
     /// The block is not newer than the root of the tree.
     #[fail(display = "OldBlock")]
     OldBlock,
