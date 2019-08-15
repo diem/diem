@@ -20,8 +20,6 @@ mod sync_manager;
 #[cfg(test)]
 mod chained_bft_smr_test;
 #[cfg(test)]
-mod event_processor_test;
-#[cfg(test)]
 mod network_tests;
 #[cfg(test)]
 mod proto_test;

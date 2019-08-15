@@ -42,6 +42,10 @@ use std::{
 use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;
 
+#[cfg(test)]
+#[path = "event_processor_test.rs"]
+mod event_processor_test;
+
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
 /// etc.). It is exposing the async processing functions for each event type.
@@ -175,13 +179,21 @@ impl<T: Payload> EventProcessor<T> {
         counters::PROPOSALS_COUNT.inc();
     }
 
+    /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
+    /// proposal, process_proposed_block would execute and decide whether to vote for it.
+    pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
+        if let Some(block) = self.pre_process_proposal(proposal_msg).await {
+            self.process_proposed_block(block).await
+        }
+    }
+
     /// The function is responsible for processing the incoming proposals and the Quorum
     /// Certificate.
     /// 1. sync up to the SyncInfo including committing to the committed state the HLI carries
     /// and fetch all the blocks from the committed state to the HQC
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
-    pub async fn process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
+    async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
         debug!("Receive proposal {}", proposal_msg);
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
@@ -463,7 +475,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    pub async fn process_winning_proposal(&self, proposal: Block<T>) {
+    async fn process_proposed_block(&self, proposal: Block<T>) {
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
         {
