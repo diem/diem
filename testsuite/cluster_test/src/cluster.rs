@@ -87,4 +87,13 @@ impl Cluster {
     pub fn instances(&self) -> &Vec<Instance> {
         &self.instances
     }
+
+    pub fn get_instance(&self, name: &str) -> Option<&Instance> {
+        for instance in &self.instances {
+            if instance.short_hash() == name {
+                return Some(instance);
+            }
+        }
+        None
+    }
 }

@@ -2,9 +2,16 @@ use clap::{App, Arg, ArgGroup, ArgMatches};
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
-    deployment::DeploymentManager,
+    deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
+    effects::{Effect, Reboot},
     experiments::{Experiment, RebootRandomValidators},
     health::{AwsLogTail, HealthCheckRunner},
+    slack::SlackClient,
+    suite::ExperimentSuite,
+};
+use failure::{
+    self,
+    prelude::{bail, format_err},
 };
 use std::{
     collections::HashSet,
@@ -22,23 +29,28 @@ pub fn main() {
     let mut runner = ClusterTestRunner::setup(&matches);
 
     if matches.is_present(ARG_RUN) {
-        runner.run_experiments_in_loop();
+        runner.run_suite_in_loop();
     } else if matches.is_present(ARG_RUN_ONCE) {
-        runner.run_single_experiment();
+        let experiment = RebootRandomValidators::new(3, &runner.cluster);
+        runner.run_single_experiment(Box::new(experiment)).unwrap();
     } else if matches.is_present(ARG_TAIL_LOGS) {
         runner.tail_logs();
     } else if matches.is_present(ARG_HEALTH_CHECK) {
         runner.run_health_check();
     } else if matches.is_present(ARG_WIPE_ALL_DB) {
         runner.wipe_all_db();
+    } else if matches.is_present(ARG_REBOOT) {
+        runner.reboot(matches.values_of_lossy(ARG_REBOOT).unwrap());
     }
 }
 
 struct ClusterTestRunner {
-    aws: Aws,
     logs: AwsLogTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
+    deployment_manager: DeploymentManager,
+    experiment_interval: Duration,
+    slack: Option<SlackClient>,
 }
 
 impl ClusterTestRunner {
@@ -59,41 +71,98 @@ impl ClusterTestRunner {
             log_tail_startup_time.as_millis()
         );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
-        Self {
-            aws,
-            logs,
-            cluster,
-            health_check_runner,
-        }
-    }
-
-    /// Run experiments every EXPERIMENT_INTERVAL seconds until fails
-    pub fn run_experiments_in_loop(&mut self) {
-        let mut deployment_manager = DeploymentManager::new(self.aws.clone(), self.cluster.clone());
         let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
             Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
             Err(..) => 15,
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
-        loop {
-            if deployment_manager.redeploy_if_needed() {
-                println!("Waiting for 60 seconds to allow ECS to restart tasks...");
-                thread::sleep(Duration::from_secs(60));
-                println!("Waiting until all validators healthy after deployment");
-                self.wait_until_all_healthy();
-            }
-            self.run_single_experiment();
-            thread::sleep(experiment_interval);
+        let deployment_manager = DeploymentManager::new(aws.clone(), cluster.clone());
+        let slack = SlackClient::try_new_from_environment();
+        Self {
+            logs,
+            cluster,
+            health_check_runner,
+            deployment_manager,
+            experiment_interval,
+            slack,
         }
     }
 
-    pub fn run_single_experiment(&mut self) {
+    pub fn run_suite_in_loop(&mut self) {
+        let mut hash_to_tag = None;
+        loop {
+            if let Some(hash) = self.deployment_manager.latest_hash_changed() {
+                self.slack_message(format!(
+                    "Deploying new version of `{}` tag: `{}`",
+                    SOURCE_TAG, hash
+                ));
+                if let Err(e) = self.redeploy(hash.clone()) {
+                    self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
+                    return;
+                }
+                self.slack_message(format!("Deployed new version `{}`", hash));
+                hash_to_tag = Some(hash);
+            }
+            let suite = ExperimentSuite::new_pre_release(&self.cluster);
+            if let Err(e) = self.run_suite(suite) {
+                self.report_failure(format!("{}", e));
+                return;
+            }
+            if let Some(hash_to_tag) = hash_to_tag.take() {
+                self.slack_message(format!(
+                    "Test suite succeed first time for `{}`",
+                    hash_to_tag
+                ));
+                if let Err(e) = self
+                    .deployment_manager
+                    .tag_tested_image(hash_to_tag.clone())
+                {
+                    self.report_failure(format!("Failed to tag tested image: {}", e));
+                    return;
+                }
+                self.slack_message(format!("Tagged `{}` as `{}`", hash_to_tag, TESTED_TAG));
+            }
+            thread::sleep(self.experiment_interval);
+        }
+    }
+
+    fn report_failure(&self, msg: String) {
+        self.slack_message(msg);
+    }
+
+    fn redeploy(&mut self, hash: String) -> failure::Result<()> {
+        self.deployment_manager.redeploy(hash);
+        println!("Waiting for 60 seconds to allow ECS to restart tasks...");
+        thread::sleep(Duration::from_secs(60));
+        println!("Waiting until all validators healthy after deployment");
+        self.wait_until_all_healthy()
+    }
+
+    fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {
+        println!("Starting suite");
+        let suite_started = Instant::now();
+        for experiment in suite.experiments {
+            let experiment_name = format!("{}", experiment);
+            self.run_single_experiment(experiment)
+                .map_err(move |e| format_err!("Experiment {} failed: {}", experiment_name, e))?;
+            thread::sleep(self.experiment_interval);
+        }
+        println!(
+            "Suite completed in {:?}",
+            Instant::now().duration_since(suite_started)
+        );
+        Ok(())
+    }
+
+    pub fn run_single_experiment(
+        &mut self,
+        experiment: Box<dyn Experiment>,
+    ) -> failure::Result<()> {
         let events = self.logs.recv_all();
         if !self.health_check_runner.run(&events).is_empty() {
-            panic!("Some validators are unhealthy before experiment started");
+            bail!("Some validators are unhealthy before experiment started");
         }
 
-        let experiment = RebootRandomValidators::new(3, &self.cluster);
         println!(
             "{}Starting experiment {}{}{}{}",
             style::Bold,
@@ -111,12 +180,12 @@ impl ClusterTestRunner {
                 .expect("Failed to send experiment result");
         });
 
-        // We expect experiments completes and cluster go into healthy state within 2 minutes
-        let experiment_deadline = Instant::now() + Duration::from_secs(2 * 60);
+        // We expect experiments completes and cluster go into healthy state within timeout
+        let experiment_deadline = Instant::now() + Duration::from_secs(5 * 60);
 
         loop {
             if Instant::now() > experiment_deadline {
-                panic!("Experiment did not complete in time");
+                bail!("Experiment did not complete in time");
             }
             let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
             // Receive all events that arrived to aws log tail within next 1 second
@@ -126,7 +195,7 @@ impl ClusterTestRunner {
             let failed_validators = self.health_check_runner.run(&events);
             for failed in failed_validators {
                 if !affected_validators.contains(&failed) {
-                    panic!(
+                    bail!(
                         "Validator {} failed, not expected for this experiment",
                         failed
                     );
@@ -158,7 +227,7 @@ impl ClusterTestRunner {
 
         loop {
             if Instant::now() > experiment_deadline {
-                panic!("Cluster did not become healthy in time");
+                bail!("Cluster did not become healthy in time");
             }
             let deadline = Instant::now() + HEALTH_POLL_INTERVAL;
             // Receive all events that arrived to aws log tail within next 1 second
@@ -169,7 +238,7 @@ impl ClusterTestRunner {
             let mut still_affected_validator = HashSet::new();
             for failed in failed_validators {
                 if !affected_validators.contains(&failed) {
-                    panic!(
+                    bail!(
                         "Validator {} failed, not expected for this experiment",
                         failed
                     );
@@ -182,6 +251,7 @@ impl ClusterTestRunner {
         }
 
         println!("Experiment completed");
+        Ok(())
     }
 
     fn run_health_check(&mut self) {
@@ -195,7 +265,7 @@ impl ClusterTestRunner {
         }
     }
 
-    fn wait_until_all_healthy(&mut self) {
+    fn wait_until_all_healthy(&mut self) -> failure::Result<()> {
         let wait_deadline = Instant::now() + Duration::from_secs(10 * 60);
         for instance in self.cluster.instances() {
             self.health_check_runner.invalidate(instance.short_hash());
@@ -203,7 +273,7 @@ impl ClusterTestRunner {
         loop {
             let now = Instant::now();
             if now > wait_deadline {
-                panic!("Validators did not become healthy after deployment");
+                bail!("Validators did not become healthy after deployment");
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
@@ -211,11 +281,21 @@ impl ClusterTestRunner {
                 break;
             }
         }
+        Ok(())
     }
 
     fn tail_logs(self) {
         for log in self.logs.event_receiver {
             println!("{:?}", log);
+        }
+    }
+
+    fn slack_message(&self, msg: String) {
+        println!("{}", msg);
+        if let Some(ref slack) = self.slack {
+            if let Err(e) = slack.send_message(&msg) {
+                println!("Failed to send slack message: {}", e);
+            }
         }
     }
 
@@ -231,6 +311,29 @@ impl ClusterTestRunner {
         }
         println!("Done");
     }
+
+    fn reboot(self, validators: Vec<String>) {
+        let mut reboots = vec![];
+        for validator in validators {
+            match self.cluster.get_instance(&validator) {
+                None => println!("{} not found", validator),
+                Some(instance) => {
+                    println!("Rebooting {}", validator);
+                    let reboot = Reboot::new(instance.clone());
+                    if let Err(err) = reboot.apply() {
+                        println!("Failed to reboot {}: {:?}", validator, err);
+                    } else {
+                        reboots.push(reboot);
+                    }
+                }
+            }
+        }
+        println!("Waiting to complete");
+        while reboots.iter().any(|r| !r.is_complete()) {
+            thread::sleep(Duration::from_secs(5));
+        }
+        println!("Completed");
+    }
 }
 
 const ARG_WORKPLACE: &str = "workplace";
@@ -240,6 +343,7 @@ const ARG_HEALTH_CHECK: &str = "health-check";
 const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
 const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
+const ARG_REBOOT: &str = "reboot";
 
 fn arg_matches() -> ArgMatches<'static> {
     let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
@@ -252,6 +356,10 @@ fn arg_matches() -> ArgMatches<'static> {
         .required(true);
     let tail_logs = Arg::with_name(ARG_TAIL_LOGS).long("--tail-logs");
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
+    let reboot = Arg::with_name(ARG_REBOOT)
+        .long("--reboot")
+        .takes_value(true)
+        .use_delimiter(true);
     // This grouping requires one and only one action (tail logs, run test, etc)
     let action_group = ArgGroup::with_name("action")
         .args(&[
@@ -260,9 +368,9 @@ fn arg_matches() -> ArgMatches<'static> {
             ARG_RUN_ONCE,
             ARG_HEALTH_CHECK,
             ARG_WIPE_ALL_DB,
+            ARG_REBOOT,
         ])
         .required(true);
-
     App::new("cluster_test")
         .author("Libra Association <opensource@libra.org>")
         .group(action_group)
@@ -273,6 +381,7 @@ fn arg_matches() -> ArgMatches<'static> {
             tail_logs,
             health_check,
             wipe_all_db,
+            reboot,
         ])
         .get_matches()
 }

@@ -105,12 +105,15 @@ impl AwsLogTail {
         let pending = prev - events_count;
         let now = unix_timestamp_now();
         if let Some(last) = events.last() {
-            println!(
-                "{} Last event delay: {}, pending {}",
-                now.as_millis(),
-                (now - last.received_timestamp).as_millis(),
-                pending
-            );
+            let delay = now - last.received_timestamp;
+            if delay > Duration::from_secs(1) {
+                println!(
+                    "{} Last event delay: {}, pending {}",
+                    now.as_millis(),
+                    delay.as_millis(),
+                    pending
+                );
+            }
         } else {
             println!("{} No events", now.as_millis());
         }
