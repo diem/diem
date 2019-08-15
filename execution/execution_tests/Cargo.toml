@@ -11,7 +11,6 @@ edition = "2018"
 [dependencies]
 futures01 = { package = "futures", version = "0.1.26" }
 grpcio = "0.4.4"
-tempfile = "3.1.0"
 
 config = { path = "../../config" }
 config_builder = { path = "../../config/config_builder" }
@@ -24,7 +23,6 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
-storage_proto = { path = "../../storage/storage_proto" }
 storage_service = { path = "../../storage/storage_service" }
 types = { path = "../../types" }
 vm_genesis = { path = "../../language/vm/vm_genesis" }

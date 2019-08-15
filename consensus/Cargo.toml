@@ -31,7 +31,6 @@ crypto = { path = "../crypto/legacy_crypto" }
 nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 execution_proto = { path = "../execution/execution_proto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
@@ -40,7 +39,6 @@ proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
-storage_proto = { path = "../storage/storage_proto" }
 tools = { path = "../common/tools" }
 types = { path = "../types" }
 

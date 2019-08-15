@@ -28,7 +28,6 @@ config = { path = "../config" }
 crash_handler = { path = "../common/crash_handler" }
 nextgen_crypto = { path = "../crypto/nextgen_crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
-libc = "0.2.61"
 libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }

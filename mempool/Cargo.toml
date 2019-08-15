@@ -20,7 +20,6 @@ ttl_cache = "0.4.2"
 
 bounded-executor = { path = "../common/bounded-executor" }
 config = { path = "../config" }
-crypto = { path = "../crypto/legacy_crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
