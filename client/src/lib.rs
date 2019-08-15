@@ -6,9 +6,17 @@
 //!
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
+pub use libra_wallet::wallet_library::CryptoHash;
+pub use nextgen_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
+pub use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
-use types::account_address::AccountAddress;
+pub use types::{
+    account_address::AccountAddress,
+    transaction::{
+        Program, RawTransaction, RawTransactionBytes, TransactionArgument, TransactionPayload,
+    },
+};
+pub use vm_genesis;
 
 pub(crate) mod account_commands;
 /// Main instance of client holding corresponding information, e.g. account address.

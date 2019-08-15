@@ -17,7 +17,7 @@ use crate::{
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
-use libra_crypto::hash::CryptoHash;
+pub use libra_crypto::hash::CryptoHash;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use rand::{rngs::EntropyRng, Rng};
