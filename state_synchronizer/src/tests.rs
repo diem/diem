@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{coordinator::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer};
+use crate::{
+    executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId, StateSyncClient, StateSynchronizer,
+};
+use config::config::RoleType;
 use config_builder::util::get_test_config;
 use crypto::HashValue;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
@@ -9,7 +12,6 @@ use failure::{prelude::*, Result};
 use futures::{
     executor::block_on,
     future::{FutureExt, TryFutureExt},
-    stream::StreamExt,
     Future,
 };
 use network::{
@@ -35,7 +37,7 @@ use std::{
 use tokio::runtime::{Builder, Runtime};
 use types::{
     account_address::AccountAddress,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    ledger_info::{LedgerInfo as TypesLedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
@@ -60,11 +62,8 @@ impl MockExecutorProxy {
         }
     }
 
-    fn mock_ledger_info(
-        peer_id: PeerId,
-        version: u64,
-    ) -> LedgerInfoWithSignatures<Ed25519Signature> {
-        let ledger_info = LedgerInfo::new(
+    fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfo {
+        let ledger_info = TypesLedgerInfo::new(
             version,
             HashValue::zero(),
             HashValue::zero(),
@@ -115,16 +114,21 @@ impl MockExecutorProxy {
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
+    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>> {
         let version = self.version.load(Ordering::Relaxed);
-        async move { Ok(version) }.boxed()
+        let response = Self::mock_ledger_info(self.peer_id, version);
+        async move { Ok(response) }.boxed()
     }
 
     fn execute_chunk(
         &self,
-        _request: ExecuteChunkRequest,
+        request: ExecuteChunkRequest,
     ) -> Pin<Box<dyn Future<Output = Result<ExecuteChunkResponse>> + Send>> {
-        self.version.fetch_add(1, Ordering::Relaxed);
+        let version = request
+            .get_ledger_info_with_sigs()
+            .get_ledger_info()
+            .version;
+        self.version.store(version, Ordering::Relaxed);
         async move { Ok(ExecuteChunkResponse::new()) }.boxed()
     }
 
@@ -132,7 +136,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         &self,
         known_version: u64,
         _: u64,
-        _: LedgerInfoWithSignatures<Ed25519Signature>,
+        _: LedgerInfo,
     ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
         let response = (self.handler)(self.mock_chunk_response(known_version));
         async move { response }.boxed()
@@ -147,9 +151,8 @@ struct SynchronizerEnv {
 }
 
 impl SynchronizerEnv {
-    fn new(handler: MockRpcHandler) -> Self {
+    fn new(handler: MockRpcHandler, role: RoleType) -> Self {
         let runtime = Builder::new().build().unwrap();
-        let config = get_test_config().0;
         let peers = vec![PeerId::random(), PeerId::random()];
 
         // setup network
@@ -193,7 +196,7 @@ impl SynchronizerEnv {
                 .transport(TransportType::Memory)
                 .direct_send_protocols(protocols.clone())
                 .build();
-        let (sender_b, mut events_b) = network_provider.add_state_synchronizer(protocols.clone());
+        let (sender_b, events_b) = network_provider.add_state_synchronizer(protocols.clone());
         runtime
             .executor()
             .spawn(network_provider.start().unit_error().compat());
@@ -207,17 +210,17 @@ impl SynchronizerEnv {
                 .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
                 .direct_send_protocols(protocols.clone())
                 .build();
-        let (sender_a, mut events_a) = network_provider.add_state_synchronizer(protocols);
+        let (sender_a, events_a) = network_provider.add_state_synchronizer(protocols);
         runtime
             .executor()
             .spawn(network_provider.start().unit_error().compat());
 
-        // await peer discovery
-        block_on(events_a.next()).unwrap().unwrap();
-        block_on(events_b.next()).unwrap().unwrap();
-
         let default_handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
         // create synchronizers
+        let mut config = get_test_config().0;
+        if role == RoleType::FullNode {
+            config.base.role = "full_node".to_string();
+        }
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_a,
@@ -228,7 +231,7 @@ impl SynchronizerEnv {
             StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_b,
                 events_b,
-                &config,
+                &get_test_config().0,
                 MockExecutorProxy::new(peers[1], handler),
             ),
         ];
@@ -246,12 +249,24 @@ impl SynchronizerEnv {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
         block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
+
+    fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
+        let max_retries = 30;
+        for _ in 0..max_retries {
+            let state = block_on(self.clients[peer_id].get_state()).unwrap();
+            if state == target_version {
+                return true;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+        }
+        false
+    }
 }
 
 #[test]
 fn test_basic_catch_up() {
     let handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
-    let env = SynchronizerEnv::new(handler);
+    let env = SynchronizerEnv::new(handler, RoleType::Validator);
 
     // test small sequential syncs
     for version in 1..5 {
@@ -274,6 +289,21 @@ fn test_flaky_peer_sync() {
             Ok(resp)
         }
     });
-    let env = SynchronizerEnv::new(handler);
+    let env = SynchronizerEnv::new(handler, RoleType::Validator);
     assert!(env.sync_to(0, 1));
+}
+
+#[test]
+fn test_full_node() {
+    let committed_version = 10;
+    let handler = Box::new(move |resp: GetChunkResponse| -> Result<GetChunkResponse> {
+        let v = resp.get_ledger_info_with_sigs().get_ledger_info().version;
+        if v <= committed_version {
+            Ok(resp)
+        } else {
+            bail!("no new data");
+        }
+    });
+    let env = SynchronizerEnv::new(handler, RoleType::FullNode);
+    assert!(env.wait_for_version(0, 10));
 }
