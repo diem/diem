@@ -16,7 +16,7 @@ module Token {
         return;
     }
 
-    public test() {
+    public test() acquires T {
         let addr1: address;
         let struct1: &mut Self.T;
 

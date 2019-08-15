@@ -23,7 +23,7 @@ module Token {
         return;
     }
 
-    public test() {
+    public test() acquires T {
         let z: Self.T;
         let addr1: address;
         let struct1: &mut Self.T;

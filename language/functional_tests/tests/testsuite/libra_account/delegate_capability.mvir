@@ -20,7 +20,7 @@ module SillyColdWallet {
         return;
     }
 
-    public withdraw(wallet_address: address, amount: u64): LibraCoin.T {
+    public withdraw(wallet_address: address, amount: u64): LibraCoin.T acquires T {
         let wallet_ref: &mut Self.T;
 
         wallet_ref = borrow_global<T>(move(wallet_address));

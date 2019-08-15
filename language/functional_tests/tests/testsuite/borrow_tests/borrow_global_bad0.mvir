@@ -1,7 +1,7 @@
 module A {
     resource T{v: u64}
 
-    public A0() {
+    public A0() acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
         sender = get_txn_sender();

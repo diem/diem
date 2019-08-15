@@ -1,7 +1,7 @@
 module Test {
     resource T { i: u64 }
 
-    public test() {
+    public test() acquires T {
         let t: Self.T;
         let t_ref: &mut Self.T;
         let i_ref: &mut u64;

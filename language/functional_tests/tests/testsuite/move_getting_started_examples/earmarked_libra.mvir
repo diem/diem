@@ -25,14 +25,14 @@ module EarmarkedLibraCoin {
     };
 
     // Publish the earmarked coin under the transaction sender's account
-    // address. Each account can contain at most one resource of a given type; 
+    // address. Each account can contain at most one resource of a given type;
     // this call will fail if the sender already has a resource of this type.
     move_to_sender<T>(move(t));
     return;
   }
 
   // Allow the transaction sender to claim a coin that was earmarked for her.
-  public claim_for_recipient(earmarked_coin_address: address): Self.T {
+  public claim_for_recipient(earmarked_coin_address: address): Self.T acquires T {
     let t: Self.T;
     let t_ref: &Self.T;
     let sender: address;
@@ -54,7 +54,7 @@ module EarmarkedLibraCoin {
   }
 
   // Allow the creator of the earmarked coin to reclaim it.
-  public claim_for_creator(): Self.T {
+  public claim_for_creator(): Self.T acquires T {
     let t: Self.T;
     let sender: address;
 
