@@ -182,7 +182,7 @@ impl Pacemaker {
     ) -> Self {
         assert!(pacemaker_timeout_quorum_size > 0);
         // It is safe to assume that "highest_qc_round" will not reach
-        // a value close to "std::u64::MAX"q as the round numbers are
+        // a value close to "std::u64::MAX" as the round numbers are
         // periodically reset to 0 in all validators and highest_qc_round
         // is equal to the highest of these round numbers.
         // The highest round number shouldn't exceed "std::u64::MAX - 2"
