@@ -2,7 +2,7 @@ module A {
     resource T{v: u64}
     resource U{v: u64}
 
-    public A0() {
+    public A0() acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
         sender = get_txn_sender();
@@ -13,7 +13,7 @@ module A {
         return;
     }
 
-    public A1() {
+    public A1() acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
         let u_ref: &mut Self.U;
@@ -25,7 +25,7 @@ module A {
         return;
     }
 
-    public A2(b: bool) {
+    public A2(b: bool) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
         sender = get_txn_sender();
@@ -38,7 +38,7 @@ module A {
         return;
     }
 
-    public A3(b: bool) {
+    public A3(b: bool) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
         sender = get_txn_sender();
@@ -49,7 +49,7 @@ module A {
         return;
     }
 
-    public A4(b: bool) {
+    public A4(b: bool) acquires T {
         let sender: address;
         let x: Self.T;
         let y: &mut Self.T;

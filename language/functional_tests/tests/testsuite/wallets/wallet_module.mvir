@@ -109,7 +109,7 @@ module ColdWallet {
     }
 
     // deposit money into a payee's cold wallet
-    public deposit(payee: address, to_deposit: LibraCoin.T) {
+    public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
 
         let payee_wallet_ref: &mut Self.T;
         // Load the payee's account
@@ -122,13 +122,15 @@ module ColdWallet {
     // withdraw money from this wallet, and send to a payee account
     // Note that this implementation moves the fund into the payee's Libra account, without assuming
     // there's a cold wallet module under that account
-    public withdraw_from_payer(payer: address,
-                            payee: address,
-                            amount: u64,
-                            pk1: bytearray,
-                            sig1: bytearray,
-                            pk2: bytearray,
-                            sig2: bytearray) {
+    public withdraw_from_payer(
+        payer: address,
+        payee: address,
+        amount: u64,
+        pk1: bytearray,
+        sig1: bytearray,
+        pk2: bytearray,
+        sig2: bytearray
+    ) acquires T {
 
         let payer_ref: &mut Self.T;
         let transaction_bytes: bytearray;
@@ -188,7 +190,7 @@ module ColdWallet {
         constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
         payer_bytes = AddressUtil.address_to_bytes(move(payer));
         prefix = BytearrayUtil.bytearray_concat(move(payer_bytes), move(constant));
-        
+
         payee_bytes = AddressUtil.address_to_bytes(move(payee));
         amount_bytes = U64Util.u64_to_bytes(move(amount));
         seq_bytes = U64Util.u64_to_bytes(*&move(wallet).sequence_num);

@@ -23,7 +23,7 @@ module TestStruct {
 	     return move(a), move(c);
 	}
 
-	public module_builtins(a: address):  &mut Self.T*bool {
+	public module_builtins(a: address):  &mut Self.T * bool acquires T  {
 		let t: Self.T;
 		let t_ref1: &mut Self.T;
 		let t_ref2: &mut Self.T;

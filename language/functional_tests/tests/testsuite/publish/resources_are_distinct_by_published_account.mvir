@@ -19,7 +19,7 @@ module LibraAccount {
         return;
     }
 
-    public test() {
+    public test() acquires T {
         let c1: Self.T;
         let sender: address;
         let sequence_number: u64;

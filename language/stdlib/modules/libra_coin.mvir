@@ -17,7 +17,7 @@ module LibraCoin {
     // sender does not have a MintCapability.
     // Since only the Association account has a mint capability, this will only succeed if it is
     // invoked by a transaction sent by that account.
-    public mint_with_default_capability(amount: u64): Self.T {
+    public mint_with_default_capability(amount: u64): Self.T acquires MintCapability {
         let capability_ref: &mut Self.MintCapability;
         let capability_immut_ref: &Self.MintCapability;
 
@@ -29,7 +29,7 @@ module LibraCoin {
     // Mint a new LibraCoin.T worth `value`. The caller must have a reference to a MintCapability.
     // Only the Association account can acquire such a reference, and it can do so only via
     // `borrow_sender_mint_capability`
-    public mint(value: u64, capability: &Self.MintCapability): Self.T {
+    public mint(value: u64, capability: &Self.MintCapability): Self.T acquires MarketCap {
         let market_cap_ref: &mut Self.MarketCap;
         let market_cap_total_value: u64;
 
@@ -50,7 +50,7 @@ module LibraCoin {
 
     // Temporary procedure that is called to burn off the collected gas fee
     // In the future this will be replaced by the actual mechanism for collecting gas
-    public TODO_REMOVE_burn_gas_fee(coin: Self.T) {
+    public TODO_REMOVE_burn_gas_fee(coin: Self.T) acquires MarketCap {
         let value: u64;
         let market_cap_ref: &mut Self.MarketCap;
         let market_cap_total_value: u64;
@@ -79,7 +79,7 @@ module LibraCoin {
     }
 
     // Return the total value of all Libra in the system
-    public market_cap(): u64 {
+    public market_cap(): u64 acquires MarketCap {
         let market_cap_ref: &mut Self.MarketCap;
 
         market_cap_ref = borrow_global<MarketCap>(0xA550C18);

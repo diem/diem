@@ -10,7 +10,7 @@ module TestMoveFrom {
       return move(yes);
     }
 
-    public increment() {
+    public increment() acquires Counter {
       let sender_address: address;
       let t_ref: &mut Self.Counter;
       let counter_ref: &mut u64;
@@ -33,7 +33,7 @@ module TestMoveFrom {
       return;
     }
 
-    public unpublish() {
+    public unpublish() acquires Counter {
       let sender_address: address;
       let counter: Self.Counter;
       let i: u64;

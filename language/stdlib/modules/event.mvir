@@ -27,7 +27,7 @@ module Event {
     // HandleIdGenerator is only going to be monotonically increased and there's no way to revert it or destroy it. Thus
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
-    fresh_guid(): bytearray {
+    fresh_guid(): bytearray acquires HandleIdGenerator {
         let exists_counter: bool;
         let sender: address;
         let counter: &mut Self.HandleIdGenerator;
@@ -58,7 +58,7 @@ module Event {
     }
 
     // Use the sender's HandleIdGenerator to generate a unique event handle that one can emit an event to.
-    public new_event_handle(): Self.Handle {
+    public new_event_handle(): Self.Handle acquires HandleIdGenerator {
         return Handle {guid: Self.fresh_guid(), counter: 0};
     }
 
