@@ -207,7 +207,10 @@ fn test_nil_block() {
         genesis_block.id()
     );
     assert_eq!(nil_block.round(), 1);
-    assert_eq!(nil_block.timestamp_usecs(), genesis_block.timestamp_usecs());
+    assert_eq!(
+        nil_block.timestamp_usecs(),
+        genesis_block.timestamp_usecs() + 1
+    );
     assert_eq!(nil_block.is_nil_block(), true);
     assert!(nil_block.author().is_none());
 

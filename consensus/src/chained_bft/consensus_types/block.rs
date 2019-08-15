@@ -245,9 +245,11 @@ where
 
         let payload = T::default();
         // We want all the NIL blocks to agree on the timestamps even though they're generated
-        // independently by different validators, hence we're using the timestamp of a parent.
-        let timestamp_usecs = parent_block.timestamp_usecs;
-
+        // independently by different validators, hence we're using the timestamp of a parent + 1.
+        // The reason for artificially adding 1 usec is to support execution state synchronization,
+        // which doesn't have any other way of determining the order of ledger infos rather than
+        // comparing their timestamps.
+        let timestamp_usecs = parent_block.timestamp_usecs + 1;
         let block_serializer = BlockSerializer {
             parent_id: parent_block.id(),
             payload: &payload,
