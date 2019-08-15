@@ -144,9 +144,6 @@ pub trait PublicKey: Sized + Clone + Eq + Hash +
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
     type PrivateKeyMaterial: PrivateKey<PublicKeyMaterial = Self>;
-    /// The length of the [`PublicKey`]
-    fn length() -> usize;
-
 }
 
 /// A type family of public keys that are used for signing.

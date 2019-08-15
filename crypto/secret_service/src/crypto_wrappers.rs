@@ -101,10 +101,6 @@ impl ValidKey for GenericPrivateKey {
 
 impl PublicKey for GenericPublicKey {
     type PrivateKeyMaterial = GenericPrivateKey;
-
-    fn length() -> usize {
-        std::cmp::max(BLS12381PublicKey::length(), Ed25519PublicKey::length())
-    }
 }
 
 impl TryFrom<&[u8]> for GenericPublicKey {

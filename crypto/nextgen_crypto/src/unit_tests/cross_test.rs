@@ -81,10 +81,6 @@ impl ValidKey for PrivateK {
 
 impl PublicKey for PublicK {
     type PrivateKeyMaterial = PrivateK;
-    // TODO(fga): fix this!
-    fn length() -> usize {
-        std::cmp::max(BLS12381PublicKey::length(), Ed25519PublicKey::length())
-    }
 }
 
 impl TryFrom<&[u8]> for PublicK {

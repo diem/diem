@@ -268,18 +268,10 @@ impl Eq for X25519PublicKey {}
 
 impl PublicKey for X25519PublicKey {
     type PrivateKeyMaterial = X25519EphemeralPrivateKey;
-
-    fn length() -> usize {
-        X25519_PUBLIC_KEY_LENGTH
-    }
 }
 
 impl PublicKey for X25519StaticPublicKey {
     type PrivateKeyMaterial = X25519StaticPrivateKey;
-
-    fn length() -> usize {
-        X25519_PUBLIC_KEY_LENGTH
-    }
 }
 
 impl TryFrom<&[u8]> for X25519StaticPublicKey {
