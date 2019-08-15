@@ -113,9 +113,9 @@ fn main() {
             target,
         } => {
             let corpus_dir = corpus_dir.unwrap_or_else(|| default_corpus_dir(target).0);
-            commands::make_corpus(target, num_items, &corpus_dir, opt.debug)
+            let item_count = commands::make_corpus(target, num_items, &corpus_dir, opt.debug)
                 .expect("Failed to create corpus");
-            println!("Wrote {} items to corpus", num_items);
+            println!("Wrote {} items to corpus", item_count);
         }
         Command::Fuzz {
             corpus_dir,

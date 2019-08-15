@@ -31,13 +31,19 @@ macro_rules! proto_fuzz_target {
                 concat!(stringify!($ty), " (protobuf)")
             }
 
-            fn generate(&self, gen: &mut ::proptest_helpers::ValueGenerator) -> Vec<u8> {
+            fn generate(
+                &self,
+                _idx: usize,
+                gen: &mut ::proptest_helpers::ValueGenerator,
+            ) -> Option<Vec<u8>> {
                 use proto_conv::IntoProtoBytes;
 
                 let value = gen.generate(::proptest::arbitrary::any::<$ty>());
-                value
-                    .into_proto_bytes()
-                    .expect("failed to convert to bytes")
+                Some(
+                    value
+                        .into_proto_bytes()
+                        .expect("failed to convert to bytes"),
+                )
             }
 
             fn fuzz(&self, data: &[u8]) {

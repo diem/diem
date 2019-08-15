@@ -18,13 +18,13 @@ impl FuzzTargetImpl for CompiledModuleTarget {
         "VM CompiledModule (custom deserializer)"
     }
 
-    fn generate(&self, gen: &mut ValueGenerator) -> Vec<u8> {
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         let value = gen.generate(any_with::<CompiledModuleMut>(16));
         let mut out = vec![];
         value
             .serialize(&mut out)
             .expect("serialization should work");
-        out
+        Some(out)
     }
 
     fn fuzz(&self, data: &[u8]) {
