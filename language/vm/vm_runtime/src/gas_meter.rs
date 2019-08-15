@@ -6,7 +6,7 @@ use crate::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
     loaded_data::function::FunctionReference,
 };
-use types::account_address::ADDRESS_LENGTH;
+use types::{account_address::ADDRESS_LENGTH, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
 use vm::{access::ModuleAccess, errors::*, file_format::Bytecode, gas_schedule::*};
 use vm_runtime_types::value::Local;
 
@@ -46,6 +46,7 @@ impl GasMeter {
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
     {
+        precondition!(transaction_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         let cost = calculate_intrinsic_gas(transaction_size);
         self.consume_gas(cost, stk)
     }

@@ -125,6 +125,8 @@ pub mod txn_executor;
 pub mod execution_stack;
 #[cfg(not(feature = "instruction_synthesis"))]
 mod execution_stack;
+#[macro_use]
+extern crate mirai_annotations;
 
 pub use move_vm::MoveVM;
 pub use process_txn::verify::static_verify_program;

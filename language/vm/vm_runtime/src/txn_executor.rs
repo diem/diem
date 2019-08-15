@@ -22,7 +22,9 @@ use types::{
     byte_array::ByteArray,
     contract_event::ContractEvent,
     language_storage::ModuleId,
-    transaction::{TransactionArgument, TransactionOutput, TransactionStatus},
+    transaction::{
+        TransactionArgument, TransactionOutput, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
     vm_error::{ExecutionStatus, VMStatus},
     write_set::WriteSet,
 };
@@ -751,9 +753,13 @@ where
     pub(crate) fn execute_function_impl(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         // We charge an intrinsic amount of gas based upon the size of the transaction submitted
         // (in raw bytes).
+        let txn_size = self.txn_data.transaction_size;
+        // The callers of this function verify the transaction before executing it. Transaction
+        // verification ensures the following condition.
+        assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         try_runtime!(self
             .gas_meter
-            .charge_transaction_gas(self.txn_data.transaction_size, &self.execution_stack));
+            .charge_transaction_gas(txn_size, &self.execution_stack));
         let beginning_height = self.execution_stack.call_stack_height();
         try_runtime!(self.execution_stack.push_call(func));
         // We always start execution from the first instruction.
