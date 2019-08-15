@@ -430,24 +430,11 @@ impl LibraDB {
                     .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
             })
             .collect::<Result<()>>()?;
-        let txn_hashes = txns_to_commit
-            .iter()
-            .map(|txn_to_commit| txn_to_commit.signed_txn().hash())
-            .collect::<Vec<_>>();
-        let gas_amounts = txns_to_commit
-            .iter()
-            .map(TransactionToCommit::gas_used)
-            .collect::<Vec<_>>();
 
         // Transaction accumulator updates. Get result root hash.
-        let txn_infos = izip!(
-            txn_hashes,
-            state_root_hashes,
-            event_root_hashes,
-            gas_amounts
-        )
-        .map(|(t, s, e, g)| TransactionInfo::new(t, s, e, g))
-        .collect::<Vec<_>>();
+        let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
+            .map(|(t, s, e)| TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used()))
+            .collect::<Vec<_>>();
         assert_eq!(txn_infos.len(), txns_to_commit.len());
 
         let new_root_hash =
