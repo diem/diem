@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::coordinator::{
-    ConsensusToCoordinatorMessage, ExecutorProxy, ExecutorProxyTrait, SyncCoordinator,
+use crate::{
+    coordinator::{CoordinatorMessage, SyncCoordinator},
+    executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
 use config::config::NodeConfig;
 use failure::prelude::*;
@@ -19,7 +20,7 @@ use types::ledger_info::LedgerInfoWithSignatures;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
-    coordinator_sender: mpsc::UnboundedSender<ConsensusToCoordinatorMessage>,
+    coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
 impl StateSynchronizer {
@@ -70,7 +71,7 @@ impl StateSynchronizer {
 }
 
 pub struct StateSyncClient {
-    coordinator_sender: mpsc::UnboundedSender<ConsensusToCoordinatorMessage>,
+    coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
 impl StateSyncClient {
@@ -83,7 +84,7 @@ impl StateSyncClient {
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {
             sender
-                .send(ConsensusToCoordinatorMessage::Requested(target, cb_sender))
+                .send(CoordinatorMessage::Requested(target, cb_sender))
                 .await?;
             let sync_status = cb_receiver.await?;
             Ok(sync_status)
@@ -94,10 +95,19 @@ impl StateSyncClient {
     pub fn commit(&self, version: u64) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
-            sender
-                .send(ConsensusToCoordinatorMessage::Commit(version))
-                .await?;
+            sender.send(CoordinatorMessage::Commit(version)).await?;
             Ok(())
+        }
+    }
+
+    /// Returns information about StateSynchronizer internal state
+    pub fn get_state(&self) -> impl Future<Output = Result<u64>> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+        async move {
+            sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
+            let info = cb_receiver.await?;
+            Ok(info)
         }
     }
 }
