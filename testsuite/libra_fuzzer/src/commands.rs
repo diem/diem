@@ -14,7 +14,8 @@ use std::{
     process::Command,
 };
 
-/// Generate data for this fuzz target into the output directory.
+/// Generates data for this fuzz target into the output directory. Returns the number of items
+/// generated.
 ///
 /// The corpus directory should be present at the time this method is called.
 pub fn make_corpus(
@@ -22,14 +23,21 @@ pub fn make_corpus(
     num_items: usize,
     corpus_dir: &Path,
     debug: bool,
-) -> Result<()> {
+) -> Result<usize> {
     // TODO: Allow custom proptest configs?
     let mut gen = ValueGenerator::new();
 
     let mut sha1 = Sha1::new();
 
-    for _ in 0..num_items {
-        let result = target.generate(&mut gen);
+    let mut idx = 0;
+    while idx < num_items {
+        let result = match target.generate(idx, &mut gen) {
+            Some(bytes) => bytes,
+            None => {
+                // No value could be generated. Assume that corpus generation has been exhausted.
+                break;
+            }
+        };
 
         // Use the SHA-1 of the result as the file name.
         sha1.input(&result);
@@ -44,8 +52,9 @@ pub fn make_corpus(
 
         f.write_all(&result)
             .with_context(|_| format!("Failed to write to file: {:?}", path))?;
+        idx += 1;
     }
-    Ok(())
+    Ok(idx)
 }
 
 /// Fuzz a target by running `cargo fuzz run`.

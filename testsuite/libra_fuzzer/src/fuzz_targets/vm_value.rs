@@ -21,7 +21,7 @@ impl FuzzTargetImpl for ValueTarget {
         "VM values + types (custom deserializer)"
     }
 
-    fn generate(&self, gen: &mut ValueGenerator) -> Vec<u8> {
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         let value = gen.generate(Value::struct_strategy());
         let struct_def = value.to_struct_def_FOR_TESTING();
 
@@ -40,7 +40,7 @@ impl FuzzTargetImpl for ValueTarget {
             .expect("writing should work");
         blob.extend_from_slice(&struct_def_blob);
         blob.extend_from_slice(&value_blob);
-        blob
+        Some(blob)
     }
 
     fn fuzz(&self, data: &[u8]) {
