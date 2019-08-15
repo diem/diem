@@ -1,5 +1,64 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+//! This module implements [`JellyfishMerkleTree`] backed by storage module. The tree itself doesn't
+//! persist anything, but realizes the logic of R/W only. The write path will produce all the
+//! intermediate results in a batch for storage layer to commit and the read path will return
+//! results directly. The public APIs are only [`new`](JellyfishMerkleTree::new),
+//! [`put_blob_sets`](JellyfishMerkleTree::put_blob_sets),
+//! [`put_blob_set`](JellyfishMerkleTree::put_blob_set) and
+//! [`get_with_proof`](JellyfishMerkleTree::get_with_proof). After each put with a `blob_set`
+//! based on a known version, the tree will return a new root hash with a [`TreeUpdateBatch`]
+//! containing all the new nodes and indices of stale nodes.
+//!
+//! A Jellyfish Merkle Tree itself logically is a 256-bit sparse Merkle tree with an optimization
+//! that any subtree containing 0 or 1 leaf node will be replaced by that leaf node or a placeholder
+//! node with default hash value. With this optimization we can save CPU by avoiding hashing on
+//! many sparse levels in the tree. Physically, the tree is structurally similar to the modified
+//! Patricia Merkle tree of Ethereum but with some modifications. A standard Jellyfish Merkle tree
+//! will look like the following figure:
+//!                                    .──────────────────────.
+//!                            _.─────'                        `──────.
+//!                       _.──'                                        `───.
+//!                   _.─'                                                  `──.
+//!               _.─'                                                          `──.
+//!             ,'                                                                  `.
+//!          ,─'                                                                      '─.
+//!        ,'                                                                            `.
+//!      ,'                                                                                `.
+//!     ╱                                                                                    ╲
+//!    ╱                                                                                      ╲
+//!   ╱                                                                                        ╲
+//!  ╱                                                                                          ╲
+//! ;                                                                                            :
+//! ;                                                                                            :
+//!;                                                                                              :
+//!│                                                                                              │
+//!+──────────────────────────────────────────────────────────────────────────────────────────────+
+//! .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.  .''.
+//!/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \
+//!+----++----++----++----++----++----++----++----++----++----++----++----++----++----++----++----+
+//! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+//!  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )
+//! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+//!  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )
+//! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+//!  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )
+//! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+//!  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )
+//! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+//! ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■
+//! ■: account_state_blob
+//!
+//! A Jellyfish Merkle Tree consists of [`Internal`] node and [`Leaf`] node. [`Internal`] node is
+//! like branch node in ethereum patricia merkle with 16 children to represent a 4-level binary
+//! tree and [`Leaf`] node is similar to that in patricia merkle too. In the above figure, each
+//! `bell` in the jellyfish is an [`Internal`] node while each tentacle is a [`Leaf`] node. It is
+//! noted that Jellyfish merkle doesn't have a counterpart for `extension` node of ethereum patricia
+//! merkle.
+//! [Internal]: crate::node_type::Internal
+//! [Leaf]: crate::node_type::Leaf
+
 #![allow(clippy::unit_arg)]
 
 #[cfg(test)]
