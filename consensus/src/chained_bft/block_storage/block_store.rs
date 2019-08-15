@@ -221,11 +221,14 @@ impl<T: Payload> BlockStore<T> {
         committed_block_id: HashValue,
         qc: &QuorumCert,
     ) -> bool {
+        // This precondition ensures that the check in the following lines
+        // does not result in an addition overflow.
+        checked_precondition!(self.root().round() <= std::u64::MAX - 2);
+
         // LedgerInfo doesn't carry the information about the round of the committed block. However,
         // the 3-chain safety rules specify that the round of the committed block must be
         // certified_block_round() - 2. In case root().round() is greater than that the committed
         // block carried by LI is older than my current commit.
-        checked_precondition!(self.root().round() < std::u64::MAX - 1);
         !(self.block_exists(committed_block_id)
             || self.root().round() + 2 >= qc.certified_block_round())
     }

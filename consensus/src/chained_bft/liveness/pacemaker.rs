@@ -181,11 +181,14 @@ impl Pacemaker {
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Self {
         assert!(pacemaker_timeout_quorum_size > 0);
-        // It is safe to assume that highest_qc_round will not reach
-        // a value close to u64::MAX as the round numbers are
+        // It is safe to assume that "highest_qc_round" will not reach
+        // a value close to "std::u64::MAX"q as the round numbers are
         // periodically reset to 0 in all validators and highest_qc_round
         // is equal to the highest of these round numbers.
-        assume!(highest_qc_round < std::u64::MAX - 1);
+        // The highest round number shouldn't exceed "std::u64::MAX - 2"
+        // in order to prevent addition overflow caused by the 3 chain
+        // safety rule check (consensus/src/chained_bft/block_storage/block_store.rs:234).
+        assume!(highest_qc_round <= std::u64::MAX - 2);
         // The starting round is maximum(highest quorum certificate,
         // highest timeout certificate round) + 1.  Note that it is possible this
         // replica already voted at this round and will until a round timeout

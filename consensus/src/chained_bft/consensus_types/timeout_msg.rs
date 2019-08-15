@@ -367,8 +367,11 @@ impl PacemakerTimeoutCertificate {
     /// Returns the round of the timeout
     pub fn round(&self) -> Round {
         // It is safe to assume that round numbers will not reach
-        // a value close to u64::MAX as they are reset to 0 periodically.
-        assumed_postcondition!(self.round < std::u64::MAX - 1);
+        // a value close to "std::u64::MAX" as they are reset to 0 periodically.
+        // The assumption that round numbers do not exceed "std::u64::MAX - 2" helps verify the
+        // precondition guarding addition overflow caused by the 3 chain safety rule
+        // (consensus/src/chained_bft/block_storage/block_store.rs:234).
+        assumed_postcondition!(self.round <= std::u64::MAX - 2);
         self.round
     }
 
