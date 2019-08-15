@@ -635,18 +635,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_stack.pop().unwrap();
                 self.code.push(StacklessBytecode::CreateAccount(temp_index));
             }
-
-            Bytecode::EmitEvent => {
-                // TODO: EmitEvent is currently unimplemented
-                let operand3_index = self.temp_stack.pop().unwrap();
-                let operand2_index = self.temp_stack.pop().unwrap();
-                let operand1_index = self.temp_stack.pop().unwrap();
-                self.code.push(StacklessBytecode::EmitEvent(
-                    operand1_index,
-                    operand2_index,
-                    operand3_index,
-                ));
-            }
         }
     }
 }

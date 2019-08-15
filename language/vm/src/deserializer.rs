@@ -965,7 +965,6 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 Bytecode::MoveToSender(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
             Opcodes::CREATE_ACCOUNT => Bytecode::CreateAccount,
-            Opcodes::EMIT_EVENT => Bytecode::EmitEvent,
             Opcodes::GET_TXN_SEQUENCE_NUMBER => Bytecode::GetTxnSequenceNumber,
             Opcodes::GET_TXN_PUBLIC_KEY => Bytecode::GetTxnPublicKey,
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
@@ -1138,10 +1137,9 @@ impl Opcodes {
             0x2F => Ok(Opcodes::MOVE_FROM),
             0x30 => Ok(Opcodes::MOVE_TO),
             0x31 => Ok(Opcodes::CREATE_ACCOUNT),
-            0x32 => Ok(Opcodes::EMIT_EVENT),
-            0x33 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
-            0x34 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
-            0x35 => Ok(Opcodes::FREEZE_REF),
+            0x32 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
+            0x33 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
+            0x34 => Ok(Opcodes::FREEZE_REF),
             _ => Err(BinaryError::UnknownOpcode),
         }
     }

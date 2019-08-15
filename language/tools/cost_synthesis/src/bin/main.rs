@@ -68,9 +68,6 @@ fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
     writer.flush().unwrap();
 }
 
-// The only instruction that we don't implement here is `EmitEvent`. This is on purpose -- the emit
-// event instruction will be changing soon, so it's not worth implementing at the moment until we
-// have decided the semantics of the instruction.
 fn stack_instructions(options: &Opt) {
     use Bytecode::*;
     let stack_opcodes: Vec<Bytecode> = vec![
