@@ -6,7 +6,8 @@ use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
         block_storage::{
-            BlockReader, BlockStore, InsertError, NeedFetchResult, VoteReceptionResult,
+            BlockReader, BlockRetriever, BlockStore, InsertError, NeedFetchResult,
+            VoteReceptionResult,
         },
         common::{Author, Payload, Round},
         consensus_types::{
@@ -24,7 +25,6 @@ use crate::{
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         persistent_storage::PersistentStorage,
         safety::{safety_rules::SafetyRules, vote_msg::VoteMsg},
-        sync_manager::{SyncManager, SyncMgrContext},
     },
     counters,
     state_replication::{StateComputer, TxnManager},
@@ -35,7 +35,10 @@ use crate::{
 use crypto::ed25519::*;
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;
 
@@ -59,7 +62,6 @@ pub struct EventProcessor<T> {
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     network: ConsensusNetworkImpl,
     storage: Arc<dyn PersistentStorage<T>>,
-    sync_manager: SyncManager<T>,
     time_service: Arc<dyn TimeService>,
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
@@ -81,12 +83,6 @@ impl<T: Payload> EventProcessor<T> {
         time_service: Arc<dyn TimeService>,
         enforce_increasing_timestamps: bool,
     ) -> Self {
-        let sync_manager = SyncManager::new(
-            Arc::clone(&block_store),
-            Arc::clone(&storage),
-            network.clone(),
-            Arc::clone(&state_computer),
-        );
         Self {
             author,
             block_store,
@@ -98,11 +94,14 @@ impl<T: Payload> EventProcessor<T> {
             txn_manager,
             network,
             storage,
-            sync_manager,
             time_service,
             enforce_increasing_timestamps,
             last_vote_sent: None,
         }
+    }
+
+    fn create_block_retriever(&self, deadline: Instant, peer: Author) -> BlockRetriever {
+        BlockRetriever::new(self.network.clone(), deadline, peer)
     }
 
     /// Leader:
@@ -341,9 +340,8 @@ impl<T: Payload> EventProcessor<T> {
                 sync_info.hqc_round(),
             );
             let deadline = self.pacemaker.current_round_deadline();
-            let sync_mgr_context = SyncMgrContext::new(sync_info, author);
-            self.sync_manager
-                .sync_to(deadline, sync_mgr_context)
+            self.block_store
+                .sync_to(sync_info, self.create_block_retriever(deadline, author))
                 .await
                 .map_err(|e| {
                     warn!(
@@ -560,7 +558,7 @@ impl<T: Payload> EventProcessor<T> {
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
         let block = self
-            .sync_manager
+            .block_store
             .execute_and_insert_block(proposed_block)
             .await
             .map_err(|e| {
@@ -664,8 +662,11 @@ impl<T: Payload> EventProcessor<T> {
         {
             if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
                 if let Err(e) = self
-                    .sync_manager
-                    .fetch_quorum_cert(qc.as_ref().clone(), preferred_peer, deadline)
+                    .block_store
+                    .fetch_quorum_cert(
+                        qc.as_ref().clone(),
+                        self.create_block_retriever(deadline, preferred_peer),
+                    )
                     .await
                 {
                     error!("Error syncing to qc {}: {:?}", qc, e);

@@ -27,6 +27,9 @@ use types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
 #[path = "block_store_test.rs"]
 mod block_store_test;
 
+#[path = "sync_manager.rs"]
+pub mod sync_manager;
+
 #[derive(Debug, PartialEq)]
 /// Whether we need to do block retrieval if we want to insert a Quorum Cert.
 pub enum NeedFetchResult {

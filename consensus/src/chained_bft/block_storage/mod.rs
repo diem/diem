@@ -15,7 +15,7 @@ use crate::{
     chained_bft::safety::vote_msg::VoteMsgVerificationError,
     state_replication::{ExecutedState, StateComputeResult},
 };
-pub use block_store::{BlockStore, NeedFetchResult};
+pub use block_store::{sync_manager::BlockRetriever, BlockStore, NeedFetchResult};
 use network::protocols::rpc::error::RpcError;
 use types::validator_verifier::VerifyError;
 
