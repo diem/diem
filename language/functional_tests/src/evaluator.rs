@@ -8,10 +8,7 @@ use crate::{
 use bytecode_verifier::verifier::{VerifiedModule, VerifiedProgram};
 use config::config::VMPublishingOption;
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
-use language_e2e_tests::{
-    account::{AccountData, AccountResource},
-    executor::FakeExecutor,
-};
+use language_e2e_tests::{account::AccountData, executor::FakeExecutor};
 use std::{str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use transaction_builder::transaction::{make_transaction_program, serialize_program};
@@ -125,9 +122,9 @@ fn run_transaction(
 
     let transaction = RawTransaction::new(
         *data.address(),
-        AccountResource::read_sequence_number(&account_resource),
+        account_resource.sequence_number(),
         program,
-        AccountResource::read_balance(&account_resource),
+        account_resource.balance(),
         1,
         Duration::from_secs(u64::max_value()),
     )

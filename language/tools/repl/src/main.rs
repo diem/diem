@@ -12,10 +12,7 @@ use compiler::Compiler;
 use failure::Error;
 use getopts::{Options, ParsingStyle};
 use hex;
-use language_e2e_tests::{
-    account::{Account, AccountResource},
-    executor::FakeExecutor,
-};
+use language_e2e_tests::{account::Account, executor::FakeExecutor};
 use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
@@ -55,7 +52,7 @@ impl Repl {
             .executor
             .read_account_resource(account)
             .expect("sender must exist");
-        AccountResource::read_sequence_number(&sender_resource)
+        sender_resource.sequence_number()
     }
 
     pub fn new() -> Self {
@@ -259,11 +256,8 @@ impl Repl {
             hex::encode(self.accounts[sender].address())
         );
         if let Some(v) = self.executor.read_account_resource(account) {
-            println!("balance: {}", AccountResource::read_balance(&v));
-            println!(
-                "sequence_number: {}",
-                AccountResource::read_sequence_number(&v)
-            );
+            println!("balance: {}", v.balance());
+            println!("sequence_number: {}", v.sequence_number(),);
         } else {
             println!("Account don't exist");
         }

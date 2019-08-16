@@ -6,7 +6,6 @@ mod peer_to_peer;
 mod rotate_key;
 
 use crate::{
-    account::AccountResource,
     account_universe::{
         default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
         AccountCurrent, AccountPairGen, AccountPickStyle, AccountUniverse, AccountUniverseGen,
@@ -167,14 +166,14 @@ pub(crate) fn assert_accounts_match(
             .read_account_resource(&account.account())
             .expect("resource for this account must exist");
         prop_assert_eq!(
-            account.account().auth_key(),
-            AccountResource::read_auth_key(&resource),
+            &account.account().auth_key(),
+            resource.authentication_key(),
             "account {} should have correct auth key",
             idx
         );
         prop_assert_eq!(
             account.balance(),
-            AccountResource::read_balance(&resource),
+            resource.balance(),
             "account {} should have correct balance",
             idx
         );
@@ -193,7 +192,7 @@ pub(crate) fn assert_accounts_match(
         //        );
         prop_assert_eq!(
             account.sequence_number(),
-            AccountResource::read_sequence_number(&resource),
+            resource.sequence_number(),
             "account {} should have correct sequence number",
             idx
         );
