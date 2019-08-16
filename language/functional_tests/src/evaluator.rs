@@ -236,9 +236,6 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
             let verified_program = unwrap_or_log!(do_verify_program(compiled_program, &deps), res);
             res.outputs.push(EvaluationOutput::Output("".to_string()));
 
-            // add all modules to be published to the vec of dependencies
-            // TODO: currently the compiler only checks the module name when looking up a module
-            //       it should check that both the name and address match
             let new_modules = verified_program.modules().to_vec();
             // This has to be before deps.extend since verified_program holds a reference to the
             // deps.
@@ -247,8 +244,9 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
             compiled_program
         } else {
-            // TODO: Should this add unverified modules to the deps list using the bypass function?
-            // Not totally sure at the moment.
+            // Even if the verifier stage is disabled, we should still add the modules to the deps.
+            // TODO: add a bypass function to the verifier and fix this
+
             compiled_program
         };
 

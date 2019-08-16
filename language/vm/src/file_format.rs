@@ -239,8 +239,8 @@ pub struct StructHandle {
     ///
     /// If `is_nominal_resource` is true, it is a *nominal resource*
     pub is_nominal_resource: bool,
-    /// The type parameters (identified by their index into the vec) and their kind constraints
-    pub type_parameters: Vec<Kind>,
+    /// The type formals (identified by their index into the vec) and their kind constraints
+    pub type_formals: Vec<Kind>,
 }
 
 /// A `FunctionHandle` is a reference to a function. It is composed by a
@@ -390,8 +390,8 @@ pub struct FunctionSignature {
         proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")
     )]
     pub arg_types: Vec<SignatureToken>,
-    /// The type parameters (identified by their index into the vec) and their kind constraints
-    pub type_parameters: Vec<Kind>,
+    /// The type formals (identified by their index into the vec) and their kind constraints
+    pub type_formals: Vec<Kind>,
 }
 
 /// A `LocalsSignature` is the list of locals used by a function.
@@ -1555,7 +1555,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
     module.function_signatures.push(FunctionSignature {
         arg_types: vec![],
         return_types: vec![],
-        type_parameters: vec![],
+        type_formals: vec![],
     });
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex(0),

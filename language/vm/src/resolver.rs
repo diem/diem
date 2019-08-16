@@ -89,7 +89,7 @@ impl Resolver {
                         .get(struct_name)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
                     is_nominal_resource: struct_handle.is_nominal_resource,
-                    type_parameters: struct_handle.type_parameters.clone(),
+                    type_formals: struct_handle.type_formals.clone(),
                 };
                 Ok(SignatureToken::Struct(
                     *self
@@ -131,7 +131,7 @@ impl Resolver {
         Ok(FunctionSignature {
             return_types,
             arg_types,
-            type_parameters: func_sig.type_parameters.clone(),
+            type_formals: func_sig.type_formals.clone(),
         })
     }
 }

@@ -66,7 +66,7 @@ fn fake_script() -> VerifiedScript {
         function_signatures: vec![FunctionSignature {
             arg_types: vec![],
             return_types: vec![],
-            type_parameters: vec![],
+            type_formals: vec![],
         }],
         locals_signatures: vec![LocalsSignature(vec![])],
         string_pool: vec!["hello".to_string()],
@@ -610,7 +610,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
-                type_parameters: vec![],
+                type_formals: vec![],
             },
         ),
         // () -> (), two locals
@@ -619,7 +619,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![],
                 return_types: vec![],
-                type_parameters: vec![],
+                type_formals: vec![],
             },
         ),
         // (Int, Int) -> (), two locals,
@@ -628,7 +628,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
-                type_parameters: vec![],
+                type_formals: vec![],
             },
         ),
         // (Int, Int) -> (), three locals,
@@ -641,7 +641,7 @@ fn test_call() {
             FunctionSignature {
                 arg_types: vec![SignatureToken::U64, SignatureToken::U64],
                 return_types: vec![],
-                type_parameters: vec![],
+                type_formals: vec![],
             },
         ),
     ]);

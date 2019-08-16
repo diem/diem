@@ -5,7 +5,7 @@ use codespan::{ByteIndex, Span};
 use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
 use crate::ast::{
     FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
-    Block, Cmd, CopyableVal, Spanned,
+    Block, Cmd, CopyableVal, Spanned, Kind, TypeVar,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp
@@ -17,6 +17,7 @@ grammar();
 
 U64: u64 = <s:r"[0-9]+"> => u64::from_str(s).unwrap();
 Name: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*"> => s.to_string();
+NameBeginTy: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*<"> => s[..s.len() - 1].to_string();
 DotName: String = <s:r"[a-zA-Z$_][a-zA-Z0-9$_]*\.[a-zA-Z$_][a-zA-Z0-9$_]*"> => s.to_string();
 
 ByteArray: ByteArray = {
@@ -131,12 +132,13 @@ FactorOp: BinOp = {
 
 QualifiedFunctionName : FunctionCall = {
     <f: Builtin> => FunctionCall::Builtin(f),
-    <module_dot_name: DotName> =>  {
+    <module_dot_name: DotName> <type_actuals: TypeActuals> =>  {
         let v: Vec<&str> = module_dot_name.split(".").collect();
         assert!(v.len() == 2, 42);
         FunctionCall::ModuleFunctionCall{
             module: ModuleName::new(v[0].to_string()),
             name: FunctionName::new(v[1].to_string()),
+            type_actuals: type_actuals,
         }
     }
 }
@@ -167,17 +169,19 @@ FieldExp: (Field, Exp_) = {
 }
 
 Term: Exp = {
-
     "move(" <v: Sp<Var>> ")" => Exp::Move(v),
     "copy(" <v: Sp<Var>> ")" => Exp::Copy(v),
     "&mut " <v: Sp<Var>> => Exp::BorrowLocal(true, v),
     "&" <v: Sp<Var>> => Exp::BorrowLocal(false, v),
     Sp<CopyableVal> => Exp::Value(<>),
-    <n: Name> "{" <fs:Comma<FieldExp>> "}" =>
+    <name_and_type_actuals: NameAndTypeActuals> "{" <fs:Comma<FieldExp>> "}" => {
+        let (name, type_actuals) = name_and_type_actuals;
         Exp::Pack(
-            StructName::new(n),
+            StructName::new(name),
+            type_actuals,
             fs.into_iter().collect::<BTreeMap<Field, Exp_>>()
-        ),
+        )
+    },
     "(" <exps: Comma<Sp<Exp>>> ")" => Exp::ExprList(exps),
 }
 
@@ -203,15 +207,27 @@ ModuleName: ModuleName = {
 Builtin: Builtin = {
     "create_account" => Builtin::CreateAccount,
     "release" => Builtin::Release,
-    "exists<" <t : StructName> ">" => Builtin::Exists(t),
-    "borrow_global<" <t : StructName> ">" => Builtin::BorrowGlobal(t),
+    "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+        let (name, type_actuals) = name_and_type_actuals;
+        Builtin::Exists(StructName::new(name), type_actuals)
+    },
+    "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+        let (name, type_actuals) = name_and_type_actuals;
+        Builtin::BorrowGlobal(StructName::new(name), type_actuals)
+    },
     "get_txn_gas_unit_price" => Builtin::GetTxnGasUnitPrice,
     "get_txn_max_gas_units" => Builtin::GetTxnMaxGasUnits,
     "get_txn_public_key" => Builtin::GetTxnPublicKey,
     "get_txn_sender" => Builtin::GetTxnSender,
     "get_txn_sequence_number" => Builtin::GetTxnSequenceNumber,
-    "move_from<" <t: StructName> ">" => Builtin::MoveFrom(t),
-    "move_to_sender<" <t: StructName> ">" => Builtin::MoveToSender(t),
+    "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+        let (name, type_actuals) = name_and_type_actuals;
+        Builtin::MoveFrom(StructName::new(name), type_actuals)
+    },
+    "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+        let (name, type_actuals) = name_and_type_actuals;
+        Builtin::MoveToSender(StructName::new(name), type_actuals)
+    },
     "get_gas_remaining" => Builtin::GetGasRemaining,
     "freeze" => Builtin::Freeze,
 }
@@ -232,20 +248,28 @@ FieldBindings: (Field, Var_) = {
 }
 
 pub Cmd : Cmd = {
-    <bindings: ReturnBindings> "=" <e: Sp<Exp>> => Cmd::Assign(bindings, e),
-    "*" <e: Sp<Exp>> "=" <op: Sp<Exp>> => Cmd::Mutate(e, op),
-    <n: StructName> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> =>
+    <bindings: ReturnBindings> "=" <e: Sp<Exp>> => Cmd::Assign(bindings, Box::new(e)),
+    "*" <e: Sp<Exp>> "=" <op: Sp<Exp>> => Cmd::Mutate(Box::new(e), Box::new(op)),
+    <name_and_type_actuals: NameAndTypeActuals> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> => {
+        let (name, type_actuals) = name_and_type_actuals;
         Cmd::Unpack(
-            n,
+            StructName::new(name),
+            type_actuals,
             bindings.into_iter().collect(),
-            e,
-        ),
-    "abort" <err: Sp<Exp>?> => Cmd::Abort(err),
-    "return" <v: Comma<Sp<Exp>>> => Cmd::Return(Spanned::no_loc(Exp::ExprList(v))),
+            Box::new(e),
+        )
+    },
+    "abort" <err: Sp<Exp>?> => {
+        match err {
+            None => Cmd::Abort(None),
+            Some(err) => Cmd::Abort(Some(Box::new(err))),
+        }
+    },
+    "return" <v: Comma<Sp<Exp>>> => Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(v)))),
     "continue" => Cmd::Continue,
     "break" => Cmd::Break,
-    <Sp<Call>> => Cmd::Exp(<>),
-    "(" <Comma<Sp<Exp>>> ")" => Cmd::Exp(Spanned::no_loc(Exp::ExprList(<>))),
+    <Sp<Call>> => Cmd::Exp(Box::new(<>)),
+    "(" <Comma<Sp<Exp>>> ")" => Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(<>)))),
 }
 
 Cmd_ : Cmd_ = {
@@ -265,7 +289,7 @@ Statement : Statement = {
         let stmt = {
             let span = err.span;
             Statement::CommandStatement(Spanned {
-                value: Cmd::Abort(Some(err)),
+                value: Cmd::Abort(Some(Box::new(err))),
                 span,
             })
         };
@@ -298,16 +322,6 @@ LoopStatement : Statement = {
     }
 }
 
-VerifierCondition: String = {
-    <expr: r"<..*>"> => {
-      let mut res = expr.to_string();
-      res.remove(0);
-      res.remove(res.len() - 1);
-      res
-    }
-}
-
-
 Statements : Vec<Statement> = {
     <Statement*>
 }
@@ -328,14 +342,49 @@ FunctionBlock: (Vec<(Var_, Type)>, Block) = {
     "{" <locals: Declarations> <stmts: Statements> "}" => (locals, Block::new(stmts))
 }
 
+Kind: Kind = {
+    "all" => Kind::All,
+    "resource" => Kind::Resource,
+    "unrestricted" => Kind::Unrestricted,
+}
+
+TypeFormal: (TypeVar, Kind) = {
+    <n: Name> <k: (":" <Kind>)?> => {
+        match k {
+            Some(k) => (TypeVar(n), k),
+            None => (TypeVar(n), Kind::All),
+        }
+    }
+}
+
+TypeActuals: Vec<Type> = {
+    <tys: ("<" <Comma<Type>> ">")?> => {
+        match tys {
+            Some(tys) => tys,
+            None => vec![],
+        }
+    }
+}
+
+NameAndTypeFormals: (String, Vec<(TypeVar, Kind)>) = {
+    <n: NameBeginTy> <k: Comma<TypeFormal>> ">" => (n, k),
+    <n: Name> => (n, vec![]),
+}
+
+NameAndTypeActuals: (String, Vec<Type>) = {
+    <n: NameBeginTy> <tys: Comma<Type>> ">" => (n, tys),
+    <n: Name> => (n, vec![]),
+}
+
 Type: Type = {
     "address" => Type::Address,
     "u64" => Type::U64,
     "bool" => Type::Bool,
     "bytearray" => Type::ByteArray,
-    <s: QualifiedStructIdent> => Type::Struct(s),
+    <s: QualifiedStructIdent> <tys: TypeActuals> => Type::Struct(s, tys),
     "&" <t: Type> => Type::Reference(false, Box::new(t)),
     "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
+    <n: Name> => Type::TypeParameter(TypeVar(n)),
 }
 
 ArgDecl : (Var, Type) = {
@@ -372,14 +421,16 @@ FunctionDecl : (FunctionName, Function) = {
 }
 
 MoveFunctionDecl : (FunctionName, Function) = {
-    <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+    <p: Public?> <name_and_type_formals: NameAndTypeFormals> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
     <acquires: AcquireList?>
     <locals_body: FunctionBlock> => {
+        let (name, type_formals) = name_and_type_formals;
         let (locals, body) = locals_body;
-        (FunctionName::new(n), Function::new(
+        (FunctionName::new(name), Function::new(
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
+            type_formals,
             acquires.unwrap_or_else(Vec::new),
             FunctionBody::Move{locals: locals, code: body},
         ))
@@ -387,13 +438,15 @@ MoveFunctionDecl : (FunctionName, Function) = {
 }
 
 NativeFunctionDecl: (FunctionName, Function) = {
-    <nat: NativeTag> <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+    <nat: NativeTag> <p: Public?> <name_and_type_formals: NameAndTypeFormals> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
         <acquires: AcquireList?>
         ";" => {
-        (FunctionName::new(n), Function::new(
+        let (name, type_formals) = name_and_type_formals;
+        (FunctionName::new(name), Function::new(
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
+            type_formals,
             acquires.unwrap_or_else(Vec::new),
             FunctionBody::Native,
         ))
@@ -425,12 +478,13 @@ pub Program : Program = {
         let return_stmt = Statement::CommandStatement(
             Spanned {
                 span: Span::default(),
-                value: Cmd::Return(Spanned::no_loc(Exp::ExprList(vec![]))),
+                value: Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(vec![])))),
             }
         );
         let main =
             Function::new(
 	        FunctionVisibility::Public,
+                vec![],
                 vec![],
                 vec![],
                 vec![],
@@ -453,6 +507,7 @@ pub Script : Script = {
                 args,
                 vec![],
                 vec![],
+                vec![],
                 FunctionBody::Move{ locals: locals, code: body },
             );
         Script::new(imports, main)
@@ -460,15 +515,18 @@ pub Script : Script = {
 }
 
 StructDecl: StructDefinition = {
-    <is_nominal_resource: StructKind> <n: Name> "{" <data: (FieldDecl)*> "}" => {
+    <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" => {
+        let (name, type_formals) = name_and_type_formals;
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
             fields.insert(field, type_);
         }
-        StructDefinition::move_declared(is_nominal_resource, n, fields)
+        StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)
     },
-    <native: NativeTag> <is_nominal_resource: StructKind> <n: Name> ";" =>
-        StructDefinition::native(is_nominal_resource, n),
+    <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" => {
+        let (name, type_formals) = name_and_type_formals;
+        StructDefinition::native(is_nominal_resource, name, type_formals)
+    }
 }
 
 QualifiedModuleIdent: QualifiedModuleIdent = {

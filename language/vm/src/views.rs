@@ -189,8 +189,8 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         self.struct_handle.is_nominal_resource
     }
 
-    pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
-        &self.struct_handle.type_parameters
+    pub fn type_formals(&self) -> &Vec<Kind> {
+        &self.struct_handle.type_formals
     }
 
     pub fn definition(&self) -> StructDefinitionView<'a, T> {
@@ -271,8 +271,8 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         }
     }
 
-    pub fn type_parameter_constraints(&self) -> &Vec<Kind> {
-        self.struct_handle_view.type_parameter_constraints()
+    pub fn type_formals(&self) -> &Vec<Kind> {
+        self.struct_handle_view.type_formals()
     }
 
     pub fn fields(

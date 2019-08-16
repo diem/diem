@@ -218,7 +218,7 @@ impl ModuleBuilder {
                 module: ModuleHandleIndex::new(0),
                 name: StringPoolIndex::new((struct_idx + offset) as TableIndex),
                 is_nominal_resource: self.gen.gen_bool(1.0 / 2.0),
-                type_parameters: vec![],
+                type_formals: vec![],
             })
             .collect();
     }
@@ -264,7 +264,7 @@ impl ModuleBuilder {
                 let function_sig = FunctionSignature {
                     arg_types: args,
                     return_types,
-                    type_parameters: vec![],
+                    type_formals: vec![],
                 };
 
                 (locals, function_sig)

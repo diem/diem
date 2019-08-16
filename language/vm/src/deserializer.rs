@@ -443,12 +443,12 @@ fn load_struct_handles(
         let module_handle = read_uleb_u16_internal(&mut cursor)?;
         let name = read_uleb_u16_internal(&mut cursor)?;
         let is_nominal_resource = load_nominal_resource_flag(&mut cursor)?;
-        let type_parameters = load_kinds(&mut cursor)?;
+        let type_formals = load_kinds(&mut cursor)?;
         struct_handles.push(StructHandle {
             module: ModuleHandleIndex(module_handle),
             name: StringPoolIndex(name),
             is_nominal_resource,
-            type_parameters,
+            type_formals,
         });
     }
     Ok(())
@@ -610,11 +610,11 @@ fn load_function_signatures(
             let token = load_signature_token(&mut cursor)?;
             args_signature.push(token);
         }
-        let type_parameters = load_kinds(&mut cursor)?;
+        let type_formals = load_kinds(&mut cursor)?;
         function_signatures.push(FunctionSignature {
             return_types: returns_signature,
             arg_types: args_signature,
-            type_parameters,
+            type_formals,
         });
     }
     Ok(())

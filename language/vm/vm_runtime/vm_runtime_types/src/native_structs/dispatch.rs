@@ -10,7 +10,7 @@ pub struct NativeStruct {
     /// The expected boolean indicating if it is a nominal resource or not
     pub expected_nominal_resource: bool,
     /// The expected kind constraints of the type parameters.
-    pub expected_type_parameters: Vec<Kind>,
+    pub expected_type_formals: Vec<Kind>,
     /// The expected index for the struct
     /// Helpful for ensuring proper typing of native functions
     pub expected_index: StructHandleIndex,
@@ -36,7 +36,7 @@ macro_rules! add {
 
         let s = NativeStruct {
             expected_nominal_resource: $resource,
-            expected_type_parameters: $ty_kinds,
+            expected_type_formals: $ty_kinds,
             expected_index,
         };
         let old = struct_table.insert($name.into(), s);
