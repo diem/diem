@@ -6,6 +6,7 @@ use crate::{
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction},
 };
+use canonical_serialization::SimpleSerializer;
 use chrono::Utc;
 use crypto::{
     ed25519::*,
@@ -15,8 +16,6 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use proto_conv::IntoProto;
-use protobuf::Message;
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
 /// to sign a block and to verify the signatures of other validators on a block
@@ -73,7 +72,7 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
 
 impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
-        let bytes = raw_txn.clone().into_proto().write_to_bytes()?;
+        let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn)?;
         let hash = RawTransactionBytes(&bytes).hash();
         let signature = self.private_key.sign_message(&hash);
         Ok(SignedTransaction::craft_signed_transaction_for_client(

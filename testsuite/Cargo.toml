@@ -19,6 +19,7 @@ rusty-fork = "0.2.1"
 # should have their crates listed as dev-dependencies.
 benchmark = { path = "../benchmark" }
 cli = { path = "../client", package="client" }
+canonical_serialization = { path = "../common/canonical_serialization", package="canonical_serialization" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_swarm = { path = "../libra_swarm", features = ["testing"]}
 logger = { path = "../common/logger" }

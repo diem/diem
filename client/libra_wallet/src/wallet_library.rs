@@ -17,9 +17,9 @@ use crate::{
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
+use canonical_serialization::SimpleSerializer;
 pub use libra_crypto::hash::CryptoHash;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
+use proto_conv::{FromProto, IntoProtoBytes};
 use rand::{rngs::EntropyRng, Rng};
 use std::{collections::HashMap, path::Path};
 use types::{
@@ -153,7 +153,7 @@ impl WalletLibrary {
     /// AccountAddress is not contained in the addr_map, then this function will return an Error
     pub fn sign_txn(&self, txn: RawTransaction) -> Result<SignedTransaction> {
         if let Some(child) = self.addr_map.get(&txn.sender()) {
-            let raw_bytes = txn.into_proto().write_to_bytes()?;
+            let raw_bytes = SimpleSerializer::<Vec<u8>>::serialize(&txn)?;
             let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
 
             let child_key = self.key_factory.private_child(child.clone())?;
@@ -161,7 +161,7 @@ impl WalletLibrary {
             let public_key = child_key.get_public();
 
             let mut signed_txn = ProtoSignedTransaction::new();
-            signed_txn.set_raw_txn_bytes(raw_bytes.to_vec());
+            signed_txn.set_raw_txn_bytes(txn.into_proto_bytes()?);
             signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
             signed_txn.set_sender_signature(signature.to_bytes().to_vec());
 
