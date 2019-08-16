@@ -172,25 +172,6 @@ where
         self.id_to_quorum_cert.get(&block_id).cloned()
     }
 
-    pub(super) fn is_ancestor(
-        &self,
-        ancestor: &Block<T>,
-        block: &Block<T>,
-    ) -> Result<bool, BlockTreeError> {
-        let mut current_block = block;
-        while current_block.round() >= ancestor.round() {
-            let parent_id = current_block.parent_id();
-            current_block = self
-                .id_to_block
-                .get(&parent_id)
-                .ok_or(BlockTreeError::BlockNotFound { id: parent_id })?;
-            if current_block.id() == ancestor.id() {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
     pub(super) fn insert_block(
         &mut self,
         block: Block<T>,
@@ -424,14 +405,6 @@ where
 
     pub(super) fn get_all_block_id(&self) -> Vec<HashValue> {
         self.id_to_block.keys().cloned().collect()
-    }
-
-    #[allow(dead_code)]
-    fn print_all_blocks(&self) {
-        println!("Printing all {} blocks", self.id_to_block.len());
-        for block in self.id_to_block.values() {
-            println!("{:?}", block);
-        }
     }
 }
 

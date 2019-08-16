@@ -3,9 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{
-            block_tree::BlockTree, BlockReader, BlockTreeError, InsertError, VoteReceptionResult,
-        },
+        block_storage::{block_tree::BlockTree, BlockReader, InsertError, VoteReceptionResult},
         common::{Payload, Round},
         consensus_types::{block::Block, quorum_cert::QuorumCert},
         persistent_storage::PersistentStorage,
@@ -435,14 +433,6 @@ impl<T: Payload> BlockReader for BlockStore<T> {
             .read()
             .unwrap()
             .get_quorum_cert_for_block(block_id)
-    }
-
-    fn is_ancestor(
-        &self,
-        ancestor: &Block<Self::Payload>,
-        block: &Block<Self::Payload>,
-    ) -> Result<bool, BlockTreeError> {
-        self.inner.read().unwrap().is_ancestor(ancestor, block)
     }
 
     fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
