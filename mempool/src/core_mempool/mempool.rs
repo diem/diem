@@ -21,6 +21,7 @@ use lru_cache::LruCache;
 use std::{
     cmp::{max, min},
     collections::HashSet,
+    convert::TryFrom,
 };
 use ttl_cache::TtlCache;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
@@ -84,10 +85,10 @@ impl Mempool {
 
     fn log_latency(&mut self, account: AccountAddress, sequence_number: u64, metric: &str) {
         if let Some(&creation_time) = self.metrics_cache.get(&(account, sequence_number)) {
-            OP_COUNTERS.observe(
-                metric,
-                (Utc::now().timestamp_millis() - creation_time) as f64,
-            );
+            if let Ok(time_delta_ms) = u64::try_from(Utc::now().timestamp_millis() - creation_time)
+            {
+                OP_COUNTERS.observe_duration(metric, Duration::from_millis(time_delta_ms));
+            }
         }
     }
 
@@ -221,7 +222,7 @@ impl Mempool {
             self.log_latency(
                 transaction.sender(),
                 transaction.sequence_number(),
-                "txn_pre_consensus_ms",
+                "txn_pre_consensus_s",
             );
         }
         block
