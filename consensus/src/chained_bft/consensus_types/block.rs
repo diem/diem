@@ -331,7 +331,7 @@ where
         // Height:
         // - should not exceed std::u64::MAX - 1 to ensure the parent check doesn't
         // cause addition overflow.
-        // (consensus/src/chained_bft/consensus_types/block.rs: pub fn make_block)
+        // (Block::make_block)
         assumed_postcondition!(self.height < std::u64::MAX);
         self.height
     }
@@ -340,8 +340,7 @@ where
         // Round numbers:
         // - are reset to 0 periodically.
         // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
-        // (consensus/src/chained_bft/block_storage/block_store.rs: pub fn
-        // need_sync_for_quorum_cert).
+        // (BlockStore::need_sync_for_quorum_cert)
         assumed_postcondition!(self.round < std::u64::MAX - 1);
         self.round
     }
