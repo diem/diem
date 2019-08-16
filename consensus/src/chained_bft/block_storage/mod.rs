@@ -168,15 +168,6 @@ pub trait BlockReader: Send + Sync {
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>>;
 
-    /// Returns true if a given "ancestor" block is an ancestor of a given "block".
-    /// Returns a failure if not all the blocks are present between the block's height and the
-    /// parent's height.
-    fn is_ancestor(
-        &self,
-        ancestor: &Block<Self::Payload>,
-        block: &Block<Self::Payload>,
-    ) -> Result<bool, BlockTreeError>;
-
     /// Returns all the blocks between the root and the given block, including the given block
     /// but excluding the root.
     /// In case a given block is not the successor of the root, return None.
