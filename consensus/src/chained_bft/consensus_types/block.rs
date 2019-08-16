@@ -228,7 +228,7 @@ where
 
         // This precondition guards the addition overflow caused by passing
         // parent_block.height() + 1 to new_internal.
-        checked_precondition!(parent_block.height() <= std::u64::MAX - 1);
+        checked_precondition!(parent_block.height() < std::u64::MAX);
         Block::new_internal(
             payload,
             parent_block.id(),
@@ -249,7 +249,7 @@ where
 
         // This precondition guards the addition overflow caused by using
         // parent_block.height() + 1 in the construction of BlockSerializer.
-        checked_precondition!(parent_block.height() <= std::u64::MAX - 1);
+        checked_precondition!(parent_block.height() < std::u64::MAX);
 
         let payload = T::default();
         // We want all the NIL blocks to agree on the timestamps even though they're generated
@@ -332,7 +332,7 @@ where
         // - should not exceed std::u64::MAX - 1 to ensure the parent check doesn't
         // cause addition overflow.
         // (consensus/src/chained_bft/consensus_types/block.rs: pub fn make_block)
-        assumed_postcondition!(self.height <= std::u64::MAX - 1);
+        assumed_postcondition!(self.height < std::u64::MAX);
         self.height
     }
 
@@ -342,7 +342,7 @@ where
         // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
         // (consensus/src/chained_bft/block_storage/block_store.rs: pub fn
         // need_sync_for_quorum_cert).
-        assumed_postcondition!(self.round <= std::u64::MAX - 2);
+        assumed_postcondition!(self.round < std::u64::MAX - 1);
         self.round
     }
 

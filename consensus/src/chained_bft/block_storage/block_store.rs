@@ -223,7 +223,7 @@ impl<T: Payload> BlockStore<T> {
     ) -> bool {
         // This precondition ensures that the check in the following lines
         // does not result in an addition overflow.
-        checked_precondition!(self.root().round() <= std::u64::MAX - 2);
+        checked_precondition!(self.root().round() < std::u64::MAX - 1);
 
         // LedgerInfo doesn't carry the information about the round of the committed block. However,
         // the 3-chain safety rules specify that the round of the committed block must be

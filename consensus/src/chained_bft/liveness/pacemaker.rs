@@ -186,7 +186,7 @@ impl Pacemaker {
         // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
         // (consensus/src/chained_bft/block_storage/block_store.rs: pub fn
         // need_sync_for_quorum_cert).
-        assume!(highest_qc_round <= std::u64::MAX - 2);
+        assume!(highest_qc_round < std::u64::MAX - 1);
         // The starting round is maximum(highest quorum certificate,
         // highest timeout certificate round) + 1.  Note that it is possible this
         // replica already voted at this round and will until a round timeout
