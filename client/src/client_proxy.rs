@@ -988,7 +988,7 @@ impl ClientProxy {
         }
         let sequence_number = raw_data.parse::<u64>()?;
         if is_blocking {
-            self.wait_for_transaction(AccountAddress::new([0; 32]), sequence_number);
+            self.wait_for_transaction(association_address(), sequence_number);
         }
         Ok(())
     }
