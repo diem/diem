@@ -16,6 +16,7 @@ mod state_synchronizer;
 mod test;
 
 // Public re-exports
+pub use crate::interface::LibraNetworkProvider;
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,

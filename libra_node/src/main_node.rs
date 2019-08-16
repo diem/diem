@@ -10,6 +10,7 @@ use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use execution_proto::proto::execution_grpc;
 use execution_service::ExecutionService;
+use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use grpcio_sys;
@@ -19,9 +20,8 @@ use metrics::metric_server;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
-        StateSynchronizerEvents, StateSynchronizerSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
-        CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL, STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        LibraNetworkProvider, CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
+        MEMPOOL_DIRECT_SEND_PROTOCOL, STATE_SYNCHRONIZER_MSG_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -147,14 +147,7 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
         .expect("Unable to create grpc server")
 }
 
-pub fn setup_network(
-    config: &mut NodeConfig,
-) -> (
-    (MempoolNetworkSender, MempoolNetworkEvents),
-    (ConsensusNetworkSender, ConsensusNetworkEvents),
-    (StateSynchronizerSender, StateSynchronizerEvents),
-    Runtime,
-) {
+pub fn setup_network(config: &mut NodeConfig) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
         .name_prefix("network-")
         .build()
@@ -191,46 +184,29 @@ pub fn setup_network(
 
     let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
     let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
-    let (
-        (mempool_network_sender, mempool_network_events),
-        (consensus_network_sender, consensus_network_events),
-        (state_sync_network_sender, state_sync_network_events),
-        _listen_addr,
-    ) = NetworkBuilder::new(runtime.executor(), peer_id, listen_addr)
-        .transport(if config.network.enable_encryption_and_authentication {
-            TransportType::TcpNoise
-        } else {
-            TransportType::Tcp
-        })
-        .advertised_address(advertised_addr)
-        .seed_peers(seed_peers)
-        .signing_keys((network_signing_private, network_signing_public))
-        .identity_keys(network_identity_keypair)
-        .trusted_peers(trusted_peers)
-        .discovery_interval_ms(config.network.discovery_interval_ms)
-        .connectivity_check_interval_ms(config.network.connectivity_check_interval_ms)
-        .consensus_protocols(vec![
-            ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
-            ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-        ])
-        .mempool_protocols(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)])
-        .state_sync_protocols(vec![ProtocolId::from_static(
-            STATE_SYNCHRONIZER_MSG_PROTOCOL,
-        )])
-        .direct_send_protocols(vec![
-            ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-            ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
-        ])
-        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-        .build();
+    let (_listen_addr, network_provider) =
+        NetworkBuilder::new(runtime.executor(), peer_id, listen_addr)
+            .transport(if config.network.enable_encryption_and_authentication {
+                TransportType::TcpNoise
+            } else {
+                TransportType::Tcp
+            })
+            .advertised_address(advertised_addr)
+            .seed_peers(seed_peers)
+            .signing_keys((network_signing_private, network_signing_public))
+            .identity_keys(network_identity_keypair)
+            .trusted_peers(trusted_peers)
+            .discovery_interval_ms(config.network.discovery_interval_ms)
+            .connectivity_check_interval_ms(config.network.connectivity_check_interval_ms)
+            .direct_send_protocols(vec![
+                ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+                ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+                ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ])
+            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+            .build();
 
-    (
-        (mempool_network_sender, mempool_network_events),
-        (consensus_network_sender, consensus_network_events),
-        (state_sync_network_sender, state_sync_network_events),
-        runtime,
-    )
+    (runtime, network_provider)
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
@@ -256,13 +232,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
     instant = Instant::now();
-    let (
-        (mempool_network_sender, mempool_network_events),
-        (consensus_network_sender, consensus_network_events),
-        (state_sync_network_sender, state_sync_network_events),
-        network,
-    ) = setup_network(node_config);
+    let (runtime, mut network_provider) = setup_network(node_config);
     debug!("Network started in {} ms", instant.elapsed().as_millis());
+
+    let (state_sync_network_sender, state_sync_network_events) = network_provider
+        .add_state_synchronizer(vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        )]);
 
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_sender,
@@ -274,6 +250,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let mut consensus = None;
     if let RoleType::Validator = node_config.base.get_role() {
         instant = Instant::now();
+        let (mempool_network_sender, mempool_network_events) = network_provider
+            .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
         mempool = Some(MempoolRuntime::bootstrap(
             &node_config,
             mempool_network_sender,
@@ -282,6 +260,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
         instant = Instant::now();
+        let (consensus_network_sender, consensus_network_events) =
+            network_provider.add_consensus(vec![
+                ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
+                ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+            ]);
         let mut consensus_provider = make_consensus_provider(
             node_config,
             consensus_network_sender,
@@ -295,6 +278,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
 
+    // Start the network providers.
+    runtime
+        .executor()
+        .spawn(network_provider.start().unit_error().compat());
+
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
@@ -305,7 +293,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         _ac: ac,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
-        _network: network,
+        _network: runtime,
         consensus,
         _execution: execution,
         _storage: storage,
