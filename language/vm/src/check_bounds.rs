@@ -359,7 +359,8 @@ impl FunctionDefinition {
                         }
                     }
                     // Instructions that refer to the locals.
-                    CopyLoc(idx) | MoveLoc(idx) | StLoc(idx) | BorrowLoc(idx) => {
+                    CopyLoc(idx) | MoveLoc(idx) | StLoc(idx) | MutBorrowLoc(idx)
+                    | ImmBorrowLoc(idx) => {
                         let idx = *idx as usize;
                         if idx >= locals_len {
                             Some(VMStaticViolation::CodeUnitIndexOutOfBounds(

@@ -2250,14 +2250,15 @@ impl<S: Scope + Sized> Compiler<S> {
         function_frame: &mut FunctionFrame,
     ) -> Result<VecDeque<InferredType>> {
         let loc_idx = function_frame.get_local(&v)?;
-        code.code.push(Bytecode::BorrowLoc(loc_idx));
-        function_frame.push()?;
         let loc_type = function_frame.get_local_type(loc_idx)?;
         let inner_token = Box::new(InferredType::from_signature_token(loc_type));
         Ok(if is_mutable {
+            code.code.push(Bytecode::MutBorrowLoc(loc_idx));
+            function_frame.push()?;
             self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
         } else {
-            code.code.push(Bytecode::FreezeRef);
+            code.code.push(Bytecode::ImmBorrowLoc(loc_idx));
+            function_frame.push()?;
             self.make_singleton_vec_deque(InferredType::Reference(inner_token))
         })
     }

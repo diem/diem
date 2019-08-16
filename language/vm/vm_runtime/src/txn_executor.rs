@@ -337,7 +337,7 @@ where
                         return Ok(Ok(0));
                     }
                 }
-                Bytecode::BorrowLoc(idx) => {
+                Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
                     match self
                         .execution_stack
                         .top_frame()?

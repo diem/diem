@@ -74,7 +74,7 @@ fn bytecode_moveloc_local_unavailable() {
 fn bytecode_borrowloc() {
     let mut state1 = AbstractState::new(&Vec::new());
     state1.insert_local(0, SignatureToken::U64);
-    let state2 = common::run_instruction(Bytecode::BorrowLoc(0), state1);
+    let state2 = common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
     assert_eq!(
         state2.stack_peek(0),
         Some(SignatureToken::MutableReference(Box::new(
@@ -90,10 +90,34 @@ fn bytecode_borrowloc() {
 }
 
 #[test]
+fn bytecode_imm_borrowloc() {
+    let mut state1 = AbstractState::new(&Vec::new());
+    state1.insert_local(0, SignatureToken::U64);
+    let state2 = common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(SignatureToken::Reference(Box::new(SignatureToken::U64))),
+        "stack type postcondition not met"
+    );
+    assert_eq!(
+        state2.get_local(0),
+        Some(&(SignatureToken::U64, BorrowState::Available)),
+        "locals signature postcondition not met"
+    );
+}
+
+#[test]
 #[should_panic]
 fn bytecode_borrowloc_no_local() {
     let state1 = AbstractState::new(&Vec::new());
-    common::run_instruction(Bytecode::BorrowLoc(0), state1);
+    common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_imm_borrowloc_no_local() {
+    let state1 = AbstractState::new(&Vec::new());
+    common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
 }
 
 #[test]
@@ -102,5 +126,14 @@ fn bytecode_borrowloc_local_unavailable() {
     let mut state1 = AbstractState::new(&Vec::new());
     state1.insert_local(0, SignatureToken::U64);
     state1.move_local(0);
-    common::run_instruction(Bytecode::BorrowLoc(0), state1);
+    common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_imm_borrowloc_local_unavailable() {
+    let mut state1 = AbstractState::new(&Vec::new());
+    state1.insert_local(0, SignatureToken::U64);
+    state1.move_local(0);
+    common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
 }

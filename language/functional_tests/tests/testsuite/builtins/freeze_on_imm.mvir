@@ -9,4 +9,5 @@ main() {
     return;
 }
 
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: FreezeRefTypeMismatchError(6) }
+// check: VerificationError
+// check: FreezeRefTypeMismatchError

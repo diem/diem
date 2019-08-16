@@ -1,4 +1,3 @@
-
 module Tester {
     struct X { f: u64 }
 
