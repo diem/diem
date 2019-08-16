@@ -51,7 +51,7 @@ mod event_processor_test;
 pub struct EventProcessor<T> {
     author: Author,
     block_store: Arc<BlockStore<T>>,
-    pacemaker: Arc<dyn Pacemaker>,
+    pacemaker: Pacemaker,
     proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: SafetyRules,
@@ -70,7 +70,7 @@ impl<T: Payload> EventProcessor<T> {
     pub fn new(
         author: Author,
         block_store: Arc<BlockStore<T>>,
-        pacemaker: Arc<dyn Pacemaker>,
+        pacemaker: Pacemaker,
         proposer_election: Arc<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: SafetyRules,
@@ -249,7 +249,11 @@ impl<T: Payload> EventProcessor<T> {
     /// a pacemaker timeout certificate is formed with 2f+1 timeouts, the next proposer will be
     /// able to chain a proposal block to a highest quorum certificate such that all honest replicas
     /// can vote for it.
-    pub async fn process_timeout_msg(&mut self, timeout_msg: TimeoutMsg, quorum_size: usize) {
+    pub async fn process_remote_timeout_msg(
+        &mut self,
+        timeout_msg: TimeoutMsg,
+        quorum_size: usize,
+    ) {
         debug!(
             "Received timeout msg for round {} from {}",
             timeout_msg.pacemaker_timeout().round(),
@@ -374,7 +378,10 @@ impl<T: Payload> EventProcessor<T> {
     /// to ensure that the next proposer can make a proposal that can be voted on by all replicas.
     /// Saving the consensus state ensures that on restart, the replicas will not waste time
     /// on previous rounds.
-    pub async fn process_outgoing_pacemaker_timeout(&mut self, round: Round) {
+    pub async fn process_local_timeout(&mut self, round: Round) {
+        if !self.pacemaker.process_local_timeout(round) {
+            return;
+        }
         let last_vote_round = self.safety_rules.consensus_state().last_vote_round();
         warn!(
             "Round {} timed out and {}, expected round proposer was {:?}, broadcasting new round to all replicas",

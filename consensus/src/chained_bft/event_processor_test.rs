@@ -14,8 +14,7 @@ use crate::{
         },
         event_processor::EventProcessor,
         liveness::{
-            local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
@@ -66,7 +65,6 @@ struct NodeSetup {
     signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
-    pacemaker: Arc<dyn Pacemaker>,
     #[allow(dead_code)]
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
@@ -91,17 +89,15 @@ impl NodeSetup {
     }
 
     fn create_pacemaker(
-        executor: TaskExecutor,
         time_service: Arc<dyn TimeService>,
-    ) -> (Arc<dyn Pacemaker>, channel::Receiver<NewRoundEvent>) {
+    ) -> (Pacemaker, channel::Receiver<NewRoundEvent>) {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let highest_certified_round = 0;
         let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
         (
-            Arc::new(LocalPacemaker::new(
-                executor,
+            Pacemaker::new(
                 MockStorage::<TestPayload>::start_for_testing()
                     .0
                     .persistent_liveness_storage(),
@@ -113,7 +109,7 @@ impl NodeSetup {
                 pacemaker_timeout_sender,
                 1,
                 HighestTimeoutCertificates::new(None, None),
-            )),
+            ),
             new_round_events_receiver,
         )
     }
@@ -192,8 +188,7 @@ impl NodeSetup {
         );
         let safety_rules = SafetyRules::new(consensus_state);
 
-        let (pacemaker, new_rounds_receiver) =
-            Self::create_pacemaker(executor.clone(), time_service.clone());
+        let (pacemaker, new_rounds_receiver) = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
         let (commit_cb_sender, commit_cb_receiver) =
@@ -201,7 +196,7 @@ impl NodeSetup {
         let event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),
-            Arc::clone(&pacemaker),
+            pacemaker,
             Arc::clone(&proposer_election),
             proposal_generator,
             safety_rules,
@@ -221,7 +216,6 @@ impl NodeSetup {
             signer,
             proposer_author,
             peers,
-            pacemaker,
             commit_cb_receiver,
         }
     }
@@ -528,7 +522,7 @@ fn process_new_round_msg_test() {
 
     // As the static proposer processes the new round message it should learn about
     // block_0_quorum_cert at round 1.
-    block_on(static_proposer.event_processor.process_timeout_msg(
+    block_on(static_proposer.event_processor.process_remote_timeout_msg(
         TimeoutMsg::new(
             SyncInfo::new(
                 block_0_quorum_cert,
@@ -715,10 +709,11 @@ fn process_block_retrieval() {
         node.block_store.signer(),
     );
     let block_id = block.id();
-    node.pacemaker
-        .process_certificates(block.round() - 1, None, None);
 
     block_on(async move {
+        node.event_processor
+            .process_certificates(block.quorum_cert(), None)
+            .await;
         node.event_processor.process_proposed_block(block).await;
 
         // first verify that we can retrieve the block if it's in the tree
@@ -786,43 +781,41 @@ fn basic_restart_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
+    let mut inserter = TreeInserter::new(node.block_store.clone());
     let node_mut = &mut node;
 
     let genesis = node_mut.block_store.root();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
     let mut proposals = Vec::new();
-    let proposals_mut = &mut proposals;
     let num_proposals = 100;
     // insert a few successful proposals
-    block_on(async move {
-        for i in 1..=num_proposals {
-            let proposal = Block::make_block(
-                genesis.as_ref(),
-                vec![1],
-                i,
-                1,
-                genesis_qc.clone(),
-                node_mut.block_store.signer(),
-            );
-            let proposal_id = proposal.id();
-            proposals_mut.push(proposal_id);
-            node_mut
-                .pacemaker
-                .process_certificates(proposal.round() - 1, None, None);
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    proposals.push(a1);
+    for i in 2..=num_proposals {
+        let parent = proposals.last().unwrap();
+        let proposal = inserter.insert_block(parent, i);
+        proposals.push(proposal);
+    }
+    for proposal in &proposals {
+        block_on(
             node_mut
                 .event_processor
-                .process_proposed_block(proposal)
-                .await;
-        }
-    });
+                .process_certificates(proposal.quorum_cert(), None),
+        );
+        block_on(
+            node_mut
+                .event_processor
+                .process_proposed_block(Block::clone(proposal)),
+        );
+    }
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.executor());
     assert_eq!(
         node.event_processor.consensus_state(),
-        ConsensusState::new(num_proposals, 0),
+        ConsensusState::new(num_proposals, num_proposals - 2),
     );
-    for id in proposals {
-        assert_eq!(node.block_store.block_exists(id), true);
+    for block in proposals {
+        assert_eq!(node.block_store.block_exists(block.id()), true);
     }
 }
 
@@ -838,9 +831,7 @@ fn nil_vote_on_timeout() {
     block_on(async move {
         // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
         // extends genesis
-        node.event_processor
-            .process_outgoing_pacemaker_timeout(1)
-            .await;
+        node.event_processor.process_local_timeout(1).await;
         let timeout_msg = TimeoutMsg::from_proto(
             playground
                 .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
