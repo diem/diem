@@ -2378,7 +2378,6 @@ impl<S: Scope + Sized> Compiler<S> {
                         };
                         Ok(self.make_singleton_vec_deque(InferredType::Reference(inner_token)))
                     }
-                    _ => bail!("unsupported builtin function: {}", function),
                 }
             }
             FunctionCall::ModuleFunctionCall { module, name } => {

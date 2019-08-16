@@ -205,7 +205,6 @@ Builtin: Builtin = {
     "release" => Builtin::Release,
     "exists<" <t : StructName> ">" => Builtin::Exists(t),
     "borrow_global<" <t : StructName> ">" => Builtin::BorrowGlobal(t),
-    "get_height" => Builtin::GetHeight,
     "get_txn_gas_unit_price" => Builtin::GetTxnGasUnitPrice,
     "get_txn_max_gas_units" => Builtin::GetTxnMaxGasUnits,
     "get_txn_public_key" => Builtin::GetTxnPublicKey,
