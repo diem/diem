@@ -3,19 +3,17 @@
 
 use crate::{
     account_address::AccountAddress,
-    proto::transaction::{
-        RawTransaction as ProtoRawTransaction, SignedTransaction as ProtoSignedTransaction,
-    },
+    proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{
         Program, RawTransaction, RawTransactionBytes, SignatureCheckedTransaction,
         SignedTransaction,
     },
     write_set::WriteSet,
 };
+use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, hash::CryptoHash, traits::*};
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
-use std::time::{SystemTime, UNIX_EPOCH};
+use proto_conv::IntoProtoBytes;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
 
@@ -33,20 +31,21 @@ pub fn get_test_signed_transaction(
     gas_unit_price: u64,
     max_gas_amount: Option<u64>,
 ) -> ProtoSignedTransaction {
-    let mut raw_txn = ProtoRawTransaction::new();
-    raw_txn.set_sender_account(sender.as_ref().to_vec());
-    raw_txn.set_sequence_number(sequence_number);
-    raw_txn.set_program(program.unwrap_or_else(placeholder_script).into_proto());
-    raw_txn.set_expiration_time(expiration_time);
-    raw_txn.set_max_gas_amount(max_gas_amount.unwrap_or(MAX_GAS_AMOUNT));
-    raw_txn.set_gas_unit_price(gas_unit_price);
+    let raw_txn = RawTransaction::new(
+        sender,
+        sequence_number,
+        program.unwrap_or_else(placeholder_script),
+        max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+        gas_unit_price,
+        Duration::from_secs(expiration_time),
+    );
 
-    let bytes = raw_txn.write_to_bytes().unwrap();
+    let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn).unwrap();
     let hash = RawTransactionBytes(&bytes).hash();
     let signature = private_key.sign_message(&hash);
 
     let mut signed_txn = ProtoSignedTransaction::new();
-    signed_txn.set_raw_txn_bytes(bytes);
+    signed_txn.set_raw_txn_bytes(raw_txn.into_proto_bytes().unwrap());
     signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
     signed_txn.set_sender_signature(signature.to_bytes().to_vec());
     signed_txn
@@ -63,23 +62,20 @@ pub fn get_test_unchecked_transaction(
     gas_unit_price: u64,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
-    let mut raw_txn = ProtoRawTransaction::new();
-    raw_txn.set_sender_account(sender.as_ref().to_vec());
-    raw_txn.set_sequence_number(sequence_number);
-    raw_txn.set_program(program.unwrap_or_else(placeholder_script).into_proto());
-    raw_txn.set_expiration_time(expiration_time);
-    raw_txn.set_max_gas_amount(max_gas_amount.unwrap_or(MAX_GAS_AMOUNT));
-    raw_txn.set_gas_unit_price(gas_unit_price);
+    let raw_txn = RawTransaction::new(
+        sender,
+        sequence_number,
+        program.unwrap_or_else(placeholder_script),
+        max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+        gas_unit_price,
+        Duration::from_secs(expiration_time),
+    );
 
-    let bytes = raw_txn.write_to_bytes().unwrap();
+    let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn).unwrap();
     let hash = RawTransactionBytes(&bytes).hash();
     let signature = private_key.sign_message(&hash);
 
-    SignedTransaction::craft_signed_transaction_for_client(
-        RawTransaction::from_proto(raw_txn).unwrap(),
-        public_key,
-        signature,
-    )
+    SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature)
 }
 
 // Test helper for transaction creation. Short version for get_test_signed_transaction

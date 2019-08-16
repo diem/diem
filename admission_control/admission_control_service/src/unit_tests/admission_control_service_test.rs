@@ -10,18 +10,15 @@ use crate::{
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
-use assert_matches::assert_matches;
-use crypto::{ed25519::*, hash::CryptoHash, test_utils::TEST_SEED, SigningKey};
+use crypto::{ed25519::*, test_utils::TEST_SEED};
 use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use proto_conv::FromProto;
-use protobuf::{Message, UnknownFields};
 use rand::SeedableRng;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::RawTransactionBytes,
     vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
 };
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
@@ -172,38 +169,6 @@ fn test_submit_txn_inner_vm() {
     assert_status(
         response,
         VMStatus::Validation(VMValidationStatus::InvalidSignature),
-    );
-}
-
-#[test]
-fn test_reject_unknown_fields() {
-    let ac_service = create_ac_service_for_ut();
-    let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
-    let keypair = compat::generate_keypair(None);
-    let sender = AccountAddress::random();
-    let mut signed_txn = get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1, None);
-    let mut raw_txn = protobuf::parse_from_bytes::<::types::proto::transaction::RawTransaction>(
-        signed_txn.raw_txn_bytes.as_ref(),
-    )
-    .unwrap();
-    let mut unknown_fields = UnknownFields::new();
-    unknown_fields.add_fixed32(1, 2);
-    raw_txn.unknown_fields = unknown_fields;
-
-    let bytes = raw_txn.write_to_bytes().unwrap();
-    let hash = RawTransactionBytes(&bytes).hash();
-    let signature = keypair.0.sign_message(&hash);
-
-    signed_txn.set_raw_txn_bytes(bytes);
-    signed_txn.set_sender_signature(signature.to_bytes().to_vec());
-    req.set_signed_txn(signed_txn);
-    let response = SubmitTransactionResponse::from_proto(
-        ac_service.submit_transaction_inner(req.clone()).unwrap(),
-    )
-    .unwrap();
-    assert_matches!(
-        response.ac_status.unwrap(),
-        AdmissionControlStatus::Rejected(_)
     );
 }
 

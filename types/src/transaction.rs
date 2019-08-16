@@ -170,14 +170,15 @@ impl RawTransaction {
         private_key: &Ed25519PrivateKey,
         public_key: Ed25519PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
-        let raw_txn_bytes = self.clone().into_proto_bytes()?;
+        let raw_txn_bytes = SimpleSerializer::<Vec<u8>>::serialize(&self)?;
         let hash = RawTransactionBytes(&raw_txn_bytes).hash();
         let signature = private_key.sign_message(&hash);
         Ok(SignatureCheckedTransaction(SignedTransaction {
-            raw_txn: self,
+            // Will be cleaned up after eliminating raw_txn_bytes below
+            raw_txn: self.clone(),
             public_key,
             signature,
-            raw_txn_bytes,
+            raw_txn_bytes: self.into_proto_bytes()?,
         }))
     }
 
@@ -480,8 +481,9 @@ impl SignedTransaction {
             raw_txn: raw_txn.clone(),
             public_key,
             signature,
-            // In real world raw_txn should be derived from raw_txn_bytes, not the opposite.
-            raw_txn_bytes: raw_txn.into_proto_bytes().expect("Should convert."),
+            raw_txn_bytes: raw_txn
+                .into_proto_bytes()
+                .expect("Unable to serialize transaction"),
         }
     }
 
@@ -528,7 +530,8 @@ impl SignedTransaction {
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
     /// the signature is valid.
     pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
-        let hash = RawTransactionBytes(&self.raw_txn_bytes).hash();
+        let raw_txn_bytes = SimpleSerializer::<Vec<u8>>::serialize(&self.raw_txn)?;
+        let hash = RawTransactionBytes(&raw_txn_bytes).hash();
         self.public_key.verify_signature(&hash, &self.signature)?;
         Ok(SignatureCheckedTransaction(self))
     }
@@ -565,19 +568,10 @@ impl FromProto for SignedTransaction {
             crate::proto::transaction::RawTransaction,
         >(txn.raw_txn_bytes.as_ref())?;
 
-        // First check if extra data is being sent in the proto.  Note that this is a temporary
-        // measure to prevent extraneous data from being packaged.  Longer-term, we will likely
-        // need to allow this for compatibility reasons.  Note that we only need to do this
-        // for raw bytes under the signed transaction.  We do this because we actually store this
-        // field in the DB.
-        // TODO: Remove prevention of unknown fields
-        ensure!(
-            proto_raw_transaction.unknown_fields.fields.is_none(),
-            "Unknown fields not allowed in testnet proto for raw transaction"
-        );
+        let raw_txn = RawTransaction::from_proto(proto_raw_transaction)?;
 
         let t = SignedTransaction {
-            raw_txn: RawTransaction::from_proto(proto_raw_transaction)?,
+            raw_txn,
             public_key: Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
             signature: Ed25519Signature::try_from(txn.get_sender_signature())?,
             raw_txn_bytes: txn.raw_txn_bytes,
@@ -594,7 +588,11 @@ impl IntoProto for SignedTransaction {
 
     fn into_proto(self) -> Self::ProtoType {
         let mut transaction = Self::ProtoType::new();
-        transaction.set_raw_txn_bytes(self.raw_txn_bytes);
+        transaction.set_raw_txn_bytes(
+            self.raw_txn
+                .into_proto_bytes()
+                .expect("serialization failed"),
+        );
         transaction.set_sender_public_key(self.public_key.to_bytes().to_vec());
         transaction.set_sender_signature(self.signature.to_bytes().to_vec());
         transaction
@@ -717,7 +715,7 @@ impl IntoProto for SignedTransactionWithProof {
 impl CanonicalSerialize for SignedTransaction {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
-            .encode_bytes(&self.raw_txn_bytes)?
+            .encode_struct(&self.raw_txn)?
             .encode_bytes(&self.public_key.to_bytes())?
             .encode_bytes(&self.signature.to_bytes())?;
         Ok(())
@@ -729,15 +727,13 @@ impl CanonicalDeserialize for SignedTransaction {
     where
         Self: Sized,
     {
-        let raw_txn_bytes = deserializer.decode_bytes()?;
+        let raw_txn: RawTransaction = deserializer.decode_struct()?;
         let public_key_bytes = deserializer.decode_bytes()?;
         let signature_bytes = deserializer.decode_bytes()?;
-        let proto_raw_transaction = protobuf::parse_from_bytes::<
-            crate::proto::transaction::RawTransaction,
-        >(raw_txn_bytes.as_ref())?;
+        let raw_txn_bytes = raw_txn.clone().into_proto_bytes()?;
 
         Ok(SignedTransaction {
-            raw_txn: RawTransaction::from_proto(proto_raw_transaction)?,
+            raw_txn,
             public_key: Ed25519PublicKey::try_from(&public_key_bytes[..]).unwrap(),
             signature: Ed25519Signature::try_from(&signature_bytes[..]).unwrap(),
             raw_txn_bytes,
