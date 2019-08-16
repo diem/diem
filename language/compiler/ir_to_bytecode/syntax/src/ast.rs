@@ -247,8 +247,6 @@ pub enum Builtin {
     /// Get the struct object (`StructName` resolved by current module) associated with the given
     /// address
     BorrowGlobal(StructName),
-    /// Returns the height of the current transaction.
-    GetHeight,
     /// Returns the price per gas unit the current transaction is willing to pay
     GetTxnGasUnitPrice,
     /// Returns the maximum units of gas the current transaction is willing to use
@@ -1128,7 +1126,6 @@ impl fmt::Display for Builtin {
             Builtin::Release => write!(f, "release"),
             Builtin::Exists(t) => write!(f, "exists<{}>", t),
             Builtin::BorrowGlobal(t) => write!(f, "borrow_global<{}>", t),
-            Builtin::GetHeight => write!(f, "get_height"),
             Builtin::GetTxnMaxGasUnits => write!(f, "get_txn_max_gas_units"),
             Builtin::GetTxnGasUnitPrice => write!(f, "get_txn_gas_unit_price"),
             Builtin::GetTxnPublicKey => write!(f, "get_txn_public_key"),
