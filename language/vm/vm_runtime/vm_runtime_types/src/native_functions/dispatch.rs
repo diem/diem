@@ -61,7 +61,7 @@ macro_rules! add {
         let expected_signature = FunctionSignature {
             return_types: $ret,
             arg_types: $args,
-            type_parameters: $kinds,
+            type_formals: $kinds,
         };
         let f = NativeFunction {
             dispatch: $dis,
@@ -87,7 +87,7 @@ fn tstruct(
     let native_struct = dispatch_native_struct(&id, function_name).unwrap();
     let idx = native_struct.expected_index;
     // TODO assert kinds match
-    assert_eq!(args.len(), native_struct.expected_type_parameters.len());
+    assert_eq!(args.len(), native_struct.expected_type_formals.len());
     SignatureToken::Struct(idx, args)
 }
 

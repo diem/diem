@@ -102,8 +102,76 @@ pub struct ImportDefinition {
 }
 
 //**************************************************************************************************
+// Vars
+//**************************************************************************************************
+
+/// Newtype for a variable/local
+#[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
+pub struct Var(String);
+
+/// The type of a variable with a location
+pub type Var_ = Spanned<Var>;
+
+/// New type that represents a type variable. Used to declare type formals & reference them.
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct TypeVar(pub String);
+
+//**************************************************************************************************
+// Kinds
+//**************************************************************************************************
+
+// TODO: This enum is completely equivalent to vm::file_format::Kind.
+//       Should we just use vm::file_format::Kind or replace both with a common one?
+/// The kind of a type. Analogous to `vm::file_format::Kind`.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Kind {
+    /// Represents the super set of all types.
+    All,
+    /// `Resource` types must follow move semantics and various resource safety rules.
+    Resource,
+    /// `Unrestricted` types do not need to follow the `Resource` rules.
+    Unrestricted,
+}
+
+//**************************************************************************************************
+// Types
+//**************************************************************************************************
+
+/// The type of a single value
+#[derive(Debug, PartialEq, Clone)]
+pub enum Type {
+    /// `address`
+    Address,
+    /// `u64`
+    U64,
+    /// `bool`
+    Bool,
+    /// `bytearray`
+    ByteArray,
+    /// `string`, currently unused
+    String,
+    /// A module defined struct
+    Struct(QualifiedStructIdent, Vec<Type>),
+    /// A reference type, the bool flag indicates whether the reference is mutable
+    Reference(bool, Box<Type>),
+    /// A type parameter
+    TypeParameter(TypeVar),
+}
+
+//**************************************************************************************************
 // Structs
 //**************************************************************************************************
+
+/// Identifier for a struct definition. Tells us where to look in the storage layer to find the
+/// code associated with the interface
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub struct QualifiedStructIdent {
+    /// Module name and address in which the struct is contained
+    pub module: ModuleName,
+    /// Name for the struct class. Should be unique among structs published under the same
+    /// module+address
+    pub name: StructName,
+}
 
 /// The file newtype
 pub type Field = types::access_path::Field;
@@ -122,6 +190,8 @@ pub struct StructDefinition {
     pub is_nominal_resource: bool,
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
+    /// Kind constraints of the type parameters
+    pub type_formals: Vec<(TypeVar, Kind)>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
 }
@@ -150,6 +220,8 @@ pub struct FunctionSignature {
     pub formals: Vec<(Var, Type)>,
     /// Optional return types
     pub return_type: Vec<Type>,
+    /// Possibly-empty list of (TypeVar, Kind) pairs.s.
+    pub type_formals: Vec<(TypeVar, Kind)>,
 }
 
 /// Public or internal modifier for a procedure
@@ -194,46 +266,8 @@ pub struct Function {
 }
 
 //**************************************************************************************************
-// Types
-//**************************************************************************************************
-/// Identifier for a struct definition. Tells us where to look in the storage layer to find the
-/// code associated with the interface
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct QualifiedStructIdent {
-    /// Module name and address in which the struct is contained
-    pub module: ModuleName,
-    /// Name for the struct class. Should be unique among structs published under the same
-    /// module+address
-    pub name: StructName,
-}
-
-/// The type of a single value
-#[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    /// `address`
-    Address,
-    /// `u64`
-    U64,
-    /// `bool`
-    Bool,
-    /// `bytearray`
-    ByteArray,
-    /// `string`, currently unused
-    String,
-    /// A module defined struct
-    Struct(QualifiedStructIdent),
-    /// A reference type, the bool flag indicates whether the reference is mutable
-    Reference(bool, Box<Type>),
-}
-//**************************************************************************************************
 // Statements
 //**************************************************************************************************
-
-/// Newtype for a variable/local
-#[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Var(String);
-/// The type of a variable with a location
-pub type Var_ = Spanned<Var>;
 
 /// Builtin "function"-like operators that often have a signature not expressable in the
 /// type system and/or have access to some runtime/storage context
@@ -243,10 +277,10 @@ pub enum Builtin {
     Release,
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the given address
-    Exists(StructName),
+    Exists(StructName, Vec<Type>),
     /// Get the struct object (`StructName` resolved by current module) associated with the given
     /// address
-    BorrowGlobal(StructName),
+    BorrowGlobal(StructName, Vec<Type>),
     /// Returns the price per gas unit the current transaction is willing to pay
     GetTxnGasUnitPrice,
     /// Returns the maximum units of gas the current transaction is willing to use
@@ -264,9 +298,9 @@ pub enum Builtin {
     /// Initialize a previously empty address by publishing a resource of type Account
     CreateAccount,
     /// Remove a resource of the given type from the account with the given address
-    MoveFrom(StructName),
+    MoveFrom(StructName, Vec<Type>),
     /// Publish an instantiated struct object into sender's account.
-    MoveToSender(StructName),
+    MoveToSender(StructName, Vec<Type>),
 
     /// Convert a mutable reference into an immutable one
     Freeze,
@@ -281,29 +315,31 @@ pub enum FunctionCall {
     ModuleFunctionCall {
         module: ModuleName,
         name: FunctionName,
+        type_actuals: Vec<Type>,
     },
 }
 /// The type for a function call and its location
 pub type FunctionCall_ = Spanned<FunctionCall>;
 
 /// Enum for Move commands
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
     /// `x = e`
-    Assign(Vec<Var_>, Exp_),
+    Assign(Vec<Var_>, Box<Exp_>),
     /// `n { f_1: x_1, ... , f_j: x_j  } = e`
-    Unpack(StructName, Fields<Var_>, Exp_),
+    Unpack(StructName, Vec<Type>, Fields<Var_>, Box<Exp_>),
     /// `*e_1 = e_2`
-    Mutate(Exp_, Exp_),
+    Mutate(Box<Exp_>, Box<Exp_>),
     /// `abort e`
-    Abort(Option<Exp_>),
+    Abort(Option<Box<Exp_>>),
     /// `return e_1, ... , e_j`
-    Return(Exp_),
+    Return(Box<Exp_>),
     /// `break`
     Break,
     /// `continue`
     Continue,
-    Exp(Exp_),
+    Exp(Box<Exp_>),
 }
 /// The type of a command with its location
 pub type Cmd_ = Spanned<Cmd>;
@@ -376,8 +412,10 @@ pub enum CopyableVal {
     /// Not yet supported in the parser
     String(String),
 }
+
 /// The type of a value and its location
 pub type CopyableVal_ = Spanned<CopyableVal>;
+
 /// The type for fields and their bound expressions
 pub type ExpFields = Fields<Exp_>;
 
@@ -446,7 +484,7 @@ pub enum Exp {
     /// Returns a fresh `StructInstance` whose type and kind (resource or otherwise)
     /// as the current struct class (i.e., the class of the method we're currently executing).
     /// `n { f_1: e_1, ... , f_j: e_j }`
-    Pack(StructName, ExpFields),
+    Pack(StructName, Vec<Type>, ExpFields),
     /// `&e.f`, `&mut e.f`
     Borrow {
         /// mutable or not
@@ -596,8 +634,8 @@ impl ModuleDefinition {
 
 impl Type {
     /// Creates a new struct type
-    pub fn r#struct(ident: QualifiedStructIdent) -> Type {
-        Type::Struct(ident)
+    pub fn r#struct(ident: QualifiedStructIdent, type_actuals: Vec<Type>) -> Type {
+        Type::Struct(ident, type_actuals)
     }
 
     /// Creates a new reference type from its mutability and underlying type
@@ -683,10 +721,16 @@ impl StructDefinition {
     /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn move_declared(is_nominal_resource: bool, name: String, fields: Fields<Type>) -> Self {
+    pub fn move_declared(
+        is_nominal_resource: bool,
+        name: String,
+        type_formals: Vec<(TypeVar, Kind)>,
+        fields: Fields<Type>,
+    ) -> Self {
         StructDefinition {
             is_nominal_resource,
             name: StructName::new(name),
+            type_formals,
             fields: StructDefinitionFields::Move { fields },
         }
     }
@@ -694,10 +738,15 @@ impl StructDefinition {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
-    pub fn native(is_nominal_resource: bool, name: String) -> Self {
+    pub fn native(
+        is_nominal_resource: bool,
+        name: String,
+        type_formals: Vec<(TypeVar, Kind)>,
+    ) -> Self {
         StructDefinition {
             is_nominal_resource,
             name: StructName::new(name),
+            type_formals,
             fields: StructDefinitionFields::Native,
         }
     }
@@ -722,10 +771,15 @@ impl FunctionName {
 
 impl FunctionSignature {
     /// Creates a new function signature from the parameters and the return types
-    pub fn new(formals: Vec<(Var, Type)>, return_type: Vec<Type>) -> Self {
+    pub fn new(
+        formals: Vec<(Var, Type)>,
+        return_type: Vec<Type>,
+        type_formals: Vec<(TypeVar, Kind)>,
+    ) -> Self {
         FunctionSignature {
             formals,
             return_type,
+            type_formals,
         }
     }
 }
@@ -737,10 +791,11 @@ impl Function {
         visibility: FunctionVisibility,
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
+        type_formals: Vec<(TypeVar, Kind)>,
         acquires: Vec<StructName>,
         body: FunctionBody,
     ) -> Self {
-        let signature = FunctionSignature::new(formals, return_type);
+        let signature = FunctionSignature::new(formals, return_type, type_formals);
         Function {
             visibility,
             signature,
@@ -769,8 +824,12 @@ impl Var {
 
 impl FunctionCall {
     /// Creates a `FunctionCall::ModuleFunctionCall` variant
-    pub fn module_call(module: ModuleName, name: FunctionName) -> Self {
-        FunctionCall::ModuleFunctionCall { module, name }
+    pub fn module_call(module: ModuleName, name: FunctionName, type_actuals: Vec<Type>) -> Self {
+        FunctionCall::ModuleFunctionCall {
+            module,
+            name,
+            type_actuals,
+        }
     }
 
     /// Creates a `FunctionCall::Builtin` variant with no location information
@@ -782,12 +841,12 @@ impl FunctionCall {
 impl Cmd {
     /// Creates a command that returns no values
     pub fn return_empty() -> Self {
-        Cmd::Return(Spanned::no_loc(Exp::ExprList(vec![])))
+        Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(vec![]))))
     }
 
     /// Creates a command that returns a single value
     pub fn return_(op: Exp_) -> Self {
-        Cmd::Return(op)
+        Cmd::Return(Box::new(op))
     }
 }
 
@@ -871,8 +930,8 @@ impl Exp {
     }
 
     /// Creates a new pack/struct-instantiation `Exp` with no location information
-    pub fn instantiate(n: StructName, s: ExpFields) -> Exp_ {
-        Spanned::no_loc(Exp::Pack(n, s))
+    pub fn instantiate(n: StructName, tys: Vec<Type>, s: ExpFields) -> Exp_ {
+        Spanned::no_loc(Exp::Pack(n, tys, s))
     }
 
     /// Creates a new binary operator `Exp` with no location information
@@ -995,6 +1054,26 @@ where
     }
 }
 
+impl fmt::Display for TypeVar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Kind::All => "all",
+                Kind::Resource => "resource",
+                Kind::Unrestricted => "unrestricted",
+            }
+        )
+    }
+}
+
 impl fmt::Display for ModuleName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -1024,7 +1103,12 @@ impl fmt::Display for ModuleDefinition {
 
 impl fmt::Display for StructDefinition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Struct({}, ", self.name)?;
+        writeln!(
+            f,
+            "Struct({}{}, ",
+            self.name,
+            format_type_formals(&self.type_formals)
+        )?;
         match &self.fields {
             StructDefinitionFields::Move { fields } => writeln!(f, "{}", format_fields(fields))?,
             StructDefinitionFields::Native => writeln!(f, "{{native}}")?,
@@ -1068,7 +1152,9 @@ impl fmt::Display for FunctionBody {
     }
 }
 
+// TODO: This function should take an iterator instead.
 fn intersperse<T: fmt::Display>(items: &[T], join: &str) -> String {
+    // TODO: Any performance issues here? Could be O(n^2) if not optimized.
     items.iter().fold(String::new(), |acc, v| {
         format!("{acc}{join}{v}", acc = acc, join = join, v = v)
     })
@@ -1082,6 +1168,7 @@ fn format_fields<T: fmt::Display>(fields: &Fields<T>) -> String {
 
 impl fmt::Display for FunctionSignature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", format_type_formals(&self.type_formals))?;
         write!(f, "(")?;
         for (v, ty) in self.formals.iter() {
             write!(f, "{}: {}, ", v, ty)?;
@@ -1097,6 +1184,26 @@ impl fmt::Display for QualifiedStructIdent {
     }
 }
 
+fn format_type_actuals(tys: &[Type]) -> String {
+    if tys.is_empty() {
+        "".to_string()
+    } else {
+        format!("<{}>", intersperse(tys, ", "))
+    }
+}
+
+fn format_type_formals(formals: &[(TypeVar, Kind)]) -> String {
+    if formals.is_empty() {
+        "".to_string()
+    } else {
+        let formatted = formals
+            .iter()
+            .map(|(tv, k)| format!("{}: {}", tv, k))
+            .collect::<Vec<_>>();
+        format!("<{}>", intersperse(&formatted, ", "))
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1105,10 +1212,11 @@ impl fmt::Display for Type {
             Type::Address => write!(f, "address"),
             Type::ByteArray => write!(f, "bytearray"),
             Type::String => write!(f, "string"),
-            Type::Struct(ident) => write!(f, "{}", ident),
+            Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
             Type::Reference(is_mutable, t) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
             }
+            Type::TypeParameter(s) => write!(f, "{}", s),
         }
     }
 }
@@ -1124,16 +1232,20 @@ impl fmt::Display for Builtin {
         match self {
             Builtin::CreateAccount => write!(f, "create_account"),
             Builtin::Release => write!(f, "release"),
-            Builtin::Exists(t) => write!(f, "exists<{}>", t),
-            Builtin::BorrowGlobal(t) => write!(f, "borrow_global<{}>", t),
+            Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
+            Builtin::BorrowGlobal(t, tys) => {
+                write!(f, "borrow_global<{}{}>", t, format_type_actuals(tys))
+            }
             Builtin::GetTxnMaxGasUnits => write!(f, "get_txn_max_gas_units"),
             Builtin::GetTxnGasUnitPrice => write!(f, "get_txn_gas_unit_price"),
             Builtin::GetTxnPublicKey => write!(f, "get_txn_public_key"),
             Builtin::GetTxnSender => write!(f, "get_txn_sender"),
             Builtin::GetTxnSequenceNumber => write!(f, "get_txn_sequence_number"),
             Builtin::GetGasRemaining => write!(f, "get_gas_remaining"),
-            Builtin::MoveFrom(t) => write!(f, "move_from<{}>", t),
-            Builtin::MoveToSender(t) => write!(f, "move_to_sender<{}>", t),
+            Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
+            Builtin::MoveToSender(t, tys) => {
+                write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
+            }
             Builtin::Freeze => write!(f, "freeze"),
         }
     }
@@ -1143,7 +1255,17 @@ impl fmt::Display for FunctionCall {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             FunctionCall::Builtin(fun) => write!(f, "{}", fun),
-            FunctionCall::ModuleFunctionCall { module, name } => write!(f, "{}.{}", module, name),
+            FunctionCall::ModuleFunctionCall {
+                module,
+                name,
+                type_actuals,
+            } => write!(
+                f,
+                "{}.{}{}",
+                module,
+                name,
+                format_type_actuals(type_actuals)
+            ),
         }
     }
 }
@@ -1158,10 +1280,11 @@ impl fmt::Display for Cmd {
                     write!(f, "{} = ({});", intersperse(var_list, ", "), e)
                 }
             }
-            Cmd::Unpack(n, bindings, e) => write!(
+            Cmd::Unpack(n, tys, bindings, e) => write!(
                 f,
-                "{} {{ {} }} = {}",
+                "{}{} {{ {} }} = {}",
                 n,
+                format_type_actuals(tys),
                 bindings
                     .iter()
                     .fold(String::new(), |acc, (field, var)| format!(
@@ -1300,10 +1423,11 @@ impl fmt::Display for Exp {
             Exp::UnaryExp(o, e) => write!(f, "({}{})", o, e),
             Exp::BinopExp(e1, o, e2) => write!(f, "({} {} {})", o, e1, e2),
             Exp::Value(v) => write!(f, "{}", v),
-            Exp::Pack(n, s) => write!(
+            Exp::Pack(n, tys, s) => write!(
                 f,
-                "{}{{{}}}",
+                "{}{}{{{}}}",
                 n,
+                format_type_actuals(tys),
                 s.iter().fold(String::new(), |acc, (field, op)| format!(
                     "{} {} : {},",
                     acc, field, op,

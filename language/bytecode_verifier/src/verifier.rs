@@ -430,15 +430,14 @@ fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<Verifi
                 let declared_index = idx as u16;
                 let declared_is_nominal_resource =
                     native_struct_definition_view.is_nominal_resource();
-                let declared_type_parameters =
-                    native_struct_definition_view.type_parameter_constraints();
+                let declared_type_formals = native_struct_definition_view.type_formals();
 
                 let expected_index = vm_native_struct.expected_index.0;
                 let expected_is_nominal_resource = vm_native_struct.expected_nominal_resource;
-                let expected_type_parameters = &vm_native_struct.expected_type_parameters;
+                let expected_type_formals = &vm_native_struct.expected_type_formals;
                 if declared_index != expected_index
                     || declared_is_nominal_resource != expected_is_nominal_resource
-                    || declared_type_parameters != expected_type_parameters
+                    || declared_type_formals != expected_type_formals
                 {
                     errors.push(VerificationError {
                         kind: IndexKind::StructHandle,
@@ -488,8 +487,7 @@ fn verify_struct_kind(
         if let Some(struct_definition_view) = owner_module_view.struct_definition(struct_name) {
             if struct_handle_view.is_nominal_resource()
                 != struct_definition_view.is_nominal_resource()
-                || struct_handle_view.type_parameter_constraints()
-                    != struct_definition_view.type_parameter_constraints()
+                || struct_handle_view.type_formals() != struct_definition_view.type_formals()
             {
                 errors.push(VerificationError {
                     kind: IndexKind::StructHandle,

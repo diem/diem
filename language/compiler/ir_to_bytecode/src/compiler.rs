@@ -4,10 +4,11 @@
 use crate::{
     errors::*,
     parser::ast::{
-        BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Function, FunctionBody, FunctionCall,
-        FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Loop,
+        self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Function, FunctionBody,
+        FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Loop,
         ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
-        StructDefinition as MoveStruct, StructDefinitionFields, Type, UnaryOp, Var, Var_, While,
+        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
+        While,
     },
 };
 
@@ -26,11 +27,11 @@ use vm::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule,
         CompiledModuleMut, CompiledProgram, CompiledScriptMut, FieldDefinition,
         FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, LocalsSignature,
+        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature,
         LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
         StringPoolIndex, StructDefinition, StructDefinitionIndex, StructFieldInformation,
         StructHandle, StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
-        NO_TYPE_ACTUALS, SELF_MODULE_NAME,
+        SELF_MODULE_NAME,
     },
     printers::TableAccess,
 };
@@ -40,6 +41,8 @@ struct LoopInfo {
     start_loc: usize,
     breaks: Vec<usize>,
 }
+
+type TypeFormalMap = HashMap<TypeVar, usize>;
 
 // Ideally, we should capture all of this info into a CFG, but as we only have structured control
 // flow currently, it would be a bit overkill. It will be a necessity if we add arbitrary branches
@@ -86,6 +89,7 @@ enum InferredType {
     Struct(StructHandleIndex),
     Reference(Box<InferredType>),
     MutableReference(Box<InferredType>),
+    TypeParameter(String),
 }
 
 impl InferredType {
@@ -107,9 +111,7 @@ impl InferredType {
                 let i_inner = Self::from_signature_token(&*s_inner);
                 I::MutableReference(Box::new(i_inner))
             }
-            S::TypeParameter(_) => {
-                unimplemented!();
-            }
+            S::TypeParameter(s_inner) => I::TypeParameter(s_inner.to_string()),
         }
     }
 
@@ -125,6 +127,7 @@ impl InferredType {
                 inner.get_struct_handle()
             }
             InferredType::Struct(idx) => Ok(*idx),
+            InferredType::TypeParameter(_) => bail!("no struct type for type parameter"),
         }
     }
 }
@@ -470,6 +473,7 @@ trait Scope {
         module_idx: ModuleHandleIndex,
         name_idx: StringPoolIndex,
         is_always_resource: bool,
+        type_formals: Vec<Kind>,
     ) -> Result<StructHandleIndex>;
     fn make_function_handle(
         &mut self,
@@ -526,6 +530,8 @@ trait Scope {
         struct_name: &str,
     ) -> Result<&StructHandle>;
     fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String>;
+    fn get_struct_def_at(&self, idx: StructDefinitionIndex) -> Result<&StructDefinition>;
+    fn get_struct_handle_at(&self, idx: StructHandleIndex) -> Result<&StructHandle>;
     fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex>;
     fn get_field_type(&self, sh_idx: StructHandleIndex, name: &str) -> Result<&TypeSignature>;
     fn get_function_signature(
@@ -587,12 +593,13 @@ impl<'a> Scope for ModuleScope<'a> {
         module_idx: ModuleHandleIndex,
         name_idx: StringPoolIndex,
         is_nominal_resource: bool,
+        type_formals: Vec<Kind>,
     ) -> Result<StructHandleIndex> {
         let sh = StructHandle {
             module: module_idx,
             name: name_idx,
             is_nominal_resource,
-            type_parameters: vec![],
+            type_formals,
         };
         let size = self.module.struct_handles.len();
         if size >= TABLE_MAX_SIZE {
@@ -764,6 +771,20 @@ impl<'a> Scope for ModuleScope<'a> {
         self.module.get_string_at(idx)
     }
 
+    fn get_struct_def_at(&self, idx: StructDefinitionIndex) -> Result<&StructDefinition> {
+        match self.module.struct_defs.get(idx.0 as usize) {
+            Some(def) => Ok(def),
+            None => bail!("no struct def at index {}", idx),
+        }
+    }
+
+    fn get_struct_handle_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
+        match self.module.struct_handles.get(idx.0 as usize) {
+            Some(sh) => Ok(sh),
+            None => bail!("no struct handle at index {}", idx),
+        }
+    }
+
     fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex> {
         let field_map = match self.field_definitions.get(&sh_idx) {
             None => bail!("no struct handle index {}", sh_idx),
@@ -874,12 +895,13 @@ impl<'a> Scope for ScriptScope<'a> {
         module_idx: ModuleHandleIndex,
         name_idx: StringPoolIndex,
         is_nominal_resource: bool,
+        type_formals: Vec<Kind>,
     ) -> Result<StructHandleIndex> {
         let sh = StructHandle {
             module: module_idx,
             name: name_idx,
             is_nominal_resource,
-            type_parameters: vec![],
+            type_formals,
         };
         let size = self.script.struct_handles.len();
         if size >= TABLE_MAX_SIZE {
@@ -1006,6 +1028,17 @@ impl<'a> Scope for ScriptScope<'a> {
         self.script.get_string_at(idx)
     }
 
+    fn get_struct_def_at(&self, _idx: StructDefinitionIndex) -> Result<&StructDefinition> {
+        bail!("no struct defs in scripts")
+    }
+
+    fn get_struct_handle_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
+        match self.script.struct_handles.get(idx.0 as usize) {
+            Some(sh) => Ok(sh),
+            None => bail!("no struct handle at index {}", idx),
+        }
+    }
+
     fn get_field_def(
         &self,
         _sh_idx: StructHandleIndex,
@@ -1055,6 +1088,13 @@ const FIELDS_MAX_SIZE: usize = TABLE_MAX_SIZE;
 const FUNCTIONS_MAX_SIZE: usize = TABLE_MAX_SIZE;
 const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
 
+fn build_type_formal_map(type_formals: &[(TypeVar, ast::Kind)]) -> TypeFormalMap {
+    type_formals
+        .iter()
+        .enumerate()
+        .map(|(idx, (ty_var, _))| (ty_var.clone(), idx))
+        .collect()
+}
 //
 // Module/Contract compilation
 //
@@ -1111,8 +1151,13 @@ fn compile_module_impl<'a>(
         match &function.body {
             FunctionBody::Move { locals, code } => {
                 debug!("compile move function: {} {}", name, &function.signature);
+                // TODO: this mapping has been built previously
+                //         in define_function
+                //         in build_function_signature
+                //       change the API so that it can be reused
+                let k = build_type_formal_map(&function.signature.type_formals);
                 let compiled_code =
-                    compiler.compile_function(&function.signature.formals, locals, code)?;
+                    compiler.compile_function(&k, &function.signature.formals, locals, code)?;
                 compiler
                     .scope
                     .publish_code(name.name_ref(), compiled_code)?;
@@ -1256,6 +1301,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 let defining_module_name =
                     module.string_at(defining_module_handle.name).to_string();
                 let defining_module_addr = *module.address_at(defining_module_handle.address);
+                let type_formals = struct_handle.type_formals.clone();
 
                 let name_idx = self.make_string(&struct_name)?;
                 let defining_module_name_idx = self.make_string(&defining_module_name)?;
@@ -1267,6 +1313,7 @@ impl<S: Scope + Sized> Compiler<S> {
                     defining_module_handle_idx,
                     name_idx,
                     is_nominal_resource,
+                    type_formals,
                 )?;
                 Ok(SignatureToken::Struct(local_sh_idx, vec![]))
             }
@@ -1300,7 +1347,7 @@ impl<S: Scope + Sized> Compiler<S> {
             Ok(FunctionSignature {
                 return_types,
                 arg_types,
-                type_parameters: vec![],
+                type_formals: func_sig.type_formals,
             })
         }
     }
@@ -1315,13 +1362,19 @@ impl<S: Scope + Sized> Compiler<S> {
             .iter()
             .map(|s| {
                 let name_idx = self.make_string(s.name.name_ref())?;
-                self.make_struct_handle(module_idx, name_idx, s.is_nominal_resource)
+                let type_formals = s
+                    .type_formals
+                    .iter()
+                    .map(|(_, k)| self.build_kind(k))
+                    .collect::<Vec<_>>();
+                self.make_struct_handle(module_idx, name_idx, s.is_nominal_resource, type_formals)
             })
             .collect::<Result<Vec<_>>>()?;
 
         // define fields for each struct
         for (s, sh_idx) in structs.iter().zip(struct_handles.iter()) {
-            let struct_def = self.define_fields(*sh_idx, &s.fields)?;
+            let k = build_type_formal_map(&s.type_formals);
+            let struct_def = self.define_fields(&k, *sh_idx, &s.fields)?;
             self.scope
                 .publish_struct_def(s.name.name_ref(), s.is_nominal_resource, struct_def)?;
         }
@@ -1331,6 +1384,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn define_fields(
         &mut self,
+        k: &TypeFormalMap,
         struct_handle: StructHandleIndex,
         definition_fields: &StructDefinitionFields,
     ) -> Result<StructDefinition> {
@@ -1350,7 +1404,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 for field in fields {
                     let field_name = field.0.name();
                     let field_type = field.1;
-                    self.publish_field(struct_handle, field_name, field_type)?;
+                    self.publish_field(k, struct_handle, field_name, field_type)?;
                 }
                 field_information
             }
@@ -1371,10 +1425,14 @@ impl<S: Scope + Sized> Compiler<S> {
         let sig_idx = self.make_function_signature(&signature)?;
         let fh_idx =
             self.make_function_handle(ModuleHandleIndex::new(0), main_name_idx, sig_idx)?;
+        // TODO: this mapping has been built previously
+        //         in build_function_signature
+        //       change the API so that it can be reused
+        let k = build_type_formal_map(&main.signature.type_formals);
         // compile script
         let code = match &main.body {
             FunctionBody::Move { code, locals } => {
-                self.compile_function(&main.signature.formals, locals, code)?
+                self.compile_function(&k, &main.signature.formals, locals, code)?
             }
             FunctionBody::Native => bail!("main() cannot be a native function"),
         };
@@ -1447,8 +1505,12 @@ impl<S: Scope + Sized> Compiler<S> {
         Ok(idx)
     }
 
-    fn make_type_signature(&mut self, _type: &Type) -> Result<TypeSignatureIndex> {
-        let signature = self.build_type_signature(_type)?;
+    fn make_type_signature(
+        &mut self,
+        k: &TypeFormalMap,
+        _type: &Type,
+    ) -> Result<TypeSignatureIndex> {
+        let signature = self.build_type_signature(k, _type)?;
         let mut empty = false;
         let idx;
         {
@@ -1543,18 +1605,22 @@ impl<S: Scope + Sized> Compiler<S> {
         module_idx: ModuleHandleIndex,
         name_idx: StringPoolIndex,
         is_nominal_resource: bool,
+        type_formals: Vec<Kind>,
     ) -> Result<StructHandleIndex> {
         let sh = StructHandle {
             module: module_idx,
             name: name_idx,
             is_nominal_resource,
-            type_parameters: vec![],
+            type_formals: type_formals.clone(),
         };
         Ok(match self.structs.get(&sh) {
             None => {
-                let idx =
-                    self.scope
-                        .make_struct_handle(module_idx, name_idx, is_nominal_resource)?;
+                let idx = self.scope.make_struct_handle(
+                    module_idx,
+                    name_idx,
+                    is_nominal_resource,
+                    type_formals,
+                )?;
                 self.structs.insert(sh, idx);
                 idx
             }
@@ -1597,12 +1663,13 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn publish_field(
         &mut self,
+        k: &TypeFormalMap,
         sh_idx: StructHandleIndex,
         name: &str,
         sig: &Type,
     ) -> Result<FieldDefinitionIndex> {
         let name_idx = self.make_string(name)?;
-        let sig_idx = self.make_type_signature(sig)?;
+        let sig_idx = self.make_type_signature(k, sig)?;
         let field_def = FieldDefinition {
             struct_: sh_idx,
             name: name_idx,
@@ -1656,8 +1723,8 @@ impl<S: Scope + Sized> Compiler<S> {
     // Signature building methods
     //
 
-    fn build_type_signature(&mut self, type_: &Type) -> Result<TypeSignature> {
-        let signature_token = self.build_signature_token(type_)?;
+    fn build_type_signature(&mut self, k: &TypeFormalMap, type_: &Type) -> Result<TypeSignature> {
+        let signature_token = self.build_signature_token(k, type_)?;
         Ok(TypeSignature(signature_token))
     }
 
@@ -1665,42 +1732,58 @@ impl<S: Scope + Sized> Compiler<S> {
         &mut self,
         signature: &AstFunctionSignature,
     ) -> Result<FunctionSignature> {
+        let k = build_type_formal_map(&signature.type_formals);
         let mut ret_sig: Vec<SignatureToken> = Vec::new();
         for t in &signature.return_type {
-            ret_sig.push(self.build_signature_token(&t)?);
+            ret_sig.push(self.build_signature_token(&k, &t)?);
         }
         let mut arg_sig: Vec<SignatureToken> = Vec::new();
         for formal in &signature.formals {
-            arg_sig.push(self.build_signature_token(&formal.1)?)
+            arg_sig.push(self.build_signature_token(&k, &formal.1)?)
         }
+        let type_formals: Vec<_> = signature
+            .type_formals
+            .iter()
+            .map(|(_, k)| self.build_kind(k))
+            .collect();
         Ok(FunctionSignature {
             return_types: ret_sig,
             arg_types: arg_sig,
-            type_parameters: vec![],
+            type_formals,
         })
     }
 
-    fn build_signature_token(&mut self, t: &Type) -> Result<SignatureToken> {
+    fn build_kind(&mut self, k: &ast::Kind) -> Kind {
+        match k {
+            ast::Kind::All => Kind::All,
+            ast::Kind::Resource => Kind::Resource,
+            ast::Kind::Unrestricted => Kind::Unrestricted,
+        }
+    }
+
+    fn build_signature_token(&mut self, k: &TypeFormalMap, t: &Type) -> Result<SignatureToken> {
         match t {
             Type::Address => Ok(SignatureToken::Address),
             Type::U64 => Ok(SignatureToken::U64),
             Type::Bool => Ok(SignatureToken::Bool),
             Type::ByteArray => Ok(SignatureToken::ByteArray),
             Type::Reference(is_mutable, inner_type) => {
-                let inner_token = Box::new(self.build_signature_token(inner_type)?);
+                let inner_token = Box::new(self.build_signature_token(k, inner_type)?);
                 if *is_mutable {
                     Ok(SignatureToken::MutableReference(inner_token))
                 } else {
                     Ok(SignatureToken::Reference(inner_token))
                 }
             }
-            Type::Struct(ident) => {
+            Type::Struct(ident, tys) => {
+                let type_actuals = self.build_type_actuals(k, tys)?;
+
                 let module_name = ident.module().name_ref();
                 let struct_name = ident.name().name_ref();
 
                 // in order to know the kind of the struct, we need to perform a look up using the
                 // qualified name of the struct (Module.Name)
-                let (module_idx, is_nominal_resource) =
+                let (module_idx, is_nominal_resource, type_formals) =
                     if self.scope.get_name().is_ok() && module_name == ModuleName::SELF {
                         // case 1: the struct is defined in the module currently being compiled
                         //         in this case, we look up the struct handles and find the one
@@ -1709,7 +1792,7 @@ impl<S: Scope + Sized> Compiler<S> {
                         //         completely set up at the time this function is callled
                         let mh_idx = ModuleHandleIndex::new(0);
                         let sh = self.scope.get_struct_handle(mh_idx, struct_name)?;
-                        (mh_idx, sh.is_nominal_resource)
+                        (mh_idx, sh.is_nominal_resource, sh.type_formals.clone())
                     } else {
                         // case 2: the struct is defined in an external module already compiled
                         //         in this case we look up the struct definition and get the
@@ -1720,14 +1803,46 @@ impl<S: Scope + Sized> Compiler<S> {
                             .scope
                             .get_external_struct_def(module_name, struct_name)?;
                         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-                        (module_idx, struct_handle.is_nominal_resource)
+                        (
+                            module_idx,
+                            struct_handle.is_nominal_resource,
+                            struct_handle.type_formals.clone(),
+                        )
                     };
                 let name_idx = self.make_string(struct_name)?;
-                let sh_idx = self.make_struct_handle(module_idx, name_idx, is_nominal_resource)?;
-                Ok(SignatureToken::Struct(sh_idx, vec![]))
+                let sh_idx = self.make_struct_handle(
+                    module_idx,
+                    name_idx,
+                    is_nominal_resource,
+                    type_formals,
+                )?;
+                Ok(SignatureToken::Struct(sh_idx, type_actuals))
             }
+            Type::TypeParameter(ty_var) => match k.get(ty_var) {
+                Some(idx) => Ok(SignatureToken::TypeParameter(*idx as u16)),
+                None => bail!("no type parameter named {}", ty_var),
+            },
             Type::String => bail!("`string` type is currently unused"),
         }
+    }
+
+    fn build_type_actuals(
+        &mut self,
+        k: &TypeFormalMap,
+        tys: &[Type],
+    ) -> Result<Vec<SignatureToken>> {
+        tys.iter()
+            .map(|ty| self.build_signature_token(k, ty))
+            .collect::<Result<Vec<_>>>()
+    }
+
+    fn make_type_actuals(
+        &mut self,
+        k: &TypeFormalMap,
+        tys: &[Type],
+    ) -> Result<LocalsSignatureIndex> {
+        let type_actuals = self.build_type_actuals(k, tys)?;
+        self.make_locals_signature(&LocalsSignature(type_actuals))
     }
 
     //
@@ -1735,6 +1850,7 @@ impl<S: Scope + Sized> Compiler<S> {
     //
     fn compile_function(
         &mut self,
+        k: &TypeFormalMap,
         formals: &[(Var, Type)],
         locals: &[(Var_, Type)],
         body: &Block,
@@ -1742,14 +1858,14 @@ impl<S: Scope + Sized> Compiler<S> {
         let mut code = CodeUnit::default();
         let mut function_frame = FunctionFrame::new();
         for (var, t) in formals {
-            let type_sig = self.build_signature_token(t)?;
+            let type_sig = self.build_signature_token(k, t)?;
             function_frame.define_local(var, type_sig)?;
         }
         for (var_, t) in locals {
-            let type_sig = self.build_signature_token(t)?;
+            let type_sig = self.build_signature_token(k, t)?;
             function_frame.define_local(&var_.value, type_sig)?;
         }
-        self.compile_block(body, &mut code, &mut function_frame)?;
+        self.compile_block(k, body, &mut code, &mut function_frame)?;
         let sig_idx = self.make_locals_signature(&function_frame.local_types)?;
         code.locals = sig_idx;
         code.max_stack_size = if function_frame.max_stack_depth < 0 {
@@ -1764,6 +1880,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_block(
         &mut self,
+        k: &TypeFormalMap,
         body: &Block,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
@@ -1777,20 +1894,20 @@ impl<S: Scope + Sized> Compiler<S> {
             let stmt_info;
             match stmt {
                 Statement::CommandStatement(command) => {
-                    stmt_info = self.compile_command(&command, code, function_frame)?;
+                    stmt_info = self.compile_command(k, &command, code, function_frame)?;
                     debug!("{:?}", code);
                 }
                 Statement::WhileStatement(while_) => {
                     // always assume the loop might not be taken
-                    stmt_info = self.compile_while(&while_, code, function_frame)?;
+                    stmt_info = self.compile_while(k, &while_, code, function_frame)?;
                     debug!("{:?}", code);
                 }
                 Statement::LoopStatement(loop_) => {
-                    stmt_info = self.compile_loop(&loop_, code, function_frame)?;
+                    stmt_info = self.compile_loop(k, &loop_, code, function_frame)?;
                     debug!("{:?}", code);
                 }
                 Statement::IfElseStatement(if_else) => {
-                    stmt_info = self.compile_if_else(&if_else, code, function_frame)?;
+                    stmt_info = self.compile_if_else(k, &if_else, code, function_frame)?;
                     debug!("{:?}", code);
                 }
                 Statement::EmptyStatement => continue,
@@ -1802,16 +1919,17 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_if_else(
         &mut self,
+        k: &TypeFormalMap,
         if_else: &IfElse,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
     ) -> Result<ControlFlowInfo> {
-        self.compile_expression(&if_else.cond, code, function_frame)?;
+        self.compile_expression(k, &if_else.cond, code, function_frame)?;
 
         let brfalse_ins_loc = code.code.len();
         code.code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
         function_frame.pop()?;
-        let if_cf_info = self.compile_block(&if_else.if_block, code, function_frame)?;
+        let if_cf_info = self.compile_block(k, &if_else.if_block, code, function_frame)?;
 
         let mut else_block_location = code.code.len();
 
@@ -1826,7 +1944,7 @@ impl<S: Scope + Sized> Compiler<S> {
                     code.code.push(Bytecode::Branch(0)); // placeholder, final branch target replaced later
                     else_block_location += 1;
                 }
-                let else_cf_info = self.compile_block(else_block, code, function_frame)?;
+                let else_cf_info = self.compile_block(k, else_block, code, function_frame)?;
                 if !if_cf_info.terminal_node {
                     code.code[branch_ins_loc] = Bytecode::Branch(code.code.len() as u16);
                 }
@@ -1842,19 +1960,20 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_while(
         &mut self,
+        k: &TypeFormalMap,
         while_: &While,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
     ) -> Result<ControlFlowInfo> {
         let loop_start_loc = code.code.len();
         function_frame.push_loop(loop_start_loc)?;
-        self.compile_expression(&while_.cond, code, function_frame)?;
+        self.compile_expression(k, &while_.cond, code, function_frame)?;
 
         let brfalse_loc = code.code.len();
         code.code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
         function_frame.pop()?;
 
-        self.compile_block(&while_.block, code, function_frame)?;
+        self.compile_block(k, &while_.block, code, function_frame)?;
         code.code.push(Bytecode::Branch(loop_start_loc as u16));
 
         let loop_end_loc = code.code.len() as u16;
@@ -1881,6 +2000,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_loop(
         &mut self,
+        k: &TypeFormalMap,
         loop_: &Loop,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
@@ -1888,7 +2008,7 @@ impl<S: Scope + Sized> Compiler<S> {
         let loop_start_loc = code.code.len();
         function_frame.push_loop(loop_start_loc)?;
 
-        let body_cf_info = self.compile_block(&loop_.block, code, function_frame)?;
+        let body_cf_info = self.compile_block(k, &loop_.block, code, function_frame)?;
         code.code.push(Bytecode::Branch(loop_start_loc as u16));
 
         let loop_end_loc = code.code.len() as u16;
@@ -1912,6 +2032,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_command(
         &mut self,
+        k: &TypeFormalMap,
         cmd: &Cmd,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
@@ -1919,13 +2040,13 @@ impl<S: Scope + Sized> Compiler<S> {
         debug!("compile command {}", cmd);
         match cmd {
             Cmd::Return(exps) => {
-                self.compile_expression(exps, code, function_frame)?;
+                self.compile_expression(k, exps, code, function_frame)?;
                 code.code.push(Bytecode::Ret);
             }
             Cmd::Abort(exp_opt) => {
                 match exp_opt {
                     Some(exp) => {
-                        self.compile_expression(exp, code, function_frame)?;
+                        self.compile_expression(k, exp, code, function_frame)?;
                     }
                     None => (),
                 };
@@ -1933,7 +2054,8 @@ impl<S: Scope + Sized> Compiler<S> {
                 function_frame.pop()?;
             }
             Cmd::Assign(lhs_variables, rhs_expressions) => {
-                let _expr_type = self.compile_expression(rhs_expressions, code, function_frame)?;
+                let _expr_type =
+                    self.compile_expression(k, rhs_expressions, code, function_frame)?;
                 for var in lhs_variables.iter().rev() {
                     let loc_idx = function_frame.get_local(&var.value)?;
                     let st_loc = Bytecode::StLoc(loc_idx);
@@ -1941,11 +2063,13 @@ impl<S: Scope + Sized> Compiler<S> {
                     function_frame.pop()?;
                 }
             }
-            Cmd::Unpack(name, bindings, e) => {
-                self.compile_expression(e, code, function_frame)?;
+            Cmd::Unpack(name, tys, bindings, e) => {
+                let type_actuals_id = self.make_type_actuals(k, tys)?;
+
+                self.compile_expression(k, e, code, function_frame)?;
 
                 let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                code.code.push(Bytecode::Unpack(def_idx, NO_TYPE_ACTUALS));
+                code.code.push(Bytecode::Unpack(def_idx, type_actuals_id));
                 function_frame.pop()?;
 
                 for lhs_variable in bindings.values().rev() {
@@ -1955,8 +2079,8 @@ impl<S: Scope + Sized> Compiler<S> {
                 }
             }
             Cmd::Mutate(exp, op) => {
-                self.compile_expression(op, code, function_frame)?;
-                self.compile_expression(exp, code, function_frame)?;
+                self.compile_expression(k, op, code, function_frame)?;
+                self.compile_expression(k, exp, code, function_frame)?;
                 code.code.push(Bytecode::WriteRef);
                 function_frame.pop()?;
                 function_frame.pop()?;
@@ -1971,7 +2095,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 code.code.push(Bytecode::Branch(0));
             }
             Cmd::Exp(exp) => {
-                self.compile_expression(exp, code, function_frame)?;
+                self.compile_expression(k, exp, code, function_frame)?;
             }
         }
         let (reachable_break, terminal_node) = match cmd {
@@ -2001,6 +2125,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_expression(
         &mut self,
+        k: &TypeFormalMap,
         exp: &Exp,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
@@ -2041,24 +2166,26 @@ impl<S: Scope + Sized> Compiler<S> {
                 }
                 CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
             },
-            Exp::Pack(name, fields) => {
-                let module_idx = ModuleHandleIndex::new(0);
-                let name_idx = self.make_string(name.name_ref())?;
-                let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
+            Exp::Pack(name, tys, fields) => {
+                let type_actuals_id = self.make_type_actuals(k, tys)?;
+
+                let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
+                let sd = self.scope.get_struct_def_at(def_idx)?;
+                let sh_idx = sd.struct_handle;
+
                 for (_, exp) in fields.iter() {
-                    self.compile_expression(exp, code, function_frame)?;
+                    self.compile_expression(k, exp, code, function_frame)?;
                 }
 
-                code.code.push(Bytecode::Pack(def_idx, NO_TYPE_ACTUALS));
+                code.code.push(Bytecode::Pack(def_idx, type_actuals_id));
                 for _ in fields.iter() {
                     function_frame.pop()?;
                 }
                 function_frame.push()?;
-                Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
+                Ok(self.make_singleton_vec_deque(InferredType::Struct(sh_idx)))
             }
             Exp::UnaryExp(op, e) => {
-                self.compile_expression(e, code, function_frame)?;
+                self.compile_expression(k, e, code, function_frame)?;
                 match op {
                     UnaryOp::Not => {
                         code.code.push(Bytecode::Not);
@@ -2067,8 +2194,8 @@ impl<S: Scope + Sized> Compiler<S> {
                 }
             }
             Exp::BinopExp(e1, op, e2) => {
-                self.compile_expression(e1, code, function_frame)?;
-                self.compile_expression(e2, code, function_frame)?;
+                self.compile_expression(k, e1, code, function_frame)?;
+                self.compile_expression(k, e2, code, function_frame)?;
                 function_frame.pop()?;
                 match op {
                     BinOp::Add => {
@@ -2139,7 +2266,7 @@ impl<S: Scope + Sized> Compiler<S> {
             }
             Exp::Dereference(e) => {
                 let loc_type = self
-                    .compile_expression(e, code, function_frame)?
+                    .compile_expression(k, e, code, function_frame)?
                     .pop_front();
                 code.code.push(Bytecode::ReadRef);
                 match loc_type {
@@ -2158,7 +2285,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 ref field,
             } => {
                 let this_type_option = self
-                    .compile_expression(exp, code, function_frame)?
+                    .compile_expression(k, exp, code, function_frame)?
                     .pop_front();
                 match this_type_option {
                     Some(this_type) => self.compile_load_field_reference(
@@ -2173,16 +2300,16 @@ impl<S: Scope + Sized> Compiler<S> {
             }
             Exp::FunctionCall(f, exps) => {
                 let mut actuals_tys = VecDeque::new();
-                for types in self.compile_expression(exps, code, function_frame)? {
+                for types in self.compile_expression(k, exps, code, function_frame)? {
                     actuals_tys.push_back(types);
                 }
-                let result = self.compile_call(f, code, function_frame, actuals_tys)?;
+                let result = self.compile_call(k, f, code, function_frame, actuals_tys)?;
                 Ok(result)
             }
             Exp::ExprList(exps) => {
                 let mut result = VecDeque::new();
                 for e in exps {
-                    result.append(&mut self.compile_expression(e, code, function_frame)?);
+                    result.append(&mut self.compile_expression(k, e, code, function_frame)?);
                 }
                 Ok(result)
             }
@@ -2265,6 +2392,7 @@ impl<S: Scope + Sized> Compiler<S> {
 
     fn compile_call(
         &mut self,
+        k: &TypeFormalMap,
         call: &FunctionCall,
         code: &mut CodeUnit,
         function_frame: &mut FunctionFrame,
@@ -2293,26 +2421,29 @@ impl<S: Scope + Sized> Compiler<S> {
                         function_frame.push()?;
                         Ok(self.make_singleton_vec_deque(InferredType::Address))
                     }
-                    Builtin::Exists(name) => {
+                    Builtin::Exists(name, tys) => {
+                        let type_actuals_id = self.make_type_actuals(k, tys)?;
+
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::Exists(def_idx, NO_TYPE_ACTUALS));
+                        code.code.push(Bytecode::Exists(def_idx, type_actuals_id));
                         function_frame.pop()?;
                         function_frame.push()?;
                         Ok(self.make_singleton_vec_deque(InferredType::Bool))
                     }
-                    Builtin::BorrowGlobal(name) => {
-                        let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
+                    Builtin::BorrowGlobal(name, tys) => {
+                        let type_actuals_id = self.make_type_actuals(k, tys)?;
+
+                        let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
                         code.code
-                            .push(Bytecode::BorrowGlobal(def_idx, NO_TYPE_ACTUALS));
+                            .push(Bytecode::BorrowGlobal(def_idx, type_actuals_id));
                         function_frame.pop()?;
                         function_frame.push()?;
 
-                        let module_idx = ModuleHandleIndex::new(0);
-                        let name_idx = self.make_string(name.name_ref())?;
-                        let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
+                        let sd = self.scope.get_struct_def_at(def_idx)?;
+                        let sh_idx = sd.struct_handle;
                         Ok(
                             self.make_singleton_vec_deque(InferredType::MutableReference(
-                                Box::new(InferredType::Struct(sh)),
+                                Box::new(InferredType::Struct(sh_idx)),
                             )),
                         )
                     }
@@ -2328,23 +2459,25 @@ impl<S: Scope + Sized> Compiler<S> {
                         function_frame.push()?;
                         Ok(VecDeque::new())
                     }
-                    Builtin::MoveFrom(name) => {
-                        let (is_always_resource, def_idx) =
+                    Builtin::MoveFrom(name, tys) => {
+                        let type_actuals_id = self.make_type_actuals(k, tys)?;
+
+                        let (_is_always_resource, def_idx) =
                             self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::MoveFrom(def_idx, NO_TYPE_ACTUALS));
+                        code.code.push(Bytecode::MoveFrom(def_idx, type_actuals_id));
                         function_frame.pop()?; // pop the address
                         function_frame.push()?; // push the return value
 
-                        let module_idx = ModuleHandleIndex::new(0);
-                        let name_idx = self.make_string(name.name_ref())?;
-                        let sh =
-                            self.make_struct_handle(module_idx, name_idx, is_always_resource)?;
-                        Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
+                        let sd = self.scope.get_struct_def_at(def_idx)?;
+                        let sh_idx = sd.struct_handle;
+                        Ok(self.make_singleton_vec_deque(InferredType::Struct(sh_idx)))
                     }
-                    Builtin::MoveToSender(name) => {
+                    Builtin::MoveToSender(name, tys) => {
+                        let type_actuals_id = self.make_type_actuals(k, tys)?;
+
                         let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
                         code.code
-                            .push(Bytecode::MoveToSender(def_idx, NO_TYPE_ACTUALS));
+                            .push(Bytecode::MoveToSender(def_idx, type_actuals_id));
                         function_frame.push()?;
                         Ok(VecDeque::new())
                     }
@@ -2372,7 +2505,13 @@ impl<S: Scope + Sized> Compiler<S> {
                     }
                 }
             }
-            FunctionCall::ModuleFunctionCall { module, name } => {
+            FunctionCall::ModuleFunctionCall {
+                module,
+                name,
+                type_actuals,
+            } => {
+                let type_actuals_id = self.make_type_actuals(k, type_actuals)?;
+
                 let scope_name = self.scope.get_name();
 
                 let mh = if scope_name.is_ok() && module.name() == ModuleName::SELF {
@@ -2419,7 +2558,7 @@ impl<S: Scope + Sized> Compiler<S> {
                 let args_count = func_sig.arg_types.len();
                 let sig_idx = self.make_function_signature(&func_sig)?;
                 let fh_idx = self.make_function_handle(mh, name_idx, sig_idx)?;
-                let call = Bytecode::Call(fh_idx, NO_TYPE_ACTUALS);
+                let call = Bytecode::Call(fh_idx, type_actuals_id);
                 code.code.push(call);
                 for _ in 0..args_count {
                     function_frame.pop()?;

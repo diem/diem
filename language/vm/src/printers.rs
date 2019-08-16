@@ -569,7 +569,7 @@ fn display_locals_signature<T: TableAccess>(
     Ok(())
 }
 
-fn display_type_parameters<T: TableAccess>(
+fn display_type_actuals<T: TableAccess>(
     types: &[SignatureToken],
     tables: &T,
     f: &mut fmt::Formatter,
@@ -600,7 +600,7 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::Address => write!(f, "Address"),
         SignatureToken::Struct(idx, types) => {
             display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)?;
-            display_type_parameters(&types, tables, f)
+            display_type_actuals(&types, tables, f)
         }
         SignatureToken::Reference(token) => {
             write!(f, "&")?;
@@ -648,7 +648,7 @@ fn display_bytecode<T: TableAccess>(
         }
         Bytecode::Call(idx, types_idx) => {
             write!(f, "Call")?;
-            display_type_parameters(
+            display_type_actuals(
                 &tables.get_locals_signature_at(*types_idx).unwrap().0,
                 tables,
                 f,

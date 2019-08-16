@@ -238,7 +238,7 @@ impl CompiledModuleStrategyGen {
                     let struct_handles: Vec<_> = struct_handles
                         .into_iter()
                         .map(
-                            |(module_idx, name_idx, is_nominal_resource, type_parameters)| {
+                            |(module_idx, name_idx, is_nominal_resource, type_formals)| {
                                 StructHandle {
                                     module: ModuleHandleIndex::new(
                                         module_idx.index(module_handles_len) as TableIndex,
@@ -247,7 +247,7 @@ impl CompiledModuleStrategyGen {
                                         name_idx.index(string_pool_len) as TableIndex
                                     ),
                                     is_nominal_resource,
-                                    type_parameters,
+                                    type_formals,
                                 }
                             },
                         )
@@ -404,7 +404,7 @@ struct StructDefinitionGen {
     // the is_nominal_resource field of generated struct handle is set to true if
     // either any of the fields contains a resource or self.is_nominal_resource is true
     is_nominal_resource: bool,
-    type_parameters: Vec<KindGen>,
+    type_formals: Vec<KindGen>,
     is_public: bool,
     field_defs: Option<Vec<FieldDefinitionGen>>,
 }
@@ -422,10 +422,10 @@ impl StructDefinitionGen {
             option::of(vec(FieldDefinitionGen::strategy(), member_count)),
         )
             .prop_map(
-                |(name_idx, is_nominal_resource, type_parameters, is_public, field_defs)| Self {
+                |(name_idx, is_nominal_resource, type_formals, is_public, field_defs)| Self {
                     name_idx,
                     is_nominal_resource,
-                    type_parameters,
+                    type_formals,
                     is_public,
                     field_defs,
                 },
@@ -447,8 +447,8 @@ impl StructDefinitionGen {
                         self.name_idx.index(state.string_pool_len) as TableIndex
                     ),
                     is_nominal_resource,
-                    type_parameters: self
-                        .type_parameters
+                    type_formals: self
+                        .type_formals
                         .into_iter()
                         .map(|kind| kind.materialize())
                         .collect(),
@@ -481,8 +481,8 @@ impl StructDefinitionGen {
                         self.name_idx.index(state.string_pool_len) as TableIndex
                     ),
                     is_nominal_resource,
-                    type_parameters: self
-                        .type_parameters
+                    type_formals: self
+                        .type_formals
                         .into_iter()
                         .map(|kind| kind.materialize())
                         .collect(),

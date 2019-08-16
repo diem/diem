@@ -1,0 +1,39 @@
+//! no-run: verifier, runtime
+
+module M {
+    resource Foo {}
+
+    public id<T>(x: T) {
+        return move(x);
+    }
+
+    public bar<T1, T2>(x: T1, y: T2) {
+    }
+
+    foo() {
+        let x: u64;
+        let y: Self.Foo;
+
+        x = Self.id<u64>(3);
+        y = Self.id<Self.Foo>(Foo {});
+        Self.bar<Self.Foo, bool>();
+    }
+}
+
+// The following checks & nots ensures the locals_signatures table has at least 6 elements
+//     and the first 6 elements match the exact pattern we define.
+// This is to ensure we can safely refer to elements of the table by indices.
+
+// check: locals_signatures
+// not: LocalsSignature
+// check: LocalsSignature
+// not: LocalsSignature
+// check: LocalsSignature
+// not: LocalsSignature
+// check: LocalsSignature
+// not: LocalsSignature
+// check: LocalsSignature([U64]), LocalsSignature([Struct(StructHandleIndex(0), [])]), LocalsSignature([Struct(StructHandleIndex(0), []), Bool])
+
+// check: Call(0, LocalsSignatureIndex(3))
+// check: Call(0, LocalsSignatureIndex(4))
+// check: Call(1, LocalsSignatureIndex(5))

@@ -37,7 +37,7 @@ impl KindGen {
 pub struct FunctionSignatureGen {
     return_types: Vec<SignatureTokenGen>,
     arg_types: Vec<SignatureTokenGen>,
-    type_parameters: Vec<KindGen>,
+    type_formals: Vec<KindGen>,
 }
 
 impl FunctionSignatureGen {
@@ -51,10 +51,10 @@ impl FunctionSignatureGen {
             vec(SignatureTokenGen::strategy(), arg_count),
             vec(KindGen::strategy(), kind_count),
         )
-            .prop_map(|(return_types, arg_types, type_parameters)| Self {
+            .prop_map(|(return_types, arg_types, type_formals)| Self {
                 return_types,
                 arg_types,
-                type_parameters,
+                type_formals,
             })
     }
 
@@ -64,8 +64,8 @@ impl FunctionSignatureGen {
                 .collect(),
             arg_types: SignatureTokenGen::map_materialize(self.arg_types, struct_handles_len)
                 .collect(),
-            type_parameters: self
-                .type_parameters
+            type_formals: self
+                .type_formals
                 .into_iter()
                 .map(KindGen::materialize)
                 .collect(),
