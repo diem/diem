@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::OpMetrics;
+use metrics::{DurationHistogram, OpMetrics};
 use prometheus::{Histogram, IntCounter, IntGauge};
 
 lazy_static::lazy_static! {
@@ -75,10 +75,10 @@ pub static ref STATE_SYNC_COUNT: IntCounter = OP_COUNTERS.counter("state_sync_co
 pub static ref BLOCK_RETRIEVAL_COUNT: IntCounter = OP_COUNTERS.counter("block_retrieval_count");
 
 /// Histogram of block retrieval duration.
-pub static ref BLOCK_RETRIEVAL_DURATION_MS: Histogram = OP_COUNTERS.histogram("block_retrieval_duration_ms");
+pub static ref BLOCK_RETRIEVAL_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("block_retrieval_duration_s");
 
 /// Histogram of state sync duration.
-pub static ref STATE_SYNC_DURATION_MS: Histogram = OP_COUNTERS.histogram("state_sync_duration_ms");
+pub static ref STATE_SYNC_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("state_sync_duration_s");
 
 /// Counts the number of times the sync info message has been set since last restart.
 pub static ref SYNC_INFO_MSGS_SENT_COUNT: IntCounter = OP_COUNTERS.counter("sync_info_msg_sent_count");
@@ -108,31 +108,31 @@ pub static ref NUM_BLOCKS_IN_TREE: IntGauge = OP_COUNTERS.gauge("num_blocks_in_t
 // PERFORMANCE COUNTERS
 //////////////////////
 /// Histogram of execution time (ms) of non-empty blocks.
-pub static ref BLOCK_EXECUTION_DURATION_MS: Histogram = OP_COUNTERS.histogram("block_execution_duration_ms");
+pub static ref BLOCK_EXECUTION_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("block_execution_duration_s");
 
 /// Histogram of duration of a commit procedure (the time it takes for the execution / storage to
 /// commit a block once we decide to do so).
-pub static ref BLOCK_COMMIT_DURATION_MS: Histogram = OP_COUNTERS.histogram("block_commit_duration_ms");
+pub static ref BLOCK_COMMIT_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("block_commit_duration_s");
 
 /// Histogram for the number of txns per (committed) blocks.
 pub static ref NUM_TXNS_PER_BLOCK: Histogram = OP_COUNTERS.histogram("num_txns_per_block");
 
 /// Histogram of per-transaction execution time (ms) of non-empty blocks
 /// (calculated as the overall execution time of a block divided by the number of transactions).
-pub static ref TXN_EXECUTION_DURATION_MS: Histogram = OP_COUNTERS.histogram("txn_execution_duration_ms");
+pub static ref TXN_EXECUTION_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("txn_execution_duration_s");
 
 /// Histogram of execution time (ms) of empty blocks.
-pub static ref EMPTY_BLOCK_EXECUTION_DURATION_MS: Histogram = OP_COUNTERS.histogram("empty_block_execution_duration_ms");
+pub static ref EMPTY_BLOCK_EXECUTION_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("empty_block_execution_duration_s");
 
 /// Histogram of the time it takes for a block to get committed.
 /// Measured as the commit time minus block's timestamp.
-pub static ref CREATION_TO_COMMIT_MS: Histogram = OP_COUNTERS.histogram("creation_to_commit_ms");
+pub static ref CREATION_TO_COMMIT_S: DurationHistogram = OP_COUNTERS.duration_histogram("creation_to_commit_s");
 
 /// Duration between block generation time until the moment it gathers full QC
-pub static ref CREATION_TO_QC_MS: Histogram = OP_COUNTERS.histogram("creation_to_qc_ms");
+pub static ref CREATION_TO_QC_S: DurationHistogram = OP_COUNTERS.duration_histogram("creation_to_qc_s");
 
 /// Duration between block generation time until the moment it is received and ready for execution.
-pub static ref CREATION_TO_RECEIVAL_MS: Histogram = OP_COUNTERS.histogram("creation_to_receival_ms");
+pub static ref CREATION_TO_RECEIVAL_S: DurationHistogram = OP_COUNTERS.duration_histogram("creation_to_receival_s");
 
 ////////////////////////////////////
 // PROPSOSAL/VOTE TIMESTAMP COUNTERS
@@ -150,10 +150,10 @@ pub static ref PROPOSAL_MAX_WAIT_EXCEEDED_COUNT: IntCounter = OP_COUNTERS.counte
 pub static ref PROPOSAL_WAIT_FAILED_COUNT: IntCounter = OP_COUNTERS.counter("proposal_wait_failed_count");
 
 /// Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules
-pub static ref PROPOSAL_SUCCESS_WAIT_MS: Histogram = OP_COUNTERS.histogram("proposal_success_wait_ms");
+pub static ref PROPOSAL_SUCCESS_WAIT_S: DurationHistogram = OP_COUNTERS.duration_histogram("proposal_success_wait_s");
 
 /// Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules
-pub static ref PROPOSAL_FAILURE_WAIT_MS: Histogram = OP_COUNTERS.histogram("proposal_failure_wait_ms");
+pub static ref PROPOSAL_FAILURE_WAIT_S: DurationHistogram = OP_COUNTERS.duration_histogram("proposal_failure_wait_s");
 
 /// Count of the votes that passed the timestamp rules and did not have to wait
 pub static ref VOTE_NO_WAIT_REQUIRED_COUNT: IntCounter = OP_COUNTERS.counter("vote_no_wait_required_count");
@@ -169,10 +169,10 @@ pub static ref VOTE_WAIT_FAILED_COUNT: IntCounter = OP_COUNTERS.counter("vote_wa
 
 /// Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.
 /// A success only means that a replica has an opportunity to vote.  It may not vote if it doesn't pass the voting rules.
-pub static ref VOTE_SUCCESS_WAIT_MS: Histogram = OP_COUNTERS.histogram("vote_success_wait_ms");
+pub static ref VOTE_SUCCESS_WAIT_S: DurationHistogram = OP_COUNTERS.duration_histogram("vote_success_wait_s");
 
 /// Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules
-pub static ref VOTE_FAILURE_WAIT_MS: Histogram = OP_COUNTERS.histogram("vote_failure_wait_ms");
+pub static ref VOTE_FAILURE_WAIT_S: DurationHistogram = OP_COUNTERS.duration_histogram("vote_failure_wait_s");
 
 ///////////////////
 // CHANNEL COUNTERS

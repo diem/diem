@@ -294,7 +294,7 @@ where
                 if let Some(time_to_qc) = duration_since_epoch()
                     .checked_sub(Duration::from_micros(block.timestamp_usecs()))
                 {
-                    counters::CREATION_TO_QC_MS.observe(time_to_qc.as_millis() as f64);
+                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
                 }
             }
             return VoteReceptionResult::NewQuorumCertificate(Arc::new(quorum_cert));

@@ -171,8 +171,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                 current_duration_since_epoch,
                                 wait_duration,
                             } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_MS
-                                    .observe(wait_duration.as_millis() as f64);
+                                counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
                                 counters::PROPOSAL_WAIT_WAS_REQUIRED_COUNT.inc();
                                 current_duration_since_epoch
                             }
@@ -180,7 +179,8 @@ impl<T: Payload> ProposalGenerator<T> {
                                 current_duration_since_epoch,
                                 ..
                             } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_MS.observe(0.0);
+                                counters::PROPOSAL_SUCCESS_WAIT_S
+                                    .observe_duration(Duration::new(0, 0));
                                 counters::PROPOSAL_NO_WAIT_REQUIRED_COUNT.inc();
                                 current_duration_since_epoch
                             }
@@ -193,7 +193,8 @@ impl<T: Payload> ProposalGenerator<T> {
                                     "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
                                     hqc_block.timestamp_usecs(),
                                     round_deadline);
-                                counters::PROPOSAL_FAILURE_WAIT_MS.observe(0.0);
+                                counters::PROPOSAL_FAILURE_WAIT_S
+                                    .observe_duration(Duration::new(0, 0));
                                 counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
                                 return Err(ProposalGenerationError::ExceedsMaxRoundDuration);
                             }
@@ -206,8 +207,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                     wait_duration,
                                     hqc_block.timestamp_usecs(),
                                     current_duration_since_epoch);
-                                counters::PROPOSAL_FAILURE_WAIT_MS
-                                    .observe(wait_duration.as_millis() as f64);
+                                counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
                                 counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
                                 return Err(ProposalGenerationError::CurrentTimeTooOld);
                             }

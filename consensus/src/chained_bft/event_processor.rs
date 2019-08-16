@@ -475,7 +475,7 @@ impl<T: Payload> EventProcessor<T> {
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
         {
-            counters::CREATION_TO_RECEIVAL_MS.observe(time_to_receival.as_millis() as f64);
+            counters::CREATION_TO_RECEIVAL_S.observe_duration(time_to_receival);
         }
 
         let proposal_round = proposal.round();
@@ -513,12 +513,11 @@ impl<T: Payload> EventProcessor<T> {
 
                     match waiting_success {
                         WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
-                            counters::VOTE_SUCCESS_WAIT_MS
-                                .observe(wait_duration.as_millis() as f64);
+                            counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
                             counters::VOTE_WAIT_WAS_REQUIRED_COUNT.inc();
                         }
                         WaitingSuccess::NoWaitRequired { .. } => {
-                            counters::VOTE_SUCCESS_WAIT_MS.observe(0.0);
+                            counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
                             counters::VOTE_NO_WAIT_REQUIRED_COUNT.inc();
                         }
                     }
@@ -530,7 +529,7 @@ impl<T: Payload> EventProcessor<T> {
                                     "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
                                     block_timestamp_us,
                                     current_round_deadline);
-                            counters::VOTE_FAILURE_WAIT_MS.observe(0.0);
+                            counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
                             counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
                         }
                         WaitingError::WaitFailed {
@@ -542,8 +541,7 @@ impl<T: Payload> EventProcessor<T> {
                                     wait_duration,
                                     block_timestamp_us,
                                     current_duration_since_epoch);
-                            counters::VOTE_FAILURE_WAIT_MS
-                                .observe(wait_duration.as_millis() as f64);
+                            counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
                             counters::VOTE_WAIT_FAILED_COUNT.inc();
                         }
                     };
@@ -732,7 +730,7 @@ impl<T: Payload> EventProcessor<T> {
             if let Some(time_to_commit) = duration_since_epoch()
                 .checked_sub(Duration::from_micros(committed.timestamp_usecs()))
             {
-                counters::CREATION_TO_COMMIT_MS.observe(time_to_commit.as_millis() as f64);
+                counters::CREATION_TO_COMMIT_S.observe_duration(time_to_commit);
             }
             let compute_result = self
                 .block_store

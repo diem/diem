@@ -210,8 +210,7 @@ impl ConsensusNetworkImpl {
                 return Err(BlockRetrievalFailure::InvalidResponse);
             }
         }
-        counters::BLOCK_RETRIEVAL_DURATION_MS
-            .observe(pre_retrieval_instant.elapsed().as_millis() as f64);
+        counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse {
             status: res_block.get_status(),
             blocks,

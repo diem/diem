@@ -229,7 +229,7 @@ where
                 e
             ),
         };
-        counters::STATE_SYNC_DURATION_MS.observe(pre_sync_instance.elapsed().as_millis() as f64);
+        counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let root = (
             blocks.pop().expect("should have 3-chain"),
             quorum_certs.last().expect("should have 3-chain").clone(),

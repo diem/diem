@@ -152,8 +152,9 @@ where
                 };
                 let mut backoff = Self::storage_retry_backoff();
                 match save_op.retry(&mut backoff) {
-                    Ok(()) => OP_COUNTERS
-                        .observe("blocks_commit_time_us", time.elapsed().as_micros() as f64),
+                    Ok(()) => {
+                        OP_COUNTERS.observe_duration("blocks_commit_time_s", time.elapsed());
+                    }
                     Err(_err) => crit!(
                         "Failed to save blocks to storage after trying for {} seconds.",
                         backoff.get_elapsed_time().as_secs(),
@@ -324,13 +325,8 @@ where
             &self.committed_state_tree,
         );
         let vm_outputs = {
-            let time = std::time::Instant::now();
-            let out = V::execute_block(transactions.clone(), &self.vm_config, &state_view);
-            OP_COUNTERS.observe(
-                "vm_execute_chunk_time_us",
-                time.elapsed().as_micros() as f64,
-            );
-            out
+            let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
+            V::execute_block(transactions.clone(), &self.vm_config, &state_view)
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -590,9 +586,8 @@ where
         };
 
         {
-            let time = std::time::Instant::now();
+            let _timer = OP_COUNTERS.timer("block_execute_time_s");
             self.execute_block(id);
-            OP_COUNTERS.observe("block_execute_time_us", time.elapsed().as_micros() as f64);
         }
 
         true
@@ -615,17 +610,12 @@ where
             &previous_state_tree,
         );
         let vm_outputs = {
-            let time = std::time::Instant::now();
-            let out = V::execute_block(
+            let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
+            V::execute_block(
                 block_to_execute.transactions().to_vec(),
                 &self.vm_config,
                 &state_view,
-            );
-            OP_COUNTERS.observe(
-                "vm_execute_block_time_us",
-                time.elapsed().as_micros() as f64,
-            );
-            out
+            )
         };
 
         let status: Vec<_> = vm_outputs
