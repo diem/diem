@@ -18,10 +18,11 @@ config = { path = "../config" }
 consensus = { path = "../consensus" }
 crash_handler = { path = "../common/crash_handler" }
 debug_interface = { path = "../common/debug_interface" }
-logger = { path = "../common/logger" }
 executable_helpers = { path = "../common/executable_helpers" }
 execution_proto = { path = "../execution/execution_proto" }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 grpc_helpers = { path = "../common/grpc_helpers" }
+logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 nextgen_crypto = { path = "../crypto/nextgen_crypto" }

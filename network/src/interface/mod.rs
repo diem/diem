@@ -20,13 +20,21 @@ use crate::{
         direct_send::{DirectSendNotification, DirectSendRequest, Message},
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
+    validator_network::{
+        ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
+        StateSynchronizerEvents, StateSynchronizerSender,
+    },
     ProtocolId,
 };
 use channel;
-use futures::{FutureExt, SinkExt, StreamExt};
+use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
 use logger::prelude::*;
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, time::Duration};
 use types::PeerId;
+
+pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -54,6 +62,23 @@ pub enum NetworkNotification {
     RecvMessage(PeerId, Message),
 }
 
+/// Trait that any provider of network interface needs to implement.
+pub trait LibraNetworkProvider {
+    fn add_mempool(
+        &mut self,
+        mempool_protocols: Vec<ProtocolId>,
+    ) -> (MempoolNetworkSender, MempoolNetworkEvents);
+    fn add_consensus(
+        &mut self,
+        consensus_protocols: Vec<ProtocolId>,
+    ) -> (ConsensusNetworkSender, ConsensusNetworkEvents);
+    fn add_state_synchronizer(
+        &mut self,
+        state_sync_protocols: Vec<ProtocolId>,
+    ) -> (StateSynchronizerSender, StateSynchronizerEvents);
+    fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
+}
+
 pub struct NetworkProvider<TSubstream> {
     /// Map from protocol to upstream handlers for events of that protocol type.
     upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
@@ -71,6 +96,8 @@ pub struct NetworkProvider<TSubstream> {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     /// Channel to receive requests from other actors.
     requests_rx: channel::Receiver<NetworkRequest>,
+    /// Channel over which other actors send requests to network.
+    requests_tx: channel::Sender<NetworkRequest>,
     /// The maximum number of concurrent NetworkRequests that can be handled.
     /// Back-pressure takes effect via bounded mpsc channel beyond the limit.
     max_concurrent_reqs: u32,
@@ -78,6 +105,126 @@ pub struct NetworkProvider<TSubstream> {
     /// RPC and Direct Send that can be handled.
     /// Back-pressure takes effect via bounded mpsc channel beyond the limit.
     max_concurrent_notifs: u32,
+    /// Size of channels between different actors.
+    channel_size: usize,
+}
+
+impl<TSubstream> LibraNetworkProvider for NetworkProvider<TSubstream>
+where
+    TSubstream: Debug + Send + 'static,
+{
+    fn add_mempool(
+        &mut self,
+        mempool_protocols: Vec<ProtocolId>,
+    ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
+        // Construct Mempool network interfaces
+        let (mempool_tx, mempool_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_MEMPOOL_NETWORK_EVENTS,
+            Duration::from_millis(MEMPOOL_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let mempool_network_sender = MempoolNetworkSender::new(self.requests_tx.clone());
+        let mempool_network_events = MempoolNetworkEvents::new(mempool_rx);
+        let mempool_handlers = mempool_protocols
+            .iter()
+            .map(|p| (p.clone(), mempool_tx.clone()));
+        self.upstream_handlers.extend(mempool_handlers);
+        (mempool_network_sender, mempool_network_events)
+    }
+
+    fn add_consensus(
+        &mut self,
+        consensus_protocols: Vec<ProtocolId>,
+    ) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
+        // Construct Consensus network interfaces
+        let (consensus_tx, consensus_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
+            Duration::from_millis(CONSENSUS_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let consensus_network_sender = ConsensusNetworkSender::new(self.requests_tx.clone());
+        let consensus_network_events = ConsensusNetworkEvents::new(consensus_rx);
+        let consensus_handlers = consensus_protocols
+            .iter()
+            .map(|p| (p.clone(), consensus_tx.clone()));
+        self.upstream_handlers.extend(consensus_handlers);
+        (consensus_network_sender, consensus_network_events)
+    }
+
+    fn add_state_synchronizer(
+        &mut self,
+        state_sync_protocols: Vec<ProtocolId>,
+    ) -> (StateSynchronizerSender, StateSynchronizerEvents) {
+        // Construct StateSynchronizer network interfaces
+        let (state_sync_tx, state_sync_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS,
+            Duration::from_millis(STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let state_sync_network_sender = StateSynchronizerSender::new(self.requests_tx.clone());
+        let state_sync_network_events = StateSynchronizerEvents::new(state_sync_rx);
+        let state_sync_handlers = state_sync_protocols
+            .iter()
+            .map(|p| (p.clone(), state_sync_tx.clone()));
+        self.upstream_handlers.extend(state_sync_handlers);
+        (state_sync_network_sender, state_sync_network_events)
+    }
+
+    fn start(self: Box<Self>) -> BoxFuture<'static, ()> {
+        let f = async move {
+            let rpc_reqs_tx = self.rpc_reqs_tx.clone();
+            let ds_reqs_tx = self.ds_reqs_tx.clone();
+            let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
+            let mut reqs = self
+                .requests_rx
+                .map(move |req| {
+                    Self::handle_network_request(
+                        req,
+                        rpc_reqs_tx.clone(),
+                        ds_reqs_tx.clone(),
+                        conn_mgr_reqs_tx.clone(),
+                    )
+                    .boxed()
+                })
+                .buffer_unordered(self.max_concurrent_reqs as usize);
+
+            let upstream_handlers = self.upstream_handlers.clone();
+            let mut peer_mgr_notifs = self
+                .peer_mgr_notifs_rx
+                .map(move |notif| {
+                    Self::handle_peer_mgr_notification(notif, upstream_handlers.clone()).boxed()
+                })
+                .buffer_unordered(self.max_concurrent_notifs as usize);
+
+            let upstream_handlers = self.upstream_handlers.clone();
+            let mut rpc_notifs = self
+                .rpc_notifs_rx
+                .map(move |notif| {
+                    Self::handle_rpc_notification(notif, upstream_handlers.clone()).boxed()
+                })
+                .buffer_unordered(self.max_concurrent_notifs as usize);
+
+            let upstream_handlers = self.upstream_handlers.clone();
+            let mut ds_notifs = self
+                .ds_notifs_rx
+                .map(|notif| Self::handle_ds_notification(upstream_handlers.clone(), notif).boxed())
+                .buffer_unordered(self.max_concurrent_notifs as usize);
+
+            loop {
+                futures::select! {
+                    _ = reqs.select_next_some() => {},
+                    _ = peer_mgr_notifs.select_next_some() => {},
+                    _ = rpc_notifs.select_next_some() => {},
+                    _ = ds_notifs.select_next_some() => {}
+                    complete => {
+                        crit!("Network provider actor terminated");
+                        break;
+                    }
+                }
+            }
+        };
+        f.boxed()
+    }
 }
 
 impl<TSubstream> NetworkProvider<TSubstream>
@@ -92,12 +239,13 @@ where
         ds_notifs_rx: channel::Receiver<DirectSendNotification>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         requests_rx: channel::Receiver<NetworkRequest>,
-        upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+        requests_tx: channel::Sender<NetworkRequest>,
         max_concurrent_reqs: u32,
         max_concurrent_notifs: u32,
+        channel_size: usize,
     ) -> Self {
         Self {
-            upstream_handlers,
+            upstream_handlers: HashMap::new(),
             peer_mgr_notifs_rx,
             rpc_reqs_tx,
             rpc_notifs_rx,
@@ -105,8 +253,10 @@ where
             ds_notifs_rx,
             conn_mgr_reqs_tx,
             requests_rx,
+            requests_tx,
             max_concurrent_reqs,
             max_concurrent_notifs,
+            channel_size,
         }
     }
 
@@ -202,59 +352,6 @@ where
                 ch.send(NetworkNotification::RecvMessage(peer_id, msg))
                     .await
                     .unwrap();
-            }
-        }
-    }
-
-    pub async fn start(self) {
-        let rpc_reqs_tx = self.rpc_reqs_tx.clone();
-        let ds_reqs_tx = self.ds_reqs_tx.clone();
-        let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
-        let mut reqs = self
-            .requests_rx
-            .map(move |req| {
-                Self::handle_network_request(
-                    req,
-                    rpc_reqs_tx.clone(),
-                    ds_reqs_tx.clone(),
-                    conn_mgr_reqs_tx.clone(),
-                )
-                .boxed()
-            })
-            .buffer_unordered(self.max_concurrent_reqs as usize);
-
-        let upstream_handlers = self.upstream_handlers.clone();
-        let mut peer_mgr_notifs = self
-            .peer_mgr_notifs_rx
-            .map(move |notif| {
-                Self::handle_peer_mgr_notification(notif, upstream_handlers.clone()).boxed()
-            })
-            .buffer_unordered(self.max_concurrent_notifs as usize);
-
-        let upstream_handlers = self.upstream_handlers.clone();
-        let mut rpc_notifs = self
-            .rpc_notifs_rx
-            .map(move |notif| {
-                Self::handle_rpc_notification(notif, upstream_handlers.clone()).boxed()
-            })
-            .buffer_unordered(self.max_concurrent_notifs as usize);
-
-        let upstream_handlers = self.upstream_handlers.clone();
-        let mut ds_notifs = self
-            .ds_notifs_rx
-            .map(|notif| Self::handle_ds_notification(upstream_handlers.clone(), notif).boxed())
-            .buffer_unordered(self.max_concurrent_notifs as usize);
-
-        loop {
-            futures::select! {
-                _ = reqs.select_next_some() => {},
-                _ = peer_mgr_notifs.select_next_some() => {},
-                _ = rpc_notifs.select_next_some() => {},
-                _ = ds_notifs.select_next_some() => {}
-                complete => {
-                    crit!("Network provider actor terminated");
-                    break;
-                }
             }
         }
     }

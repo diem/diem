@@ -6,7 +6,12 @@ use config_builder::util::get_test_config;
 use crypto::HashValue;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
-use futures::{executor::block_on, stream::StreamExt, Future, FutureExt};
+use futures::{
+    executor::block_on,
+    future::{FutureExt, TryFutureExt},
+    stream::StreamExt,
+    Future,
+};
 use network::{
     proto::GetChunkResponse,
     validator_network::{
@@ -180,17 +185,20 @@ impl SynchronizerEnv {
         .into_iter()
         .collect();
 
-        let (_, _, (sender_b, mut events_b), listener_addr) =
+        let (listener_addr, mut network_provider) =
             NetworkBuilder::new(runtime.executor(), peers[1], addr.clone())
                 .signing_keys((b_signing_private_key, b_signing_public_key))
                 .identity_keys((b_identity_private_key, b_identity_public_key))
                 .trusted_peers(trusted_peers.clone())
                 .transport(TransportType::Memory)
                 .direct_send_protocols(protocols.clone())
-                .state_sync_protocols(protocols.clone())
                 .build();
+        let (sender_b, mut events_b) = network_provider.add_state_synchronizer(protocols.clone());
+        runtime
+            .executor()
+            .spawn(network_provider.start().unit_error().compat());
 
-        let (sender_a, mut events_a) =
+        let (_dialer_addr, mut network_provider) =
             NetworkBuilder::new(runtime.executor(), peers[0], addr.clone())
                 .transport(TransportType::Memory)
                 .signing_keys((a_signing_private_key, a_signing_public_key))
@@ -198,9 +206,11 @@ impl SynchronizerEnv {
                 .trusted_peers(trusted_peers.clone())
                 .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
                 .direct_send_protocols(protocols.clone())
-                .state_sync_protocols(protocols)
-                .build()
-                .2;
+                .build();
+        let (sender_a, mut events_a) = network_provider.add_state_synchronizer(protocols);
+        runtime
+            .executor()
+            .spawn(network_provider.start().unit_error().compat());
 
         // await peer discovery
         block_on(events_a.next()).unwrap().unwrap();
