@@ -249,7 +249,6 @@ where
 
         // This precondition guards the addition overflow caused by using
         // parent_block.height() + 1 in the construction of BlockSerializer.
-        // (consensus/src/chained_bft/consensus_types/block.rs: pub fn round).
         checked_precondition!(parent_block.height() <= std::u64::MAX - 1);
 
         let payload = T::default();
