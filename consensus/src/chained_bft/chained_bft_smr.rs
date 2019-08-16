@@ -7,6 +7,7 @@ use crate::{
         common::{Payload, Round},
         event_processor::EventProcessor,
         liveness::{
+            multi_proposer_election::MultiProposer,
             pacemaker::{ExponentialTimeInterval, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
@@ -34,7 +35,7 @@ use futures::{
 use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::common::Author;
-use config::config::ConsensusConfig;
+use config::config::{ConsensusConfig, ConsensusProposerType};
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
@@ -45,6 +46,8 @@ pub struct ChainedBftSMRConfig {
     pub max_pruned_blocks_in_mem: usize,
     /// Initial timeout for pacemaker
     pub pacemaker_initial_timeout: Duration,
+    /// Consensus proposer type
+    pub proposer_type: ConsensusProposerType,
     /// Contiguous rounds for proposer
     pub contiguous_rounds: u32,
     /// Max block size (number of transactions) that consensus pulls from mempool
@@ -57,6 +60,7 @@ impl ChainedBftSMRConfig {
         ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem().unwrap_or(10000) as usize,
             pacemaker_initial_timeout: Duration::from_millis(pacemaker_initial_timeout_ms),
+            proposer_type: cfg.get_proposer_type(),
             contiguous_rounds: cfg.contiguous_rounds(),
             max_block_size: cfg.max_block_size(),
         }
@@ -136,12 +140,18 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     /// Create a proposer election handler based on proposers
-    fn create_proposer_election(&self) -> Arc<dyn ProposerElection<T> + Send + Sync> {
+    fn create_proposer_election(&self) -> Box<dyn ProposerElection<T> + Send + Sync> {
         assert!(!self.proposers.is_empty());
-        Arc::new(RotatingProposer::new(
-            self.proposers.clone(),
-            self.config.contiguous_rounds,
-        ))
+        match self.config.proposer_type {
+            ConsensusProposerType::MultipleOrderedProposers => {
+                Box::new(MultiProposer::new(self.proposers.clone(), 2))
+            }
+            // We don't really have a fixed proposer!
+            _ => Box::new(RotatingProposer::new(
+                self.proposers.clone(),
+                self.config.contiguous_rounds,
+            )),
+        }
     }
 
     fn start_event_processing(
@@ -270,7 +280,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 self.author,
                 Arc::clone(&block_store),
                 pacemaker,
-                Arc::clone(&proposer_election),
+                proposer_election,
                 proposal_generator,
                 safety_rules,
                 state_computer,

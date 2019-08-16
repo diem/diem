@@ -27,7 +27,7 @@ use proto_conv::FromProtoBytes;
 use types::transaction::{SignedTransaction, SCRIPT_HASH_LENGTH};
 
 use crate::{
-    config::ConsensusProposerType::{FixedProposer, RotatingProposer},
+    config::ConsensusProposerType::{FixedProposer, MultipleOrderedProposers, RotatingProposer},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{
         deserialize_key, deserialize_opt_key, serialize_key, serialize_opt_key,
@@ -542,12 +542,14 @@ impl Default for ConsensusConfig {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum ConsensusProposerType {
     // Choose the smallest PeerId as the proposer
     FixedProposer,
     // Round robin rotation of proposers
     RotatingProposer,
+    // Multiple ordered proposers per round (primary, secondary, etc.)
+    MultipleOrderedProposers,
 }
 
 impl ConsensusConfig {
@@ -555,6 +557,7 @@ impl ConsensusConfig {
         match self.proposer_type.as_str() {
             "fixed_proposer" => FixedProposer,
             "rotating_proposer" => RotatingProposer,
+            "multiple_ordered_proposers" => MultipleOrderedProposers,
             &_ => unimplemented!("Invalid proposer type: {}", self.proposer_type),
         }
     }

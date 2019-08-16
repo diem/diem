@@ -22,6 +22,7 @@ tokio = "0.1.22"
 termion = "1.5.3"
 lazy_static = "1.3.0"
 rmp-serde = "0.13.7"
+siphasher = "0.3"
 
 canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }

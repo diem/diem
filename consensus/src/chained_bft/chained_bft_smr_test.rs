@@ -26,7 +26,9 @@ use crate::chained_bft::{
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
-use config::config::ConsensusProposerType::{self, FixedProposer, RotatingProposer};
+use config::config::ConsensusProposerType::{
+    self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
+};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime;
 use types::ledger_info::LedgerInfoWithSignatures;
@@ -38,6 +40,7 @@ struct SMRNode {
     validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
+    proposer_type: ConsensusProposerType,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
@@ -57,6 +60,7 @@ impl SMRNode {
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
+        proposer_type: ConsensusProposerType,
     ) -> Self {
         let author = signer.author();
 
@@ -81,6 +85,7 @@ impl SMRNode {
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
             pacemaker_initial_timeout: Duration::from_secs(3),
+            proposer_type,
             contiguous_rounds: 2,
             max_block_size: 50,
         };
@@ -111,6 +116,7 @@ impl SMRNode {
             validator,
             peers,
             proposer,
+            proposer_type,
             smr_id,
             smr,
             commit_cb_receiver,
@@ -136,6 +142,7 @@ impl SMRNode {
             self.smr_id + 10,
             self.storage,
             recover_data,
+            self.proposer_type,
         )
     }
 
@@ -165,7 +172,9 @@ impl SMRNode {
         let proposer = {
             match proposer_type {
                 FixedProposer => vec![peers[0]],
-                RotatingProposer => validator_verifier.get_ordered_account_addresses(),
+                RotatingProposer | MultipleOrderedProposers => {
+                    validator_verifier.get_ordered_account_addresses()
+                }
             }
         };
         let mut nodes = vec![];
@@ -181,6 +190,7 @@ impl SMRNode {
                 smr_id,
                 storage,
                 initial_data,
+                proposer_type,
             ));
         }
         nodes
@@ -262,30 +272,46 @@ fn start_with_proposal_test() {
     });
 }
 
-#[test]
-/// Upon startup, the first proposal is sent, voted by all the participants, QC is formed and
-/// then the next proposal is sent.
-fn basic_full_round() {
+fn basic_full_round(num_nodes: usize, quorum_size: usize, proposer_type: ConsensusProposerType) {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let _nodes = SMRNode::start_num_nodes(2, 2, &mut playground, FixedProposer);
+    let _nodes = SMRNode::start_num_nodes(num_nodes, quorum_size, &mut playground, proposer_type);
 
+    // In case we're using multi-proposer, every proposal and vote is sent to two participants.
+    let num_messages_to_send = if proposer_type == MultipleOrderedProposers {
+        2 * (num_nodes - 1)
+    } else {
+        num_nodes - 1
+    };
     block_on(async move {
         let _broadcast_proposals_1 = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
             .await;
         let _votes_1 = playground
-            .wait_for_messages(1, NetworkPlayground::votes_only)
+            .wait_for_messages(num_messages_to_send, NetworkPlayground::votes_only)
             .await;
         let mut broadcast_proposals_2 = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
+            .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
             .await;
         let next_proposal =
             ProposalMsg::<Vec<u64>>::from_proto(broadcast_proposals_2[0].1.take_proposal())
                 .unwrap();
-        assert_eq!(next_proposal.proposal.round(), 2);
-        assert_eq!(next_proposal.proposal.height(), 2);
+        assert!(next_proposal.proposal.round() >= 2);
+        assert!(next_proposal.proposal.height() >= 2);
     });
+}
+
+#[test]
+/// Upon startup, the first proposal is sent, voted by all the participants, QC is formed and
+/// then the next proposal is sent.
+fn basic_full_round_test() {
+    basic_full_round(2, 2, FixedProposer);
+}
+
+#[test]
+/// Basic happy path with multiple proposers
+fn happy_path_with_multi_proposer() {
+    basic_full_round(2, 2, MultipleOrderedProposers);
 }
 
 /// Verify the basic e2e flow: blocks are committed, txn manager is notified, block tree is
