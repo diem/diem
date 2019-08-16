@@ -101,8 +101,8 @@ impl NodeSetup {
 
     fn create_proposer_election(
         author: Author,
-    ) -> Arc<dyn ProposerElection<TestPayload> + Send + Sync> {
-        Arc::new(RotatingProposer::new(vec![author], 1))
+    ) -> Box<dyn ProposerElection<TestPayload> + Send + Sync> {
+        Box::new(RotatingProposer::new(vec![author], 1))
     }
 
     fn create_nodes(
@@ -182,7 +182,7 @@ impl NodeSetup {
             author,
             Arc::clone(&block_store),
             pacemaker,
-            Arc::clone(&proposer_election),
+            proposer_election,
             proposal_generator,
             safety_rules,
             Arc::new(MockStateComputer::new(commit_cb_sender)),
