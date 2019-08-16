@@ -7,8 +7,7 @@ use crate::{
         common::{Payload, Round},
         event_processor::EventProcessor,
         liveness::{
-            local_pacemaker::{ExponentialTimeInterval, LocalPacemaker},
-            pacemaker::{NewRoundEvent, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, NewRoundEvent, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
@@ -114,15 +113,14 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     fn create_pacemaker(
         &self,
-        executor: TaskExecutor,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         highest_committed_round: Round,
         highest_certified_round: Round,
         highest_timeout_certificates: HighestTimeoutCertificates,
         time_service: Arc<dyn TimeService>,
         new_round_events_sender: channel::Sender<NewRoundEvent>,
-        external_timeout_sender: channel::Sender<Round>,
-    ) -> Arc<dyn Pacemaker> {
+        timeout_sender: channel::Sender<Round>,
+    ) -> Pacemaker {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
         let time_interval = Box::new(ExponentialTimeInterval::new(
@@ -130,18 +128,17 @@ impl<T: Payload> ChainedBftSMR<T> {
             1.5,
             6,
         ));
-        Arc::new(LocalPacemaker::new(
-            executor,
+        Pacemaker::new(
             persistent_liveness_storage,
             time_interval,
             highest_committed_round,
             highest_certified_round,
             time_service,
             new_round_events_sender,
-            external_timeout_sender,
+            timeout_sender,
             self.quorum_size,
             highest_timeout_certificates,
-        ))
+        )
     }
 
     /// Create a proposer election handler based on proposers
@@ -152,6 +149,7 @@ impl<T: Payload> ChainedBftSMR<T> {
             self.config.contiguous_rounds,
         ))
     }
+
     fn start_event_processing(
         &self,
         executor: TaskExecutor,
@@ -176,11 +174,11 @@ impl<T: Payload> ChainedBftSMR<T> {
                     vote_msg = network_receivers.votes.select_next_some() => {
                         event_processor.process_vote(vote_msg, quorum_size).await;
                     }
-                    timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
-                        event_processor.process_timeout_msg(timeout_msg, quorum_size).await;
+                    remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
+                        event_processor.process_remote_timeout_msg(remote_timeout_msg, quorum_size).await;
                     }
-                    outgoing_timeout = pacemaker_timeout_sender_rx.select_next_some() => {
-                        event_processor.process_outgoing_pacemaker_timeout(outgoing_timeout).await;
+                    local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
+                        event_processor.process_local_timeout(local_timeout_round).await;
                     }
                     sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
@@ -267,26 +265,25 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
             let safety_rules = SafetyRules::new(consensus_state);
 
-            let (external_timeout_sender, external_timeout_receiver) =
+            let (timeout_sender, timeout_receiver) =
                 channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
             let (new_round_events_sender, new_round_events_receiver) =
                 channel::new(1_024, &counters::PENDING_NEW_ROUND_EVENTS);
             let pacemaker = self.create_pacemaker(
-                executor.clone(),
                 self.storage.persistent_liveness_storage(),
                 block_store.root().round(),
                 block_store.highest_certified_block().round(),
                 highest_timeout_certificates,
                 time_service.clone(),
                 new_round_events_sender,
-                external_timeout_sender,
+                timeout_sender,
             );
 
             let proposer_election = self.create_proposer_election();
             let event_processor = EventProcessor::new(
                 self.author,
                 Arc::clone(&block_store),
-                Arc::clone(&pacemaker),
+                pacemaker,
                 Arc::clone(&proposer_election),
                 proposal_generator,
                 safety_rules,
@@ -303,7 +300,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
                 event_processor,
                 new_round_events_receiver,
                 network_receivers,
-                external_timeout_receiver,
+                timeout_receiver,
             );
         } else {
             panic!("start called twice on the same Chained BFT SMR!");

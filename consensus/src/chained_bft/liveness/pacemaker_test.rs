@@ -5,12 +5,14 @@ use crate::{
     chained_bft::{
         consensus_types::timeout_msg::PacemakerTimeout,
         liveness::{
-            local_pacemaker::{ExponentialTimeInterval, LocalPacemaker, PacemakerTimeInterval},
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{
+                ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker,
+                PacemakerTimeInterval,
+            },
             pacemaker_timeout_manager::HighestTimeoutCertificates,
         },
         persistent_storage::PersistentStorage,
-        test_utils::{consensus_runtime, MockStorage, TestPayload},
+        test_utils::{MockStorage, TestPayload},
     },
     util::mock_time_service::SimulatedTimeService,
 };
@@ -18,7 +20,6 @@ use channel;
 use futures::{executor::block_on, StreamExt};
 use nextgen_crypto::ed25519::*;
 use std::{sync::Arc, time::Duration, u64};
-use tokio::runtime;
 use types::validator_signer::ValidatorSigner;
 
 #[test]
@@ -35,16 +36,14 @@ fn test_pacemaker_time_interval() {
 }
 
 #[test]
-/// Verify that LocalPacemaker properly outputs PacemakerTimeoutMsg upon timeout
+/// Verify that Pacemaker properly outputs PacemakerTimeoutMsg upon timeout
 fn test_basic_timeout() {
-    let runtime = consensus_runtime();
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let highest_certified_round = 1;
     let simulated_time = SimulatedTimeService::auto_advance_until(Duration::from_millis(4));
     let (new_round_events_sender, _new_round_events_receiver) = channel::new_test(1_024);
     let (external_timeout_sender, mut external_timeout_receiver) = channel::new_test(1_024);
-    let _pm = Arc::new(LocalPacemaker::new(
-        runtime.executor(),
+    let mut pm = Pacemaker::new(
         MockStorage::<TestPayload>::start_for_testing()
             .0
             .persistent_liveness_storage(),
@@ -56,29 +55,27 @@ fn test_basic_timeout() {
         external_timeout_sender,
         1,
         HighestTimeoutCertificates::new(None, None),
-    ));
+    );
 
-    block_on(async move {
-        for _ in 0..2 {
-            let round = external_timeout_receiver.next().await.unwrap();
-            // Here we just test timeout send retry,
-            // round for timeout is not changed as no timeout certificate was gathered at this point
-            assert_eq!(2, round);
-        }
-    });
+    for _ in 0..2 {
+        let round = block_on(external_timeout_receiver.next()).unwrap();
+        // Here we just test timeout send retry,
+        // round for timeout is not changed as no timeout certificate was gathered at this point
+        assert_eq!(2, round);
+        pm.process_local_timeout(round);
+    }
 }
 
 #[test]
-/// Verify that LocalPacemaker forms a timeout certificate on receiving sufficient timeout messages
+/// Verify that Pacemaker forms a timeout certificate on receiving sufficient timeout messages
 fn test_timeout_certificate() {
-    let runtime = consensus_runtime();
     let rounds = 5;
     let mut signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = vec![];
     for round in 1..rounds {
         let signer = ValidatorSigner::<Ed25519PrivateKey>::random([round as u8; 32]);
         signers.push(signer);
     }
-    let (pm, mut new_round_events_receiver) = make_pacemaker(&runtime);
+    let (mut pm, mut new_round_events_receiver) = make_pacemaker();
 
     block_on(async move {
         // Wait for the initial event for the first round.
@@ -100,8 +97,7 @@ fn test_timeout_certificate() {
 
 #[test]
 fn test_basic_qc() {
-    let runtime = consensus_runtime();
-    let (pm, mut new_round_events_receiver) = make_pacemaker(&runtime);
+    let (mut pm, mut new_round_events_receiver) = make_pacemaker();
 
     block_on(async move {
         // Wait for the initial event for the first round.
@@ -115,16 +111,13 @@ fn test_basic_qc() {
     });
 }
 
-fn make_pacemaker(
-    runtime: &runtime::Runtime,
-) -> (Arc<LocalPacemaker>, channel::Receiver<NewRoundEvent>) {
+fn make_pacemaker() -> (Pacemaker, channel::Receiver<NewRoundEvent>) {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let simulated_time = SimulatedTimeService::new();
     let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
     let (pacemaker_timeout_tx, _) = channel::new_test(1_024);
     (
-        Arc::new(LocalPacemaker::new(
-            runtime.executor(),
+        Pacemaker::new(
             MockStorage::<TestPayload>::start_for_testing()
                 .0
                 .persistent_liveness_storage(),
@@ -136,7 +129,7 @@ fn make_pacemaker(
             pacemaker_timeout_tx,
             3,
             HighestTimeoutCertificates::new(None, None),
-        )),
+        ),
         new_round_events_receiver,
     )
 }
