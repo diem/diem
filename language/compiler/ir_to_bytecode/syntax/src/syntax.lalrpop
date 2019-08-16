@@ -4,7 +4,7 @@ use codespan::{ByteIndex, Span};
 
 use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
 use crate::ast::{
-    FunctionAnnotation, FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
+    FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
     Block, Cmd, CopyableVal, Spanned,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
@@ -275,8 +275,6 @@ Statement : Statement = {
     <IfStatement>,
     <WhileStatement>,
     <LoopStatement>,
-    <VerifyStatement>,
-    <AssumeStatement>,
     ";" => Statement::EmptyStatement,
 }
 
@@ -310,17 +308,6 @@ VerifierCondition: String = {
     }
 }
 
-VerifyStatement: Statement = {
-    "verify" <cond: VerifierCondition> => {
-        Statement::VerifyStatement(cond)
-    }
-}
-
-AssumeStatement: Statement = {
-    "assume" <cond: VerifierCondition> => {
-        Statement::AssumeStatement(cond)
-    }
-}
 
 Statements : Vec<Statement> = {
     <Statement*>
@@ -364,11 +351,6 @@ Public: () = {
   "public" => ()
 }
 
-FunctionAnnotation: FunctionAnnotation = {
-  "requires" <cond: VerifierCondition> => FunctionAnnotation::Requires(cond.to_string()),
-  "ensures" <cond: VerifierCondition> => FunctionAnnotation::Ensures(cond.to_string()),
-}
-
 ReturnType: Vec<Type> = {
     ":" <t: Type> <v: ("*" <Type>)*> => {
         let mut v = v;
@@ -393,7 +375,6 @@ FunctionDecl : (FunctionName, Function) = {
 MoveFunctionDecl : (FunctionName, Function) = {
     <p: Public?> <n: Name> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
     <acquires: AcquireList?>
-    <annotations: (FunctionAnnotation)*>
     <locals_body: FunctionBlock> => {
         let (locals, body) = locals_body;
         (FunctionName::new(n), Function::new(
@@ -401,7 +382,6 @@ MoveFunctionDecl : (FunctionName, Function) = {
             args,
             ret.unwrap_or(vec![]),
             acquires.unwrap_or_else(Vec::new),
-            annotations,
             FunctionBody::Move{locals: locals, code: body},
         ))
     }
@@ -416,7 +396,6 @@ NativeFunctionDecl: (FunctionName, Function) = {
             args,
             ret.unwrap_or(vec![]),
             acquires.unwrap_or_else(Vec::new),
-            vec![],
             FunctionBody::Native,
         ))
     }
@@ -456,7 +435,6 @@ pub Program : Program = {
                 vec![],
                 vec![],
                 vec![],
-                vec![],
                 FunctionBody::Move {
                     locals: vec![],
                     code: Block::new(vec![return_stmt]),
@@ -474,7 +452,6 @@ pub Script : Script = {
             Function::new(
                 FunctionVisibility::Public,
                 args,
-                vec![],
                 vec![],
                 vec![],
                 FunctionBody::Move{ locals: locals, code: body },

@@ -1793,7 +1793,6 @@ impl<S: Scope + Sized> Compiler<S> {
                     stmt_info = self.compile_if_else(&if_else, code, function_frame)?;
                     debug!("{:?}", code);
                 }
-                Statement::VerifyStatement(_) | Statement::AssumeStatement(_) => continue,
                 Statement::EmptyStatement => continue,
             };
             cf_info = ControlFlowInfo::successor(cf_info, stmt_info);
