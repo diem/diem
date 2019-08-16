@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData, AccountResource},
+    account::{Account, AccountData},
     common_transactions::mint_txn,
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
@@ -47,16 +47,10 @@ fn mint_to_existing() {
     let updated_receiver = executor
         .read_account_resource(receiver.account())
         .expect("receiver must exist");
-    assert_eq!(
-        sender_balance,
-        AccountResource::read_balance(&updated_sender)
-    );
-    assert_eq!(
-        receiver_balance,
-        AccountResource::read_balance(&updated_receiver)
-    );
-    assert_eq!(1, AccountResource::read_sequence_number(&updated_sender));
-    assert_eq!(10, AccountResource::read_sequence_number(&updated_receiver));
+    assert_eq!(sender_balance, updated_sender.balance());
+    assert_eq!(receiver_balance, updated_receiver.balance());
+    assert_eq!(1, updated_sender.sequence_number());
+    assert_eq!(10, updated_receiver.sequence_number());
 }
 
 #[test]
@@ -92,16 +86,10 @@ fn mint_to_new_account() {
     let updated_receiver = executor
         .read_account_resource(&new_account)
         .expect("receiver must exist");
-    assert_eq!(
-        sender_balance,
-        AccountResource::read_balance(&updated_sender)
-    );
-    assert_eq!(
-        receiver_balance,
-        AccountResource::read_balance(&updated_receiver)
-    );
-    assert_eq!(1, AccountResource::read_sequence_number(&updated_sender));
-    assert_eq!(0, AccountResource::read_sequence_number(&updated_receiver));
+    assert_eq!(sender_balance, updated_sender.balance());
+    assert_eq!(receiver_balance, updated_receiver.balance());
+    assert_eq!(1, updated_sender.sequence_number());
+    assert_eq!(0, updated_receiver.sequence_number());
 
     // Mint can only be called from genesis address;
     let txn = mint_txn(&new_account, &new_account, 0, mint_amount);

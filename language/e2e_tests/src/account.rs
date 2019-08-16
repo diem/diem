@@ -6,7 +6,7 @@
 use lazy_static::lazy_static;
 use nextgen_crypto::ed25519::*;
 use rand::{Rng, SeedableRng};
-use std::{convert::TryInto, time::Duration};
+use std::time::Duration;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -16,10 +16,7 @@ use types::{
 };
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
-use vm_runtime_types::{
-    loaded_data::struct_def::StructDef,
-    value::{MutVal, Value},
-};
+use vm_runtime_types::value::{MutVal, Value};
 
 // StdLib account, it is where the code is and needed to make access path to Account resources
 lazy_static! {
@@ -109,8 +106,8 @@ impl Account {
     /// Computes the authentication key for this account, as stored on the chain.
     ///
     /// This is the same as the account's address if the keys have never been rotated.
-    pub fn auth_key(&self) -> AccountAddress {
-        AccountAddress::from_public_key(&self.pubkey)
+    pub fn auth_key(&self) -> ByteArray {
+        ByteArray::new(AccountAddress::from_public_key(&self.pubkey).to_vec())
     }
 
     //
@@ -200,14 +197,6 @@ impl Account {
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
         .into_inner()
-    }
-
-    /// Given a blob, materializes the VM Value behind it.
-    pub(crate) fn read_account_resource(blob: &[u8], account_type: StructDef) -> Option<Value> {
-        match Value::simple_deserialize(blob, account_type) {
-            Ok(account) => Some(account),
-            Err(_) => None,
-        }
     }
 }
 
@@ -351,118 +340,5 @@ impl AccountData {
     /// Returns the initial received events count.
     pub fn received_events_count(&self) -> u64 {
         self.received_events.count()
-    }
-}
-
-/// Helper methods for dealing with account resources as seen by the Libra VM.
-pub enum AccountResource {}
-
-impl AccountResource {
-    /// Returns the authentication key read from a [`Value`] representing the account.
-    pub fn read_auth_key(account: &Value) -> AccountAddress {
-        // The return type is slightly confusing -- the auth key stored on the chain is actually
-        // just a hash of the public key from the account. This may change in the future with
-        // flexible authentication.
-        match account {
-            Value::Struct(fields) => {
-                let auth_key = fields.get(0).expect("Auth key must be field 0 in Account");
-                match &*auth_key.peek() {
-                    Value::ByteArray(bytes) => bytes
-                        .as_bytes()
-                        .try_into()
-                        .expect("Auth key must be parseable as an account address"),
-                    _ => panic!("auth key must be a ByteArray"),
-                }
-            }
-            _ => panic!("Account must be a Value::Struct"),
-        }
-    }
-
-    /// Returns the balance read from a [`Value`] representing the account.
-    pub fn read_balance(account: &Value) -> u64 {
-        match account {
-            Value::Struct(fields) => {
-                let coin = fields
-                    .get(1)
-                    .expect("LibraCoin.T must be the second field in Account");
-                match &*coin.peek() {
-                    Value::Struct(balance) => {
-                        let value = balance.get(0).expect("balance field must exist");
-                        match &*value.peek() {
-                            Value::U64(val) => *val,
-                            _ => panic!("balance field must exist"),
-                        }
-                    }
-                    _ => panic!("account must contain LibraCoin.T as second field"),
-                }
-            }
-            _ => panic!("Account must be a Value::Struct"),
-        }
-    }
-
-    /// Returns the received events count read from a [`Value`] representing the account.
-    pub fn read_received_events_count(account: &Value) -> u64 {
-        match account {
-            Value::Struct(fields) => {
-                let received_events_count = fields
-                    .get(3)
-                    .expect("received_events must be field 2 in Account");
-                match &*received_events_count.peek() {
-                    Value::Struct(fields) => {
-                        match &*fields
-                            .get(0)
-                            .expect("received_events_count must be field 0 in Event Handle")
-                            .peek()
-                        {
-                            Value::U64(count) => *count,
-                            _ => panic!("Expected a count"),
-                        }
-                    }
-                    _ => panic!("received_event field must exist"),
-                }
-            }
-            _ => panic!("Account must be a Value::Struct"),
-        }
-    }
-
-    /// Returns the sent events count read from a [`Value`] representing the account.
-    pub fn read_sent_events_count(account: &Value) -> u64 {
-        match account {
-            Value::Struct(fields) => {
-                let sent_events_count = fields
-                    .get(4)
-                    .expect("sent_events must be field 3 in Account");
-                match &*sent_events_count.peek() {
-                    Value::Struct(fields) => {
-                        match &*fields
-                            .get(0)
-                            .expect("sent_events_count must be field 0 in Event Handle")
-                            .peek()
-                        {
-                            Value::U64(count) => *count,
-                            _ => panic!("Expected a count"),
-                        }
-                    }
-                    _ => panic!("sent event field must exist"),
-                }
-            }
-            _ => panic!("Account must be a Value::Struct"),
-        }
-    }
-
-    /// Returns the sequence number read from a [`Value`] representing the account.
-    pub fn read_sequence_number(account: &Value) -> u64 {
-        match account {
-            Value::Struct(fields) => {
-                let sequence_number = fields
-                    .get(5)
-                    .expect("sequence number must be the fifth field in Account");
-                match &*sequence_number.peek() {
-                    Value::U64(val) => *val,
-                    _ => panic!("sequence number field must exist"),
-                }
-            }
-            _ => panic!("Account must be a Value::Struct"),
-        }
     }
 }

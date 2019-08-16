@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData, AccountResource},
+    account::{Account, AccountData},
     common_transactions::{create_account_txn, rotate_key_txn},
     executor::FakeExecutor,
 };
@@ -40,11 +40,11 @@ fn rotate_key() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     assert_eq!(
-        new_key_hash,
-        AccountResource::read_auth_key(&updated_sender)
+        new_key_hash.as_ref(),
+        updated_sender.authentication_key().as_bytes(),
     );
-    assert_eq!(balance, AccountResource::read_balance(&updated_sender));
-    assert_eq!(11, AccountResource::read_sequence_number(&updated_sender));
+    assert_eq!(balance, updated_sender.balance());
+    assert_eq!(11, updated_sender.sequence_number());
 
     // Check that transactions cannot be sent with the old key any more.
     let new_account = Account::new();
