@@ -369,7 +369,7 @@ impl PacemakerTimeoutCertificate {
         // Round numbers:
         // - are reset to 0 periodically.
         // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
-        // (BlockStore::need_sync_for_quorum_cert)
+        // (ConsensusState::commit_rule_for_certified_block)
         assumed_postcondition!(self.round < std::u64::MAX - 1);
         self.round
     }
