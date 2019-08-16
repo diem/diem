@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: BorrowLocReferenceError(5) }
+// check: VerificationError
+// kind: BorrowLocReferenceError
 
 main() {
     let v: u64;

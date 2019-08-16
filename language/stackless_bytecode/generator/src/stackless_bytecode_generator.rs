@@ -257,12 +257,23 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::BorrowLoc(idx) => {
+            Bytecode::MutBorrowLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types
                     .push(SignatureToken::MutableReference(Box::new(signature)));
+                self.code
+                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx));
+                self.temp_count += 1;
+            }
+
+            Bytecode::ImmBorrowLoc(idx) => {
+                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types
+                    .push(SignatureToken::Reference(Box::new(signature)));
                 self.code
                     .push(StacklessBytecode::BorrowLoc(temp_index, *idx));
                 self.temp_count += 1;

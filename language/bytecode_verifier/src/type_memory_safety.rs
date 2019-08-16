@@ -99,7 +99,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         nonce
     }
 
-    fn freeze_ok(&self, state: &AbstractState, existing_borrows: BTreeSet<Nonce>) -> bool {
+    fn freeze_ok(&self, state: &AbstractState, existing_borrows: &BTreeSet<Nonce>) -> bool {
         for (arg_idx, arg_type_view) in self.locals_signature_view.tokens().enumerate() {
             if arg_type_view.as_inner().is_mutable_reference()
                 && state.is_available(arg_idx as LocalIndex)
@@ -136,10 +136,11 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         checked_verify!(signature.is_reference());
         !signature.is_mutable_reference() || {
             let borrowed_nonces = state.borrowed_nonces(nonce);
-            self.freeze_ok(state, borrowed_nonces)
+            self.freeze_ok(state, &borrowed_nonces)
         }
     }
 
+    // helper for both `ImmBorrowFIeld` and `MutBorrowField`
     fn verify_field_access(
         &self,
         operand: &StackAbstractValue,
@@ -160,6 +161,23 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
         }
 
+        Ok(())
+    }
+
+    // helper for both `ImmBorrowLoc` and `MutBorrowLoc`
+    fn verify_borrow_loc(
+        &self,
+        state: &AbstractState,
+        loc_idx: &LocalIndex,
+        loc_signature: &SignatureToken,
+        offset: usize,
+    ) -> Result<(), VMStaticViolation> {
+        if loc_signature.is_reference() {
+            return Err(VMStaticViolation::BorrowLocReferenceError(offset));
+        }
+        if !state.is_available(*loc_idx) {
+            return Err(VMStaticViolation::BorrowLocUnavailableError(offset));
+        }
         Ok(())
     }
 
@@ -252,7 +270,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if let SignatureToken::MutableReference(signature) = operand.signature {
                     let operand_nonce = operand.value.extract_nonce().unwrap().clone();
                     let borrowed_nonces = state.borrowed_nonces(operand_nonce.clone());
-                    if self.freeze_ok(&state, borrowed_nonces) {
+                    if self.freeze_ok(&state, &borrowed_nonces) {
                         self.stack.push(StackAbstractValue {
                             signature: SignatureToken::Reference(signature),
                             value: operand.value,
@@ -312,7 +330,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if operand.signature.is_mutable_reference() {
                     let borrowed_nonces = state
                         .borrowed_nonces_for_field(*field_definition_index, operand_nonce.clone());
-                    if !self.freeze_ok(&state, borrowed_nonces) {
+                    if !self.freeze_ok(&state, &borrowed_nonces) {
                         return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
                             offset,
                         ));
@@ -422,23 +440,46 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
             }
 
-            Bytecode::BorrowLoc(idx) => {
+            Bytecode::MutBorrowLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
-                if signature.is_reference() {
-                    Err(VMStaticViolation::BorrowLocReferenceError(offset))
-                } else if !state.is_available(*idx) {
-                    Err(VMStaticViolation::BorrowLocUnavailableError(offset))
-                } else if state.is_full(state.local(*idx)) {
-                    let nonce = self.get_nonce(&mut state);
-                    state.borrow_from_local_value(*idx, nonce.clone());
-                    self.stack.push(StackAbstractValue {
-                        signature: SignatureToken::MutableReference(Box::new(signature)),
-                        value: AbstractValue::Reference(nonce),
-                    });
-                    Ok(())
-                } else {
-                    Err(VMStaticViolation::BorrowLocExistsBorrowError(offset))
+                self.verify_borrow_loc(state, idx, &signature, offset)?;
+
+                if !state.is_full(state.local(*idx)) {
+                    return Err(VMStaticViolation::BorrowLocExistsBorrowError(offset));
                 }
+
+                let nonce = self.get_nonce(&mut state);
+                state.borrow_from_local_value(*idx, nonce.clone());
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::MutableReference(Box::new(signature)),
+                    value: AbstractValue::Reference(nonce),
+                });
+                Ok(())
+            }
+
+            Bytecode::ImmBorrowLoc(idx) => {
+                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                self.verify_borrow_loc(state, idx, &signature, offset)?;
+
+                let borrowed_nonces = match state.local(*idx) {
+                    AbstractValue::Reference(_) => {
+                        // TODO This should really be a VMInvariantViolation
+                        // But it is not supported in the verifier currently
+                        return Err(VMStaticViolation::BorrowLocReferenceError(offset));
+                    }
+                    AbstractValue::Value(_, nonces) => nonces,
+                };
+                if !self.freeze_ok(state, &borrowed_nonces) {
+                    return Err(VMStaticViolation::BorrowLocExistsBorrowError(offset));
+                }
+
+                let nonce = self.get_nonce(&mut state);
+                state.borrow_from_local_value(*idx, nonce.clone());
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Reference(Box::new(signature)),
+                    value: AbstractValue::Reference(nonce),
+                });
+                Ok(())
             }
 
             // TODO: Handle type actuals for generics

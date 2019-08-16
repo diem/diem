@@ -214,7 +214,8 @@ enum BytecodeGen {
     CopyLoc(PropIndex),
     MoveLoc(PropIndex),
     StLoc(PropIndex),
-    BorrowLoc(PropIndex),
+    MutBorrowLoc(PropIndex),
+    ImmBorrowLoc(PropIndex),
 }
 
 impl BytecodeGen {
@@ -245,7 +246,8 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(CopyLoc),
             any::<PropIndex>().prop_map(MoveLoc),
             any::<PropIndex>().prop_map(StLoc),
-            any::<PropIndex>().prop_map(BorrowLoc),
+            any::<PropIndex>().prop_map(MutBorrowLoc),
+            any::<PropIndex>().prop_map(ImmBorrowLoc),
         ]
     }
 
@@ -260,7 +262,9 @@ impl BytecodeGen {
 
         match self {
             MutBorrowField(_) | ImmBorrowField(_) => state.field_defs_len != 0,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) => !locals_signature.is_empty(),
+            CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) => {
+                !locals_signature.is_empty()
+            }
             _ => true,
         }
     }
@@ -364,11 +368,17 @@ impl BytecodeGen {
                 }
                 Bytecode::StLoc(idx.index(locals_signature.len()) as LocalIndex)
             }
-            BytecodeGen::BorrowLoc(idx) => {
+            BytecodeGen::MutBorrowLoc(idx) => {
                 if locals_signature.is_empty() {
                     return None;
                 }
-                Bytecode::BorrowLoc(idx.index(locals_signature.len()) as LocalIndex)
+                Bytecode::MutBorrowLoc(idx.index(locals_signature.len()) as LocalIndex)
+            }
+            BytecodeGen::ImmBorrowLoc(idx) => {
+                if locals_signature.is_empty() {
+                    return None;
+                }
+                Bytecode::ImmBorrowLoc(idx.index(locals_signature.len()) as LocalIndex)
             }
         };
 

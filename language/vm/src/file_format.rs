@@ -836,14 +836,22 @@ pub enum Bytecode {
     ///
     /// ```..., reference_value -> ..., reference_value```
     FreezeRef,
-    /// Load a reference to a local identified by LocalIndex.
+    /// Load a mutable reference to a local identified by LocalIndex.
     ///
     /// The local must not be a reference.
     ///
     /// Stack transition:
     ///
     /// ```... -> ..., reference```
-    BorrowLoc(LocalIndex),
+    MutBorrowLoc(LocalIndex),
+    /// Load an immutable reference to a local identified by LocalIndex.
+    ///
+    /// The local must not be a reference.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., reference```
+    ImmBorrowLoc(LocalIndex),
     /// Load a mutable reference to a field identified by `FieldDefinitionIndex`.
     /// The top of the stack must be a mutable reference to a type that contains the field
     /// definition.
@@ -1058,7 +1066,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1084,7 +1092,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::WriteRef => write!(f, "WriteRef"),
             Bytecode::ReleaseRef => write!(f, "ReleaseRef"),
             Bytecode::FreezeRef => write!(f, "FreezeRef"),
-            Bytecode::BorrowLoc(a) => write!(f, "BorrowLoc({})", a),
+            Bytecode::MutBorrowLoc(a) => write!(f, "MutBorrowLoc({})", a),
+            Bytecode::ImmBorrowLoc(a) => write!(f, "ImmBorrowLoc({})", a),
             Bytecode::MutBorrowField(a) => write!(f, "MutBorrowField({})", a),
             Bytecode::ImmBorrowField(a) => write!(f, "ImmBorrowField({})", a),
             Bytecode::BorrowGlobal(a, b) => write!(f, "BorrowGlobal({}, {:?})", a, b),

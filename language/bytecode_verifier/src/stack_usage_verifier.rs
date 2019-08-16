@@ -82,7 +82,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::LdFalse
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
-            | Bytecode::BorrowLoc(_) => 1,
+            | Bytecode::MutBorrowLoc(_)
+            | Bytecode::ImmBorrowLoc(_) => 1,
 
             Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);

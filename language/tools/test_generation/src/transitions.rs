@@ -63,15 +63,20 @@ pub fn stack_push_local_move(state: &AbstractState, index: u8) -> AbstractState 
 }
 
 /// Push a reference to the local at `index` to the stack.
-pub fn stack_push_local_borrow(state: &AbstractState, index: u8) -> AbstractState {
+pub fn stack_push_local_borrow(state: &AbstractState, mut_: bool, index: u8) -> AbstractState {
     // TODO: Change to precondition once MIRAI is integrated
     assert!(
         state.get_local(index as usize).is_some(),
         "Failed to borrow local to stack"
     );
     let state = state.clone();
-    let (token, _) = state.get_local(index as usize).unwrap().clone();
-    stack_push(&state, SignatureToken::MutableReference(Box::new(token)))
+    let (inner_token, _) = state.get_local(index as usize).unwrap().clone();
+    let ref_token = if mut_ {
+        SignatureToken::MutableReference(Box::new(inner_token))
+    } else {
+        SignatureToken::Reference(Box::new(inner_token))
+    };
+    stack_push(&state, ref_token)
 }
 
 /// Pop an element from the stack and insert it into the locals at `index`
@@ -143,8 +148,8 @@ macro_rules! state_stack_push_local_move {
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_push_local_borrow {
-    ($e: expr) => {
-        Box::new(move |state| stack_push_local_borrow(state, $e))
+    ($mut_: expr, $e: expr) => {
+        Box::new(move |state| stack_push_local_borrow(state, $mut_, $e))
     };
 }
 

@@ -175,8 +175,8 @@ where
             | Unpack(_, _)
             | Pack(_, _)
             | Call(_, _) => true,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | BorrowLoc(_) | ImmBorrowField(_)
-            | MutBorrowField(_) => true,
+            CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
+            | ImmBorrowField(_) | MutBorrowField(_) => true,
             _ => false,
         }
     }
@@ -752,7 +752,7 @@ where
                     HashMap::new(),
                 )
             }
-            CopyLoc(_) | MoveLoc(_) | BorrowLoc(_) => {
+            CopyLoc(_) | MoveLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) => {
                 let (module, local_idx, function_idx, frame_local) = self.next_local_state();
                 let size = frame_local.size();
                 let mut locals_mapping = HashMap::new();

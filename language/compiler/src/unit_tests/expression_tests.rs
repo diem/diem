@@ -203,7 +203,7 @@ fn compile_immutable_borrow_local() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    assert!(instr_count!(compiled_script, FreezeRef) == 1);
+    assert!(instr_count!(compiled_script, ImmBorrowLoc(_)) == 1);
 }
 
 #[test]

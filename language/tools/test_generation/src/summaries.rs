@@ -65,9 +65,13 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             preconditions: vec![state_stack_has!(0, None), state_local_available!(i)],
             effects: vec![state_stack_pop_local_insert!(i), state_stack_pop!()],
         },
-        Bytecode::BorrowLoc(i) => Summary {
+        Bytecode::MutBorrowLoc(i) => Summary {
             preconditions: vec![state_local_available!(i)],
-            effects: vec![state_stack_push_local_borrow!(i)],
+            effects: vec![state_stack_push_local_borrow!(true, i)],
+        },
+        Bytecode::ImmBorrowLoc(i) => Summary {
+            preconditions: vec![state_local_available!(i)],
+            effects: vec![state_stack_push_local_borrow!(false, i)],
         },
         Bytecode::Add => Summary {
             preconditions: vec![
