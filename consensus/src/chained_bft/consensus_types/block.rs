@@ -227,12 +227,8 @@ where
         checked_precondition!(round > parent_block.round());
 
         // This precondition guards the addition overflow caused by passing
-        // "parent_block.height() + 1" to "new_internal". Since the
-        // "height" and "round" values are always same, the check
-        // "parent_block.height() <= std::u64::MAX - 2" ensures that
-        // the max "height" is consistent with max "round"
-        // (consensus/src/chained_bft/consensus_types/block.rs: "pub fn round").
-        checked_precondition!(parent_block.height() <= std::u64::MAX - 2);
+        // parent_block.height() + 1 to new_internal.
+        checked_precondition!(parent_block.height() <= std::u64::MAX - 1);
         Block::new_internal(
             payload,
             parent_block.id(),
@@ -252,12 +248,9 @@ where
         checked_precondition!(round > parent_block.round());
 
         // This precondition guards the addition overflow caused by using
-        // "parent_block.height() + 1" in the construction of "BlockSerializer". Since the
-        // "height" and "round" values are always same, the check
-        // "parent_block.height() <= std::u64::MAX - 2" ensures that
-        // the max "height" is consistent with max "round"
-        // (consensus/src/chained_bft/consensus_types/block.rs: "pub fn round").
-        checked_precondition!(parent_block.height() <= std::u64::MAX - 2);
+        // parent_block.height() + 1 in the construction of BlockSerializer.
+        // (consensus/src/chained_bft/consensus_types/block.rs: pub fn round).
+        checked_precondition!(parent_block.height() <= std::u64::MAX - 1);
 
         let payload = T::default();
         // We want all the NIL blocks to agree on the timestamps even though they're generated
@@ -336,20 +329,20 @@ where
     }
 
     pub fn height(&self) -> Height {
-        // Since the "height" and "round" values are equal,
-        // it is safe to make the same postcondition assumptions
-        // as in "round()".
-        assumed_postcondition!(self.height <= std::u64::MAX - 2);
+        // Height:
+        // - should not exceed std::u64::MAX - 1 to ensure the parent check doesn't
+        // cause addition overflow.
+        // (consensus/src/chained_bft/consensus_types/block.rs: pub fn make_block)
+        assumed_postcondition!(self.height <= std::u64::MAX - 1);
         self.height
     }
 
     pub fn round(&self) -> Round {
-        // It is safe to assume that round numbers will not reach a value close to
-        // "std::u64::MAX" as they are reset to 0 periodically.
-        // The assumption that round numbers do not exceed "std::u64::MAX - 2" helps verify the
-        // precondition guarding addition overflow caused by the 3 chain safety rule
-        // (consensus/src/chained_bft/block_storage/block_store.rs: "pub fn
-        // need_sync_for_quorum_cert").
+        // Round numbers:
+        // - are reset to 0 periodically.
+        // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
+        // (consensus/src/chained_bft/block_storage/block_store.rs: pub fn
+        // need_sync_for_quorum_cert).
         assumed_postcondition!(self.round <= std::u64::MAX - 2);
         self.round
     }
