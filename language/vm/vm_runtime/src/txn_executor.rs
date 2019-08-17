@@ -47,13 +47,16 @@ mod runtime_tests;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
-    /// The ModuleId for where Account module is being stored.
+    /// The ModuleId for the Account module
     pub static ref ACCOUNT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), "LibraAccount".to_string()) };
-    /// The ModuleId for where LibraCoin module is being stored.
+    /// The ModuleId for the Account module
+    pub static ref BLOCK_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), "Block".to_string()) };
+    /// The ModuleId for the LibraCoin module
     pub static ref COIN_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), "LibraCoin".to_string()) };
-    /// The ModuleId for where Event module is being stored.
+    /// The ModuleId for the Event
     pub static ref EVENT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), "Event".to_string()) };
 

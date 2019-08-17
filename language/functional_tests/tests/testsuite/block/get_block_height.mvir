@@ -1,0 +1,7 @@
+import 0x0.Block;
+main() {
+    // check that the height of the initial block is zero
+    assert(Block.get_current_height() == 0, 77);
+
+    return;
+}
