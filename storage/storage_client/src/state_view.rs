@@ -15,7 +15,7 @@ use std::{
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    proof::{definition::SparseMerkleProof, verify_sparse_merkle_element},
+    proof::{verify_sparse_merkle_element, SparseMerkleProof},
     transaction::Version,
 };
 

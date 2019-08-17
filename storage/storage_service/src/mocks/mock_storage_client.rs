@@ -22,7 +22,7 @@ use types::{
     account_state_blob::AccountStateBlob,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
-    proof::definition::SparseMerkleProof,
+    proof::SparseMerkleProof,
     proto::{
         account_state_blob::AccountStateWithProof,
         get_with_proof::{
