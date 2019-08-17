@@ -14,6 +14,8 @@ macro_rules! make_module_definition {
 lazy_static! {
     static ref ACCOUNT_MODULE: ModuleDefinition =
         make_module_definition!("../modules/libra_account.mvir");
+    static ref BLOCK_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/block.mvir");
     static ref COIN_MODULE: ModuleDefinition =
         make_module_definition!("../modules/libra_coin.mvir");
     static ref NATIVE_HASH_MODULE: ModuleDefinition =
@@ -30,16 +32,19 @@ lazy_static! {
         make_module_definition!("../modules/bytearray_util.mvir");
     static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
     static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
+        // Note: a module can depend on earlier modules in the list, but not vice versa. Don't try
+        // to rearrange without considering this!
         vec![
+            &*ADDRESS_UTIL_MODULE,
+            &*BLOCK_MODULE,
+            &*BYTEARRAY_UTIL_MODULE,
             &*COIN_MODULE,
             &*NATIVE_HASH_MODULE,
             &*SIGNATURE_MODULE,
-            &*ADDRESS_UTIL_MODULE,
             &*U64_UTIL_MODULE,
-            &*BYTEARRAY_UTIL_MODULE,
-            &*EVENT_MODULE,
-            &*ACCOUNT_MODULE,
-            &*VALIDATOR_SET_MODULE,
+            &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
+            &*ACCOUNT_MODULE, // depends on Coin, Event, AddressUtil, BytearrayUtil, U64Util
+            &*VALIDATOR_SET_MODULE // will eventually depend on Account, others
         ]
     };
 }

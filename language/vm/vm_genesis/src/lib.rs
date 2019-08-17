@@ -36,7 +36,7 @@ use vm_runtime::{
         module_cache::{BlockModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE},
+    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE},
 };
 use vm_runtime_types::value::Local;
 
@@ -329,6 +329,10 @@ pub fn encode_genesis_transaction_with_validator(
             txn_executor.create_account(genesis_addr).unwrap().unwrap();
             txn_executor
                 .create_account(account_config::core_code_address())
+                .unwrap()
+                .unwrap();
+            txn_executor
+                .execute_function(&BLOCK_MODULE, "initialize", vec![])
                 .unwrap()
                 .unwrap();
             txn_executor
