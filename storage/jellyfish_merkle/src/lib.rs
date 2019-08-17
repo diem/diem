@@ -76,10 +76,7 @@ use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 use proptest_derive::Arbitrary;
 use std::collections::{HashMap, HashSet};
 use tree_cache::TreeCache;
-use types::{
-    account_state_blob::AccountStateBlob, proof::definition::SparseMerkleProof,
-    transaction::Version,
-};
+use types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version};
 
 /// The hardcoded maximum height of a [`JellyfishMerkleTree`] in nibbles.
 const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;

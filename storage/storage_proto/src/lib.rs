@@ -37,7 +37,7 @@ use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::definition::SparseMerkleProof,
+    proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 
