@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crypto::hash::{TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH};
 use proptest::{collection::vec, prelude::*};
-use types::proof::verify_test_accumulator_element;
+use types::proof::{verify_test_accumulator_element, AccumulatorConsistencyVerificationError};
 
 #[test]
 fn test_error_on_bad_parameters() {
@@ -20,6 +21,100 @@ fn test_one_leaf() {
     store.put_many(&writes);
 
     verify(&store, 1, root_hash, &[hash], 0)
+}
+
+fn mutate_hash(hash: HashValue) -> HashValue {
+    let mut buf = hash.to_vec();
+    *buf.last_mut().unwrap() ^= 0xFF;
+    let ret = HashValue::from_slice(&buf).unwrap();
+    assert_ne!(hash, ret);
+    ret
+}
+
+fn convert_error(res: failure::Result<()>) -> AccumulatorConsistencyVerificationError {
+    res.err()
+        .unwrap()
+        .downcast::<AccumulatorConsistencyVerificationError>()
+        .unwrap()
+}
+
+#[test]
+fn test_bad_consistency_proof() {
+    let batch1: Vec<_> = std::iter::repeat_with(HashValue::random).take(3).collect();
+    let batch2: Vec<_> = std::iter::repeat_with(HashValue::random).take(10).collect();
+    let total_leaves = (batch1.len() + batch2.len()) as u64;
+    let batch1_size = batch1.len() as u64;
+    let mut store = MockHashStore::new();
+
+    let (root_hash1, writes1) = TestAccumulator::append(&store, 0, &batch1).unwrap();
+    store.put_many(&writes1);
+    let (root_hash2, writes2) = TestAccumulator::append(&store, batch1_size, &batch2).unwrap();
+    store.put_many(&writes2);
+
+    {
+        let mut proof =
+            TestAccumulator::get_consistency_proof(&store, total_leaves, batch1_size).unwrap();
+        proof
+            .verify::<TestOnlyHasher>(root_hash1, batch1_size, root_hash2, total_leaves)
+            .unwrap();
+
+        assert_eq!(
+            convert_error(proof.verify::<TestOnlyHasher>(
+                mutate_hash(root_hash1),
+                batch1_size,
+                root_hash2,
+                total_leaves
+            )),
+            AccumulatorConsistencyVerificationError::SubAccRootHashError {
+                expected_root_hash: mutate_hash(root_hash1),
+                actual_root_hash: root_hash1,
+            },
+        );
+
+        assert_eq!(
+            convert_error(proof.verify::<TestOnlyHasher>(
+                root_hash1,
+                batch1_size,
+                mutate_hash(root_hash2),
+                total_leaves
+            )),
+            AccumulatorConsistencyVerificationError::FullAccRootHashError {
+                expected_root_hash: mutate_hash(root_hash2),
+                actual_root_hash: root_hash2,
+            },
+        );
+
+        proof.mut_siblings().push(HashValue::random());
+        assert_eq!(
+            convert_error(proof.verify::<TestOnlyHasher>(
+                root_hash1,
+                batch1_size,
+                root_hash2,
+                total_leaves
+            )),
+            AccumulatorConsistencyVerificationError::NumSiblingError {
+                expected_num_siblings: 3,
+                actual_num_siblings: 4,
+            },
+        );
+    }
+
+    {
+        let mut proof = TestAccumulator::get_consistency_proof(&store, total_leaves, 0).unwrap();
+        proof.mut_siblings().push(HashValue::random());
+        assert_eq!(
+            convert_error(proof.verify::<TestOnlyHasher>(
+                *ACCUMULATOR_PLACEHOLDER_HASH,
+                0,
+                root_hash2,
+                total_leaves,
+            )),
+            AccumulatorConsistencyVerificationError::NumSiblingError {
+                expected_num_siblings: 0,
+                actual_num_siblings: 1,
+            }
+        );
+    }
 }
 
 proptest! {
@@ -46,6 +141,24 @@ proptest! {
 
         // verify proofs for all leaves of a subtree towards subtree root
         verify(&store, batch1.len(), root_hash1, &batch1, 0);
+    }
+
+    #[test]
+    fn test_consistency_proof(
+        batch1 in vec(any::<HashValue>(), 0..100),
+        batch2 in vec(any::<HashValue>(), 0..100),
+    ) {
+        let total_leaves = (batch1.len() + batch2.len()) as u64;
+        let batch1_size = batch1.len() as u64;
+        let mut store = MockHashStore::new();
+
+        let (root_hash1, writes1) = TestAccumulator::append(&store, 0, &batch1).unwrap();
+        store.put_many(&writes1);
+        let (root_hash2, writes2) = TestAccumulator::append(&store, batch1_size, &batch2).unwrap();
+        store.put_many(&writes2);
+
+        let proof = TestAccumulator::get_consistency_proof(&store, total_leaves, batch1_size).unwrap();
+        proof.verify::<TestOnlyHasher>(root_hash1, batch1_size, root_hash2, total_leaves).unwrap();
     }
 }
 

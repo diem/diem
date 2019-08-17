@@ -17,7 +17,7 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkRes
 use failure::prelude::*;
 use futures::channel::oneshot;
 use logger::prelude::*;
-use scratchpad::{Accumulator, ProofRead, SparseMerkleTree};
+use scratchpad::{ProofRead, SparseMerkleTree};
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
     convert::TryFrom,
@@ -30,7 +30,7 @@ use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfoWithSignatures,
-    proof::SparseMerkleProof,
+    proof::{accumulator::Accumulator, SparseMerkleProof},
     transaction::{
         SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,

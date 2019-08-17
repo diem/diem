@@ -11,7 +11,7 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
 use logger::prelude::*;
-use scratchpad::{Accumulator, SparseMerkleTree};
+use scratchpad::SparseMerkleTree;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
@@ -21,6 +21,7 @@ use types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
+    proof::accumulator::Accumulator,
     transaction::{SignedTransaction, TransactionStatus},
 };
 

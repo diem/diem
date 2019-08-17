@@ -104,7 +104,10 @@
 use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use failure::prelude::*;
 use std::marker::PhantomData;
-use types::proof::{position::Position, AccumulatorProof, MerkleTreeInternalNode};
+use types::proof::{
+    position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
+    AccumulatorConsistencyProof, AccumulatorProof, MerkleTreeInternalNode,
+};
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -144,6 +147,19 @@ where
     /// See [`types::proof::AccumulatorProof`] for proof format.
     pub fn get_proof(reader: &R, num_leaves: u64, leaf_index: u64) -> Result<AccumulatorProof> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
+    }
+
+    /// Gets a proof that this accumulator is consistent with another accumulator that has
+    /// `sub_acc_leaves` leaves. `sub_acc_leaves` must not be greater than `full_acc_leaves`.
+    ///
+    /// See [`types::proof::AccumulatorConsistencyProof`] for proof format.
+    pub fn get_consistency_proof(
+        reader: &R,
+        full_acc_leaves: u64,
+        sub_acc_leaves: u64,
+    ) -> Result<AccumulatorConsistencyProof> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_consistency_proof(sub_acc_leaves)
     }
 }
 
@@ -315,6 +331,38 @@ where
             .collect();
 
         Ok(AccumulatorProof::new(siblings))
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_consistency_proof`.
+    fn get_consistency_proof(&self, sub_acc_leaves: u64) -> Result<AccumulatorConsistencyProof> {
+        ensure!(
+            sub_acc_leaves <= self.num_leaves,
+            "The other accumulator is bigger than this one. self.num_leaves: {}. \
+             sub_acc_leaves: {}.",
+            self.num_leaves,
+            sub_acc_leaves,
+        );
+
+        // If the other accumulator is empty. Nothing is needed for the proof since any accumulator
+        // is consistent with an empty one.
+        if sub_acc_leaves == 0 {
+            return Ok(AccumulatorConsistencyProof::new(vec![], vec![]));
+        }
+
+        let frozen_subtree_roots = FrozenSubTreeIterator::new(sub_acc_leaves)
+            .map(|p| self.get_hash(p))
+            .collect::<Result<Vec<_>>>()?;
+
+        let root_level = Position::get_root_position(self.num_leaves - 1).get_level();
+        let siblings = FrozenSubtreeSiblingIterator::new(sub_acc_leaves)
+            .take_while(|p| p.get_level() < root_level)
+            .map(|p| self.get_hash(p))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(AccumulatorConsistencyProof::new(
+            frozen_subtree_roots,
+            siblings,
+        ))
     }
 }
 

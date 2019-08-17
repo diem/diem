@@ -10,9 +10,10 @@
 mod proof_proto_conversion_test;
 
 use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
+use super::accumulator::Accumulator;
 use crate::transaction::TransactionInfo;
 use crypto::{
-    hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use failure::prelude::*;
@@ -303,6 +304,110 @@ impl AccumulatorConsistencyProof {
     pub fn siblings(&self) -> &[HashValue] {
         &self.siblings
     }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn mut_frozen_subtree_roots(&mut self) -> &mut Vec<HashValue> {
+        &mut self.frozen_subtree_roots
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn mut_siblings(&mut self) -> &mut Vec<HashValue> {
+        &mut self.siblings
+    }
+
+    /// Verifies the proof. The verification consists of two steps. First, the frozen subtree roots
+    /// must match `sub_acc_root_hash` and `sub_acc_leaves`. Second, after combining the frozen
+    /// subtree roots with the siblings we must be able to obtain `full_acc_root_hash`.
+    pub fn verify<H: CryptoHasher>(
+        &self,
+        sub_acc_root_hash: HashValue,
+        sub_acc_leaves: u64,
+        full_acc_root_hash: HashValue,
+        full_acc_leaves: u64,
+    ) -> Result<()> {
+        ensure!(
+            sub_acc_leaves <= full_acc_leaves,
+            "Old accumulator ({} leaves) is bigger than new accumulator ({} leaves).",
+            sub_acc_leaves,
+            full_acc_leaves,
+        );
+
+        let old_accumulator =
+            Accumulator::<H>::new(self.frozen_subtree_roots.clone(), sub_acc_leaves)?;
+        if old_accumulator.root_hash() != sub_acc_root_hash {
+            bail_err!(
+                AccumulatorConsistencyVerificationError::SubAccRootHashError {
+                    expected_root_hash: sub_acc_root_hash,
+                    actual_root_hash: old_accumulator.root_hash(),
+                }
+            );
+        }
+
+        if sub_acc_leaves == 0 {
+            if !self.siblings.is_empty() {
+                bail_err!(AccumulatorConsistencyVerificationError::NumSiblingError {
+                    expected_num_siblings: 0,
+                    actual_num_siblings: self.siblings.len(),
+                });
+            }
+            return Ok(());
+        }
+
+        // The expected number of siblings is
+        // 1) The number of levels in the full accumulator.
+        // 2) Minus the number of frozen subtrees in the sub accumulator.
+        // 3) Minus the height of the lowest frozen subtree.
+        let expected_num_siblings = full_acc_leaves.next_power_of_two().trailing_zeros() as usize
+            + 1
+            - self.frozen_subtree_roots.len()
+            - sub_acc_leaves.trailing_zeros() as usize;
+        if self.siblings.len() != expected_num_siblings {
+            bail_err!(AccumulatorConsistencyVerificationError::NumSiblingError {
+                expected_num_siblings,
+                actual_num_siblings: self.siblings.len(),
+            });
+        }
+
+        let actual_root_hash = old_accumulator.append_siblings(&self.siblings)?;
+        if actual_root_hash != full_acc_root_hash {
+            bail_err!(
+                AccumulatorConsistencyVerificationError::FullAccRootHashError {
+                    expected_root_hash: full_acc_root_hash,
+                    actual_root_hash,
+                }
+            );
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Fail)]
+pub enum AccumulatorConsistencyVerificationError {
+    #[fail(
+        display = "Frozen subtrees do not match old root hash. Expected: {:x}. Actual: {:x}.",
+        expected_root_hash, actual_root_hash
+    )]
+    SubAccRootHashError {
+        expected_root_hash: HashValue,
+        actual_root_hash: HashValue,
+    },
+    #[fail(
+        display = "Unexpected number of siblings. Expected: {}. Actual: {}.",
+        expected_num_siblings, actual_num_siblings
+    )]
+    NumSiblingError {
+        expected_num_siblings: usize,
+        actual_num_siblings: usize,
+    },
+    #[fail(
+        display = "Root hashes do not match. Expected: {:x}. Actual: {:x}.",
+        expected_root_hash, actual_root_hash
+    )]
+    FullAccRootHashError {
+        expected_root_hash: HashValue,
+        actual_root_hash: HashValue,
+    },
 }
 
 impl FromProto for AccumulatorConsistencyProof {

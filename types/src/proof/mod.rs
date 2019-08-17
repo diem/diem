@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod accumulator;
 pub mod position;
 #[cfg(any(test, feature = "testing"))]
 pub mod proptest_proof;
@@ -28,8 +29,8 @@ use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
 pub use crate::proof::definition::{
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
-    SignedTransactionProof, SparseMerkleProof,
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorConsistencyVerificationError,
+    AccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
 };
 
 /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
