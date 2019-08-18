@@ -9,6 +9,7 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
 };
+use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
@@ -116,6 +117,19 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
     fn write_borrow_ok(existing_borrows: BTreeSet<Nonce>) -> bool {
         existing_borrows.is_empty()
+    }
+
+    fn is_readable_reference(
+        &self,
+        state: &AbstractState,
+        signature: &SignatureToken,
+        nonce: Nonce,
+    ) -> bool {
+        checked_verify!(signature.is_reference());
+        !signature.is_mutable_reference() || {
+            let borrowed_nonces = state.borrowed_nonces(nonce);
+            self.freeze_ok(state, borrowed_nonces)
+        }
     }
 
     fn execute_inner(
@@ -503,48 +517,34 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::ReadRef => {
-                let operand = self.stack.pop().unwrap();
-                match operand.signature {
-                    SignatureToken::Reference(signature) => {
-                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
-                        let kind = SignatureTokenView::new(self.module, &signature).kind();
-                        match kind {
-                            Kind::All | Kind::Resource => {
-                                Err(VMStaticViolation::ReadRefResourceError(offset))
-                            }
-                            Kind::Unrestricted => {
-                                self.stack.push(StackAbstractValue {
-                                    signature: *signature,
-                                    value: AbstractValue::full_value(Kind::Unrestricted),
-                                });
-                                state.destroy_nonce(operand_nonce);
-                                Ok(())
-                            }
-                        }
+                let StackAbstractValue {
+                    signature: operand_signature,
+                    value: operand_value,
+                } = self.stack.pop().unwrap();
+                if !operand_signature.is_reference() {
+                    return Err(VMStaticViolation::ReadRefTypeMismatchError(offset));
+                }
+                let operand_nonce = operand_value.extract_nonce().unwrap();
+                if !self.is_readable_reference(state, &operand_signature, operand_nonce.clone()) {
+                    Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset))
+                } else {
+                    let inner_signature = *match operand_signature {
+                        SignatureToken::Reference(signature) => signature,
+                        SignatureToken::MutableReference(signature) => signature,
+                        _ => panic!("Unreachable"),
+                    };
+                    if SignatureTokenView::new(self.module, &inner_signature).kind()
+                        != Kind::Unrestricted
+                    {
+                        Err(VMStaticViolation::ReadRefResourceError(offset))
+                    } else {
+                        self.stack.push(StackAbstractValue {
+                            signature: inner_signature,
+                            value: AbstractValue::full_value(Kind::Unrestricted),
+                        });
+                        state.destroy_nonce(operand_nonce.clone());
+                        Ok(())
                     }
-                    SignatureToken::MutableReference(signature) => {
-                        let operand_nonce = operand.value.extract_nonce().unwrap().clone();
-                        let kind = SignatureTokenView::new(self.module, &signature).kind();
-                        match kind {
-                            Kind::All | Kind::Resource => {
-                                Err(VMStaticViolation::ReadRefResourceError(offset))
-                            }
-                            Kind::Unrestricted => {
-                                let borrowed_nonces = state.borrowed_nonces(operand_nonce.clone());
-                                if self.freeze_ok(&state, borrowed_nonces) {
-                                    self.stack.push(StackAbstractValue {
-                                        signature: *signature,
-                                        value: AbstractValue::full_value(Kind::Unrestricted),
-                                    });
-                                    state.destroy_nonce(operand_nonce);
-                                    Ok(())
-                                } else {
-                                    Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset))
-                                }
-                            }
-                        }
-                    }
-                    _ => Err(VMStaticViolation::ReadRefTypeMismatchError(offset)),
                 }
             }
 
@@ -634,10 +634,18 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
                     if let AbstractValue::Reference(nonce) = operand1.value {
-                        state.destroy_nonce(nonce);
+                        if self.is_readable_reference(state, &operand1.signature, nonce.clone()) {
+                            state.destroy_nonce(nonce);
+                        } else {
+                            return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
+                        }
                     }
                     if let AbstractValue::Reference(nonce) = operand2.value {
-                        state.destroy_nonce(nonce);
+                        if self.is_readable_reference(state, &operand2.signature, nonce.clone()) {
+                            state.destroy_nonce(nonce);
+                        } else {
+                            return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
+                        }
                     }
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::Bool,
