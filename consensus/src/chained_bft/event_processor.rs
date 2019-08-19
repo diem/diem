@@ -117,7 +117,7 @@ impl<T: Payload> EventProcessor<T> {
     /// Replica:
     ///
     /// Do nothing
-    pub async fn process_new_round_event(&self, new_round_event: NewRoundEvent) {
+    async fn process_new_round_event(&self, new_round_event: NewRoundEvent) {
         debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
@@ -273,9 +273,12 @@ impl<T: Payload> EventProcessor<T> {
                 counters::TIMEOUT_VOTES_FORM_QC_COUNT.inc();
             }
         }
-        self.pacemaker
+        if let Some(new_round_event) = self
+            .pacemaker
             .process_remote_timeout(timeout_msg.pacemaker_timeout().clone())
-            .await;
+        {
+            self.process_new_round_event(new_round_event).await;
+        }
     }
 
     /// In case some peer's round or HQC is stale, send a SyncInfo message to that peer.
@@ -454,13 +457,13 @@ impl<T: Payload> EventProcessor<T> {
                 self.process_commit(block, finality_proof).await;
             }
         }
-        self.pacemaker
-            .process_certificates(
-                qc.certified_block_round(),
-                highest_committed_proposal_round,
-                tc,
-            )
-            .await;
+        if let Some(new_round_event) = self.pacemaker.process_certificates(
+            qc.certified_block_round(),
+            highest_committed_proposal_round,
+            tc,
+        ) {
+            self.process_new_round_event(new_round_event).await;
+        }
     }
 
     /// This function processes a proposal that was chosen as a representative of its round:
@@ -782,6 +785,21 @@ impl<T: Payload> EventProcessor<T> {
         {
             error!("Failed to return the requested block: {:?}", e);
         }
+    }
+
+    /// To jump start new round with the current certificates we have.
+    pub async fn start(&mut self) {
+        let hqc = self.block_store.highest_quorum_cert();
+        let last_committed_round = self.block_store.root().round();
+        let new_round_event = self
+            .pacemaker
+            .process_certificates(
+                hqc.certified_block_round(),
+                Some(last_committed_round),
+                None,
+            )
+            .expect("Can not jump start a new round from existing certificates.");
+        self.process_new_round_event(new_round_event).await;
     }
 
     /// Inspect the current consensus state.

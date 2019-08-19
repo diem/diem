@@ -14,12 +14,9 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
-use futures::{executor::block_on, future, Future, FutureExt, SinkExt};
 use logger::prelude::*;
-use mirai_annotations::assume;
 use std::{
-    cmp, fmt,
-    pin::Pin,
+    fmt,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -160,8 +157,6 @@ pub struct Pacemaker {
     current_round_deadline: Instant,
     // Service for timer
     time_service: Arc<dyn TimeService>,
-    // To send new round events.
-    new_round_events_sender: channel::Sender<NewRoundEvent>,
     // To send timeout events to other pacemakers
     timeout_sender: channel::Sender<Round>,
     // Manages the PacemakerTimeout and PacemakerTimeoutCertificate structs
@@ -172,77 +167,31 @@ impl Pacemaker {
     pub fn new(
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         time_interval: Box<dyn PacemakerTimeInterval>,
-        highest_committed_round: Round,
-        highest_qc_round: Round,
         time_service: Arc<dyn TimeService>,
-        new_round_events_sender: channel::Sender<NewRoundEvent>,
         timeout_sender: channel::Sender<Round>,
         pacemaker_timeout_quorum_size: usize,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Self {
         assert!(pacemaker_timeout_quorum_size > 0);
-        // Round numbers:
-        // - are reset to 0 periodically.
-        // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
-        // (ConsensusState::commit_rule_for_certified_block).
-        assume!(highest_qc_round < std::u64::MAX - 1);
-        // The starting round is maximum(highest quorum certificate,
-        // highest timeout certificate round) + 1.  Note that it is possible this
-        // replica already voted at this round and will until a round timeout
-        // or another replica convinces it via a quorum certificate or a timeout
-        // certificate to advance to a higher round.
-        let current_round = {
-            match highest_timeout_certificates.highest_timeout_certificate() {
-                Some(highest_timeout_certificate) => {
-                    cmp::max(highest_qc_round, highest_timeout_certificate.round())
-                }
-                None => highest_qc_round,
-            }
-        } + 1;
         // Our counters are initialized via lazy_static, so they're not going to appear in
         // Prometheus if some conditions never happen. Invoking get() function enforces creation.
         counters::QC_ROUNDS_COUNT.get();
         counters::TIMEOUT_ROUNDS_COUNT.get();
         counters::TIMEOUT_COUNT.get();
 
-        let mut pacemaker = Self {
+        Self {
             time_interval,
-            highest_committed_round,
-            highest_qc_round,
-            current_round,
+            highest_committed_round: 0,
+            highest_qc_round: 0,
+            current_round: 0,
             current_round_deadline: Instant::now(),
             time_service,
-            new_round_events_sender,
             timeout_sender,
             pacemaker_timeout_manager: PacemakerTimeoutManager::new(
                 pacemaker_timeout_quorum_size,
-                highest_timeout_certificates,
+                highest_timeout_certificate,
                 persistent_liveness_storage,
             ),
-        };
-        // To jump start the execution.
-        block_on(pacemaker.create_new_round_task(NewRoundReason::QCReady));
-        pacemaker
-    }
-
-    /// Trigger an event to create a new round interval and ignore any events from previous round
-    /// intervals.  The reason for the event is given by the caller, the timeout is
-    /// deterministically determined by the reason and the internal state.
-    fn create_new_round_task(&mut self, reason: NewRoundReason) -> impl Future<Output = ()> + Send {
-        let round = self.current_round;
-        let timeout = self.setup_timeout();
-        let mut sender = self.new_round_events_sender.clone();
-        async move {
-            if let Err(e) = sender
-                .send(NewRoundEvent {
-                    round,
-                    reason,
-                    timeout,
-                })
-                .await
-            {
-                debug!("Error in sending new round interval event: {:?}", e);
-            }
         }
     }
 
@@ -284,7 +233,7 @@ impl Pacemaker {
 
     /// Attempts to update highest_qc_certified_round when receiving QC for given round.
     /// Returns true if highest_qc_certified_round of this pacemaker has changed
-    fn update_highest_qc_round(&mut self, round: Round) -> bool {
+    fn update_highest_qc_round(&mut self, round: Round) {
         if round > self.highest_qc_round {
             debug!(
                 "{}QuorumCertified at {}{}",
@@ -293,16 +242,14 @@ impl Pacemaker {
                 Fg(Reset)
             );
             self.highest_qc_round = round;
-            return true;
         }
-        false
     }
 
     /// Combines highest_qc_certified_round, highest_local_tc and highest_received_tc into
     /// effective round of this pacemaker.
     /// Generates new_round event if effective round changes and ensures it is
     /// monotonically increasing
-    fn update_current_round(&mut self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    fn update_current_round(&mut self) -> Option<NewRoundEvent> {
         let (mut best_round, mut best_reason) = (self.highest_qc_round, NewRoundReason::QCReady);
         if let Some(highest_timeout_certificate) =
             self.pacemaker_timeout_manager.highest_timeout_certificate()
@@ -323,7 +270,7 @@ impl Pacemaker {
                 new_round,
                 Fg(Reset)
             );
-            return future::ready(()).boxed();
+            return None;
         }
         assert!(
             new_round > self.current_round,
@@ -332,20 +279,20 @@ impl Pacemaker {
             new_round
         );
         self.current_round = new_round;
-        self.create_new_round_task(best_reason).boxed()
+        let timeout = self.setup_timeout();
+        Some(NewRoundEvent {
+            round: self.current_round,
+            reason: best_reason,
+            timeout,
+        })
     }
 
     /// Validate timeout certificate and update local state if it's correct
-    fn check_and_update_highest_received_tc(
-        &mut self,
-        tc: Option<&PacemakerTimeoutCertificate>,
-    ) -> bool {
+    fn check_and_update_highest_received_tc(&mut self, tc: Option<&PacemakerTimeoutCertificate>) {
         if let Some(tc) = tc {
-            return self
-                .pacemaker_timeout_manager
+            self.pacemaker_timeout_manager
                 .update_highest_received_timeout_certificate(tc);
         }
-        false
     }
 
     /// Returns deadline for current round
@@ -374,33 +321,31 @@ impl Pacemaker {
         qc_round: Round,
         highest_committed_round: Option<Round>,
         timeout_certificate: Option<&PacemakerTimeoutCertificate>,
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        let tc_round_updated = self.check_and_update_highest_received_tc(timeout_certificate);
-        let qc_round_updated = self.update_highest_qc_round(qc_round);
+    ) -> Option<NewRoundEvent> {
+        self.check_and_update_highest_received_tc(timeout_certificate);
+        self.update_highest_qc_round(qc_round);
         match highest_committed_round {
             Some(commit_round) if (commit_round > self.highest_committed_round) => {
                 self.highest_committed_round = commit_round;
             }
             _ => (),
         }
-        if tc_round_updated || qc_round_updated {
-            return self.update_current_round();
-        }
-        future::ready(()).boxed()
+        self.update_current_round()
     }
 
     /// The function is invoked upon receiving a remote timeout message from another validator.
     pub fn process_remote_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    ) -> Option<NewRoundEvent> {
         if self
             .pacemaker_timeout_manager
             .update_received_timeout(pacemaker_timeout)
         {
-            return self.update_current_round();
+            self.update_current_round()
+        } else {
+            None
         }
-        future::ready(()).boxed()
     }
 
     /// To process the local round timeout triggered by TimeService and return whether it's the

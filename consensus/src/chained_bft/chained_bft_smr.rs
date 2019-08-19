@@ -3,11 +3,11 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockStore},
+        block_storage::BlockStore,
         common::{Payload, Round},
         event_processor::EventProcessor,
         liveness::{
-            pacemaker::{ExponentialTimeInterval, NewRoundEvent, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, Pacemaker},
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
@@ -114,12 +114,9 @@ impl<T: Payload> ChainedBftSMR<T> {
     fn create_pacemaker(
         &self,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
-        highest_committed_round: Round,
-        highest_certified_round: Round,
-        highest_timeout_certificates: HighestTimeoutCertificates,
         time_service: Arc<dyn TimeService>,
-        new_round_events_sender: channel::Sender<NewRoundEvent>,
         timeout_sender: channel::Sender<Round>,
+        highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Pacemaker {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
@@ -131,13 +128,10 @@ impl<T: Payload> ChainedBftSMR<T> {
         Pacemaker::new(
             persistent_liveness_storage,
             time_interval,
-            highest_committed_round,
-            highest_certified_round,
             time_service,
-            new_round_events_sender,
             timeout_sender,
             self.quorum_size,
-            highest_timeout_certificates,
+            highest_timeout_certificate,
         )
     }
 
@@ -154,17 +148,14 @@ impl<T: Payload> ChainedBftSMR<T> {
         &self,
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
-        mut new_round_events_receiver: channel::Receiver<NewRoundEvent>,
         mut network_receivers: NetworkReceivers<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
     ) {
         let quorum_size = self.quorum_size;
         let fut = async move {
+            event_processor.start().await;
             loop {
                 select! {
-                    new_round_event = new_round_events_receiver.select_next_some() => {
-                        event_processor.process_new_round_event(new_round_event).await;
-                    }
                     proposal_msg = network_receivers.proposals.select_next_some() => {
                         event_processor.process_proposal_msg(proposal_msg).await;
                     }
@@ -267,16 +258,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
             let (timeout_sender, timeout_receiver) =
                 channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
-            let (new_round_events_sender, new_round_events_receiver) =
-                channel::new(1_024, &counters::PENDING_NEW_ROUND_EVENTS);
             let pacemaker = self.create_pacemaker(
                 self.storage.persistent_liveness_storage(),
-                block_store.root().round(),
-                block_store.highest_certified_block().round(),
-                highest_timeout_certificates,
                 time_service.clone(),
-                new_round_events_sender,
                 timeout_sender,
+                highest_timeout_certificates,
             );
 
             let proposer_election = self.create_proposer_election();
@@ -298,7 +284,6 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             self.start_event_processing(
                 executor,
                 event_processor,
-                new_round_events_receiver,
                 network_receivers,
                 timeout_receiver,
             );
