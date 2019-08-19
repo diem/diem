@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the control-flow graph uses for bytecode verification.
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    marker::Sized,
-};
+use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::{Bytecode, CodeOffset};
 
 // BTree/Hash agnostic type wrappers
@@ -15,10 +12,7 @@ type Set<V> = BTreeSet<V>;
 pub type BlockId = CodeOffset;
 
 /// A trait that specifies the basic requirements for a CFG
-pub trait ControlFlowGraph: Sized {
-    /// Given a vector of bytecodes, constructs the control flow graph for it.
-    fn new(code: &[Bytecode]) -> Self;
-
+pub trait ControlFlowGraph {
     /// Given a block ID, return the reachable blocks from that block
     /// including the block itself.
     fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock>;
@@ -70,6 +64,38 @@ impl BasicBlock {
 }
 
 impl VMControlFlowGraph {
+    pub fn new(code: &[Bytecode]) -> Self {
+        // First go through and collect block ids, i.e., offsets that begin basic blocks.
+        // Need to do this first in order to handle backwards edges.
+        let mut block_ids = Set::new();
+        block_ids.insert(ENTRY_BLOCK_ID);
+        for pc in 0..code.len() {
+            VMControlFlowGraph::record_block_ids(pc as CodeOffset, code, &mut block_ids);
+        }
+
+        // Create basic blocks
+        let mut cfg = VMControlFlowGraph { blocks: Map::new() };
+        let mut entry = 0;
+        for pc in 0..code.len() {
+            let co_pc: CodeOffset = pc as CodeOffset;
+
+            // Create a basic block
+            if VMControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
+                let successors = Bytecode::get_successors(co_pc, code);
+                let bb = BasicBlock {
+                    entry,
+                    exit: co_pc,
+                    successors,
+                };
+                cfg.blocks.insert(entry, bb);
+                entry = co_pc + 1;
+            }
+        }
+
+        assert_eq!(entry, code.len() as CodeOffset);
+        cfg
+    }
+
     pub fn display(&self) {
         for block in self.blocks.values() {
             block.display();
@@ -128,38 +154,6 @@ impl VMControlFlowGraph {
 const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl ControlFlowGraph for VMControlFlowGraph {
-    fn new(code: &[Bytecode]) -> Self {
-        // First go through and collect block ids, i.e., offsets that begin basic blocks.
-        // Need to do this first in order to handle backwards edges.
-        let mut block_ids = Set::new();
-        block_ids.insert(ENTRY_BLOCK_ID);
-        for pc in 0..code.len() {
-            VMControlFlowGraph::record_block_ids(pc as CodeOffset, code, &mut block_ids);
-        }
-
-        // Create basic blocks
-        let mut cfg = VMControlFlowGraph { blocks: Map::new() };
-        let mut entry = 0;
-        for pc in 0..code.len() {
-            let co_pc: CodeOffset = pc as CodeOffset;
-
-            // Create a basic block
-            if VMControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = Bytecode::get_successors(co_pc, code);
-                let bb = BasicBlock {
-                    entry,
-                    exit: co_pc,
-                    successors,
-                };
-                cfg.blocks.insert(entry, bb);
-                entry = co_pc + 1;
-            }
-        }
-
-        assert_eq!(entry, code.len() as CodeOffset);
-        cfg
-    }
-
     fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock> {
         self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
     }
