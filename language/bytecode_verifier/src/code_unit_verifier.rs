@@ -4,7 +4,7 @@
 //! This module implements the checker for verifying correctness of function bodies.
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
-use crate::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
+use crate::control_flow_graph::VMControlFlowGraph;
 use vm::{
     access::ModuleAccess,
     errors::{VMStaticViolation, VerificationError},
