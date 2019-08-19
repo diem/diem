@@ -35,8 +35,9 @@ types = { path = "../types" }
 
 [dev-dependencies]
 criterion = "0.2.11"
-
 nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+types = { path = "../types", features = ["testing"]}
+
 
 [build-dependencies]
 protoc-rust = "2.5.0"
