@@ -14,6 +14,7 @@ pub mod proof;
 #[cfg(any(test, feature = "testing"))]
 pub mod proptest_types;
 pub mod proto;
+#[cfg(any(test, feature = "testing"))]
 pub mod test_helpers;
 pub mod transaction;
 pub mod transaction_helpers;
