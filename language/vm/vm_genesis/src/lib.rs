@@ -55,7 +55,8 @@ pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureChec
     raw_txn.sign(private_key, public_key.clone())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct Account {
     pub addr: AccountAddress,
     pub privkey: Ed25519PrivateKey,
@@ -116,12 +117,12 @@ impl Accounts {
         self.accounts[account].addr
     }
 
-    pub fn get_account(&self, account: usize) -> Account {
-        self.accounts[account].clone()
+    pub fn get_account(&self, account: usize) -> &Account {
+        &self.accounts[account]
     }
 
     pub fn get_public_key(&self, account: usize) -> Ed25519PublicKey {
-        self.accounts[account].clone().pubkey
+        self.accounts[account].pubkey.clone()
     }
 
     pub fn create_txn_with_args(
