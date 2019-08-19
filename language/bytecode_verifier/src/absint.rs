@@ -1,4 +1,4 @@
-use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
+use crate::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::HashMap;
 use vm::{
     file_format::{Bytecode, CompiledModule},
@@ -87,7 +87,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         initial_state: Self::State,
         function_view: &FunctionDefinitionView<CompiledModule>,
-        cfg: &VMControlFlowGraph,
+        cfg: &dyn ControlFlowGraph,
     ) -> InvariantMap<Self::State> {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
         let entry_block_id = 0; // 0 is always the entry block
@@ -124,7 +124,7 @@ pub trait AbstractInterpreter: TransferFunctions {
                 }
             };
             let block_ends_in_error = self
-                .execute_block(block_id, &mut state, &function_view, &cfg)
+                .execute_block(block_id, &mut state, &function_view, cfg)
                 .is_err();
             if block_ends_in_error {
                 block_invariant.post = BlockPostcondition::Error;
@@ -185,7 +185,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         block_id: BlockId,
         state: &mut Self::State,
         function_view: &FunctionDefinitionView<CompiledModule>,
-        cfg: &VMControlFlowGraph,
+        cfg: &dyn ControlFlowGraph,
     ) -> Result<(), Self::AnalysisError> {
         let block = cfg
             .block_of_id(block_id)
