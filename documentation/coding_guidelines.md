@@ -302,6 +302,8 @@ As a consequence, it is recommended that you set up your test-only code in the f
 
 *A final note on integration tests*: All tests that use conditional test-only elements in another crate need to activate the "testing" feature through the `[features]` section in their `Cargo.toml`. [Integration tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.html) can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for feature activation. In the Libra codebase, we therefore recommend that *integration tests which depend on test-only code in their tested crate* be extracted to their own crate. You can look at `language/vm/serializer_tests` for an example of such an extracted integration test.
 
+*Note for developers*: The reason we use a feature re-export (in the `[features]` section of the `Cargo.toml` is that a profile is not enough to activate the `"testing"` feature flag. See [cargo-issue #291](https://github.com/rust-lang/cargo/issues/2911) for details).
+
 *Fuzzing*
 
 Libra contains harnesses for fuzzing crash-prone code like deserializers, using [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html) through [`cargo fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html). For more examples, see the `testsuite/libra_fuzzer` directory.

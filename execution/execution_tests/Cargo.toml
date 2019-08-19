@@ -30,3 +30,4 @@ vm_genesis = { path = "../../language/vm/vm_genesis" }
 [dev-dependencies]
 rand = "0.6.5"
 nextgen_crypto = { path = "../../crypto/nextgen_crypto", features = ["testing"] }
+types = { path = "../../types", features = ["testing"]}
