@@ -40,7 +40,6 @@ use futures::{
     channel::{mpsc, oneshot},
     compat::Future01CompatExt,
     executor::block_on,
-    prelude::*,
 };
 use network::{
     proto::BlockRetrievalStatus,
@@ -59,13 +58,10 @@ struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload>,
-    new_rounds_receiver: channel::Receiver<NewRoundEvent>,
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner<Ed25519PrivateKey>,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
-    #[allow(dead_code)]
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl NodeSetup {
@@ -87,29 +83,19 @@ impl NodeSetup {
         )))
     }
 
-    fn create_pacemaker(
-        time_service: Arc<dyn TimeService>,
-    ) -> (Pacemaker, channel::Receiver<NewRoundEvent>) {
+    fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Pacemaker {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-        let highest_certified_round = 0;
-        let (new_round_events_sender, new_round_events_receiver) = channel::new_test(1_024);
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
-        (
-            Pacemaker::new(
-                MockStorage::<TestPayload>::start_for_testing()
-                    .0
-                    .persistent_liveness_storage(),
-                time_interval,
-                0,
-                highest_certified_round,
-                time_service,
-                new_round_events_sender,
-                pacemaker_timeout_sender,
-                1,
-                HighestTimeoutCertificates::new(None, None),
-            ),
-            new_round_events_receiver,
+        Pacemaker::new(
+            MockStorage::<TestPayload>::start_for_testing()
+                .0
+                .persistent_liveness_storage(),
+            time_interval,
+            time_service,
+            pacemaker_timeout_sender,
+            1,
+            HighestTimeoutCertificates::default(),
         )
     }
 
@@ -187,12 +173,12 @@ impl NodeSetup {
         );
         let safety_rules = SafetyRules::new(consensus_state);
 
-        let (pacemaker, new_rounds_receiver) = Self::create_pacemaker(time_service.clone());
+        let pacemaker = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let (commit_cb_sender, commit_cb_receiver) =
+        let (commit_cb_sender, _commit_cb_receiver) =
             mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
-        let event_processor = EventProcessor::new(
+        let mut event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),
             pacemaker,
@@ -206,16 +192,15 @@ impl NodeSetup {
             time_service,
             true,
         );
+        block_on(event_processor.start());
         Self {
             author,
             block_store,
             event_processor,
-            new_rounds_receiver,
             storage,
             signer,
             proposer_author,
             peers,
-            commit_cb_receiver,
         }
     }
 
@@ -675,15 +660,12 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        // This is 'kick off' event from pacemaker initialization
-        let new_round_event = node.new_rounds_receiver.next().await.unwrap();
-        assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
-        assert_eq!(new_round_event.round, 1);
         node.event_processor.process_vote(vote_msg, 1).await;
-        let new_round_event = node.new_rounds_receiver.next().await.unwrap();
-        // This is event from processing qc for round 1
-        assert_eq!(new_round_event.reason, NewRoundReason::QCReady);
-        assert_eq!(new_round_event.round, 2);
+        // The new QC is aggregated
+        assert_eq!(
+            node.block_store.highest_quorum_cert().certified_block_id(),
+            a1.id()
+        );
     });
     block_on(runtime.shutdown_now().compat()).unwrap();
 }
