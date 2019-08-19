@@ -8,16 +8,13 @@ use crate::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
+    event::EventHandle,
     language_storage::StructTag,
 };
-#[cfg(any(test, feature = "testing"))]
-use canonical_serialization::SimpleSerializer;
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleDeserializer,
 };
-#[cfg(any(test, feature = "testing"))]
-use crypto::HashValue;
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
@@ -25,8 +22,6 @@ use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
 };
-#[cfg(any(test, feature = "testing"))]
-use tiny_keccak::sha3_256;
 
 /// An account object. This is the top-level entry in global storage. We'll never need to create an
 /// `Account` struct, but if we did, it would look something like
@@ -77,15 +72,6 @@ pub fn account_struct_tag() -> StructTag {
     }
 }
 
-/// A Rust representation of an Event Handle Resource.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct EventHandle {
-    /// The associated globally unique key that is used as the key to the EventStore.
-    key: ByteArray,
-    /// Number of events in the event stream.
-    count: u64,
-}
-
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
 #[derive(Debug, Default)]
@@ -97,55 +83,6 @@ pub struct AccountResource {
     delegated_withdrawal_capability: bool,
     sent_events: EventHandle,
     received_events: EventHandle,
-}
-
-impl EventHandle {
-    /// Constructs a new Event Handle
-    pub fn new(key: ByteArray, count: u64) -> Self {
-        EventHandle { key, count }
-    }
-
-    /// Return the key to where this event is stored in EventStore.
-    pub fn key(&self) -> &[u8] {
-        self.key.as_bytes()
-    }
-    /// Return the counter for the handle
-    pub fn count(&self) -> u64 {
-        self.count
-    }
-
-    /// Return the AccessPath to where this event is stored in EventStore.
-    /// TODO: Clean up this API by creating a new type wrapper for this new key type.
-    pub fn as_access_path(&self) -> Result<AccessPath> {
-        Ok(AccessPath::new(
-            AccountAddress::try_from(self.key())?,
-            vec![],
-        ))
-    }
-
-    #[cfg(any(test, feature = "testing"))]
-    /// Create a random event handle for testing
-    pub fn random_handle(count: u64) -> Self {
-        Self {
-            key: ByteArray::new(HashValue::random().to_vec()),
-            count,
-        }
-    }
-
-    #[cfg(any(test, feature = "testing"))]
-    /// Derive a unique handle by using an AccountAddress and a counter.
-    pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut serializer: SimpleSerializer<Vec<u8>> = SimpleSerializer::new();
-        serializer.encode_u64(salt).expect("Can't serialize salt");
-        serializer
-            .encode_struct(addr)
-            .expect("Can't serialize address");
-        let event_handle = sha3_256(&serializer.get_output());
-        Self {
-            key: ByteArray::new(event_handle.to_vec()),
-            count: 0,
-        }
-    }
 }
 
 impl AccountResource {
@@ -218,22 +155,6 @@ impl AccountResource {
     }
 }
 
-impl CanonicalSerialize for EventHandle {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_u64(self.count)?
-            .encode_struct(&self.key)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for EventHandle {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let count = deserializer.decode_u64()?;
-        let key = deserializer.decode_struct()?;
-        Ok(EventHandle { count, key })
-    }
-}
 impl CanonicalSerialize for AccountResource {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         // TODO(drussi): the order in which these fields are serialized depends on some

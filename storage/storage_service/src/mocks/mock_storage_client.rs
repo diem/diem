@@ -17,8 +17,8 @@ use storage_client::StorageRead;
 use storage_proto::StartupInfo;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    account_config::EventHandle,
     account_state_blob::AccountStateBlob,
+    event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
     proof::SparseMerkleProof,

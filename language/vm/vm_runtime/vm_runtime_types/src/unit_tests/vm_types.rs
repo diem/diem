@@ -42,7 +42,7 @@ fn account_type() {
     assert_eq!(*account_resource.authentication_key(), authentication_key);
     assert_eq!(account_resource.balance(), balance);
     assert_eq!(
-        account_resource.sent_events().key(),
+        account_resource.sent_events().key().as_bytes(),
         sent_events_key.as_bytes()
     );
     assert_eq!(
@@ -50,7 +50,7 @@ fn account_type() {
         received_events_count
     );
     assert_eq!(
-        account_resource.received_events().key(),
+        account_resource.received_events().key().as_bytes(),
         recv_events_key.as_bytes()
     );
     assert_eq!(account_resource.sent_events().count(), sent_events_count);
