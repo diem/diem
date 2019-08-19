@@ -69,6 +69,7 @@ impl Stream for StateSynchronizerEvents {
     }
 }
 
+#[derive(Clone)]
 pub struct StateSynchronizerSender {
     inner: channel::Sender<NetworkRequest>,
 }

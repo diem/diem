@@ -214,7 +214,6 @@ impl SynchronizerEnv {
             .executor()
             .spawn(network_provider.start().unit_error().compat());
 
-        let default_handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
         // create synchronizers
         let mut config = get_test_config().0;
         if role == RoleType::FullNode {
@@ -225,7 +224,7 @@ impl SynchronizerEnv {
                 sender_a,
                 events_a,
                 &config,
-                MockExecutorProxy::new(peers[0], default_handler),
+                MockExecutorProxy::new(peers[0], Self::default_handler()),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 sender_b,
@@ -244,9 +243,17 @@ impl SynchronizerEnv {
         }
     }
 
+    fn default_handler() -> MockRpcHandler {
+        Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) })
+    }
+
     fn sync_to(&self, peer_id: usize, version: u64) -> bool {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
         block_on(self.clients[peer_id].sync_to(target)).unwrap()
+    }
+
+    fn commit(&self, peer_id: usize, version: u64) {
+        block_on(self.clients[peer_id].commit(version)).unwrap();
     }
 
     fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
@@ -264,8 +271,7 @@ impl SynchronizerEnv {
 
 #[test]
 fn test_basic_catch_up() {
-    let handler = Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) });
-    let env = SynchronizerEnv::new(handler, RoleType::Validator);
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
 
     // test small sequential syncs
     for version in 1..5 {
@@ -294,15 +300,12 @@ fn test_flaky_peer_sync() {
 
 #[test]
 fn test_full_node() {
-    let committed_version = 10;
-    let handler = Box::new(move |resp: GetChunkResponse| -> Result<GetChunkResponse> {
-        let v = resp.get_ledger_info_with_sigs().get_ledger_info().version;
-        if v <= committed_version {
-            Ok(resp)
-        } else {
-            bail!("no new data");
-        }
-    });
-    let env = SynchronizerEnv::new(handler, RoleType::FullNode);
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::FullNode);
+    env.commit(1, 10);
+    // first sync should be fulfilled immediately after peer discovery
     assert!(env.wait_for_version(0, 10));
+    env.commit(1, 20);
+    // second sync will be done via long polling cause first node should send new request
+    // after receiving first chunk immediately
+    assert!(env.wait_for_version(0, 20));
 }
