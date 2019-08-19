@@ -5,10 +5,11 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{AccountResource, EventHandle},
+    account_config::AccountResource,
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     contract_event::ContractEvent,
+    event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorProof,
@@ -35,7 +36,7 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use proptest_helpers::Index;
-use std::{collections::HashMap, convert::TryFrom, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 prop_compose! {
     #[inline]
@@ -416,20 +417,16 @@ impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
 #[allow(clippy::implicit_hasher)]
 pub fn renumber_events(
     events: &[ContractEvent],
-    next_seq_num_by_access_path: &mut HashMap<AccessPath, u64>,
+    next_seq_num_by_access_path: &mut HashMap<EventKey, u64>,
 ) -> Vec<ContractEvent> {
     events
         .iter()
         .map(|e| {
             let next_seq_num = next_seq_num_by_access_path
-                .entry(e.access_path().clone())
+                .entry(e.key().clone())
                 .or_insert(0);
             *next_seq_num += 1;
-            ContractEvent::new(
-                e.access_path().clone(),
-                *next_seq_num - 1,
-                e.event_data().to_vec(),
-            )
+            ContractEvent::new(*e.key(), *next_seq_num - 1, e.event_data().to_vec())
         })
         .collect::<Vec<_>>()
 }
@@ -478,19 +475,14 @@ impl ContractEventGen {
     pub fn materialize(self, account_universe: &[&AccountResource]) -> ContractEvent {
         let account = self.event_handle_index.get(account_universe);
         let (event_key, seq) = if self.use_sent_key {
-            (
-                AccountAddress::try_from(account.sent_events().key())
-                    .expect("Event key size mismatch"),
-                account.sent_events().count(),
-            )
+            (*account.sent_events().key(), account.sent_events().count())
         } else {
             (
-                AccountAddress::try_from(account.received_events().key())
-                    .expect("Event key size mismatch"),
+                *account.received_events().key(),
                 account.received_events().count(),
             )
         };
-        ContractEvent::new(AccessPath::new(event_key, vec![]), seq, self.payload)
+        ContractEvent::new(event_key, seq, self.payload)
     }
 }
 
@@ -517,24 +509,21 @@ impl AccountResourceGen {
 
 impl ContractEvent {
     pub fn strategy_impl(
-        event_key_strategy: impl Strategy<Value = AccountAddress>,
+        event_key_strategy: impl Strategy<Value = EventKey>,
     ) -> impl Strategy<Value = Self> {
         (event_key_strategy, any::<u64>(), vec(any::<u8>(), 1..10)).prop_map(
-            |(event_key, seq_num, event_data)| {
-                ContractEvent::new(AccessPath::new(event_key, vec![]), seq_num, event_data)
-            },
+            |(event_key, seq_num, event_data)| ContractEvent::new(event_key, seq_num, event_data),
         )
     }
 }
 
 impl EventHandle {
     pub fn strategy_impl(
-        event_key_strategy: impl Strategy<Value = AccountAddress>,
+        event_key_strategy: impl Strategy<Value = EventKey>,
     ) -> impl Strategy<Value = Self> {
         // We only generate small counters so that it won't overflow.
-        (event_key_strategy, 0..std::u64::MAX / 2).prop_map(|(event_key, counter)| {
-            EventHandle::new(ByteArray::new(event_key.to_vec()), counter)
-        })
+        (event_key_strategy, 0..std::u64::MAX / 2)
+            .prop_map(|(event_key, counter)| EventHandle::new(event_key, counter))
     }
 }
 
@@ -543,14 +532,14 @@ impl Arbitrary for EventHandle {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        EventHandle::strategy_impl(any::<AccountAddress>()).boxed()
+        EventHandle::strategy_impl(any::<EventKey>()).boxed()
     }
 }
 
 impl Arbitrary for ContractEvent {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        ContractEvent::strategy_impl(any::<AccountAddress>()).boxed()
+        ContractEvent::strategy_impl(any::<EventKey>()).boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;

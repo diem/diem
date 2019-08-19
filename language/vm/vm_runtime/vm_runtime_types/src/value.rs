@@ -11,7 +11,6 @@ use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
-    contract_event::ContractEvent,
 };
 use vm::{
     errors::*,
@@ -345,14 +344,6 @@ impl Local {
         }
     }
 
-    pub fn emit_event_data(self, byte_array: ByteArray, data: MutVal) -> Option<ContractEvent> {
-        if let Local::GlobalRef(r) = self {
-            r.emit_event_data(byte_array, data)
-        } else {
-            None
-        }
-    }
-
     pub fn value(self) -> Option<MutVal> {
         match self {
             Local::Value(v) => Some(v),
@@ -428,20 +419,6 @@ impl RootAccessPath {
     fn mark_deleted(&mut self) {
         self.status = GlobalDataStatus::DELETED;
     }
-
-    fn emit_event_data(
-        &mut self,
-        byte_array: ByteArray,
-        counter: u64,
-        data: MutVal,
-    ) -> Option<ContractEvent> {
-        let blob = match data.peek().simple_serialize() {
-            Some(data) => data,
-            None => return None,
-        };
-        let ap = AccessPath::new_for_event(self.ap.address, &self.ap.path, byte_array.as_bytes());
-        Some(ContractEvent::new(ap, counter, blob))
-    }
 }
 
 impl GlobalRef {
@@ -506,17 +483,6 @@ impl GlobalRef {
             root: Rc::clone(&self.root),
             reference: self.reference.shallow_clone(),
         }
-    }
-
-    fn emit_event_data(self, byte_array: ByteArray, data: MutVal) -> Option<ContractEvent> {
-        let counter = match &*self.reference.peek() {
-            Value::U64(i) => *i,
-            _ => return None,
-        };
-        self.reference.mutate_reference(MutVal::u64(counter + 1));
-        self.root
-            .borrow_mut()
-            .emit_event_data(byte_array, counter, data)
     }
 
     fn size(&self) -> AbstractMemorySize<GasCarrier> {

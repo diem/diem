@@ -208,6 +208,7 @@ impl LibraDB {
         };
         let event_key = account_resource
             .get_event_handle_by_query_path(query_path)?
+            .key()
             .as_access_path()?;
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.

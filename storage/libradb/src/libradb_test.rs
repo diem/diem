@@ -9,7 +9,7 @@ use crate::{
 use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
-use std::{collections::HashMap, convert::TryFrom};
+use std::collections::HashMap;
 use types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
 
 fn test_save_blocks_impl(
@@ -141,7 +141,7 @@ fn get_events_by_query_path(
         let account_resource = get_account_resource_or_default(&proof_of_latest_event.blob)?;
         let expected_event_key = account_resource
             .get_event_handle_by_query_path(query_path)?
-            .as_access_path()?;
+            .key();
 
         let num_events = events_with_proof.len() as u64;
         proof_of_latest_event.verify(ledger_info, ledger_info.version(), query_path.address)?;
@@ -265,13 +265,11 @@ fn group_events_by_query_path(
             let account =
                 AccountResource::make_from(&account_btree).expect("AccountResource is not found");
             event_key_to_query_path.insert(
-                AccountAddress::try_from(account.sent_events().key())
-                    .expect("Event Key size mismatch"),
+                account.sent_events().key().clone(),
                 AccessPath::new_for_sent_event(*address),
             );
             event_key_to_query_path.insert(
-                AccountAddress::try_from(account.received_events().key())
-                    .expect("Event Key size mismatch"),
+                account.received_events().key().clone(),
                 AccessPath::new_for_received_event(*address),
             );
         }
@@ -280,7 +278,7 @@ fn group_events_by_query_path(
     for txn in txns_to_commit {
         for event in txn.events() {
             let query_path = event_key_to_query_path
-                .get(&event.access_path().address)
+                .get(event.key())
                 .expect("Unknown Event Key")
                 .clone();
             query_path_to_events

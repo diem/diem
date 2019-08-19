@@ -14,7 +14,7 @@ import "proof.proto";
 
 // An event emitted from a smart contract
 message Event {
-    AccessPath access_path = 1;
+    bytes key = 1;
     uint64 sequence_number = 2;
     bytes event_data = 3;
 }

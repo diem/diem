@@ -22,9 +22,10 @@ use crypto::{
 };
 use failure::prelude::*;
 use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::sync::Arc;
+use std::{convert::TryFrom, sync::Arc};
 use types::{
     access_path::AccessPath,
+    account_address::AccountAddress,
     contract_event::ContractEvent,
     proof::{position::Position, AccumulatorProof, EventProof},
     transaction::Version,
@@ -200,9 +201,10 @@ impl EventStore {
             .iter()
             .enumerate()
             .map(|(idx, event)| {
+                // TODO: Clean up the EventByAccessPathSchema
                 cs.batch.put::<EventSchema>(&(version, idx as u64), event)?;
                 cs.batch.put::<EventByAccessPathSchema>(
-                    &(event.access_path().clone(), event.sequence_number()),
+                    &(event.key().as_access_path()?, event.sequence_number()),
                     &(version, idx as u64),
                 )?;
                 Ok(())

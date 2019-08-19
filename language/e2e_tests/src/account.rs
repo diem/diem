@@ -10,8 +10,9 @@ use std::time::Duration;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{self, EventHandle},
+    account_config,
     byte_array::ByteArray,
+    event::EventHandle,
     transaction::{
         Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionPayload,
     },
@@ -356,7 +357,7 @@ impl AccountData {
 
     /// Returns the unique key for this sent events stream.
     pub fn sent_events_key(&self) -> &[u8] {
-        self.sent_events.key()
+        self.sent_events.key().as_bytes()
     }
 
     /// Returns the initial sent events count.
@@ -366,7 +367,7 @@ impl AccountData {
 
     /// Returns the unique key for this received events stream.
     pub fn received_events_key(&self) -> &[u8] {
-        self.received_events.key()
+        self.received_events.key().as_bytes()
     }
 
     /// Returns the initial received events count.

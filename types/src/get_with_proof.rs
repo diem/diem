@@ -296,7 +296,7 @@ fn verify_get_events_by_access_path_resp(
             req_access_path.address,
         )?;
         let event_handle = account_resource.get_event_handle_by_query_path(&req_access_path)?;
-        (event_handle.count(), event_handle.as_access_path()?)
+        (event_handle.count(), event_handle.key())
     };
 
     let cursor =
@@ -330,7 +330,7 @@ fn verify_get_events_by_access_path_resp(
         .map(|(e, seq_num)| {
             e.verify(
                 ledger_info,
-                &expected_event_key,
+                expected_event_key,
                 seq_num,
                 e.transaction_version,
                 e.event_index,

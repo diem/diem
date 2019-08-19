@@ -21,6 +21,7 @@ use types::{
     account_config,
     byte_array::ByteArray,
     contract_event::ContractEvent,
+    event::EventKey,
     language_storage::ModuleId,
     transaction::{
         TransactionArgument, TransactionOutput, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES,
@@ -274,18 +275,15 @@ where
                             let msg = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
                             let count = try_runtime!(self.execution_stack.pop_as::<u64>());
                             let key = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
-                            let guid = AccountAddress::try_from(key.as_bytes())
+                            let guid = EventKey::try_from(key.as_bytes())
                                 .map_err(|_| VMInvariantViolation::EventKeyMismatch)?;
 
                             // TODO:
                             // 1. Rename the AccessPath here to a new type that represents such
                             //    globally unique id for event streams.
                             // 2. Charge gas for the msg emitted.
-                            self.event_data.push(ContractEvent::new(
-                                AccessPath::new(guid, vec![]),
-                                count,
-                                msg.into_inner(),
-                            ))
+                            self.event_data
+                                .push(ContractEvent::new(guid, count, msg.into_inner()))
                         } else {
                             let mut arguments = VecDeque::new();
                             let expected_args = native_function.num_args();

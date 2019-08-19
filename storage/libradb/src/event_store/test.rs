@@ -14,7 +14,7 @@ use rand::Rng;
 use std::collections::HashMap;
 use tempfile::tempdir;
 use types::{
-    account_address::AccountAddress, contract_event::ContractEvent,
+    account_address::AccountAddress, contract_event::ContractEvent, event::EventKey,
     proof::verify_event_accumulator_element, proptest_types::renumber_events,
 };
 
@@ -114,9 +114,9 @@ proptest! {
     }
 }
 
-fn traverse_events_by_access_path(
+fn traverse_events_by_event_key(
     store: &EventStore,
-    access_path: &AccessPath,
+    event_key: &EventKey,
     ledger_version: Version,
 ) -> Vec<ContractEvent> {
     const LIMIT: u64 = 3;
@@ -127,7 +127,12 @@ fn traverse_events_by_access_path(
     let mut last_batch_len = LIMIT;
     loop {
         let mut batch = store
-            .lookup_events_by_access_path(access_path, seq_num, LIMIT, ledger_version)
+            .lookup_events_by_access_path(
+                &event_key.as_access_path().unwrap(),
+                seq_num,
+                LIMIT,
+                ledger_version,
+            )
             .unwrap();
         if last_batch_len < LIMIT {
             assert!(batch.is_empty());
@@ -159,32 +164,22 @@ fn traverse_events_by_access_path(
         .collect()
 }
 
-fn arb_event_batches() -> impl Strategy<Value = (Vec<AccessPath>, Vec<Vec<ContractEvent>>)> {
+fn arb_event_batches() -> impl Strategy<Value = Vec<Vec<ContractEvent>>> {
     // TODO: Get rid of the unnecessary prop_flat_map here.
-    (vec(any::<AccountAddress>(), 3), (0..100usize))
+    (vec(any::<EventKey>(), 3), (0..100usize))
         .prop_flat_map(|(raw_event_keys, num_batches)| {
             let event_key_strategy = Union::new(raw_event_keys.clone().into_iter().map(Just));
-
-            let event_key_vec = raw_event_keys
-                .iter()
-                .map(|address| AccessPath::new(*address, vec![]))
-                .collect::<Vec<_>>();
-            (
-                Just(event_key_vec),
-                vec(
-                    vec(ContractEvent::strategy_impl(event_key_strategy), 0..10),
-                    num_batches,
-                ),
+            vec(
+                vec(ContractEvent::strategy_impl(event_key_strategy), 0..10),
+                num_batches,
             )
         })
-        .prop_map(|(all_possible_event_keys, event_batches)| {
+        .prop_map(|event_batches| {
             let mut seq_num_by_event_key = HashMap::new();
-            let numbered_event_batches = event_batches
+            event_batches
                 .into_iter()
                 .map(|events| renumber_events(&events, &mut seq_num_by_event_key))
-                .collect::<Vec<_>>();
-
-            (all_possible_event_keys, numbered_event_batches)
+                .collect::<Vec<_>>()
         })
 }
 
@@ -192,15 +187,12 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_get_events_by_access_path((addresses, event_batches) in arb_event_batches().no_shrink()) {
-        test_get_events_by_access_path_impl(addresses, event_batches);
+    fn test_get_events_by_access_path(event_batches in arb_event_batches().no_shrink()) {
+        test_get_events_by_access_path_impl(event_batches);
     }
 }
 
-fn test_get_events_by_access_path_impl(
-    access_paths: Vec<AccessPath>,
-    event_batches: Vec<Vec<ContractEvent>>,
-) {
+fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
     // Put into db.
     let tmp_dir = tempdir().unwrap();
     let db = LibraDB::new(&tmp_dir);
@@ -214,11 +206,11 @@ fn test_get_events_by_access_path_impl(
     let ledger_version_plus_one = event_batches.len() as u64;
 
     // Calculate expected event sequence per access_path.
-    let mut events_by_access_path = HashMap::new();
+    let mut events_by_event_key = HashMap::new();
     event_batches.into_iter().for_each(|batch| {
         batch.into_iter().for_each(|e| {
-            let mut events = events_by_access_path
-                .entry(e.access_path().clone())
+            let mut events = events_by_event_key
+                .entry(e.key().clone())
                 .or_insert_with(Vec::new);
             assert_eq!(events.len() as u64, e.sequence_number());
             events.push(e.clone());
@@ -226,10 +218,8 @@ fn test_get_events_by_access_path_impl(
     });
 
     // Fetch and check.
-    events_by_access_path
-        .into_iter()
-        .for_each(|(path, events)| {
-            let traversed = traverse_events_by_access_path(&store, &path, ledger_version_plus_one);
-            assert_eq!(events, traversed);
-        });
+    events_by_event_key.into_iter().for_each(|(path, events)| {
+        let traversed = traverse_events_by_event_key(&store, &path, ledger_version_plus_one);
+        assert_eq!(events, traversed);
+    });
 }
