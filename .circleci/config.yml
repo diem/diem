@@ -18,6 +18,7 @@ commands:
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
+            echo 'export RUSTFLAGS="-D warnings"' >> $BASH_ENV
   restore_sccache_cache:
     steps:
       - restore_cache:
