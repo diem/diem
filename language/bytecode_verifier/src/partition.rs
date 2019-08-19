@@ -28,8 +28,8 @@ impl Partition {
     // removes a nonce that already exists in the partition
     pub fn remove_nonce(&mut self, nonce: Nonce) {
         let id = self.nonce_to_id.remove(&nonce).unwrap();
-        self.id_to_nonce_set.entry(id).and_modify(|x| {
-            x.remove(&nonce);
+        self.id_to_nonce_set.entry(id).and_modify(|nonce_set| {
+            nonce_set.remove(&nonce);
         });
         if self.id_to_nonce_set[&id].is_empty() {
             self.id_to_nonce_set.remove(&id).unwrap();
@@ -47,10 +47,10 @@ impl Partition {
         for nonce in &nonce_set2 {
             self.nonce_to_id
                 .entry(nonce.clone())
-                .and_modify(|x| *x = id1);
+                .and_modify(|id| *id = id1);
         }
-        self.id_to_nonce_set.entry(id1).and_modify(|x| {
-            x.append(&mut nonce_set2);
+        self.id_to_nonce_set.entry(id1).and_modify(|nonce_set| {
+            nonce_set.append(&mut nonce_set2);
         });
     }
 

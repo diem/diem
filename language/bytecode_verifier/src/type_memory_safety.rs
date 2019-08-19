@@ -431,8 +431,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         });
                     }
                 }
-                for x in all_references_to_borrow_from {
-                    state.destroy_nonce(x);
+                for nonce in all_references_to_borrow_from {
+                    state.destroy_nonce(nonce);
                 }
                 Ok(())
             }
