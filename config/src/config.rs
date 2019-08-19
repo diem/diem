@@ -618,6 +618,8 @@ pub struct StateSyncConfig {
     pub chunk_limit: u64,
     // interval used for checking state synchronization progress
     pub tick_interval_ms: u64,
+    // default timeout used for long polling to remote peer
+    pub long_poll_timeout_ms: u64,
 }
 
 impl Default for StateSyncConfig {
@@ -625,6 +627,7 @@ impl Default for StateSyncConfig {
         Self {
             chunk_limit: 1000,
             tick_interval_ms: 10,
+            long_poll_timeout_ms: 30000,
         }
     }
 }
