@@ -14,6 +14,11 @@ commands:
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
+  sccache_setup:
+    steps:
+      - run:
+          name: Set Up sccache Environment
+          command: |
             echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
@@ -44,6 +49,7 @@ jobs:
     resource_class: 2xlarge
     steps:
       - env_setup
+      - sccache_setup
       - restore_sccache_cache
       - run:
           name: Git Hooks and Checks
