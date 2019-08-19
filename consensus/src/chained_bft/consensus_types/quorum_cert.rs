@@ -9,12 +9,12 @@ use crate::{
     state_replication::ExecutedState,
 };
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
 use failure::Result;
 use network::proto::QuorumCert as ProtoQuorumCert;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{

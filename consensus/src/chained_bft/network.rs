@@ -14,7 +14,7 @@ use crate::{
 };
 use bytes::Bytes;
 use channel;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use failure;
 use futures::{
     channel::oneshot, stream::select, FutureExt, SinkExt, Stream, StreamExt, TryFutureExt,
@@ -25,7 +25,6 @@ use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::{

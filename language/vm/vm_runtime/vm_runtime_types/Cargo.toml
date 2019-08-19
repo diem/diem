@@ -16,7 +16,7 @@ tiny-keccak = "1.5.0"
 types = { path = "../../../../types" }
 vm = { path = "../../" }
 canonical_serialization = { path = "../../../../common/canonical_serialization" }
-nextgen_crypto = { path = "../../../../crypto/nextgen_crypto" }
+crypto = { path = "../../../../crypto/crypto" }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 
 [dependencies.prometheus]

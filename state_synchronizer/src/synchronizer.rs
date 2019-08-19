@@ -6,6 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
 use config::config::NodeConfig;
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -13,7 +14,6 @@ use futures::{
     SinkExt,
 };
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
-use nextgen_crypto::ed25519::*;
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
 use types::ledger_info::LedgerInfoWithSignatures;

@@ -1,6 +1,6 @@
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
-use nextgen_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,

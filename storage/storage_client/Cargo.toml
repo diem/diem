@@ -12,10 +12,9 @@ futures_01 = { version = "0.1.25", package = "futures" }
 grpcio = "0.4.4"
 protobuf = "~2.7"
 rand = "0.6.5"
-crypto = { path = "../../crypto/legacy_crypto" }
+crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 metrics = { path = "../../common/metrics" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 scratchpad = { path = "../scratchpad" }
 state_view = { path = "../state_view" }

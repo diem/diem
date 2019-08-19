@@ -3,6 +3,7 @@
 
 use crate::block_tree::Block;
 use crypto::{
+    ed25519::*,
     hash::{EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
 };
@@ -10,7 +11,6 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use scratchpad::{Accumulator, SparseMerkleTree};
 use std::{
     collections::{HashMap, HashSet},

@@ -35,7 +35,7 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use futures::{
     channel::{mpsc, oneshot},
     compat::Future01CompatExt,
@@ -46,7 +46,6 @@ use network::{
     proto::BlockRetrievalStatus,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;

@@ -26,7 +26,7 @@
 //! # Examples
 //!
 //! ```
-//! use nextgen_crypto::x25519::*;
+//! use crypto::x25519::*;
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! // Derive an X25519 static key pair from seed using the extract-then-expand HKDF method from RFC 5869.
@@ -40,7 +40,7 @@
 //! assert_eq!(public_key1, public_key2);
 //!
 //! // Generate a random X25519 ephemeral key pair from an RNG (in this example a StdRng)
-//! use nextgen_crypto::Uniform;
+//! use crypto::Uniform;
 //! let seed = [1u8; 32];
 //! let mut rng: StdRng = SeedableRng::from_seed(seed);
 //! let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
@@ -56,8 +56,7 @@
 //! assert_ne!(public_key1, public_key2);
 //! ```
 
-use crate::traits::*;
-use crypto::hkdf::Hkdf;
+use crate::{hkdf::Hkdf, traits::*};
 use crypto_derive::{SilentDebug, SilentDisplay};
 use rand::{rngs::EntropyRng, RngCore};
 use serde::{de, export, ser};
@@ -383,7 +382,7 @@ impl<'de> de::Deserialize<'de> for X25519StaticPublicKey {
 //////////////////////////
 
 /// Those transitory traits are meant to help with the progressive
-/// migration of the code base to the nextgen_crypto module and will
+/// migration of the code base to the crypto module and will
 /// disappear after.
 pub mod compat {
     use crate::traits::*;

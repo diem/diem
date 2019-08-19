@@ -14,7 +14,7 @@ rand = "0.6.5"
 serde = { version = "1.0.96", features = ["derive"] }
 tempfile = "3.1.0"
 toml = "0.4"
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 logger = { path = "../common/logger" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
@@ -22,8 +22,8 @@ types = { path = "../types" }
 
 [dev-dependencies]
 types = { path = "../types", features = ["testing"] }
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["nextgen_crypto/testing", "types/testing"]
+testing = ["crypto/testing", "types/testing"]

@@ -7,8 +7,8 @@ use cli::{
 };
 use config::config::RoleType;
 use config_builder::swarm_config::LibraSwarmTopology;
+use crypto::{ed25519::*, SigningKey};
 use libra_swarm::{swarm::LibraSwarm, utils};
-use nextgen_crypto::{ed25519::*, SigningKey};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;

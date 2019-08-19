@@ -4,7 +4,7 @@
 //! Used for node restarts, network partitions, full node syncs
 #![feature(async_await)]
 #![recursion_limit = "1024"]
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 use types::{account_address::AccountAddress, ledger_info::LedgerInfoWithSignatures};
 
 pub use synchronizer::{StateSyncClient, StateSynchronizer};

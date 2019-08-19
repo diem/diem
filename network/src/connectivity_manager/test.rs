@@ -4,9 +4,9 @@
 use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
+use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{FutureExt, SinkExt, TryFutureExt};
 use memsocket::MemorySocket;
-use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;
 use tokio::runtime::Runtime;

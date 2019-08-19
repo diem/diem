@@ -4,7 +4,7 @@
 #![allow(clippy::unit_arg)]
 
 use crate::{contract_event::EventWithProof, ledger_info::LedgerInfoWithSignatures};
-use nextgen_crypto::*;
+use crypto::*;
 use proto_conv::{FromProto, IntoProto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -38,7 +38,7 @@ impl<Sig: Signature> FromProto for ValidatorChangeEventWithProof<Sig> {
 }
 
 #[cfg(any(test, feature = "testing"))]
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
 

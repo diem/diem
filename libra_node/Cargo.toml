@@ -25,7 +25,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 execution_service = { path = "../execution/execution_service" }
 network = { path = "../network" }
 state_synchronizer = { path = "../state_synchronizer" }

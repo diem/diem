@@ -10,11 +10,11 @@ use crate::chained_bft::{
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue,
 };
 use network;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::RepeatedField;
 use serde::{Deserialize, Serialize};

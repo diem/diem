@@ -5,9 +5,8 @@
 
 use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
-use crypto::hash::CryptoHash;
+use crypto::{ed25519::*, hash::CryptoHash};
 use itertools::zip_eq;
-use nextgen_crypto::ed25519::*;
 use proptest::{collection::vec, prelude::*};
 use types::{ledger_info::LedgerInfo, proptest_types::arb_txn_to_commit_batch};
 

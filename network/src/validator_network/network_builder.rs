@@ -22,12 +22,12 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
-use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
-use nextgen_crypto::{
+use crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
+use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,

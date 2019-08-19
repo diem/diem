@@ -6,7 +6,7 @@ use crate::{
     common_transactions::rotate_key_txn,
     gas_costs,
 };
-use nextgen_crypto::ed25519::{compat::keypair_strategy, *};
+use crypto::ed25519::{compat::keypair_strategy, *};
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use proptest_helpers::Index;

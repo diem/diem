@@ -5,8 +5,10 @@ use crate::{
     proto::secret_service::KeyType,
     secret_service_server::{KeyID, SecretServiceServer},
 };
-use crypto::hash::HashValue;
-use nextgen_crypto::traits::{Signature, ValidKey};
+use crypto::{
+    hash::HashValue,
+    traits::{Signature, ValidKey},
+};
 
 /////////////////////////////////////////////////////////////////////////////////////
 // These tests check interoperability of key_generation,                           //

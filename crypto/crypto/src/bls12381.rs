@@ -8,7 +8,7 @@
 //!
 //! ```
 //! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use nextgen_crypto::{
+//! use crypto::{
 //!     bls12381::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -30,10 +30,9 @@
 //! This module is not currently used, but could be included in the future for improved
 //! performance in consensus.
 
-use crate::traits::*;
+use crate::{traits::*, HashValue};
 use bincode::{deserialize, serialize};
 use core::convert::TryFrom;
-use crypto::hash::HashValue;
 use crypto_derive::{SilentDebug, SilentDisplay};
 use failure::prelude::*;
 use pairing::{

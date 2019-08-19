@@ -4,12 +4,12 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::trusted_peers::TrustedPeersConfig;
+use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
 use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,

@@ -6,11 +6,11 @@ use crate::{
         BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature, BLS12381_PRIVATE_KEY_LENGTH,
         BLS12381_PUBLIC_KEY_LENGTH, BLS12381_SIGNATURE_LENGTH,
     },
+    hash::HashValue,
     traits::*,
     unit_tests::uniform_keypair_strategy,
 };
 use bincode::{deserialize, serialize};
-use crypto::hash::HashValue;
 use proptest::prelude::*;
 use std::convert::TryFrom;
 

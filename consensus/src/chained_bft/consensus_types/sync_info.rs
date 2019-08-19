@@ -1,8 +1,8 @@
 use crate::chained_bft::consensus_types::{
     quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
 };
+use crypto::ed25519::*;
 use network;
-use nextgen_crypto::ed25519::*;
 
 use crate::chained_bft::{
     common::Round, consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,

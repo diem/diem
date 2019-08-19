@@ -12,7 +12,7 @@ use core::{
     ops::{Index, IndexMut},
 };
 
-use crypto::hash::HashValue;
+use crate::hash::HashValue;
 use ed25519_dalek;
 use proptest::prelude::*;
 

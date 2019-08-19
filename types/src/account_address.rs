@@ -10,11 +10,10 @@ use canonical_serialization::{
 };
 use crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
-    HashValue,
+    HashValue, VerifyingKey,
 };
 use failure::prelude::*;
 use hex;
-use nextgen_crypto::VerifyingKey;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};

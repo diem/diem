@@ -15,12 +15,12 @@ use crate::{
 use accumulator::{HashReader, MerkleAccumulator};
 use arc_swap::ArcSwap;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, TransactionAccumulatorHasher},
     HashValue,
 };
 use failure::prelude::*;
 use itertools::Itertools;
-use nextgen_crypto::ed25519::*;
 use schemadb::{ReadOptions, DB};
 use std::{ops::Deref, sync::Arc};
 use types::{

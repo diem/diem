@@ -12,7 +12,7 @@ use assert_matches::assert_matches;
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 use std::collections::HashSet;
 use tiny_keccak::Keccak;
 use types::{

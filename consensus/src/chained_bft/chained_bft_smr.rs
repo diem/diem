@@ -22,6 +22,7 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
     compat::Future01CompatExt,
@@ -30,7 +31,6 @@ use futures::{
     select,
     stream::StreamExt,
 };
-use nextgen_crypto::ed25519::*;
 use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::common::Author;

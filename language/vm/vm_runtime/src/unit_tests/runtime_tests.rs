@@ -4,7 +4,7 @@
 use super::*;
 use crate::{code_cache::module_cache::VMModuleCache, txn_executor::TransactionExecutor};
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use nextgen_crypto::ed25519::compat;
+use crypto::ed25519::compat;
 use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
 use vm::{

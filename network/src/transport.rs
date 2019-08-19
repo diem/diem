@@ -5,14 +5,14 @@ use crate::{
     common::NetworkPublicKeys,
     protocols::identity::{exchange_identity, Identity},
 };
+use crypto::{
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    ValidKey,
+};
 use logger::prelude::*;
 use netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},
     transport::{boxed, memory, tcp, TransportExt},
-};
-use nextgen_crypto::{
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-    ValidKey,
 };
 use noise::NoiseConfig;
 use std::{

@@ -3,12 +3,11 @@
 
 use crate::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
 use config_builder::util::get_test_config;
-use crypto::hash::GENESIS_BLOCK_ID;
+use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED};
 use execution_client::ExecutionClient;
 use execution_proto::ExecuteBlockRequest;
 use failure::prelude::*;
 use grpcio::EnvBuilder;
-use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED};
 use proto_conv::FromProto;
 use rand::SeedableRng;
 use std::sync::Arc;

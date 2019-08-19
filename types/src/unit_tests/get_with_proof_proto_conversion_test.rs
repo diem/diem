@@ -7,7 +7,7 @@ use crate::{
     },
     proto,
 };
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto};
 

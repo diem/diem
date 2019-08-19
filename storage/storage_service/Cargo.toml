@@ -13,8 +13,7 @@ protobuf = "~2.7"
 
 canonical_serialization = { path = "../../common/canonical_serialization" }
 config = { path = "../../config" }
-crypto = { path = "../../crypto/legacy_crypto" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
+crypto = { path = "../../crypto/crypto" }
 debug_interface = { path = "../../common/debug_interface" }
 executable_helpers = { path = "../../common/executable_helpers" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }

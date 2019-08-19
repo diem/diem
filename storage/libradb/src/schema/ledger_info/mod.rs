@@ -14,8 +14,8 @@
 
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
+use crypto::ed25519::*;
 use failure::prelude::*;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use schemadb::{
     define_schema,

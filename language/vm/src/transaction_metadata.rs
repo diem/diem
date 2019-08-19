@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
-use nextgen_crypto::ed25519::{compat, Ed25519PublicKey};
+use crypto::ed25519::{compat, Ed25519PublicKey};
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 pub struct TransactionMetadata {

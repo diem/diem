@@ -8,11 +8,13 @@ use crate::{
 };
 use chrono::Utc;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, TestOnlyHash},
+    test_utils::KeyPair,
+    traits::SigningKey,
     HashValue,
 };
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair, traits::SigningKey};
 use proto_conv::IntoProto;
 use protobuf::Message;
 

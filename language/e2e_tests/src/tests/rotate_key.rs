@@ -6,7 +6,7 @@ use crate::{
     common_transactions::{create_account_txn, rotate_key_txn},
     executor::FakeExecutor,
 };
-use nextgen_crypto::ed25519::compat;
+use crypto::ed25519::compat;
 use types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,

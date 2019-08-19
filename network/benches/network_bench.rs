@@ -15,6 +15,7 @@ use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
+use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
     compat::Future01CompatExt,
@@ -32,7 +33,6 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use nextgen_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use parity_multiaddr::Multiaddr;
 use protobuf::Message;
 use rand::{rngs::StdRng, SeedableRng};

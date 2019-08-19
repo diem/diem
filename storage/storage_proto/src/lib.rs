@@ -27,9 +27,8 @@
 
 pub mod proto;
 
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
-use nextgen_crypto::ed25519::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};

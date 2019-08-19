@@ -7,6 +7,7 @@ use admission_control_proto::proto::admission_control_grpc::{
 use admission_control_service::admission_control_service::AdmissionControlService;
 use config::config::{NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
+use crypto::ed25519::*;
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use execution_proto::proto::execution_grpc;
 use execution_service::ExecutionService;
@@ -25,7 +26,6 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use nextgen_crypto::ed25519::*;
 use state_synchronizer::StateSynchronizer;
 use std::{
     cmp::min,

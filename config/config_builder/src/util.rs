@@ -5,8 +5,8 @@ use config::{
     config::{NodeConfig, NodeConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
+use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use proto_conv::IntoProtoBytes;
 use rand::{Rng, SeedableRng};
 use std::{convert::TryFrom, fs::File, io::prelude::*, path::Path};

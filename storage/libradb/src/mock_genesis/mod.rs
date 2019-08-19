@@ -5,12 +5,12 @@
 
 use crate::LibraDB;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
 use failure::Result;
 use lazy_static::lazy_static;
-use nextgen_crypto::ed25519::*;
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,

@@ -15,7 +15,7 @@ protobuf = "~2.7"
 
 admission_control_proto = { path = "../admission_control_proto" }
 config = { path = "../../config" }
-crypto = { path = "../../crypto/legacy_crypto" }
+crypto = { path = "../../crypto/crypto" }
 debug_interface = { path = "../../common/debug_interface" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 executable_helpers = { path = "../../common/executable_helpers" }
@@ -23,7 +23,6 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 logger = { path = "../../common/logger" }
 mempool = { path = "../../mempool" }
 metrics = { path = "../../common/metrics" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
 types = { path = "../../types" }

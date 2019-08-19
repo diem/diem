@@ -12,8 +12,8 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
+use crypto::ed25519::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use nextgen_crypto::ed25519::*;
 
 use crate::chained_bft::{
     chained_bft_smr::ChainedBftSMRConfig, common::Author, persistent_storage::StorageWriteProxy,
@@ -122,18 +122,13 @@ impl ChainedBftProvider {
 
         let signer = ValidatorSigner::new(author, private_key);
         let peers_with_public_keys = node_config.base.trusted_peers.get_trusted_consensus_peers();
-        let peers_with_nextgen_public_keys = peers_with_public_keys
-            .clone()
-            .into_iter()
-            .map(|(k, v)| (AccountAddress::clone(&k), v))
-            .collect();
         let peers = Arc::new(
             peers_with_public_keys
                 .keys()
                 .map(AccountAddress::clone)
                 .collect(),
         );
-        let validator = Arc::new(ValidatorVerifier::new(peers_with_nextgen_public_keys));
+        let validator = Arc::new(ValidatorVerifier::new(peers_with_public_keys));
         counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_size() as i64);

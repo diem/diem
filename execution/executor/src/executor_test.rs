@@ -8,10 +8,9 @@ use crate::{
     Executor, OP_COUNTERS,
 };
 use config::config::{NodeConfig, NodeConfigHelpers};
-use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
+use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
-use nextgen_crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::IntoProtoBytes;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};

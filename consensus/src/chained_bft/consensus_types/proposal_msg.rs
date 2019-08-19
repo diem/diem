@@ -5,9 +5,9 @@ use crate::chained_bft::{
     common::{Author, Payload},
     consensus_types::{block::Block, sync_info::SyncInfo},
 };
+use crypto::ed25519::*;
 use failure::prelude::*;
 use network::proto::Proposal as ProtoProposal;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::fmt;
 use types::validator_verifier::ValidatorVerifier;

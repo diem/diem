@@ -15,9 +15,8 @@ use crypto::HashValue;
 use logger::prelude::*;
 
 use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::StateComputeResult};
-use crypto::hash::CryptoHash;
+use crypto::{ed25519::*, hash::CryptoHash};
 use mirai_annotations::checked_precondition;
-use nextgen_crypto::ed25519::*;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},

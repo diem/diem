@@ -7,12 +7,12 @@ use crate::{
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, CryptoHasher, VoteMsgHasher},
     HashValue,
 };
 use failure::Result as ProtoResult;
 use network::proto::Vote as ProtoVote;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{

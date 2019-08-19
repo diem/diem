@@ -14,9 +14,8 @@ use crate::chained_bft::{
         placeholder_ledger_info, TreeInserter,
     },
 };
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue, *};
 use futures::executor::block_on;
-use nextgen_crypto::{ed25519::*, *};
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
 use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};

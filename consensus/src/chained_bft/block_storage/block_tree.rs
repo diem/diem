@@ -12,10 +12,9 @@ use crate::{
     util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use logger::prelude::*;
 use mirai_annotations::checked_verify_eq;
-use nextgen_crypto::ed25519::*;
 use serde::Serialize;
 use std::{
     collections::{

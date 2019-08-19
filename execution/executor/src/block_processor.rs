@@ -9,6 +9,7 @@ use crate::{
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
 };
@@ -16,7 +17,6 @@ use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkRes
 use failure::prelude::*;
 use futures::channel::oneshot;
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use scratchpad::{Accumulator, ProofRead, SparseMerkleTree};
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},

@@ -13,6 +13,7 @@ mod mock_vm;
 use crate::block_processor::BlockProcessor;
 use config::config::NodeConfig;
 use crypto::{
+    ed25519::*,
     hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
@@ -21,7 +22,6 @@ use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use std::{
     collections::HashMap,
     marker::PhantomData,

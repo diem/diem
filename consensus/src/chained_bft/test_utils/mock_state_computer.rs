@@ -5,11 +5,10 @@ use crate::{
     chained_bft::consensus_types::quorum_cert::QuorumCert,
     state_replication::{StateComputeResult, StateComputer},
 };
-use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use crypto::{ed25519::*, hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use std::pin::Pin;
 use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;

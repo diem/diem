@@ -14,7 +14,7 @@ use crate::{
     state_replication::ExecutedState,
 };
 use channel;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -22,7 +22,6 @@ use network::{
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use nextgen_crypto::ed25519::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex, RwLock},

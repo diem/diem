@@ -3,7 +3,7 @@
 
 use crate::{assert_prologue_parity, executor::FakeExecutor};
 use assert_matches::assert_matches;
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 use types::{
     access_path::AccessPath,
     account_config,
