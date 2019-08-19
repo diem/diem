@@ -10,10 +10,9 @@ use crate::{
     },
     state_replication::ExecutedState,
 };
-use crypto::{hash::CryptoHash, HashValue};
+use crypto::{ed25519::*, hash::CryptoHash, HashValue};
 use futures::{channel::mpsc, executor::block_on};
 use logger::{set_simple_logger, set_simple_logger_prefix};
-use nextgen_crypto::ed25519::*;
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 use tokio::runtime;

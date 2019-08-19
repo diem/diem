@@ -43,6 +43,7 @@ use crate::{
 use bytes::Bytes;
 use channel;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHasher, DiscoveryMsgHasher},
     HashValue,
 };
@@ -55,7 +56,6 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use parity_multiaddr::Multiaddr;
 use protobuf::{self, Message};
 use rand::{rngs::SmallRng, FromEntropy, Rng};

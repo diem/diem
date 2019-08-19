@@ -21,10 +21,11 @@ use crate::{
     vm_error::VMStatus,
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use crypto::{hash::CryptoHash, HashValue};
-use nextgen_crypto::{
+use crypto::{
     ed25519::{compat::keypair_strategy, *},
+    hash::CryptoHash,
     traits::*,
+    HashValue,
 };
 use proptest::{
     collection::{vec, SizeRange},

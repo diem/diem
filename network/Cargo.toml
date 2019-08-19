@@ -22,8 +22,7 @@ unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
-crypto = { path = "../crypto/legacy_crypto" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
@@ -35,9 +34,8 @@ types = { path = "../types" }
 
 [dev-dependencies]
 criterion = "0.2.11"
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
 types = { path = "../types", features = ["testing"]}
-
 
 [build-dependencies]
 protoc-rust = "2.5.0"

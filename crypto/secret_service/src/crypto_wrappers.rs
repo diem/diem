@@ -5,14 +5,14 @@
 //! and to make the secret service agnostic to the details of the particular signing algorithms.
 
 use core::convert::TryFrom;
-use crypto::hash::HashValue;
-use crypto_derive::SilentDebug;
-use failure::prelude::*;
-use nextgen_crypto::{
+use crypto::{
     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    hash::HashValue,
     traits::*,
 };
+use crypto_derive::SilentDebug;
+use failure::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 

@@ -27,8 +27,7 @@ rmp-serde = "0.13.7"
 canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
-crypto = { path = "../crypto/legacy_crypto" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 execution_proto = { path = "../execution/execution_proto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }
@@ -59,7 +58,7 @@ rusty-fork = "0.2.1"
 config_builder = { path = "../config/config_builder" }
 execution_service = { path = "../execution/execution_service" }
 storage_service = { path = "../storage/storage_service" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+crypto = { path = "../crypto/crypto", features = ["testing"]}
 types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }

@@ -11,12 +11,12 @@ use std::{
     string::ToString,
 };
 
-use logger::LoggerType;
-use nextgen_crypto::{
+use crypto::{
     ed25519::*,
     test_utils::TEST_SEED,
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
+use logger::LoggerType;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;

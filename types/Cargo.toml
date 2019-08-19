@@ -24,8 +24,7 @@ serde = { version = "1.0.96", features = ["derive"] }
 tiny-keccak = "1.5.0"
 
 canonical_serialization = { path = "../common/canonical_serialization" }
-crypto = { path = "../crypto/legacy_crypto" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../common/proptest_helpers" }
 proto_conv = { path = "../common/proto_conv", features = ["derive"] }
@@ -34,8 +33,8 @@ proto_conv = { path = "../common/proto_conv", features = ["derive"] }
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["nextgen_crypto/testing"]
+testing = ["crypto/testing"]

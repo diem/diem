@@ -8,7 +8,7 @@ use crate::{
 use canonical_serialization::{
     CanonicalDeserializer, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
 };
-use nextgen_crypto::ed25519::*;
+use crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::{FromProto, IntoProto};
 use std::convert::TryFrom;

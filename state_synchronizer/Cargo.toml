@@ -21,7 +21,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
@@ -35,8 +35,7 @@ features = ["push"]
 bytes = "0.4.12"
 
 config_builder = { path = "../config/config_builder" }
-crypto = { path = "../crypto/legacy_crypto" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+crypto = { path = "../crypto/crypto", features = ["testing"]}
 parity-multiaddr = "0.4.0"
 types = { path = "../types", features = ["testing"] }
 vm_genesis = { path = "../language/vm/vm_genesis" }

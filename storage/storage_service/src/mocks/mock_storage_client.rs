@@ -4,10 +4,9 @@
 //! This module provides mock storage clients for tests.
 
 use canonical_serialization::SimpleSerializer;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use rand::{
     rngs::{OsRng, StdRng},

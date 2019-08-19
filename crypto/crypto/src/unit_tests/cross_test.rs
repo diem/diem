@@ -8,7 +8,7 @@ use crate::{
     unit_tests::uniform_keypair_strategy,
 };
 
-use crypto::hash::HashValue;
+use crate::hash::HashValue;
 
 use core::convert::TryFrom;
 use crypto_derive::SilentDebug;

@@ -15,10 +15,9 @@ use crate::{
     state_replication::StateMachineReplication,
 };
 use channel;
-use crypto::hash::CryptoHash;
+use crypto::{ed25519::*, hash::CryptoHash};
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use nextgen_crypto::ed25519::*;
 use proto_conv::FromProto;
 use std::sync::Arc;
 use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};

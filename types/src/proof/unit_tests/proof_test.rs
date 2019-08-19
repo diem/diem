@@ -17,13 +17,13 @@ use crate::{
     },
 };
 use crypto::{
+    ed25519::*,
     hash::{
         CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
         GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use nextgen_crypto::ed25519::*;
 use proptest::{collection::vec, prelude::*};
 
 #[test]

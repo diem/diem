@@ -6,7 +6,7 @@ use crate::{
     counters,
     state_replication::{StateComputeResult, StateComputer},
 };
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use execution_proto::proto::{
     execution::{CommitBlockRequest, CommitBlockStatus, ExecuteBlockRequest, ExecuteBlockResponse},
     execution_grpc::ExecutionClient,
@@ -14,7 +14,6 @@ use execution_proto::proto::{
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use state_synchronizer::StateSyncClient;
 use std::{pin::Pin, sync::Arc, time::Instant};

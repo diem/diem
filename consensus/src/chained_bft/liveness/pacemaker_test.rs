@@ -17,8 +17,8 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use channel;
+use crypto::ed25519::*;
 use futures::{executor::block_on, StreamExt};
-use nextgen_crypto::ed25519::*;
 use std::{sync::Arc, time::Duration, u64};
 use types::validator_signer::ValidatorSigner;
 

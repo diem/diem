@@ -7,7 +7,7 @@
 //! # Examples
 //!
 //! ```
-//! use nextgen_crypto::{traits::Uniform, vrf::ecvrf::*};
+//! use crypto::{traits::Uniform, vrf::ecvrf::*};
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! let message = b"Test message";
@@ -22,7 +22,7 @@
 //! using a `VRFPublicKey`:
 //!
 //! ```
-//! # use nextgen_crypto::{traits::Uniform, vrf::ecvrf::*};
+//! # use crypto::{traits::Uniform, vrf::ecvrf::*};
 //! # use rand::{rngs::StdRng, SeedableRng};
 //! # let message = b"Test message";
 //! # let mut rng: StdRng = SeedableRng::from_seed([0; 32]);
@@ -35,7 +35,7 @@
 //! Produce a pseudorandom output from a `Proof`:
 //!
 //! ```
-//! # use nextgen_crypto::{traits::Uniform, vrf::ecvrf::*};
+//! # use crypto::{traits::Uniform, vrf::ecvrf::*};
 //! # use rand::{rngs::StdRng, SeedableRng};
 //! # let message = b"Test message";
 //! # let mut rng: StdRng = SeedableRng::from_seed([0; 32]);

@@ -14,7 +14,7 @@ num-traits = "0.2"
 proptest = "0.9.2"
 proptest-derive = "0.1.2"
 
-crypto = { path = "../../crypto/legacy_crypto" }
+crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 serde = { version = "1.0.89", features = ["derive"] }
 types = { path = "../../types" }

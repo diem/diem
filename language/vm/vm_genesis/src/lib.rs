@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{VMConfig, VMPublishingOption};
+use crypto::ed25519::*;
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
-use nextgen_crypto::ed25519::*;
 use rand::{rngs::StdRng, SeedableRng};
 use state_view::StateView;
 use std::{collections::HashSet, iter::FromIterator, time::Duration};

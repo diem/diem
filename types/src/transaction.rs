@@ -21,14 +21,15 @@ use canonical_serialization::{
     SimpleSerializer,
 };
 use crypto::{
+    ed25519::*,
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher,
         SignedTransactionHasher, TransactionInfoHasher,
     },
+    traits::*,
     HashValue,
 };
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::*, traits::*};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto, IntoProtoBytes};

@@ -13,13 +13,13 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
 };
 use crypto::{
+    ed25519::*,
     hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
     HashValue,
 };
 use failure::Result;
 use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
 use network::proto::Block as ProtoBlock;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

@@ -37,10 +37,9 @@ Right now the keys are generated randomly: the seed is driven from OS randomness
     ├── secret_service_server.rs   # Struct SecretServiceServer that holds the map of the generated secret keys and implements API answering the requests
     ├── secret_service_client.rs   # ConsensusKeyManager that represents a client for the secret service, it submits the requests and wraps the responses
     ├── secret_service_node.rs     # Runnable SecretServiceNode that opens connections on the ports specified in the node_config
-    ├── crypto_wrappers.rs         # Helper methods for new crypto API located in the nextgen directory
+    ├── crypto_wrappers.rs         # Helper methods for new crypto API located in the crypto directory
     ├── main.rs                    # Runs the secret service in its own process
     ├── unit_tests                 # Tests
     ├── lib.rs
-    └── proto/              
+    └── proto/
         └── secret_service.proto    # Rpc definitions of callable functions, the format for request and response messages as well as the error codes
-

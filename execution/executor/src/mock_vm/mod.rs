@@ -5,7 +5,7 @@
 mod mock_vm_test;
 
 use config::config::VMConfig;
-use nextgen_crypto::ed25519::compat;
+use crypto::ed25519::compat;
 use state_view::StateView;
 use std::collections::HashMap;
 use types::{

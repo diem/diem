@@ -11,9 +11,8 @@ use crate::{
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
 use assert_matches::assert_matches;
-use crypto::hash::CryptoHash;
+use crypto::{ed25519::*, hash::CryptoHash, test_utils::TEST_SEED, SigningKey};
 use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
-use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, SigningKey};
 use proto_conv::FromProto;
 use protobuf::{Message, UnknownFields};
 use rand::SeedableRng;

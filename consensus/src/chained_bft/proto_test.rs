@@ -11,8 +11,7 @@ use crate::{
     },
     state_replication::ExecutedState,
 };
-use crypto::HashValue;
-use nextgen_crypto::ed25519::Ed25519PrivateKey;
+use crypto::{ed25519::Ed25519PrivateKey, HashValue};
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 use types::validator_signer::ValidatorSigner;
 

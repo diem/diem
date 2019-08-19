@@ -6,8 +6,8 @@
 //! For examples on how to use these traits, see the implementations of the [`ed25519`] or
 //! [`bls12381`] modules.
 
+use crate::HashValue;
 use core::convert::{From, TryFrom};
-use crypto::hash::HashValue;
 use failure::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 

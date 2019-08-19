@@ -6,9 +6,9 @@ use crate::{
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
 };
 use config::config::NodeConfigHelpers;
+use crypto::ed25519::*;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use nextgen_crypto::ed25519::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashSet, iter::FromIterator};
 use types::{

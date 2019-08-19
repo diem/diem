@@ -10,8 +10,10 @@ use crate::chained_bft::{
     test_utils::placeholder_certificate_for_block,
 };
 
-use crypto::HashValue;
-use nextgen_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    HashValue,
+};
 use proptest::{prelude::*, std_facade::hash_map::HashMap};
 use std::{
     panic,

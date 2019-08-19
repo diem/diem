@@ -9,12 +9,12 @@
 
 mod state_view;
 
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
 use metrics::counters::SVC_COUNTERS;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use rand::Rng;

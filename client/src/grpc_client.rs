@@ -11,11 +11,11 @@ use admission_control_proto::{
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::sync::Arc;
 use types::{

@@ -10,8 +10,8 @@ use crate::{
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
+use crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 use failure::Result;
-use nextgen_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};

@@ -3,8 +3,8 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
+use crypto::ed25519::*;
 use lazy_static::lazy_static;
-use nextgen_crypto::ed25519::*;
 use rand::{Rng, SeedableRng};
 use std::time::Duration;
 use types::{

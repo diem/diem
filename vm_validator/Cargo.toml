@@ -26,7 +26,7 @@ rand = "0.6.5"
 execution_proto = { path = "../execution/execution_proto" }
 execution_service = { path = "../execution/execution_service" }
 grpc_helpers = { path = "../common/grpc_helpers" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types", features = ["testing"] }
 vm_genesis = { path = "../language/vm/vm_genesis" }

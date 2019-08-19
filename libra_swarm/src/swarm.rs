@@ -7,10 +7,10 @@ use crate::{
 };
 use config::config::{NodeConfig, RoleType};
 use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfig, SwarmConfigBuilder};
+use crypto::{ed25519::*, test_utils::KeyPair};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use logger::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::{
     collections::HashMap,
     env,

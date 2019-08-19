@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bincode::serialize;
+use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::{
     fs::{self, File},
     io::Write,

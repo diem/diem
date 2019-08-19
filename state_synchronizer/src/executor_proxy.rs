@@ -1,5 +1,6 @@
 use crate::LedgerInfo;
 use config::config::NodeConfig;
+use crypto::ed25519::*;
 use execution_proto::proto::{
     execution::{ExecuteChunkRequest, ExecuteChunkResponse},
     execution_grpc::ExecutionClient,
@@ -10,7 +11,6 @@ use grpc_helpers::convert_grpc_response;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
 use network::proto::GetChunkResponse;
-use nextgen_crypto::ed25519::*;
 use proto_conv::IntoProto;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};

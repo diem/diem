@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ProtocolId;
-use nextgen_crypto::{ed25519::*, x25519::X25519StaticPublicKey};
+use crypto::{ed25519::*, x25519::X25519StaticPublicKey};
 use std::fmt;
 
 /// A Negotiated substream encapsulates a protocol and a substream for which that protocol has been

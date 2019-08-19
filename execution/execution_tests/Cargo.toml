@@ -14,13 +14,12 @@ grpcio = "0.4.4"
 
 config = { path = "../../config" }
 config_builder = { path = "../../config/config_builder" }
-crypto = { path = "../../crypto/legacy_crypto" }
+crypto = { path = "../../crypto/crypto" }
 execution_client = { path = "../execution_client" }
 execution_proto = { path = "../execution_proto" }
 execution_service = { path = "../execution_service" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
 storage_service = { path = "../../storage/storage_service" }
@@ -29,5 +28,5 @@ vm_genesis = { path = "../../language/vm/vm_genesis" }
 
 [dev-dependencies]
 rand = "0.6.5"
-nextgen_crypto = { path = "../../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../../crypto/crypto", features = ["testing"] }
 types = { path = "../../types", features = ["testing"]}

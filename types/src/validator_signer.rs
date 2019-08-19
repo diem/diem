@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use crypto::HashValue;
+use crypto::{test_utils::TEST_SEED, HashValue, *};
 use failure::Error;
-use nextgen_crypto::{test_utils::TEST_SEED, *};
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
@@ -95,7 +94,7 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
 pub mod proptests {
     use super::*;
     #[cfg(test)]
-    use nextgen_crypto::ed25519::*;
+    use crypto::ed25519::*;
     use proptest::{prelude::*, sample, strategy::LazyJust};
 
     #[allow(clippy::redundant_closure)]

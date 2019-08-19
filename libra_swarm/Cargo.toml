@@ -19,12 +19,12 @@ debug_interface = { path = "../common/debug_interface" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 logger = { path = "../common/logger" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 tools = { path = "../common/tools" }
 
 [dev-dependencies]
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"]}
+crypto = { path = "../crypto/crypto", features = ["testing"]}
 
 [features]
 default = []
-testing = ["nextgen_crypto/testing", "client_lib/testing"]
+testing = ["crypto/testing", "client_lib/testing"]

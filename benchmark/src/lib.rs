@@ -6,11 +6,11 @@ use admission_control_proto::proto::{
     admission_control_grpc::AdmissionControlClient,
 };
 use client::{AccountData, AccountStatus};
+use crypto::{ed25519::*, test_utils::KeyPair};
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
 use logger::prelude::*;
 use metrics::OpMetrics;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto, sync::Arc, thread, time};
 use types::{account_address::AccountAddress, account_config::association_address};

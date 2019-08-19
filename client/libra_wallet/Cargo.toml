@@ -23,7 +23,7 @@ types = { path = "../../types" }
 version = "1.0.0-pre.1"
 
 [dependencies.libra_crypto]
-path = "../../crypto/legacy_crypto"
+path = "../../crypto/crypto"
 package = "crypto"
 
 [dependencies.proto_conv]

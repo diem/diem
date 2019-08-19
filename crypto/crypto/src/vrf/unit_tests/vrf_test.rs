@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{unit_tests::uniform_keypair_strategy, vrf::ecvrf::*};
+use crate::{hash::HashValue, unit_tests::uniform_keypair_strategy, vrf::ecvrf::*};
 use core::convert::TryFrom;
-use crypto::hash::HashValue;
 use curve25519_dalek::{
     constants::ED25519_BASEPOINT_POINT, edwards::CompressedEdwardsY,
     scalar::Scalar as ed25519_Scalar,

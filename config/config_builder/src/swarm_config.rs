@@ -8,8 +8,8 @@ use config::{
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
+use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use nextgen_crypto::{ed25519::*, test_utils::KeyPair};
 use std::path::{Path, PathBuf};
 
 /// Topology indicates the shape of the validator network

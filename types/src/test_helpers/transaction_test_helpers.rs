@@ -14,8 +14,7 @@ use crate::{
     transaction_helpers::get_signed_transactions_digest,
     write_set::WriteSet,
 };
-use crypto::hash::CryptoHash;
-use nextgen_crypto::{ed25519::*, traits::*};
+use crypto::{ed25519::*, hash::CryptoHash, traits::*};
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::time::{SystemTime, UNIX_EPOCH};

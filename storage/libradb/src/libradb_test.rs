@@ -6,8 +6,7 @@ use crate::{
     mock_genesis::{db_with_mock_genesis, GENESIS_INFO},
     test_helper::arb_blocks_to_commit,
 };
-use crypto::hash::CryptoHash;
-use nextgen_crypto::ed25519::*;
+use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{collections::HashMap, convert::TryFrom};

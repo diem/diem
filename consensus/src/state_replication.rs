@@ -3,10 +3,9 @@
 
 use crate::chained_bft::QuorumCert;
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
-use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use crypto::{ed25519::*, hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
 use futures::Future;
-use nextgen_crypto::ed25519::*;
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, sync::Arc};
 use types::{

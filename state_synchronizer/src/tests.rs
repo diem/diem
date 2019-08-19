@@ -6,7 +6,7 @@ use crate::{
 };
 use config::config::RoleType;
 use config_builder::util::get_test_config;
-use crypto::HashValue;
+use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
 use futures::{
@@ -22,7 +22,6 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, SigningKey};
 use parity_multiaddr::Multiaddr;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};

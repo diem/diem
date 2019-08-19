@@ -27,8 +27,8 @@ use crate::{
     account::{Account, AccountData},
     gas_costs,
 };
+use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use lazy_static::lazy_static;
-use nextgen_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use proptest::{prelude::*, strategy::Union};
 use std::fmt;
 use types::{

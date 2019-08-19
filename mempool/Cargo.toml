@@ -25,7 +25,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }

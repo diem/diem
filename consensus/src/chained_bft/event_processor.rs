@@ -32,9 +32,9 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
+use crypto::ed25519::*;
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
-use nextgen_crypto::ed25519::*;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
 use types::ledger_info::LedgerInfoWithSignatures;

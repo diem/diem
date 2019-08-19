@@ -3,6 +3,7 @@
 
 use crate::{counters, executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId};
 use config::config::{NodeConfig, RoleType, StateSyncConfig};
+use crypto::ed25519::*;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::prelude::*;
 use futures::{
@@ -16,7 +17,6 @@ use network::{
     proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
 };
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use rand::{thread_rng, Rng};
 use std::{

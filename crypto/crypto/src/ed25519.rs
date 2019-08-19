@@ -10,7 +10,7 @@
 //!
 //! ```
 //! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use nextgen_crypto::{
+//! use crypto::{
 //!     ed25519::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -29,9 +29,8 @@
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
 
-use crate::traits::*;
+use crate::{traits::*, HashValue};
 use core::convert::TryFrom;
-use crypto::hash::HashValue;
 use crypto_derive::{SilentDebug, SilentDisplay};
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek;
@@ -386,7 +385,7 @@ impl Eq for Ed25519Signature {}
 //////////////////////////
 
 /// Those transitory traits are meant to help with the progressive
-/// migration of the code base to the nextgen_crypto module and will
+/// migration of the code base to the crypto module and will
 /// disappear after
 pub mod compat {
     use crate::ed25519::*;

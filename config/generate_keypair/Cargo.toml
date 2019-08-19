@@ -12,4 +12,4 @@ clap = { version = "2.32" }
 tempdir = "0.3.7"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-nextgen_crypto = { path = "../../crypto/nextgen_crypto/"}
+crypto = { path = "../../crypto/crypto/"}

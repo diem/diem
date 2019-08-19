@@ -26,7 +26,7 @@ tempfile = "3.1.0"
 admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
 config = { path = "../config" }
 crash_handler = { path = "../common/crash_handler" }
-nextgen_crypto = { path = "../crypto/nextgen_crypto" }
+crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
@@ -36,9 +36,9 @@ types = { path = "../types" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
 
 [dev-dependencies]
-nextgen_crypto = { path = "../crypto/nextgen_crypto", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
 types = { path = "../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing", "nextgen_crypto/testing"]
+testing = ["types/testing", "crypto/testing"]

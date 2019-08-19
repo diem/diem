@@ -11,9 +11,9 @@ use crate::{
     },
 };
 use config::config::NodeConfigHelpers;
+use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use nextgen_crypto::ed25519::compat::generate_keypair;
 use proto_conv::FromProto;
 use std::{
     sync::{Arc, Mutex},

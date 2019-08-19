@@ -10,12 +10,11 @@
 mod tests;
 
 use config::config::NodeConfig;
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use execution_proto::proto::execution_grpc::create_execution;
 use execution_service::ExecutionService;
 use grpc_helpers::ServerHandle;
 use grpcio::{EnvBuilder, ServerBuilder};
-use nextgen_crypto::ed25519::*;
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;

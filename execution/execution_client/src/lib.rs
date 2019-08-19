@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crypto::ed25519::*;
 use execution_proto::{
     proto::{execution::CommitBlockRequest, execution_grpc},
     ExecuteBlockRequest, ExecuteBlockResponse,
 };
 use failure::{bail, Result};
 use grpcio::{ChannelBuilder, Environment};
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::sync::Arc;
 use types::ledger_info::LedgerInfoWithSignatures;

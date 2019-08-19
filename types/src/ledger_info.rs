@@ -11,10 +11,9 @@ use crate::{
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{CryptoHash, CryptoHasher, LedgerInfoHasher},
-    HashValue,
+    HashValue, *,
 };
 use failure::prelude::*;
-use nextgen_crypto::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
