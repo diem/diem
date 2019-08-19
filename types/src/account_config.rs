@@ -16,6 +16,7 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleDeserializer,
 };
+#[cfg(any(test, feature = "testing"))]
 use crypto::HashValue;
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
