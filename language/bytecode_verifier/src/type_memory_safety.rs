@@ -19,8 +19,8 @@ use vm::{
         SignatureToken,
     },
     views::{
-        FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView, SignatureTokenView,
-        StructDefinitionView, ViewInternals,
+        FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView, ModuleView,
+        SignatureTokenView, StructDefinitionView, ViewInternals,
     },
 };
 
@@ -31,7 +31,7 @@ struct StackAbstractValue {
 }
 
 pub struct TypeAndMemorySafetyAnalysis<'a> {
-    module: &'a CompiledModule,
+    module_view: ModuleView<'a, CompiledModule>,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
     locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
     stack: Vec<StackAbstractValue>,
@@ -45,6 +45,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
     ) -> Vec<VMStaticViolation> {
+        let module_view = ModuleView::new(module);
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         let function_signature_view = function_definition_view.signature();
@@ -66,7 +67,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         // nonces in [0, locals_signature_view.len()) are reserved for constructing canonical state
         let next_nonce = locals_signature_view.len();
         let mut verifier = Self {
-            module,
+            module_view,
             function_definition_view: FunctionDefinitionView::new(module, function_definition),
             locals_signature_view,
             stack: vec![],
@@ -85,6 +86,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
         }
         verifier.errors
+    }
+
+    fn module(&self) -> &'a CompiledModule {
+        self.module_view.as_inner()
     }
 
     fn get_nonce(&mut self, state: &mut AbstractState) -> Nonce {
@@ -149,7 +154,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
             };
         if !self
-            .module
+            .module()
             .is_field_in_struct(*field_definition_index, struct_handle_index)
         {
             return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
@@ -167,7 +172,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         match bytecode {
             Bytecode::Pop => {
                 let operand = self.stack.pop().unwrap();
-                let kind = SignatureTokenView::new(self.module, &operand.signature).kind();
+                let kind = SignatureTokenView::new(self.module(), &operand.signature).kind();
                 if kind != Kind::Unrestricted {
                     Err(VMStaticViolation::PopResourceError(offset))
                 } else if operand.value.is_reference() {
@@ -280,7 +285,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 let field_signature = self
-                    .module
+                    .module()
                     .get_field_signature(*field_definition_index)
                     .0
                     .clone();
@@ -315,7 +320,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 let field_signature = self
-                    .module
+                    .module()
                     .get_field_signature(*field_definition_index)
                     .0
                     .clone();
@@ -438,11 +443,22 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::Call(idx, _) => {
-                let function_handle = self.module.function_handle_at(*idx);
-                let function_signature =
-                    self.module.function_signature_at(function_handle.signature);
+                let function_handle = self.module().function_handle_at(*idx);
+                let function_signature = self
+                    .module()
+                    .function_signature_at(function_handle.signature);
+
+                let function_acquired_resources = self
+                    .module_view
+                    .function_acquired_resources(&function_handle);
+                for acquired_resource in &function_acquired_resources {
+                    if !state.global(*acquired_resource).is_empty() {
+                        return Err(VMStaticViolation::GlobalReferenceError(offset));
+                    }
+                }
+
                 let function_signature_view =
-                    FunctionSignatureView::new(self.module, function_signature);
+                    FunctionSignatureView::new(self.module(), function_signature);
                 let mut all_references_to_borrow_from = BTreeSet::new();
                 let mut mutable_references_to_borrow_from = BTreeSet::new();
                 for arg_type in function_signature.arg_types.iter().rev() {
@@ -490,9 +506,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::Pack(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
+                let struct_definition = self.module().struct_def_at(*idx);
                 let struct_definition_view =
-                    StructDefinitionView::new(self.module, struct_definition);
+                    StructDefinitionView::new(self.module(), struct_definition);
                 match struct_definition_view.fields() {
                     None => {
                         // TODO pack on native error
@@ -525,7 +541,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::Unpack(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
+                let struct_definition = self.module().struct_def_at(*idx);
                 let struct_arg = self.stack.pop().unwrap();
                 if struct_arg.signature
                     != SignatureToken::Struct(struct_definition.struct_handle, vec![])
@@ -533,7 +549,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     return Err(VMStaticViolation::UnpackTypeMismatchError(offset));
                 }
                 let struct_definition_view =
-                    StructDefinitionView::new(self.module, struct_definition);
+                    StructDefinitionView::new(self.module(), struct_definition);
                 match struct_definition_view.fields() {
                     None => {
                         // TODO unpack on native error
@@ -570,7 +586,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         SignatureToken::MutableReference(signature) => signature,
                         _ => panic!("Unreachable"),
                     };
-                    if SignatureTokenView::new(self.module, &inner_signature).kind()
+                    if SignatureTokenView::new(self.module(), &inner_signature).kind()
                         != Kind::Unrestricted
                     {
                         Err(VMStaticViolation::ReadRefResourceError(offset))
@@ -589,7 +605,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let ref_operand = self.stack.pop().unwrap();
                 let val_operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = ref_operand.signature {
-                    let kind = SignatureTokenView::new(self.module, &signature).kind();
+                    let kind = SignatureTokenView::new(self.module(), &signature).kind();
                     match kind {
                         Kind::Resource | Kind::All => {
                             Err(VMStaticViolation::WriteRefResourceError(offset))
@@ -667,7 +683,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Eq | Bytecode::Neq => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
-                let kind1 = SignatureTokenView::new(self.module, &operand1.signature).kind();
+                let kind1 = SignatureTokenView::new(self.module(), &operand1.signature).kind();
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
                     if let AbstractValue::Reference(nonce) = operand1.value {
@@ -712,8 +728,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::Exists(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                if !StructDefinitionView::new(self.module, struct_definition).is_nominal_resource()
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
                 {
                     return Err(VMStaticViolation::ExistsNoResourceError(offset));
                 }
@@ -732,8 +749,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::BorrowGlobal(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                if !StructDefinitionView::new(self.module, struct_definition).is_nominal_resource()
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
                 {
                     return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
                 } else if !state.global(*idx).is_empty() {
@@ -758,8 +776,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::MoveFrom(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                if !StructDefinitionView::new(self.module, struct_definition).is_nominal_resource()
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
                 {
                     return Err(VMStaticViolation::MoveFromNoResourceError(offset));
                 } else if !state.global(*idx).is_empty() {
@@ -780,8 +799,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
             // TODO: Handle type actuals for generics
             Bytecode::MoveToSender(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                if !StructDefinitionView::new(self.module, struct_definition).is_nominal_resource()
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
                 {
                     return Err(VMStaticViolation::MoveToSenderNoResourceError(offset));
                 }

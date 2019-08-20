@@ -173,6 +173,10 @@ enum VMVerificationErrorKind {
     ModuleAddressDoesNotMatchSender = 69;
     // The module does not have any module handles. Each module or script must have at least one module handle.
     NoModuleHandles = 70;
+    MissingAcquiresResourceAnnotationError = 71;
+    ExtraneousAcquiresResourceAnnotationError = 72;
+    DuplicateAcquiresResourceAnnotationError = 73;
+    InvalidAcquiresResourceAnnotationError = 74;
 }
 
 // These are errors that the VM might raise if a violation of internal

@@ -4,7 +4,7 @@ module Tester {
     struct Point { x: u64, y: u64 }
 
     // the resource is here to just give a feeling why the computation might not be reorderable
-    set_and_pick(p: &mut Self.Point): &mut u64  {
+    set_and_pick(p: &mut Self.Point): &mut u64 acquires Initializer {
         let init: &mut Self.Initializer;
 
         init = borrow_global<Initializer>(get_txn_sender());
@@ -22,7 +22,7 @@ module Tester {
         return freeze(move(u));
     }
 
-    larger_field(point_ref: &mut Self.Point): &u64 {
+    larger_field(point_ref: &mut Self.Point): &u64 acquires Initializer {
         let field_ref: &mut u64;
         let returned_ref: &u64;
 

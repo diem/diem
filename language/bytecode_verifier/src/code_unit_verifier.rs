@@ -13,7 +13,8 @@ use vm::{
 };
 
 use crate::{
-    stack_usage_verifier::StackUsageVerifier, type_memory_safety::TypeAndMemorySafetyAnalysis,
+    acquires_list_verifier::AcquiresVerifier, stack_usage_verifier::StackUsageVerifier,
+    type_memory_safety::TypeAndMemorySafetyAnalysis,
 };
 
 pub struct CodeUnitVerifier<'a> {
@@ -67,6 +68,10 @@ impl<'a> CodeUnitVerifier<'a> {
         cfg: &VMControlFlowGraph,
     ) -> Vec<VMStaticViolation> {
         let errors = StackUsageVerifier::verify(self.module, function_definition, cfg);
+        if !errors.is_empty() {
+            return errors;
+        }
+        let errors = AcquiresVerifier::verify(self.module, function_definition);
         if !errors.is_empty() {
             return errors;
         }

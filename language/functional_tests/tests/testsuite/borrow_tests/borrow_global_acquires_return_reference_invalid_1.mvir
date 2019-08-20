@@ -1,0 +1,15 @@
+module A {
+    resource T1{v: u64}
+
+    public test1() acquires T1 {
+        release(Self.borrow_acquires_t1());
+        return;
+    }
+
+    borrow_acquires_t1(): &mut Self.T1 acquires T1 {
+        return borrow_global<T1>(get_txn_sender());
+    }
+}
+
+// check: VerificationError
+// check: RetUnsafeToDestroyError

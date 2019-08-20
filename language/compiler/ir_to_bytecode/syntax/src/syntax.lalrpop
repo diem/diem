@@ -359,7 +359,7 @@ ReturnType: Vec<Type> = {
 }
 
 AcquireList: Vec<StructName> = {
-    "acquires" <s: StructName> <al: ("*" <StructName>)*> => {
+    "acquires" <s: StructName> <al: ("," <StructName>)*> => {
         let mut al = al;
         al.insert(0, s);
         al

@@ -305,6 +305,20 @@ pub enum VMStaticViolation {
 
     #[fail(display = "Illegal global operation at offset {}", _0)]
     GlobalReferenceError(usize),
+
+    #[fail(display = "Missing acquires resource annotaiton at offset {}", _0)]
+    MissingAcquiresResourceAnnotationError(usize),
+
+    #[fail(display = "Extraneous acquires resource annotaiton")]
+    ExtraneousAcquiresResourceAnnotationError,
+
+    #[fail(display = "Duplicate acquires resource annotaiton")]
+    DuplicateAcquiresResourceAnnotationError,
+
+    #[fail(
+        display = "Duplicate acquires resource annotaiton. The struct is not a nominal resource."
+    )]
+    InvalidAcquiresResourceAnnotationError,
 }
 
 #[derive(Clone, Debug, Eq, Fail, Ord, PartialEq, PartialOrd)]
@@ -721,6 +735,18 @@ impl From<&VerificationError> for VMVerificationError {
             }
             VMStaticViolation::GlobalReferenceError(_) => {
                 VMVerificationError::GlobalReferenceError(message)
+            }
+            VMStaticViolation::MissingAcquiresResourceAnnotationError(_) => {
+                VMVerificationError::MissingAcquiresResourceAnnotationError(message)
+            }
+            VMStaticViolation::ExtraneousAcquiresResourceAnnotationError => {
+                VMVerificationError::ExtraneousAcquiresResourceAnnotationError(message)
+            }
+            VMStaticViolation::InvalidAcquiresResourceAnnotationError => {
+                VMVerificationError::InvalidAcquiresResourceAnnotationError(message)
+            }
+            VMStaticViolation::DuplicateAcquiresResourceAnnotationError => {
+                VMVerificationError::DuplicateAcquiresResourceAnnotationError(message)
             }
         }
     }
