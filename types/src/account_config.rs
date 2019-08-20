@@ -70,9 +70,9 @@ pub fn coin_struct_tag() -> StructTag {
 
 pub fn account_struct_tag() -> StructTag {
     StructTag {
+        address: core_code_address(),
         module: ACCOUNT_MODULE_NAME.to_string(),
         name: ACCOUNT_STRUCT_NAME.to_string(),
-        address: core_code_address(),
         type_params: vec![],
     }
 }
@@ -284,15 +284,7 @@ pub fn get_account_resource_or_default(
 /// Return the path to the Account resource. It can be used to create an AccessPath for an
 /// Account resource.
 pub fn account_resource_path() -> Vec<u8> {
-    AccessPath::resource_access_vec(
-        &StructTag {
-            address: core_code_address(),
-            module: ACCOUNT_MODULE_NAME.to_string(),
-            name: ACCOUNT_STRUCT_NAME.to_string(),
-            type_params: vec![],
-        },
-        &Accesses::empty(),
-    )
+    AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty())
 }
 
 /// Return the path to the sent event counter for an Account resource.
