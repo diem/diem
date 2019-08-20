@@ -1,6 +1,6 @@
 use crate::{
     code_cache::module_cache::ModuleCache,
-    process_txn::verify::{VerifiedTransaction, VerifiedTransactionState},
+    process_txn::verify::{VerTxn, VerifiedTransaction, VerifiedTransactionState},
 };
 use logger::prelude::*;
 use types::{
@@ -52,9 +52,12 @@ where
         TransactionPayload::Program(program) => {
             let VerifiedTransactionState {
                 mut txn_executor,
-                main,
-                modules,
+                verified_txn,
             } = txn_state.expect("program-based transactions should always have associated state");
+            let (main, modules) = match verified_txn {
+                VerTxn::Program(ver_program) => (ver_program.main, ver_program.modules),
+                _ => unreachable!("TransactionPayload::Program expects VerTxn::Program"),
+            };
 
             let (_, args, module_bytes) = program.into_inner();
 
@@ -128,11 +131,73 @@ where
             0,
             VMStatus::Execution(ExecutionStatus::Executed).into(),
         ),
-        TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
-            // This is an impossible condition at the moment and for a short time.
-            // ValidatedTransaction is never built with Module or Script so there
-            // is no way to reach this state
-            panic!("Unknown Transaction")
+        TransactionPayload::Module(module) => {
+            let VerifiedTransactionState {
+                mut txn_executor,
+                verified_txn,
+            } = txn_state.expect("module transactions should always have associated state");
+            let ver_module = match verified_txn {
+                VerTxn::Module(ver_module) => ver_module,
+                _ => unreachable!("TransactionPayload::Module expects VerTxn::Module"),
+            };
+            let module_id = ver_module.self_id();
+            // Make sure that there is not already a module with this name published
+            // under the transaction sender's account.
+            // Note: although this reads from the "module cache", `get_loaded_module`
+            // will read through the cache to fetch the module from the global storage
+            // if it is not already cached.
+            match txn_executor.module_cache().get_loaded_module(&module_id) {
+                Ok(Ok(None)) => (), // No module with this name exists. safe to publish one
+                Ok(Ok(Some(_))) | Ok(Err(_)) => {
+                    // A module with this name already exists (the error case is when the module
+                    // couldn't be verified, but it still exists so we should fail similarly).
+                    // It is not safe to publish another one; it would clobber the old module.
+                    // This would break code that links against the module and make published
+                    // resources from the old module inaccessible (or worse, accessible and not
+                    // typesafe).
+                    //
+                    // We are currently developing a versioning scheme for safe updates of
+                    // modules and resources.
+                    warn!("[VM] VM error duplicate module {:?}", module_id);
+                    return txn_executor.failed_transaction_cleanup(Ok(Err(VMRuntimeError {
+                        loc: Location::default(),
+                        err: VMErrorKind::DuplicateModuleName,
+                    })));
+                }
+                Err(err) => {
+                    error!(
+                        "[VM] VM internal error while checking for duplicate module {:?}: {:?}",
+                        module_id, err
+                    );
+                    return ExecutedTransaction::discard_error_output(&err);
+                }
+            }
+            let module_bytes = module.into_inner();
+            txn_executor.transaction_cleanup(vec![(module_id, module_bytes)])
+        }
+        TransactionPayload::Script(script) => {
+            let VerifiedTransactionState {
+                mut txn_executor,
+                verified_txn,
+            } = txn_state.expect("script-based transactions should always have associated state");
+            let main = match verified_txn {
+                VerTxn::Script(func) => func,
+                _ => unreachable!("TransactionPayload::Script expects VerTxn::Program"),
+            };
+
+            let (_, args) = script.into_inner();
+            txn_executor.setup_main_args(args);
+            match txn_executor.execute_function_impl(main) {
+                Ok(Ok(_)) => txn_executor.transaction_cleanup(vec![]),
+                Ok(Err(err)) => {
+                    warn!("[VM] User error running script: {:?}", err);
+                    txn_executor.failed_transaction_cleanup(Ok(Err(err)))
+                }
+                Err(err) => {
+                    error!("[VM] VM error running script: {:?}", err);
+                    ExecutedTransaction::discard_error_output(&err)
+                }
+            }
         }
     }
 }

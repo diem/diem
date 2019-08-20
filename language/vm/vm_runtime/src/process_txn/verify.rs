@@ -11,7 +11,10 @@ use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use logger::prelude::*;
 use types::{
     account_address::AccountAddress,
-    transaction::{Program, SignatureCheckedTransaction, TransactionArgument, TransactionPayload},
+    transaction::{
+        Module, Program, Script, SignatureCheckedTransaction, TransactionArgument,
+        TransactionPayload,
+    },
     vm_error::{VMStatus, VMVerificationError, VMVerificationStatus},
 };
 use vm::{
@@ -54,8 +57,7 @@ where
 
                 Some(VerifiedTransactionState {
                     txn_executor: txn_state.txn_executor,
-                    main,
-                    modules,
+                    verified_txn: VerTxn::Program(VerProgram { main, modules }),
                 })
             }
             TransactionPayload::WriteSet(_write_set) => {
@@ -63,11 +65,27 @@ where
                 // here.
                 None
             }
-            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
-                // This is an impossible condition at the moment and for a short time.
-                // ValidatedTransaction is never built with Module or Script so there
-                // is no way to reach this state
-                panic!("Unknown Transaction")
+            TransactionPayload::Module(module) => {
+                let txn_state = txn_state
+                    .expect("module-based transactions should always have associated state");
+
+                let verified_module = Self::verify_module(&txn.sender(), module)?;
+
+                Some(VerifiedTransactionState {
+                    txn_executor: txn_state.txn_executor,
+                    verified_txn: VerTxn::Module(Box::new(verified_module)),
+                })
+            }
+            TransactionPayload::Script(script) => {
+                let txn_state = txn_state
+                    .expect("script-based transactions should always have associated state");
+
+                let main = Self::verify_script(script, script_cache)?;
+
+                Some(VerifiedTransactionState {
+                    txn_executor: txn_state.txn_executor,
+                    verified_txn: VerTxn::Script(main),
+                })
             }
         };
 
@@ -121,6 +139,63 @@ where
         Ok((main, modules))
     }
 
+    fn verify_module(
+        sender_address: &AccountAddress,
+        module: &Module,
+    ) -> Result<VerifiedModule, VMStatus> {
+        let compiled_module = match CompiledModule::deserialize(module.code()) {
+            Ok(module) => module,
+            Err(err) => {
+                warn!("[VM] module deserialization failed {:?}", err);
+                return Err((&err).into());
+            }
+        };
+
+        // Make sure the module's self address matches the transaction sender. The self address is
+        // where the module will actually be published. If we did not check this, the sender could
+        // publish a module under anyone's account.
+        if compiled_module.address() != sender_address {
+            let error = VerificationError {
+                kind: IndexKind::AddressPool,
+                idx: CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
+                err: VMStaticViolation::ModuleAddressDoesNotMatchSender,
+            };
+            let statuses = vec![VerificationStatus::Module(0, error)];
+            return Err(statuses.iter().collect());
+        }
+
+        match VerifiedModule::new(compiled_module) {
+            Ok(ver_module) => Ok(ver_module),
+            Err((_, errors)) => {
+                let mut statuses: Vec<VerificationStatus> = vec![];
+                for error in errors {
+                    statuses.push(VerificationStatus::Module(0, error));
+                }
+                Err(statuses.iter().collect())
+            }
+        }
+    }
+
+    fn verify_script(
+        script: &Script,
+        script_cache: &'txn ScriptCache<'alloc>,
+    ) -> Result<FunctionRef<'alloc>, VMStatus> {
+        // Ensure the script can correctly be resolved into main.
+        let main = match script_cache.cache_script(&script.code()) {
+            Ok(Ok(main)) => main,
+            Ok(Err(ref err)) => return Err(err.into()),
+            Err(ref err) => return Err(err.into()),
+        };
+
+        if !verify_actuals(main.signature(), script.args()) {
+            return Err(VMStatus::Verification(vec![VMVerificationStatus::Script(
+                VMVerificationError::TypeMismatch("Actual Type Mismatch".to_string()),
+            )]));
+        }
+
+        Ok(main)
+    }
+
     /// Executes this transaction.
     pub fn execute(self) -> ExecutedTransaction {
         ExecutedTransaction::new(self)
@@ -143,7 +218,7 @@ where
     }
 }
 
-/// State for program-based [`VerifiedTransaction`] instances.
+/// State for [`VerifiedTransaction`] instances.
 #[allow(dead_code)]
 pub(super) struct VerifiedTransactionState<'alloc, 'txn, P>
 where
@@ -152,8 +227,24 @@ where
 {
     pub(super) txn_executor:
         TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+    pub(super) verified_txn: VerTxn<'alloc>,
+}
+
+/// A verified `Program` is a main and a list of modules.
+pub struct VerProgram<'alloc> {
     pub(super) main: FunctionRef<'alloc>,
     pub(super) modules: Vec<VerifiedModule>,
+}
+
+/// A verified transaction is a transaction executing code that has gone through the verifier.
+///
+/// It can be a program, a script or a module. A transaction script gets executed by the VM.
+/// A module script publishes the module provided.
+// TODO: A Script will be a FunctionRef once we remove the ability to publish in scripts.
+pub enum VerTxn<'alloc> {
+    Program(VerProgram<'alloc>),
+    Script(FunctionRef<'alloc>),
+    Module(Box<VerifiedModule>),
 }
 
 fn static_verify_modules(

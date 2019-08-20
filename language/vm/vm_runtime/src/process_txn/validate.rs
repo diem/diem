@@ -86,154 +86,66 @@ where
 
         let txn_state = match txn.payload() {
             TransactionPayload::Program(program) => {
-                let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
-                // The transaction is too large.
-                if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
-                    let error_str = format!(
-                        "max size: {}, txn size: {}",
-                        MAX_TRANSACTION_SIZE_IN_BYTES,
-                        raw_bytes_len.get()
-                    );
-                    warn!(
-                        "[VM] Transaction size too big {} (max {})",
-                        raw_bytes_len.get(),
-                        MAX_TRANSACTION_SIZE_IN_BYTES
-                    );
-                    return Err(VMStatus::Validation(
-                        VMValidationStatus::ExceededMaxTransactionSize(error_str),
-                    ));
-                }
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    || {
+                        // Verify against whitelist if we are locked. Otherwise allow.
+                        if !is_allowed_script(&publishing_option, &program.code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
+                            return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
+                        }
 
-                // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
-                // `raw_bytes_len`
-                assume!(raw_bytes_len.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
-
-                // The submitted max gas units that the transaction can consume is greater than the
-                // maximum number of gas units bound that we have set for any
-                // transaction.
-                if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
-                    let error_str = format!(
-                        "max gas units: {}, gas units submitted: {}",
-                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                        txn.max_gas_amount()
-                    );
-                    warn!(
-                        "[VM] Gas unit error; max {}, submitted {}",
-                        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                        txn.max_gas_amount()
-                    );
-                    return Err(VMStatus::Validation(
-                        VMValidationStatus::MaxGasUnitsExceedsMaxGasUnitsBound(error_str),
-                    ));
-                }
-
-                // The submitted transactions max gas units needs to be at least enough to cover the
-                // intrinsic cost of the transaction as calculated against the size of the
-                // underlying `RawTransaction`
-                let min_txn_fee = gas_schedule::calculate_intrinsic_gas(raw_bytes_len);
-                if txn.max_gas_amount() < min_txn_fee.get() {
-                    let error_str = format!(
-                        "min gas required for txn: {}, gas submitted: {}",
-                        min_txn_fee.get(),
-                        txn.max_gas_amount()
-                    );
-                    warn!(
-                        "[VM] Gas unit error; min {}, submitted {}",
-                        min_txn_fee.get(),
-                        txn.max_gas_amount()
-                    );
-                    return Err(VMStatus::Validation(
-                        VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(error_str),
-                    ));
-                }
-
-                // The submitted gas price is less than the minimum gas unit price set by the VM.
-                // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
-                // we turn off the clippy warning.
-                #[allow(clippy::absurd_extreme_comparisons)]
-                let below_min_bound =
-                    txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
-                if below_min_bound {
-                    let error_str = format!(
-                        "gas unit min price: {}, submitted price: {}",
-                        gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
-                        txn.gas_unit_price()
-                    );
-                    warn!(
-                        "[VM] Gas unit error; min {}, submitted {}",
-                        gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
-                        txn.gas_unit_price()
-                    );
-                    return Err(VMStatus::Validation(
-                        VMValidationStatus::GasUnitPriceBelowMinBound(error_str),
-                    ));
-                }
-
-                // The submitted gas price is greater than the maximum gas unit price set by the VM.
-                if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() {
-                    let error_str = format!(
-                        "gas unit max price: {}, submitted price: {}",
-                        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-                        txn.gas_unit_price()
-                    );
-                    warn!(
-                        "[VM] Gas unit error; min {}, submitted {}",
-                        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-                        txn.gas_unit_price()
-                    );
-                    return Err(VMStatus::Validation(
-                        VMValidationStatus::GasUnitPriceAboveMaxBound(error_str),
-                    ));
-                }
-
-                // Verify against whitelist if we are locked. Otherwise allow.
-                if !is_allowed_script(&publishing_option, &program.code()) {
-                    warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
-                    return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
-                }
-
-                if !publishing_option.is_open() {
-                    // Not allowing module publishing for now.
-                    if !program.modules().is_empty() {
-                        warn!("[VM] Custom modules not allowed");
-                        return Err(VMStatus::Validation(VMValidationStatus::UnknownModule));
-                    }
-                }
-
-                let metadata = TransactionMetadata::new(&txn);
-                let mut txn_state =
-                    ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator);
-
-                // Run the prologue to ensure that clients have enough gas and aren't tricking us by
-                // sending us garbage.
-                // TODO: write-set transactions (other than genesis??) should also run the prologue.
-                match txn_state.txn_executor.run_prologue() {
-                    Ok(Ok(_)) => {}
-                    Ok(Err(ref err)) => {
-                        let vm_status = convert_prologue_runtime_error(&err, &txn.sender());
-
-                        // In validating mode, accept transactions with sequence number greater
-                        // or equal to the current sequence number.
-                        match (mode, vm_status) {
-                            (
-                                ValidationMode::Validating,
-                                VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew),
-                            ) => {
-                                trace!("[VM] Sequence number too new error ignored");
-                            }
-                            (_, vm_status) => {
-                                warn!("[VM] Error in prologue: {:?}", err);
-                                return Err(vm_status);
+                        if !publishing_option.is_open() {
+                            // Not allowing module publishing for now.
+                            if !program.modules().is_empty() {
+                                warn!("[VM] Custom modules not allowed");
+                                return Err(VMStatus::Validation(
+                                    VMValidationStatus::UnknownModule,
+                                ));
                             }
                         }
-                    }
-                    Err(ref err) => {
-                        error!("[VM] VM internal error in prologue: {:?}", err);
-                        return Err(err.into());
-                    }
-                };
-
-                Some(txn_state)
+                        Ok(())
+                    },
+                )?)
+            }
+            TransactionPayload::Script(script) => {
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    || {
+                        // Verify against whitelist if we are locked. Otherwise allow.
+                        if !is_allowed_script(&publishing_option, &script.code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
+                            return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
+                        }
+                        Ok(())
+                    },
+                )?)
+            }
+            TransactionPayload::Module(module) => {
+                println!("validate module {:?}", module);
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    || {
+                        if !publishing_option.is_open() {
+                            warn!("[VM] Custom modules not allowed");
+                            Err(VMStatus::Validation(VMValidationStatus::UnknownModule))
+                        } else {
+                            Ok(())
+                        }
+                    },
+                )?)
             }
             TransactionPayload::WriteSet(write_set) => {
                 // The only acceptable write-set transaction for now is for the genesis
@@ -254,18 +166,6 @@ where
                 }
 
                 None
-            }
-            TransactionPayload::Module(_) => {
-                // UnknownModule is a good enough error for this temporary condition.
-                // It usually signals the VM does not allow publishing which is reasonable.
-                // Adding new errors does not seem a smart choice
-                return Err(VMStatus::Validation(VMValidationStatus::UnknownModule));
-            }
-            TransactionPayload::Script(_) => {
-                // UnknownScript is a good enough error for this temporary condition.
-                // It usually signals the VM does not allow custom script which is reasonable.
-                // Adding new errors does not seem a smart choice
-                return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
             }
         };
 
@@ -294,6 +194,151 @@ where
     /// Returns the `ValidatedTransactionState` within.
     pub(super) fn take_state(&mut self) -> Option<ValidatedTransactionState<'alloc, 'txn, P>> {
         self.txn_state.take()
+    }
+
+    fn validate(
+        txn: &SignatureCheckedTransaction,
+        module_cache: P,
+        data_cache: &'txn dyn RemoteCache,
+        allocator: &'txn Arena<LoadedModule>,
+        mode: ValidationMode,
+        payload_check: impl Fn() -> Result<(), VMStatus>,
+    ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
+        let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
+        // The transaction is too large.
+        if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
+            let error_str = format!(
+                "max size: {}, txn size: {}",
+                MAX_TRANSACTION_SIZE_IN_BYTES,
+                raw_bytes_len.get()
+            );
+            warn!(
+                "[VM] Transaction size too big {} (max {})",
+                raw_bytes_len.get(),
+                MAX_TRANSACTION_SIZE_IN_BYTES
+            );
+            return Err(VMStatus::Validation(
+                VMValidationStatus::ExceededMaxTransactionSize(error_str),
+            ));
+        }
+
+        // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
+        // `raw_bytes_len`
+        assume!(raw_bytes_len.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
+
+        // The submitted max gas units that the transaction can consume is greater than the
+        // maximum number of gas units bound that we have set for any
+        // transaction.
+        if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
+            let error_str = format!(
+                "max gas units: {}, gas units submitted: {}",
+                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                txn.max_gas_amount()
+            );
+            warn!(
+                "[VM] Gas unit error; max {}, submitted {}",
+                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                txn.max_gas_amount()
+            );
+            return Err(VMStatus::Validation(
+                VMValidationStatus::MaxGasUnitsExceedsMaxGasUnitsBound(error_str),
+            ));
+        }
+
+        // The submitted transactions max gas units needs to be at least enough to cover the
+        // intrinsic cost of the transaction as calculated against the size of the
+        // underlying `RawTransaction`
+        let min_txn_fee = gas_schedule::calculate_intrinsic_gas(raw_bytes_len);
+        if txn.max_gas_amount() < min_txn_fee.get() {
+            let error_str = format!(
+                "min gas required for txn: {}, gas submitted: {}",
+                min_txn_fee.get(),
+                txn.max_gas_amount()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                min_txn_fee.get(),
+                txn.max_gas_amount()
+            );
+            return Err(VMStatus::Validation(
+                VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(error_str),
+            ));
+        }
+
+        // The submitted gas price is less than the minimum gas unit price set by the VM.
+        // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
+        // we turn off the clippy warning.
+        #[allow(clippy::absurd_extreme_comparisons)]
+        let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
+        if below_min_bound {
+            let error_str = format!(
+                "gas unit min price: {}, submitted price: {}",
+                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            return Err(VMStatus::Validation(
+                VMValidationStatus::GasUnitPriceBelowMinBound(error_str),
+            ));
+        }
+
+        // The submitted gas price is greater than the maximum gas unit price set by the VM.
+        if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() {
+            let error_str = format!(
+                "gas unit max price: {}, submitted price: {}",
+                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            return Err(VMStatus::Validation(
+                VMValidationStatus::GasUnitPriceAboveMaxBound(error_str),
+            ));
+        }
+
+        payload_check()?;
+
+        let metadata = TransactionMetadata::new(&txn);
+        let mut txn_state =
+            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator);
+
+        // Run the prologue to ensure that clients have enough gas and aren't tricking us by
+        // sending us garbage.
+        // TODO: write-set transactions (other than genesis??) should also run the prologue.
+        match txn_state.txn_executor.run_prologue() {
+            Ok(Ok(_)) => {}
+            Ok(Err(ref err)) => {
+                let vm_status = convert_prologue_runtime_error(&err, &txn.sender());
+
+                // In validating mode, accept transactions with sequence number greater
+                // or equal to the current sequence number.
+                match (mode, vm_status) {
+                    (
+                        ValidationMode::Validating,
+                        VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew),
+                    ) => {
+                        trace!("[VM] Sequence number too new error ignored");
+                    }
+                    (_, vm_status) => {
+                        warn!("[VM] Error in prologue: {:?}", err);
+                        return Err(vm_status);
+                    }
+                }
+            }
+            Err(ref err) => {
+                error!("[VM] VM internal error in prologue: {:?}", err);
+                return Err(err.into());
+            }
+        };
+
+        Ok(txn_state)
     }
 }
 

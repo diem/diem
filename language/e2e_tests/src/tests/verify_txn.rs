@@ -5,7 +5,7 @@ use crate::{
     account::AccountData,
     assert_prologue_disparity, assert_prologue_parity,
     common_transactions::*,
-    compile::{compile_program_with_address, compile_script},
+    compile::{compile_module_with_address, compile_script},
     executor::FakeExecutor,
 };
 use assert_matches::assert_matches;
@@ -19,7 +19,8 @@ use types::{
     account_address::AccountAddress,
     test_helpers::transaction_test_helpers,
     transaction::{
-        TransactionArgument, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
+        Module, Script, TransactionArgument, TransactionPayload, TransactionStatus,
+        MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
     },
     vm_error::{
         ExecutionStatus, VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus,
@@ -374,13 +375,10 @@ pub fn test_no_publishing() {
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
     executor.add_account_data(&sender);
-    executor.add_account_data(&receiver);
 
-    let program = String::from(
+    let module = String::from(
         "
-        modules:
         module M {
             public max(a: u64, b: u64): u64 {
                 if (copy(a) > copy(b)) {
@@ -397,24 +395,16 @@ pub fn test_no_publishing() {
                 return copy(c);
             }
         }
-        script:
-        import 0x0.LibraAccount;
-        main (payee: address, amount: u64) {
-          LibraAccount.pay_from_sender(move(payee), move(amount));
-          return;
-        }
         ",
     );
 
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U64(100));
-
-    let random_script = compile_program_with_address(sender.address(), &program, args);
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
+    let random_module = compile_module_with_address(sender.address(), &module);
+    let txn = sender.account().create_signed_txn(
+        TransactionPayload::Module(Module::new(random_module)),
+        10,
+        100_000,
+        1,
+    );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -429,13 +419,12 @@ pub fn test_open_publishing_invalid_address() {
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let receiver = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
-    let program = String::from(
+    let module = String::from(
         "
-        modules:
         module M {
             public max(a: u64, b: u64): u64 {
                 if (copy(a) > copy(b)) {
@@ -452,24 +441,16 @@ pub fn test_open_publishing_invalid_address() {
                 return copy(c);
             }
         }
-        script:
-        import 0x0.LibraAccount;
-        main (payee: address, amount: u64) {
-          LibraAccount.pay_from_sender(move(payee), move(amount));
-          return;
-        }
         ",
     );
 
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U64(100));
-
-    let random_script = compile_program_with_address(receiver.address(), &program, args);
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
+    let random_module = compile_module_with_address(receiver.address(), &module);
+    let txn = sender.account().create_signed_txn(
+        TransactionPayload::Module(Module::new(random_module)),
+        10,
+        100_000,
+        1,
+    );
 
     // verify and fail because the addresses don't match
     let vm_status = executor.verify_transaction(txn.clone());
@@ -507,13 +488,10 @@ pub fn test_open_publishing() {
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
     executor.add_account_data(&sender);
-    executor.add_account_data(&receiver);
 
     let program = String::from(
         "
-        modules:
         module M {
             public max(a: u64, b: u64): u64 {
                 if (copy(a) > copy(b)) {
@@ -530,24 +508,16 @@ pub fn test_open_publishing() {
                 return copy(c);
             }
         }
-        script:
-        import 0x0.LibraAccount;
-        main (payee: address, amount: u64) {
-          LibraAccount.pay_from_sender(move(payee), move(amount));
-          return;
-        }
         ",
     );
 
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U64(100));
-
-    let random_script = compile_program_with_address(sender.address(), &program, args);
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
+    let random_module = compile_module_with_address(sender.address(), &program);
+    let txn = sender.account().create_signed_txn(
+        TransactionPayload::Module(Module::new(random_module)),
+        10,
+        100_000,
+        1,
+    );
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -561,7 +531,6 @@ fn test_dependency_fails_verification() {
 
     // Get a module that fails verification into the store.
     let bad_module_code = "
-    modules:
     module Test {
         resource R1 { }
         struct S1 { r1: Self.R1 }
@@ -574,20 +543,12 @@ fn test_dependency_fails_verification() {
             return move(s);
         }
     }
-
-    script:
-    main() {
-    }
     ";
     let compiler = Compiler {
         code: bad_module_code,
         ..Compiler::default()
     };
-    let mut modules = compiler
-        .into_compiled_program()
-        .expect("Failed to compile")
-        .modules;
-    let module = modules.swap_remove(0);
+    let module = compiler.into_compiled_module().expect("Failed to compile");
     executor.add_module(&module.self_id(), &module);
 
     // Create a transaction that tries to use that module.
@@ -613,10 +574,13 @@ fn test_dependency_fails_verification() {
         )],
         ..Compiler::default()
     };
-    let program = compiler.into_program(vec![]).expect("Failed to compile");
-    let txn = sender
-        .account()
-        .create_signed_txn_impl(*sender.address(), program, 10, 100_000, 1);
+    let script = compiler.into_script_blob().expect("Failed to compile");
+    let txn = sender.account().create_signed_txn(
+        TransactionPayload::Script(Script::new(script, vec![])),
+        10,
+        100_000,
+        1,
+    );
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     let errors = match executor.execute_transaction(txn).status() {

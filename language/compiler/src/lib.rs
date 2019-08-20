@@ -8,14 +8,17 @@ mod unit_tests;
 
 use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
-use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_program},
+    parser::parse_program,
+};
 use std::mem;
 use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
     transaction::{Program, TransactionArgument},
 };
-use vm::file_format::CompiledProgram;
+use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug, Default)]
@@ -56,6 +59,12 @@ impl<'a> Compiler<'a> {
         self.compile_impl()
     }
 
+    /// Compiles into a `CompiledScript`.
+    pub fn into_script(mut self) -> Result<CompiledScript> {
+        let compiled_program = self.compile_impl()?.0;
+        Ok(compiled_program.script)
+    }
+
     /// Compiles the script into a serialized form.
     pub fn into_script_blob(mut self) -> Result<Vec<u8>> {
         let compiled_program = self.compile_impl()?.0;
@@ -63,6 +72,20 @@ impl<'a> Compiler<'a> {
         let mut serialized_script = Vec::<u8>::new();
         compiled_program.script.serialize(&mut serialized_script)?;
         Ok(serialized_script)
+    }
+
+    /// Compiles the module.
+    pub fn into_compiled_module(mut self) -> Result<CompiledModule> {
+        Ok(self.compile_mod()?.0)
+    }
+
+    /// Compiles the module into a serialized form.
+    pub fn into_module_blob(mut self) -> Result<Vec<u8>> {
+        let compiled_module = self.compile_mod()?.0;
+
+        let mut serialized_module = Vec::<u8>::new();
+        compiled_module.serialize(&mut serialized_module)?;
+        Ok(serialized_module)
     }
 
     /// Compiles the code and arguments into a `Program` -- the bytecode is serialized.
@@ -85,6 +108,15 @@ impl<'a> Compiler<'a> {
         let deps = self.deps();
         let compiled_program = compile_program(&self.address, &parsed_program, &deps)?;
         Ok((compiled_program, deps))
+    }
+
+    fn compile_mod(&mut self) -> Result<(CompiledModule, Vec<VerifiedModule>)> {
+        let parsed_program = parse_program(self.code)?;
+        let deps = self.deps();
+        assert_eq!(parsed_program.modules.len(), 1, "Must have single module");
+        let module = parsed_program.modules.get(0).expect("Module must exist");
+        let compiled_module = compile_module(&self.address, module, &deps)?;
+        Ok((compiled_module, deps))
     }
 
     fn deps(&mut self) -> Vec<VerifiedModule> {
