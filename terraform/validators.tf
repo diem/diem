@@ -158,7 +158,7 @@ resource "aws_instance" "validator" {
 
 data "local_file" "keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/${var.peer_ids[count.index]}.node.keys.toml"
+  filename = "${var.validator_set}/validator_${var.peer_ids[count.index]}.node.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator" {
