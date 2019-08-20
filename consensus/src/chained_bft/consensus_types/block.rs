@@ -329,7 +329,9 @@ where
 
     pub fn height(&self) -> Height {
         // Height:
-        // - should not exceed std::u64::MAX - 1 to ensure the parent check doesn't
+        // - Reasonable to assume that the height of the block chain will not grow enough to exceed
+        // std::u64::MAX - 1 in the next million years at least
+        // - The upper limit of std::u64::MAX - 1 ensures that the parent check doesn't
         // cause addition overflow.
         // (Block::make_block)
         assumed_postcondition!(self.height < std::u64::MAX);
