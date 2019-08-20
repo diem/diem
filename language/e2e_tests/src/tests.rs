@@ -20,5 +20,3 @@ mod pack_unpack;
 mod peer_to_peer;
 mod rotate_key;
 mod verify_txn;
-// Remove once we enable Module and Script transactions
-mod bad_txn;
