@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::unit_arg)]
+
 //! This module has definition of various proofs.
 
 #[cfg(test)]
@@ -14,6 +16,8 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
@@ -306,6 +310,7 @@ impl AccumulatorConsistencyProof {
 /// the correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is
 /// supposed to match the `SignedTransaction`.
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::proof::SignedTransactionProof)]
 pub struct SignedTransactionProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
@@ -344,6 +349,7 @@ impl SignedTransactionProof {
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `SparseMerkleProof` from state root to the account.
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::proof::AccountStateProof)]
 pub struct AccountStateProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
@@ -392,6 +398,7 @@ impl AccountStateProof {
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `AccumulatorProof` from event accumulator root to the event.
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::proof::EventProof)]
 pub struct EventProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the

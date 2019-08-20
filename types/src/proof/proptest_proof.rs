@@ -4,12 +4,7 @@
 //! All proofs generated in this module are not valid proofs. They are only for the purpose of
 //! testing conversion between Rust and Protobuf.
 
-use crate::{
-    proof::{
-        AccountStateProof, AccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
-    },
-    transaction::TransactionInfo,
-};
+use crate::proof::{AccumulatorProof, SparseMerkleProof};
 use crypto::{
     hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -54,43 +49,6 @@ prop_compose! {
     }
 }
 
-prop_compose! {
-    fn arb_signed_transaction_proof()(
-        ledger_info_to_transaction_info_proof in any::<AccumulatorProof>(),
-        transaction_info in any::<TransactionInfo>(),
-    ) -> SignedTransactionProof {
-        SignedTransactionProof::new(ledger_info_to_transaction_info_proof, transaction_info)
-    }
-}
-
-prop_compose! {
-    fn arb_account_state_proof()(
-        ledger_info_to_transaction_info_proof in any::<AccumulatorProof>(),
-        transaction_info in any::<TransactionInfo>(),
-        transaction_info_to_account_proof in any::<SparseMerkleProof>(),
-    ) -> AccountStateProof {
-        AccountStateProof::new(
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
-            transaction_info_to_account_proof,
-        )
-    }
-}
-
-prop_compose! {
-    fn arb_event_proof()(
-        ledger_info_to_transaction_info_proof in any::<AccumulatorProof>(),
-        transaction_info in any::<TransactionInfo>(),
-        transaction_info_to_event_proof in any::<AccumulatorProof>(),
-    ) -> EventProof {
-        EventProof::new(
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
-            transaction_info_to_event_proof,
-        )
-    }
-}
-
 macro_rules! impl_arbitrary_for_proof {
     ($proof_type: ident, $arb_func: ident) => {
         impl Arbitrary for $proof_type {
@@ -106,6 +64,3 @@ macro_rules! impl_arbitrary_for_proof {
 
 impl_arbitrary_for_proof!(AccumulatorProof, arb_accumulator_proof);
 impl_arbitrary_for_proof!(SparseMerkleProof, arb_sparse_merkle_proof);
-impl_arbitrary_for_proof!(SignedTransactionProof, arb_signed_transaction_proof);
-impl_arbitrary_for_proof!(AccountStateProof, arb_account_state_proof);
-impl_arbitrary_for_proof!(EventProof, arb_event_proof);
