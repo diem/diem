@@ -32,12 +32,11 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
-use crypto::ed25519::*;
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::LedgerInfoWithSignatures;
 
 #[cfg(test)]
 #[path = "event_processor_test.rs"]
@@ -694,7 +693,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn process_commit(
         &self,
         committed_block: Arc<Block<T>>,
-        finality_proof: LedgerInfoWithSignatures<Ed25519Signature>,
+        finality_proof: LedgerInfoWithSignatures,
     ) {
         // First make sure that this commit is new.
         if committed_block.round() <= self.block_store.root().round() {

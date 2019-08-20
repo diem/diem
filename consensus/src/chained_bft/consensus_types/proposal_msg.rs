@@ -5,12 +5,11 @@ use crate::chained_bft::{
     common::{Author, Payload},
     consensus_types::{block::Block, sync_info::SyncInfo},
 };
-use crypto::ed25519::*;
 use failure::prelude::*;
 use network::proto::Proposal as ProtoProposal;
 use proto_conv::{FromProto, IntoProto};
 use std::fmt;
-use types::validator_verifier::ValidatorVerifier;
+use types::crypto_proxies::ValidatorVerifier;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
@@ -21,7 +20,7 @@ pub struct ProposalMsg<T> {
 }
 
 impl<T: Payload> ProposalMsg<T> {
-    pub fn verify(&self, validator: &ValidatorVerifier<Ed25519PublicKey>) -> Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
         if self.proposal.is_nil_block() {
             return Err(format_err!("Proposal {} for a NIL block", self.proposal));
         }

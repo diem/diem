@@ -9,7 +9,6 @@ use crate::{
     state_replication::ExecutedState,
 };
 use crypto::{
-    ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
@@ -22,9 +21,8 @@ use std::{
     fmt::{Display, Formatter},
 };
 use types::{
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -36,7 +34,7 @@ pub struct QuorumCert {
     /// The round of a certified block.
     certified_block_round: Round,
     /// The signed LedgerInfo of a committed block that carries the data about the certified block.
-    signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
+    signed_ledger_info: LedgerInfoWithSignatures,
     /// The id of the parent block of the certified block
     certified_parent_block_id: HashValue,
     /// The round of the parent block of the certified block
@@ -62,7 +60,7 @@ impl QuorumCert {
         block_id: HashValue,
         state: ExecutedState,
         round: Round,
-        signed_ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
+        signed_ledger_info: LedgerInfoWithSignatures,
         certified_parent_block_id: HashValue,
         certified_parent_block_round: Round,
         certified_grandparent_block_id: HashValue,
@@ -92,7 +90,7 @@ impl QuorumCert {
         self.certified_block_round
     }
 
-    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures<Ed25519Signature> {
+    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures {
         &self.signed_ledger_info
     }
 
@@ -136,7 +134,7 @@ impl QuorumCert {
             *GENESIS_BLOCK_ID,
             0,
         );
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
+        let signer = ValidatorSigner::genesis();
         let li = LedgerInfo::new(
             0,
             *ACCUMULATOR_PLACEHOLDER_HASH,
@@ -164,7 +162,7 @@ impl QuorumCert {
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), VoteMsgVerificationError> {
         let vote_hash = VoteMsg::vote_digest(
             self.certified_block_id,

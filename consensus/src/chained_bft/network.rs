@@ -14,7 +14,7 @@ use crate::{
 };
 use bytes::Bytes;
 use channel;
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use failure;
 use futures::{
     channel::oneshot, stream::select, FutureExt, SinkExt, Stream, StreamExt, TryFutureExt,
@@ -32,7 +32,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::{account_address::AccountAddress, validator_verifier::ValidatorVerifier};
+use types::{account_address::AccountAddress, crypto_proxies::ValidatorVerifier};
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
@@ -95,7 +95,7 @@ pub struct ConsensusNetworkImpl {
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier>,
 }
 
 impl Clone for ConsensusNetworkImpl {
@@ -118,7 +118,7 @@ impl ConsensusNetworkImpl {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+        validator: Arc<ValidatorVerifier>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -314,7 +314,7 @@ struct NetworkTask<T, S> {
     timeout_msg_tx: channel::Sender<TimeoutMsg>,
     sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier>,
 }
 
 impl<T, S> NetworkTask<T, S>

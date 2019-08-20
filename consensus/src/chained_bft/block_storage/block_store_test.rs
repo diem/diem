@@ -14,11 +14,11 @@ use crate::chained_bft::{
         placeholder_ledger_info, TreeInserter,
     },
 };
-use crypto::{ed25519::*, HashValue, *};
+use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
-use types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
+use types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 
 fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize>>>) {
     let block_store = build_empty_tree();
@@ -318,7 +318,7 @@ fn test_insert_vote() {
     let mut author_public_keys = vec![];
 
     for i in 0..qc_size {
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([i as u8; 32]);
+        let signer = ValidatorSigner::random([i as u8; 32]);
         author_public_keys.push((
             AccountAddress::from_public_key(&signer.public_key()),
             signer.public_key(),

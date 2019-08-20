@@ -13,7 +13,6 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
 };
 use crypto::{
-    ed25519::*,
     hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
     HashValue,
 };
@@ -29,9 +28,8 @@ use std::{
     fmt::{Display, Formatter},
 };
 use types::{
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
 };
 
 #[cfg(test)]
@@ -60,7 +58,7 @@ pub enum BlockSource {
         /// Author of the block that can be validated by the author's public key and the signature
         author: Author,
         /// Signature that the hash of this block has been authored by the owner of the private key
-        signature: Ed25519Signature,
+        signature: Signature,
     },
     /// NIL blocks don't have authors or signatures: they're generated upon timeouts to fill in the
     /// gaps in the rounds.
@@ -129,7 +127,7 @@ where
     // Make an empty genesis block
     pub fn make_genesis_block() -> Self {
         let ancestor_id = HashValue::zero();
-        let genesis_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::genesis();
+        let genesis_validator_signer = ValidatorSigner::genesis();
         let state = ExecutedState::state_for_genesis();
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
@@ -168,7 +166,7 @@ where
             quorum_cert: genesis_quorum_cert,
             block_source: BlockSource::Proposal {
                 author: genesis_validator_signer.author(),
-                signature,
+                signature: signature.into(),
             },
         }
     }
@@ -182,7 +180,7 @@ where
         height: Height,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        validator_signer: &ValidatorSigner,
     ) -> Self {
         let block_internal = BlockSerializer {
             parent_id,
@@ -209,7 +207,7 @@ where
             quorum_cert,
             block_source: BlockSource::Proposal {
                 author: validator_signer.author(),
-                signature,
+                signature: signature.into(),
             },
         }
     }
@@ -220,7 +218,7 @@ where
         round: Round,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        validator_signer: &ValidatorSigner,
     ) -> Self {
         // A block must carry a QC to its parent.
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
@@ -290,7 +288,7 @@ where
 
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), BlockVerificationError> {
         if self.is_genesis_block() {
             return Ok(());
@@ -307,8 +305,8 @@ where
             return Err(BlockVerificationError::InvalidBlockRound);
         }
         if let BlockSource::Proposal { author, signature } = &self.block_source {
-            validator
-                .verify_signature(*author, self.hash(), signature)
+            signature
+                .verify(validator, *author, self.hash())
                 .map_err(|_| BlockVerificationError::SigVerifyError)?;
         } else if self.payload != T::default() {
             // NIL block must not carry payload
@@ -363,7 +361,7 @@ where
         }
     }
 
-    pub fn signature(&self) -> Option<&Ed25519Signature> {
+    pub fn signature(&self) -> Option<&Signature> {
         if let BlockSource::Proposal { signature, .. } = &self.block_source {
             Some(signature)
         } else {
@@ -485,7 +483,8 @@ where
         proto.set_height(self.height());
         proto.set_quorum_cert(self.quorum_cert().clone().into_proto());
         if let BlockSource::Proposal { author, signature } = self.block_source {
-            proto.set_signature(signature.to_bytes().as_ref().into());
+            let bytes = bytes::Bytes::from(&signature.to_bytes()[..]);
+            proto.set_signature(bytes);
             proto.set_author(author.into());
         }
         proto
@@ -511,7 +510,7 @@ where
         } else {
             BlockSource::Proposal {
                 author: Author::try_from(object.get_author())?,
-                signature: Ed25519Signature::try_from(object.get_signature())?,
+                signature: Signature::try_from(object.get_signature())?,
             }
         };
         Ok(Block {

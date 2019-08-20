@@ -18,10 +18,9 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use channel;
-use crypto::ed25519::*;
 use futures::{executor::block_on, StreamExt};
 use std::{sync::Arc, time::Duration, u64};
-use types::validator_signer::ValidatorSigner;
+use types::crypto_proxies::ValidatorSigner;
 
 #[test]
 fn test_pacemaker_time_interval() {
@@ -56,9 +55,9 @@ fn test_basic_timeout() {
 /// Verify that Pacemaker forms a timeout certificate on receiving sufficient timeout messages
 fn test_timeout_certificate() {
     let rounds: Round = 5;
-    let mut signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = vec![];
+    let mut signers: Vec<ValidatorSigner> = vec![];
     for round in 1..rounds {
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([round as u8; 32]);
+        let signer = ValidatorSigner::random([round as u8; 32]);
         signers.push(signer);
     }
     let (mut pm, _) = make_pacemaker();

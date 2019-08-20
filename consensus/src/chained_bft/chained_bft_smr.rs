@@ -23,7 +23,6 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
     compat::Future01CompatExt,
@@ -32,13 +31,13 @@ use futures::{
     select,
     stream::StreamExt,
 };
-use types::validator_signer::ValidatorSigner;
 
 use crate::chained_bft::common::Author;
 use config::config::{ConsensusConfig, ConsensusProposerType};
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
+use types::crypto_proxies::ValidatorSigner;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -74,7 +73,7 @@ pub struct ChainedBftSMR<T> {
     author: Author,
     // TODO [Reconfiguration] quorum size is just a function of current validator set.
     quorum_size: usize,
-    signer: Option<ValidatorSigner<Ed25519PrivateKey>>,
+    signer: Option<ValidatorSigner>,
     proposers: Vec<Author>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
@@ -88,7 +87,7 @@ impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
         author: Author,
         quorum_size: usize,
-        signer: ValidatorSigner<Ed25519PrivateKey>,
+        signer: ValidatorSigner,
         proposers: Vec<Author>,
         network: ConsensusNetworkImpl,
         runtime: Runtime,
