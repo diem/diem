@@ -229,6 +229,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer_id: PeerId,
         mut request: GetChunkRequest,
     ) -> Result<()> {
+        if request.timeout > self.config.max_timeout_ms
+            || request.limit > self.config.max_chunk_limit
+        {
+            return Err(format_err!(
+                "[state sync] timeout: {:?}, chunk limit: {:?}, but timeout must not exceed {:?} ms, and chunk limit must not exceed {:?}",
+                request.timeout,
+                request.limit,
+                self.config.max_timeout_ms,
+                self.config.max_chunk_limit
+            ));
+        }
+
         let latest_ledger_info = self.executor_proxy.get_latest_ledger_info().await?;
         let target = LedgerInfo::from_proto(request.take_ledger_info_with_sigs())
             .unwrap_or(latest_ledger_info);
