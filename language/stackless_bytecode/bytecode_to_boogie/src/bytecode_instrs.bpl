@@ -1,7 +1,7 @@
 type TypeName;
 type FieldName;
 type LocalName;
-type Address;
+type Address = int;
 type ByteArray;
 type String;
 type CreationTime = int;
@@ -26,8 +26,11 @@ function {:constructor} Map(m: [Edge]Value): Value;
 const DefaultMap: [Edge]Value;
 
 type {:datatype} Reference;
-function {:constructor} GlobalReference(a: Address, t: TypeName, p: Path, v: Value): Reference;
-function {:constructor} LocalReference(c: CreationTime, l: LocalName, p: Path, v: Value): Reference;
+function {:constructor} Reference(rt: RefType, p: Path, v: Value): Reference;
+
+type {:datatype} RefType;
+function {:constructor} Global(a: Address, t: TypeName): RefType;
+function {:constructor} Local(c: CreationTime, l: LocalName): RefType;
 
 type {:datatype} ResourceStore;
 function {:constructor} ResourceStore(domain: [Address]bool, contents: [Address]Value): ResourceStore;
@@ -39,21 +42,11 @@ procedure {:inline 1} DeepUpdateReference(src: Reference, dst: Reference) return
     var isPrefix: bool;
     var v': Value;
     dst' := dst;
-    if (is#LocalReference(src)) {
-        if (is#LocalReference(dst) && c#LocalReference(src) == c#LocalReference(dst) && l#LocalReference(src) == l#LocalReference(dst)) {
-            call isPrefix := IsPrefixMax(p#LocalReference(dst), p#LocalReference(src));
-            if (isPrefix) {
-                call v' := UpdateValueMax(p#LocalReference(src), v#LocalReference(src), p#LocalReference(dst), v#LocalReference(dst));
-                dst' := LocalReference(c#LocalReference(dst), l#LocalReference(dst), p#LocalReference(dst), v');
-            }
-        }
-    } else {
-        if (is#GlobalReference(dst) && a#GlobalReference(src) == a#GlobalReference(dst) && t#GlobalReference(src) == t#GlobalReference(dst)) {
-            call isPrefix := IsPrefixMax(p#GlobalReference(dst), p#GlobalReference(src));
-            if (isPrefix) {
-                call v' := UpdateValueMax(p#GlobalReference(src), v#GlobalReference(src), p#GlobalReference(dst), v#GlobalReference(dst));
-                dst' := GlobalReference(a#GlobalReference(dst), t#GlobalReference(dst), p#GlobalReference(dst), v');
-            }
+    if (rt#Reference(src) == rt#Reference(dst)) {
+        call isPrefix := IsPrefixMax(p#Reference(dst), p#Reference(src));
+        if (isPrefix) {
+            call v' := UpdateValueMax(p#Reference(src), v#Reference(src), p#Reference(dst), v#Reference(dst));
+            dst' := Reference(rt#Reference(dst), p#Reference(dst), v');
         }
     }
 }
@@ -62,18 +55,20 @@ procedure {:inline 1} DeepUpdateLocal(c: CreationTime, l: LocalName, src: Refere
 {
     var v': Value;
     dst' := dst;
-    if (is#LocalReference(src) && c == c#LocalReference(src) && l == l#LocalReference(src)) {
-        call dst' := UpdateValueMax(p#LocalReference(src), v#LocalReference(src), Nil(), dst);
+    if (is#Local(rt#Reference(src)) && c == c#Local(rt#Reference(src)) && l == l#Local(rt#Reference(src))) {
+        call dst' := UpdateValueMax(p#Reference(src), v#Reference(src), Nil(), dst);
     }
 }
 
 procedure {:inline 1} DeepUpdateGlobal(t: TypeName, src: Reference, dst: ResourceStore) returns (dst': ResourceStore)
 {
     var v': Value;
+    var a: Address;
     dst' := dst;
-    if (is#GlobalReference(src) && t == t#GlobalReference(src)) {
-        call v' := UpdateValueMax(p#GlobalReference(src), v#GlobalReference(src), Nil(), contents#ResourceStore(dst)[a#GlobalReference(src)]);
-        dst' := ResourceStore(domain#ResourceStore(dst), contents#ResourceStore(dst)[a#GlobalReference(src) := v']);
+    if (is#Global(rt#Reference(src)) && t == t#Global(rt#Reference(src))) {
+        a := a#Global(rt#Reference(src));
+        call v' := UpdateValueMax(p#Reference(src), v#Reference(src), Nil(), contents#ResourceStore(dst)[a]);
+        dst' := ResourceStore(domain#ResourceStore(dst), contents#ResourceStore(dst)[a := v']);
     }
 }
 
@@ -86,8 +81,11 @@ procedure {:inline 1} Exists(address: Value, rs: ResourceStore) returns (dst: Va
 procedure {:inline 1} MoveToSender(rs: ResourceStore, v: Value) returns (rs': ResourceStore)
 {
     var a: Address;
-    a := a#Address(senderAddress);
-    assert !domain#ResourceStore(rs)[a];
+    a := sender#Transaction_cons(txn);
+    if (domain#ResourceStore(rs)[a]) {
+        // sender already has the resource
+        abort_flag := true;
+    }
     rs' := ResourceStore(domain#ResourceStore(rs)[a := true], contents#ResourceStore(rs)[a := v]);
 }
 
@@ -106,43 +104,32 @@ procedure {:inline 1} BorrowGlobal(address: Value, t: TypeName, rs: ResourceStor
     var a: Address;
     var v: Value;
     a := a#Address(address);
-    assert domain#ResourceStore(rs)[a];
+    if (!domain#ResourceStore(rs)[a]) {
+        abort_flag := true;
+    }
     v := contents#ResourceStore(rs)[a];
-    dst := GlobalReference(a, t, Nil(), v);
+    dst := Reference(Global(a, t), Nil(), v);
 }
 
 procedure {:inline 1} BorrowLoc(c: CreationTime, l: LocalName, local: Value) returns (dst: Reference)
 {
-    dst := LocalReference(c, l, Nil(), local);
+    dst := Reference(Local(c, l), Nil(), local);
 }
 
 procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
 {
-    if (is#GlobalReference(src)) {
-        assert is#Map(v#GlobalReference(src));
-        dst := GlobalReference(a#GlobalReference(src), t#GlobalReference(src), Cons(p#GlobalReference(src), Field(f)), m#Map(v#GlobalReference(src))[Field(f)]);
-    } else {
-        assert is#Map(v#LocalReference(src));
-        dst := LocalReference(c#LocalReference(src), l#LocalReference(src), Cons(p#LocalReference(src), Field(f)), m#Map(v#LocalReference(src))[Field(f)]);
-    }
+    assert is#Map(v#Reference(src));
+    dst := Reference(rt#Reference(src), Cons(p#Reference(src), Field(f)), m#Map(v#Reference(src))[Field(f)]);
 }
 
 procedure {:inline 1} WriteRef(to: Reference, v: Value) returns (to': Reference)
 {
-    if (is#GlobalReference(to)) {
-        to' := GlobalReference(a#GlobalReference(to), t#GlobalReference(to), p#GlobalReference(to), v);
-    } else {
-        to' := LocalReference(c#LocalReference(to), l#LocalReference(to), p#LocalReference(to), v);
-    }
+    to' := Reference(rt#Reference(to), p#Reference(to), v);
 }
 
 procedure {:inline 1} ReadRef(from: Reference) returns (v: Value)
 {
-    if (is#GlobalReference(from)) {
-        v := v#GlobalReference(from);
-    } else {
-        v := v#LocalReference(from);
-    }
+    v := v#Reference(from);
 }
 
 procedure {:inline 1} CopyOrMoveRef(local: Reference) returns (dst: Reference)
@@ -362,6 +349,8 @@ returns (addr_exists': [Address]bool)
 {
   var addr: Address;
   addr := a#Address(addr_val);
-  assert !addr_exists[addr];
+  if (addr_exists[addr]) {
+      abort_flag := true;
+  }
   addr_exists' := addr_exists[addr := true];
 }

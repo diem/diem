@@ -12,6 +12,7 @@ use vm::{
         FieldDefinitionIndex, FunctionHandleIndex, SignatureToken, StructDefinitionIndex,
         StructHandleIndex,
     },
+    internals::ModuleIndex,
     views::{
         FieldDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
         StructHandleView, ViewInternals,
@@ -208,6 +209,7 @@ impl<'a> BoogieTranslator<'a> {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
+                let mut dest_type_assumptions = vec![];
                 for arg in args.iter() {
                     args_str.push_str(&format!(", t{}", arg));
                     if self.is_local_mutable_ref(*arg, func_idx) {
@@ -216,51 +218,71 @@ impl<'a> BoogieTranslator<'a> {
                 }
                 for dest in dests.iter() {
                     dest_str.push_str(&format!(", t{}", dest));
+                    dest_type_assumptions.push(self.format_type_checking(
+                        format!("t{}", dest),
+                        &self.get_local_type(*dest, func_idx),
+                    ));
                 }
 
                 for type_str in self.all_type_strs.iter() {
                     args_str.push_str(&format!(", rs_{}'", type_str));
                     dest_str.push_str(&format!(", rs_{}'", type_str));
                 }
-                vec![format!(
+                let mut res_vec = vec![format!(
                     "call addr_exists'{} := {}(c', addr_exists'{});",
                     dest_str, callee_name, args_str
-                )]
+                )];
+                res_vec.extend(dest_type_assumptions);
+                res_vec
             }
             Pack(dest, struct_def_index, fields) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 let mut fields_str = String::new();
+                let mut res_vec = vec![];
                 for (idx, field_temp) in fields.iter().enumerate() {
                     if idx > 0 {
                         fields_str.push_str(", ");
                     }
                     fields_str.push_str(&format!("t{}", field_temp));
+                    res_vec.push(self.format_type_checking(
+                        format!("t{}", field_temp),
+                        &self.get_local_type(*field_temp, func_idx),
+                    ));
                 }
-                vec![format!(
+                res_vec.push(format!(
                     "call t{} := Pack_{}({});",
                     dest, struct_str, fields_str
-                )]
+                ));
+                res_vec
             }
             Unpack(dests, struct_def_index, src) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 let mut dests_str = String::new();
+                let mut dest_type_assumptions = vec![];
                 for (idx, dest) in dests.iter().enumerate() {
                     if idx > 0 {
                         dests_str.push_str(", ");
                     }
                     dests_str.push_str(&format!("t{}", dest));
+                    dest_type_assumptions.push(self.format_type_checking(
+                        format!("t{}", dest),
+                        &self.get_local_type(*dest, func_idx),
+                    ));
                 }
-                vec![format!(
+                let mut res_vec = vec![format!(
                     "call {} := Unpack_{}(t{});",
                     dests_str, struct_str, src
-                )]
+                )];
+                res_vec.extend(dest_type_assumptions);
+                res_vec
             }
             BorrowField(dest, src, field_def_index) => {
                 let field_name = self.field_name_from_index(*field_def_index);
-                vec![format!(
-                    "call t{} := BorrowField(t{}, {});",
-                    dest, src, field_name
-                )]
+                let field_sig = self.get_local_type(*dest, func_idx);
+                vec![
+                    format!("call t{} := BorrowField(t{}, {});", dest, src, field_name),
+                    self.format_type_checking(format!("t{}", dest), &field_sig),
+                ]
             }
             Exists(dest, addr, struct_def_index) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
@@ -271,10 +293,14 @@ impl<'a> BoogieTranslator<'a> {
             }
             BorrowGlobal(dest, addr, struct_def_index) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
-                vec![format!(
-                    "call t{} := BorrowGlobal(t{}, {}, rs_{}');",
-                    dest, addr, struct_str, struct_str,
-                )]
+                vec![
+                    format!(
+                        "call t{} := BorrowGlobal(t{}, {}, rs_{}');",
+                        dest, addr, struct_str, struct_str,
+                    ),
+                    format!("assume is#Global(rt#Reference(t{}));", dest),
+                    format!("assume is#Map(v#Reference(t{}));", dest),
+                ]
             }
             MoveToSender(src, struct_def_index) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
@@ -285,10 +311,16 @@ impl<'a> BoogieTranslator<'a> {
             }
             MoveFrom(dest, src, struct_def_index) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
-                vec![format!(
-                    "call t{}, rs_{}' := MoveFrom(t{}, rs_{}');",
-                    dest, struct_str, src, struct_str,
-                )]
+                vec![
+                    format!(
+                        "call t{}, rs_{}' := MoveFrom(t{}, rs_{}');",
+                        dest, struct_str, src, struct_str,
+                    ),
+                    self.format_type_checking(
+                        format!("t{}", dest),
+                        &self.get_local_type(*dest, func_idx),
+                    ),
+                ]
             }
             Ret(rets) => {
                 let mut ret_assignments = vec![];
@@ -301,6 +333,11 @@ impl<'a> BoogieTranslator<'a> {
             LdTrue(idx) => vec![format!("call t{} := LdTrue();", idx)],
             LdFalse(idx) => vec![format!("call t{} := LdFalse();", idx)],
             LdConst(idx, num) => vec![format!("call t{} := LdConst({});", idx, num)],
+            LdAddr(idx, addr_idx) => {
+                let addr = self.module.address_pool()[(*addr_idx).into_index()];
+                let addr_int = u64::from_str_radix(&addr.to_string(), 16).unwrap();
+                vec![format!("call t{} := LdAddr({}); ", idx, addr_int)]
+            }
             Not(dest, operand) => vec![format!("call t{} := Not(t{});", dest, operand)],
             Add(dest, op1, op2) => vec![format!("call t{} := Add(t{}, t{});", dest, op1, op2)],
             Sub(dest, op1, op2) => vec![format!("call t{} := Sub(t{}, t{});", dest, op1, op2)],
@@ -317,20 +354,26 @@ impl<'a> BoogieTranslator<'a> {
                 let operand_type = self.get_local_type(*op1, func_idx);
                 vec![format!(
                     "call t{} := Eq_{}(t{}, t{});",
-                    dest, operand_type, op1, op2
+                    dest,
+                    self.format_type(&operand_type),
+                    op1,
+                    op2
                 )]
             }
             Neq(dest, op1, op2) => {
                 let operand_type = self.get_local_type(*op1, func_idx);
                 vec![format!(
                     "call t{} := Neq_{}(t{}, t{});",
-                    dest, operand_type, op1, op2
+                    dest,
+                    self.format_type(&operand_type),
+                    op1,
+                    op2
                 )]
             }
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
                 vec!["// bit operation not supported".into()]
             }
-            Abort(_) => vec!["assert false;".into()],
+            Abort(_) => vec!["abort_flag := true;".into()],
             GetGasRemaining(idx) => vec![format!("call t{} := GetGasRemaining();", idx)],
             GetTxnSequenceNumber(idx) => vec![format!("call t{} := GetTxnSequenceNumber();", idx)],
             GetTxnPublicKey(idx) => vec![format!("call t{} := GetTxnPublicKey();", idx)],
@@ -419,13 +462,10 @@ impl<'a> BoogieTranslator<'a> {
                     self.get_local_name(i, arg_names),
                     self.get_arg_name(i, arg_names)
                 ));
-                if !self.is_local_ref(i, idx) {
-                    arg_value_assumption_str.push_str(&format!(
-                        "    assume is#{}({});\n",
-                        self.format_value_cons(local_type),
-                        self.get_arg_name(i, arg_names),
-                    ));
-                }
+                arg_value_assumption_str.push_str(&format!(
+                    "    {}",
+                    self.format_type_checking(self.get_arg_name(i, arg_names), local_type)
+                ));
             }
             if SignatureTokenView::new(self.module, local_type).is_reference() {
                 ref_vars.insert(i);
@@ -607,8 +647,8 @@ impl<'a> BoogieTranslator<'a> {
         format!("{}_{}", module_name, function_name)
     }
 
-    pub fn get_local_type(&self, local_idx: usize, func_idx: usize) -> String {
-        self.format_type(&self.stackless_bytecode[func_idx].local_types[local_idx])
+    pub fn get_local_type(&self, local_idx: usize, func_idx: usize) -> SignatureToken {
+        self.stackless_bytecode[func_idx].local_types[local_idx].clone()
     }
 
     pub fn format_type_index(&self, sig: &SignatureToken) -> String {
@@ -665,6 +705,17 @@ impl<'a> BoogieTranslator<'a> {
             _ => "Value",
         }
         .into()
+    }
+
+    pub fn format_type_checking(&self, name: String, sig: &SignatureToken) -> String {
+        match sig {
+            SignatureToken::Reference(s) | SignatureToken::MutableReference(s) => format!(
+                "assume is#{}(v#Reference({}));\n",
+                self.format_value_cons(s),
+                name,
+            ),
+            _ => format!("assume is#{}({});\n", self.format_value_cons(sig), name,),
+        }
     }
 
     pub fn get_field_info_from_struct_handle_index(
