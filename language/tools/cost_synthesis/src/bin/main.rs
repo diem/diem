@@ -30,6 +30,7 @@ use vm::{
         FunctionDefinitionIndex, FunctionHandleIndex, StringPoolIndex, StructDefinitionIndex,
         NO_TYPE_ACTUALS,
     },
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -66,6 +67,28 @@ fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
     }
 
     writer.flush().unwrap();
+}
+
+fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<GasCarrier>) -> u64 {
+    match instr {
+        Bytecode::MoveToSender(_, _)
+        | Bytecode::Exists(_, _)
+        | Bytecode::BorrowGlobal(_, _)
+        | Bytecode::Eq
+        | Bytecode::Neq
+        | Bytecode::LdStr(_)
+        | Bytecode::LdByteArray(_)
+        | Bytecode::StLoc(_)
+        | Bytecode::CopyLoc(_)
+        | Bytecode::Pack(_, _)
+        | Bytecode::Unpack(_, _)
+        | Bytecode::WriteRef
+        | Bytecode::ReadRef
+        | Bytecode::MoveFrom(_, _) => {
+            cost / size.get() + if cost % size.get() == 0 { 0 } else { 1 }
+        }
+        _ => cost,
+    }
 }
 
 fn stack_instructions(options: &Opt) {
@@ -143,7 +166,7 @@ fn stack_instructions(options: &Opt) {
             );
             let instr_costs: Vec<u64> = stack_gen
                 .map(|stack_state| {
-                    let instr = RandomStackGenerator::stack_transition(
+                    let (instr, size) = RandomStackGenerator::stack_transition(
                         &mut vm.execution_stack,
                         stack_state,
                     );
@@ -170,7 +193,7 @@ fn stack_instructions(options: &Opt) {
                             },
                         }
                     }
-                    u64::try_from(time).unwrap()
+                    size_normalize_cost(&instruction, u64::try_from(time).unwrap(), size)
                 })
                 .collect();
             (format!("{:?}", instruction), instr_costs)

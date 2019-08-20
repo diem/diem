@@ -11,7 +11,11 @@ use crate::{
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
+use types::{
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    byte_array::ByteArray,
+    language_storage::ModuleId,
+};
 use vm::{
     access::*,
     assert_ok,
@@ -346,7 +350,7 @@ where
         )
     }
 
-    fn fill_instruction_arg(&mut self) -> Bytecode {
+    fn fill_instruction_arg(&mut self) -> (Bytecode, usize) {
         use Bytecode::*;
         // For branching we need to know the size of the code within the top frame on the execution
         // stack (the frame that the instruction will be executing in) so that we don't jump off
@@ -366,21 +370,32 @@ where
         match self.op {
             BrTrue(_) => {
                 let index = self.next_bounded_index(frame_len as TableIndex);
-                BrTrue(index as CodeOffset)
+                (BrTrue(index as CodeOffset), 1)
             }
             BrFalse(_) => {
                 let index = self.next_bounded_index(frame_len as TableIndex);
-                BrFalse(index as CodeOffset)
+                (BrFalse(index as CodeOffset), 1)
             }
             Branch(_) => {
                 let index = self.next_bounded_index(frame_len as TableIndex);
-                Branch(index as CodeOffset)
+                (Branch(index as CodeOffset), 1)
             }
-            LdConst(_) => LdConst(self.next_int(&[])),
-            LdStr(_) => LdStr(self.next_string_idx()),
-            LdByteArray(_) => LdByteArray(self.next_bytearray_idx()),
-            LdAddr(_) => LdAddr(self.next_address_idx()),
-            _ => self.op.clone(),
+            LdConst(_) => {
+                let i = self.next_int(&[]);
+                (LdConst(i), 1)
+            }
+            LdStr(_) => {
+                let string_idx = self.next_string_idx();
+                let string_size = self.root_module.string_at(string_idx).len();
+                (LdStr(string_idx), string_size)
+            }
+            LdByteArray(_) => {
+                let bytearray_idx = self.next_bytearray_idx();
+                let bytearray_size = self.root_module.byte_array_at(bytearray_idx).len();
+                (LdByteArray(bytearray_idx), bytearray_size)
+            }
+            LdAddr(_) => (LdAddr(self.next_address_idx()), ADDRESS_LENGTH),
+            _ => (self.op.clone(), 0),
         }
     }
 
@@ -807,13 +822,16 @@ where
                 acc.push(self.generate_from_type(x, &acc));
                 acc
             });
+            let (instr_arg, arg_size) = self.fill_instruction_arg();
             let size = starting_stack
                 .iter()
-                .fold(AbstractMemorySize::new(0), |acc, x| acc.add(x.size()));
+                .fold(AbstractMemorySize::new(arg_size as GasCarrier), |acc, x| {
+                    acc.add(x.size())
+                });
             StackState::new(
                 (self.root_module, None),
                 self.random_pad(starting_stack),
-                self.fill_instruction_arg(),
+                instr_arg,
                 size,
                 HashMap::new(),
             )
@@ -828,7 +846,7 @@ where
     pub fn stack_transition<P>(
         stk: &mut ExecutionStack<'alloc, 'txn, P>,
         stack_state: StackState<'alloc>,
-    ) -> Bytecode
+    ) -> (Bytecode, AbstractMemorySize<GasCarrier>)
     where
         P: ModuleCache<'alloc>,
     {
@@ -845,7 +863,7 @@ where
                 .expect("[Stack Transition] Unable to get top frame on execution stack.")
                 .store_local(local_index, local));
         }
-        stack_state.instr
+        (stack_state.instr, stack_state.size)
     }
 }
 
