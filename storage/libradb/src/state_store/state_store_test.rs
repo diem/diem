@@ -15,8 +15,8 @@ fn put_account_state_set(
     store: &StateStore,
     account_state_set: Vec<(AccountAddress, AccountStateBlob)>,
     version: Version,
-    expected_new_internals: usize,
-    expected_stale_internals: usize,
+    expected_new_nodes: usize,
+    expected_stale_nodes: usize,
     expected_stale_leaves: usize,
 ) -> HashValue {
     let mut cs = ChangeSet::new();
@@ -30,12 +30,12 @@ fn put_account_state_set(
         .unwrap()[0];
     store.db.write_schemas(cs.batch).unwrap();
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::NewStateInternals),
-        expected_new_internals
+        cs.counter_bumps.get(LedgerCounter::NewStateNodes),
+        expected_new_nodes
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StaleStateInternals),
-        expected_stale_internals
+        cs.counter_bumps.get(LedgerCounter::StaleStateNodes),
+        expected_stale_nodes
     );
     assert_eq!(
         cs.counter_bumps.get(LedgerCounter::NewStateLeaves),
