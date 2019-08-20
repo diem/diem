@@ -185,7 +185,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         cfg: &dyn ControlFlowGraph,
     ) -> Result<(), Self::AnalysisError> {
         let block_end = cfg.block_end(&block_id);
-        for offset in cfg.block_start(&block_id)..=block_end {
+        for offset in cfg.instr_indexes(&block_id) {
             let instr = &function_view.code().code[offset as usize];
             self.execute(state, instr, offset as usize, block_end as usize)?
         }

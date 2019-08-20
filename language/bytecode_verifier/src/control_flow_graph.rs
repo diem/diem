@@ -22,6 +22,9 @@ pub trait ControlFlowGraph {
     /// Successors of the block ID in the bytecode vector
     fn successors(&self, block_id: &BlockId) -> &Vec<BlockId>;
 
+    /// Iterator over the indexes of instructions in this block
+    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;
+
     /// Return an iterator over the blocks of the CFG
     fn blocks(&self) -> Vec<BlockId>;
 
@@ -136,9 +139,11 @@ impl ControlFlowGraph for VMControlFlowGraph {
     }
 
     fn blocks(&self) -> Vec<BlockId> {
-        assert!(false, "TODO: figure this out");
-        vec![]
-        //        self.blocks.into_iter().map(|(k,v)| k)
+        self.blocks.keys().cloned().collect()
+    }
+
+    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
+        Box::new(self.block_start(block_id)..self.block_end(block_id))
     }
 
     fn num_blocks(&self) -> u16 {
@@ -147,5 +152,91 @@ impl ControlFlowGraph for VMControlFlowGraph {
 
     fn entry_block_id(&self) -> BlockId {
         ENTRY_BLOCK_ID
+    }
+}
+
+/// Reversed view of control flow graph to support backward analysis
+struct BackwardControlFlowGraph {
+    forward_cfg: VMControlFlowGraph,
+    exit_block_id: BlockId,
+    predecessors: Map<BlockId, Vec<BlockId>>,
+}
+
+impl BackwardControlFlowGraph {
+    pub fn new(code: &[Bytecode]) -> Self {
+        let forward_cfg = VMControlFlowGraph::new(code);
+        // create a single exit block to use as the entry block in the trait
+        let exit_block_id = forward_cfg.num_blocks() + 1;
+        let mut predecessors = Map::new();
+        // create a predecessor map. the predecessors of the entry block are any blocks with no
+        // successors
+        for (block_id, block) in &forward_cfg.blocks {
+            let successors = &block.successors;
+            if successors.is_empty() {
+                predecessors
+                    .entry(exit_block_id)
+                    .or_insert_with(Vec::new)
+                    .push(*block_id)
+            } else {
+                for successor_id in successors {
+                    predecessors
+                        .entry(*successor_id)
+                        .or_insert_with(Vec::new)
+                        .push(*block_id)
+                }
+            }
+        }
+
+        Self {
+            forward_cfg,
+            exit_block_id,
+            predecessors,
+        }
+    }
+
+    pub fn is_exit_block(&self, block_id: BlockId) -> bool {
+        self.exit_block_id == block_id
+    }
+}
+
+impl ControlFlowGraph for BackwardControlFlowGraph {
+    // Like normal CFG, but everything is backward
+
+    fn block_start(&self, block_id: &BlockId) -> CodeOffset {
+        if self.is_exit_block(*block_id) {
+            *block_id
+        } else {
+            self.forward_cfg.blocks[block_id].exit
+        }
+    }
+
+    fn block_end(&self, block_id: &BlockId) -> CodeOffset {
+        if self.is_exit_block(*block_id) {
+            *block_id
+        } else {
+            self.forward_cfg.blocks[block_id].exit
+        }
+    }
+
+    fn successors(&self, block_id: &BlockId) -> &Vec<BlockId> {
+        &self.predecessors[block_id]
+    }
+
+    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
+        Box::new((self.block_start(block_id)..self.block_end(block_id)).rev())
+    }
+
+    fn blocks(&self) -> Vec<BlockId> {
+        let mut blocks = self.forward_cfg.blocks();
+        blocks.push(self.exit_block_id);
+        blocks
+    }
+
+    fn num_blocks(&self) -> u16 {
+        self.forward_cfg.num_blocks() + 1
+    }
+
+    fn entry_block_id(&self) -> BlockId {
+        self.exit_block_id
     }
 }
