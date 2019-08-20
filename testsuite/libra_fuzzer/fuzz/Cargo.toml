@@ -25,3 +25,4 @@ members = ["."]
 [[bin]]
 name = "fuzz_runner"
 path = "fuzz_targets/fuzz_runner.rs"
+test = false
