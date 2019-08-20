@@ -1,5 +1,5 @@
 [package]
-name = "crypto-derive"
+name = "crypto_derive"
 version = "0.1.0"
 description = "Custom derives for `crypto`"
 edition = "2018"
@@ -10,3 +10,8 @@ proc_macro = true
 [dependencies]
 syn = { version = "1.0.1", features = ["derive"] }
 quote = "1.0.0"
+proc-macro2 = "1.0.1"
+
+[dev-dependencies]
+crypto = { path = "../crypto"}
+failure = { path = "../../common/failure_ext", package = "failure_ext"}
