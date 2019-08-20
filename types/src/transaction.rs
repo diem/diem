@@ -356,11 +356,6 @@ pub struct SignedTransaction {
 pub struct SignatureCheckedTransaction(SignedTransaction);
 
 impl SignatureCheckedTransaction {
-    /// Returns a reference to the `SignedTransaction` within.
-    pub fn as_inner(&self) -> &SignedTransaction {
-        &self.0
-    }
-
     /// Returns the `SignedTransaction` within.
     pub fn into_inner(self) -> SignedTransaction {
         self.0

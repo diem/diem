@@ -9,13 +9,11 @@ use crate::{
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer,
 };
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::collections::btree_map::BTreeMap;
 
 pub const VALIDATOR_SET_MODULE_NAME: &str = "ValidatorSet";
 pub const VALIDATOR_SET_STRUCT_NAME: &str = "T";
@@ -41,15 +39,6 @@ impl ValidatorSet {
     /// Constructs a ValidatorSet resource.
     pub fn new(payload: Vec<ValidatorPublicKeys>) -> Self {
         ValidatorSet(payload)
-    }
-
-    /// Given an account map (typically from storage) retrieves the validator resource associated.
-    pub fn make_from(account_map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
-        let ap = validator_set_path();
-        match account_map.get(&ap) {
-            Some(bytes) => SimpleDeserializer::deserialize(bytes),
-            None => bail!("No data for {:?}", ap),
-        }
     }
 
     pub fn payload(&self) -> &[ValidatorPublicKeys] {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
-#![cfg(test)]
 use crate::{
     common::NetworkPublicKeys,
     proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock, SignedTransaction},

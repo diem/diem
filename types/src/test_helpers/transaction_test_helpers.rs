@@ -5,13 +5,11 @@ use crate::{
     account_address::AccountAddress,
     proto::transaction::{
         RawTransaction as ProtoRawTransaction, SignedTransaction as ProtoSignedTransaction,
-        SignedTransactionsBlock,
     },
     transaction::{
         Program, RawTransaction, RawTransactionBytes, SignatureCheckedTransaction,
         SignedTransaction,
     },
-    transaction_helpers::get_signed_transactions_digest,
     write_set::WriteSet,
 };
 use crypto::hash::CryptoHash;
@@ -150,34 +148,4 @@ pub fn get_write_set_txn(
     RawTransaction::new_write_set(sender, sequence_number, write_set)
         .sign(&private_key, public_key)
         .unwrap()
-}
-
-// Test helper for transaction block creation
-pub fn create_signed_transactions_block(
-    sender: AccountAddress,
-    starting_sequence_number: u64,
-    num_transactions_in_block: u64,
-    priv_key: &Ed25519PrivateKey,
-    pub_key: &Ed25519PublicKey,
-    validator_priv_key: &Ed25519PrivateKey,
-    validator_pub_key: &Ed25519PublicKey,
-) -> SignedTransactionsBlock {
-    let mut signed_txns_block = SignedTransactionsBlock::new();
-    for i in starting_sequence_number..(starting_sequence_number + num_transactions_in_block) {
-        // Add some transactions to the block
-        signed_txns_block.transactions.push(get_test_signed_txn(
-            sender,
-            i, /* seq_number */
-            priv_key.clone(),
-            pub_key.clone(),
-            None,
-        ));
-    }
-
-    let message = get_signed_transactions_digest(&signed_txns_block.transactions);
-    let signature = validator_priv_key.sign_message(&message);
-    signed_txns_block.set_validator_signature(signature.to_bytes().to_vec());
-    signed_txns_block.set_validator_public_key(validator_pub_key.to_bytes().to_vec());
-
-    signed_txns_block
 }

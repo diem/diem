@@ -82,11 +82,6 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Self::new(author_to_public_keys)
     }
 
-    /// Helper method to initialize with an empty validator set.
-    pub fn new_empty() -> Self {
-        Self::new(HashMap::new())
-    }
-
     /// Verify the correctness of a signature of a hash by a known author.
     pub fn verify_signature(
         &self,
