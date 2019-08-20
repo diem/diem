@@ -20,9 +20,10 @@ use std::{
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-#[cfg(test)]
-use types::validator_signer::proptests;
-use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
+use types::{
+    validator_signer::{proptests, ValidatorSigner},
+    validator_verifier::ValidatorVerifier,
+};
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
 
