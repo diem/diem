@@ -10,7 +10,7 @@ use crate::{
     },
     state_replication::ExecutedState,
 };
-use crypto::{ed25519::*, hash::CryptoHash, HashValue};
+use crypto::{hash::CryptoHash, HashValue};
 use futures::{channel::mpsc, executor::block_on};
 use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::{collections::HashMap, sync::Arc};
@@ -18,8 +18,8 @@ use termion::color::*;
 use tokio::runtime;
 use tools::output_capture::OutputCapture;
 use types::{
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    validator_signer::ValidatorSigner,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
+    ledger_info::LedgerInfo,
 };
 
 mod mock_state_computer;
@@ -38,10 +38,9 @@ pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
 }
 
 pub fn build_empty_tree_with_custom_signing(
-    my_signer: ValidatorSigner<Ed25519PrivateKey>,
+    my_signer: ValidatorSigner,
 ) -> Arc<BlockStore<Vec<usize>>> {
-    let (commit_cb_sender, _commit_cb_receiver) =
-        mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
+    let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
@@ -109,8 +108,8 @@ impl TreeInserter {
     pub fn insert_pre_made_block(
         &mut self,
         block: Block<Vec<usize>>,
-        block_signer: &ValidatorSigner<Ed25519PrivateKey>,
-        qc_signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
+        block_signer: &ValidatorSigner,
+        qc_signers: Vec<&ValidatorSigner>,
     ) -> Arc<Block<Vec<usize>>> {
         self.payload_val += 1;
         let new_round = if block.round() > 0 {
@@ -154,7 +153,7 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
 }
 
 pub fn placeholder_certificate_for_block(
-    signers: Vec<&ValidatorSigner<Ed25519PrivateKey>>,
+    signers: Vec<&ValidatorSigner>,
     certified_block_id: HashValue,
     certified_block_round: u64,
     certified_parent_block_id: HashValue,

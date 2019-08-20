@@ -5,22 +5,20 @@ use crate::{
     chained_bft::consensus_types::quorum_cert::QuorumCert,
     state_replication::{StateComputeResult, StateComputer},
 };
-use crypto::{ed25519::*, hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use logger::prelude::*;
 use std::pin::Pin;
 use termion::color::*;
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::LedgerInfoWithSignatures;
 
 pub struct MockStateComputer {
-    commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures<Ed25519Signature>>,
+    commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
 }
 
 impl MockStateComputer {
-    pub fn new(
-        commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures<Ed25519Signature>>,
-    ) -> Self {
+    pub fn new(commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>) -> Self {
         MockStateComputer { commit_callback }
     }
 }
@@ -44,7 +42,7 @@ impl StateComputer for MockStateComputer {
 
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures<Ed25519Signature>,
+        commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         self.commit_callback
             .unbounded_send(commit)

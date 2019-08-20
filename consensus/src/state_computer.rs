@@ -6,7 +6,7 @@ use crate::{
     counters,
     state_replication::{StateComputeResult, StateComputer},
 };
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use execution_proto::proto::{
     execution::{CommitBlockRequest, CommitBlockStatus, ExecuteBlockRequest, ExecuteBlockResponse},
     execution_grpc::ExecutionClient,
@@ -23,7 +23,7 @@ use std::{
     time::{Duration, Instant},
 };
 use types::{
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, TransactionStatus},
 };
 
@@ -130,7 +130,7 @@ impl StateComputer for ExecutionProxy {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures<Ed25519Signature>,
+        commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = commit.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);

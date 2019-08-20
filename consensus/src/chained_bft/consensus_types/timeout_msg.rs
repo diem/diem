@@ -10,7 +10,6 @@ use crate::chained_bft::{
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
-    ed25519::*,
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue,
 };
@@ -22,8 +21,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
-    validator_signer::ValidatorSigner,
-    validator_verifier::{ValidatorVerifier, VerifyError},
+    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+    validator_verifier::VerifyError,
 };
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the
@@ -70,17 +69,13 @@ pub enum TimeoutVerificationError {
 pub struct PacemakerTimeout {
     round: Round,
     author: Author,
-    signature: Ed25519Signature,
+    signature: Signature,
     vote: Option<VoteMsg>,
 }
 
 impl PacemakerTimeout {
     /// Creates new PacemakerTimeout
-    pub fn new(
-        round: Round,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
-        vote: Option<VoteMsg>,
-    ) -> Self {
+    pub fn new(round: Round, validator_signer: &ValidatorSigner, vote: Option<VoteMsg>) -> Self {
         let author = validator_signer.author();
         let digest = PacemakerTimeoutSerializer { round, author }.hash();
         let signature = validator_signer
@@ -89,7 +84,7 @@ impl PacemakerTimeout {
         PacemakerTimeout {
             round,
             author,
-            signature,
+            signature: signature.into(),
             vote,
         }
     }
@@ -112,12 +107,9 @@ impl PacemakerTimeout {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(
-        &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
-    ) -> Result<(), TimeoutVerificationError> {
-        validator
-            .verify_signature(self.author, self.digest(), &self.signature)
+    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), TimeoutVerificationError> {
+        self.signature
+            .verify(validator, self.author, self.digest())
             .map_err(TimeoutVerificationError::SigVerifyError)?;
         if let Some(vote) = self.vote.as_ref() {
             vote.verify(validator)
@@ -132,7 +124,7 @@ impl PacemakerTimeout {
     }
 
     /// Returns the signature of the author for this timeout
-    pub fn signature(&self) -> &Ed25519Signature {
+    pub fn signature(&self) -> &Signature {
         &self.signature
     }
 }
@@ -144,7 +136,7 @@ impl IntoProto for PacemakerTimeout {
         let mut proto = Self::ProtoType::new();
         proto.set_round(self.round);
         proto.set_author(self.author.into());
-        proto.set_signature(self.signature.to_bytes().as_ref().into());
+        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
         if let Some(vote) = self.vote {
             proto.set_vote(vote.into_proto());
         }
@@ -158,7 +150,7 @@ impl FromProto for PacemakerTimeout {
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let round = object.get_round();
         let author = Author::try_from(object.take_author())?;
-        let signature = Ed25519Signature::try_from(object.get_signature())?;
+        let signature = Signature::try_from(object.get_signature())?;
         let vote = if let Some(vote_msg) = object.vote.into_option() {
             Some(VoteMsg::from_proto(vote_msg)?)
         } else {
@@ -210,7 +202,7 @@ impl CryptoHash for TimeoutMsgSerializer {
 pub struct TimeoutMsg {
     sync_info: SyncInfo,
     pacemaker_timeout: PacemakerTimeout,
-    signature: Ed25519Signature,
+    signature: Signature,
 }
 
 impl TimeoutMsg {
@@ -218,7 +210,7 @@ impl TimeoutMsg {
     pub fn new(
         sync_info: SyncInfo,
         pacemaker_timeout: PacemakerTimeout,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        validator_signer: &ValidatorSigner,
     ) -> TimeoutMsg {
         let digest = Self::new_round_digest(pacemaker_timeout.digest());
         let signature = validator_signer
@@ -227,7 +219,7 @@ impl TimeoutMsg {
         TimeoutMsg {
             sync_info,
             pacemaker_timeout,
-            signature,
+            signature: signature.into(),
         }
     }
 
@@ -249,10 +241,7 @@ impl TimeoutMsg {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(
-        &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
-    ) -> Result<(), TimeoutVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), TimeoutVerificationError> {
         self.pacemaker_timeout.verify(validator)
     }
 
@@ -263,7 +252,7 @@ impl TimeoutMsg {
 
     /// Returns a reference to the signature of the author
     #[allow(dead_code)]
-    pub fn signature(&self) -> &Ed25519Signature {
+    pub fn signature(&self) -> &Signature {
         &self.signature
     }
 }
@@ -274,7 +263,7 @@ impl FromProto for TimeoutMsg {
     fn from_proto(mut object: network::proto::TimeoutMsg) -> failure::Result<Self> {
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
         let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
-        let signature = Ed25519Signature::try_from(object.get_signature())?;
+        let signature = Signature::try_from(object.get_signature())?;
         Ok(TimeoutMsg {
             sync_info,
             pacemaker_timeout,
@@ -290,7 +279,7 @@ impl IntoProto for TimeoutMsg {
         let mut proto = Self::ProtoType::new();
         proto.set_sync_info(self.sync_info.into_proto());
         proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
-        proto.set_signature(self.signature.to_bytes().as_ref().into());
+        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
         proto
     }
 }
@@ -338,13 +327,15 @@ impl PacemakerTimeoutCertificate {
     /// Verifies that timeouts in message actually certify the round
     pub fn verify(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier,
     ) -> Result<(), PacemakerTimeoutCertificateVerificationError> {
         let mut min_round: Option<Round> = None;
         let mut unique_authors = HashSet::new();
         for timeout in &self.timeouts {
             if let Err(e) =
-                validator.verify_signature(timeout.author(), timeout.digest(), timeout.signature())
+                timeout
+                    .signature()
+                    .verify(validator, timeout.author(), timeout.digest())
             {
                 return Err(SigVerifyError(timeout.author(), e));
             }

@@ -7,7 +7,6 @@ use crate::{
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
-    ed25519::*,
     hash::{CryptoHash, CryptoHasher, VoteMsgHasher},
     HashValue,
 };
@@ -20,9 +19,9 @@ use std::{
     fmt::{Display, Formatter},
 };
 use types::{
+    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
-    validator_signer::ValidatorSigner,
-    validator_verifier::{ValidatorVerifier, VerifyError},
+    validator_verifier::VerifyError,
 };
 
 /// VoteMsg verification errors.
@@ -101,7 +100,7 @@ pub struct VoteMsg {
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
-    signature: Ed25519Signature,
+    signature: Signature,
 }
 
 impl Display for VoteMsg {
@@ -133,7 +132,7 @@ impl VoteMsg {
         grandparent_block_round: Round,
         author: Author,
         mut ledger_info_placeholder: LedgerInfo,
-        validator_signer: &ValidatorSigner<Ed25519PrivateKey>,
+        validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(Self::vote_digest(
             proposed_block_id,
@@ -157,7 +156,7 @@ impl VoteMsg {
             grandparent_block_round,
             author,
             ledger_info: ledger_info_placeholder,
-            signature: li_sig,
+            signature: li_sig.into(),
         }
     }
 
@@ -207,25 +206,18 @@ impl VoteMsg {
     }
 
     /// Return the signature of the vote
-    pub fn signature(&self) -> &Ed25519Signature {
+    pub fn signature(&self) -> &Signature {
         &self.signature
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
     /// and then verifies the signature.
-    pub fn verify(
-        &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
-    ) -> Result<(), VoteMsgVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), VoteMsgVerificationError> {
         if self.ledger_info.consensus_data_hash() != self.vote_hash() {
             return Err(VoteMsgVerificationError::ConsensusDataMismatch);
         }
-        validator
-            .verify_signature(
-                self.author(),
-                self.ledger_info.hash(),
-                &(self.signature().clone().into()),
-            )
+        self.signature()
+            .verify(validator, self.author(), self.ledger_info.hash())
             .map_err(VoteMsgVerificationError::SigVerifyError)
     }
 
@@ -280,7 +272,7 @@ impl IntoProto for VoteMsg {
         proto.set_grandparent_block_round(self.grandparent_block_round);
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
-        proto.set_signature(self.signature.to_bytes().as_ref().into());
+        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
         proto
     }
 }
@@ -299,7 +291,7 @@ impl FromProto for VoteMsg {
         let grandparent_block_round = object.get_grandparent_block_round();
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
-        let signature = Ed25519Signature::try_from(object.get_signature())?;
+        let signature = Signature::try_from(object.get_signature())?;
         Ok(VoteMsg {
             proposed_block_id,
             executed_state: ExecutedState { state_id, version },

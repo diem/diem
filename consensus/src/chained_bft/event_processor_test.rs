@@ -35,7 +35,7 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},
     compat::Future01CompatExt,
@@ -48,10 +48,7 @@ use network::{
 use proto_conv::FromProto;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
-use types::{
-    ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
-};
+use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is setting up node environment for the test.
 struct NodeSetup {
@@ -59,19 +56,18 @@ struct NodeSetup {
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload>,
     storage: Arc<MockStorage<TestPayload>>,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
+    signer: ValidatorSigner,
     proposer_author: Author,
     peers: Arc<Vec<Author>>,
 }
 
 impl NodeSetup {
     fn build_empty_store(
-        signer: ValidatorSigner<Ed25519PrivateKey>,
+        signer: ValidatorSigner,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
-        let (commit_cb_sender, _commit_cb_receiver) =
-            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
+        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
 
         Arc::new(block_on(BlockStore::new(
             storage,
@@ -138,7 +134,7 @@ impl NodeSetup {
     fn new(
         playground: &mut NetworkPlayground,
         executor: TaskExecutor,
-        signer: ValidatorSigner<Ed25519PrivateKey>,
+        signer: ValidatorSigner,
         proposer_author: Author,
         peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
@@ -176,8 +172,7 @@ impl NodeSetup {
         let pacemaker = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let (commit_cb_sender, _commit_cb_receiver) =
-            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
+        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),

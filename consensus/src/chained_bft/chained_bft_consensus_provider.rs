@@ -12,7 +12,6 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use crypto::ed25519::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::{
@@ -27,16 +26,17 @@ use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 use types::{
-    account_address::AccountAddress, transaction::SignedTransaction,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress,
+    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
+    transaction::SignedTransaction,
 };
 
 struct InitialSetup {
     author: Author,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
+    signer: ValidatorSigner,
     quorum_size: usize,
     peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator: Arc<ValidatorVerifier>,
 }
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.

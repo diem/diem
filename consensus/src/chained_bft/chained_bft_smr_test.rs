@@ -15,12 +15,11 @@ use crate::{
     state_replication::StateMachineReplication,
 };
 use channel;
-use crypto::{ed25519::*, hash::CryptoHash};
+use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use proto_conv::FromProto;
 use std::sync::Arc;
-use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 
 use crate::chained_bft::{
     persistent_storage::RecoveryData,
@@ -31,19 +30,19 @@ use config::config::ConsensusProposerType::{
 };
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime;
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
     author: Author,
-    signer: ValidatorSigner<Ed25519PrivateKey>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    signer: ValidatorSigner,
+    validator: Arc<ValidatorVerifier>,
     peers: Arc<Vec<Author>>,
     proposer: Vec<Author>,
     proposer_type: ConsensusProposerType,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
-    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures<Ed25519Signature>>,
+    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
@@ -53,8 +52,8 @@ impl SMRNode {
     fn start(
         quorum_size: usize,
         playground: &mut NetworkPlayground,
-        signer: ValidatorSigner<Ed25519PrivateKey>,
-        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+        signer: ValidatorSigner,
+        validator: Arc<ValidatorVerifier>,
         peers: Arc<Vec<Author>>,
         proposer: Vec<Author>,
         smr_id: usize,
@@ -100,8 +99,7 @@ impl SMRNode {
             storage.clone(),
             initial_data,
         );
-        let (commit_cb_sender, commit_cb_receiver) =
-            mpsc::unbounded::<LedgerInfoWithSignatures<Ed25519Signature>>();
+        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut mp = MockTransactionManager::new();
         let commit_receiver = mp.take_commit_receiver();
         let mempool = Arc::new(mp);
@@ -197,10 +195,7 @@ impl SMRNode {
     }
 }
 
-fn verify_finality_proof(
-    node: &SMRNode,
-    ledger_info_with_sig: &LedgerInfoWithSignatures<Ed25519Signature>,
-) {
+fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSignatures) {
     let ledger_info_hash = ledger_info_with_sig.ledger_info().hash();
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
