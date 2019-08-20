@@ -23,8 +23,8 @@ pub(crate) enum LedgerCounter {
     NewStateLeaves = 201,
     StaleStateLeaves = 202,
 
-    NewStateInternals = 301,
-    StaleStateInternals = 302,
+    NewStateNodes = 301,
+    StaleStateNodes = 302,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
