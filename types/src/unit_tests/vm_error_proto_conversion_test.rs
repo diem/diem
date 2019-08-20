@@ -24,11 +24,6 @@ proptest! {
     }
 
     #[test]
-    fn vm_verification_status_roundtrip(verification_status in any::<VMVerificationStatus>()) {
-        assert_protobuf_encode_decode(&verification_status);
-    }
-
-    #[test]
     fn vm_invariant_violation_roundtrip(invariant_violation in any::<VMInvariantViolationError>()) {
         assert_protobuf_encode_decode_non_message(&invariant_violation);
     }
@@ -52,6 +47,16 @@ proptest! {
     fn execution_status_roundtrip(execution_status in any::<ExecutionStatus>()) {
         assert_protobuf_encode_decode(&execution_status);
     }
+}
+
+#[test]
+fn test_vm_verification_status_roundtrip() {
+    with_stack_size(4 * 1024 * 1024, || {
+        proptest!(|(verification_status in any::<VMVerificationStatus>())| {
+            assert_protobuf_encode_decode(&verification_status);
+        })
+    })
+    .unwrap();
 }
 
 #[test]

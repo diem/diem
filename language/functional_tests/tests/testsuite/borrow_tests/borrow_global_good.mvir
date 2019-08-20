@@ -13,7 +13,7 @@ module A {
         return;
     }
 
-    public A1() acquires T {
+    public A1() acquires T, U {
         let sender: address;
         let t_ref: &mut Self.T;
         let u_ref: &mut Self.U;

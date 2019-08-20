@@ -122,6 +122,16 @@ impl<'a> DuplicationChecker<'a> {
                 err: VMStaticViolation::DuplicateElement,
             })
         }
+        for (idx, function_def) in self.module.function_defs().iter().enumerate() {
+            let acquires = function_def.acquires_global_resources.iter();
+            if Self::first_duplicate_element(acquires).is_some() {
+                errors.push(VerificationError {
+                    kind: IndexKind::FunctionDefinition,
+                    idx,
+                    err: VMStaticViolation::DuplicateAcquiresResourceAnnotationError,
+                })
+            }
+        }
         if let Some(idx) = Self::first_duplicate_element(
             self.module.field_defs().iter().map(|x| (x.struct_, x.name)),
         ) {

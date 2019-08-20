@@ -17,7 +17,7 @@ module LibraCoin {
     // sender does not have a MintCapability.
     // Since only the Association account has a mint capability, this will only succeed if it is
     // invoked by a transaction sent by that account.
-    public mint_with_default_capability(amount: u64): Self.T acquires MintCapability {
+    public mint_with_default_capability(amount: u64): Self.T acquires MintCapability, MarketCap {
         let capability_ref: &mut Self.MintCapability;
         let capability_immut_ref: &Self.MintCapability;
 

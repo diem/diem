@@ -110,6 +110,10 @@ pub enum VMVerificationError {
     MoveToSenderNoResourceError(String),
     CreateAccountTypeMismatchError(String),
     GlobalReferenceError(String),
+    MissingAcquiresResourceAnnotationError(String),
+    ExtraneousAcquiresResourceAnnotationError(String),
+    DuplicateAcquiresResourceAnnotationError(String),
+    InvalidAcquiresResourceAnnotationError(String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -572,6 +576,19 @@ impl IntoProto for VMVerificationError {
             VMVerificationError::GlobalReferenceError(message) => {
                 (ProtoKind::GlobalReferenceError, message)
             }
+            VMVerificationError::MissingAcquiresResourceAnnotationError(message) => {
+                (ProtoKind::MissingAcquiresResourceAnnotationError, message)
+            }
+            VMVerificationError::ExtraneousAcquiresResourceAnnotationError(message) => (
+                ProtoKind::ExtraneousAcquiresResourceAnnotationError,
+                message,
+            ),
+            VMVerificationError::InvalidAcquiresResourceAnnotationError(message) => {
+                (ProtoKind::InvalidAcquiresResourceAnnotationError, message)
+            }
+            VMVerificationError::DuplicateAcquiresResourceAnnotationError(message) => {
+                (ProtoKind::DuplicateAcquiresResourceAnnotationError, message)
+            }
         }
     }
 }
@@ -758,6 +775,18 @@ impl FromProto for VMVerificationError {
             ProtoKind::GlobalReferenceError => {
                 Ok(VMVerificationError::GlobalReferenceError(message))
             }
+            ProtoKind::MissingAcquiresResourceAnnotationError => Ok(
+                VMVerificationError::MissingAcquiresResourceAnnotationError(message),
+            ),
+            ProtoKind::ExtraneousAcquiresResourceAnnotationError => {
+                Ok(VMVerificationError::ExtraneousAcquiresResourceAnnotationError(message))
+            }
+            ProtoKind::DuplicateAcquiresResourceAnnotationError => {
+                Ok(VMVerificationError::DuplicateAcquiresResourceAnnotationError(message))
+            }
+            ProtoKind::InvalidAcquiresResourceAnnotationError => Ok(
+                VMVerificationError::InvalidAcquiresResourceAnnotationError(message),
+            ),
             ProtoKind::UnknownVerificationError => {
                 bail_err!(DecodingError::UnknownVerificationErrorEncountered)
             }

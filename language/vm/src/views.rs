@@ -16,12 +16,14 @@ use std::iter::DoubleEndedIterator;
 use crate::{
     access::ModuleAccess,
     file_format::{
-        CodeUnit, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionSignature, Kind,
-        LocalIndex, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
-        StructFieldInformation, StructHandle, StructHandleIndex, TypeSignature,
+        CodeUnit, CompiledModule, FieldDefinition, FunctionDefinition, FunctionHandle,
+        FunctionSignature, Kind, LocalIndex, LocalsSignature, ModuleHandle, SignatureToken,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandle,
+        StructHandleIndex, TypeSignature,
     },
     SignatureTokenKind,
 };
+use std::collections::BTreeSet;
 
 use types::language_storage::ModuleId;
 
@@ -147,6 +149,29 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
 
     pub fn struct_definition(&self, name: &'a str) -> Option<&StructDefinitionView<'a, T>> {
         self.name_to_struct_definition_view.get(name)
+    }
+
+    pub fn function_acquired_resources(
+        &self,
+        function_handle: &FunctionHandle,
+    ) -> BTreeSet<StructDefinitionIndex> {
+        if function_handle.module.0 != CompiledModule::IMPLEMENTED_MODULE_INDEX {
+            return BTreeSet::new();
+        }
+
+        // TODO these unwraps should be VMInvariantViolations
+        let function_name = self
+            .as_inner()
+            .string_pool()
+            .get(function_handle.name.0 as usize)
+            .unwrap();
+        let function_def = self.function_definition(function_name).unwrap();
+        function_def
+            .as_inner()
+            .acquires_global_resources
+            .iter()
+            .cloned()
+            .collect()
     }
 
     pub fn id(&self) -> ModuleId {
@@ -372,19 +397,6 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
 
     pub fn code(&self) -> &'a CodeUnit {
         &self.function_def.code
-    }
-
-    pub fn acquires_global_resources(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = StructDefinitionView<'a, T>> {
-        let module = self.module;
-        self.function_def
-            .acquires_global_resources
-            .iter()
-            .map(move |idx| {
-                let def = module.struct_def_at(*idx);
-                StructDefinitionView::new(module, def)
-            })
     }
 }
 
