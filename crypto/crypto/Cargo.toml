@@ -28,7 +28,7 @@ tiny-keccak = "1.5.0"
 x25519-dalek = "0.5.2"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-crypto-derive = { path = "./src/macros" }
+crypto_derive = { path = "../crypto_derive" }
 proto_conv = { path = "../../common/proto_conv" }
 
 [dev-dependencies]

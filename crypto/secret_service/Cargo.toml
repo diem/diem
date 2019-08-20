@@ -16,7 +16,7 @@ serde = { version = "1.0.96", features = ["derive"] }
 
 config = { path = "../../config" }
 crypto = { path = "../crypto" }
-crypto-derive = { path = "../crypto/src/macros" }
+crypto_derive = { path = "../crypto_derive" }
 debug_interface = { path = "../../common/debug_interface" }
 executable_helpers = { path = "../../common/executable_helpers" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
