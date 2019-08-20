@@ -305,6 +305,64 @@ impl AccumulatorConsistencyProof {
     }
 }
 
+impl FromProto for AccumulatorConsistencyProof {
+    type ProtoType = crate::proto::proof::AccumulatorConsistencyProof;
+
+    fn from_proto(mut proto_proof: Self::ProtoType) -> Result<Self> {
+        let frozen_subtree_roots = proto_proof
+            .take_frozen_subtree_roots()
+            .into_iter()
+            .map(|hash_bytes| HashValue::from_slice(&hash_bytes))
+            .collect::<Result<Vec<_>>>()?;
+
+        let num_siblings = proto_proof.get_num_siblings() as usize;
+        ensure!(
+            num_siblings <= 63,
+            "Too many ({}) siblings in the proof.",
+            num_siblings,
+        );
+        ensure!(
+            proto_proof.get_non_default_siblings().len() <= num_siblings,
+            "Expect {} siblings in total. Got {} non-default siblings.",
+            num_siblings,
+            proto_proof.get_non_default_siblings().len(),
+        );
+        let mut siblings = proto_proof
+            .take_non_default_siblings()
+            .into_iter()
+            .map(|hash_bytes| HashValue::from_slice(&hash_bytes))
+            .collect::<Result<Vec<_>>>()?;
+        siblings.resize(num_siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
+
+        Ok(Self::new(frozen_subtree_roots, siblings))
+    }
+}
+
+impl IntoProto for AccumulatorConsistencyProof {
+    type ProtoType = crate::proto::proof::AccumulatorConsistencyProof;
+
+    fn into_proto(self) -> Self::ProtoType {
+        let mut proto_proof = Self::ProtoType::new();
+
+        for frozen_subtree_root in self.frozen_subtree_roots {
+            proto_proof
+                .mut_frozen_subtree_roots()
+                .push(frozen_subtree_root.to_vec());
+        }
+        proto_proof.set_num_siblings(self.siblings.len() as u32);
+        for sibling in self.siblings {
+            if sibling == *ACCUMULATOR_PLACEHOLDER_HASH {
+                break;
+            }
+            proto_proof
+                .mut_non_default_siblings()
+                .push(sibling.to_vec());
+        }
+
+        proto_proof
+    }
+}
+
 /// The complete proof used to authenticate a `SignedTransaction` object.  This structure consists
 /// of an `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify
 /// the correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is

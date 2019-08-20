@@ -4,7 +4,7 @@
 //! All proofs generated in this module are not valid proofs. They are only for the purpose of
 //! testing conversion between Rust and Protobuf.
 
-use crate::proof::{AccumulatorProof, SparseMerkleProof};
+use crate::proof::{AccumulatorConsistencyProof, AccumulatorProof, SparseMerkleProof};
 use crypto::{
     hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -49,6 +49,18 @@ prop_compose! {
     }
 }
 
+prop_compose! {
+    fn arb_accumulator_consistency_proof()(
+        frozen_subtree_roots in vec(any::<HashValue>(), 1..64),
+        non_default_siblings in vec(any::<HashValue>(), 0..30),
+        default_siblings in vec(any::<HashValue>(), 0..30),
+    ) -> AccumulatorConsistencyProof {
+        let mut siblings = non_default_siblings;
+        siblings.extend(default_siblings.into_iter());
+        AccumulatorConsistencyProof::new(frozen_subtree_roots, siblings)
+    }
+}
+
 macro_rules! impl_arbitrary_for_proof {
     ($proof_type: ident, $arb_func: ident) => {
         impl Arbitrary for $proof_type {
@@ -64,3 +76,7 @@ macro_rules! impl_arbitrary_for_proof {
 
 impl_arbitrary_for_proof!(AccumulatorProof, arb_accumulator_proof);
 impl_arbitrary_for_proof!(SparseMerkleProof, arb_sparse_merkle_proof);
+impl_arbitrary_for_proof!(
+    AccumulatorConsistencyProof,
+    arb_accumulator_consistency_proof
+);
