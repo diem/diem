@@ -40,15 +40,6 @@ impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
         Ok(self.private_key.sign_message(&message))
     }
 
-    /// Checks that `signature` is valid for `message` using `public_key`.
-    pub fn verify_message(
-        &self,
-        message: HashValue,
-        signature: &<PrivateKey::VerifyingKeyMaterial as VerifyingKey>::SignatureMaterial,
-    ) -> Result<(), Error> {
-        signature.verify(&message, &self.public_key)
-    }
-
     /// Returns the author associated with this signer.
     pub fn author(&self) -> AccountAddress {
         self.author
@@ -149,12 +140,5 @@ pub mod proptests {
             prop_assert_eq!(public_key, signer.public_key());
         }
 
-        #[test]
-        fn test_signer(signer in arb_signer::<Ed25519PrivateKey>(), message in HashValue::arbitrary()) {
-            let signature = signer.sign_message(message).unwrap();
-            prop_assert!(signer
-                         .verify_message(message, &signature)
-                         .is_ok());
-        }
     }
 }

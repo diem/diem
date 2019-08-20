@@ -10,7 +10,7 @@ use failure::prelude::*;
 use grpcio::EnvBuilder;
 use proto_conv::FromProto;
 use rand::SeedableRng;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use types::{
     access_path::AccessPath,
@@ -240,7 +240,7 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new_empty()),
+        Arc::new(ValidatorVerifier::new(HashMap::new())),
         0,
         &request_items,
         &response_items,
@@ -433,7 +433,7 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new_empty()),
+        Arc::new(ValidatorVerifier::new(HashMap::new())),
         0,
         &request_items,
         &response_items,
