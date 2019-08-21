@@ -24,7 +24,6 @@ config_builder = { path = "../config/config_builder" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
-libra_swarm = { path = "../libra_swarm" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
@@ -35,3 +34,4 @@ vm_genesis = { path = "../language/vm/vm_genesis" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_swarm = { path = "../libra_swarm", features = ["testing"]}

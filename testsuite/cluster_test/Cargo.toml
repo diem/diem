@@ -21,3 +21,5 @@ clap = "2.32"
 termion = "1.5.3"
 itertools = "0.8.0"
 reqwest = "0.9.19"
+benchmark = { path = "../../benchmark"}
+openssl = { version = "0.10", features = ["vendored"] }
