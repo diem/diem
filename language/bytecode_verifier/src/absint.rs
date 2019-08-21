@@ -1,5 +1,5 @@
 use crate::control_flow_graph::{BlockId, ControlFlowGraph};
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use vm::{
     file_format::{Bytecode, CompiledModule},
     views::FunctionDefinitionView,
@@ -16,6 +16,36 @@ pub enum JoinResult {
     Unchanged,
     Changed,
     Error,
+}
+
+/// Generic domain combinators
+
+/// A finite height set domain
+#[derive(Clone, Debug)]
+pub struct SetDomain<V>(pub BTreeSet<V>);
+
+impl<V: Eq + Ord + Clone> SetDomain<V> {
+    pub fn empty() -> Self {
+        SetDomain(BTreeSet::new())
+    }
+}
+
+impl<V: Eq + Ord + Clone> AbstractDomain for SetDomain<V> {
+    fn join(&mut self, other: &Self) -> JoinResult {
+        let mut changed = false;
+        // join is just set union. but this approach clones less than using Rust's union
+        for item in other.0.iter() {
+            if !self.0.contains(&item) {
+                self.0.insert(item.clone());
+                changed = true;
+            }
+        }
+        if changed {
+            JoinResult::Changed
+        } else {
+            JoinResult::Unchanged
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -90,8 +120,8 @@ pub trait AbstractInterpreter: TransferFunctions {
         cfg: &dyn ControlFlowGraph,
     ) -> InvariantMap<Self::State> {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
-        let entry_block_id = 0; // 0 is always the entry block
-                                // seed worklist/precondition map with initial block/state
+        // seed worklist/precondition map with initial block/state
+        let entry_block_id = cfg.entry_block_id();
         let mut work_list = vec![entry_block_id];
         inv_map.insert(
             entry_block_id,
@@ -102,6 +132,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         );
 
         while let Some(block_id) = work_list.pop() {
+            println!("pulled {:?} from worklist", block_id);
             let mut block_invariant = match inv_map.get_mut(&block_id) {
                 Some(BlockInvariant {
                     post: BlockPostcondition::Error,
@@ -184,11 +215,13 @@ pub trait AbstractInterpreter: TransferFunctions {
         function_view: &FunctionDefinitionView<CompiledModule>,
         cfg: &dyn ControlFlowGraph,
     ) -> Result<(), Self::AnalysisError> {
+        println!("executing block {:?}", block_id);
         let block_end = cfg.block_end(&block_id);
         for offset in cfg.instr_indexes(&block_id) {
             let instr = &function_view.code().code[offset as usize];
             self.execute(state, instr, offset as usize, block_end as usize)?
         }
+        println!("done executing block");
 
         Ok(())
     }

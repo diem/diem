@@ -143,7 +143,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
     }
 
     fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
-        Box::new(self.block_start(block_id)..self.block_end(block_id))
+        Box::new(self.block_start(block_id)..=self.block_end(block_id))
     }
 
     fn num_blocks(&self) -> u16 {
@@ -156,7 +156,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
 }
 
 /// Reversed view of control flow graph to support backward analysis
-struct BackwardControlFlowGraph {
+pub struct BackwardControlFlowGraph {
     forward_cfg: VMControlFlowGraph,
     exit_block_id: BlockId,
     predecessors: Map<BlockId, Vec<BlockId>>,
@@ -167,10 +167,15 @@ impl BackwardControlFlowGraph {
         let forward_cfg = VMControlFlowGraph::new(code);
         // create a single exit block to use as the entry block in the trait
         let exit_block_id = forward_cfg.num_blocks() + 1;
+        println!("Created CFG with exit block {:?}", exit_block_id);
         let mut predecessors = Map::new();
         // create a predecessor map. the predecessors of the entry block are any blocks with no
         // successors
         for (block_id, block) in &forward_cfg.blocks {
+            if !predecessors.contains_key(block_id) {
+                predecessors.insert(*block_id, Vec::new());
+            }
+
             let successors = &block.successors;
             if successors.is_empty() {
                 predecessors
@@ -214,16 +219,18 @@ impl ControlFlowGraph for BackwardControlFlowGraph {
         if self.is_exit_block(*block_id) {
             *block_id
         } else {
-            self.forward_cfg.blocks[block_id].exit
+            self.forward_cfg.blocks[block_id].entry
         }
     }
 
     fn successors(&self, block_id: &BlockId) -> &Vec<BlockId> {
-        &self.predecessors[block_id]
+        let res = &self.predecessors[block_id];
+        println!("got {:?} successors for {:?}", res.len(), block_id);
+        res
     }
 
     fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
-        Box::new((self.block_start(block_id)..self.block_end(block_id)).rev())
+      Box::new((self.block_end(block_id)..=self.block_start(block_id)).rev())
     }
 
     fn blocks(&self) -> Vec<BlockId> {

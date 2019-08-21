@@ -5,14 +5,14 @@ use bytecode_verifier::{
     verifier::{verify_module_dependencies, VerifiedProgram},
     VerifiedModule,
 };
-use compiler::{util, Compiler};
+use compiler::{liveness::LivenessAnalysis, util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
 use serde_json;
-use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
+use std::{convert::TryFrom, fmt::Debug, fs, io::Write, path::PathBuf};
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
 use types::{access_path::AccessPath, account_address::AccountAddress, transaction::Program};
-use vm::{errors::VerificationError, file_format::CompiledModule};
+use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -47,9 +47,9 @@ struct Args {
     pub deps_path: Option<String>,
 }
 
-fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
-    println!("Verification failed. Errors below:");
-    for e in verification_errors {
+fn print_errors_and_exit<E: Sized + Debug>(errors: &[E], phase: &str) -> ! {
+    println!("{} failed. Errors below:", phase);
+    for e in errors {
         println!("{:?}", e);
     }
     std::process::exit(1);
@@ -58,12 +58,19 @@ fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
 fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
     let verified_module = match VerifiedModule::new(module) {
         Ok(module) => module,
-        Err((_, errors)) => print_errors_and_exit(&errors),
+        Err((_, errors)) => print_errors_and_exit(&errors, "Verification"),
     };
     let errors = verify_module_dependencies(&verified_module, dependencies);
     if !errors.is_empty() {
-        print_errors_and_exit(&errors);
+        print_errors_and_exit(&errors, "Verifying dependencies");
     }
+
+    // lint the module too
+    let errors = LivenessAnalysis::analyze(&verified_module);
+    if !errors.is_empty() {
+        print_errors_and_exit(&errors, "Linting");
+    }
+
     verified_module
 }
 
@@ -75,6 +82,7 @@ fn write_output(path: &str, buf: &[u8]) {
 }
 
 fn main() {
+    println!("Compiling!!!!!!!!!!");
     let args = Args::from_args();
 
     let address = args
@@ -146,6 +154,7 @@ fn main() {
         let compiled_program = if !args.no_verify {
             let verified_program = VerifiedProgram::new(compiled_program, &dependencies)
                 .expect("Failed to verify program");
+            do_verify_module(verified_program.script().clone().into_module().into_inner().clone(), &dependencies);
             verified_program.into_inner()
         } else {
             compiled_program

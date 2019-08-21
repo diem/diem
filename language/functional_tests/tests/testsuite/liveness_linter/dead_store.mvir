@@ -1,0 +1,6 @@
+main() {
+    let x: u64;
+
+    x = 7;
+    return;
+}
