@@ -6,7 +6,7 @@ mod common;
 
 #[test]
 fn bytecode_add() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Add, state1);
@@ -19,7 +19,7 @@ fn bytecode_add() {
 
 #[test]
 fn bytecode_sub() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Sub, state1);
@@ -32,7 +32,7 @@ fn bytecode_sub() {
 
 #[test]
 fn bytecode_mul() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Mul, state1);
@@ -45,7 +45,7 @@ fn bytecode_mul() {
 
 #[test]
 fn bytecode_div() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Div, state1);
@@ -58,7 +58,7 @@ fn bytecode_div() {
 
 #[test]
 fn bytecode_mod() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Mod, state1);

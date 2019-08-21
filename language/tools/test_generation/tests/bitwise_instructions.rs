@@ -6,7 +6,7 @@ mod common;
 
 #[test]
 fn bytecode_bitand() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::BitAnd, state1);
@@ -19,7 +19,7 @@ fn bytecode_bitand() {
 
 #[test]
 fn bytecode_bitor() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::BitAnd, state1);
@@ -32,7 +32,7 @@ fn bytecode_bitor() {
 
 #[test]
 fn bytecode_xor() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.stack_push(SignatureToken::U64);
     state1.stack_push(SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::Xor, state1);

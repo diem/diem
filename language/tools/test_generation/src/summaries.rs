@@ -276,6 +276,18 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             preconditions: vec![],
             effects: vec![state_stack_push!(SignatureToken::U64)],
         },
+        Bytecode::Branch(_) => Summary {
+            preconditions: vec![state_never!()],
+            effects: vec![],
+        },
+        Bytecode::BrTrue(_) => Summary {
+            preconditions: vec![state_never!()],
+            effects: vec![state_stack_pop!()],
+        },
+        Bytecode::BrFalse(_) => Summary {
+            preconditions: vec![state_never!()],
+            effects: vec![state_stack_pop!()],
+        },
         _ => Summary {
             preconditions: vec![state_never!()],
             effects: vec![],

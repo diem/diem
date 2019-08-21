@@ -6,7 +6,7 @@ mod common;
 
 #[test]
 fn bytecode_gettxngasunitprice() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     let state2 = common::run_instruction(Bytecode::GetTxnGasUnitPrice, state1);
     assert_eq!(
         state2.stack_peek(0),
@@ -17,7 +17,7 @@ fn bytecode_gettxngasunitprice() {
 
 #[test]
 fn bytecode_gettxnmaxgasunits() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     let state2 = common::run_instruction(Bytecode::GetTxnMaxGasUnits, state1);
     assert_eq!(
         state2.stack_peek(0),
@@ -28,7 +28,7 @@ fn bytecode_gettxnmaxgasunits() {
 
 #[test]
 fn bytecode_gettxnsequencenumber() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     let state2 = common::run_instruction(Bytecode::GetTxnSequenceNumber, state1);
     assert_eq!(
         state2.stack_peek(0),
@@ -39,7 +39,7 @@ fn bytecode_gettxnsequencenumber() {
 
 #[test]
 fn bytecode_getgasremaining() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     let state2 = common::run_instruction(Bytecode::GetGasRemaining, state1);
     assert_eq!(
         state2.stack_peek(0),
