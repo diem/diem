@@ -13,9 +13,20 @@ pub fn stack_has(state: &AbstractState, index: usize, token: Option<SignatureTok
     }
 }
 
+/// Determine whether two tokens on the stack have the same type
 pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
     if stack_has(state, index2, None) {
         return state.stack_peek(index1) == state.stack_peek(index2);
+    }
+    false
+}
+
+/// Determine whether a token on the stack and a token in the locals have the same type
+pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
+    if stack_has(state, index1, None) {
+        if let Some((token, _)) = state.get_local(index2) {
+            return state.stack_peek(index1) == Some(token.clone());
+        }
     }
     false
 }
@@ -96,10 +107,20 @@ macro_rules! state_stack_has {
     };
 }
 
+/// Wrapper for determining whether two tokens on the stack have the same type
 #[macro_export]
 macro_rules! state_stack_has_polymorphic_eq {
     ($e1: expr, $e2: expr) => {
         Box::new(move |state| stack_has_polymorphic_eq(state, $e1, $e2))
+    };
+}
+
+/// Wrapper for determining whether a token on the stack and a token in the locals
+/// have the same type
+#[macro_export]
+macro_rules! state_stack_local_polymorphic_eq {
+    ($e1: expr, $e2: expr) => {
+        Box::new(move |state| stack_local_polymorphic_eq(state, $e1, $e2))
     };
 }
 

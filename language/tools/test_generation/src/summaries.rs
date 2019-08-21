@@ -3,9 +3,9 @@
 
 use crate::{
     abstract_state::AbstractState, state_local_available, state_never, state_stack_has,
-    state_stack_has_polymorphic_eq, state_stack_pop, state_stack_pop_local_insert,
-    state_stack_push, state_stack_push_local_borrow, state_stack_push_local_copy,
-    state_stack_push_local_move, transitions::*,
+    state_stack_has_polymorphic_eq, state_stack_local_polymorphic_eq, state_stack_pop,
+    state_stack_pop_local_insert, state_stack_push, state_stack_push_local_borrow,
+    state_stack_push_local_copy, state_stack_push_local_move, transitions::*,
 };
 use vm::file_format::{Bytecode, SignatureToken};
 
@@ -62,7 +62,11 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             effects: vec![state_stack_push_local_move!(i)],
         },
         Bytecode::StLoc(i) => Summary {
-            preconditions: vec![state_stack_has!(0, None), state_local_available!(i)],
+            preconditions: vec![
+                state_stack_has!(0, None),
+                state_local_available!(i),
+                state_stack_local_polymorphic_eq!(0, i as usize),
+            ],
             effects: vec![state_stack_pop_local_insert!(i), state_stack_pop!()],
         },
         Bytecode::BorrowLoc(i) => Summary {

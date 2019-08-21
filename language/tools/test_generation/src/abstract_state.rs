@@ -94,6 +94,10 @@ impl AbstractState {
             .insert(i, (token.clone(), BorrowState::Available));
     }
 
+    pub fn get_locals(&self) -> &HashMap<usize, (SignatureToken, BorrowState)> {
+        &self.locals
+    }
+
     /// TODO: Determine whether the current state is a final state
     pub fn is_final(&self) -> bool {
         self.stack.is_empty()
