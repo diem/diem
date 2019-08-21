@@ -48,7 +48,7 @@ use logger::prelude::*;
 use metrics::OpMetrics;
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_proto::ExecutorStartupInfo;
+use storage_proto::StartupInfo;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -540,12 +540,12 @@ impl LibraDB {
         ))
     }
 
-    // =========================== Execution Internal APIs ========================================
+    // =========================== Libra Core Internal APIs ========================================
 
     /// Gets an account state by account address, out of the ledger state indicated by the state
     /// Merkle tree root hash.
     ///
-    /// This is used by the executor module internally.
+    /// This is used by libra core (executor) internally.
     pub fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
@@ -555,10 +555,11 @@ impl LibraDB {
             .get_account_state_with_proof_by_version(address, version)
     }
 
-    /// Gets information needed from storage during the startup of the executor module.
+    /// Gets information needed from storage during the startup of the executor or state
+    /// synchronizer module.
     ///
-    /// This is used by the executor module internally.
-    pub fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>> {
+    /// This is used by the libra core (executor, state synchronizer) internally.
+    pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         // Get the latest ledger info. Return None if not bootstrapped.
         let ledger_info_with_sigs = match self.ledger_store.get_latest_ledger_info_option() {
             Some(x) => x,
@@ -574,7 +575,7 @@ impl LibraDB {
             .ledger_store
             .get_ledger_frozen_subtree_hashes(latest_version)?;
 
-        Ok(Some(ExecutorStartupInfo {
+        Ok(Some(StartupInfo {
             ledger_info,
             latest_version,
             account_state_root_hash,

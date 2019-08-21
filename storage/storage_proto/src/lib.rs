@@ -284,21 +284,21 @@ impl GetTransactionsResponse {
     }
 }
 
-/// Helper to construct and parse [`proto::storage::ExecutorStartupInfo`]
+/// Helper to construct and parse [`proto::storage::StartupInfo`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-pub struct ExecutorStartupInfo {
+pub struct StartupInfo {
     pub ledger_info: LedgerInfo,
     pub latest_version: Version,
     pub account_state_root_hash: HashValue,
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
 }
 
-impl FromProto for ExecutorStartupInfo {
-    type ProtoType = crate::proto::storage::ExecutorStartupInfo;
+impl FromProto for StartupInfo {
+    type ProtoType = crate::proto::storage::StartupInfo;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
@@ -319,8 +319,8 @@ impl FromProto for ExecutorStartupInfo {
     }
 }
 
-impl IntoProto for ExecutorStartupInfo {
-    type ProtoType = crate::proto::storage::ExecutorStartupInfo;
+impl IntoProto for StartupInfo {
+    type ProtoType = crate::proto::storage::StartupInfo;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -337,22 +337,22 @@ impl IntoProto for ExecutorStartupInfo {
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetExecutorStartupInfoResponse`]
+/// Helper to construct and parse [`proto::storage::GetStartupInfoResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-pub struct GetExecutorStartupInfoResponse {
-    pub info: Option<ExecutorStartupInfo>,
+pub struct GetStartupInfoResponse {
+    pub info: Option<StartupInfo>,
 }
 
-impl FromProto for GetExecutorStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetExecutorStartupInfoResponse;
+impl FromProto for GetStartupInfoResponse {
+    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let info = if object.has_info() {
-            Some(ExecutorStartupInfo::from_proto(object.take_info())?)
+            Some(StartupInfo::from_proto(object.take_info())?)
         } else {
             None
         };
@@ -361,8 +361,8 @@ impl FromProto for GetExecutorStartupInfoResponse {
     }
 }
 
-impl IntoProto for GetExecutorStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetExecutorStartupInfoResponse;
+impl IntoProto for GetStartupInfoResponse {
+    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
