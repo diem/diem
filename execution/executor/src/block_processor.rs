@@ -383,9 +383,8 @@ where
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
-        let num_txns = txns_to_commit.len() as u64;
         let ledger_info_to_commit = if self.committed_transaction_accumulator.num_leaves()
-            + num_txns
+            + txns_to_commit.len() as u64
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
@@ -400,6 +399,12 @@ where
             );
             Some(ledger_info_with_sigs)
         } else {
+            // This means that the current chunk is not the last one. If it's empty, there's
+            // nothing to write to storage. Since storage expect either new transaction or new
+            // ledger info, we need to return here.
+            if txns_to_commit.is_empty() {
+                return Ok(());
+            }
             None
         };
         self.storage_write_client.save_transactions(
