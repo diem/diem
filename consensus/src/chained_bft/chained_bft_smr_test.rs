@@ -22,6 +22,7 @@ use proto_conv::FromProto;
 use std::sync::Arc;
 
 use crate::chained_bft::{
+    consensus_types::timeout_msg::TimeoutMsg,
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
@@ -812,5 +813,60 @@ fn chain_with_nil_blocks() {
         );
 
         assert!(nodes[2].smr.block_store().unwrap().root().round() >= 1)
+    });
+}
+
+#[test]
+/// Test secondary proposal processing
+fn secondary_proposers() {
+    let runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.executor());
+
+    let mut nodes = SMRNode::start_num_nodes(3, 2, &mut playground, MultipleOrderedProposers);
+    block_on(async move {
+        // Node 0 is disconnected.
+        playground.drop_message_for(&nodes[0].author, nodes[1].author);
+        playground.drop_message_for(&nodes[0].author, nodes[2].author);
+        // Run a system until node 0 is a designated primary proposer. In this round the
+        // secondary proposal should be voted for and attached to the timeout message.
+        let timeout_msgs = playground
+            .wait_for_messages(2 * 2, NetworkPlayground::timeout_msg_only)
+            .await;
+        let mut secondary_proposal_ids = vec![];
+        for mut msg in timeout_msgs {
+            let timeout_msg = TimeoutMsg::from_proto(msg.1.take_timeout_msg()).unwrap();
+            assert!(timeout_msg.pacemaker_timeout().vote_msg().is_some());
+            secondary_proposal_ids.push(
+                timeout_msg
+                    .pacemaker_timeout()
+                    .vote_msg()
+                    .unwrap()
+                    .proposed_block_id(),
+            );
+        }
+        assert_eq!(secondary_proposal_ids.len(), 4);
+        let secondary_proposal_id = secondary_proposal_ids[0];
+        for id in secondary_proposal_ids {
+            assert_eq!(secondary_proposal_id, id);
+        }
+        // The secondary proposal id should get committed at some point in the future:
+        // 10 rounds should be more than enough. Note that it's hard to say what round is going to
+        // have 2 proposals and what round is going to have just one proposal because we don't want
+        // to predict the rounds with proposer 0 being a leader.
+        let mut secondary_proposal_committed = false;
+        for _ in 0..10 {
+            playground
+                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .await;
+            // Retrieve all the ids committed by the node to check whether secondary_proposal_id
+            // has been committed.
+            while let Ok(Some(li)) = nodes[1].commit_cb_receiver.try_next() {
+                if li.ledger_info().consensus_block_id() == secondary_proposal_id {
+                    secondary_proposal_committed = true;
+                    break;
+                }
+            }
+        }
+        assert_eq!(secondary_proposal_committed, true);
     });
 }

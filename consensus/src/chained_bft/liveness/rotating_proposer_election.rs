@@ -46,7 +46,7 @@ impl<T: Payload> ProposerElection<T> for RotatingProposer {
         vec![self.get_proposer(round)]
     }
 
-    fn process_proposal(&self, proposal: Block<T>) -> Option<Block<T>> {
+    fn process_proposal(&mut self, proposal: Block<T>) -> Option<Block<T>> {
         // This is a simple rotating proposer, the proposal is processed in the context of the
         // caller task, no synchronization required because there is no mutable state.
         let round_author = self.get_proposer(proposal.round());
@@ -55,5 +55,9 @@ impl<T: Payload> ProposerElection<T> for RotatingProposer {
         } else {
             Some(proposal)
         }
+    }
+
+    fn take_backup_proposal(&mut self, _round: Round) -> Option<Block<T>> {
+        None
     }
 }

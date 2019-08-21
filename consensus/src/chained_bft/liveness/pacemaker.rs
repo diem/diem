@@ -264,12 +264,6 @@ impl Pacemaker {
 
         let new_round = best_round + 1;
         if self.current_round == new_round {
-            debug!(
-                "{}Round did not change: {}{}",
-                Fg(LightBlack),
-                new_round,
-                Fg(Reset)
-            );
             return None;
         }
         assert!(

@@ -190,7 +190,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
-        debug!("Receive proposal {}", proposal_msg);
+        debug!("EventProcessor: receive proposal {}", proposal_msg);
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
@@ -386,23 +386,24 @@ impl<T: Payload> EventProcessor<T> {
         }
         let last_vote_round = self.safety_rules.consensus_state().last_vote_round();
         warn!(
-            "Round {} timed out and {}, expected round proposer was {:?}, broadcasting new round to all replicas",
+            "Round {} timed out: {}, expected round proposer was {:?}, broadcasting new round to all replicas",
             round,
-            if last_vote_round == round { "already executed and voted at this round" } else { "will vote for NIL at this round" },
-            self.proposer_election.get_valid_proposers(round),
+            if last_vote_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
+            self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
         let vote_msg_to_attach = match self.last_vote_sent.as_ref() {
             Some((vote, vote_round)) if (*vote_round == round) => Some(vote.clone()),
             _ => {
-                // Try to generate a NIL vote
-                match self.gen_nil_vote(round).await {
-                    Ok(nil_vote_msg) => {
-                        self.last_vote_sent.replace((nil_vote_msg.clone(), round));
-                        Some(nil_vote_msg)
+                // Try to generate a backup vote
+                match self.gen_backup_vote(round).await {
+                    Ok(backup_vote_msg) => {
+                        self.last_vote_sent
+                            .replace((backup_vote_msg.clone(), round));
+                        Some(backup_vote_msg)
                     }
                     Err(e) => {
-                        warn!("Failed to generate a NIL vote: {}", e);
+                        warn!("Failed to generate a backup vote: {}", e);
                         None
                     }
                 }
@@ -433,8 +434,23 @@ impl<T: Payload> EventProcessor<T> {
             .await;
     }
 
-    async fn gen_nil_vote(&mut self, round: Round) -> failure::Result<VoteMsg> {
-        let block = self.proposal_generator.generate_nil_block(round)?;
+    async fn gen_backup_vote(&mut self, round: Round) -> failure::Result<VoteMsg> {
+        // We generally assume that this function is called only if no votes have been sent in this
+        // round, but having a duplicate proposal here would work ok because block store makes
+        // sure the calls to `execute_and_insert_block` are idempotent.
+
+        // Either use the best proposal received in this round or a NIL block if nothing available.
+        let block = match self.proposer_election.take_backup_proposal(round) {
+            Some(b) => {
+                debug!("Planning to vote for a backup proposal {}", b);
+                b
+            }
+            None => {
+                let nil_block = self.proposal_generator.generate_nil_block(round)?;
+                debug!("Planning to vote for a NIL block {}", nil_block);
+                nil_block
+            }
+        };
         self.execute_and_vote(block).await
     }
 
