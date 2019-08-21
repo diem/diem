@@ -28,14 +28,19 @@ pub struct AbstractState {
 impl AbstractState {
     /// Create a new AbstractState given a list of `SignatureTokens` that will be
     /// the (available) locals that the state will have.
-    pub fn new(initial_locals: &[SignatureToken]) -> AbstractState {
+    pub fn new() -> AbstractState {
         AbstractState {
             stack: Vec::new(),
-            locals: initial_locals
-                .iter()
-                .enumerate()
-                .map(|(i, token)| (i, (token.clone(), BorrowState::Available)))
-                .collect(),
+            locals: HashMap::new(),
+        }
+    }
+
+    /// Create a new AbstractState given a list of `SignatureTokens` that will be
+    /// the (available) locals that the state will have.
+    pub fn from_locals(locals: HashMap<usize, (SignatureToken, BorrowState)>) -> AbstractState {
+        AbstractState {
+            stack: Vec::new(),
+            locals,
         }
     }
 

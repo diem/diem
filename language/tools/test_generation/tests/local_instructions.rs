@@ -6,7 +6,7 @@ mod common;
 
 #[test]
 fn bytecode_copyloc() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::CopyLoc(0), state1);
     assert_eq!(
@@ -24,14 +24,14 @@ fn bytecode_copyloc() {
 #[test]
 #[should_panic]
 fn bytecode_copyloc_no_local() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     common::run_instruction(Bytecode::CopyLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
 fn bytecode_copyloc_local_unavailable() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     state1.move_local(0);
     common::run_instruction(Bytecode::CopyLoc(0), state1);
@@ -39,7 +39,7 @@ fn bytecode_copyloc_local_unavailable() {
 
 #[test]
 fn bytecode_moveloc() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::MoveLoc(0), state1);
     assert_eq!(
@@ -57,14 +57,14 @@ fn bytecode_moveloc() {
 #[test]
 #[should_panic]
 fn bytecode_moveloc_no_local() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     common::run_instruction(Bytecode::MoveLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
 fn bytecode_moveloc_local_unavailable() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     state1.move_local(0);
     common::run_instruction(Bytecode::MoveLoc(0), state1);
@@ -72,7 +72,7 @@ fn bytecode_moveloc_local_unavailable() {
 
 #[test]
 fn bytecode_borrowloc() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
     assert_eq!(
@@ -91,7 +91,7 @@ fn bytecode_borrowloc() {
 
 #[test]
 fn bytecode_imm_borrowloc() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     let state2 = common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
     assert_eq!(
@@ -109,21 +109,21 @@ fn bytecode_imm_borrowloc() {
 #[test]
 #[should_panic]
 fn bytecode_borrowloc_no_local() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
 fn bytecode_imm_borrowloc_no_local() {
-    let state1 = AbstractState::new(&Vec::new());
+    let state1 = AbstractState::new();
     common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
 fn bytecode_borrowloc_local_unavailable() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     state1.move_local(0);
     common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
@@ -132,7 +132,7 @@ fn bytecode_borrowloc_local_unavailable() {
 #[test]
 #[should_panic]
 fn bytecode_imm_borrowloc_local_unavailable() {
-    let mut state1 = AbstractState::new(&Vec::new());
+    let mut state1 = AbstractState::new();
     state1.insert_local(0, SignatureToken::U64);
     state1.move_local(0);
     common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
