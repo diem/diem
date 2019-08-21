@@ -14,7 +14,7 @@ use rand::{
 };
 use std::{collections::BTreeMap, pin::Pin};
 use storage_client::StorageRead;
-use storage_proto::ExecutorStartupInfo;
+use storage_proto::StartupInfo;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::EventHandle,
@@ -131,13 +131,13 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!();
     }
 
-    fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>> {
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         unimplemented!()
     }
 
-    fn get_executor_startup_info_async(
+    fn get_startup_info_async(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<ExecutorStartupInfo>>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
         unimplemented!()
     }
 }

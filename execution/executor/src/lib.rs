@@ -61,7 +61,7 @@ where
         config: &NodeConfig,
     ) -> Self {
         let startup_info = storage_read_client
-            .get_executor_startup_info()
+            .get_startup_info()
             .expect("Failed to read startup info from storage.");
 
         let (

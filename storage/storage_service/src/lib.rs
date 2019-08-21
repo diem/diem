@@ -24,7 +24,7 @@ use std::{
 use storage_proto::proto::{
     storage::{
         GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-        GetExecutorStartupInfoRequest, GetExecutorStartupInfoResponse, GetTransactionsRequest,
+        GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest,
         GetTransactionsResponse, SaveTransactionsRequest, SaveTransactionsResponse,
     },
     storage_grpc::{create_storage, Storage},
@@ -205,9 +205,9 @@ impl StorageService {
         Ok(SaveTransactionsResponse::new())
     }
 
-    fn get_executor_startup_info_inner(&self) -> Result<GetExecutorStartupInfoResponse> {
-        let info = self.db.get_executor_startup_info()?;
-        let rust_resp = storage_proto::GetExecutorStartupInfoResponse { info };
+    fn get_startup_info_inner(&self) -> Result<GetStartupInfoResponse> {
+        let info = self.db.get_startup_info()?;
+        let rust_resp = storage_proto::GetStartupInfoResponse { info };
         Ok(rust_resp.into_proto())
     }
 }
@@ -261,15 +261,15 @@ impl Storage for StorageService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_executor_startup_info(
+    fn get_startup_info(
         &mut self,
         ctx: grpcio::RpcContext,
-        _req: GetExecutorStartupInfoRequest,
-        sink: grpcio::UnarySink<GetExecutorStartupInfoResponse>,
+        _req: GetStartupInfoRequest,
+        sink: grpcio::UnarySink<GetStartupInfoResponse>,
     ) {
-        debug!("[GRPC] Storage::get_executor_startup_info");
+        debug!("[GRPC] Storage::get_startup_info");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_executor_startup_info_inner();
+        let resp = self.get_startup_info_inner();
         provide_grpc_response(resp, ctx, sink);
     }
 }

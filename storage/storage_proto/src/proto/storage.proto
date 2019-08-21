@@ -42,9 +42,9 @@ service Storage {
     GetAccountStateWithProofByVersionRequest)
     returns (GetAccountStateWithProofByVersionResponse);
 
-    // Returns information needed for Executor to start up.
-    rpc GetExecutorStartupInfo(GetExecutorStartupInfoRequest)
-    returns (GetExecutorStartupInfoResponse);
+    // Returns information needed for libra core to start up.
+    rpc GetStartupInfo(GetStartupInfoRequest)
+    returns (GetStartupInfoResponse);
 }
 
 message SaveTransactionsRequest {
@@ -94,14 +94,14 @@ message GetAccountStateWithProofByVersionResponse {
     types.SparseMerkleProof sparse_merkle_proof = 2;
 }
 
-message GetExecutorStartupInfoRequest {}
+message GetStartupInfoRequest {}
 
-message GetExecutorStartupInfoResponse {
+message GetStartupInfoResponse {
     // When this is empty, Storage needs to be bootstrapped via the bootstrap API
-    ExecutorStartupInfo info = 1;
+    StartupInfo info = 1;
 }
 
-message ExecutorStartupInfo {
+message StartupInfo {
     // The latest LedgerInfo. Note that at start up storage can have more
     // transactions than the latest LedgerInfo indicates due to an incomplete
     // start up sync.
