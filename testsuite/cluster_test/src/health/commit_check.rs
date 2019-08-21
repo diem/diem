@@ -76,6 +76,9 @@ impl HealthCheck for CommitHistoryHealthCheck {
                 va.insert(commit.round);
             }
         }
+        if let Some(min_round) = self.latest_committed_round.values().min() {
+            self.round_to_commit.retain(|k, _v| *k >= *min_round);
+        }
     }
 
     fn name(&self) -> &'static str {
