@@ -6,10 +6,10 @@
 #![allow(clippy::blacklisted_name)]
 #![allow(clippy::many_single_char_names)]
 
-use super::*;
+use crate::*;
 use byteorder::WriteBytesExt;
 use failure::Result;
-use std::u32;
+use std::collections::BTreeMap;
 
 // Do not change the test vectors. Please read the comment below.
 const TEST_VECTOR_1: &str = "ffffffffffffffff060000006463584d4237640000000000000009000000000102\
@@ -125,7 +125,7 @@ fn test_btreemap_encode() {
     let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
 
     // ensure the order was encoded in lexicographic order
-    assert_eq!(deserializer.raw_bytes.read_u32::<Endianness>().unwrap(), 4);
+    assert_eq!(deserializer.decode_u32().unwrap(), 4);
     assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key1);
     assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), value);
     assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key3);
@@ -165,10 +165,8 @@ fn test_serialization_roundtrip() {
     let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
     let deserialized_foo = Foo::deserialize(&mut deserializer).unwrap();
     assert_eq!(foo, deserialized_foo);
-    assert_eq!(
-        deserializer.raw_bytes.position(),
-        deserializer.raw_bytes.get_ref().len() as u64
-    );
+    assert_eq!(deserializer.position(), deserializer.len() as u64);
+    assert!(deserializer.is_empty());
 }
 
 #[test]
