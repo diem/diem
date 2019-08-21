@@ -95,6 +95,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(mut self) {
         self.known_version = self
+            .executor_proxy
             .get_latest_version()
             .await
             .expect("[start sync] failed to fetch latest version from storage");
@@ -162,16 +163,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
     }
 
-    async fn get_latest_version(&self) -> Result<u64> {
-        self.executor_proxy
-            .get_latest_ledger_info()
-            .await
-            .map(|li| li.ledger_info().version())
-    }
-
     async fn request_sync(&mut self, target: LedgerInfo, callback: oneshot::Sender<bool>) {
         let requested_version = target.ledger_info().version();
         self.known_version = self
+            .executor_proxy
             .get_latest_version()
             .await
             .expect("[state sync] failed to fetch latest version from storage");
@@ -299,16 +294,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             response.take_ledger_info_with_sigs(),
         ) {
             Ok(target) => {
-                let status = self.store_transactions(target, txn_list_with_proof).await;
+                if let Err(err) = self.store_transactions(target, txn_list_with_proof).await {
+                    error!("[state sync] failed to apply chunk {:?}", err);
+                }
                 counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
-                if status.is_ok() {
-                    match self.get_latest_version().await {
-                        Ok(version) => {
-                            self.commit(version).await;
-                        }
-                        Err(err) => {
-                            error!("[state sync] storage version read failed {:?}", err);
-                        }
+                match self.executor_proxy.get_latest_version().await {
+                    Ok(version) => {
+                        self.commit(version).await;
+                    }
+                    Err(err) => {
+                        error!("[state sync] storage version read failed {:?}", err);
                     }
                 }
             }

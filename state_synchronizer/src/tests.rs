@@ -119,6 +119,11 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         async move { Ok(response) }.boxed()
     }
 
+    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
+        let version = self.version.load(Ordering::Relaxed);
+        async move { Ok(version) }.boxed()
+    }
+
     fn execute_chunk(
         &self,
         request: ExecuteChunkRequest,
