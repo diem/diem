@@ -10,7 +10,3 @@ pub mod rpc;
 pub(crate) mod discovery;
 pub(crate) mod health_checker;
 pub(crate) mod identity;
-
-// Keep this module for now to be used in PeerManager tests
-#[cfg(test)]
-pub(crate) mod peer_id_exchange;

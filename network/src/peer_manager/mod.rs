@@ -174,8 +174,6 @@ where
 impl<TTransport, TMuxer> PeerManager<TTransport, TMuxer>
 where
     TTransport: Transport<Output = (Identity, TMuxer)> + Send + 'static,
-    TTransport::Listener: 'static,
-    TTransport::Inbound: 'static,
     TMuxer: StreamMultiplexer + 'static,
 {
     /// Construct a new PeerManager actor
