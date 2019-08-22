@@ -25,7 +25,7 @@ use crypto::{
     },
     HashValue,
 };
-use failure::{prelude::*, Fail, Result};
+use failure::{Fail, Result};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest_derive::Arbitrary;
@@ -89,8 +89,10 @@ impl NodeKey {
     pub fn encode(&self) -> Result<Vec<u8>> {
         let mut out = vec![];
         out.write_u64::<BigEndian>(self.version())?;
-        out.write_u8((self.nibble_path().num_nibbles() & 1) as u8)?;
         out.write_all(self.nibble_path().bytes())?;
+        if self.nibble_path().num_nibbles() != 0 && self.nibble_path().num_nibbles() % 2 == 0 {
+            out.write_u8(0x01)?;
+        }
         Ok(out)
     }
 
@@ -98,16 +100,15 @@ impl NodeKey {
     pub fn decode(val: &[u8]) -> Result<NodeKey> {
         let mut reader = Cursor::new(val);
         let version = reader.read_u64::<BigEndian>()?;
-        let is_odd = reader.read_u8()? == 1;
         let mut nibble_bytes = vec![];
         reader.read_to_end(&mut nibble_bytes)?;
-        if nibble_bytes.is_empty() && is_odd {
-            bail!("corrupted node key: empty node key with odd number of nibbles.")
-        }
-        let nibble_path = if is_odd {
-            NibblePath::new_odd(nibble_bytes)
-        } else {
+        let nibble_path = if nibble_bytes.is_empty() {
             NibblePath::new(nibble_bytes)
+        } else if *nibble_bytes.last().expect("checked non-emptyness") == 0x01 {
+            nibble_bytes.pop();
+            NibblePath::new(nibble_bytes)
+        } else {
+            NibblePath::new_odd(nibble_bytes)
         };
         Ok(NodeKey::new(version, nibble_path))
     }
