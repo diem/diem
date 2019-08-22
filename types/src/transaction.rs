@@ -717,9 +717,9 @@ impl IntoProto for SignedTransactionWithProof {
 impl CanonicalSerialize for SignedTransaction {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
-            .encode_variable_length_bytes(&self.raw_txn_bytes)?
-            .encode_variable_length_bytes(&self.public_key.to_bytes())?
-            .encode_variable_length_bytes(&self.signature.to_bytes())?;
+            .encode_bytes(&self.raw_txn_bytes)?
+            .encode_bytes(&self.public_key.to_bytes())?
+            .encode_bytes(&self.signature.to_bytes())?;
         Ok(())
     }
 }
@@ -729,9 +729,9 @@ impl CanonicalDeserialize for SignedTransaction {
     where
         Self: Sized,
     {
-        let raw_txn_bytes = deserializer.decode_variable_length_bytes()?;
-        let public_key_bytes = deserializer.decode_variable_length_bytes()?;
-        let signature_bytes = deserializer.decode_variable_length_bytes()?;
+        let raw_txn_bytes = deserializer.decode_bytes()?;
+        let public_key_bytes = deserializer.decode_bytes()?;
+        let signature_bytes = deserializer.decode_bytes()?;
         let proto_raw_transaction = protobuf::parse_from_bytes::<
             crate::proto::transaction::RawTransaction,
         >(raw_txn_bytes.as_ref())?;
@@ -898,9 +898,9 @@ impl TransactionInfo {
 impl CanonicalSerialize for TransactionInfo {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
-            .encode_raw_bytes(self.signed_transaction_hash.as_ref())?
-            .encode_raw_bytes(self.state_root_hash.as_ref())?
-            .encode_raw_bytes(self.event_root_hash.as_ref())?
+            .encode_bytes(self.signed_transaction_hash.as_ref())?
+            .encode_bytes(self.state_root_hash.as_ref())?
+            .encode_bytes(self.event_root_hash.as_ref())?
             .encode_u64(self.gas_used)?;
         Ok(())
     }

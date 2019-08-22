@@ -173,7 +173,7 @@ struct TimeoutMsgSerializer {
 
 impl CanonicalSerialize for TimeoutMsgSerializer {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> failure::Result<()> {
-        serializer.encode_raw_bytes(self.pacemaker_timeout_digest.as_ref())?;
+        serializer.encode_bytes(self.pacemaker_timeout_digest.as_ref())?;
         Ok(())
     }
 }

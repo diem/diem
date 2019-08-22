@@ -76,7 +76,7 @@ impl ExecutedState {
 
 impl CanonicalSerialize for ExecutedState {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_raw_bytes(self.state_id.as_ref())?;
+        serializer.encode_bytes(self.state_id.as_ref())?;
         serializer.encode_u64(self.version)?;
         Ok(())
     }

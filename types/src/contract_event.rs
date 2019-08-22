@@ -9,9 +9,7 @@ use crate::{
     proof::{verify_event, EventProof},
     transaction::Version,
 };
-use canonical_serialization::{
-    CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
-};
+use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{ContractEventHasher, CryptoHash, CryptoHasher},
     HashValue,
@@ -69,7 +67,7 @@ impl std::fmt::Debug for ContractEvent {
 
 impl std::fmt::Display for ContractEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(payload) = SimpleDeserializer::deserialize::<AccountEvent>(&self.event_data) {
+        if let Ok(payload) = AccountEvent::try_from(&self.event_data) {
             write!(
                 f,
                 "ContractEvent {{ key: {}, index: {:?}, event_data: {:?} }}",
@@ -86,7 +84,7 @@ impl CanonicalSerialize for ContractEvent {
         serializer
             .encode_struct(&self.key)?
             .encode_u64(self.sequence_number)?
-            .encode_variable_length_bytes(&self.event_data)?;
+            .encode_bytes(&self.event_data)?;
         Ok(())
     }
 }

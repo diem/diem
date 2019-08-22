@@ -6,7 +6,6 @@ use crate::{
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
 };
-use canonical_serialization::SimpleDeserializer;
 use std::time::Instant;
 use types::{
     account_config::AccountEvent,
@@ -98,7 +97,7 @@ fn few_peer_to_peer_with_event() {
         // check events
         for event in txn_output.events() {
             let account_event: AccountEvent =
-                SimpleDeserializer::deserialize(event.event_data()).expect("event data must parse");
+                AccountEvent::try_from(event.event_data()).expect("event data must parse");
             assert_eq!(transfer_amount, account_event.amount());
             assert!(
                 &account_event.account() == sender.address()

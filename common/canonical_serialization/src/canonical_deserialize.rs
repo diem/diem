@@ -19,6 +19,8 @@ pub trait CanonicalDeserialize {
 pub trait CanonicalDeserializer {
     fn decode_bool(&mut self) -> Result<bool>;
 
+    fn decode_bytes(&mut self) -> Result<Vec<u8>>;
+
     fn decode_i8(&mut self) -> Result<i8>;
 
     fn decode_i16(&mut self) -> Result<i16>;
@@ -64,9 +66,6 @@ pub trait CanonicalDeserializer {
         &mut self,
     ) -> Result<BTreeMap<K, V>>;
 
-    // decode a byte array with the given length as input
-    fn decode_bytes_with_len(&mut self, len: u32) -> Result<Vec<u8>>;
-
     fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>>;
 
     fn decode_struct<T>(&mut self) -> Result<T>
@@ -76,8 +75,6 @@ pub trait CanonicalDeserializer {
     {
         T::deserialize(self)
     }
-
-    fn decode_variable_length_bytes(&mut self) -> Result<Vec<u8>>;
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>>;
 }

@@ -159,9 +159,9 @@ impl CanonicalSerialize for LedgerInfo {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_u64(self.version)?
-            .encode_raw_bytes(self.transaction_accumulator_hash.as_ref())?
-            .encode_raw_bytes(self.consensus_data_hash.as_ref())?
-            .encode_raw_bytes(self.consensus_block_id.as_ref())?
+            .encode_bytes(self.transaction_accumulator_hash.as_ref())?
+            .encode_bytes(self.consensus_data_hash.as_ref())?
+            .encode_bytes(self.consensus_block_id.as_ref())?
             .encode_u64(self.epoch_num)?
             .encode_u64(self.timestamp_usecs)?;
         Ok(())

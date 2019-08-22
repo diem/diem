@@ -115,11 +115,9 @@ impl CanonicalSerialize for ValidatorPublicKeys {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.account_address)?
-            .encode_variable_length_bytes(&self.consensus_public_key.to_bytes())?
-            .encode_variable_length_bytes(
-                &X25519StaticPublicKey::to_bytes(&self.network_identity_public_key)[..],
-            )?
-            .encode_variable_length_bytes(&self.network_signing_public_key.to_bytes())?;
+            .encode_bytes(&self.consensus_public_key.to_bytes())?
+            .encode_bytes(&X25519StaticPublicKey::to_bytes(&self.network_identity_public_key)[..])?
+            .encode_bytes(&self.network_signing_public_key.to_bytes())?;
         Ok(())
     }
 }
@@ -127,12 +125,11 @@ impl CanonicalSerialize for ValidatorPublicKeys {
 impl CanonicalDeserialize for ValidatorPublicKeys {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let account_address = deserializer.decode_struct::<AccountAddress>()?;
-        let consensus_public_key =
-            Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
+        let consensus_public_key = Ed25519PublicKey::try_from(&deserializer.decode_bytes()?[..])?;
         let network_identity_public_key =
-            X25519StaticPublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
+            X25519StaticPublicKey::try_from(&deserializer.decode_bytes()?[..])?;
         let network_signing_public_key =
-            Ed25519PublicKey::try_from(&deserializer.decode_variable_length_bytes()?[..])?;
+            Ed25519PublicKey::try_from(&deserializer.decode_bytes()?[..])?;
         Ok(ValidatorPublicKeys::new(
             account_address,
             consensus_public_key,

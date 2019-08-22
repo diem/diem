@@ -50,12 +50,12 @@ struct VoteMsgSerializer {
 impl CanonicalSerialize for VoteMsgSerializer {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> failure::Result<()> {
         serializer
-            .encode_raw_bytes(self.proposed_block_id.as_ref())?
+            .encode_bytes(self.proposed_block_id.as_ref())?
             .encode_struct(&self.executed_state)?
             .encode_u64(self.round)?
-            .encode_raw_bytes(self.parent_block_id.as_ref())?
+            .encode_bytes(self.parent_block_id.as_ref())?
             .encode_u64(self.parent_block_round)?
-            .encode_raw_bytes(self.grandparent_block_id.as_ref())?
+            .encode_bytes(self.grandparent_block_id.as_ref())?
             .encode_u64(self.grandparent_block_round)?;
         Ok(())
     }

@@ -18,9 +18,9 @@ use std::collections::BTreeMap;
 
 // Do not change this test vector. It is used to verify correctness of the serializer.
 const TEST_VECTOR: &str = "ffffffffffffffff060000006463584d4237640000000000000009000000000102\
-                           03040506070805050505050505050505050505050505050505050505050505050505\
-                           05050505630000000103000000010000000103000000161543030000000038150300\
-                           0000160a05040000001415596903000000c9175a";
+                           03040506070820000000050505050505050505050505050505050505050505050505\
+                           05050505050505056300000001030000000100000001030000001615430300000000\
+                           381503000000160a05040000001415596903000000c9175a";
 
 #[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct Addr(pub [u8; 32]);
@@ -34,7 +34,7 @@ impl Addr {
 impl CanonicalDeserialize for Addr {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let mut data_slice: [u8; 32] = [0; 32];
-        let data_decoded = deserializer.decode_bytes_with_len(32)?;
+        let data_decoded = deserializer.decode_bytes()?;
         data_slice.copy_from_slice(data_decoded.as_slice());
         Ok(Addr::new(data_slice))
     }
@@ -42,7 +42,7 @@ impl CanonicalDeserialize for Addr {
 
 impl CanonicalSerialize for Addr {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_raw_bytes(&self.0)?;
+        serializer.encode_bytes(&self.0)?;
         Ok(())
     }
 }
@@ -59,7 +59,7 @@ impl CanonicalDeserialize for Bar {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         Ok(Bar {
             a: deserializer.decode_u64()?,
-            b: deserializer.decode_variable_length_bytes()?,
+            b: deserializer.decode_bytes()?,
             c: deserializer.decode_struct()?,
             d: deserializer.decode_u32()?,
         })
@@ -70,7 +70,7 @@ impl CanonicalSerialize for Bar {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_u64(self.a)?
-            .encode_variable_length_bytes(&self.b)?
+            .encode_bytes(&self.b)?
             .encode_struct(&self.c)?
             .encode_u32(self.d)?;
         Ok(())
@@ -90,7 +90,7 @@ impl CanonicalDeserialize for Foo {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         Ok(Foo {
             a: deserializer.decode_u64()?,
-            b: deserializer.decode_variable_length_bytes()?,
+            b: deserializer.decode_bytes()?,
             c: deserializer.decode_struct()?,
             d: deserializer.decode_bool()?,
             e: deserializer.decode_btreemap()?,
@@ -102,7 +102,7 @@ impl CanonicalSerialize for Foo {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_u64(self.a)?
-            .encode_variable_length_bytes(&self.b)?
+            .encode_bytes(&self.b)?
             .encode_struct(&self.c)?
             .encode_bool(self.d)?
             .encode_btreemap(&self.e)?;
@@ -245,14 +245,14 @@ fn test_btreemap_lexicographic_order() {
 
     // ensure the order was encoded in lexicographic order
     assert_eq!(deserializer.decode_u32().unwrap(), 4);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key1);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), value);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key3);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), value);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key4);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), value);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), key2);
-    assert_eq!(deserializer.decode_variable_length_bytes().unwrap(), value);
+    assert_eq!(deserializer.decode_bytes().unwrap(), key1);
+    assert_eq!(deserializer.decode_bytes().unwrap(), value);
+    assert_eq!(deserializer.decode_bytes().unwrap(), key3);
+    assert_eq!(deserializer.decode_bytes().unwrap(), value);
+    assert_eq!(deserializer.decode_bytes().unwrap(), key4);
+    assert_eq!(deserializer.decode_bytes().unwrap(), value);
+    assert_eq!(deserializer.decode_bytes().unwrap(), key2);
+    assert_eq!(deserializer.decode_bytes().unwrap(), value);
 }
 
 #[test]
@@ -284,8 +284,7 @@ fn test_deserialization_failure_cases() {
     let bytes_len_2 = vec![0; 2];
     let mut deserializer = SimpleDeserializer::new(&bytes_len_2);
     assert!(deserializer.clone().decode_u64().is_err());
-    assert!(deserializer.clone().decode_bytes_with_len(32).is_err());
-    assert!(deserializer.clone().decode_variable_length_bytes().is_err());
+    assert!(deserializer.clone().decode_bytes().is_err());
     assert!(deserializer.clone().decode_struct::<Foo>().is_err());
     assert!(Foo::deserialize(&mut deserializer.clone()).is_err());
 
@@ -295,14 +294,13 @@ fn test_deserialization_failure_cases() {
         .write_u32::<Endianness>(ARRAY_MAX_LENGTH as u32 + 1)
         .unwrap();
     deserializer = SimpleDeserializer::new(&long_bytes);
-    assert!(deserializer.clone().decode_variable_length_bytes().is_err());
+    assert!(deserializer.clone().decode_bytes().is_err());
 
     // vec not long enough should fail
     let mut bytes_len_10 = Vec::new();
     bytes_len_10.write_u32::<Endianness>(32).unwrap();
     deserializer = SimpleDeserializer::new(&bytes_len_10);
-    assert!(deserializer.clone().decode_variable_length_bytes().is_err());
-    assert!(deserializer.clone().decode_bytes_with_len(32).is_err());
+    assert!(deserializer.clone().decode_bytes().is_err());
 
     // malformed struct should fail
     let mut some_bytes = Vec::new();
@@ -316,7 +314,7 @@ fn test_deserialization_failure_cases() {
     evil_bytes.write_u32::<Endianness>(500).unwrap();
     evil_bytes.resize_with(4 + 499, Default::default);
     deserializer = SimpleDeserializer::new(&evil_bytes);
-    assert!(deserializer.clone().decode_variable_length_bytes().is_err());
+    assert!(deserializer.clone().decode_bytes().is_err());
 
     // malformed encoded bool with value not 0 or 1
     let mut bool_bytes = Vec::new();

@@ -245,14 +245,14 @@ impl TryFrom<AccountAddress> for Bech32 {
 
 impl CanonicalSerialize for AccountAddress {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_variable_length_bytes(&self.0)?;
+        serializer.encode_bytes(&self.0)?;
         Ok(())
     }
 }
 
 impl CanonicalDeserialize for AccountAddress {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_variable_length_bytes()?;
+        let bytes = deserializer.decode_bytes()?;
         Self::try_from(bytes)
     }
 }

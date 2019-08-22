@@ -445,8 +445,8 @@ where
             .encode_u64(self.round)?
             .encode_u64(self.height)?
             .encode_struct(self.payload)?
-            .encode_raw_bytes(self.parent_id.as_ref())?
-            .encode_raw_bytes(self.quorum_cert.certified_block_id().as_ref())?
+            .encode_bytes(self.parent_id.as_ref())?
+            .encode_bytes(self.quorum_cert.certified_block_id().as_ref())?
             .encode_optional(&self.author)?;
         Ok(())
     }
