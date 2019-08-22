@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 grpcio = "0.4.3"
-futures = { version = "0.3.0-alpha.13", package = "futures-preview", features = ["compat"] }
-futures_01 = { version = "0.1.25", package = "futures" }
+futures = { version = "0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
+futures_01 = { version = "0.1.28", package = "futures" }
 
 failure = { package = "failure_ext", path = "../failure_ext" }
 logger = { path = "../logger" }

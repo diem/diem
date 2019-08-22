@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 bytes = "0.4.12"
 futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
-futures_01 = { version = "0.1.25", package = "futures" }
+futures_01 = { version = "0.1.28", package = "futures" }
 parity-multiaddr = "0.4.0"
 tokio = "0.1.22"
 unsigned-varint = { version = "0.2.2", features = ["codec"] }

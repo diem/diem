@@ -9,7 +9,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures01 = { package = "futures", version = "0.1.26" }
+futures01 = { package = "futures", version = "0.1.28" }
 grpcio = "0.4.4"
 
 config = { path = "../../config" }
