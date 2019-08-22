@@ -8,7 +8,7 @@
 //! the stack height by the number of values returned by the function as indicated in its
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
-use crate::control_flow_graph::{BasicBlock, VMControlFlowGraph};
+use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
 use vm::{
     access::ModuleAccess,
     errors::VMStaticViolation,
@@ -19,7 +19,6 @@ use vm::{
 pub struct StackUsageVerifier<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
-    cfg: &'a VMControlFlowGraph,
 }
 
 impl<'a> StackUsageVerifier<'a> {
@@ -32,24 +31,28 @@ impl<'a> StackUsageVerifier<'a> {
         let verifier = Self {
             module,
             function_definition_view,
-            cfg,
         };
 
         let mut errors = vec![];
-        for (_, block) in verifier.cfg.blocks.iter() {
-            errors.append(&mut verifier.verify_block(&block));
+        for block_id in cfg.blocks() {
+            errors.append(&mut verifier.verify_block(&block_id, cfg));
         }
         errors
     }
 
-    fn verify_block(&self, block: &BasicBlock) -> Vec<VMStaticViolation> {
+    fn verify_block(
+        &self,
+        block_id: &BlockId,
+        cfg: &dyn ControlFlowGraph,
+    ) -> Vec<VMStaticViolation> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
-        for i in block.entry..=block.exit {
+        let block_start = cfg.block_start(block_id);
+        for i in block_start..=cfg.block_end(block_id) {
             stack_size_increment += self.instruction_effect(&code[i as usize]);
             if stack_size_increment < 0 {
                 return vec![VMStaticViolation::NegativeStackSizeInsideBlock(
-                    block.entry as usize,
+                    block_start as usize,
                     i as usize,
                 )];
             }
@@ -59,7 +62,7 @@ impl<'a> StackUsageVerifier<'a> {
             vec![]
         } else {
             vec![VMStaticViolation::PositiveStackSizeAtBlockEnd(
-                block.entry as usize,
+                block_start as usize,
             )]
         }
     }
