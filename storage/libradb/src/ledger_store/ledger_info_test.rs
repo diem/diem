@@ -20,7 +20,7 @@ prop_compose! {
         partial_ledger_infos_with_sigs in vec(
             any_with::<LedgerInfoWithSignatures<Ed25519Signature>>((1..3).into()).no_shrink(), 1..100
         ),
-        start_version in 0..10000u64,
+        start_epoch in 0..10000u64,
     ) -> Vec<LedgerInfoWithSignatures<Ed25519Signature>> {
         partial_ledger_infos_with_sigs
             .iter()
@@ -29,11 +29,11 @@ prop_compose! {
                 let ledger_info = p.ledger_info();
                 LedgerInfoWithSignatures::new(
                     LedgerInfo::new(
-                        start_version + i as u64,
+                        start_epoch + i as Version,
                         ledger_info.transaction_accumulator_hash(),
                         ledger_info.consensus_data_hash(),
                         HashValue::zero(),
-                        ledger_info.epoch_num(),
+                        start_epoch + i as u64 /* epoch_num */,
                         ledger_info.timestamp_usecs(),
                     ),
                     p.signatures().clone(),
@@ -53,7 +53,7 @@ proptest! {
         let tmp_dir = tempdir().unwrap();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.ledger_store;
-        let start_version = ledger_infos_with_sigs.first().unwrap().ledger_info().version();
+        let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch_num();
 
         let mut cs = ChangeSet::new();
         ledger_infos_with_sigs
@@ -62,6 +62,6 @@ proptest! {
             .collect::<Result<Vec<_>>>()
             .unwrap();
         store.db.write_schemas(cs.batch).unwrap();
-        prop_assert_eq!(db.ledger_store.get_ledger_infos(start_version).unwrap(), ledger_infos_with_sigs);
+        prop_assert_eq!(db.ledger_store.get_ledger_infos(start_epoch).unwrap(), ledger_infos_with_sigs);
     }
 }

@@ -68,10 +68,10 @@ impl LedgerStore {
     #[cfg(test)]
     fn get_ledger_infos(
         &self,
-        start_version: Version,
+        start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
-        iter.seek(&start_version)?;
+        iter.seek(&start_epoch)?;
         Ok(iter.map(|kv| Ok(kv?.1)).collect::<Result<Vec<_>>>()?)
     }
 
@@ -174,7 +174,7 @@ impl LedgerStore {
         cs: &mut ChangeSet,
     ) -> Result<()> {
         cs.batch.put::<LedgerInfoSchema>(
-            &ledger_info_with_sigs.ledger_info().version(),
+            &ledger_info_with_sigs.ledger_info().epoch_num(),
             ledger_info_with_sigs,
         )
     }
