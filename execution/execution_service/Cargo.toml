@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures01 = { package = "futures", version = "0.1.26" }
+futures01 = { package = "futures", version = "0.1.28" }
 futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17", features = ["compat"] }
 grpcio = "0.4.4"
 
