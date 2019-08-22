@@ -19,13 +19,6 @@ pub trait CanonicalDeserialize {
 pub trait CanonicalDeserializer {
     fn decode_bool(&mut self) -> Result<bool>;
 
-    fn decode_btreemap<K: CanonicalDeserialize + std::cmp::Ord, V: CanonicalDeserialize>(
-        &mut self,
-    ) -> Result<BTreeMap<K, V>>;
-
-    // decode a byte array with the given length as input
-    fn decode_bytes_with_len(&mut self, len: u32) -> Result<Vec<u8>>;
-
     fn decode_i8(&mut self) -> Result<i8>;
 
     fn decode_i16(&mut self) -> Result<i16>;
@@ -34,17 +27,15 @@ pub trait CanonicalDeserializer {
 
     fn decode_i64(&mut self) -> Result<i64>;
 
-    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>>;
-
     fn decode_string(&mut self) -> Result<String>;
 
-    fn decode_struct<T>(&mut self) -> Result<T>
-    where
-        T: CanonicalDeserialize,
-        Self: Sized,
-    {
-        T::deserialize(self)
-    }
+    fn decode_u8(&mut self) -> Result<u8>;
+
+    fn decode_u16(&mut self) -> Result<u16>;
+
+    fn decode_u32(&mut self) -> Result<u32>;
+
+    fn decode_u64(&mut self) -> Result<u64>;
 
     fn decode_tuple2<T0, T1>(&mut self) -> Result<(T0, T1)>
     where
@@ -69,138 +60,67 @@ pub trait CanonicalDeserializer {
         ))
     }
 
-    fn decode_u8(&mut self) -> Result<u8>;
+    fn decode_btreemap<K: CanonicalDeserialize + std::cmp::Ord, V: CanonicalDeserialize>(
+        &mut self,
+    ) -> Result<BTreeMap<K, V>>;
 
-    fn decode_u16(&mut self) -> Result<u16>;
+    // decode a byte array with the given length as input
+    fn decode_bytes_with_len(&mut self, len: u32) -> Result<Vec<u8>>;
 
-    fn decode_u32(&mut self) -> Result<u32>;
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>>;
 
-    fn decode_u64(&mut self) -> Result<u64>;
+    fn decode_struct<T>(&mut self) -> Result<T>
+    where
+        T: CanonicalDeserialize,
+        Self: Sized,
+    {
+        T::deserialize(self)
+    }
 
     fn decode_variable_length_bytes(&mut self) -> Result<Vec<u8>>;
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>>;
 }
 
-impl CanonicalDeserialize for BTreeMap<Vec<u8>, Vec<u8>> {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(deserializer.decode_btreemap()?)
-    }
+macro_rules! impl_canonical_deserialize {
+    ($function:ident, $type:ty) => {
+        impl CanonicalDeserialize for $type {
+            fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<(Self)> {
+                deserializer.$function()
+            }
+        }
+    };
 }
 
-impl CanonicalDeserialize for i8 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_i8()?;
-        Ok(num)
-    }
+macro_rules! impl_canonical_deserialize_for_tuple {
+    ($function:ident, $($type:ident)+) => (
+        impl<$($type), +> CanonicalDeserialize for ($($type), +)
+        where
+            $($type: CanonicalDeserialize,) +
+        {
+            fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<(Self)>
+            where
+                Self: Sized,
+            {
+                deserializer.$function()
+            }
+        }
+    );
 }
 
-impl CanonicalDeserialize for i16 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_i16()?;
-        Ok(num)
-    }
-}
-
-impl CanonicalDeserialize for i32 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_i32()?;
-        Ok(num)
-    }
-}
-
-impl CanonicalDeserialize for i64 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_i64()?;
-        Ok(num)
-    }
-}
-
-impl CanonicalDeserialize for String {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(deserializer.decode_string()?)
-    }
-}
-
-impl<T0, T1> CanonicalDeserialize for (T0, T1)
-where
-    T0: CanonicalDeserialize,
-    T1: CanonicalDeserialize,
-{
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        deserializer.decode_tuple2()
-    }
-}
-
-impl<T0, T1, T2> CanonicalDeserialize for (T0, T1, T2)
-where
-    T0: CanonicalDeserialize,
-    T1: CanonicalDeserialize,
-    T2: CanonicalDeserialize,
-{
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        deserializer.decode_tuple3()
-    }
-}
-
-impl CanonicalDeserialize for u8 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_u8()?;
-        Ok(num)
-    }
-}
-
-impl CanonicalDeserialize for u16 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        deserializer.decode_u16()
-    }
-}
-
-impl CanonicalDeserialize for u32 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        deserializer.decode_u32()
-    }
-}
-
-impl CanonicalDeserialize for u64 {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let num = deserializer.decode_u64()?;
-        Ok(num)
-    }
-}
+impl_canonical_deserialize!(decode_bool, bool);
+impl_canonical_deserialize!(decode_btreemap, BTreeMap<Vec<u8>, Vec<u8>>);
+impl_canonical_deserialize!(decode_i8, i8);
+impl_canonical_deserialize!(decode_i16, i16);
+impl_canonical_deserialize!(decode_i32, i32);
+impl_canonical_deserialize!(decode_i64, i64);
+impl_canonical_deserialize!(decode_string, String);
+impl_canonical_deserialize_for_tuple!(decode_tuple2, T0 T1);
+impl_canonical_deserialize_for_tuple!(decode_tuple3, T0 T1 T2);
+impl_canonical_deserialize!(decode_u8, u8);
+impl_canonical_deserialize!(decode_u16, u16);
+impl_canonical_deserialize!(decode_u32, u32);
+impl_canonical_deserialize!(decode_u64, u64);
 
 impl<T> CanonicalDeserialize for Option<T>
 where

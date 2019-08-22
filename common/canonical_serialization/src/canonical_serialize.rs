@@ -15,12 +15,7 @@ pub trait CanonicalSerialize {
 
 /// Trait for serializers that implement LCS
 pub trait CanonicalSerializer {
-    fn encode_bool(&mut self, b: bool) -> Result<&mut Self>;
-
-    fn encode_btreemap<K: CanonicalSerialize, V: CanonicalSerialize>(
-        &mut self,
-        v: &BTreeMap<K, V>,
-    ) -> Result<&mut Self>;
+    fn encode_bool(&mut self, v: bool) -> Result<&mut Self>;
 
     fn encode_i8(&mut self, v: i8) -> Result<&mut Self>;
 
@@ -30,23 +25,15 @@ pub trait CanonicalSerializer {
 
     fn encode_i64(&mut self, v: i64) -> Result<&mut Self>;
 
-    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
+    fn encode_string(&mut self, v: &str) -> Result<&mut Self>;
 
-    // Use this encoder when the length of the array is known to be fixed and always known at
-    // deserialization time. The raw bytes of the array without length prefix are encoded.
-    // For deserialization, use decode_bytes_with_len() which requires giving the length
-    // as input
-    fn encode_raw_bytes(&mut self, bytes: &[u8]) -> Result<&mut Self>;
+    fn encode_u8(&mut self, v: u8) -> Result<&mut Self>;
 
-    fn encode_string(&mut self, s: &str) -> Result<&mut Self>;
+    fn encode_u16(&mut self, v: u16) -> Result<&mut Self>;
 
-    fn encode_struct(&mut self, structure: &impl CanonicalSerialize) -> Result<&mut Self>
-    where
-        Self: std::marker::Sized,
-    {
-        structure.serialize(self)?;
-        Ok(self)
-    }
+    fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
+
+    fn encode_u64(&mut self, v: u64) -> Result<&mut Self>;
 
     fn encode_tuple2<T0, T1>(&mut self, v: &(T0, T1)) -> Result<&mut Self>
     where
@@ -72,13 +59,26 @@ pub trait CanonicalSerializer {
         Ok(self)
     }
 
-    fn encode_u8(&mut self, v: u8) -> Result<&mut Self>;
+    fn encode_btreemap<K: CanonicalSerialize, V: CanonicalSerialize>(
+        &mut self,
+        v: &BTreeMap<K, V>,
+    ) -> Result<&mut Self>;
 
-    fn encode_u16(&mut self, v: u16) -> Result<&mut Self>;
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
 
-    fn encode_u32(&mut self, v: u32) -> Result<&mut Self>;
+    // Use this encoder when the length of the array is known to be fixed and always known at
+    // deserialization time. The raw bytes of the array without length prefix are encoded.
+    // For deserialization, use decode_bytes_with_len() which requires giving the length
+    // as input
+    fn encode_raw_bytes(&mut self, bytes: &[u8]) -> Result<&mut Self>;
 
-    fn encode_u64(&mut self, v: u64) -> Result<&mut Self>;
+    fn encode_struct(&mut self, structure: &impl CanonicalSerialize) -> Result<&mut Self>
+    where
+        Self: std::marker::Sized,
+    {
+        structure.serialize(self)?;
+        Ok(self)
+    }
 
     // Use this encoder to encode variable length byte arrays whose length may not be known at
     // deserialization time.
@@ -87,40 +87,55 @@ pub trait CanonicalSerializer {
     fn encode_vec<T: CanonicalSerialize>(&mut self, v: &[T]) -> Result<&mut Self>;
 }
 
-impl CanonicalSerialize for BTreeMap<Vec<u8>, Vec<u8>> {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_btreemap(self)?;
-        Ok(())
-    }
+macro_rules! impl_canonical_serialize_for_complex {
+    ($function:ident, $type:ty) => {
+        impl CanonicalSerialize for $type {
+            fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+                serializer.$function(self)?;
+                Ok(())
+            }
+        }
+    };
 }
 
-impl CanonicalSerialize for i8 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_i8(*self)?;
-        Ok(())
-    }
+macro_rules! impl_canonical_serialize_for_primitive {
+    ($function:ident, $type:ty) => {
+        impl CanonicalSerialize for $type {
+            fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+                serializer.$function(*self)?;
+                Ok(())
+            }
+        }
+    };
 }
 
-impl CanonicalSerialize for i16 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_i16(*self)?;
-        Ok(())
-    }
+macro_rules! impl_canonical_serialize_for_tuple {
+    ($function:ident,$($type:ident)+) => (
+        impl<$($type), +> CanonicalSerialize for ($($type),+)
+        where
+            $($type: CanonicalSerialize,) +
+        {
+            fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+                serializer.$function(self)?;
+                Ok(())
+            }
+        }
+    );
 }
 
-impl CanonicalSerialize for i32 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_i32(*self)?;
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for i64 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_i64(*self)?;
-        Ok(())
-    }
-}
+impl_canonical_serialize_for_primitive!(encode_bool, bool);
+impl_canonical_serialize_for_complex!(encode_btreemap, BTreeMap<Vec<u8>, Vec<u8>>);
+impl_canonical_serialize_for_primitive!(encode_i8, i8);
+impl_canonical_serialize_for_primitive!(encode_i16, i16);
+impl_canonical_serialize_for_primitive!(encode_i32, i32);
+impl_canonical_serialize_for_primitive!(encode_i64, i64);
+impl_canonical_serialize_for_complex!(encode_string, &str);
+impl_canonical_serialize_for_tuple!(encode_tuple2, T0 T1);
+impl_canonical_serialize_for_tuple!(encode_tuple3, T0 T1 T2);
+impl_canonical_serialize_for_primitive!(encode_u8, u8);
+impl_canonical_serialize_for_primitive!(encode_u16, u16);
+impl_canonical_serialize_for_primitive!(encode_u32, u32);
+impl_canonical_serialize_for_primitive!(encode_u64, u64);
 
 impl<T> CanonicalSerialize for Option<T>
 where
@@ -132,67 +147,9 @@ where
     }
 }
 
-impl CanonicalSerialize for &str {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(self)?;
-        Ok(())
-    }
-}
-
 impl CanonicalSerialize for String {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer.encode_string(self.as_str())?;
-        Ok(())
-    }
-}
-
-impl<T0, T1> CanonicalSerialize for (T0, T1)
-where
-    T0: CanonicalSerialize,
-    T1: CanonicalSerialize,
-{
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_tuple2(self)?;
-        Ok(())
-    }
-}
-
-impl<T0, T1, T2> CanonicalSerialize for (T0, T1, T2)
-where
-    T0: CanonicalSerialize,
-    T1: CanonicalSerialize,
-    T2: CanonicalSerialize,
-{
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_tuple3(self)?;
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for u8 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u8(*self)?;
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for u16 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u16(*self)?;
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for u32 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u32(*self)?;
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for u64 {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u64(*self)?;
         Ok(())
     }
 }
@@ -201,6 +158,12 @@ impl CanonicalSerialize for u64 {
 /// if usize is larger than a 64-bit integer.
 impl CanonicalSerialize for usize {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        ensure!(
+            *self <= u64::max_value() as usize,
+            "usize bigger than max allowed. Expected <= {}, found: {}",
+            u64::max_value(),
+            *self,
+        );
         serializer.encode_u64(*self as u64)?;
         Ok(())
     }
