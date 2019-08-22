@@ -171,9 +171,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .await
             .expect("[state sync] failed to fetch latest version from storage");
 
+        debug!(
+            "[state sync] sync requested. Known version: {}, requested_version: {}",
+            self.known_version, requested_version
+        );
+
         // if requested version equals to current committed, just pass ledger info to executor
         // there might be still empty blocks between committed state and requested
         if requested_version <= self.known_version {
+            debug!("[state sync] sync contains only empty blocks");
             self.store_transactions(target.clone(), TransactionListWithProof::new())
                 .await
                 .expect("[state sync] failed to execute empty blocks");
@@ -192,18 +198,19 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     async fn commit(&mut self, version: u64) {
-        if version <= self.known_version {
-            error!(
-                "[state sync] invalid commit. Known version: {}, commit version: {}",
-                self.known_version, version
-            );
-            return;
-        }
-        self.known_version = version;
-        if let Err(err) = self.check_subscriptions().await {
-            error!("[state sync] failed to check subscriptions: {:?}", err);
+        debug!(
+            "[state sync] commit. Known version: {}, version: {}",
+            self.known_version, version
+        );
+        let is_update = version > self.known_version;
+        self.known_version = std::cmp::max(version, self.known_version);
+        if is_update {
+            if let Err(err) = self.check_subscriptions().await {
+                error!("[state sync] failed to check subscriptions: {:?}", err);
+            }
         }
         if self.known_version == self.target_version() {
+            debug!("[state sync] synchronization is finished");
             if let Some(cb) = self.callback.take() {
                 if cb.send(true).is_err() {
                     error!("[state sync] failed to notify subscriber");
@@ -238,7 +245,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let latest_ledger_info = self.executor_proxy.get_latest_ledger_info().await?;
         let target = LedgerInfo::from_proto(request.take_ledger_info_with_sigs())
-            .unwrap_or(latest_ledger_info);
+            .unwrap_or_else(|_| latest_ledger_info.clone());
+        debug!("[state sync] chunk request: peer_id: {:?}, known_version: {}, latest_ledger_info: {}, target: {}", peer_id, request.known_version, latest_ledger_info.ledger_info().version(), target.ledger_info().version());
 
         // if upstream synchronizer doesn't have new data and request timeout is set
         // add peer request into subscription queue
@@ -289,6 +297,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // optimistically fetch next chunk
         let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
         self.request_next_chunk(chunk_size).await;
+        debug!(
+            "[state sync] process chunk response. chunk_size: {}",
+            chunk_size
+        );
 
         match LedgerInfoWithSignatures::<Ed25519Signature>::from_proto(
             response.take_ledger_info_with_sigs(),
@@ -347,6 +359,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     self.config.long_poll_timeout_ms
                 }
             };
+            debug!(
+                "[state sync] request next chunk. peer_id: {:?}, known_version: {}, timeout: {}",
+                peer_id,
+                self.known_version + offset,
+                timeout
+            );
 
             let mut msg = StateSynchronizerMsg::new();
             msg.set_chunk_request(req);
