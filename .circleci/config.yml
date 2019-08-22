@@ -70,6 +70,29 @@ jobs:
           name: Run All End to End Tests
           command: RUST_BACKTRACE=1 cargo test --package testsuite
       - save_sccache_cache
+  validate-config:
+    docker:
+      - image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/github_circleci:latest
+        aws_auth:
+          aws_access_key_id: $ECR_RO_ACCESS_KEY_ID
+          aws_secret_access_key: $ECR_RO_SECRET_ACCESS_KEY
+    resource_class: 2xlarge
+    steps:
+      - env_setup
+      - sccache_setup
+      - restore_sccache_cache
+      - run:
+          # generate config; diff config to existing one
+          name: Generate dev config
+          command: |
+            cd terraform/validator-sets
+            ./build.sh dev -n 4
+      - run:
+          name: Compare config
+          command: |
+            git diff-index HEAD -- terraform/
+            git diff-index --quiet HEAD -- terraform/
+      - save_sccache_cache
   audit:
     docker:
       - image: circleci/rust:stretch
@@ -101,6 +124,7 @@ workflows:
   commit-workflow:
     jobs:
       - build
+      - validate-config
       - terraform
 
   scheduled-workflow:
