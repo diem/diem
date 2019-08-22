@@ -76,7 +76,7 @@ use crate::{
 use crypto::HashValue;
 use failure::prelude::*;
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet},
     convert::Into,
 };
 use types::transaction::Version;
@@ -88,13 +88,13 @@ use types::transaction::Version;
 #[derive(Default)]
 struct FrozenTreeCache {
     /// Immutable node_cache.
-    node_cache: HashMap<NodeKey, Node>,
+    node_cache: BTreeMap<NodeKey, Node>,
 
     /// # of leaves in the `node_cache`,
     num_new_leaves: usize,
 
     /// Immutable stale_node_index_cache.
-    stale_node_index_cache: HashSet<StaleNodeIndex>,
+    stale_node_index_cache: BTreeSet<StaleNodeIndex>,
 
     /// # of leaves in the `stale_node_index_cache`,
     num_stale_leaves: usize,

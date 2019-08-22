@@ -74,7 +74,7 @@ use failure::prelude::*;
 use nibble::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 use proptest_derive::Arbitrary;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use tree_cache::TreeCache;
 use types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version};
 
@@ -89,9 +89,9 @@ pub trait TreeReader {
 }
 
 /// Node batch that will be written into db atomically with other batches.
-pub type NodeBatch = HashMap<NodeKey, Node>;
+pub type NodeBatch = BTreeMap<NodeKey, Node>;
 /// [`RetireNodeIndex`] batch that will be written into db atomically with other batches.
-pub type StaleNodeIndexBatch = HashSet<StaleNodeIndex>;
+pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
 
 /// Indicates a node becomes stale since `stale_since_version`.
 #[derive(Arbitrary, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

@@ -6,6 +6,7 @@ use crate::nibble::Nibble;
 use crypto::HashValue;
 use mock_tree_store::MockTreeStore;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 use types::proof::verify_sparse_merkle_element;
 
 fn update_nibble(original_key: &HashValue, n: usize, nibble: u8) -> HashValue {
