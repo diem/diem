@@ -22,6 +22,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
+use config::config::RoleType;
 use crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
@@ -71,6 +72,7 @@ pub struct NetworkBuilder {
     executor: TaskExecutor,
     peer_id: PeerId,
     addr: Multiaddr,
+    role: RoleType,
     advertised_address: Option<Multiaddr>,
     seed_peers: HashMap<PeerId, PeerInfo>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
@@ -96,11 +98,17 @@ pub struct NetworkBuilder {
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
-    pub fn new(executor: TaskExecutor, peer_id: PeerId, addr: Multiaddr) -> NetworkBuilder {
+    pub fn new(
+        executor: TaskExecutor,
+        peer_id: PeerId,
+        addr: Multiaddr,
+        role: RoleType,
+    ) -> NetworkBuilder {
         NetworkBuilder {
             executor,
             peer_id,
             addr,
+            role,
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
@@ -293,7 +301,7 @@ impl NetworkBuilder {
     /// Create the configured `NetworkBuilder`
     /// Return the constructed Mempool and Consensus Sender+Events
     pub fn build(&mut self) -> (Multiaddr, Box<dyn LibraNetworkProvider>) {
-        let identity = Identity::new(self.peer_id, self.supported_protocols());
+        let identity = Identity::new(self.peer_id, self.supported_protocols(), self.role.clone());
         // Build network based on the transport type
         let own_identity_keys = self.identity_keys.take().expect("Identity keys not set");
         let trusted_peers = self.trusted_peers.clone();

@@ -192,28 +192,36 @@ impl SynchronizerEnv {
         .into_iter()
         .collect();
 
-        let (listener_addr, mut network_provider) =
-            NetworkBuilder::new(runtime.executor(), peers[1], addr.clone())
-                .signing_keys((b_signing_private_key, b_signing_public_key))
-                .identity_keys((b_identity_private_key, b_identity_public_key))
-                .trusted_peers(trusted_peers.clone())
-                .transport(TransportType::Memory)
-                .direct_send_protocols(protocols.clone())
-                .build();
+        let (listener_addr, mut network_provider) = NetworkBuilder::new(
+            runtime.executor(),
+            peers[1],
+            addr.clone(),
+            RoleType::Validator,
+        )
+        .signing_keys((b_signing_private_key, b_signing_public_key))
+        .identity_keys((b_identity_private_key, b_identity_public_key))
+        .trusted_peers(trusted_peers.clone())
+        .transport(TransportType::Memory)
+        .direct_send_protocols(protocols.clone())
+        .build();
         let (sender_b, events_b) = network_provider.add_state_synchronizer(protocols.clone());
         runtime
             .executor()
             .spawn(network_provider.start().unit_error().compat());
 
-        let (_dialer_addr, mut network_provider) =
-            NetworkBuilder::new(runtime.executor(), peers[0], addr.clone())
-                .transport(TransportType::Memory)
-                .signing_keys((a_signing_private_key, a_signing_public_key))
-                .identity_keys((a_identity_private_key, a_identity_public_key))
-                .trusted_peers(trusted_peers.clone())
-                .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
-                .direct_send_protocols(protocols.clone())
-                .build();
+        let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+            runtime.executor(),
+            peers[0],
+            addr.clone(),
+            RoleType::Validator,
+        )
+        .transport(TransportType::Memory)
+        .signing_keys((a_signing_private_key, a_signing_public_key))
+        .identity_keys((a_identity_private_key, a_identity_public_key))
+        .trusted_peers(trusted_peers.clone())
+        .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
+        .direct_send_protocols(protocols.clone())
+        .build();
         let (sender_a, events_a) = network_provider.add_state_synchronizer(protocols);
         runtime
             .executor()

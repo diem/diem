@@ -22,6 +22,7 @@ unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
+config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 logger = { path = "../common/logger" }

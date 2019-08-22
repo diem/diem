@@ -17,7 +17,7 @@ pub use self::{
         Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote,
     },
     mempool::MempoolSyncMsg,
-    network::{DiscoveryMsg, IdentityMsg, Note, PeerInfo, Ping, Pong},
+    network::{DiscoveryMsg, IdentityMsg, IdentityMsg_Role, Note, PeerInfo, Ping, Pong},
     state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
 pub use transaction::SignedTransaction;
