@@ -1,9 +1,9 @@
 //! This module generates the Boogie version of bytecode instructions in the format of Boogie
 //! procedures.
 use crate::translator::*;
-use vm::file_format::StructHandleIndex;
-
-impl<'a> BoogieTranslator<'a> {
+use bytecode_verifier::VerifiedModule;
+use vm::access::ModuleAccess;
+impl BoogieTranslator {
     pub fn emit_stratified_functions(&self) -> String {
         let mut res = String::new();
         let mut update_value_str = String::new();
@@ -39,7 +39,7 @@ impl<'a> BoogieTranslator<'a> {
             update_value_str.push_str("    } else {\n");
 
             if i == 0 {
-                res.push_str("        assert false;\n");
+                res.push_str("        isPrefix := false;\n");
                 update_value_str.push_str("        assume false;\n");
             } else {
                 res.push_str(&format!(
@@ -59,10 +59,15 @@ impl<'a> BoogieTranslator<'a> {
         res
     }
 
-    pub fn emit_struct_specific_functions(&self, idx: StructHandleIndex) -> String {
+    pub fn emit_struct_specific_functions(
+        &self,
+        module: &VerifiedModule,
+        def_idx: usize,
+    ) -> String {
         let mut res = String::from("\n");
-        let field_info = self.get_field_info_from_struct_handle_index(idx);
-        let struct_name = self.struct_name_from_handle_index(idx);
+        let field_info = get_field_info_from_def_index(module, def_idx);
+        let struct_handle_index = module.struct_defs()[def_idx].struct_handle;
+        let struct_name = struct_name_from_handle_index(module, struct_handle_index);
         let mut args_str = String::new();
         let mut typechecking_str = String::new();
         let mut fields_str = String::new();
