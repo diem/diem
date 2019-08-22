@@ -10,6 +10,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
+use config::config::RoleType;
 use futures::{
     channel::oneshot,
     compat::Compat01As03,
@@ -68,7 +69,7 @@ fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
 }
 
 fn build_test_identity(peer_id: PeerId) -> Identity {
-    Identity::new(peer_id, Vec::new())
+    Identity::new(peer_id, Vec::new(), RoleType::Validator)
 }
 
 fn build_test_peer(
@@ -302,7 +303,7 @@ fn build_test_peer_manager(
     protocol_handlers.insert(protocol.clone(), hello_tx);
 
     let peer_manager = PeerManager::new(
-        build_test_transport(Identity::new(peer_id, vec![])),
+        build_test_transport(Identity::new(peer_id, vec![], RoleType::Validator)),
         executor.clone(),
         peer_id,
         "/memory/0".parse().unwrap(),

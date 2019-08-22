@@ -184,27 +184,31 @@ pub fn setup_network(config: &mut NodeConfig) -> (Runtime, Box<dyn LibraNetworkP
 
     let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
     let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
-    let (_listen_addr, network_provider) =
-        NetworkBuilder::new(runtime.executor(), peer_id, listen_addr)
-            .transport(if config.network.enable_encryption_and_authentication {
-                TransportType::TcpNoise
-            } else {
-                TransportType::Tcp
-            })
-            .advertised_address(advertised_addr)
-            .seed_peers(seed_peers)
-            .signing_keys((network_signing_private, network_signing_public))
-            .identity_keys(network_identity_keypair)
-            .trusted_peers(trusted_peers)
-            .discovery_interval_ms(config.network.discovery_interval_ms)
-            .connectivity_check_interval_ms(config.network.connectivity_check_interval_ms)
-            .direct_send_protocols(vec![
-                ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-                ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-                ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
-            ])
-            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-            .build();
+    let (_listen_addr, network_provider) = NetworkBuilder::new(
+        runtime.executor(),
+        peer_id,
+        listen_addr,
+        config.base.get_role(),
+    )
+    .transport(if config.network.enable_encryption_and_authentication {
+        TransportType::TcpNoise
+    } else {
+        TransportType::Tcp
+    })
+    .advertised_address(advertised_addr)
+    .seed_peers(seed_peers)
+    .signing_keys((network_signing_private, network_signing_public))
+    .identity_keys(network_identity_keypair)
+    .trusted_peers(trusted_peers)
+    .discovery_interval_ms(config.network.discovery_interval_ms)
+    .connectivity_check_interval_ms(config.network.connectivity_check_interval_ms)
+    .direct_send_protocols(vec![
+        ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+        ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+        ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+    ])
+    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+    .build();
 
     (runtime, network_provider)
 }

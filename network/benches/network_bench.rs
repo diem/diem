@@ -10,6 +10,7 @@
 #![allow(clippy::identity_op)]
 
 use bytes::Bytes;
+use config::config::RoleType;
 use core::str::FromStr;
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
@@ -91,17 +92,21 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let (listen_addr, mut network_provider) =
-        NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
-            .transport(TransportType::TcpNoise)
-            .trusted_peers(trusted_peers.clone())
-            .identity_keys((listener_identity_private_key, listener_identity_public_key))
-            .signing_keys((listener_signing_private_key, listener_signing_public_key))
-            .discovery_interval_ms(HOUR_IN_MS)
-            .direct_send_protocols(vec![ProtocolId::from_static(
-                CONSENSUS_DIRECT_SEND_PROTOCOL,
-            )])
-            .build();
+    let (listen_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.executor(),
+        listener_peer_id,
+        listener_addr,
+        RoleType::Validator,
+    )
+    .transport(TransportType::TcpNoise)
+    .trusted_peers(trusted_peers.clone())
+    .identity_keys((listener_identity_private_key, listener_identity_public_key))
+    .signing_keys((listener_signing_private_key, listener_signing_public_key))
+    .discovery_interval_ms(HOUR_IN_MS)
+    .direct_send_protocols(vec![ProtocolId::from_static(
+        CONSENSUS_DIRECT_SEND_PROTOCOL,
+    )])
+    .build();
     let (_listener_sender, mut listener_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
@@ -111,23 +116,27 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         .spawn(network_provider.start().unit_error().compat());
 
     // Set up the dialer network
-    let (_dialer_addr, mut network_provider) =
-        NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
-            .transport(TransportType::TcpNoise)
-            .trusted_peers(trusted_peers.clone())
-            .identity_keys((dialer_identity_private_key, dialer_identity_public_key))
-            .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-            .seed_peers(
-                [(listener_peer_id, vec![listen_addr])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            )
-            .discovery_interval_ms(HOUR_IN_MS)
-            .direct_send_protocols(vec![ProtocolId::from_static(
-                CONSENSUS_DIRECT_SEND_PROTOCOL,
-            )])
-            .build();
+    let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.executor(),
+        dialer_peer_id,
+        dialer_addr,
+        RoleType::Validator,
+    )
+    .transport(TransportType::TcpNoise)
+    .trusted_peers(trusted_peers.clone())
+    .identity_keys((dialer_identity_private_key, dialer_identity_public_key))
+    .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+    .seed_peers(
+        [(listener_peer_id, vec![listen_addr])]
+            .iter()
+            .cloned()
+            .collect(),
+    )
+    .discovery_interval_ms(HOUR_IN_MS)
+    .direct_send_protocols(vec![ProtocolId::from_static(
+        CONSENSUS_DIRECT_SEND_PROTOCOL,
+    )])
+    .build();
     let (mut dialer_sender, mut dialer_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
@@ -226,15 +235,19 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .collect();
 
     // Set up the listener network
-    let (listen_addr, mut network_provider) =
-        NetworkBuilder::new(runtime.executor(), listener_peer_id, listener_addr)
-            .transport(TransportType::TcpNoise)
-            .trusted_peers(trusted_peers.clone())
-            .identity_keys((listener_identity_private_key, listener_identity_public_key))
-            .signing_keys((listener_signing_private_key, listener_signing_public_key))
-            .discovery_interval_ms(HOUR_IN_MS)
-            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-            .build();
+    let (listen_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.executor(),
+        listener_peer_id,
+        listener_addr,
+        RoleType::Validator,
+    )
+    .transport(TransportType::TcpNoise)
+    .trusted_peers(trusted_peers.clone())
+    .identity_keys((listener_identity_private_key, listener_identity_public_key))
+    .signing_keys((listener_signing_private_key, listener_signing_public_key))
+    .discovery_interval_ms(HOUR_IN_MS)
+    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+    .build();
     let (_listener_sender, mut listener_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
     runtime
@@ -242,21 +255,25 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         .spawn(network_provider.start().unit_error().compat());
 
     // Set up the dialer network
-    let (_dialer_addr, mut network_provider) =
-        NetworkBuilder::new(runtime.executor(), dialer_peer_id, dialer_addr)
-            .transport(TransportType::TcpNoise)
-            .trusted_peers(trusted_peers.clone())
-            .identity_keys((dialer_identity_private_key, dialer_identity_public_key))
-            .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-            .seed_peers(
-                [(listener_peer_id, vec![listen_addr])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            )
-            .discovery_interval_ms(HOUR_IN_MS)
-            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-            .build();
+    let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
+        runtime.executor(),
+        dialer_peer_id,
+        dialer_addr,
+        RoleType::Validator,
+    )
+    .transport(TransportType::TcpNoise)
+    .trusted_peers(trusted_peers.clone())
+    .identity_keys((dialer_identity_private_key, dialer_identity_public_key))
+    .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+    .seed_peers(
+        [(listener_peer_id, vec![listen_addr])]
+            .iter()
+            .cloned()
+            .collect(),
+    )
+    .discovery_interval_ms(HOUR_IN_MS)
+    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+    .build();
     let (dialer_sender, mut dialer_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
     runtime
