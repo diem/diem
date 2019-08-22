@@ -15,7 +15,7 @@ module Tester {
 
         new_t = Self.new(1);
         *move(t2) = move(new_t);
-        release(move(t));
+        _ = move(t);
         return;
     }
 

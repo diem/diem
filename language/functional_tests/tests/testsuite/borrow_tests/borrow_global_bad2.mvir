@@ -8,7 +8,7 @@ module A {
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         t = move_from<T>(move(sender));
-        release(move(t_ref));
+        _ = move(t_ref);
         return;
     }
 }

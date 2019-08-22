@@ -8,21 +8,21 @@ module VTest {
     public t1(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
     public t2(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
     public t3(this: &Self.T): bool {
         let x: &bool;
         x = &copy(this).fv;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 }
@@ -39,21 +39,21 @@ module RTest {
     public t1(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
     public t2(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).fint;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
     public t3(this: &Self.T): bool {
         let x: &bool;
         x = &copy(this).fv;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 

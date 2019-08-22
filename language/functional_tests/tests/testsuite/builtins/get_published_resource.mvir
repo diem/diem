@@ -8,7 +8,7 @@ module Token {
     public value(this: &Self.T): u64 {
         let vref: &u64;
         vref = &copy(this).v;
-        release(move(this));
+        _ = move(this);
         return *move(vref);
     }
 

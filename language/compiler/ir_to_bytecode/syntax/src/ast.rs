@@ -273,8 +273,6 @@ pub struct Function {
 /// type system and/or have access to some runtime/storage context
 #[derive(Debug, PartialEq, Clone)]
 pub enum Builtin {
-    /// Intentionally destroy a resource (i.e., the inverse of `new`).
-    Release,
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the given address
     Exists(StructName, Vec<Type>),
@@ -321,16 +319,26 @@ pub enum FunctionCall {
 /// The type for a function call and its location
 pub type FunctionCall_ = Spanned<FunctionCall>;
 
+/// Enum for Move lvalues
+#[derive(Debug, Clone, PartialEq)]
+pub enum LValue {
+    /// `x`
+    Var(Var_),
+    /// `*e`
+    Mutate(Exp_),
+    /// `_`
+    Pop,
+}
+pub type LValue_ = Spanned<LValue>;
+
 /// Enum for Move commands
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
-    /// `x = e`
-    Assign(Vec<Var_>, Box<Exp_>),
+    /// `l_1, ..., l_n = e`
+    Assign(Vec<LValue_>, Exp_),
     /// `n { f_1: x_1, ... , f_j: x_j  } = e`
     Unpack(StructName, Vec<Type>, Fields<Var_>, Box<Exp_>),
-    /// `*e_1 = e_2`
-    Mutate(Box<Exp_>, Box<Exp_>),
     /// `abort e`
     Abort(Option<Box<Exp_>>),
     /// `return e_1, ... , e_j`
@@ -1231,7 +1239,6 @@ impl fmt::Display for Builtin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Builtin::CreateAccount => write!(f, "create_account"),
-            Builtin::Release => write!(f, "release"),
             Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
             Builtin::BorrowGlobal(t, tys) => {
                 write!(f, "borrow_global<{}{}>", t, format_type_actuals(tys))
@@ -1270,6 +1277,16 @@ impl fmt::Display for FunctionCall {
     }
 }
 
+impl fmt::Display for LValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LValue::Var(x) => write!(f, "{}", x),
+            LValue::Mutate(e) => write!(f, "*{}", e),
+            LValue::Pop => write!(f, "_"),
+        }
+    }
+}
+
 impl fmt::Display for Cmd {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1293,7 +1310,6 @@ impl fmt::Display for Cmd {
                     )),
                 e
             ),
-            Cmd::Mutate(e, o) => write!(f, "*({}) = {};", e, o),
             Cmd::Abort(None) => write!(f, "abort;"),
             Cmd::Abort(Some(err)) => write!(f, "abort {};", err),
             Cmd::Return(exps) => write!(f, "return {};", exps),

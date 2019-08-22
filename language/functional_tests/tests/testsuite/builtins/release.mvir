@@ -4,10 +4,10 @@ import 0x0.LibraCoin;
 main() {
     let ten_coins: LibraCoin.T;
     ten_coins = LibraAccount.withdraw_from_sender(10);
-    release(move(ten_coins));
+    _ = move(ten_coins);
 
     return;
 }
 
 // check: VerificationError
-// check: ReleaseRefTypeMismatchError(4)
+// check: PopResourceError(4)

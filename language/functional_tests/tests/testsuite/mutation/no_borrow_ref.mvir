@@ -6,6 +6,6 @@ main() {
     let ref_v: &u64;
     v = 5;
     ref_v = &v;
-    release(&ref_v);
+    _ = &ref_v;
     return;
 }

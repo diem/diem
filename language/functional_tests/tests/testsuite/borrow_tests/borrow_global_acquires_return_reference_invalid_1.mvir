@@ -2,7 +2,7 @@ module A {
     resource T1{v: u64}
 
     public test1() acquires T1 {
-        release(Self.borrow_acquires_t1());
+        _ = Self.borrow_acquires_t1();
         return;
     }
 

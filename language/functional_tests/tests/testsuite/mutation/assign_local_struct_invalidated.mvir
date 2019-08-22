@@ -18,7 +18,7 @@ module Tester {
 
         new_t = Self.new(1);
         *move(t2) = move(new_t);
-        release(move(t));
+        _ = move(t);
         return;
     }
 
@@ -27,7 +27,7 @@ module Tester {
         let r: u64;
         ref_v = &copy(this).v;
         r = *move(ref_v);
-        release(move(this));
+        _ = move(this);
         return move(r);
     }
 

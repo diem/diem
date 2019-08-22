@@ -821,15 +821,6 @@ pub enum Bytecode {
     ///
     /// ```..., value, reference_value -> ...```
     WriteRef,
-    /// Release a reference. The reference will become invalid and cannot be used after.
-    ///
-    /// All references must be consumed and ReleaseRef is a way to release references not
-    /// consumed by other opcodes.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., reference_value -> ...```
-    ReleaseRef,
     /// Convert a mutable reference to an immutable reference.
     ///
     /// Stack transition:
@@ -1066,7 +1057,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1090,7 +1081,6 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Unpack(a, b) => write!(f, "Unpack({}, {:?})", a, b),
             Bytecode::ReadRef => write!(f, "ReadRef"),
             Bytecode::WriteRef => write!(f, "WriteRef"),
-            Bytecode::ReleaseRef => write!(f, "ReleaseRef"),
             Bytecode::FreezeRef => write!(f, "FreezeRef"),
             Bytecode::MutBorrowLoc(a) => write!(f, "MutBorrowLoc({})", a),
             Bytecode::ImmBorrowLoc(a) => write!(f, "ImmBorrowLoc({})", a),

@@ -15,6 +15,6 @@ main() {
     let r: &u64;
     x = 0;
     r = Test.no(&mut x);
-    release(move(r));
+    _ = move(r);
     return;
 }

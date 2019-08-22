@@ -33,7 +33,7 @@ module LibraCoin {
         let market_cap_ref: &mut Self.MarketCap;
         let market_cap_total_value: u64;
 
-        release(move(capability));
+        _ = move(capability);
 
         // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
         // this is to prevent the market cap's total value from hitting u64_max due to excessive

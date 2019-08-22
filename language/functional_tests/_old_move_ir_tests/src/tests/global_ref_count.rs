@@ -26,11 +26,11 @@ module Test {{
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         i_ref = &copy(t_ref).i;
-        release(move(t_ref));
+        _ = move(t_ref);
 
         t_ref = borrow_global<T>(copy(sender));
-        release(move(t_ref));
-        release(move(i_ref));
+        _ = move(t_ref);
+        _ = move(i_ref);
     }}
 }}
 script:
@@ -66,11 +66,11 @@ module Test {{
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         i_ref = copy(t_ref);
-        release(move(t_ref));
+        _ = move(t_ref);
 
         t_ref = borrow_global<T>(copy(sender));
-        release(move(t_ref));
-        release(move(i_ref));
+        _ = move(t_ref);
+        _ = move(i_ref);
     }}
 }}
 script:

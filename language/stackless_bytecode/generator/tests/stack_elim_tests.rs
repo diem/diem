@@ -22,7 +22,7 @@ fn transform_code_with_refs() {
                 *move(b) = 0;
                 value_ref = &move(a).value;
                 frozen_ref = freeze(move(c));
-                release(move(frozen_ref));
+                _ = move(frozen_ref);
                 return *move(value_ref);
             }
         }
@@ -41,7 +41,6 @@ fn transform_code_with_refs() {
         FreezeRef(10, 9),
         StLoc(4, 10),
         MoveLoc(11, 4),
-        ReleaseRef(11),
         MoveLoc(12, 3),
         ReadRef(13, 12),
         Ret(vec![13]),

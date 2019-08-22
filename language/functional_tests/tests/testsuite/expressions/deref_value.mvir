@@ -11,7 +11,7 @@ module A {
       f = &copy(this).f;
       y = *move(f);
       assert(copy(y) == 2, 42);
-      release(move(this));
+      _ = move(this);
       return;
     }
 }

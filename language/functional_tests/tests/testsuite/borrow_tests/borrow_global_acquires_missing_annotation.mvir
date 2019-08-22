@@ -2,7 +2,7 @@ module A {
     resource T1{v: u64}
 
     public test() {
-        release(borrow_global<T1>(get_txn_sender()));
+        _ = borrow_global<T1>(get_txn_sender());
         return;
     }
 

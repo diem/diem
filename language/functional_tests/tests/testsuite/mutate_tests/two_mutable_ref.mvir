@@ -8,9 +8,9 @@ module M {
       let b_ref: &mut u64;
       a_ref = &mut copy(addr).a;
       b_ref = &mut copy(addr).b;
-      release(move(a_ref));
-      release(move(b_ref));
-      release(move(addr));
+      _ = move(a_ref);
+      _ = move(b_ref);
+      _ = move(addr);
       return;
   }
 }

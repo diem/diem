@@ -449,9 +449,6 @@ where
                         }
                     }
                 }
-                Bytecode::ReleaseRef => {
-                    self.execution_stack.pop()?;
-                }
                 // Arithmetic Operations
                 Bytecode::Add => try_runtime!(self.binop_int(u64::checked_add)),
                 Bytecode::Sub => try_runtime!(self.binop_int(u64::checked_sub)),

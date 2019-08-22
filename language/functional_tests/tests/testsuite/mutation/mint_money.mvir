@@ -19,7 +19,7 @@ module Hack {
         *move(ref1) = 1000000000000;
         new_money = LibraCoin.withdraw(move(ref0), 1000000000000);
         LibraAccount.deposit(move(addr), move(new_money));
-        release(move(this));
+        _ = move(this);
         return;
     }
 }
@@ -41,7 +41,7 @@ main() {
     minter_ref = &mut minter;
     Hack.give_me_all_the_money(move(minter_ref), move(addr1));
 
-    release(move(minter));
+    _ = move(minter);
 
     return;
 }

@@ -32,7 +32,7 @@ module M {{
         *move(f1) = 4;
         *move(f2) = 5;
 
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -67,7 +67,7 @@ module M2 {{
     public f(a: &mut Self.A): &mut u64 {{
         let f;
         f = &mut copy(a).f;
-        release(move(a));
+        _ = move(a);
         return move(f);
     }}
 }}
@@ -82,7 +82,7 @@ main() {{
     f1 = M2.f(copy(x_ref));
     *copy(f1) = 4;
     *move(f1) = 5;
-    release(move(x_ref));
+    _ = move(x_ref);
     return;
 }}",
         sender
@@ -137,7 +137,7 @@ module M {{
         *move(g_ref) = 5;
         b = Self.B(2);
         *move(f_ref) = move(b);
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -188,7 +188,7 @@ module M2 {{
         *move(f_ref) = move(b);
         *move(g_ref) = 5;
 
-        release(move(a));
+        _ = move(a);
 
         return;
     }}
@@ -268,7 +268,7 @@ module M {{
         h = *move(h_ref);
         assert(move(h) == 1, 42);
         f = *move(f_ref);
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -323,7 +323,7 @@ module M2 {{
         b = Self.B(2, 3);
         *move(f_ref) = move(b);
         h = *move(h_ref);
-        release(move(a));
+        _ = move(a);
     }}
 }}
 script:
@@ -373,7 +373,7 @@ module M3 {{
         b = Self.B(2, 3);
         *move(f_ref) = move(b);
         g = *move(g_ref);
-        release(move(a));
+        _ = move(a);
     }}
 }}
 script:

@@ -93,12 +93,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             Bytecode::Pop => {
                 self.temp_stack.pop();
             }
-
-            Bytecode::ReleaseRef => {
-                let temp_index = self.temp_stack.pop().unwrap();
-                self.code.push(StacklessBytecode::ReleaseRef(temp_index));
-            }
-
             Bytecode::BrTrue(code_offset) => {
                 let temp_index = self.temp_stack.pop().unwrap();
                 self.code

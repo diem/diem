@@ -12,7 +12,7 @@ module MoneyHolder {
             let val: u64;
             ref = &copy(this).money;
             val = LibraCoin.value(move(ref));
-            release(move(this));
+            _ = move(this);
             return move(val);
         }
 

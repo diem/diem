@@ -17,6 +17,6 @@ main() {
 
     sender = get_txn_sender();
     yes = borrow_global<T>(copy(sender));
-    release(move(yes));
+    _ = move(yes);
     return;
 }

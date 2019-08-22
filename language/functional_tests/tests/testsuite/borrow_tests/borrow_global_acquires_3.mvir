@@ -8,7 +8,7 @@ module A {
         x = borrow_global<T1>(get_txn_sender());
         y = Self.get_v(move(x));
         Self.acquires_t2();
-        release(move(y));
+        _ = move(y);
         Self.acquires_t1();
 
         return;
@@ -19,7 +19,7 @@ module A {
         let y: &mut u64;
         x = borrow_global<T1>(get_txn_sender());
         y = Self.get_v(move(x));
-        release(move(y));
+        _ = move(y);
         Self.acquires_t1();
         Self.acquires_t2();
 
@@ -31,7 +31,7 @@ module A {
         let y: &mut u64;
         x = borrow_global<T1>(get_txn_sender());
         y = Self.get_v(move(x));
-        release(move(y));
+        _ = move(y);
         Self.acquires_t2();
         Self.acquires_t1();
 

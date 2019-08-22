@@ -7,9 +7,9 @@ module A {
         let t_ref: &mut Self.T;
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
-        release(move(t_ref));
+        _ = move(t_ref);
         t_ref = borrow_global<T>(copy(sender));
-        release(move(t_ref));
+        _ = move(t_ref);
         return;
     }
 
@@ -20,8 +20,8 @@ module A {
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         u_ref = borrow_global<U>(copy(sender));
-        release(move(t_ref));
-        release(move(u_ref));
+        _ = move(t_ref);
+        _ = move(u_ref);
         return;
     }
 
@@ -34,7 +34,7 @@ module A {
         } else {
             t_ref = borrow_global<T>(copy(sender));
         }
-        release(move(t_ref));
+        _ = move(t_ref);
         return;
     }
 
@@ -44,7 +44,7 @@ module A {
         sender = get_txn_sender();
         if (move(b)) {
             t_ref = borrow_global<T>(copy(sender));
-            release(move(t_ref));
+            _ = move(t_ref);
         }
         return;
     }
@@ -56,7 +56,7 @@ module A {
         sender = get_txn_sender();
         x = move_from<T>(copy(sender));
         y = borrow_global<T>(move(sender));
-        release(move(y));
+        _ = move(y);
         move_to_sender<T>(move(x));
         return;
     }

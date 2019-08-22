@@ -5,8 +5,8 @@ use crate::{
     errors::*,
     parser::ast::{
         self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Function, FunctionBody,
-        FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Loop,
-        ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
+        FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse,
+        LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
         StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
         While,
     },
@@ -2053,15 +2053,10 @@ impl<S: Scope + Sized> Compiler<S> {
                 code.code.push(Bytecode::Abort);
                 function_frame.pop()?;
             }
-            Cmd::Assign(lhs_variables, rhs_expressions) => {
+            Cmd::Assign(lvalues, rhs_expressions) => {
                 let _expr_type =
                     self.compile_expression(k, rhs_expressions, code, function_frame)?;
-                for var in lhs_variables.iter().rev() {
-                    let loc_idx = function_frame.get_local(&var.value)?;
-                    let st_loc = Bytecode::StLoc(loc_idx);
-                    code.code.push(st_loc);
-                    function_frame.pop()?;
-                }
+                self.compile_lvalues(k, lvalues, code, function_frame)?;
             }
             Cmd::Unpack(name, tys, bindings, e) => {
                 let type_actuals_id = self.make_type_actuals(k, tys)?;
@@ -2077,13 +2072,6 @@ impl<S: Scope + Sized> Compiler<S> {
                     let st_loc = Bytecode::StLoc(loc_idx);
                     code.code.push(st_loc);
                 }
-            }
-            Cmd::Mutate(exp, op) => {
-                self.compile_expression(k, op, code, function_frame)?;
-                self.compile_expression(k, exp, code, function_frame)?;
-                code.code.push(Bytecode::WriteRef);
-                function_frame.pop()?;
-                function_frame.pop()?;
             }
             Cmd::Continue => {
                 let loc = function_frame.get_loop_start()?;
@@ -2115,6 +2103,36 @@ impl<S: Scope + Sized> Compiler<S> {
             reachable_break,
             terminal_node,
         })
+    }
+
+    fn compile_lvalues(
+        &mut self,
+        k: &TypeFormalMap,
+        lvalues: &[LValue_],
+        code: &mut CodeUnit,
+        function_frame: &mut FunctionFrame,
+    ) -> Result<()> {
+        for lvalue_ in lvalues.iter().rev() {
+            match &lvalue_.value {
+                LValue::Var(v) => {
+                    let loc_idx = function_frame.get_local(&v.value)?;
+                    code.code.push(Bytecode::StLoc(loc_idx));
+                    function_frame.pop()?;
+                }
+                LValue::Mutate(e) => {
+                    self.compile_expression(k, e, code, function_frame)?;
+                    code.code.push(Bytecode::WriteRef);
+                    function_frame.pop()?;
+                    function_frame.pop()?;
+                }
+                LValue::Pop => {
+                    code.code.push(Bytecode::Pop);
+
+                    function_frame.pop()?;
+                }
+            }
+        }
+        Ok(())
     }
 
     fn make_singleton_vec_deque(&mut self, t: InferredType) -> VecDeque<InferredType> {
@@ -2446,12 +2464,6 @@ impl<S: Scope + Sized> Compiler<S> {
                                 Box::new(InferredType::Struct(sh_idx)),
                             )),
                         )
-                    }
-                    Builtin::Release => {
-                        code.code.push(Bytecode::ReleaseRef);
-                        function_frame.pop()?;
-                        function_frame.push()?;
-                        Ok(VecDeque::new())
                     }
                     Builtin::CreateAccount => {
                         code.code.push(Bytecode::CreateAccount);
