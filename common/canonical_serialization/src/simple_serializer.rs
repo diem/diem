@@ -83,9 +83,24 @@ where
         }
 
         for (key, value) in map {
-            self.encode_raw_bytes(&key)?;
-            self.encode_raw_bytes(&value)?;
+            self.output.write_all(key.as_ref())?;
+            self.output.write_all(value.as_ref())?;
         }
+        Ok(self)
+    }
+
+    fn encode_bytes(&mut self, v: &[u8]) -> Result<&mut Self> {
+        ensure!(
+            v.len() <= ARRAY_MAX_LENGTH,
+            "array length exceeded the maximum length limit. \
+             length: {}, Max length limit: {}",
+            v.len(),
+            ARRAY_MAX_LENGTH,
+        );
+
+        // first add the length as a 4-byte integer
+        self.encode_u32(v.len() as u32)?;
+        self.output.write_all(v)?;
         Ok(self)
     }
 
@@ -122,14 +137,9 @@ where
         Ok(self)
     }
 
-    fn encode_raw_bytes(&mut self, bytes: &[u8]) -> Result<&mut Self> {
-        self.output.write_all(bytes.as_ref())?;
-        Ok(self)
-    }
-
     fn encode_string(&mut self, s: &str) -> Result<&mut Self> {
         // String::as_bytes returns the UTF-8 encoded byte array
-        self.encode_variable_length_bytes(s.as_bytes())
+        self.encode_bytes(s.as_bytes())
     }
 
     fn encode_u8(&mut self, v: u8) -> Result<&mut Self> {
@@ -149,21 +159,6 @@ where
 
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self> {
         self.output.write_u64::<Endianness>(v)?;
-        Ok(self)
-    }
-
-    fn encode_variable_length_bytes(&mut self, v: &[u8]) -> Result<&mut Self> {
-        ensure!(
-            v.len() <= ARRAY_MAX_LENGTH,
-            "array length exceeded the maximum length limit. \
-             length: {}, Max length limit: {}",
-            v.len(),
-            ARRAY_MAX_LENGTH,
-        );
-
-        // first add the length as a 4-byte integer
-        self.encode_u32(v.len() as u32)?;
-        self.output.write_all(v)?;
         Ok(self)
     }
 

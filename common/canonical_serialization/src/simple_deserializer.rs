@@ -79,19 +79,27 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
         Ok(map)
     }
 
-    fn decode_bytes_with_len(&mut self, len: u32) -> Result<Vec<u8>> {
-        // make sure there is enough bytes left in the buffer
-        let remain = self.raw_bytes.get_ref().len() as u64 - self.raw_bytes.position();
+    fn decode_bytes(&mut self) -> Result<Vec<u8>> {
+        let len = self.decode_u32()?;
         ensure!(
-            remain >= len.into(),
-            "not enough bytes left. input size: {}, remaining: {}",
+            len as usize <= ARRAY_MAX_LENGTH,
+            "array length longer than max allowed length. len: {}, max: {}",
+            len,
+            ARRAY_MAX_LENGTH
+        );
+
+        // make sure there is enough bytes left in the buffer
+        let remain = self.raw_bytes.get_ref().len() - self.raw_bytes.position() as usize;
+        ensure!(
+            remain >= (len as usize),
+            "not enough bytes left. len: {}, remaining: {}",
             len,
             remain
         );
 
-        let mut buffer = vec![0; len as usize];
-        self.raw_bytes.read_exact(&mut buffer)?;
-        Ok(buffer)
+        let mut vec = vec![0; len as usize];
+        self.raw_bytes.read_exact(&mut vec)?;
+        Ok(vec)
     }
 
     fn decode_i8(&mut self) -> Result<i8> {
@@ -135,30 +143,7 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
     }
 
     fn decode_string(&mut self) -> Result<String> {
-        Ok(String::from_utf8(self.decode_variable_length_bytes()?)?)
-    }
-
-    fn decode_variable_length_bytes(&mut self) -> Result<Vec<u8>> {
-        let len = self.decode_u32()?;
-        ensure!(
-            len as usize <= ARRAY_MAX_LENGTH,
-            "array length longer than max allowed length. len: {}, max: {}",
-            len,
-            ARRAY_MAX_LENGTH
-        );
-
-        // make sure there is enough bytes left in the buffer
-        let remain = self.raw_bytes.get_ref().len() - self.raw_bytes.position() as usize;
-        ensure!(
-            remain >= (len as usize),
-            "not enough bytes left. len: {}, remaining: {}",
-            len,
-            remain
-        );
-
-        let mut vec = vec![0; len as usize];
-        self.raw_bytes.read_exact(&mut vec)?;
-        Ok(vec)
+        Ok(String::from_utf8(self.decode_bytes()?)?)
     }
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>> {

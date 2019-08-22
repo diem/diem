@@ -161,14 +161,14 @@ impl CanonicalSerialize for EventKey {
         // We cannot use encode_raw_bytes as this structure will represent how Move Value of type
         // EventKey is serialized into. And since Move doesn't have fix length bytearray, values
         // can't be encoded in the fix length fasion.
-        serializer.encode_variable_length_bytes(&self.0)?;
+        serializer.encode_bytes(&self.0)?;
         Ok(())
     }
 }
 
 impl CanonicalDeserialize for EventKey {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_variable_length_bytes()?;
+        let bytes = deserializer.decode_bytes()?;
         Self::try_from(bytes.as_slice())
     }
 }

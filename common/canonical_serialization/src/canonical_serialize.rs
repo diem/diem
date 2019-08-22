@@ -17,6 +17,8 @@ pub trait CanonicalSerialize {
 pub trait CanonicalSerializer {
     fn encode_bool(&mut self, v: bool) -> Result<&mut Self>;
 
+    fn encode_bytes(&mut self, v: &[u8]) -> Result<&mut Self>;
+
     fn encode_i8(&mut self, v: i8) -> Result<&mut Self>;
 
     fn encode_i16(&mut self, v: i16) -> Result<&mut Self>;
@@ -66,12 +68,6 @@ pub trait CanonicalSerializer {
 
     fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
 
-    // Use this encoder when the length of the array is known to be fixed and always known at
-    // deserialization time. The raw bytes of the array without length prefix are encoded.
-    // For deserialization, use decode_bytes_with_len() which requires giving the length
-    // as input
-    fn encode_raw_bytes(&mut self, bytes: &[u8]) -> Result<&mut Self>;
-
     fn encode_struct(&mut self, structure: &impl CanonicalSerialize) -> Result<&mut Self>
     where
         Self: std::marker::Sized,
@@ -79,10 +75,6 @@ pub trait CanonicalSerializer {
         structure.serialize(self)?;
         Ok(self)
     }
-
-    // Use this encoder to encode variable length byte arrays whose length may not be known at
-    // deserialization time.
-    fn encode_variable_length_bytes(&mut self, v: &[u8]) -> Result<&mut Self>;
 
     fn encode_vec<T: CanonicalSerialize>(&mut self, v: &[T]) -> Result<&mut Self>;
 }

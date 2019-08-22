@@ -86,7 +86,7 @@ impl CanonicalSerialize for ModuleId {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.address)?
-            .encode_variable_length_bytes(self.name.as_bytes())?;
+            .encode_bytes(self.name.as_bytes())?;
         Ok(())
     }
 }
@@ -94,7 +94,7 @@ impl CanonicalSerialize for ModuleId {
 impl CanonicalDeserialize for ModuleId {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let address = deserializer.decode_struct::<AccountAddress>()?;
-        let name = String::from_utf8(deserializer.decode_variable_length_bytes()?)?;
+        let name = String::from_utf8(deserializer.decode_bytes()?)?;
 
         Ok(Self { address, name })
     }
@@ -114,8 +114,8 @@ impl CanonicalSerialize for StructTag {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.address)?
-            .encode_variable_length_bytes(self.module.as_bytes())?
-            .encode_variable_length_bytes(self.name.as_bytes())?
+            .encode_bytes(self.module.as_bytes())?
+            .encode_bytes(self.name.as_bytes())?
             .encode_vec(&self.type_params)?;
         Ok(())
     }
@@ -124,8 +124,8 @@ impl CanonicalSerialize for StructTag {
 impl CanonicalDeserialize for StructTag {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let address = deserializer.decode_struct::<AccountAddress>()?;
-        let module = String::from_utf8(deserializer.decode_variable_length_bytes()?)?;
-        let name = String::from_utf8(deserializer.decode_variable_length_bytes()?)?;
+        let module = String::from_utf8(deserializer.decode_bytes()?)?;
+        let name = String::from_utf8(deserializer.decode_bytes()?)?;
         let type_params = deserializer.decode_vec::<StructTag>()?;
         Ok(Self {
             address,

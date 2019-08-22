@@ -5,7 +5,7 @@
 
 use crate::{
     access_path::{AccessPath, Accesses},
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     event::EventHandle,
@@ -246,6 +246,16 @@ pub struct AccountEvent {
 }
 
 impl AccountEvent {
+    pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
+        let mut deserializer = SimpleDeserializer::new(bytes);
+        let amount = deserializer.decode_u64()?;
+        let offset = deserializer.position() as usize;
+        Ok(Self {
+            account: AccountAddress::try_from(&bytes[offset..])?,
+            amount,
+        })
+    }
+
     /// Get the account related to the event
     pub fn account(&self) -> AccountAddress {
         self.account
@@ -254,19 +264,5 @@ impl AccountEvent {
     /// Get the amount sent or received
     pub fn amount(&self) -> u64 {
         self.amount
-    }
-}
-
-impl CanonicalDeserialize for AccountEvent {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        // TODO: this is a horrible hack and we need to come up with a proper separation of
-        // data/code so that we don't need the entire VM to read an Account event.
-        // Also we cannot depend on the VM here as we would have a circular dependency and
-        // it's not clear if this API should live in the VM or in types
-        let amount = deserializer.decode_u64()?;
-        let account =
-            AccountAddress::try_from(deserializer.decode_bytes_with_len(ADDRESS_LENGTH as u32)?)?;
-
-        Ok(AccountEvent { account, amount })
     }
 }

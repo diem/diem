@@ -52,7 +52,7 @@ fn deserialize_struct(
                 }
             }
             Type::String => {
-                if let Ok(bytes) = deserializer.decode_variable_length_bytes() {
+                if let Ok(bytes) = deserializer.decode_bytes() {
                     if let Ok(s) = String::from_utf8(bytes) {
                         s_vals.push(MutVal::new(Value::String(s)));
                         continue;
@@ -64,7 +64,7 @@ fn deserialize_struct(
                 });
             }
             Type::ByteArray => {
-                if let Ok(bytes) = deserializer.decode_variable_length_bytes() {
+                if let Ok(bytes) = deserializer.decode_bytes() {
                     s_vals.push(MutVal::new(Value::ByteArray(ByteArray::new(bytes))));
                     continue;
                 }
@@ -74,7 +74,7 @@ fn deserialize_struct(
                 });
             }
             Type::Address => {
-                if let Ok(bytes) = deserializer.decode_variable_length_bytes() {
+                if let Ok(bytes) = deserializer.decode_bytes() {
                     if let Ok(addr) = AccountAddress::try_from(bytes) {
                         s_vals.push(MutVal::new(Value::Address(addr)));
                         continue;
@@ -118,7 +118,7 @@ impl CanonicalSerialize for Value {
             Value::Address(addr) => {
                 // TODO: this is serializing as a vector but we want just raw bytes
                 // however the AccountAddress story is a bit difficult to work with right now
-                serializer.encode_variable_length_bytes(addr.as_ref())?;
+                serializer.encode_bytes(addr.as_ref())?;
             }
             Value::Bool(b) => {
                 serializer.encode_bool(*b)?;
@@ -129,7 +129,7 @@ impl CanonicalSerialize for Value {
             Value::String(s) => {
                 // TODO: must define an api for canonical serializations of string.
                 // Right now we are just using Rust to serialize the string
-                serializer.encode_variable_length_bytes(s.as_bytes())?;
+                serializer.encode_bytes(s.as_bytes())?;
             }
             Value::Struct(vals) => {
                 for mut_val in vals {
@@ -137,7 +137,7 @@ impl CanonicalSerialize for Value {
                 }
             }
             Value::ByteArray(bytearray) => {
-                serializer.encode_variable_length_bytes(bytearray.as_bytes())?;
+                serializer.encode_bytes(bytearray.as_bytes())?;
             }
         }
         Ok(())
