@@ -11,7 +11,6 @@ vm = { path = "../../vm" }
 types = { path = "../../../types" }
 ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 stackless_bytecode_generator = { path = "../generator"}
-
 [dev-dependencies]
 proptest = "0.9"
 types = { path = "../../../types", features = ["testing"]}

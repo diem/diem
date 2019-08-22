@@ -275,6 +275,18 @@ procedure {:inline 1} Neq_address(src1: Value, src2: Value) returns (dst: Value)
     dst := Boolean(a#Address(src1) != a#Address(src2));
 }
 
+procedure {:inline 1} Eq_bytearray(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#ByteArray(src1) && is#ByteArray(src2);
+    dst := Boolean(b#ByteArray(src1) == b#ByteArray(src2));
+}
+
+procedure {:inline 1} Neq_bytearray(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#ByteArray(src1) && is#ByteArray(src2);
+    dst := Boolean(b#ByteArray(src1) != b#ByteArray(src2));
+}
+
 procedure {:inline 1} LdConst(val: int) returns (ret: Value)
 {
     ret := Integer(val);
@@ -347,10 +359,11 @@ var Address_Exists: [Address]bool;
 procedure {:inline 1} CreateAccount(addr_val: Value, addr_exists: [Address]bool)
 returns (addr_exists': [Address]bool)
 {
-  var addr: Address;
-  addr := a#Address(addr_val);
-  if (addr_exists[addr]) {
+  var a: Address;
+  a := a#Address(addr_val);
+  if (domain#ResourceStore(rs_LibraAccount_T)[a]) {
       abort_flag := true;
   }
-  addr_exists' := addr_exists[addr := true];
-}
+  rs_LibraAccount_T := ResourceStore(domain#ResourceStore(rs_LibraAccount_T)[a := true], contents#ResourceStore(rs_LibraAccount_T)[a := Map(DefaultMap[Field(LibraAccount_T_balance) := Map(DefaultMap[Field(LibraCoin_T_value) := Integer(0)])])]);
+  assert domain#ResourceStore(rs_LibraAccount_T)[a];
+ }
