@@ -18,7 +18,7 @@ fn cfg_compile_script_ret() {
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 1);
+    assert_eq!(cfg.blocks().len(), 1);
     assert_eq!(cfg.num_blocks(), 1);
     assert_eq!(cfg.reachable_from(0).len(), 1);
 }
@@ -43,7 +43,7 @@ fn cfg_compile_script_let() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 1);
+    assert_eq!(cfg.blocks().len(), 1);
     assert_eq!(cfg.num_blocks(), 1);
     assert_eq!(cfg.reachable_from(0).len(), 1);
 }
@@ -68,7 +68,7 @@ fn cfg_compile_if() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.blocks().len(), 3);
     assert_eq!(cfg.num_blocks(), 3);
     assert_eq!(cfg.reachable_from(0).len(), 3);
 }
@@ -96,7 +96,7 @@ fn cfg_compile_if_else() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
     assert_eq!(cfg.reachable_from(0).len(), 4);
 }
@@ -122,7 +122,7 @@ fn cfg_compile_if_else_with_else_return() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
     assert_eq!(cfg.reachable_from(0).len(), 4);
 }
@@ -151,7 +151,7 @@ fn cfg_compile_nested_if() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 6);
+    assert_eq!(cfg.blocks().len(), 6);
     assert_eq!(cfg.num_blocks(), 6);
     assert_eq!(cfg.reachable_from(7).len(), 4);
 }
@@ -176,7 +176,7 @@ fn cfg_compile_if_else_with_if_return() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.blocks().len(), 3);
     assert_eq!(cfg.num_blocks(), 3);
     assert_eq!(cfg.reachable_from(0).len(), 3);
     assert_eq!(cfg.reachable_from(4).len(), 1);
@@ -202,7 +202,7 @@ fn cfg_compile_if_else_with_two_returns() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
     assert_eq!(cfg.reachable_from(0).len(), 3);
     assert_eq!(cfg.reachable_from(4).len(), 1);
@@ -231,7 +231,7 @@ fn cfg_compile_if_else_with_else_abort() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
     assert_eq!(cfg.reachable_from(0).len(), 4);
 }
@@ -256,7 +256,7 @@ fn cfg_compile_if_else_with_if_abort() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 3);
+    assert_eq!(cfg.blocks().len(), 3);
     assert_eq!(cfg.num_blocks(), 3);
     assert_eq!(cfg.reachable_from(0).len(), 3);
     assert_eq!(cfg.reachable_from(4).len(), 1);
@@ -282,7 +282,7 @@ fn cfg_compile_if_else_with_two_aborts() {
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
     println!("SCRIPT:\n {}", compiled_script);
     cfg.display();
-    assert_eq!(cfg.blocks.len(), 4);
+    assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
     assert_eq!(cfg.reachable_from(0).len(), 3);
     assert_eq!(cfg.reachable_from(4).len(), 1);

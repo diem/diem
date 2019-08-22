@@ -13,42 +13,39 @@ pub type BlockId = CodeOffset;
 
 /// A trait that specifies the basic requirements for a CFG
 pub trait ControlFlowGraph {
-    /// Given a block ID, return the reachable blocks from that block
-    /// including the block itself.
-    fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock>;
+    /// Start index of the block ID in the bytecode vector
+    fn block_start(&self, block_id: &BlockId) -> CodeOffset;
 
-    /// Given an offset into the bytecode return the basic block ID that contains
-    /// that offset
-    fn block_id_of_offset(&self, code_offset: CodeOffset) -> Option<BlockId>;
+    /// End index of the block ID in the bytecode vector
+    fn block_end(&self, block_id: &BlockId) -> CodeOffset;
 
-    /// Given a block ID, return the corresponding basic block. Return None if
-    /// the block ID is invalid.
-    fn block_of_id(&self, block_id: BlockId) -> Option<&BasicBlock>;
+    /// Successors of the block ID in the bytecode vector
+    fn successors(&self, block_id: &BlockId) -> &Vec<BlockId>;
+
+    /// Iterator over the indexes of instructions in this block
+    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;
+
+    /// Return an iterator over the blocks of the CFG
+    fn blocks(&self) -> Vec<BlockId>;
 
     /// Return the number of blocks (vertices) in the control flow graph
     fn num_blocks(&self) -> u16;
 
-    /// Return the id of the entry block.
+    /// Return the id of the entry block for this control-flow graph
     /// Note: even a CFG with no instructions has an (empty) entry block.
     fn entry_block_id(&self) -> BlockId;
 }
 
-/// A basic block
-pub struct BasicBlock {
-    /// Start index into bytecode vector
-    pub entry: CodeOffset,
-
-    /// End index into bytecode vector
-    pub exit: CodeOffset,
-
-    /// Flows-to
-    pub successors: Vec<BlockId>,
+struct BasicBlock {
+    entry: CodeOffset,
+    exit: CodeOffset,
+    successors: Vec<BlockId>,
 }
 
 /// The control flow graph that we build from the bytecode.
 pub struct VMControlFlowGraph {
     /// The basic blocks
-    pub blocks: Map<BlockId, BasicBlock>,
+    blocks: Map<BlockId, BasicBlock>,
 }
 
 impl BasicBlock {
@@ -62,6 +59,8 @@ impl BasicBlock {
         println!("+=======================+");
     }
 }
+
+const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl VMControlFlowGraph {
     pub fn new(code: &[Bytecode]) -> Self {
@@ -120,28 +119,23 @@ impl VMControlFlowGraph {
 
     /// A utility function that implements BFS-reachability from block_id with
     /// respect to get_targets function
-    fn traverse_by(
-        &self,
-        get_targets: fn(&BasicBlock) -> &Vec<BlockId>,
-        block_id: BlockId,
-    ) -> Vec<&BasicBlock> {
+    fn traverse_by(&self, block_id: BlockId) -> Vec<BlockId> {
         let mut ret = Vec::new();
         // We use this index to keep track of our frontier.
         let mut index = 0;
         // Guard against cycles
         let mut seen = Set::new();
 
-        let block = &self.blocks[&block_id];
-        ret.push(block);
+        ret.push(block_id);
         seen.insert(&block_id);
 
         while index < ret.len() {
-            let block = ret[index];
+            let block_id = ret[index];
             index += 1;
-            let successors = get_targets(&block);
+            let successors = self.successors(&block_id);
             for block_id in successors.iter() {
                 if !seen.contains(&block_id) {
-                    ret.push(&self.blocks[&block_id]);
+                    ret.push(*block_id);
                     seen.insert(block_id);
                 }
             }
@@ -149,33 +143,38 @@ impl VMControlFlowGraph {
 
         ret
     }
+
+    pub fn reachable_from(&self, block_id: BlockId) -> Vec<BlockId> {
+        self.traverse_by(block_id)
+    }
 }
 
-const ENTRY_BLOCK_ID: BlockId = 0;
-
 impl ControlFlowGraph for VMControlFlowGraph {
-    fn reachable_from(&self, block_id: BlockId) -> Vec<&BasicBlock> {
-        self.traverse_by(|block: &BasicBlock| &block.successors, block_id)
+    // Note: in the following procedures, it's safe not to check bounds because:
+    // - Every CFG (even one with no instructions) has a block at ENTRY_BLOCK_ID
+    // - The only way to acquire new BlockId's is via block_successors()
+    // - block_successors only() returns valid BlockId's
+    // Note: it is still possible to get a BlockId from one CFG and use it in another CFG where it
+    // is not valid. The design does not attempt to prevent this abuse of the API.
+
+    fn block_start(&self, block_id: &BlockId) -> CodeOffset {
+        self.blocks[block_id].entry
     }
 
-    fn block_id_of_offset(&self, code_offset: CodeOffset) -> Option<BlockId> {
-        let mut index = None;
-
-        for (block_id, block) in &self.blocks {
-            if block.entry >= code_offset && block.exit <= code_offset {
-                index = Some(*block_id);
-            }
-        }
-
-        index
+    fn block_end(&self, block_id: &BlockId) -> CodeOffset {
+        self.blocks[block_id].exit
     }
 
-    fn block_of_id(&self, block_id: BlockId) -> Option<&BasicBlock> {
-        if self.blocks.contains_key(&block_id) {
-            Some(&self.blocks[&block_id])
-        } else {
-            None
-        }
+    fn successors(&self, block_id: &BlockId) -> &Vec<BlockId> {
+        &self.blocks[block_id].successors
+    }
+
+    fn blocks(&self) -> Vec<BlockId> {
+        self.blocks.keys().cloned().collect()
+    }
+
+    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
+        Box::new(self.block_start(block_id)..=self.block_end(block_id))
     }
 
     fn num_blocks(&self) -> u16 {
