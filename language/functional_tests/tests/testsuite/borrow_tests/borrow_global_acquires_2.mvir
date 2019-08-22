@@ -6,7 +6,7 @@ module A {
         let x: &mut Self.T1;
         x = borrow_global<T1>(get_txn_sender());
         Self.acquires_t2();
-        release(move(x));
+        _ = move(x);
         Self.acquires_t1();
 
         return;
@@ -15,7 +15,7 @@ module A {
     public test2(addr: address) acquires T1, T2 {
         let x: &mut Self.T1;
         x = borrow_global<T1>(get_txn_sender());
-        release(move(x));
+        _ = move(x);
         Self.acquires_t1();
         Self.acquires_t2();
 
@@ -25,7 +25,7 @@ module A {
     public test3(addr: address) acquires T1, T2 {
         let x: &mut Self.T1;
         x = borrow_global<T1>(get_txn_sender());
-        release(move(x));
+        _ = move(x);
         Self.acquires_t2();
         Self.acquires_t1();
 

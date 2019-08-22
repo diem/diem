@@ -11,7 +11,7 @@ module Token {
     public value(this: &Self.T): u64 {
         let vref: &u64;
         vref = &copy(this).v;
-        release(move(this));
+        _ = move(this);
         return *move(vref);
     }
 
@@ -42,6 +42,6 @@ main() {
     t = Token.new(1);
     tref = &mut t;
     balance_ref = &move(tref).v;
-    release(move(balance_ref));
+    _ = move(balance_ref);
     return;
 }

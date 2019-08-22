@@ -10,7 +10,7 @@ module A {
         f = &mut copy(this).f;
         *copy(f) = 2;
         assert(*move(f) == 2, 42);
-        release(move(this));
+        _ = move(this);
         return;
     }
 }

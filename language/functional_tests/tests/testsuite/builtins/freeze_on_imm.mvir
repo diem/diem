@@ -5,7 +5,7 @@ main() {
     x = 5;
     imm_ref = &x;
     imm_ref = freeze(move(imm_ref));
-    release(move(imm_ref));
+    _ = move(imm_ref);
     return;
 }
 

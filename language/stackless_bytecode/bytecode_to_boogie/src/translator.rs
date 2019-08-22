@@ -203,7 +203,6 @@ impl<'a> BoogieTranslator<'a> {
             WriteRef(dest, src) => {
                 vec![format!("call t{} := WriteRef(t{}, t{});", dest, dest, src)]
             }
-            ReleaseRef(_) => vec!["// noop for release?".to_string()],
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
             Call(dests, callee_index, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);

@@ -12,9 +12,8 @@ pub enum StacklessBytecode {
     StLoc(LocalIndex, TempIndex),     // l = t
     BorrowLoc(TempIndex, LocalIndex), // t1 = &t2
 
-    ReadRef(TempIndex, TempIndex),  // t1 = *t2
-    WriteRef(TempIndex, TempIndex), // *t1 = t2
-    ReleaseRef(TempIndex),
+    ReadRef(TempIndex, TempIndex),   // t1 = *t2
+    WriteRef(TempIndex, TempIndex),  // *t1 = t2
     FreezeRef(TempIndex, TempIndex), // t1 = immutable(t2)
 
     Call(Vec<TempIndex>, FunctionHandleIndex, Vec<TempIndex>), /* t1_vec = call(index) with

@@ -665,7 +665,6 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
-        Bytecode::ReleaseRef => binary.push(Opcodes::RELEASE_REF as u8),
         Bytecode::MoveFrom(class_idx, types_idx) => {
             binary.push(Opcodes::MOVE_FROM as u8)?;
             write_u16_as_uleb128(binary, class_idx.0)?;

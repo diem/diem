@@ -58,7 +58,7 @@ module ApprovalGroup {
         } else {
             result = false;
         }
-        release(move(group));
+        _ = move(group);
         return move(result);
     }
 
@@ -167,7 +167,7 @@ module ColdWallet {
             // how to handle error?
 
         }
-        release(move(payer_ref));
+        _ = move(payer_ref);
         return;
     }
 

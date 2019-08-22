@@ -13,11 +13,11 @@ module Test {
         sender = get_txn_sender();
         t_ref = borrow_global<T>(copy(sender));
         i_ref = &copy(t_ref).i;
-        release(move(t_ref));
+        _ = move(t_ref);
         assert(*move(i_ref) == 0, 42);
 
         t_ref = borrow_global<T>(copy(sender));
-        release(move(t_ref));
+        _ = move(t_ref);
         return;
     }
 }

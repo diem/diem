@@ -6,7 +6,7 @@ main() {
     x = 5;
     x_ref = &mut x;
     imm_ref = freeze(move(x_ref));
-    release(move(imm_ref));
+    _ = move(imm_ref);
 
     return;
 }

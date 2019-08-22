@@ -10,10 +10,10 @@ module Tester {
         *&mut copy(b1).f = *&copy(data).v1;
         *&mut copy(b2).f = *&move(data).v2;
         if (*&copy(b1).f >= *&copy(b2).f) {
-            release(move(b2));
+            _ = move(b2);
             return &move(b1).f;
         } else {
-            release(move(b1));
+            _ = move(b1);
             return &move(b2).f;
         }
     }

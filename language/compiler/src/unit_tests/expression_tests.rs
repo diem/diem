@@ -79,7 +79,7 @@ fn compile_script_borrow_local() {
             let ref_x: &u64;
             x = 3;
             ref_x = &x;
-            release(move(ref_x));
+            _ = move(ref_x);
             return;
         }
         ",
@@ -195,7 +195,7 @@ fn compile_immutable_borrow_local() {
             x = 5;
             ref_x = &x;
 
-            release(move(ref_x));
+            _ = move(ref_x);
 
             return;
         }
@@ -216,21 +216,21 @@ fn compile_borrow_field() {
             public borrow_immut_field(arg: &Self.FooCoin) {
                 let field_ref: &u64;
                 field_ref = &move(arg).value;
-                release(move(field_ref));
+                _ = move(field_ref);
                 return;
             }
 
             public borrow_immut_field_from_mut_ref(arg: &mut Self.FooCoin) {
                 let field_ref: &u64;
                 field_ref = &move(arg).value;
-                release(move(field_ref));
+                _ = move(field_ref);
                 return;
             }
 
             public borrow_mut_field(arg: &mut Self.FooCoin) {
                 let field_ref: &mut u64;
                 field_ref = &mut move(arg).value;
-                release(move(field_ref));
+                _ = move(field_ref);
                 return;
             }
         }

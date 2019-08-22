@@ -6,13 +6,13 @@ module A {
         // the acquire of t1 does not pollute y
         y = Self.borrow_acquires_t1(move(x));
         Self.acquires_t1();
-        release(move(y));
+        _ = move(y);
 
         return;
     }
 
     borrow_acquires_t1(x: &mut Self.T1): &mut u64 acquires T1 {
-        release(borrow_global<T1>(get_txn_sender()));
+        _ = borrow_global<T1>(get_txn_sender());
         return &mut move(x).v;
     }
 

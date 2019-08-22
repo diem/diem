@@ -4,7 +4,7 @@ module A {
     public test(addr: address) acquires T1 {
         let x: &mut Self.T1;
         x = borrow_global<T1>(get_txn_sender());
-        release(move(x));
+        _ = move(x);
         Self.acquires_t1();
 
         return;

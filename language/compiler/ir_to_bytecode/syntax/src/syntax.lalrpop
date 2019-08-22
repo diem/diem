@@ -8,7 +8,8 @@ use crate::ast::{
     Block, Cmd, CopyableVal, Spanned, Kind, TypeVar,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
-    StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp
+    StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
+    LValue, LValue_
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
@@ -206,7 +207,6 @@ ModuleName: ModuleName = {
 
 Builtin: Builtin = {
     "create_account" => Builtin::CreateAccount,
-    "release" => Builtin::Release,
     "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
         let (name, type_actuals) = name_and_type_actuals;
         Builtin::Exists(StructName::new(name), type_actuals)
@@ -232,12 +232,16 @@ Builtin: Builtin = {
     "freeze" => Builtin::Freeze,
 }
 
-ReturnBindings: Vec<Var_> = {
-    <l:Sp<Var>> <v: ("," <Sp<Var>>)*> => {
+LValue: LValue = {
+    <l:Sp<Var>> => LValue::Var(l),
+    "*" <e: Sp<Exp>> => LValue::Mutate(e),
+    "_" => LValue::Pop,
+}
+
+LValues: Vec<LValue_> = {
+    <l:Sp<LValue>> <v: ("," <Sp<LValue>>)*> => {
         let mut v = v;
-        v.reverse();
-        v.push(l);
-        v.reverse();
+        v.insert(0, l);
         v
     }
 }
@@ -248,8 +252,7 @@ FieldBindings: (Field, Var_) = {
 }
 
 pub Cmd : Cmd = {
-    <bindings: ReturnBindings> "=" <e: Sp<Exp>> => Cmd::Assign(bindings, Box::new(e)),
-    "*" <e: Sp<Exp>> "=" <op: Sp<Exp>> => Cmd::Mutate(Box::new(e), Box::new(op)),
+    <lvalues: LValues> "=" <e: Sp<Exp>> => Cmd::Assign(lvalues, e),
     <name_and_type_actuals: NameAndTypeActuals> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> => {
         let (name, type_actuals) = name_and_type_actuals;
         Cmd::Unpack(

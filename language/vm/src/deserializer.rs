@@ -961,7 +961,6 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let types_idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::BorrowGlobal(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
-            Opcodes::RELEASE_REF => Bytecode::ReleaseRef,
             Opcodes::MOVE_FROM => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
@@ -1143,13 +1142,12 @@ impl Opcodes {
             0x2D => Ok(Opcodes::GET_TXN_SENDER),
             0x2E => Ok(Opcodes::EXISTS),
             0x2F => Ok(Opcodes::BORROW_GLOBAL),
-            0x30 => Ok(Opcodes::RELEASE_REF),
-            0x31 => Ok(Opcodes::MOVE_FROM),
-            0x32 => Ok(Opcodes::MOVE_TO),
-            0x33 => Ok(Opcodes::CREATE_ACCOUNT),
-            0x34 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
-            0x35 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
-            0x36 => Ok(Opcodes::FREEZE_REF),
+            0x30 => Ok(Opcodes::MOVE_FROM),
+            0x31 => Ok(Opcodes::MOVE_TO),
+            0x32 => Ok(Opcodes::CREATE_ACCOUNT),
+            0x33 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
+            0x34 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
+            0x35 => Ok(Opcodes::FREEZE_REF),
             _ => Err(BinaryError::UnknownOpcode),
         }
     }

@@ -22,7 +22,7 @@ module Token {
 
         addr1 = 0x0111111111111111111111111111111111111111111111111111111111111110;
         struct1 = borrow_global<T>(move(addr1));
-        release(move(struct1));
+        _ = move(struct1);
 
         return;
     }

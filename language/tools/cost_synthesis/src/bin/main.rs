@@ -73,7 +73,6 @@ fn stack_instructions(options: &Opt) {
     let stack_opcodes: Vec<Bytecode> = vec![
         ReadRef,
         WriteRef,
-        ReleaseRef,
         FreezeRef,
         MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),

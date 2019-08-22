@@ -7,7 +7,7 @@ module A {
         x = borrow_global<T1>(get_txn_sender());
         Self.acquires_t2();
         Self.acquires_t1();
-        release(move(x));
+        _ = move(x);
 
         return;
     }
@@ -17,7 +17,7 @@ module A {
         x = borrow_global<T1>(get_txn_sender());
         Self.acquires_t2();
         Self.acquires_t1();
-        release(move(x));
+        _ = move(x);
 
         return;
     }
@@ -26,7 +26,7 @@ module A {
         let x: &mut Self.T1;
         x = borrow_global<T1>(get_txn_sender());
         Self.acquires_t1();
-        release(move(x));
+        _ = move(x);
         Self.acquires_t2();
 
         return;

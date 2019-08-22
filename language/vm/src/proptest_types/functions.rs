@@ -398,7 +398,6 @@ impl BytecodeGen {
 
         static JUST_BYTECODES: &[Bytecode] = &[
             FreezeRef,
-            ReleaseRef,
             Pop,
             Ret,
             LdTrue,

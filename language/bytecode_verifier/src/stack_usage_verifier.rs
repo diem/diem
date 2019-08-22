@@ -145,7 +145,6 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::FreezeRef => 0,
             Bytecode::Exists(_, _) => 0,
             Bytecode::BorrowGlobal(_, _) => 0,
-            Bytecode::ReleaseRef => -1,
             Bytecode::MoveFrom(_, _) => 0,
             Bytecode::MoveToSender(_, _) => -1,
 

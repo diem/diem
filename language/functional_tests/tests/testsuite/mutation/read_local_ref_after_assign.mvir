@@ -12,6 +12,6 @@ main() {
     *copy(assign_ref) = 0;
     assert(*copy(assign_ref) == 0, 42);
     no = *move(read_ref);
-    release(move(assign_ref));
+    _ = move(assign_ref);
     return;
 }

@@ -16,8 +16,8 @@ module M {
         x_ref = &mut copy(a).x;
         y_ref = &copy(b).y;
         *move(x_ref) = *move(y_ref);
-        release(move(a));
-        release(move(b));
+        _ = move(a);
+        _ = move(b);
         return;
     }
 
@@ -27,8 +27,8 @@ module M {
         y_ref = &mut copy(b).y;
         x_ref = &copy(a).x;
         *move(y_ref) = *move(x_ref);
-        release(move(a));
-        release(move(b));
+        _ = move(a);
+        _ = move(b);
         return;
     }
 

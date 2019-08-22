@@ -18,7 +18,7 @@ module Tester {
     public vref(this: &mut Self.T): &u64 {
         let r: &u64;
         r = &copy(this).v;
-        release(move(this));
+        _ = move(this);
         return move(r);
     }
 }

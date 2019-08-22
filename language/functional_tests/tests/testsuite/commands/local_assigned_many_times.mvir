@@ -9,23 +9,23 @@ main() {
 
     x_ref = &x;
     y_ref = &y;
-    release(move(y_ref));
-    release(move(x_ref));
+    _ = move(y_ref);
+    _ = move(x_ref);
 
     x_ref = &x;
     y_ref = move(x_ref);
 
     if (true) {
-        release(move(y_ref));
+        _ = move(y_ref);
         x_ref = &y;
         y_ref = &x;
     } else {
-        release(move(y_ref));
+        _ = move(y_ref);
         x_ref = &x;
         y_ref = &y;
     }
 
     assert(*move(x_ref) == 2, 42);
-    release(move(y_ref));
+    _ = move(y_ref);
     return;
 }

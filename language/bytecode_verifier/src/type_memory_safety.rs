@@ -192,22 +192,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 let kind = SignatureTokenView::new(self.module(), &operand.signature).kind();
                 if kind != Kind::Unrestricted {
-                    Err(VMStaticViolation::PopResourceError(offset))
-                } else if operand.value.is_reference() {
-                    Err(VMStaticViolation::PopReferenceError(offset))
-                } else {
-                    Ok(())
+                    return Err(VMStaticViolation::PopResourceError(offset));
                 }
-            }
 
-            Bytecode::ReleaseRef => {
-                let operand = self.stack.pop().unwrap();
                 if let AbstractValue::Reference(nonce) = operand.value {
                     state.destroy_nonce(nonce);
-                    Ok(())
-                } else {
-                    Err(VMStaticViolation::ReleaseRefTypeMismatchError(offset))
                 }
+
+                Ok(())
             }
 
             Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {

@@ -277,7 +277,6 @@ lazy_static! {
             (Mul, 41, 1),
             (MoveLoc(0), 41, 1),
             (And, 49, 1),
-            (ReleaseRef, 28, 1),
             (GetTxnPublicKey, 41, 1),
             (Pop, 27, 1),
             (BitAnd, 44, 1),

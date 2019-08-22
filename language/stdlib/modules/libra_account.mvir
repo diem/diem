@@ -111,7 +111,7 @@ module LibraAccount {
         amount_byte = U64Util.u64_to_bytes(*(&copy(event).amount));
         address_byte = AddressUtil.address_to_bytes(*(&copy(event).payee));
         result = BytearrayUtil.bytearray_concat(move(amount_byte), move(address_byte));
-        release(move(event));
+        _ = move(event);
         return move(result);
     }
 
@@ -123,7 +123,7 @@ module LibraAccount {
         amount_byte = U64Util.u64_to_bytes(*(&copy(event).amount));
         address_byte = AddressUtil.address_to_bytes(*(&copy(event).payer));
         result = BytearrayUtil.bytearray_concat(move(amount_byte), move(address_byte));
-        release(move(event));
+        _ = move(event);
         return move(result);
     }
 

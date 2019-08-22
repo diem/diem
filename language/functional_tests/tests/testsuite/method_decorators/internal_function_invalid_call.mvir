@@ -14,7 +14,7 @@ module Test {
     public get_value(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).value;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
@@ -27,7 +27,7 @@ module Test {
         let x: &mut u64;
         x = &mut copy(this).value;
         *move(x) = move(new_value);
-        release(move(this));
+        _ = move(this);
         return;
     }
 }
