@@ -10,7 +10,9 @@ where
 {
     let serialized: Vec<u8> =
         SimpleSerializer::serialize(object).expect("Serialization should work");
-    let deserialized: T =
-        SimpleDeserializer::deserialize(&serialized).expect("Deserialization should work");
+    let mut deserializer = SimpleDeserializer::new(&serialized);
+    let deserialized = T::deserialize(&mut deserializer).expect("Deserialization should work");
     assert_eq!(*object, deserialized);
+    assert_eq!(deserializer.position(), deserializer.len() as u64);
+    assert!(deserializer.is_empty());
 }
