@@ -178,7 +178,6 @@ enum GlobalDataStatus {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct RootAccessPath {
     status: GlobalDataStatus,
-    ref_count: u64,
     ap: AccessPath,
 }
 
@@ -346,14 +345,6 @@ impl Local {
         }
     }
 
-    pub fn release_reference(self) -> Result<(), VMRuntimeError> {
-        if let Local::GlobalRef(r) = self {
-            r.release_reference()
-        } else {
-            Ok(())
-        }
-    }
-
     pub fn emit_event_data(self, byte_array: ByteArray, data: MutVal) -> Option<ContractEvent> {
         if let Local::GlobalRef(r) = self {
             r.emit_event_data(byte_array, data)
@@ -426,7 +417,6 @@ impl RootAccessPath {
     pub fn new(ap: AccessPath) -> Self {
         RootAccessPath {
             status: GlobalDataStatus::CLEAN,
-            ref_count: 0,
             ap,
         }
     }
@@ -437,16 +427,6 @@ impl RootAccessPath {
 
     fn mark_deleted(&mut self) {
         self.status = GlobalDataStatus::DELETED;
-    }
-
-    // REVIEW: check for overflow?
-    fn inc_ref_count(&mut self) {
-        self.ref_count += 1;
-    }
-
-    // the check that the ref_count is already 0 is done in release_ref
-    fn dec_ref_count(&mut self) {
-        self.ref_count -= 1;
     }
 
     fn emit_event_data(
@@ -482,8 +462,6 @@ impl GlobalRef {
     }
 
     fn new_ref(root: &GlobalRef, reference: MutVal) -> Self {
-        // increment the global ref count
-        root.root.borrow_mut().inc_ref_count();
         GlobalRef {
             root: Rc::clone(&root.root),
             reference,
@@ -493,21 +471,17 @@ impl GlobalRef {
     // Return the resource behind the reference.
     // If the reference is not exclusively held by the cache (ref count 0) returns None
     pub fn get_data(self) -> Option<Value> {
-        if self.root.borrow().ref_count > 0 {
-            None
-        } else {
-            match Rc::try_unwrap(self.root) {
-                Ok(_) => match Rc::try_unwrap(self.reference.0) {
-                    Ok(res) => Some(res.into_inner()),
-                    Err(_) => None,
-                },
+        match Rc::try_unwrap(self.root) {
+            Ok(_) => match Rc::try_unwrap(self.reference.0) {
+                Ok(res) => Some(res.into_inner()),
                 Err(_) => None,
-            }
+            },
+            Err(_) => None,
         }
     }
 
     pub fn is_loadable(&self) -> bool {
-        self.root.borrow().ref_count == 0 && !self.is_deleted()
+        !self.is_deleted()
     }
 
     pub fn is_dirty(&self) -> bool {
@@ -528,28 +502,13 @@ impl GlobalRef {
     }
 
     pub fn shallow_clone(&self) -> Self {
-        // increment the global ref count
-        self.root.borrow_mut().inc_ref_count();
         GlobalRef {
             root: Rc::clone(&self.root),
             reference: self.reference.shallow_clone(),
         }
     }
 
-    fn release_reference(self) -> Result<(), VMRuntimeError> {
-        if self.root.borrow().ref_count == 0 {
-            Err(VMRuntimeError {
-                loc: Location::new(),
-                err: VMErrorKind::GlobalRefAlreadyReleased,
-            })
-        } else {
-            self.root.borrow_mut().dec_ref_count();
-            Ok(())
-        }
-    }
-
     fn emit_event_data(self, byte_array: ByteArray, data: MutVal) -> Option<ContractEvent> {
-        self.root.borrow_mut().dec_ref_count();
         let counter = match &*self.reference.peek() {
             Value::U64(i) => *i,
             _ => return None,
@@ -569,10 +528,7 @@ impl Reference for GlobalRef {
     fn borrow_field(&self, idx: u32) -> Option<Self> {
         match &*self.reference.peek() {
             Value::Struct(ref vec) => match vec.get(idx as usize) {
-                Some(field_ref) => {
-                    self.root.borrow_mut().dec_ref_count();
-                    Some(GlobalRef::new_ref(self, field_ref.shallow_clone()))
-                }
+                Some(field_ref) => Some(GlobalRef::new_ref(self, field_ref.shallow_clone())),
                 None => None,
             },
             _ => None,
@@ -580,12 +536,10 @@ impl Reference for GlobalRef {
     }
 
     fn read_reference(self) -> MutVal {
-        self.root.borrow_mut().dec_ref_count();
         self.reference.clone()
     }
 
     fn mutate_reference(self, v: MutVal) {
-        self.root.borrow_mut().dec_ref_count();
         self.root.borrow_mut().mark_dirty();
         self.reference.mutate_reference(v);
     }
