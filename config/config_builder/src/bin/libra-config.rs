@@ -112,7 +112,7 @@ fn main() {
         );
         println!(
             "Node Keys for PeerId({}): {:?}",
-            node_config.base.peer_id, node_config.base.peer_keypairs_file
+            node_config.base.peer_id, node_config.network.peer_keypairs_file
         );
     }
 }

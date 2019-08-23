@@ -4,7 +4,10 @@
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction;
 use config::{
-    config::{BaseConfig, KeyPairs, NodeConfig, NodeConfigHelpers, RoleType, VMPublishingOption},
+    config::{
+        BaseConfig, KeyPairs, NetworkConfig, NodeConfig, NodeConfigHelpers, RoleType,
+        VMPublishingOption,
+    },
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
 };
@@ -69,7 +72,7 @@ impl SwarmConfig {
         template.base.data_dir_path = output_dir.into();
         let (mut peers_private_keys, trusted_peers_config) =
             TrustedPeersConfigHelpers::get_test_config(topology.num_validators(), key_seed);
-        let trusted_peers_file = template.base.trusted_peers_file.clone();
+        let trusted_peers_file = template.network.trusted_peers_file.clone();
         let seed_peers_file = template.network.seed_peers_file.clone();
         trusted_peers_config.save_config(&output_dir.join(&trusted_peers_file));
         let mut seed_peers_config = SeedPeersConfigHelpers::get_test_config_with_ipver(
@@ -186,24 +189,35 @@ impl SwarmConfig {
 
         let base_config = BaseConfig::new(
             node_id.to_string(),
-            role_string,
-            KeyPairs::default(),
-            key_file_name.into(),
             template.base.data_dir_path.clone(),
-            template.base.trusted_peers_file.clone(),
-            template.base.trusted_peers.clone(),
             template.base.node_sync_retries,
             template.base.node_sync_channel_buffer_size,
             template.base.node_async_log_chan_size,
         );
+        let network_config = NetworkConfig {
+            role: role_string,
+            peer_keypairs: KeyPairs::default(),
+            peer_keypairs_file: key_file_name.into(),
+            trusted_peers: template.network.trusted_peers.clone(),
+            trusted_peers_file: template.network.trusted_peers_file.clone(),
+            seed_peers: template.network.seed_peers.clone(),
+            seed_peers_file: template.network.seed_peers_file.clone(),
+            listen_address: template.network.listen_address.clone(),
+            advertised_address: template.network.advertised_address.clone(),
+            discovery_interval_ms: template.network.discovery_interval_ms,
+            connectivity_check_interval_ms: template.network.connectivity_check_interval_ms,
+            enable_encryption_and_authentication: template
+                .network
+                .enable_encryption_and_authentication,
+        };
         let mut config = NodeConfig {
             base: base_config,
+            network: network_config,
             metrics: template.metrics.clone(),
             execution: template.execution.clone(),
             admission_control: template.admission_control.clone(),
             debug_interface: template.debug_interface.clone(),
             storage: template.storage.clone(),
-            network: template.network.clone(),
             consensus: template.consensus.clone(),
             mempool: template.mempool.clone(),
             state_sync: template.state_sync.clone(),
@@ -219,15 +233,15 @@ impl SwarmConfig {
         let key_file_name = format!("{}.node.keys.toml", alias);
         config.storage.dir = dir.join(alias).join("db");
 
-        config.base.peer_keypairs_file = key_file_name.into();
-        peer_keypairs.save_config(&output_dir.join(&config.base.peer_keypairs_file));
+        config.network.peer_keypairs_file = key_file_name.into();
+        peer_keypairs.save_config(&output_dir.join(&config.network.peer_keypairs_file));
         config.vm_config.publishing_options = VMPublishingOption::Open;
 
         config
     }
 
     pub fn get_alias(config: &NodeConfig) -> String {
-        match config.base.get_role() {
+        match (&config.network.role).into() {
             RoleType::Validator => format!("validator_{}", config.base.peer_id),
             RoleType::FullNode => format!(
                 "full_node_{}_{}",
@@ -348,12 +362,12 @@ impl SwarmConfigBuilder {
         template.execution.genesis_file_location = "genesis.blob".to_string();
 
         // Set and generate trusted peers config file
-        if template.base.trusted_peers_file.is_empty() {
-            template.base.trusted_peers_file = "trusted_peers.config.toml".to_string();
+        if template.network.trusted_peers_file.as_os_str().is_empty() {
+            template.network.trusted_peers_file = PathBuf::from("trusted_peers.config.toml");
         };
         // Set seed peers file and config. Config is populated in the loop below
-        if template.network.seed_peers_file.is_empty() {
-            template.network.seed_peers_file = "seed_peers.config.toml".to_string();
+        if template.network.seed_peers_file.as_os_str().is_empty() {
+            template.network.seed_peers_file = PathBuf::from("seed_peers.config.toml");
         };
 
         SwarmConfig::new(

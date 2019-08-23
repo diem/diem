@@ -87,28 +87,14 @@ pub struct NodeConfig {
 #[serde(default)]
 pub struct BaseConfig {
     pub peer_id: String,
-    pub role: String,
-    // peer_keypairs contains all the node's private keys,
-    // it is filled later on from a different file
-    #[serde(skip)]
-    pub peer_keypairs: KeyPairs,
-    // peer_keypairs_file contains the configuration file containing all the node's private keys.
-    pub peer_keypairs_file: PathBuf,
     pub data_dir_path: PathBuf,
     #[serde(skip)]
     temp_data_dir: Option<TempDir>,
-    //TODO move set of trusted peers into genesis file
-    pub trusted_peers_file: String,
-    #[serde(skip)]
-    pub trusted_peers: TrustedPeersConfig,
-
     // Number of retries per chunk download
     pub node_sync_retries: usize,
-
     // Buffer size for sync_channel used for node syncing (number of elements that it can
     // hold before it blocks on sends)
     pub node_sync_channel_buffer_size: u64,
-
     // chan_size of slog async drain for node logging.
     pub node_async_log_chan_size: usize,
 }
@@ -117,13 +103,8 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             peer_id: "".to_string(),
-            role: "validator".to_string(),
-            peer_keypairs_file: PathBuf::from("peer_keypairs.config.toml"),
-            peer_keypairs: KeyPairs::default(),
             data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
             temp_data_dir: None,
-            trusted_peers_file: "trusted_peers.config.toml".to_string(),
-            trusted_peers: TrustedPeersConfig::default(),
             node_sync_retries: 7,
             node_sync_channel_buffer_size: 10,
             node_async_log_chan_size: 256,
@@ -260,43 +241,35 @@ pub enum RoleType {
     FullNode,
 }
 
+impl<T> std::convert::From<T> for RoleType
+where
+    T: AsRef<str>,
+{
+    fn from(t: T) -> RoleType {
+        match t.as_ref() {
+            "validator" => RoleType::Validator,
+            "full_node" => RoleType::FullNode,
+            _ => unimplemented!("Invalid node role: {}", t.as_ref()),
+        }
+    }
+}
+
 impl BaseConfig {
     /// Constructs a new BaseConfig with an empty temp directory
     pub fn new(
         peer_id: String,
-        role: String,
-        peer_keypairs: KeyPairs,
-        peer_keypairs_file: PathBuf,
         data_dir_path: PathBuf,
-        trusted_peers_file: String,
-        trusted_peers: TrustedPeersConfig,
-
         node_sync_retries: usize,
-
         node_sync_channel_buffer_size: u64,
-
         node_async_log_chan_size: usize,
     ) -> Self {
         BaseConfig {
             peer_id,
-            role,
-            peer_keypairs,
-            peer_keypairs_file,
             data_dir_path,
             temp_data_dir: None,
-            trusted_peers_file,
-            trusted_peers,
             node_sync_retries,
             node_sync_channel_buffer_size,
             node_async_log_chan_size,
-        }
-    }
-
-    pub fn get_role(&self) -> RoleType {
-        match self.role.as_str() {
-            "validator" => RoleType::Validator,
-            "full_node" => RoleType::FullNode,
-            &_ => unimplemented!("Invalid node role: {}", self.role),
         }
     }
 }
@@ -306,13 +279,8 @@ impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
             peer_id: self.peer_id.clone(),
-            role: self.role.clone(),
-            peer_keypairs: self.peer_keypairs.clone(),
-            peer_keypairs_file: self.peer_keypairs_file.clone(),
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
-            trusted_peers_file: self.trusted_peers_file.clone(),
-            trusted_peers: self.trusted_peers.clone(),
             node_sync_retries: self.node_sync_retries,
             node_sync_channel_buffer_size: self.node_sync_channel_buffer_size,
             node_async_log_chan_size: self.node_async_log_chan_size,
@@ -490,12 +458,9 @@ impl Default for StorageConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
-    pub seed_peers_file: String,
-    #[serde(skip)]
-    pub seed_peers: SeedPeersConfig,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: Multiaddr,
@@ -504,18 +469,58 @@ pub struct NetworkConfig {
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
     pub enable_encryption_and_authentication: bool,
+    pub role: String,
+    // peer_keypairs contains all the node's private keys,
+    // it is filled later on from peer_keypairs_file.
+    #[serde(skip)]
+    pub peer_keypairs: KeyPairs,
+    pub peer_keypairs_file: PathBuf,
+    // trusted peers are the nodes allowed to connect when the network is started in permissioned
+    // mode.
+    #[serde(skip)]
+    pub trusted_peers: TrustedPeersConfig,
+    pub trusted_peers_file: PathBuf,
+    // seed_peers act as seed nodes for the discovery protocol.
+    #[serde(skip)]
+    pub seed_peers: SeedPeersConfig,
+    pub seed_peers_file: PathBuf,
 }
 
 impl Default for NetworkConfig {
     fn default() -> NetworkConfig {
         NetworkConfig {
-            seed_peers_file: "seed_peers.config.toml".to_string(),
-            seed_peers: SeedPeersConfig::default(),
+            role: "validator".to_string(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_encryption_and_authentication: true,
+            peer_keypairs_file: PathBuf::from("peer_keypairs.config.toml"),
+            peer_keypairs: KeyPairs::default(),
+            trusted_peers_file: PathBuf::from("trusted_peers.config.toml"),
+            trusted_peers: TrustedPeersConfig::default(),
+            seed_peers_file: PathBuf::from("seed_peers.config.toml"),
+            seed_peers: SeedPeersConfig::default(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Clone for NetworkConfig {
+    fn clone(&self) -> Self {
+        Self {
+            listen_address: self.listen_address.clone(),
+            advertised_address: self.advertised_address.clone(),
+            discovery_interval_ms: self.discovery_interval_ms,
+            connectivity_check_interval_ms: self.connectivity_check_interval_ms,
+            enable_encryption_and_authentication: self.enable_encryption_and_authentication,
+            role: self.role.clone(),
+            peer_keypairs: self.peer_keypairs.clone(),
+            peer_keypairs_file: self.peer_keypairs_file.clone(),
+            seed_peers: self.seed_peers.clone(),
+            seed_peers_file: self.seed_peers_file.clone(),
+            trusted_peers: self.trusted_peers.clone(),
+            trusted_peers_file: self.trusted_peers_file.clone(),
         }
     }
 }
@@ -666,19 +671,19 @@ impl NodeConfig {
         if let Some(peer_id) = peer_id {
             config.base.peer_id = peer_id;
         }
-        if !config.base.trusted_peers_file.is_empty() {
-            config.base.trusted_peers = TrustedPeersConfig::load_config(
+        if !config.network.trusted_peers_file.as_os_str().is_empty() {
+            config.network.trusted_peers = TrustedPeersConfig::load_config(
                 path.as_ref()
-                    .with_file_name(&config.base.trusted_peers_file),
+                    .with_file_name(&config.network.trusted_peers_file),
             );
         }
-        if !config.base.peer_keypairs_file.as_os_str().is_empty() {
-            config.base.peer_keypairs = KeyPairs::load_config(
+        if !config.network.peer_keypairs_file.as_os_str().is_empty() {
+            config.network.peer_keypairs = KeyPairs::load_config(
                 path.as_ref()
-                    .with_file_name(&config.base.peer_keypairs_file),
+                    .with_file_name(&config.network.peer_keypairs_file),
             );
         }
-        if !config.network.seed_peers_file.is_empty() {
+        if !config.network.seed_peers_file.as_os_str().is_empty() {
             config.network.seed_peers = SeedPeersConfig::load_config(
                 path.as_ref()
                     .with_file_name(&config.network.seed_peers_file),
@@ -772,10 +777,10 @@ impl NodeConfigHelpers {
         config.base.peer_id = peer_id.clone();
         // load node's keypairs
         let private_keys = peers_private_keys.remove_entry(peer_id.as_str()).unwrap().1;
-        config.base.peer_keypairs = KeyPairs::load(private_keys);
-        config.base.trusted_peers = trusted_peers_test;
+        config.network.peer_keypairs = KeyPairs::load(private_keys);
+        config.network.trusted_peers = trusted_peers_test;
         config.network.seed_peers = SeedPeersConfigHelpers::get_test_config(
-            &config.base.trusted_peers,
+            &config.network.trusted_peers,
             get_tcp_port(&config.network.advertised_address),
         );
         NodeConfigHelpers::update_data_dir_path_if_needed(&mut config, ".")

@@ -1,12 +1,10 @@
 # Defaults are now set in config.rs
 
-[base]
+[network]
+seed_peers_file = ""  # For direct validation of this file
 peer_keypairs_file = ""  # For direct validation of this file
 trusted_peers_file = ""  # For direct validation of this file
 role = "full_node"
-
-[network]
-seed_peers_file = ""  # For direct validation of this file
 
 [execution]
 genesis_file_location = "<USE_TEMP_DIR>"

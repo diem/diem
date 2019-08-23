@@ -83,7 +83,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             known_version: 0,
             target: None,
             config: node_config.state_sync.clone(),
-            autosync: node_config.base.get_role() == RoleType::FullNode,
+            autosync: (RoleType::FullNode == (&node_config.network.role).into()),
             peers: HashMap::new(),
             subscriptions: HashMap::new(),
             callback: None,
