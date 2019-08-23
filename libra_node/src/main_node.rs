@@ -5,9 +5,12 @@ use admission_control_proto::proto::admission_control_grpc::{
     create_admission_control, AdmissionControlClient,
 };
 use admission_control_service::admission_control_service::AdmissionControlService;
-use config::config::{NodeConfig, RoleType};
+use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
-use crypto::ed25519::*;
+use crypto::{
+    ed25519::*,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use execution_proto::proto::execution_grpc;
 use execution_service::ExecutionService;
@@ -29,6 +32,7 @@ use network::{
 use state_synchronizer::StateSynchronizer;
 use std::{
     cmp::min,
+    collections::HashMap,
     convert::{TryFrom, TryInto},
     sync::Arc,
     thread,
@@ -147,69 +151,49 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
         .expect("Unable to create grpc server")
 }
 
-pub fn setup_network(config: &mut NodeConfig) -> (Runtime, Box<dyn LibraNetworkProvider>) {
+// TODO: Move role, trusted_peers and keys into NetworkConfig.
+pub fn setup_network(
+    config: &NetworkConfig,
+    peer_id: PeerId,
+    role: RoleType,
+    trusted_peers: HashMap<PeerId, NetworkPublicKeys, std::collections::hash_map::RandomState>,
+    signing_keys: (Ed25519PrivateKey, Ed25519PublicKey),
+    identity_keys: (X25519StaticPrivateKey, X25519StaticPublicKey),
+) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
         .name_prefix("network-")
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
-    let peer_id = PeerId::try_from(config.base.peer_id.clone()).expect("Invalid PeerId");
-    let listen_addr = config.network.listen_address.clone();
-    let advertised_addr = config.network.advertised_address.clone();
-    let trusted_peers = config
-        .base
-        .trusted_peers
-        .get_trusted_network_peers()
-        .clone()
-        .into_iter()
-        .map(|(peer_id, (signing_public_key, identity_public_key))| {
-            (
-                peer_id,
-                NetworkPublicKeys {
-                    signing_public_key,
-                    identity_public_key,
-                },
-            )
-        })
-        .collect();
     let seed_peers = config
-        .network
         .seed_peers
         .seed_peers
         .clone()
         .into_iter()
         .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
         .collect();
-    let network_signing_private = config.base.peer_keypairs.take_network_signing_private()
-        .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
-
-    let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
-    let network_identity_keypair = config.base.peer_keypairs.get_network_identity_keypair();
-    let (_listen_addr, network_provider) = NetworkBuilder::new(
-        runtime.executor(),
-        peer_id,
-        listen_addr,
-        config.base.get_role(),
-    )
-    .transport(if config.network.enable_encryption_and_authentication {
-        TransportType::TcpNoise
-    } else {
-        TransportType::Tcp
-    })
-    .advertised_address(advertised_addr)
-    .seed_peers(seed_peers)
-    .signing_keys((network_signing_private, network_signing_public))
-    .identity_keys(network_identity_keypair)
-    .trusted_peers(trusted_peers)
-    .discovery_interval_ms(config.network.discovery_interval_ms)
-    .connectivity_check_interval_ms(config.network.connectivity_check_interval_ms)
-    .direct_send_protocols(vec![
-        ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-        ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-        ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
-    ])
-    .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-    .build();
-
+    let listen_addr = config.listen_address.clone();
+    let advertised_addr = config.advertised_address.clone();
+    let (_listen_addr, network_provider) =
+        NetworkBuilder::new(runtime.executor(), peer_id, listen_addr, role)
+            .transport(if config.enable_encryption_and_authentication {
+                TransportType::TcpNoise
+            } else {
+                TransportType::Tcp
+            })
+            .advertised_address(advertised_addr)
+            .seed_peers(seed_peers)
+            .signing_keys(signing_keys)
+            .identity_keys(identity_keys)
+            .trusted_peers(trusted_peers)
+            .discovery_interval_ms(config.discovery_interval_ms)
+            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+            .direct_send_protocols(vec![
+                ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+                ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+                ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ])
+            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+            .build();
     (runtime, network_provider)
 }
 
@@ -236,7 +220,37 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
     instant = Instant::now();
-    let (runtime, mut network_provider) = setup_network(node_config);
+    let trusted_peers = node_config
+        .base
+        .trusted_peers
+        .get_trusted_network_peers()
+        .clone()
+        .into_iter()
+        .map(|(peer_id, (signing_public_key, identity_public_key))| {
+            (
+                peer_id,
+                NetworkPublicKeys {
+                    signing_public_key,
+                    identity_public_key,
+                },
+            )
+        })
+        .collect();
+    let peer_id = PeerId::try_from(node_config.base.peer_id.clone()).expect("Invalid PeerId");
+    let network_signing_private = node_config.base.peer_keypairs.take_network_signing_private()
+        .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
+    let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+    let (runtime, mut network_provider) = setup_network(
+        &node_config.network,
+        peer_id,
+        node_config.base.get_role(),
+        trusted_peers,
+        (network_signing_private, network_signing_public),
+        node_config
+            .base
+            .peer_keypairs
+            .get_network_identity_keypair(),
+    );
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 
     let (state_sync_network_sender, state_sync_network_events) = network_provider
