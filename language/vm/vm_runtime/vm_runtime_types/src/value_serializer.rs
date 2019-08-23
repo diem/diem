@@ -107,6 +107,14 @@ fn deserialize_struct(
                     err: VMErrorKind::InvalidData,
                 })
             }
+            Type::TypeVariable(_) => {
+                // This case is not possible as we disallow calls like borrow_global<Foo<Coin>>()
+                // for now.
+                return Err(VMRuntimeError {
+                    loc: Location::new(),
+                    err: VMErrorKind::InvalidData,
+                });
+            }
         }
     }
     Ok(Value::Struct(s_vals))
