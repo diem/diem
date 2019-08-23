@@ -2,12 +2,15 @@
 
 module Vector {
 
-  native struct T;
+  // Vector containing data of type Item
+  native struct T<Element: all>;
 
-  native public length(v: &Self.T): u64;
+  // Return the length of the vector
+  native public length<Element: all>(v: &Self.T<Element>): u64;
 
-  public is_empty(v: &Self.T): bool {
-    return Self.length(move(v)) == 0;
+  // Return true if the vector has no elements
+  public is_empty<Element: all>(v: &Self.T<Element>): bool {
+    return Self.length<Element>(move(v)) == 0;
   }
 
 }
