@@ -158,7 +158,7 @@ pub fn setup_network(
     role: RoleType,
     trusted_peers: HashMap<PeerId, NetworkPublicKeys, std::collections::hash_map::RandomState>,
     signing_keys: (Ed25519PrivateKey, Ed25519PublicKey),
-    identity_keys: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    mut identity_keys: Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>,
 ) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
         .name_prefix("network-")
@@ -173,27 +173,32 @@ pub fn setup_network(
         .collect();
     let listen_addr = config.listen_address.clone();
     let advertised_addr = config.advertised_address.clone();
-    let (_listen_addr, network_provider) =
-        NetworkBuilder::new(runtime.executor(), peer_id, listen_addr, role)
-            .transport(if config.enable_encryption_and_authentication {
-                TransportType::TcpNoise
-            } else {
-                TransportType::Tcp
-            })
-            .advertised_address(advertised_addr)
-            .seed_peers(seed_peers)
-            .signing_keys(signing_keys)
-            .identity_keys(identity_keys)
-            .trusted_peers(trusted_peers)
-            .discovery_interval_ms(config.discovery_interval_ms)
-            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            .direct_send_protocols(vec![
-                ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-                ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-                ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
-            ])
-            .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-            .build();
+    let mut network_builder = NetworkBuilder::new(runtime.executor(), peer_id, listen_addr, role);
+    if config.enable_encryption_and_authentication {
+        network_builder
+            .transport(TransportType::TcpNoise)
+            .identity_keys(
+                identity_keys
+                    .take()
+                    .expect("Identity keys not provided for noise transport"),
+            );
+    } else {
+        network_builder.transport(TransportType::Tcp);
+    };
+    let (_listen_addr, network_provider) = network_builder
+        .advertised_address(advertised_addr)
+        .seed_peers(seed_peers)
+        .trusted_peers(trusted_peers)
+        .signing_keys(signing_keys)
+        .discovery_interval_ms(config.discovery_interval_ms)
+        .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+        .direct_send_protocols(vec![
+            ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+        ])
+        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
+        .build();
     (runtime, network_provider)
 }
 
@@ -246,10 +251,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         node_config.base.get_role(),
         trusted_peers,
         (network_signing_private, network_signing_public),
-        node_config
-            .base
-            .peer_keypairs
-            .get_network_identity_keypair(),
+        Some(
+            node_config
+                .base
+                .peer_keypairs
+                .get_network_identity_keypair(),
+        ),
     );
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 
