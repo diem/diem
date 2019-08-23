@@ -94,7 +94,7 @@ pub struct LibraDB {
 
 impl LibraDB {
     /// Config parameter for the pruner.
-    const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
+    const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = u64::max_value();
 
     /// This creates an empty LibraDB instance on disk or opens one if it already exists.
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
