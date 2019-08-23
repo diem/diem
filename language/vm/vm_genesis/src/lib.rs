@@ -171,7 +171,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compile_program(&AccountAddress::default(), body, stdlib_modules()).unwrap();
+        compile_program(AccountAddress::default(), body.clone(), stdlib_modules()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script

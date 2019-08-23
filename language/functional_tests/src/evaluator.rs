@@ -323,7 +323,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
                 res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
 
                 let compiled_script =
-                    unwrap_or_log!(compile_script(addr, &parsed_script, &deps), res);
+                    unwrap_or_log!(compile_script(*addr, parsed_script, &deps), res);
                 res.outputs
                     .push(EvaluationOutput::Output(format!("{:?}", compiled_script)));
 
@@ -364,7 +364,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
                 res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
 
                 let compiled_module =
-                    unwrap_or_log!(compile_module(addr, &parsed_module, &deps), res);
+                    unwrap_or_log!(compile_module(*addr, parsed_module, &deps), res);
                 res.outputs
                     .push(EvaluationOutput::Output(format!("{:?}", compiled_module)));
 

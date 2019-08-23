@@ -20,4 +20,4 @@ main() {
     return;
 }
 
-// check: no struct definition referencing in scripts
+// check: Missing struct definition for T

@@ -1,4 +1,4 @@
-// check: no struct definition referencing in scripts
+// check: Missing struct definition for Token
 
 module Token {
     resource T { }

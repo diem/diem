@@ -1,0 +1,5 @@
+// TODO this should fail
+
+module M {
+    struct T{f: u64, f: u64}
+}

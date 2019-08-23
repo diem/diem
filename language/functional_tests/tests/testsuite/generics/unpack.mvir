@@ -12,7 +12,7 @@ module M {
     }
 }
 
-// check: [LocalsSignature([]), LocalsSignature([U64]
+// check: [LocalsSignature([Struct(StructHandleIndex(0), [U64]), U64]), LocalsSignature([U64])]
 // check: Unpack(0, LocalsSignatureIndex(1))
 
 
@@ -33,5 +33,5 @@ module M {
     }
 }
 
-// check: [LocalsSignature([]), LocalsSignature([U64, Bool])
+// check: [LocalsSignature([Struct(StructHandleIndex(0), [U64, Bool]), U64, Bool]), LocalsSignature([U64, Bool])]
 // check: Unpack(0, LocalsSignatureIndex(1))

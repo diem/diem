@@ -34,7 +34,7 @@ fn compile_script_expr_addition() {
     assert_eq!(compiled_script.function_handles().len(), 1);
     assert!(compiled_script.type_signatures().is_empty());
     assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 2); // local variables sig
+    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.string_pool().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -64,7 +64,7 @@ fn compile_script_expr_combined() {
     assert_eq!(compiled_script.function_handles().len(), 1);
     assert!(compiled_script.type_signatures().is_empty());
     assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 2); // local variables sig
+    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.string_pool().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -91,7 +91,7 @@ fn compile_script_borrow_local() {
     assert_eq!(compiled_script.function_handles().len(), 1);
     assert!(compiled_script.type_signatures().is_empty());
     assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 2); // local variables sig
+    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.string_pool().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -118,7 +118,7 @@ fn compile_script_borrow_local_mutable() {
     assert_eq!(compiled_script.function_handles().len(), 1);
     assert!(compiled_script.type_signatures().is_empty());
     assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 2); // local variables sig
+    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.string_pool().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module
@@ -146,7 +146,7 @@ fn compile_script_borrow_reference() {
     assert_eq!(compiled_script.function_handles().len(), 1);
     assert!(compiled_script.type_signatures().is_empty());
     assert_eq!(compiled_script.function_signatures().len(), 1); // method sig
-    assert_eq!(compiled_script.locals_signatures().len(), 2); // local variables sig
+    assert_eq!(compiled_script.locals_signatures().len(), 1); // local variables sig
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
     assert_eq!(compiled_script.string_pool().len(), 2); // the name of `main()` + the name of the "<SELF>" module
     assert_eq!(compiled_script.address_pool().len(), 1); // the empty address of <SELF> module

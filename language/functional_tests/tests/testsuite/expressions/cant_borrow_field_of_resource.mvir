@@ -1,5 +1,4 @@
-// check: no field type referencing in scripts
-// TODO is it possible to get this to compile to let the bytecode verifier complain?
+// check: Unbound field v
 
 module Token {
     resource T {v: u64}
