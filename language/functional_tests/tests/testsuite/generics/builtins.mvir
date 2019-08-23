@@ -17,7 +17,7 @@ module M {
     }
 }
 
-// check: [LocalsSignature([]), LocalsSignature([U64])
+// check: [LocalsSignature([Reference(Struct(StructHandleIndex(0), [U64])), Struct(StructHandleIndex(0), [U64])]), LocalsSignature([U64])]
 // check: BorrowGlobal(0, LocalsSignatureIndex(1))
 // check: Exists(0, LocalsSignatureIndex(1))
 // check: MoveFrom(0, LocalsSignatureIndex(1))

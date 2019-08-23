@@ -1,5 +1,4 @@
-// check: no struct handle index 1
-// TODO is it possible to get this to compile to let the bytecode verifier complain?
+// check: Unbound field balance
 
 module Hack {
     import 0x0.LibraCoin;

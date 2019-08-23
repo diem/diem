@@ -106,16 +106,17 @@ impl<'a> Compiler<'a> {
     fn compile_impl(&mut self) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(self.code)?;
         let deps = self.deps();
-        let compiled_program = compile_program(&self.address, &parsed_program, &deps)?;
+        let compiled_program = compile_program(self.address, parsed_program, &deps)?;
         Ok((compiled_program, deps))
     }
 
     fn compile_mod(&mut self) -> Result<(CompiledModule, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(self.code)?;
         let deps = self.deps();
-        assert_eq!(parsed_program.modules.len(), 1, "Must have single module");
-        let module = parsed_program.modules.get(0).expect("Module must exist");
-        let compiled_module = compile_module(&self.address, module, &deps)?;
+        let mut modules = parsed_program.modules;
+        assert_eq!(modules.len(), 1, "Must have single module");
+        let module = modules.pop().expect("Module must exist");
+        let compiled_module = compile_module(self.address, module, &deps)?;
         Ok((compiled_module, deps))
     }
 

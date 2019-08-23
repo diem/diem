@@ -37,7 +37,7 @@ fn compile_script_string_impl(
     deps: Vec<CompiledModule>,
 ) -> Result<(CompiledScript, Vec<VerificationError>)> {
     let parsed_program = parse_program(code).unwrap();
-    let compiled_program = compile_program(&AccountAddress::default(), &parsed_program, &deps)?;
+    let compiled_program = compile_program(AccountAddress::default(), parsed_program, &deps)?;
 
     let mut serialized_script = Vec::<u8>::new();
     compiled_program.script.serialize(&mut serialized_script)?;
@@ -88,9 +88,9 @@ fn compile_module_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<(CompiledModule, Vec<VerificationError>)> {
-    let address = &AccountAddress::default();
+    let address = AccountAddress::default();
     let module = parse_module(code).unwrap();
-    let compiled_module = compile_module(&address, &module, &deps)?;
+    let compiled_module = compile_module(address, module, &deps)?;
 
     let mut serialized_module = Vec::<u8>::new();
     compiled_module.serialize(&mut serialized_module)?;

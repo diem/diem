@@ -174,7 +174,7 @@ fn main() {
             }
         }
     } else {
-        let compiled_module = util::do_compile_module(&args.source_path, &address, &deps);
+        let compiled_module = util::do_compile_module(&args.source_path, address, &deps);
         let compiled_module = if !args.no_verify {
             let verified_module = do_verify_module(compiled_module, &deps);
             verified_module.into_inner()

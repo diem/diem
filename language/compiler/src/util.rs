@@ -8,11 +8,11 @@ use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub fn do_compile_module<T: ModuleAccess>(
     source_path: &Path,
-    address: &AccountAddress,
+    address: AccountAddress,
     dependencies: &[T],
 ) -> CompiledModule {
     let source = fs::read_to_string(source_path)
         .unwrap_or_else(|_| panic!("Unable to read file: {:?}", source_path));
     let parsed_module = parse_module(&source).unwrap();
-    compile_module(address, &parsed_module, dependencies).unwrap()
+    compile_module(address, parsed_module, dependencies).unwrap()
 }

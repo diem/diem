@@ -20,20 +20,9 @@ module M {
     }
 }
 
-// The following checks & nots ensures the locals_signatures table has at least 6 elements
-//     and the first 6 elements match the exact pattern we define.
-// This is to ensure we can safely refer to elements of the table by indices.
-
-// check: locals_signatures
-// not: LocalsSignature
-// check: LocalsSignature
-// not: LocalsSignature
-// check: LocalsSignature
-// not: LocalsSignature
-// check: LocalsSignature
-// not: LocalsSignature
-// check: LocalsSignature([U64]), LocalsSignature([Struct(StructHandleIndex(0), [])]), LocalsSignature([Struct(StructHandleIndex(0), []), Bool])
+// check: [LocalsSignature([TypeParameter(0)]), LocalsSignature([TypeParameter(0), TypeParameter(1)]), LocalsSignature([U64, Struct(StructHandleIndex(0), [])]), LocalsSignature([U64]), LocalsSignature([]), LocalsSignature([Struct(StructHandleIndex(0), [])]), LocalsSignature([Struct(StructHandleIndex(0), []), Bool])]
 
 // check: Call(0, LocalsSignatureIndex(3))
-// check: Call(0, LocalsSignatureIndex(4))
-// check: Call(1, LocalsSignatureIndex(5))
+// check: Pack(0, LocalsSignatureIndex(4))
+// check: Call(0, LocalsSignatureIndex(5))
+// check: Call(1, LocalsSignatureIndex(6))
