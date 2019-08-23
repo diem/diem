@@ -343,7 +343,7 @@ impl LibraSwarm {
                 tee_logs,
             )
             .unwrap();
-            match node_config.base.get_role() {
+            match (&node_config.network.role).into() {
                 RoleType::Validator => {
                     swarm.validator_nodes.insert(node.peer_id(), node);
                 }

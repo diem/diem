@@ -230,7 +230,7 @@ impl SynchronizerEnv {
         // create synchronizers
         let mut config = get_test_config().0;
         if role == RoleType::FullNode {
-            config.base.role = "full_node".to_string();
+            config.network.role = "full_node".to_string();
         }
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(

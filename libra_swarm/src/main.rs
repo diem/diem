@@ -58,7 +58,7 @@ fn main() {
     );
 
     let config = &swarm.config.get_configs()[0].1;
-    let validator_set_file = &config.base.trusted_peers_file;
+    let validator_set_file = &config.network.trusted_peers_file;
     println!("To run the Libra CLI client in a separate process and connect to the local cluster of nodes you just spawned, use this command:");
     println!(
         "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",
