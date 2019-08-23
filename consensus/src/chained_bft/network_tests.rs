@@ -7,6 +7,7 @@ use crate::{
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
         },
+        epoch_manager::EpochManager,
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
         safety::vote_msg::VoteMsg,
         test_utils::{consensus_runtime, placeholder_ledger_info},
@@ -333,20 +334,20 @@ fn test_network_api() {
         peers.push(random_validator_signer.author());
         signers.push(random_validator_signer);
     }
-    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
-    for i in 0..num_nodes {
+    let validator = ValidatorVerifier::new(author_to_public_keys);
+    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
+    for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
-        playground.add_node(peers[i], consensus_tx, network_reqs_rx);
+        playground.add_node(*peer, consensus_tx, network_reqs_rx);
         let mut node = ConsensusNetworkImpl::new(
-            peers[i],
+            *peer,
             network_sender,
             network_events,
-            Arc::new(peers.clone()),
-            Arc::clone(&validator),
+            Arc::clone(&epoch_mgr),
         );
         receivers.push(node.start(&runtime.executor()));
         nodes.push(node);
@@ -409,7 +410,8 @@ fn test_rpc() {
             .unwrap()
             .push(random_validator_signer.author());
     }
-    let validator = Arc::new(ValidatorVerifier::new(author_to_public_keys));
+    let validator = ValidatorVerifier::new(author_to_public_keys);
+    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
     for i in 0..num_nodes {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -421,8 +423,7 @@ fn test_rpc() {
             peers[i],
             network_sender.clone(),
             network_events,
-            Arc::clone(&peers),
-            Arc::clone(&validator),
+            Arc::clone(&epoch_mgr),
         );
         senders.push(network_sender);
         receivers.push(node.start(&runtime.executor()));

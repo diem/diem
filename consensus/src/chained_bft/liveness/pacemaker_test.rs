@@ -61,13 +61,14 @@ fn test_timeout_certificate() {
         signers.push(signer);
     }
     let (mut pm, _) = make_pacemaker();
+    let quorum_size = 3;
 
     // Send timeout for rounds 1..5, each from a different author, so that they can be
     // accumulated into single timeout certificate
     for round in 1..rounds {
         let signer = &signers[(round - 1) as usize];
         let pacemaker_timeout = PacemakerTimeout::new(round, signer, None);
-        let result = pm.process_remote_timeout(pacemaker_timeout);
+        let result = pm.process_remote_timeout(pacemaker_timeout, quorum_size);
         // quorum size is 3 in make_pacemaker
         if round >= 3 {
             // Then timeout quorum for previous round (1,2,3) generates new round event for
@@ -98,7 +99,6 @@ fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
             time_interval,
             Arc::new(simulated_time.clone()),
             timeout_tx,
-            3,
             HighestTimeoutCertificates::default(),
         ),
         timeout_rx,

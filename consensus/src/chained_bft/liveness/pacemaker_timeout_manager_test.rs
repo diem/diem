@@ -11,8 +11,8 @@ use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_basic() {
+    let quorum_size = 2;
     let mut timeout_manager = PacemakerTimeoutManager::new(
-        2,
         HighestTimeoutCertificates::new(None, None),
         MockStorage::<TestPayload>::start_for_testing()
             .0
@@ -25,13 +25,13 @@ fn test_basic() {
     // No timeout certificate generated on adding 2 timeouts from the same author
     let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signer1, None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer1_round1),
+        timeout_manager.update_received_timeout(timeout_signer1_round1, quorum_size),
         false
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
     let timeout_signer1_round2 = PacemakerTimeout::new(2, &validator_signer1, None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer1_round2),
+        timeout_manager.update_received_timeout(timeout_signer1_round2, quorum_size),
         false
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
@@ -39,7 +39,7 @@ fn test_basic() {
     // Timeout certificate generated on adding a timeout from signer2
     let timeout_signer2_round1 = PacemakerTimeout::new(1, &validator_signer2, None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round1),
+        timeout_manager.update_received_timeout(timeout_signer2_round1, quorum_size),
         true
     );
     assert_eq!(
@@ -53,7 +53,7 @@ fn test_basic() {
     // Timeout certificate increased when incrementing the round from signer 2
     let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signer2, None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round2),
+        timeout_manager.update_received_timeout(timeout_signer2_round2, quorum_size),
         true
     );
     assert_eq!(
@@ -67,7 +67,7 @@ fn test_basic() {
     // No timeout certificate generated since signer 1 is still on round 2
     let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signer2, None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round3),
+        timeout_manager.update_received_timeout(timeout_signer2_round3, quorum_size),
         false
     );
     assert_eq!(
@@ -109,7 +109,6 @@ fn test_recovery_from_highest_timeout_certificate() {
     let tc = PacemakerTimeoutCertificate::new(10, vec![timeout1, timeout2]);
 
     let timeout_manager = PacemakerTimeoutManager::new(
-        2,
         HighestTimeoutCertificates::new(Some(tc), None),
         MockStorage::<TestPayload>::start_for_testing()
             .0

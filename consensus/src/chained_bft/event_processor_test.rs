@@ -12,6 +12,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
+        epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
             pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
@@ -46,7 +47,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use proto_conv::FromProto;
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
 use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
@@ -58,7 +59,7 @@ struct NodeSetup {
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
-    peers: Arc<Vec<Author>>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl NodeSetup {
@@ -90,7 +91,6 @@ impl NodeSetup {
             time_interval,
             time_service,
             pacemaker_timeout_sender,
-            1,
             HighestTimeoutCertificates::default(),
         )
     }
@@ -107,14 +107,15 @@ impl NodeSetup {
         num_nodes: usize,
     ) -> Vec<NodeSetup> {
         let mut signers = vec![];
-        let mut peers = vec![];
+        let mut author_to_public_keys = HashMap::new();
         for i in 0..num_nodes {
             let signer = ValidatorSigner::random([i as u8; 32]);
-            peers.push(signer.author());
+            author_to_public_keys.insert(signer.author(), signer.public_key());
             signers.push(signer);
         }
-        let proposer_author = peers[0];
-        let peers_ref = Arc::new(peers);
+        let proposer_author = signers[0].author();
+        let validators = ValidatorVerifier::new(author_to_public_keys);
+        let epoch_mgr = Arc::new(EpochManager::new(0, validators));
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
@@ -123,9 +124,9 @@ impl NodeSetup {
                 executor.clone(),
                 signer.clone(),
                 proposer_author,
-                Arc::clone(&peers_ref),
                 storage,
                 initial_data,
+                Arc::clone(&epoch_mgr),
             ));
         }
         nodes
@@ -136,9 +137,9 @@ impl NodeSetup {
         executor: TaskExecutor,
         signer: ValidatorSigner,
         proposer_author: Author,
-        peers: Arc<Vec<Author>>,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
+        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -147,14 +148,12 @@ impl NodeSetup {
         let author = signer.author();
 
         playground.add_node(author, consensus_tx, network_reqs_rx);
-        let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
 
         let network = ConsensusNetworkImpl::new(
             signer.author(),
             network_sender,
             network_events,
-            Arc::clone(&peers),
-            Arc::new(validator),
+            Arc::clone(&epoch_mgr),
         );
         let consensus_state = initial_data.state();
 
@@ -186,6 +185,7 @@ impl NodeSetup {
             storage.clone(),
             time_service,
             true,
+            Arc::clone(&epoch_mgr),
         );
         block_on(event_processor.start());
         Self {
@@ -195,7 +195,7 @@ impl NodeSetup {
             storage,
             signer,
             proposer_author,
-            peers,
+            epoch_mgr,
         }
     }
 
@@ -209,9 +209,9 @@ impl NodeSetup {
             executor,
             self.signer,
             self.proposer_author,
-            self.peers,
             self.storage,
             recover_data,
+            self.epoch_mgr,
         )
     }
 }
@@ -501,18 +501,19 @@ fn process_new_round_msg_test() {
 
     // As the static proposer processes the new round message it should learn about
     // block_0_quorum_cert at round 1.
-    block_on(static_proposer.event_processor.process_remote_timeout_msg(
-        TimeoutMsg::new(
-            SyncInfo::new(
-                block_0_quorum_cert,
-                QuorumCert::certificate_for_genesis(),
-                None,
-            ),
-            PacemakerTimeout::new(2, &non_proposer.signer, None),
-            &non_proposer.signer,
-        ),
-        2,
-    ));
+    block_on(
+        static_proposer
+            .event_processor
+            .process_remote_timeout_msg(TimeoutMsg::new(
+                SyncInfo::new(
+                    block_0_quorum_cert,
+                    QuorumCert::certificate_for_genesis(),
+                    None,
+                ),
+                PacemakerTimeout::new(2, &non_proposer.signer, None),
+                &non_proposer.signer,
+            )),
+    );
     assert_eq!(
         static_proposer
             .block_store
@@ -655,7 +656,7 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        node.event_processor.process_vote(vote_msg, 1).await;
+        node.event_processor.process_vote(vote_msg).await;
         // The new QC is aggregated
         assert_eq!(
             node.block_store.highest_quorum_cert().certified_block_id(),

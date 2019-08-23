@@ -16,6 +16,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
         },
+        epoch_manager::EpochManager,
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -63,6 +64,7 @@ pub struct EventProcessor<T> {
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(VoteMsg, Round)>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl<T: Payload> EventProcessor<T> {
@@ -79,6 +81,7 @@ impl<T: Payload> EventProcessor<T> {
         storage: Arc<dyn PersistentStorage<T>>,
         time_service: Arc<dyn TimeService>,
         enforce_increasing_timestamps: bool,
+        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         let sync_manager = SyncManager::new(
             Arc::clone(&block_store),
@@ -101,6 +104,7 @@ impl<T: Payload> EventProcessor<T> {
             time_service,
             enforce_increasing_timestamps,
             last_vote_sent: None,
+            epoch_mgr,
         }
     }
 
@@ -248,11 +252,7 @@ impl<T: Payload> EventProcessor<T> {
     /// a pacemaker timeout certificate is formed with 2f+1 timeouts, the next proposer will be
     /// able to chain a proposal block to a highest quorum certificate such that all honest replicas
     /// can vote for it.
-    pub async fn process_remote_timeout_msg(
-        &mut self,
-        timeout_msg: TimeoutMsg,
-        quorum_size: usize,
-    ) {
+    pub async fn process_remote_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
         debug!(
             "Received timeout msg for round {} from {}",
             timeout_msg.pacemaker_timeout().round(),
@@ -268,14 +268,17 @@ impl<T: Payload> EventProcessor<T> {
             return;
         };
         if let Some(vote) = timeout_msg.pacemaker_timeout().vote_msg() {
-            if let Some(_qc) = self.add_vote(vote.clone(), quorum_size).await {
+            if let Some(_qc) = self
+                .add_vote(vote.clone(), self.epoch_mgr.quorum_size())
+                .await
+            {
                 counters::TIMEOUT_VOTES_FORM_QC_COUNT.inc();
             }
         }
-        if let Some(new_round_event) = self
-            .pacemaker
-            .process_remote_timeout(timeout_msg.pacemaker_timeout().clone())
-        {
+        if let Some(new_round_event) = self.pacemaker.process_remote_timeout(
+            timeout_msg.pacemaker_timeout().clone(),
+            self.epoch_mgr.quorum_size(),
+        ) {
             self.process_new_round_event(new_round_event).await;
         }
     }
@@ -639,7 +642,7 @@ impl<T: Payload> EventProcessor<T> {
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
-    pub async fn process_vote(&mut self, vote: VoteMsg, quorum_size: usize) {
+    pub async fn process_vote(&mut self, vote: VoteMsg) {
         // Check whether this validator is a valid recipient of the vote.
         let next_round = vote.round() + 1;
         if self
@@ -659,7 +662,7 @@ impl<T: Payload> EventProcessor<T> {
             return;
         }
 
-        self.add_vote(vote, quorum_size).await;
+        self.add_vote(vote, self.epoch_mgr.quorum_size()).await;
     }
 
     /// Add a vote. Fetch missing dependencies if required.

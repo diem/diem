@@ -23,6 +23,7 @@ use std::sync::Arc;
 
 use crate::chained_bft::{
     consensus_types::timeout_msg::TimeoutMsg,
+    epoch_manager::EpochManager,
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
@@ -37,8 +38,7 @@ use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, Validator
 struct SMRNode {
     author: Author,
     signer: ValidatorSigner,
-    validator: Arc<ValidatorVerifier>,
-    peers: Arc<Vec<Author>>,
+    epoch_mgr: Arc<EpochManager>,
     proposer: Vec<Author>,
     proposer_type: ConsensusProposerType,
     smr_id: usize,
@@ -51,11 +51,9 @@ struct SMRNode {
 
 impl SMRNode {
     fn start(
-        quorum_size: usize,
         playground: &mut NetworkPlayground,
         signer: ValidatorSigner,
-        validator: Arc<ValidatorVerifier>,
-        peers: Arc<Vec<Author>>,
+        epoch_mgr: Arc<EpochManager>,
         proposer: Vec<Author>,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
@@ -78,8 +76,7 @@ impl SMRNode {
             author,
             network_sender,
             network_events,
-            Arc::clone(&peers),
-            Arc::clone(&validator),
+            Arc::clone(&epoch_mgr),
         );
 
         let config = ChainedBftSMRConfig {
@@ -91,7 +88,6 @@ impl SMRNode {
         };
         let mut smr = ChainedBftSMR::new(
             author,
-            quorum_size,
             signer.clone(),
             proposer.clone(),
             network,
@@ -99,6 +95,7 @@ impl SMRNode {
             config,
             storage.clone(),
             initial_data,
+            Arc::clone(&epoch_mgr),
         );
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut mp = MockTransactionManager::new();
@@ -112,8 +109,7 @@ impl SMRNode {
         Self {
             author,
             signer,
-            validator,
-            peers,
+            epoch_mgr,
             proposer,
             proposer_type,
             smr_id,
@@ -125,18 +121,16 @@ impl SMRNode {
         }
     }
 
-    fn restart(mut self, quorum_size: usize, playground: &mut NetworkPlayground) -> Self {
+    fn restart(mut self, playground: &mut NetworkPlayground) -> Self {
         self.smr.stop();
         let recover_data = self
             .storage
             .get_recovery_data()
             .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::start(
-            quorum_size,
             playground,
             self.signer,
-            self.validator,
-            self.peers,
+            self.epoch_mgr,
             self.proposer,
             self.smr_id + 10,
             self.storage,
@@ -162,29 +156,24 @@ impl SMRNode {
             );
             signers.push(random_validator_signer);
         }
-        let validator_verifier = Arc::new(
+        let validator_verifier =
             ValidatorVerifier::new_with_quorum_size(author_to_public_keys, quorum_size)
-                .expect("Invalid quorum_size."),
-        );
-        let peers: Arc<Vec<Author>> =
-            Arc::new(signers.iter().map(|signer| signer.author()).collect());
+                .expect("Invalid quorum_size.");
+        let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+        let peers = epoch_mgr.validators().get_ordered_account_addresses();
         let proposer = {
             match proposer_type {
                 FixedProposer => vec![peers[0]],
-                RotatingProposer | MultipleOrderedProposers => {
-                    validator_verifier.get_ordered_account_addresses()
-                }
+                RotatingProposer | MultipleOrderedProposers => peers,
             }
         };
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
             let (storage, initial_data) = MockStorage::start_for_testing();
             nodes.push(Self::start(
-                quorum_size,
                 playground,
                 signers.remove(0),
-                Arc::clone(&validator_verifier),
-                Arc::clone(&peers),
+                Arc::clone(&epoch_mgr),
                 proposer.clone(),
                 smr_id,
                 storage,
@@ -201,8 +190,11 @@ fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSi
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
             Ok(()),
-            node.validator
-                .verify_signature(*author, ledger_info_hash, &(signature.clone().into()))
+            node.epoch_mgr.validators().verify_signature(
+                *author,
+                ledger_info_hash,
+                &(signature.clone().into())
+            )
         );
     }
 }
@@ -371,7 +363,7 @@ fn basic_commit_and_restart() {
     playground = NetworkPlayground::new(runtime.executor());
     nodes = nodes
         .into_iter()
-        .map(|node| node.restart(2, &mut playground))
+        .map(|node| node.restart(&mut playground))
         .collect();
 
     block_on(async {

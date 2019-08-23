@@ -8,6 +8,7 @@ use crate::{
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, sync_info::SyncInfo, timeout_msg::TimeoutMsg,
         },
+        epoch_manager::EpochManager,
         safety::vote_msg::VoteMsg,
     },
     counters,
@@ -32,7 +33,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::{account_address::AccountAddress, crypto_proxies::ValidatorVerifier};
+use types::account_address::AccountAddress;
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
@@ -94,8 +95,7 @@ pub struct ConsensusNetworkImpl {
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
-    peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl Clone for ConsensusNetworkImpl {
@@ -106,8 +106,7 @@ impl Clone for ConsensusNetworkImpl {
             network_events: None,
             self_sender: self.self_sender.clone(),
             self_receiver: None,
-            peers: self.peers.clone(),
-            validator: Arc::clone(&self.validator),
+            epoch_mgr: Arc::clone(&self.epoch_mgr),
         }
     }
 }
@@ -117,8 +116,7 @@ impl ConsensusNetworkImpl {
         author: Author,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
-        peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier>,
+        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -127,8 +125,7 @@ impl ConsensusNetworkImpl {
             network_events: Some(network_events),
             self_sender,
             self_receiver: Some(self_receiver),
-            peers,
-            validator,
+            epoch_mgr,
         }
     }
 
@@ -151,7 +148,6 @@ impl ConsensusNetworkImpl {
             .take()
             .expect("[consensus]: self receiver is already taken");
         let all_events = select(network_events, own_msgs);
-        let validator = Arc::clone(&self.validator);
         executor.spawn(
             NetworkTask {
                 proposal_tx,
@@ -160,7 +156,7 @@ impl ConsensusNetworkImpl {
                 timeout_msg_tx,
                 sync_info_tx,
                 all_events,
-                validator,
+                epoch_mgr: Arc::clone(&self.epoch_mgr),
             }
             .run()
             .boxed()
@@ -202,7 +198,7 @@ impl ConsensusNetworkImpl {
         let mut blocks = vec![];
         for block in res_block.take_blocks().into_iter() {
             if let Ok(block) = Block::from_proto(block) {
-                if block.verify(self.validator.as_ref()).is_err() {
+                if block.verify(self.epoch_mgr.validators().as_ref()).is_err() {
                     return Err(BlockRetrievalFailure::InvalidSignature);
                 }
                 blocks.push(block);
@@ -236,15 +232,15 @@ impl ConsensusNetworkImpl {
     }
 
     async fn broadcast(&mut self, msg: ConsensusMsg) {
-        for peer in self.peers.iter() {
-            if self.author == *peer {
+        for peer in self.epoch_mgr.validators().get_ordered_account_addresses() {
+            if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
                 if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
                     error!("Error delivering a self proposal: {:?}", err);
                 }
                 continue;
             }
-            if let Err(err) = self.network_sender.send_to(*peer, msg.clone()).await {
+            if let Err(err) = self.network_sender.send_to(peer, msg.clone()).await {
                 error!(
                     "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
                     peer, err, msg
@@ -314,7 +310,7 @@ struct NetworkTask<T, S> {
     timeout_msg_tx: channel::Sender<TimeoutMsg>,
     sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
-    validator: Arc<ValidatorVerifier>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl<T, S> NetworkTask<T, S>
@@ -365,13 +361,15 @@ where
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
         let proposal = ProposalMsg::<T>::from_proto(msg.take_proposal())?;
-        proposal.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusProposal)
-                .error(&e)
-                .data(&proposal)
-                .log();
-            e
-        })?;
+        proposal
+            .verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusProposal)
+                    .error(&e)
+                    .data(&proposal)
+                    .log();
+                e
+            })?;
         debug!("Received proposal {}", proposal);
         self.proposal_tx.send(proposal).await?;
         Ok(())
@@ -380,13 +378,14 @@ where
     async fn process_vote<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
         let vote = VoteMsg::from_proto(msg.take_vote())?;
         debug!("Received {}", vote);
-        vote.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusVote)
-                .error(&e)
-                .data(&vote)
-                .log();
-            e
-        })?;
+        vote.verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusVote)
+                    .error(&e)
+                    .data(&vote)
+                    .log();
+                e
+            })?;
         self.vote_tx.send(vote).await?;
         Ok(())
     }
@@ -396,13 +395,15 @@ where
         msg: &'a mut ConsensusMsg,
     ) -> failure::Result<()> {
         let timeout_msg = TimeoutMsg::from_proto(msg.take_timeout_msg())?;
-        timeout_msg.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusRound)
-                .error(&e)
-                .data(&timeout_msg)
-                .log();
-            e
-        })?;
+        timeout_msg
+            .verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusRound)
+                    .error(&e)
+                    .data(&timeout_msg)
+                    .log();
+                e
+            })?;
         self.timeout_msg_tx.send(timeout_msg).await?;
         Ok(())
     }
@@ -413,13 +414,15 @@ where
         peer: AccountAddress,
     ) -> failure::Result<()> {
         let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
-        sync_info.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidSyncInfoMsg)
-                .error(&e)
-                .data(&sync_info)
-                .log();
-            e
-        })?;
+        sync_info
+            .verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidSyncInfoMsg)
+                    .error(&e)
+                    .data(&sync_info)
+                    .log();
+                e
+            })?;
         self.sync_info_tx.send((sync_info, peer)).await?;
         Ok(())
     }
