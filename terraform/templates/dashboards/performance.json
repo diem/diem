@@ -335,7 +335,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_ms'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_s'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -420,7 +420,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_ms'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_s'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -505,7 +505,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='block_commit_duration_ms'}[1m])/irate(consensus_duration_count{op='block_commit_duration_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='vm_execute_block_time_s'}[1m])/irate(consensus_duration_count{op='vm_execute_block_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -603,7 +603,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool_duration_sum{op='txn_pre_consensus_ms'}[1m])/irate(mempool_duration_count{op='txn_pre_consensus_ms'}[1m])",
+          "expr": "irate(mempool_duration_sum{op='txn_pre_consensus_s'}[1m])/irate(mempool_duration_count{op='txn_pre_consensus_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -701,7 +701,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_commit_ms'}[1m])/irate(consensus_duration_count{op='creation_to_commit_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -786,7 +786,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_qc_ms'}[1m])/irate(consensus_duration_count{op='creation_to_qc_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

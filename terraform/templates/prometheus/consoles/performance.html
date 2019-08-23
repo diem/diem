@@ -27,27 +27,27 @@
 <h2>Storage and execution</h2>
 <table style="width: 90%;" cellpadding="10px">
   <tr>
-    {{ template "graph_in_table" (args "txnExecutionTime" "Avg txn execution time (ms)" "irate(consensus_duration_sum{op='txn_execution_duration_ms'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "txnExecutionTime" "Avg txn execution time (ms)" "irate(consensus_duration_sum{op='txn_execution_duration_s'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "blockExecutionTime" "Avg block execution time (ms)" "irate(consensus_duration_sum{op='block_execution_duration_ms'}[1m])/irate(consensus_duration_count{op='block_execution_duration_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "blockExecutionTime" "Avg block execution time (ms)" "irate(consensus_duration_sum{op='block_execution_duration_s'}[1m])/irate(consensus_duration_count{op='block_execution_duration_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "blockCommitTime" "Avg commit (store) time (ms)" "irate(consensus_duration_sum{op='block_commit_duration_ms'}[1m])/irate(consensus_duration_count{op='block_commit_duration_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "blockCommitTime" "Avg commit (store) time (ms)" "irate(consensus_duration_sum{op='vm_execute_block_time_s'}[1m])/irate(consensus_duration_count{op='vm_execute_block_time_s'}[1m])" "ms") }}
   </tr>
 </table>
 
 <h2>AC and Mempool</h2>
 <table style="width: 90%;" cellpadding="10px">
   <tr>
-    {{ template "graph_in_table" (args "preConsensusTime" "Avg time spent before consensus (ms)" "irate(consensus_duration_sum{op='txn_pre_consensus_ms'}[1m])/irate(consensus_duration_count{op='txn_pre_consensus_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "preConsensusTime" "Avg time spent before consensus (ms)" "irate(consensus_duration_sum{op='txn_pre_consensus_s'}[1m])/irate(consensus_duration_count{op='txn_pre_consensus_s'}[1m])" "ms") }}
   </tr>
 </table>
 
 <h2>Consensus counters</h2>
 <table style="width: 90%;" cellpadding="10px">
   <tr>
-    {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_ms'}[1m])/irate(consensus_duration_count{op='creation_to_commit_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "creationToQC" "Avg time since block creation to QC (ms)" "irate(consensus_duration_sum{op='creation_to_qc_ms'}[1m])/irate(consensus_duration_count{op='creation_to_qc_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToQC" "Avg time since block creation to QC (ms)" "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])" "ms") }}
   </tr>
 </table>
 

@@ -55,9 +55,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(executor_duration_sum{op='block_execute_time_us'}[1m]) / irate(executor_duration_count{op='block_execute_time_us'}[1m])",
+          "expr": "irate(executor_duration_sum{op='block_execute_time_s'}[1m]) / irate(executor_duration_count{op='block_execute_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -139,9 +140,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(executor_duration_sum{op='vm_execute_block_time_us'}[1m]) / irate(executor_duration_count{op='vm_execute_block_time_us'}[1m])",
+          "expr": "irate(executor_duration_sum{op='vm_execute_block_time_s'}[1m]) / irate(executor_duration_count{op='vm_execute_block_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -223,9 +225,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(executor_duration_sum{op='blocks_commit_time_us'}[1m]) / irate(executor_duration_count{op='blocks_commit_time_us'}[1m])",
+          "expr": "irate(executor_duration_sum{op='blocks_commit_time_s'}[1m]) / irate(executor_duration_count{op='blocks_commit_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -310,6 +313,7 @@
           "expr": "irate(executor_duration_sum{op='storage_save_transactions_time_s'}[1m]) / irate(executor_duration_count{op='storage_save_transactions_time_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -392,6 +396,6 @@
   },
   "timezone": "",
   "title": "Execution",
-  "uid": "aneBjoVZz",
+  "uid": "execution",
   "version": 1
 }

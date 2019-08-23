@@ -23,11 +23,11 @@ groups:
 
   # Execution counters
   - record: consensus_execution_duration_sum:irate1m
-    expr: irate(consensus_duration_sum_ms{op='txn_execution_duration_ms'}[1m])
+    expr: irate(consensus_duration_sum_s{op='txn_execution_duration_s'}[1m])
   - record: consensus_execution_duration_count:irate1m
-    expr: irate(consensus_duration_count{op='txn_execution_duration_ms'}[1m])
-  - record: consensus_execution_duration_mean_ms:irate1m
-    expr: consensus_execution_duration_sum_ms:irate1m / consensus_execution_duration_count:irate1m
+    expr: irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])
+  - record: consensus_execution_duration_mean_s:irate1m
+    expr: consensus_execution_duration_sum_s:irate1m / consensus_execution_duration_count:irate1m
 
   # gRPC metrics
   - record: grpc_req:irate1m
