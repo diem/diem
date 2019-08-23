@@ -3,13 +3,13 @@
 module Vector {
 
   // Vector containing data of type Item
-  native struct T<Element: all>;
+  native struct T<Element>;
 
   // Return the length of the vector
-  native public length<Element: all>(v: &Self.T<Element>): u64;
+  native public length<Element>(v: &Self.T<Element>): u64;
 
   // Return true if the vector has no elements
-  public is_empty<Element: all>(v: &Self.T<Element>): bool {
+  public is_empty<Element>(v: &Self.T<Element>): bool {
     return Self.length<Element>(move(v)) == 0;
   }
 

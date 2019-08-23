@@ -23,7 +23,7 @@ module M {
 //! no-run: verifier, runtime
 
 module M {
-    public foo<T1, T2: all, T3: resource, T4: unrestricted>(x1: T4, x2: T3) {
+    public foo<T1, T2, T3: resource, T4: unrestricted>(x1: T4, x2: T3) {
         let x3: T2;
         let x4: T1;
     }
