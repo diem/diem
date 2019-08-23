@@ -35,3 +35,7 @@ vm_genesis = { path = "../language/vm/vm_genesis" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
+
+[features]
+default = []
+testing = ["crypto/testing", "libra_swarm/testing"]
