@@ -17,6 +17,7 @@ use netcore::{
 use noise::NoiseConfig;
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     io,
     sync::{Arc, RwLock},
     time::Duration,
@@ -90,7 +91,6 @@ pub fn build_memory_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
-
                 if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                     Ok((peer_id, socket))
                 } else {
@@ -162,6 +162,47 @@ pub fn build_tcp_noise_transport(
                         .log();
                     Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
                 }
+            }
+        })
+        .and_then(|(peer_id, socket), origin| {
+            async move {
+                let muxer = Yamux::upgrade_connection(socket, origin).await?;
+                Ok((peer_id, muxer))
+            }
+        })
+        .and_then(move |(peer_id, muxer), origin| {
+            async move {
+                let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
+                match_peer_id(identity, peer_id)
+                    .and_then(|identity| check_role(&own_identity, identity))
+                    .and_then(|identity| Ok((identity, muxer)))
+            }
+        })
+        .with_timeout(TRANSPORT_TIMEOUT)
+        .boxed()
+}
+
+// Transport based on TCP + Noise, but permissionless -- i.e., any node is allowed to connect.
+pub fn build_permissionless_tcp_noise_transport(
+    own_identity: Identity,
+    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
+    let tcp_transport = tcp::TcpTransport::default();
+    let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    tcp_transport
+        .and_then(move |socket, origin| {
+            async move {
+                let (remote_static_key, socket) =
+                    noise_config.upgrade_connection(socket, origin).await?;
+                // Generate PeerId from X25519StaticPublicKey.
+                // Note: This is inconsistent with current types because AccountAddress is derived
+                // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
+                // not mean anything in the permissionless setting, we use the network public key
+                // to generate a peer_id for the peer. The only reason this works is that both are
+                // 32 bytes in size. If/when this condition no longer holds, we will receive an
+                // error.
+                let peer_id = PeerId::try_from(remote_static_key).unwrap();
+                Ok((peer_id, socket))
             }
         })
         .and_then(|(peer_id, socket), origin| {
