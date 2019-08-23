@@ -188,13 +188,13 @@ impl SwarmConfig {
         };
 
         let base_config = BaseConfig::new(
-            node_id.to_string(),
             template.base.data_dir_path.clone(),
             template.base.node_sync_retries,
             template.base.node_sync_channel_buffer_size,
             template.base.node_async_log_chan_size,
         );
         let network_config = NetworkConfig {
+            peer_id: node_id.to_string(),
             role: role_string,
             peer_keypairs: KeyPairs::default(),
             peer_keypairs_file: key_file_name.into(),
@@ -226,7 +226,7 @@ impl SwarmConfig {
             secret_service: template.secret_service.clone(),
         };
 
-        config.base.peer_id = node_id.to_string();
+        config.network.peer_id = node_id.to_string();
         NodeConfigHelpers::randomize_config_ports(&mut config);
 
         let alias = Self::get_alias(&config);
@@ -242,10 +242,10 @@ impl SwarmConfig {
 
     pub fn get_alias(config: &NodeConfig) -> String {
         match (&config.network.role).into() {
-            RoleType::Validator => format!("validator_{}", config.base.peer_id),
+            RoleType::Validator => format!("validator_{}", config.network.peer_id),
             RoleType::FullNode => format!(
                 "full_node_{}_{}",
-                config.base.peer_id, config.admission_control.admission_control_service_port
+                config.network.peer_id, config.admission_control.admission_control_service_port
             ),
         }
     }

@@ -109,7 +109,7 @@ impl ChainedBftProvider {
     fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup {
         // Keeping the initial set of validators in a node config is embarrassing and we should
         // all feel bad about it.
-        let peer_id_str = node_config.base.peer_id.clone();
+        let peer_id_str = node_config.network.peer_id.clone();
         let author =
             AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
         let private_key = node_config

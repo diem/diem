@@ -108,11 +108,11 @@ fn main() {
     for (path, node_config) in generated_configs.get_configs() {
         println!(
             "Node Config for PeerId({}): {:?}",
-            node_config.base.peer_id, path
+            node_config.network.peer_id, path
         );
         println!(
             "Node Keys for PeerId({}): {:?}",
-            node_config.base.peer_id, node_config.network.peer_keypairs_file
+            node_config.network.peer_id, node_config.network.peer_keypairs_file
         );
     }
 }
