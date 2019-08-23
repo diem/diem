@@ -231,7 +231,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     debug!("AC started in {} ms", instant.elapsed().as_millis());
 
     instant = Instant::now();
-    let peer_id = PeerId::try_from(node_config.base.peer_id.clone()).expect("Invalid PeerId");
+    let peer_id = PeerId::try_from(node_config.network.peer_id.clone()).expect("Invalid PeerId");
     let (runtime, mut network_provider) = setup_network(peer_id, &mut node_config.network);
     debug!("Network started in {} ms", instant.elapsed().as_millis());
 

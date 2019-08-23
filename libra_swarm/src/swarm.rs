@@ -63,7 +63,7 @@ impl LibraNode {
         disable_logging: bool,
         tee_logs: bool,
     ) -> Result<Self> {
-        let peer_id = config.base.peer_id.clone();
+        let peer_id = config.network.peer_id.clone();
         let log = logdir.join(format!("{}.log", SwarmConfig::get_alias(&config)));
         let log_file = File::create(&log)?;
         let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
@@ -562,7 +562,7 @@ impl LibraSwarm {
             .config
             .get_configs()
             .iter()
-            .find(|(_path, config)| config.base.peer_id == peer_id)
+            .find(|(_path, config)| config.network.peer_id == peer_id)
             .expect(
                 &format!(
                     "PeerId {} not found in any of the admission control service ports.",

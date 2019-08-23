@@ -86,7 +86,6 @@ pub struct NodeConfig {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct BaseConfig {
-    pub peer_id: String,
     pub data_dir_path: PathBuf,
     #[serde(skip)]
     temp_data_dir: Option<TempDir>,
@@ -102,7 +101,6 @@ pub struct BaseConfig {
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            peer_id: "".to_string(),
             data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
             temp_data_dir: None,
             node_sync_retries: 7,
@@ -257,14 +255,12 @@ where
 impl BaseConfig {
     /// Constructs a new BaseConfig with an empty temp directory
     pub fn new(
-        peer_id: String,
         data_dir_path: PathBuf,
         node_sync_retries: usize,
         node_sync_channel_buffer_size: u64,
         node_async_log_chan_size: usize,
     ) -> Self {
         BaseConfig {
-            peer_id,
             data_dir_path,
             temp_data_dir: None,
             node_sync_retries,
@@ -278,7 +274,6 @@ impl BaseConfig {
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
-            peer_id: self.peer_id.clone(),
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
             node_sync_retries: self.node_sync_retries,
@@ -461,6 +456,7 @@ impl Default for StorageConfig {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
+    pub peer_id: String,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: Multiaddr,
@@ -489,6 +485,7 @@ pub struct NetworkConfig {
 impl Default for NetworkConfig {
     fn default() -> NetworkConfig {
         NetworkConfig {
+            peer_id: "".to_string(),
             role: "validator".to_string(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
@@ -509,6 +506,7 @@ impl Default for NetworkConfig {
 impl Clone for NetworkConfig {
     fn clone(&self) -> Self {
         Self {
+            peer_id: self.peer_id.clone(),
             listen_address: self.listen_address.clone(),
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
@@ -669,7 +667,7 @@ impl NodeConfig {
         let mut config = Self::load_template(&path)?;
         // Allow peer_id override if set
         if let Some(peer_id) = peer_id {
-            config.base.peer_id = peer_id;
+            config.network.peer_id = peer_id;
         }
         if !config.network.trusted_peers_file.as_os_str().is_empty() {
             config.network.trusted_peers = TrustedPeersConfig::load_config(
@@ -716,7 +714,7 @@ impl NodeConfig {
 
     /// Returns the peer info for this node
     pub fn own_addrs(&self) -> (String, Vec<Multiaddr>) {
-        let own_peer_id = self.base.peer_id.clone();
+        let own_peer_id = self.network.peer_id.clone();
         let own_addrs = vec![self.network.advertised_address.clone()];
         (own_peer_id, own_addrs)
     }
@@ -774,7 +772,8 @@ impl NodeConfigHelpers {
         let (mut peers_private_keys, trusted_peers_test) =
             TrustedPeersConfigHelpers::get_test_config(1, None);
         let peer_id = trusted_peers_test.peers.keys().collect::<Vec<_>>()[0];
-        config.base.peer_id = peer_id.clone();
+        // Setup node's peer id.
+        config.network.peer_id = peer_id.clone();
         // load node's keypairs
         let private_keys = peers_private_keys.remove_entry(peer_id.as_str()).unwrap().1;
         config.network.peer_keypairs = KeyPairs::load(private_keys);

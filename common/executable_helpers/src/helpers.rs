@@ -27,13 +27,13 @@ pub fn load_configs_from_args(args: &ArgMatches<'_>) -> NodeConfig {
         info!("Loading node config from: {}", &config_path);
         node_config = NodeConfig::load_config(peer_id, &config_path).expect("NodeConfig");
 
-        info!("Starting Full {}", node_config.base.peer_id);
+        info!("Starting Full {}", node_config.network.peer_id);
     } else {
         // Note we will silently ignore --peer_id arg here
         info!("Loading test configs");
         node_config = NodeConfigHelpers::get_single_node_test_config(false /* random ports */);
 
-        info!("Starting Single-Mode {}", node_config.base.peer_id);
+        info!("Starting Single-Mode {}", node_config.network.peer_id);
     }
 
     // Node configuration contains important ephemeral port information and should
@@ -85,7 +85,7 @@ pub fn setup_executable(
         Some(config.base.node_async_log_chan_size),
     );
 
-    setup_metrics(&config.base.peer_id, &config);
+    setup_metrics(&config.network.peer_id, &config);
 
     (config, logger, args)
 }
