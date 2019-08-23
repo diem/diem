@@ -6,7 +6,7 @@
 use crate::{
     account_address::AccountAddress,
     transaction::Version,
-    validator_verifier::{ValidatorVerifier, VerifyError},
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier, VerifyError},
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{

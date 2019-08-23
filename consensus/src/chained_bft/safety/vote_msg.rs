@@ -22,7 +22,7 @@ use std::{
 use types::{
     ledger_info::LedgerInfo,
     validator_signer::ValidatorSigner,
-    validator_verifier::{ValidatorVerifier, VerifyError},
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier, VerifyError},
 };
 
 /// VoteMsg verification errors.

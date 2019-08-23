@@ -23,7 +23,7 @@ use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
     validator_signer::ValidatorSigner,
-    validator_verifier::{ValidatorVerifier, VerifyError},
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier, VerifyError},
 };
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the

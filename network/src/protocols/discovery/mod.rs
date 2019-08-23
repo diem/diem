@@ -70,7 +70,8 @@ use std::{
 use tokio::{codec::Framed, prelude::FutureExt as _};
 use types::{
     validator_signer::ValidatorSigner as Signer,
-    validator_verifier::ValidatorVerifier as SignatureValidator, PeerId,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier as SignatureValidator},
+    PeerId,
 };
 use unsigned_varint::codec::UviBytes;
 

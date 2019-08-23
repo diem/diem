@@ -34,18 +34,76 @@ pub enum VerifyError {
     InvalidSignature,
 }
 
+pub trait ConsensusVerifier<PublicKeyType: VerifyingKey> {
+    fn verify_signature(
+        &self,
+        author: AccountAddress,
+        hash: HashValue,
+        signature: &PublicKeyType::SignatureMaterial,
+    ) -> std::result::Result<(), VerifyError>;
+
+    fn verify_aggregated_signature<T>(
+        &self,
+        hash: HashValue,
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKeyType::SignatureMaterial> + Clone;
+
+    /// This function will try batch signature verification and falls back to normal
+    /// iterated verification if batching fails.
+    fn batch_verify_aggregated_signature<T>(
+        &self,
+        hash: HashValue,
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKeyType::SignatureMaterial> + Clone;
+
+    /// Ensure there are at least quorum_size and not more than maximum expected signatures.
+    fn check_num_of_signatures<T>(
+        &self,
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKeyType::SignatureMaterial> + Clone;
+
+    /// Ensure there are only known authors. According to the threshold verification policy,
+    /// invalid public keys are not allowed.
+    fn check_keys<T>(
+        &self,
+        aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKeyType::SignatureMaterial> + Clone;
+    /// Return the public key for this address.
+    fn get_public_key(&self, author: AccountAddress) -> Option<PublicKeyType>;
+
+    /// Returns a ordered list of account addresses from smallest to largest.
+    fn get_ordered_account_addresses(&self) -> Vec<AccountAddress>;
+
+    /// Returns the number of authors to be validated.
+    fn len(&self) -> usize;
+
+    /// Is there at least one author?
+    fn is_empty(&self) -> bool;
+
+    /// Returns quorum_size.
+    fn quorum_size(&self) -> usize;
+}
+
 /// Supports validation of signatures for known authors. This struct can be used for all signature
 /// verification operations including block and network signature verification, respectively.
 #[derive(Clone)]
-pub struct ValidatorVerifier<P> {
-    author_to_public_keys: HashMap<AccountAddress, P>,
+pub struct ValidatorVerifier<PublicKeyType> {
+    author_to_public_keys: HashMap<AccountAddress, PublicKeyType>,
     quorum_size: usize,
 }
 
-impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
+impl<PublicKeyType: VerifyingKey> ValidatorVerifier<PublicKeyType> {
     /// Initialize with a map of author to public key and set quorum size to default (`2f + 1`) or
     /// zero if `author_to_public_keys` is empty.
-    pub fn new(author_to_public_keys: HashMap<AccountAddress, PublicKey>) -> Self {
+    pub fn new(author_to_public_keys: HashMap<AccountAddress, PublicKeyType>) -> Self {
         let quorum_size = if author_to_public_keys.is_empty() {
             0
         } else {
@@ -59,7 +117,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Initializes a validator verifier with specified quorum size.
     pub fn new_with_quorum_size(
-        author_to_public_keys: HashMap<AccountAddress, PublicKey>,
+        author_to_public_keys: HashMap<AccountAddress, PublicKeyType>,
         quorum_size: usize,
     ) -> Result<Self> {
         ensure!(
@@ -69,25 +127,28 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
             author_to_public_keys.len(),
             quorum_size
         );
-        Ok(ValidatorVerifier {
+        Ok(Self {
             author_to_public_keys,
             quorum_size,
         })
     }
 
     /// Helper method to initialize with a single author and public key.
-    pub fn new_single(author: AccountAddress, public_key: PublicKey) -> Self {
+    pub fn new_single(author: AccountAddress, public_key: PublicKeyType) -> Self {
         let mut author_to_public_keys = HashMap::new();
         author_to_public_keys.insert(author, public_key);
         Self::new(author_to_public_keys)
     }
+}
 
-    /// Verify the correctness of a signature of a hash by a known author.
-    pub fn verify_signature(
+impl<PublicKeyType: VerifyingKey> ConsensusVerifier<PublicKeyType>
+    for ValidatorVerifier<PublicKeyType>
+{
+    fn verify_signature(
         &self,
         author: AccountAddress,
         hash: HashValue,
-        signature: &PublicKey::SignatureMaterial,
+        signature: &PublicKeyType::SignatureMaterial,
     ) -> std::result::Result<(), VerifyError> {
         let public_key = self.author_to_public_keys.get(&author);
         match public_key {
@@ -102,18 +163,13 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         }
     }
 
-    /// This function will successfully return when at least quorum_size signatures of known authors
-    /// are successfully verified. Also, an aggregated signature is considered invalid if any of the
-    /// attached signatures is invalid or it does not correspond to a known author. The latter is to
-    /// prevent malicious users from adding arbitrary content to the signature payload that would go
-    /// unnoticed.
-    pub fn verify_aggregated_signature<T>(
+    fn verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
         aggregated_signature: &HashMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
+        T: Into<PublicKeyType::SignatureMaterial> + Clone,
     {
         self.check_num_of_signatures(aggregated_signature)?;
         for (author, signature) in aggregated_signature {
@@ -122,30 +178,28 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Ok(())
     }
 
-    /// This function will try batch signature verification and falls back to normal
-    /// iterated verification if batching fails.
-    pub fn batch_verify_aggregated_signature<T>(
+    fn batch_verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
         aggregated_signature: &HashMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
+        T: Into<PublicKeyType::SignatureMaterial> + Clone,
     {
         self.check_num_of_signatures(aggregated_signature)?;
         self.check_keys(aggregated_signature)?;
-        let keys_and_signatures: Vec<(PublicKey, PublicKey::SignatureMaterial)> =
+        let keys_and_signatures: Vec<(PublicKeyType, PublicKeyType::SignatureMaterial)> =
             aggregated_signature
                 .iter()
                 .flat_map(|(author, signature)| {
-                    let sig: PublicKey::SignatureMaterial = signature.clone().into();
+                    let sig: PublicKeyType::SignatureMaterial = signature.clone().into();
                     self.author_to_public_keys
                         .get(&author)
                         .and_then(|pub_key| Some((pub_key.clone(), sig)))
                 })
                 .collect();
         // Fallback is required to identify the source of the problem if batching fails.
-        if PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
+        if PublicKeyType::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
             let iterated_verification =
                 self.verify_aggregated_signature(hash, aggregated_signature);
             match iterated_verification {
@@ -159,13 +213,12 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Ok(())
     }
 
-    /// Ensure there are at least quorum_size and not more than maximum expected signatures.
     fn check_num_of_signatures<T>(
         &self,
         aggregated_signature: &HashMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
+        T: Into<PublicKeyType::SignatureMaterial> + Clone,
     {
         let num_of_signatures = aggregated_signature.len();
         if num_of_signatures < self.quorum_size {
@@ -183,14 +236,12 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Ok(())
     }
 
-    /// Ensure there are only known authors. According to the threshold verification policy,
-    /// invalid public keys are not allowed.
     fn check_keys<T>(
         &self,
         aggregated_signature: &HashMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
+        T: Into<PublicKeyType::SignatureMaterial> + Clone,
     {
         for author in aggregated_signature.keys() {
             if self.author_to_public_keys.get(&author) == None {
@@ -200,31 +251,26 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Ok(())
     }
 
-    /// Return the public key for this address.
-    pub fn get_public_key(&self, author: AccountAddress) -> Option<PublicKey> {
+    fn get_public_key(&self, author: AccountAddress) -> Option<PublicKeyType> {
         self.author_to_public_keys.get(&author).cloned()
     }
 
-    /// Returns a ordered list of account addresses from smallest to largest.
-    pub fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
+    fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
         let mut account_addresses: Vec<AccountAddress> =
             self.author_to_public_keys.keys().cloned().collect();
         account_addresses.sort();
         account_addresses
     }
 
-    /// Returns the number of authors to be validated.
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.author_to_public_keys.len()
     }
 
-    /// Is there at least one author?
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Returns quorum_size.
-    pub fn quorum_size(&self) -> usize {
+    fn quorum_size(&self) -> usize {
         self.quorum_size
     }
 }
@@ -234,7 +280,7 @@ mod tests {
     use crate::{
         account_address::AccountAddress,
         validator_signer::ValidatorSigner,
-        validator_verifier::{ValidatorVerifier, VerifyError},
+        validator_verifier::{ConsensusVerifier, ValidatorVerifier, VerifyError},
     };
     use crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
     use std::collections::HashMap;

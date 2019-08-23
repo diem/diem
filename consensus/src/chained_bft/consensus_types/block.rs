@@ -31,7 +31,7 @@ use std::{
 use types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier},
 };
 
 #[cfg(test)]

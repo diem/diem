@@ -9,29 +9,30 @@ use crate::{
         consensus_types::proposal_msg::ProposalMsg,
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
+        persistent_storage::RecoveryData,
         safety::vote_msg::VoteMsg,
-        test_utils::{MockStateComputer, MockStorage, MockTransactionManager, TestPayload},
+        test_utils::{
+            consensus_runtime, with_smr_id, MockStateComputer, MockStorage, MockTransactionManager,
+            TestPayload,
+        },
     },
     state_replication::StateMachineReplication,
 };
 use channel;
+use config::config::ConsensusProposerType::{
+    self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
+};
 use crypto::{ed25519::*, hash::CryptoHash};
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use proto_conv::FromProto;
-use std::sync::Arc;
-use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
-
-use crate::chained_bft::{
-    persistent_storage::RecoveryData,
-    test_utils::{consensus_runtime, with_smr_id},
-};
-use config::config::ConsensusProposerType::{
-    self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
-};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime;
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::{
+    ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier},
+};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {

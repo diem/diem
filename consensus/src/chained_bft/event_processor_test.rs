@@ -35,7 +35,7 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use crypto::{ed25519::*, HashValue};
+use crypto::{ed25519::*, HashValue, VerifyingKey};
 use futures::{
     channel::{mpsc, oneshot},
     compat::Future01CompatExt,
@@ -46,11 +46,13 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use proto_conv::FromProto;
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
 use types::{
-    ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress,
+    ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier, VerifyError},
 };
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -826,4 +828,104 @@ fn nil_vote_on_timeout() {
         assert_eq!(vote_msg.round(), 1);
         assert_eq!(vote_msg.parent_block_id(), genesis_id);
     });
+}
+
+//
+// Fuzzing
+// =======
+// These are fuzzing related functions
+//
+
+#[derive(Clone)]
+pub struct FakeVerifier<PublicKey> {
+    author_to_public_keys: HashMap<AccountAddress, PublicKey>,
+    quorum_size: usize,
+}
+
+impl<PublicKey> FakeVerifier<PublicKey> {
+    pub fn new_with_quorum_size(
+        author_to_public_keys: HashMap<AccountAddress, PublicKey>,
+        quorum_size: usize,
+    ) -> Self {
+        Self {
+            author_to_public_keys,
+            quorum_size,
+        }
+    }
+}
+
+impl<PublicKey: VerifyingKey> ConsensusVerifier<PublicKey> for FakeVerifier<PublicKey> {
+    fn verify_signature(
+        &self,
+        _author: AccountAddress,
+        _hash: HashValue,
+        _signature: &PublicKey::SignatureMaterial,
+    ) -> std::result::Result<(), VerifyError> {
+        Ok(())
+    }
+
+    fn verify_aggregated_signature<T>(
+        &self,
+        _hash: HashValue,
+        _aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
+        Ok(())
+    }
+
+    fn batch_verify_aggregated_signature<T>(
+        &self,
+        _hash: HashValue,
+        _aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
+        Ok(())
+    }
+
+    fn check_num_of_signatures<T>(
+        &self,
+        _aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
+        Ok(())
+    }
+
+    fn check_keys<T>(
+        &self,
+        _aggregated_signature: &HashMap<AccountAddress, T>,
+    ) -> std::result::Result<(), VerifyError>
+    where
+        T: Into<PublicKey::SignatureMaterial> + Clone,
+    {
+        Ok(())
+    }
+
+    fn get_public_key(&self, author: AccountAddress) -> Option<PublicKey> {
+        self.author_to_public_keys.get(&author).cloned()
+    }
+
+    fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
+        let mut account_addresses: Vec<AccountAddress> =
+            self.author_to_public_keys.keys().cloned().collect();
+        account_addresses.sort();
+        account_addresses
+    }
+
+    fn len(&self) -> usize {
+        self.author_to_public_keys.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn quorum_size(&self) -> usize {
+        self.quorum_size
+    }
 }

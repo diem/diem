@@ -27,8 +27,10 @@ use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 use types::{
-    account_address::AccountAddress, transaction::SignedTransaction,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress,
+    transaction::SignedTransaction,
+    validator_signer::ValidatorSigner,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier},
 };
 
 struct InitialSetup {

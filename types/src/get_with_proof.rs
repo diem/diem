@@ -18,7 +18,7 @@ use crate::{
     },
     transaction::{SignedTransactionWithProof, TransactionListWithProof, Version},
     validator_change::ValidatorChangeEventWithProof,
-    validator_verifier::ValidatorVerifier,
+    validator_verifier::{ConsensusVerifier, ValidatorVerifier},
 };
 use crypto::{hash::CryptoHash, *};
 use failure::prelude::*;
