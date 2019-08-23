@@ -244,6 +244,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         state_sync_network_sender,
         state_sync_network_events,
         &node_config,
+        vec![], // TODO: pass in empty vector for now, will be derived from node config later
     );
 
     let mut mempool = None;

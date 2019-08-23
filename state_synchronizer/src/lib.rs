@@ -12,6 +12,7 @@ pub use synchronizer::{StateSyncClient, StateSynchronizer};
 mod coordinator;
 mod counters;
 mod executor_proxy;
+mod peer_manager;
 mod synchronizer;
 
 type PeerId = AccountAddress;

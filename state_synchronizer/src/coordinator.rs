@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId};
+use crate::{
+    counters, executor_proxy::ExecutorProxyTrait, peer_manager::PeerManager, LedgerInfo, PeerId,
+};
 use config::config::{NodeConfig, RoleType, StateSyncConfig};
 use crypto::ed25519::*;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
@@ -18,7 +20,6 @@ use network::{
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
 };
 use proto_conv::{FromProto, IntoProto};
-use rand::{thread_rng, Rng};
 use std::{
     collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -55,7 +56,7 @@ pub(crate) struct SyncCoordinator<T> {
     // even if no target state was specified
     autosync: bool,
     // peers used for synchronization. TBD: value is meta information about peer sync quality
-    peers: HashMap<PeerId, ()>,
+    peer_manager: PeerManager,
     // option callback. Called when state sync reaches target version
     callback: Option<oneshot::Sender<bool>>,
     // timestamp of last commit
@@ -74,17 +75,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         node_config: &NodeConfig,
         executor_proxy: T,
+        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         Self {
             network_sender,
             network_events: network_events.fuse(),
             client_events,
-
             known_version: 0,
             target: None,
             config: node_config.state_sync.clone(),
             autosync: (RoleType::FullNode == (&node_config.network.role).into()),
-            peers: HashMap::new(),
+            peer_manager: PeerManager::new(upstream_peer_ids),
             subscriptions: HashMap::new(),
             callback: None,
             last_commit: None,
@@ -125,13 +126,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         Ok(event) => {
                             match event {
                                 Event::NewPeer(peer_id) => {
-                                    if self.autosync {
-                                        self.peers.insert(peer_id, ());
-                                        self.check_progress().await;
-                                    }
+                                    self.peer_manager.enable_peer(&peer_id);
+                                    self.check_progress().await;
                                 }
                                 Event::LostPeer(peer_id) => {
-                                    self.peers.remove(&peer_id);
+                                    self.peer_manager.disable_peer(&peer_id);
                                 }
                                 Event::Message((peer_id, mut message)) => {
                                     if message.has_chunk_request() {
@@ -190,7 +189,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         if requested_version > self.target_version() {
-            self.peers = target.signatures().keys().map(|p| (*p, ())).collect();
+            self.peer_manager
+                .set_peers(target.signatures().keys().copied().collect());
             self.target = Some(target);
             self.request_next_chunk(0).await;
         }
@@ -347,7 +347,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// ensures that StateSynchronizer makes progress
     /// if peer is not responding, issues new sync request
     async fn check_progress(&mut self) {
-        if !self.peers.is_empty() && (self.autosync || self.target.is_some()) {
+        if !self.peer_manager.is_empty() && (self.autosync || self.target.is_some()) {
             let last_commit = self.last_commit.unwrap_or(UNIX_EPOCH);
             let timeout = match self.target {
                 Some(_) => 2 * self.config.tick_interval_ms,
@@ -366,39 +366,33 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     async fn request_next_chunk(&mut self, offset: u64) {
         if self.autosync || self.known_version + offset < self.target_version() {
-            let idx = thread_rng().gen_range(0, self.peers.len());
-            let peer_id = self
-                .peers
-                .keys()
-                .nth(idx)
-                .cloned()
-                .expect("[state synchronizer] failed to pick peer from ledger info");
+            if let Some(peer_id) = self.peer_manager.pick_peer() {
+                let mut req = GetChunkRequest::new();
+                req.set_known_version(self.known_version + offset);
+                req.set_limit(self.config.chunk_limit);
+                let timeout = match &self.target {
+                    Some(target) => {
+                        req.set_ledger_info_with_sigs(target.clone().into_proto());
+                        0
+                    }
+                    None => {
+                        req.set_timeout(self.config.long_poll_timeout_ms);
+                        self.config.long_poll_timeout_ms
+                    }
+                };
+                debug!(
+                    "[state sync] request next chunk. peer_id: {:?}, known_version: {}, timeout: {}",
+                    peer_id,
+                    self.known_version + offset,
+                    timeout
+                );
 
-            let mut req = GetChunkRequest::new();
-            req.set_known_version(self.known_version + offset);
-            req.set_limit(self.config.chunk_limit);
-            let timeout = match &self.target {
-                Some(target) => {
-                    req.set_ledger_info_with_sigs(target.clone().into_proto());
-                    0
+                let mut msg = StateSynchronizerMsg::new();
+                msg.set_chunk_request(req);
+
+                if self.network_sender.send_to(peer_id, msg).await.is_err() {
+                    error!("[state sync] failed to send p2p message");
                 }
-                None => {
-                    req.set_timeout(self.config.long_poll_timeout_ms);
-                    self.config.long_poll_timeout_ms
-                }
-            };
-            debug!(
-                "[state sync] request next chunk. peer_id: {:?}, known_version: {}, timeout: {}",
-                peer_id,
-                self.known_version + offset,
-                timeout
-            );
-
-            let mut msg = StateSynchronizerMsg::new();
-            msg.set_chunk_request(req);
-
-            if self.network_sender.send_to(peer_id, msg).await.is_err() {
-                error!("[state sync] failed to send p2p message");
             }
         }
     }
