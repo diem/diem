@@ -58,8 +58,8 @@ pub(crate) struct SyncCoordinator<T> {
     peers: HashMap<PeerId, ()>,
     // option callback. Called when state sync reaches target version
     callback: Option<oneshot::Sender<bool>>,
-    // timestamp of next peer sync request
-    next_sync: Option<SystemTime>,
+    // timestamp of last commit
+    last_commit: Option<SystemTime>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
     // value format is (expiration_time, known_version, limit)
@@ -87,7 +87,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             peers: HashMap::new(),
             subscriptions: HashMap::new(),
             callback: None,
-            next_sync: None,
+            last_commit: None,
             executor_proxy,
         }
     }
@@ -205,6 +205,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let is_update = version > self.known_version;
         self.known_version = std::cmp::max(version, self.known_version);
         if is_update {
+            self.last_commit = Some(SystemTime::now());
             if let Err(err) = self.check_subscriptions().await {
                 error!("[state sync] failed to check subscriptions: {:?}", err);
             }
@@ -294,6 +295,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// executes transactions, updates progress state, calls callback if some sync is finished
     async fn process_chunk_response(&mut self, mut response: GetChunkResponse) {
         let txn_list_with_proof = response.take_txn_list_with_proof();
+
+        if let Some(version) = txn_list_with_proof
+            .first_transaction_version
+            .clone()
+            .map(|x| x.get_value())
+            .into_option()
+        {
+            if version != self.known_version + 1 {
+                debug!(
+                    "[state sync] non sequential chunk. Known version: {}, received: {}",
+                    self.known_version, version
+                );
+                return;
+            }
+        }
         // optimistically fetch next chunk
         let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
         self.request_next_chunk(chunk_size).await;
@@ -301,6 +317,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             "[state sync] process chunk response. chunk_size: {}",
             chunk_size
         );
+
+        let previous_version = self.known_version;
 
         match LedgerInfoWithSignatures::<Ed25519Signature>::from_proto(
             response.take_ledger_info_with_sigs(),
@@ -318,6 +336,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         error!("[state sync] storage version read failed {:?}", err);
                     }
                 }
+                debug!("[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}", previous_version, self.known_version, chunk_size);
             }
             Err(err) => {
                 error!("[state sync] invalid ledger info {:?}", err);
@@ -329,9 +348,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// if peer is not responding, issues new sync request
     async fn check_progress(&mut self) {
         if !self.peers.is_empty() && (self.autosync || self.target.is_some()) {
-            let timestamp = self.next_sync.unwrap_or(UNIX_EPOCH);
-            if SystemTime::now().duration_since(timestamp).is_ok() {
-                self.request_next_chunk(0).await;
+            let last_commit = self.last_commit.unwrap_or(UNIX_EPOCH);
+            let timeout = match self.target {
+                Some(_) => 2 * self.config.tick_interval_ms,
+                None => self.config.tick_interval_ms + self.config.long_poll_timeout_ms,
+            };
+            let expected_next_sync = last_commit.checked_add(Duration::from_millis(timeout));
+
+            // if coordinator didn't make progress by expected time, issue new request
+            if let Some(tst) = expected_next_sync {
+                if SystemTime::now().duration_since(tst).is_ok() {
+                    self.request_next_chunk(0).await;
+                }
             }
         }
     }
@@ -369,9 +397,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             let mut msg = StateSynchronizerMsg::new();
             msg.set_chunk_request(req);
 
-            self.next_sync = SystemTime::now().checked_add(Duration::from_millis(
-                timeout + self.config.tick_interval_ms,
-            ));
             if self.network_sender.send_to(peer_id, msg).await.is_err() {
                 error!("[state sync] failed to send p2p message");
             }
