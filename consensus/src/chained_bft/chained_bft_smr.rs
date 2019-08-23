@@ -14,7 +14,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{ConsensusNetworkImpl, NetworkReceivers},
+        network::ConsensusNetworkImpl,
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
         safety::safety_rules::SafetyRules,
     },
@@ -32,7 +32,7 @@ use futures::{
     stream::StreamExt,
 };
 
-use crate::chained_bft::common::Author;
+use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
 use config::config::{ConsensusConfig, ConsensusProposerType};
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
@@ -71,8 +71,6 @@ impl ChainedBftSMRConfig {
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
     author: Author,
-    // TODO [Reconfiguration] quorum size is just a function of current validator set.
-    quorum_size: usize,
     signer: Option<ValidatorSigner>,
     proposers: Vec<Author>,
     runtime: Option<Runtime>,
@@ -81,12 +79,12 @@ pub struct ChainedBftSMR<T> {
     config: ChainedBftSMRConfig,
     storage: Arc<dyn PersistentStorage<T>>,
     initial_data: Option<RecoveryData<T>>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
         author: Author,
-        quorum_size: usize,
         signer: ValidatorSigner,
         proposers: Vec<Author>,
         network: ConsensusNetworkImpl,
@@ -94,10 +92,10 @@ impl<T: Payload> ChainedBftSMR<T> {
         config: ChainedBftSMRConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
+        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         Self {
             author,
-            quorum_size,
             signer: Some(signer),
             proposers,
             runtime: Some(runtime),
@@ -106,6 +104,7 @@ impl<T: Payload> ChainedBftSMR<T> {
             config,
             storage,
             initial_data: Some(initial_data),
+            epoch_mgr,
         }
     }
 
@@ -133,7 +132,6 @@ impl<T: Payload> ChainedBftSMR<T> {
             time_interval,
             time_service,
             timeout_sender,
-            self.quorum_size,
             highest_timeout_certificate,
         )
     }
@@ -154,13 +152,12 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     fn start_event_processing(
-        &self,
+        &mut self,
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
-        mut network_receivers: NetworkReceivers<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
     ) {
-        let quorum_size = self.quorum_size;
+        let mut network_receivers = self.network.start(&executor);
         let fut = async move {
             event_processor.start().await;
             loop {
@@ -172,10 +169,10 @@ impl<T: Payload> ChainedBftSMR<T> {
                         event_processor.process_block_retrieval(block_retrieval).await;
                     }
                     vote_msg = network_receivers.votes.select_next_some() => {
-                        event_processor.process_vote(vote_msg, quorum_size).await;
+                        event_processor.process_vote(vote_msg).await;
                     }
                     remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
-                        event_processor.process_remote_timeout_msg(remote_timeout_msg, quorum_size).await;
+                        event_processor.process_remote_timeout_msg(remote_timeout_msg).await;
                     }
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
                         event_processor.process_local_timeout(local_timeout_round).await;
@@ -208,10 +205,6 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .executor();
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
 
-        // We first start the network and retrieve the network receivers (this function needs a
-        // mutable reference).
-        // Must do it here before giving the clones of network to other components.
-        let network_receivers = self.network.start(&executor);
         let initial_data = self
             .initial_data
             .take()
@@ -240,65 +233,60 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         }
 
         // the signer is only stored in the SMR to be provided here
-        let opt_signer = std::mem::replace(&mut self.signer, None);
-        if let Some(signer) = opt_signer {
-            let block_store = Arc::new(block_on(BlockStore::new(
-                Arc::clone(&self.storage),
-                initial_data,
-                signer,
-                Arc::clone(&state_computer),
-                true,
-                self.config.max_pruned_blocks_in_mem,
-            )));
+        let signer = self
+            .signer
+            .take()
+            .expect("start called twice on the same Chained BFT SMR!");
+        let block_store = Arc::new(block_on(BlockStore::new(
+            Arc::clone(&self.storage),
+            initial_data,
+            signer,
+            Arc::clone(&state_computer),
+            true,
+            self.config.max_pruned_blocks_in_mem,
+        )));
 
-            self.block_store = Some(Arc::clone(&block_store));
+        self.block_store = Some(Arc::clone(&block_store));
 
-            // txn manager is required both by proposal generator (to pull the proposers)
-            // and by event processor (to update their status).
-            let proposal_generator = ProposalGenerator::new(
-                block_store.clone(),
-                Arc::clone(&txn_manager),
-                time_service.clone(),
-                self.config.max_block_size,
-                true,
-            );
+        // txn manager is required both by proposal generator (to pull the proposers)
+        // and by event processor (to update their status).
+        let proposal_generator = ProposalGenerator::new(
+            block_store.clone(),
+            Arc::clone(&txn_manager),
+            time_service.clone(),
+            self.config.max_block_size,
+            true,
+        );
 
-            let safety_rules = SafetyRules::new(consensus_state);
+        let safety_rules = SafetyRules::new(consensus_state);
 
-            let (timeout_sender, timeout_receiver) =
-                channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
-            let pacemaker = self.create_pacemaker(
-                self.storage.persistent_liveness_storage(),
-                time_service.clone(),
-                timeout_sender,
-                highest_timeout_certificates,
-            );
+        let (timeout_sender, timeout_receiver) =
+            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+        let pacemaker = self.create_pacemaker(
+            self.storage.persistent_liveness_storage(),
+            time_service.clone(),
+            timeout_sender,
+            highest_timeout_certificates,
+        );
 
-            let proposer_election = self.create_proposer_election();
-            let event_processor = EventProcessor::new(
-                self.author,
-                Arc::clone(&block_store),
-                pacemaker,
-                proposer_election,
-                proposal_generator,
-                safety_rules,
-                state_computer,
-                txn_manager,
-                self.network.clone(),
-                Arc::clone(&self.storage),
-                time_service.clone(),
-                true,
-            );
+        let proposer_election = self.create_proposer_election();
+        let event_processor = EventProcessor::new(
+            self.author,
+            Arc::clone(&block_store),
+            pacemaker,
+            proposer_election,
+            proposal_generator,
+            safety_rules,
+            state_computer,
+            txn_manager,
+            self.network.clone(),
+            Arc::clone(&self.storage),
+            time_service.clone(),
+            true,
+            Arc::clone(&self.epoch_mgr),
+        );
 
-            self.start_event_processing(
-                executor,
-                event_processor,
-                network_receivers,
-                timeout_receiver,
-            );
-        } else {
-            panic!("start called twice on the same Chained BFT SMR!");
-        }
+        self.start_event_processing(executor, event_processor, timeout_receiver);
 
         debug!("Chained BFT SMR started.");
         Ok(())

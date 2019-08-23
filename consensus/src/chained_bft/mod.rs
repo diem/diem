@@ -14,6 +14,7 @@ mod chained_bft_smr;
 mod event_processor;
 mod network;
 
+pub mod epoch_manager;
 pub mod persistent_storage;
 mod sync_manager;
 

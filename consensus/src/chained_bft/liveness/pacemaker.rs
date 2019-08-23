@@ -169,10 +169,8 @@ impl Pacemaker {
         time_interval: Box<dyn PacemakerTimeInterval>,
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
-        pacemaker_timeout_quorum_size: usize,
         highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Self {
-        assert!(pacemaker_timeout_quorum_size > 0);
         // Our counters are initialized via lazy_static, so they're not going to appear in
         // Prometheus if some conditions never happen. Invoking get() function enforces creation.
         counters::QC_ROUNDS_COUNT.get();
@@ -188,7 +186,6 @@ impl Pacemaker {
             time_service,
             timeout_sender,
             pacemaker_timeout_manager: PacemakerTimeoutManager::new(
-                pacemaker_timeout_quorum_size,
                 highest_timeout_certificate,
                 persistent_liveness_storage,
             ),
@@ -331,10 +328,11 @@ impl Pacemaker {
     pub fn process_remote_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
+        quorum_size: usize,
     ) -> Option<NewRoundEvent> {
         if self
             .pacemaker_timeout_manager
-            .update_received_timeout(pacemaker_timeout)
+            .update_received_timeout(pacemaker_timeout, quorum_size)
         {
             self.update_current_round()
         } else {
