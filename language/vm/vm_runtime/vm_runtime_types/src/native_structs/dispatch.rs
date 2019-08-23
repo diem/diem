@@ -26,9 +26,6 @@ pub fn dispatch_native_struct(
 }
 
 macro_rules! add {
-    ($m:ident, $addr:expr, $module:expr, $name:expr, $resource: expr) => {{
-        add!($m, $addr, $module, $name, $resource, vec![])
-    }};
     ($m:ident, $addr:expr, $module:expr, $name:expr, $resource: expr, $ty_kinds: expr) => {{
         let id = ModuleId::new($addr, $module.into());
         let struct_table = $m.entry(id).or_insert_with(HashMap::new);
@@ -50,7 +47,7 @@ lazy_static! {
     static ref NATIVE_STRUCT_MAP: NativeStructMap = {
         let mut m: NativeStructMap = HashMap::new();
         let addr = account_config::core_code_address();
-        add!(m, addr, "Vector", "T", false);
+        add!(m, addr, "Vector", "T", false, vec![Kind::All]);
         m
     };
 }

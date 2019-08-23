@@ -5,7 +5,7 @@ use super::{hash, primitive_helpers, signature, vector};
 use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
 use std::collections::{HashMap, VecDeque};
 use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
-use vm::file_format::{FunctionSignature, SignatureToken};
+use vm::file_format::{FunctionSignature, Kind, SignatureToken};
 
 /// Enum representing the result of running a native function
 pub enum NativeReturnStatus {
@@ -151,7 +151,8 @@ lazy_static! {
         // Vector
         add!(m, addr, "Vector", "length",
             vector::native_length,
-            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![])))],
+            vec![Kind::All],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
             vec![U64]
         );
         // Event
