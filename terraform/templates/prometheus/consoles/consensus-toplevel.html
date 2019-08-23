@@ -23,7 +23,7 @@
     {{ template "graph_in_table" (args "pendingBlocks" "Pending blocks" "consensus_gauge{op='num_blocks_in_tree'} - 1" "num pending blocks") }}
   </tr>
   <tr>
-    {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_ms'}[1m])/irate(consensus_duration_count{op='creation_to_commit_ms'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])" "ms") }}
   </tr>
 </table>
 
@@ -48,12 +48,12 @@
 
     {{ template "graph_in_table" (args "txnsReplayedCount" "Txns replayed in state synchronization" "consensus{op='state_sync_txns_replayed'}" "txns count") }}
 
-    {{ template "graph_in_table" (args "syncDuration" "Total time spent on state sync (ms)" "consensus_duration_sum{op='state_sync_duration_ms'}" "total time spent (ms)") }}
+    {{ template "graph_in_table" (args "syncDuration" "Total time spent on state sync (ms)" "consensus_duration_sum{op='state_sync_duration_s'}" "total time spent (ms)") }}
   </tr>
   <tr>
     {{ template "graph_in_table" (args "blockRetrievalCount" "Block retrieval requests since restart" "consensus{op='block_retrieval_count'}" "count") }}
 
-    {{ template "graph_in_table" (args "blockRetrievalDuration" "Total time spent on block retrieval (ms)" "consensus_duration_sum{op='block_retrieval_duration_ms'}" "total time spent (ms)") }}
+    {{ template "graph_in_table" (args "blockRetrievalDuration" "Total time spent on block retrieval (ms)" "consensus_duration_sum{op='block_retrieval_duration_s'}" "total time spent (ms)") }}
   </tr>
 </table>
 
