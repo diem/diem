@@ -18,7 +18,7 @@ use crypto::{
 };
 use logger::LoggerType;
 use rand::{rngs::StdRng, SeedableRng};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tempfile::TempDir;
 use toml;
 
@@ -110,6 +110,60 @@ impl Default for BaseConfig {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+enum ConsensusPrivateKey {
+    Present(Ed25519PrivateKey),
+    Removed,
+    Absent,
+}
+
+impl ConsensusPrivateKey {
+    pub fn take(&mut self) -> Option<Ed25519PrivateKey> {
+        match self {
+            ConsensusPrivateKey::Present(_) => {
+                let key = std::mem::replace(self, ConsensusPrivateKey::Removed);
+                match key {
+                    ConsensusPrivateKey::Present(priv_key) => Some(priv_key),
+                    _ => unreachable!(),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn get(&self) -> Option<&Ed25519PrivateKey> {
+        match self {
+            ConsensusPrivateKey::Present(key) => Some(key),
+            _ => None,
+        }
+    }
+}
+
+impl Serialize for ConsensusPrivateKey {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            ConsensusPrivateKey::Present(key) => serialize_key(key, serializer),
+            _ => serializer.serialize_str(""),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ConsensusPrivateKey {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<ConsensusPrivateKey, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Note: Any error in parsing is assumed to be due to the private key being absent.
+        deserialize_key(deserializer)
+            .map(ConsensusPrivateKey::Present)
+            .or_else(|_| Ok(ConsensusPrivateKey::Absent))
+    }
+}
+
 // KeyPairs is used to store all of a node's private keys.
 // It is filled via a config file at the moment.
 #[derive(Debug, Serialize, Deserialize)]
@@ -129,12 +183,10 @@ pub struct KeyPairs {
     #[serde(deserialize_with = "deserialize_key")]
     network_identity_public_key: X25519StaticPublicKey,
 
+    consensus_private_key: ConsensusPrivateKey,
     #[serde(serialize_with = "serialize_opt_key")]
     #[serde(deserialize_with = "deserialize_opt_key")]
-    consensus_private_key: Option<Ed25519PrivateKey>,
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    consensus_public_key: Ed25519PublicKey,
+    consensus_public_key: Option<Ed25519PublicKey>,
 }
 
 // required for serialization
@@ -149,8 +201,8 @@ impl Default for KeyPairs {
             network_signing_public_key: net_public_sig,
             network_identity_private_key: private_kex,
             network_identity_public_key: public_kex,
-            consensus_private_key: Some(consensus_private_sig),
-            consensus_public_key: consensus_public_sig,
+            consensus_private_key: ConsensusPrivateKey::Present(consensus_private_sig),
+            consensus_public_key: Some(consensus_public_sig),
         }
     }
 }
@@ -185,13 +237,21 @@ impl KeyPairs {
             private_keys.get_key_triplet();
         let network_signing_public_key = (&network_signing_private_key).into();
         let network_identity_public_key = (&network_identity_private_key).into();
-        let consensus_public_key = (&consensus_private_key).into();
+        let (consensus_private_key, consensus_public_key) = {
+            match consensus_private_key {
+                Some(private_key) => {
+                    let public_key = (&private_key).into();
+                    (ConsensusPrivateKey::Present(private_key), Some(public_key))
+                }
+                None => (ConsensusPrivateKey::Absent, None),
+            }
+        };
         Self {
             network_signing_private_key: Some(network_signing_private_key),
             network_signing_public_key,
             network_identity_private_key,
             network_identity_public_key,
-            consensus_private_key: Some(consensus_private_key),
+            consensus_private_key,
             consensus_public_key,
         }
     }
@@ -206,13 +266,13 @@ impl KeyPairs {
     pub fn get_network_identity_private(&self) -> X25519StaticPrivateKey {
         self.network_identity_private_key.clone()
     }
-    pub fn get_consensus_private(&self) -> &Option<Ed25519PrivateKey> {
-        &self.consensus_private_key
+    pub fn get_consensus_private(&self) -> Option<&Ed25519PrivateKey> {
+        self.consensus_private_key.get()
     }
 
     /// Beware, this destroys the private key from this NodeConfig
     pub fn take_consensus_private(&mut self) -> Option<Ed25519PrivateKey> {
-        std::mem::replace(&mut self.consensus_private_key, None)
+        self.consensus_private_key.take()
     }
     // getters for public keys
     pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
@@ -221,7 +281,7 @@ impl KeyPairs {
     pub fn get_network_identity_public(&self) -> &X25519StaticPublicKey {
         &self.network_identity_public_key
     }
-    pub fn get_consensus_public(&self) -> &Ed25519PublicKey {
+    pub fn get_consensus_public(&self) -> &Option<Ed25519PublicKey> {
         &self.consensus_public_key
     }
     // getters for keypairs
