@@ -28,6 +28,8 @@ lazy_static! {
         make_module_definition!("../modules/address_util.mvir");
     static ref U64_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/u64_util.mvir");
+    static ref VECTOR_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/vector.mvir");
     static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/bytearray_util.mvir");
     static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
@@ -42,9 +44,9 @@ lazy_static! {
             &*NATIVE_HASH_MODULE,
             &*SIGNATURE_MODULE,
             &*U64_UTIL_MODULE,
+            &*VECTOR_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on Coin, Event, AddressUtil, BytearrayUtil, U64Util
-            &*VALIDATOR_SET_MODULE // will eventually depend on Account, others
         ]
     };
 }
