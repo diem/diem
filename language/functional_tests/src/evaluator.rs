@@ -244,8 +244,12 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
             compiled_program
         } else {
-            // Even if the verifier stage is disabled, we should still add the modules to the deps.
-            // TODO: add a bypass function to the verifier and fix this
+            // Add the to-be-published modules to the dependency list without using verifier.
+            let new_modules = compiled_program
+                .modules
+                .iter()
+                .map(|m| VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(m.clone()));
+            deps.extend(new_modules);
 
             compiled_program
         };
