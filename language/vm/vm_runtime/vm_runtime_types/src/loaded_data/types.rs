@@ -21,6 +21,7 @@ pub enum Type {
     Struct(StructDef),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
+    TypeVariable(u16),
 }
 
 /// This isn't used by any normal code at the moment, but is used by the fuzzer to serialize types
@@ -51,6 +52,11 @@ impl CanonicalSerialize for Type {
                 ty.serialize(serializer)?;
                 serializer
             }
+            TypeVariable(idx) => {
+                serializer.encode_u8(0x09)?;
+                serializer.encode_u16(*idx)?;
+                serializer
+            }
         };
         Ok(())
     }
@@ -72,6 +78,7 @@ impl CanonicalDeserialize for Type {
             0x06 => Struct(StructDef::deserialize(deserializer)?),
             0x07 => Reference(Box::new(Type::deserialize(deserializer)?)),
             0x08 => MutableReference(Box::new(Type::deserialize(deserializer)?)),
+            0x09 => TypeVariable(u16::deserialize(deserializer)?),
             other => bail!(
                 "Error while deserializing type: found unexpected tag {:#x}",
                 other
