@@ -100,7 +100,7 @@ impl MockExecutorProxy {
                 txn_info,
             )],
             None,
-            Some(0),
+            Some(version + 1),
             Some(accumulator_proof),
             None,
         );
