@@ -15,10 +15,7 @@ use crate::{
         identity::Identity,
         rpc::Rpc,
     },
-    transport::{
-        build_memory_noise_transport, build_memory_transport, build_tcp_noise_transport,
-        build_tcp_transport,
-    },
+    transport::*,
     ProtocolId,
 };
 use channel;
@@ -61,6 +58,7 @@ pub enum TransportType {
     MemoryNoise,
     Tcp,
     TcpNoise,
+    PermissionlessTcpNoise,
 }
 
 /// Build Network module with custom configuration values.
@@ -318,6 +316,9 @@ impl NetworkBuilder {
                 own_identity_keys,
                 trusted_peers,
             )),
+            TransportType::PermissionlessTcpNoise => self.build_with_transport(
+                build_permissionless_tcp_noise_transport(identity, own_identity_keys),
+            ),
         }
     }
 
