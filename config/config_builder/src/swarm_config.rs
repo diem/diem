@@ -16,7 +16,10 @@ use config::{
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 pub struct SwarmConfig {
     pub configs: Vec<(PathBuf, NodeConfig)>,
@@ -26,7 +29,6 @@ pub struct SwarmConfig {
 }
 
 impl SwarmConfig {
-    //TODO convert this to use the Builder paradigm
     pub fn new(
         mut template: NodeConfig,
         num_nodes: usize,
@@ -37,28 +39,23 @@ impl SwarmConfig {
         key_seed: Option<[u8; 32]>,
         output_dir: &Path,
     ) -> Result<Self> {
-        // Generate trusted peer configs + their private keys.
-        template.base.data_dir_path = output_dir.into();
+        let (mut consensus_private_keys, mut consensus_peers_config, consensus_peers_file) =
+            SwarmConfig::building_consensus_peers_config(
+                &mut template,
+                num_nodes,
+                &output_dir,
+                key_seed,
+            );
+        let (mut network_private_keys, network_peers_config, network_peers_file) =
+            SwarmConfig::building_network_peers_config(
+                &mut template,
+                &output_dir,
+                &mut consensus_peers_config,
+                key_seed,
+            );
 
-        // Setup consensus keys and peers config file.
-        let consensus_peers_file = template.consensus.consensus_peers_file.clone();
-        let (mut consensus_private_keys, consensus_peers_config) =
-            ConfigHelpers::get_test_consensus_config(num_nodes, key_seed);
-        consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file));
-
-        // Setup network keys and file.
-        let network_peers_file = template.networks.get(0).unwrap().network_peers_file.clone();
-        let (mut network_private_keys, network_peers_config) =
-            ConfigHelpers::get_test_network_peers_config(&consensus_peers_config, key_seed);
-        network_peers_config.save_config(&output_dir.join(&network_peers_file));
-
-        // Setup seed peers and file.
-        let seed_peers_file = template.networks.get(0).unwrap().seed_peers_file.clone();
-        let mut seed_peers_config = SeedPeersConfigHelpers::get_test_config_with_ipver(
-            &network_peers_config,
-            None,
-            is_ipv4,
-        );
+        let (seed_peers_file, mut seed_peers_config) =
+            SwarmConfig::building_seed_peers_config(&template, &network_peers_config, is_ipv4);
 
         gen_genesis_transaction(
             &output_dir.join(&template.execution.genesis_file_location),
@@ -67,6 +64,99 @@ impl SwarmConfig {
             &network_peers_config,
         )?;
 
+        let configs = SwarmConfig::building_each_node_config(
+            &template,
+            &output_dir,
+            role,
+            prune_seed_peers_for_discovery,
+            &seed_peers_file,
+            &mut seed_peers_config,
+            &mut consensus_private_keys,
+            &mut network_private_keys,
+        );
+
+        Ok(Self {
+            configs,
+            seed_peers: (output_dir.join(seed_peers_file), seed_peers_config),
+            network_peers: (output_dir.join(network_peers_file), network_peers_config),
+            consensus_peers: (
+                output_dir.join(consensus_peers_file),
+                consensus_peers_config,
+            ),
+        })
+    }
+
+    fn building_consensus_peers_config(
+        template: &mut NodeConfig,
+        num_nodes: usize,
+        output_dir: &Path,
+        key_seed: Option<[u8; 32]>,
+    ) -> (
+        HashMap<String, Ed25519PrivateKey>,
+        ConsensusPeersConfig,
+        PathBuf,
+    ) {
+        template.base.data_dir_path = output_dir.into();
+        let consensus_peers_file = template.consensus.consensus_peers_file.clone();
+        let (consensus_private_keys, consensus_peers_config) =
+            ConfigHelpers::get_test_consensus_config(num_nodes, key_seed);
+
+        consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file));
+
+        (
+            consensus_private_keys,
+            consensus_peers_config,
+            consensus_peers_file,
+        )
+    }
+
+    fn building_network_peers_config(
+        template: &mut NodeConfig,
+        output_dir: &Path,
+        consensus_peers_config: &mut ConsensusPeersConfig,
+        key_seed: Option<[u8; 32]>,
+    ) -> (
+        HashMap<String, NetworkPeerPrivateKeys>,
+        NetworkPeersConfig,
+        PathBuf,
+    ) {
+        let network_peers_file = template.networks.get(0).unwrap().network_peers_file.clone();
+        let (network_private_keys, network_peers_config) =
+            ConfigHelpers::get_test_network_peers_config(&consensus_peers_config, key_seed);
+        network_peers_config.save_config(&output_dir.join(&network_peers_file));
+
+        (
+            network_private_keys,
+            network_peers_config,
+            network_peers_file,
+        )
+    }
+
+    fn building_seed_peers_config(
+        template: &NodeConfig,
+        network_peers_config: &NetworkPeersConfig,
+        is_ipv4: bool,
+    ) -> (PathBuf, SeedPeersConfig) {
+        let seed_peers_file = template.networks.get(0).unwrap().seed_peers_file.clone();
+        let seed_peers_config = SeedPeersConfigHelpers::get_test_config_with_ipver(
+            &network_peers_config,
+            None,
+            is_ipv4,
+        );
+
+        (seed_peers_file, seed_peers_config)
+    }
+
+    fn building_each_node_config(
+        template: &NodeConfig,
+        output_dir: &Path,
+        role: RoleType,
+        prune_seed_peers_for_discovery: bool,
+        seed_peers_file: &PathBuf,
+        seed_peers_config: &mut SeedPeersConfig,
+        consensus_private_keys: &mut HashMap<String, Ed25519PrivateKey>,
+        network_private_keys: &mut HashMap<String, NetworkPeerPrivateKeys>,
+    ) -> (Vec<(PathBuf, NodeConfig)>) {
         let mut configs = Vec::new();
         // Generate configs for all nodes.
         for (node_id, addrs) in &seed_peers_config.seed_peers {
@@ -117,20 +207,11 @@ impl SwarmConfig {
                 (config_file, config)
             })
             .collect::<Vec<(PathBuf, NodeConfig)>>();
-
         for (path, node_config) in &configs {
             node_config.save_config(&path);
         }
 
-        Ok(Self {
-            configs,
-            seed_peers: (output_dir.join(seed_peers_file), seed_peers_config),
-            network_peers: (output_dir.join(network_peers_file), network_peers_config),
-            consensus_peers: (
-                output_dir.join(consensus_peers_file),
-                consensus_peers_config,
-            ),
-        })
+        (configs)
     }
 
     fn get_config_by_role(
