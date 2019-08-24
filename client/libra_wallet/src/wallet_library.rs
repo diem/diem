@@ -19,7 +19,7 @@ use crate::{
 };
 use canonical_serialization::SimpleSerializer;
 pub use libra_crypto::hash::CryptoHash;
-use proto_conv::{FromProto, IntoProtoBytes};
+use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
 use std::{collections::HashMap, path::Path};
 use types::{
@@ -161,7 +161,7 @@ impl WalletLibrary {
             let public_key = child_key.get_public();
 
             let mut signed_txn = ProtoSignedTransaction::new();
-            signed_txn.set_raw_txn_bytes(txn.into_proto_bytes()?);
+            signed_txn.set_raw_txn(txn.into_proto());
             signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
             signed_txn.set_sender_signature(signature.to_bytes().to_vec());
 

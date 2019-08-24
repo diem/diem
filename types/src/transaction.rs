@@ -563,23 +563,18 @@ impl CryptoHash for SignedTransaction {
 impl FromProto for SignedTransaction {
     type ProtoType = crate::proto::transaction::SignedTransaction;
 
-    fn from_proto(txn: Self::ProtoType) -> Result<Self> {
-        let proto_raw_transaction = protobuf::parse_from_bytes::<
-            crate::proto::transaction::RawTransaction,
-        >(txn.raw_txn_bytes.as_ref())?;
+    fn from_proto(mut txn: Self::ProtoType) -> Result<Self> {
+        let raw_txn = RawTransaction::from_proto(txn.take_raw_txn())?;
+        // Will be removing raw_bytes shortly thus removing this clone
+        let raw_txn_bytes = raw_txn.clone().into_proto_bytes()?;
 
-        let raw_txn = RawTransaction::from_proto(proto_raw_transaction)?;
-
-        let t = SignedTransaction {
+        // Signature checking is encoded in `SignatureCheckedTransaction`.
+        Ok(SignedTransaction {
             raw_txn,
             public_key: Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
             signature: Ed25519Signature::try_from(txn.get_sender_signature())?,
-            raw_txn_bytes: txn.raw_txn_bytes,
-        };
-
-        // Signature checking is encoded in `SignatureCheckedTransaction`.
-
-        Ok(t)
+            raw_txn_bytes,
+        })
     }
 }
 
@@ -588,11 +583,7 @@ impl IntoProto for SignedTransaction {
 
     fn into_proto(self) -> Self::ProtoType {
         let mut transaction = Self::ProtoType::new();
-        transaction.set_raw_txn_bytes(
-            self.raw_txn
-                .into_proto_bytes()
-                .expect("serialization failed"),
-        );
+        transaction.set_raw_txn(self.raw_txn.into_proto());
         transaction.set_sender_public_key(self.public_key.to_bytes().to_vec());
         transaction.set_sender_signature(self.signature.to_bytes().to_vec());
         transaction

@@ -95,8 +95,8 @@ fn test_get_block() {
     let block = response.get_block();
     assert_eq!(block.get_transactions().len(), 1);
     assert_eq!(
-        block.get_transactions()[0].raw_txn_bytes,
-        req.get_signed_txn().raw_txn_bytes
+        block.get_transactions()[0].raw_txn,
+        req.get_signed_txn().raw_txn,
     );
 }
 
