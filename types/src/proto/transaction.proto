@@ -73,16 +73,12 @@ message Module {
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // The serialized Protobuf bytes for RawTransaction, for which the signature
-    // was signed. Protobuf doesn't guarantee the serialized bytes is canonical
-    // across different language implementations, but for our use cases for
-    // transaction it is not necessary because the client is the only one to
-    // produce this bytes, which is then persisted in storage.
-    bytes raw_txn_bytes = 1;
     // public key that corresponds to RawTransaction::sender_account
     bytes sender_public_key = 2;
     // signature for the hash
     bytes sender_signature = 3;
+    // Underlying transaction
+    RawTransaction raw_txn = 4;
 }
 
 message SignedTransactionWithProof {

@@ -12,7 +12,7 @@ use crate::{
 };
 use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, hash::CryptoHash, traits::*};
-use proto_conv::IntoProtoBytes;
+use proto_conv::IntoProto;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
@@ -45,7 +45,7 @@ pub fn get_test_signed_transaction(
     let signature = private_key.sign_message(&hash);
 
     let mut signed_txn = ProtoSignedTransaction::new();
-    signed_txn.set_raw_txn_bytes(raw_txn.into_proto_bytes().unwrap());
+    signed_txn.set_raw_txn(raw_txn.into_proto());
     signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
     signed_txn.set_sender_signature(signature.to_bytes().to_vec());
     signed_txn
