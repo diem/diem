@@ -21,7 +21,8 @@ if [ ! -f Cargo.toml ]; then
     echo "Cargo.toml not found! Are you running this script in the right directory?"
 fi
 
-dependencies=$(awk 'x==1 {print $1} /\[dependencies\]/ {x=1}' Cargo.toml| grep -v '^$'|grep -v '^\[.+\]$')
+
+dependencies=$(awk 'x==1 {print } /\[dependencies\]/ {x=1}' Cargo.toml| grep -Ev '(^$|^\[.+\]$|version|default-features)'| grep -Eo '^\w+')
 echo "$dependencies"
 for i in $dependencies; do
     echo "testing removal of $i"
