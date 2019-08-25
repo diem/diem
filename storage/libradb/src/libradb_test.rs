@@ -10,6 +10,7 @@ use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
+use tools::tempdir::TempPath;
 use types::{
     account_config::get_account_resource_or_default, contract_event::ContractEvent,
     ledger_info::LedgerInfo,
@@ -21,7 +22,7 @@ fn test_save_blocks_impl(
         LedgerInfoWithSignatures<Ed25519Signature>,
     )>,
 ) -> Result<()> {
-    let tmp_dir = tempfile::tempdir()?;
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
 
     let num_batches = input.len();
@@ -77,7 +78,7 @@ fn test_sync_transactions_impl(
         LedgerInfoWithSignatures<Ed25519Signature>,
     )>,
 ) -> Result<()> {
-    let tmp_dir = tempfile::tempdir()?;
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
 
     let num_batches = input.len();
@@ -366,7 +367,7 @@ proptest! {
 
 #[test]
 fn test_bootstrap() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     let genesis_txn_info = GENESIS_INFO.0.clone();
@@ -394,7 +395,7 @@ fn test_bootstrap() {
 rusty_fork_test! {
 #[test]
 fn test_committed_txns_counter() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     let genesis_ledger_info_with_sigs = GENESIS_INFO.1.clone();
@@ -410,7 +411,7 @@ fn test_committed_txns_counter() {
 
 #[test]
 fn test_bootstrapping_already_bootstrapped_db() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir).unwrap();
     let ledger_info = db.ledger_store.get_latest_ledger_info().unwrap();
 
@@ -442,7 +443,7 @@ fn test_get_first_seq_num_and_limit() {
 
 #[test]
 fn test_too_many_requested() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     assert!(db

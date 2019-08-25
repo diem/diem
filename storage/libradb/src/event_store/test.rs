@@ -13,7 +13,7 @@ use proptest::{
 use proptest_helpers::Index;
 use rand::Rng;
 use std::collections::HashMap;
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
@@ -36,7 +36,7 @@ fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashV
 
 #[test]
 fn test_put_empty() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.event_store;
     let mut cs = ChangeSet::new();
@@ -48,7 +48,7 @@ fn test_put_empty() {
 
 #[test]
 fn test_error_on_get_from_empty() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.event_store;
 
@@ -62,7 +62,7 @@ proptest! {
 
     #[test]
     fn test_put_get_verify(events in vec(any::<ContractEvent>().no_shrink(), 1..100)) {
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.event_store;
 
@@ -94,7 +94,7 @@ proptest! {
         events3 in vec(any::<ContractEvent>().no_shrink(), 1..100),
     ) {
 
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.event_store;
         // Save 3 chunks at different versions
@@ -186,7 +186,7 @@ proptest! {
 
 fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
     // Put into db.
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.event_store;
 

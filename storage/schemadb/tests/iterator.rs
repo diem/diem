@@ -71,13 +71,13 @@ fn collect_values(iter: SchemaIterator<TestSchema>) -> Vec<u32> {
 }
 
 struct TestDB {
-    _tmpdir: tempfile::TempDir,
+    _tmpdir: tools::tempdir::TempPath,
     db: DB,
 }
 
 impl TestDB {
     fn new() -> Self {
-        let tmpdir = tempfile::tempdir().expect("Failed to create temporary directory.");
+        let tmpdir = tools::tempdir::TempPath::new();
         let cf_opts_map: ColumnFamilyOptionsMap = [
             (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
             (
@@ -88,7 +88,7 @@ impl TestDB {
         .iter()
         .cloned()
         .collect();
-        let db = DB::open(&tmpdir, cf_opts_map).unwrap();
+        let db = DB::open(&tmpdir.path(), cf_opts_map).unwrap();
 
         db.put::<TestSchema>(&TestKey(1, 0, 0), &TestValue(100))
             .unwrap();

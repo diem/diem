@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use mktemp::Temp;
 use protobuf::{compiler_plugin, descriptor::FileDescriptorSet, error::ProtobufError};
 use protoc::{DescriptorSetOutArgs, Protoc};
 use protoc_grpcio::CompileResult;
@@ -11,6 +10,7 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
+use tools::tempdir::TempPath;
 
 /// copied from protoc-grpcio
 /// it's not public there
@@ -73,7 +73,8 @@ pub fn protoc_descriptor_set(
         .check()
         .expect("failed to find `protoc`, `protoc` must be available in `PATH`");
 
-    let descriptor_set = Temp::new_file()?;
+    let descriptor_set = TempPath::new();
+    descriptor_set.create_as_file()?;
 
     protoc
         .write_descriptor_set(DescriptorSetOutArgs {

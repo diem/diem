@@ -31,7 +31,10 @@ fn setup_env(
         template_path,
     );
     let port = swarm.get_ac_port(client_port_index, role);
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let client_proxy = ClientProxy::new(
         "localhost",
         port.to_string().as_str(),
@@ -41,7 +44,8 @@ fn setup_env(
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()
@@ -289,7 +293,10 @@ fn test_basic_state_synchronization() {
     swarm.wait_for_all_nodes_to_catchup();
 
     // Connect to the newly recovered node and verify its state
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
@@ -300,7 +307,8 @@ fn test_basic_state_synchronization() {
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()

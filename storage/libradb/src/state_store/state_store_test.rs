@@ -4,7 +4,7 @@
 use super::*;
 use crate::{pruner, LibraDB};
 use crypto::hash::CryptoHash;
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
@@ -76,7 +76,7 @@ fn verify_state_in_store(
 
 #[test]
 fn test_empty_store() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
     let address = AccountAddress::new([1u8; ADDRESS_LENGTH]);
@@ -87,7 +87,7 @@ fn test_empty_store() {
 
 #[test]
 fn test_state_store_reader_writer() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
     let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
@@ -141,7 +141,7 @@ fn test_retired_records() {
     let value3 = AccountStateBlob::from(vec![0x03]);
     let value3_update = AccountStateBlob::from(vec![0x13]);
 
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
 

@@ -22,14 +22,14 @@ use std::{
     convert::TryFrom,
     fmt, fs,
     io::{stdout, Seek, SeekFrom, Write},
-    path::{Display, Path},
+    path::{Display, Path, PathBuf},
     process::{Command, Stdio},
     str::{self, FromStr},
     sync::Arc,
     thread, time,
 };
-use tempfile::{NamedTempFile, TempPath};
 use tokio::{self, runtime::Runtime};
+use tools::tempdir::TempPath;
 use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -101,7 +101,7 @@ pub struct ClientProxy {
     /// Whether to sync with validator on account creation.
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
-    temp_files: Vec<TempPath>,
+    temp_files: Vec<PathBuf>,
 }
 
 impl ClientProxy {
@@ -464,22 +464,24 @@ impl ClientProxy {
             if space_delim_strings.len() == 5 {
                 space_delim_strings[4].to_string()
             } else {
-                let tmp_path = NamedTempFile::new()?.into_temp_path();
+                let tmp_path = TempPath::new();
                 let path = tmp_path
+                    .as_ref()
                     .to_str()
                     .ok_or_else(|| format_err!("failed to create tmp file"))?
                     .to_string();
-                self.temp_files.push(tmp_path);
+                self.temp_files.push(tmp_path.as_ref().to_path_buf());
                 path
             }
         };
-        let mut tmp_source_file = NamedTempFile::new()?;
+        let tmp_source_path = TempPath::new();
+        let mut tmp_source_file = std::fs::File::create(tmp_source_path.as_ref())?;
         let mut code = fs::read_to_string(file_path)?;
         code = code.replace("{{sender}}", &format!("0x{}", address));
         writeln!(tmp_source_file, "{}", code)?;
 
         let dependencies_file =
-            self.handle_dependencies(tmp_source_file.path().display(), is_module)?;
+            self.handle_dependencies(tmp_source_path.path().display(), is_module)?;
 
         // custom handler of old module format
         // TODO: eventually retire code after vm separation between modules and scripts
@@ -493,10 +495,10 @@ impl ClientProxy {
             "run -p compiler -- -a {} -o {} {}",
             address,
             output_path,
-            tmp_source_file.path().display(),
+            tmp_source_path.path().display(),
         );
         if let Some(file) = &dependencies_file {
-            args.push_str(&format!(" --deps={}", file.path().display()));
+            args.push_str(&format!(" --deps={}", file.as_ref().display()));
         }
 
         let status = Command::new("cargo")
@@ -513,7 +515,7 @@ impl ClientProxy {
         &mut self,
         source_path: Display,
         is_module: bool,
-    ) -> Result<Option<NamedTempFile>> {
+    ) -> Result<Option<TempPath>> {
         let mut args = format!("run -p compiler -- -l {}", source_path);
         if is_module {
             args.push_str(" -m");
@@ -538,9 +540,10 @@ impl ClientProxy {
         if dependencies.is_empty() {
             return Ok(None);
         }
-        let mut file = NamedTempFile::new()?;
+        let path = TempPath::new();
+        let mut file = std::fs::File::create(path.as_ref())?;
         file.write_all(&serde_json::to_vec(&dependencies)?)?;
-        Ok(Some(file))
+        Ok(Some(path))
     }
 
     /// Submit a transaction to the network given the unsigned raw transaction, sender public key
@@ -1099,16 +1102,16 @@ mod tests {
     use config::trusted_peers::TrustedPeersConfigHelpers;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
-    use tempfile::NamedTempFile;
+    use tools::tempdir::TempPath;
 
     fn generate_accounts_from_wallet(count: usize) -> (ClientProxy, Vec<AddressAndIndex>) {
         let mut accounts = Vec::new();
         accounts.reserve(count);
-        let file = NamedTempFile::new().unwrap();
-        let mnemonic_path = file.into_temp_path().to_str().unwrap().to_string();
-        let trust_peer_file = NamedTempFile::new().unwrap();
+        let file = TempPath::new();
+        let mnemonic_path = file.path().to_str().unwrap().to_string();
+        let trust_peer_file = TempPath::new();
         let (_, trust_peer_config) = TrustedPeersConfigHelpers::get_test_config(1, None);
-        let trust_peer_path = trust_peer_file.into_temp_path();
+        let trust_peer_path = trust_peer_file.path();
         trust_peer_config.save_config(&trust_peer_path);
 
         let val_set_file = trust_peer_path.to_str().unwrap().to_string();
@@ -1179,8 +1182,8 @@ mod tests {
         let (client, accounts) = generate_accounts_from_wallet(num);
         assert_eq!(accounts.len(), num);
 
-        let file = NamedTempFile::new().unwrap();
-        let path = file.into_temp_path();
+        let file = TempPath::new();
+        let path = file.path();
         io_utils::write_recovery(&client.wallet, &path).expect("failed to write to file");
 
         let wallet = io_utils::recover(&path).expect("failed to load from file");

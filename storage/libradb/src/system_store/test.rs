@@ -1,6 +1,6 @@
 use super::*;
 use crate::{ledger_counters::LedgerCounter, LibraDB};
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 
 fn bump_ledger_counters(
     store: &SystemStore,
@@ -19,7 +19,7 @@ fn bump_ledger_counters(
 
 #[test]
 fn test_inc_ledger_counters() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.system_store;
 
