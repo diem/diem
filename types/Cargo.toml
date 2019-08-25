@@ -8,20 +8,20 @@ edition = "2018"
 
 [dependencies]
 bech32 = "0.6.0"
-byteorder = "1.3.2"
-bytes = "0.4.12"
-chrono = "0.4.7"
-hex = "0.3.2"
-itertools = "0.8.0"
-lazy_static = "1.3.0"
+byteorder = { version = "1.3.2", default-features = false }
+bytes = { version = "0.4.12", default-features = false }
+chrono = { version = "0.4.7", default-features = false }
+hex = { version = "0.3.2", default-features = false }
+itertools = { version = "0.8.0", default-features = false }
+lazy_static = { version = "1.3.0", default-features = false }
 logger = { path = "../common/logger" }
-proptest = "0.9.4"
-proptest-derive = "0.1.2"
+proptest = { version = "0.9.4", default-features = false }
+proptest-derive = { version = "0.1.2", default-features = false }
 protobuf = "~2.7"
-radix_trie = "0.1.3"
+radix_trie = { version = "0.1.4", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.96", features = ["derive"] }
-tiny-keccak = "1.5.0"
+serde = { version = "1.0.99", default-features = false }
+tiny-keccak = { version = "1.5.0", default-features = false }
 
 canonical_serialization = { path = "../common/canonical_serialization" }
 crypto = { path = "../crypto/crypto" }
