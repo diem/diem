@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 backtrace = "0.3.34"
-toml = "0.4.7"
+toml = "0.5.3"
 
 logger = { path = "../logger" }
 serde = { version = "1.0.96", features = ["derive"] }
