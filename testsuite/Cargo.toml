@@ -25,5 +25,5 @@ libra_swarm = { path = "../libra_swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config = { path = "../config" }
 config_builder = { path = "../config/config_builder" }
-tempfile = "3.1.0"
+tools = { path = "../common/tools" }
 crypto = { path = "../crypto/crypto" }

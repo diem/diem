@@ -19,8 +19,8 @@ use crypto::{
 use logger::LoggerType;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use tempfile::TempDir;
 use toml;
+use tools::tempdir::TempPath;
 
 use failure::prelude::*;
 use proto_conv::FromProtoBytes;
@@ -88,7 +88,7 @@ pub struct NodeConfig {
 pub struct BaseConfig {
     pub data_dir_path: PathBuf,
     #[serde(skip)]
-    temp_data_dir: Option<TempDir>,
+    temp_data_dir: Option<TempPath>,
     // Number of retries per chunk download
     pub node_sync_retries: usize,
     // Buffer size for sync_channel used for node syncing (number of elements that it can
@@ -834,7 +834,8 @@ impl NodeConfigHelpers {
         base_path: P,
     ) -> Result<()> {
         if config.base.data_dir_path == Path::new(DISPOSABLE_DIR_MARKER) {
-            let dir = tempfile::tempdir().context("error creating tempdir")?;
+            let dir = TempPath::new();
+            dir.create_as_dir().expect("error creating tempdir");
             config.base.data_dir_path = dir.path().to_owned();
             config.base.temp_data_dir = Some(dir);
         }

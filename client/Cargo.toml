@@ -21,7 +21,6 @@ num-traits = "0.2"
 serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
 structopt = "0.2.15"
-tempfile = "3.1.0"
 
 admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
 config = { path = "../config" }
@@ -33,6 +32,7 @@ logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 proto_conv = { path = "../common/proto_conv" }
 types = { path = "../types" }
+tools = { path = "../common/tools/" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
 
 [dev-dependencies]

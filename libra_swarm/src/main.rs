@@ -6,6 +6,7 @@ use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{client, swarm::LibraSwarm};
 use std::path::Path;
 use structopt::StructOpt;
+use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -71,12 +72,13 @@ fn main() {
         faucet_key_file_path,
     );
 
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = TempPath::new();
+    tmp_mnemonic_file.create_as_file().unwrap();
     if args.start_client {
         let client = client::InteractiveClient::new_with_inherit_io(
             swarm.get_ac_port(0, RoleType::Validator),
             Path::new(&faucet_key_file_path),
-            &tmp_mnemonic_file.into_temp_path(),
+            &tmp_mnemonic_file.path(),
             swarm.get_trusted_peers_config_path(),
         );
         println!("Loading client...");

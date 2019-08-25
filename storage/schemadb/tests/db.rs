@@ -70,7 +70,7 @@ impl ValueCodec<TestSchema2> for TestField {
     }
 }
 
-fn open_db(dir: &tempfile::TempDir) -> DB {
+fn open_db(dir: &tools::tempdir::TempPath) -> DB {
     let cf_opts_map: ColumnFamilyOptionsMap = [
         (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
         (
@@ -85,17 +85,17 @@ fn open_db(dir: &tempfile::TempDir) -> DB {
     .iter()
     .cloned()
     .collect();
-    DB::open(&dir, cf_opts_map).expect("Failed to open DB.")
+    DB::open(&dir.path(), cf_opts_map).expect("Failed to open DB.")
 }
 
 struct TestDB {
-    _tmpdir: tempfile::TempDir,
+    _tmpdir: tools::tempdir::TempPath,
     db: DB,
 }
 
 impl TestDB {
     fn new() -> Self {
-        let tmpdir = tempfile::tempdir().expect("Failed to create temporary directory.");
+        let tmpdir = tools::tempdir::TempPath::new();
         let db = open_db(&tmpdir);
 
         TestDB {
@@ -253,7 +253,7 @@ fn test_two_schema_batches() {
 
 #[test]
 fn test_reopen() {
-    let tmpdir = tempfile::tempdir().expect("Failed to create temporary directory.");
+    let tmpdir = tools::tempdir::TempPath::new();
     {
         let db = open_db(&tmpdir);
         db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();

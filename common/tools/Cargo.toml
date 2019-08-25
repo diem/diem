@@ -1,5 +1,5 @@
 [package]
-name = "grpcio-client"
+name = "tools"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,10 +7,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-protobuf = "~2.7"
-protobuf-codegen = "2.*"
-protoc = "2.*"
-protoc-grpcio = "1.0.1"
-regex = "1.2.1"
-
-tools = { path = "../tools/"}
+hex = "0.3.2"
+rand = "0.6.5"

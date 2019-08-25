@@ -4,7 +4,7 @@
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
 use proptest::{collection::vec, prelude::*};
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::ledger_info::LedgerInfo;
 
 prop_compose! {
@@ -51,7 +51,7 @@ proptest! {
     fn test_ledger_info_put_get_verify(
         ledger_infos_with_sigs in arb_ledger_infos_with_sigs()
     ) {
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.ledger_store;
         let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch_num();

@@ -19,7 +19,6 @@ rand = "0.6.5"
 rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
-tempfile = "3.0.6"
 
 accumulator = { path = "../accumulator" }
 canonical_serialization = { path = "../../common/canonical_serialization" }
@@ -31,6 +30,7 @@ metrics = { path = "../../common/metrics" }
 proto_conv = { path = "../../common/proto_conv" }
 schemadb = { path = "../schemadb" }
 storage_proto = { path = "../storage_proto" }
+tools = { path = "../../common/tools" }
 types = { path = "../../types" }
 
 [dev-dependencies]

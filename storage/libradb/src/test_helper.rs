@@ -7,6 +7,7 @@ use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::{collection::vec, prelude::*};
+use tools::tempdir::TempPath;
 use types::{
     ledger_info::LedgerInfo,
     proptest_types::{AccountInfoUniverse, TransactionToCommitGen},
@@ -25,8 +26,8 @@ fn to_blocks_to_commit(
 > {
     // Use temporary LibraDB and STORE LEVEL APIs to calculate hashes on a per transaction basis.
     // Result is used to test the batch PUBLIC API for saving everything, i.e. `save_transactions()`
-    let tmp_dir = tempfile::tempdir()?;
-    let db = db_with_mock_genesis(&tmp_dir)?;
+    let tmp_dir = TempPath::new();
+    let db = db_with_mock_genesis(&tmp_dir.path())?;
 
     let genesis_ledger_info_with_sigs = GENESIS_INFO.1.clone();
     let genesis_ledger_info = genesis_ledger_info_with_sigs.ledger_info();

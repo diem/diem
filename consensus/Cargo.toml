@@ -40,6 +40,7 @@ proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
+tools = { path = "../common/tools" }
 types = { path = "../types" }
 debug_interface = { path = "../common/debug_interface" }
 
@@ -53,7 +54,6 @@ build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
 cached = "0.9.0"
-tempfile = "3.1.0"
 parity-multiaddr = "0.5.0"
 rusty-fork = "0.2.2"
 

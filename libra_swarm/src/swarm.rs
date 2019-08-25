@@ -17,7 +17,7 @@ use std::{
     process::{Child, Command},
     str::FromStr,
 };
-use tempfile::TempDir;
+use tools::tempdir::TempPath;
 
 const LIBRA_NODE_BIN: &str = "libra_node";
 
@@ -180,11 +180,11 @@ pub enum HealthStatus {
     RpcFailure(failure::Error),
 }
 
-/// A wrapper that unifies PathBuf and TempDir.
+/// A wrapper that unifies PathBuf and TempPath.
 #[derive(Debug)]
 pub enum LibraSwarmDir {
     Persistent(PathBuf),
-    Temporary(TempDir),
+    Temporary(TempPath),
 }
 
 impl AsRef<Path> for LibraSwarmDir {
@@ -261,9 +261,13 @@ impl LibraSwarm {
                 std::fs::create_dir_all(dir_str).expect("unable to create config dir");
                 LibraSwarmDir::Persistent(path_buf)
             }
-            None => LibraSwarmDir::Temporary(
-                tempfile::tempdir().expect("unable to create temporary config dir"),
-            ),
+            None => {
+                let temp_dir = TempPath::new();
+                temp_dir
+                    .create_as_dir()
+                    .expect("unable to create temporary config dir");
+                LibraSwarmDir::Temporary(temp_dir)
+            }
         };
         println!("Base directory containing logs and configs: {:?}", &dir);
         dir
@@ -557,7 +561,7 @@ impl Drop for LibraSwarm {
         if std::thread::panicking() {
             if let Some(dir) = self.dir.take() {
                 if let LibraSwarmDir::Temporary(temp_dir) = dir {
-                    let log_path = temp_dir.into_path();
+                    let log_path = temp_dir.path();
                     println!("logs located at {:?}", log_path);
                 }
             }

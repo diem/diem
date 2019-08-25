@@ -36,5 +36,5 @@ path = "../../common/failure_ext"
 package = "failure_ext"
 
 [dev-dependencies]
-tempfile = "3.1.0"
 types = { path = "../../types", features = ["testing"]}
+tools = { path = "../../common/tools"}
