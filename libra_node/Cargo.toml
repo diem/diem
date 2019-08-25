@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 grpcio = "0.4.3"
 grpcio-sys = "0.4.4"
-parity-multiaddr = "0.4.0"
+parity-multiaddr = "0.5.0"
 signal-hook = "0.1.10"
 tokio = "0.1.22"
 

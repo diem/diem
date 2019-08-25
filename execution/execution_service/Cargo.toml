@@ -7,9 +7,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures01 = { package = "futures", version = "0.1.28" }
+futures01 = { version = "0.1.28", default-features = false }
 futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17", features = ["compat"] }
-grpcio = "0.4.4"
+grpcio = { version = "0.4.4", default-features = false }
 
 config = { path = "../../config" }
 execution_proto = { path = "../execution_proto" }

@@ -6,21 +6,24 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
+byteorder = { version = "1.3.2", default-features = false }
+canonical_serialization = { path = "../../common/canonical_serialization" }
+datatest = { version = "0.4.2", default-features = false }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-byteorder = "1.3.2"
-hex = "0.3.2"
-lazy_static = "1.3"
-proptest = "0.9.3"
-sha-1 = "0.8"
-structopt = "0.2.15"
+hex = { version = "0.3.2", default-features = false }
+lazy_static = { version = "1.3.0", default-features = false }
+proptest = { version = "0.9.4", default-features = false }
 proptest_helpers = { path = "../../common/proptest_helpers" }
 proto_conv = { path = "../../common/proto_conv" }
-canonical_serialization = { path = "../../common/canonical_serialization" }
+rusty-fork = { version = "0.2.2", default-features = false }
+sha-1 = { version = "0.8.1", default-features = false }
+stats_alloc = { version = "0.1.8", default-features = false }
+structopt = { version = "0.2.18", default-features = false }
 
 # List out modules with data structures being fuzzed here.
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
-vm_runtime = { path = "../../language/vm/vm_runtime"}
+vm_runtime = { path = "../../language/vm/vm_runtime" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 
 [dev-dependencies]

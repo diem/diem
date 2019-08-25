@@ -7,12 +7,12 @@ publish = false
 edition = "2018"
 
 [dependencies]
-ctrlc = "3.1.3"
-lazy_static = "1.2.0"
-structopt = "0.2.15"
-tempfile = "3.1.0"
-
 client_lib = { package = "client", path = "../client" }
+ctrlc = { version = "3.1.3", default-features = false }
+lazy_static = { version = "1.3.0", default-features = false }
+structopt = { version = "0.2.18", default-features = false }
+tempfile = { version = "3.1.0", default-features = false }
+
 config = { path = "../config" }
 config_builder = { path = "../config/config_builder" }
 debug_interface = { path = "../common/debug_interface" }

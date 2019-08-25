@@ -7,9 +7,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bincode = "1.1.1"
-clap = { version = "2.32" }
-tempdir = "0.3.7"
+bincode = { version = "1.1.4", default-features = false }
+clap = { version = "2.33.0", default-features = false }
+tempdir = { version = "0.3.7", default-features = false }
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 crypto = { path = "../../crypto/crypto/"}
