@@ -8,6 +8,9 @@ pub mod summaries;
 pub mod transitions;
 
 #[macro_use]
+extern crate mirai_annotations;
+
+#[macro_use]
 extern crate log;
 extern crate env_logger;
 use bytecode_generator::BytecodeGenerator;

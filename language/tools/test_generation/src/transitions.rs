@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::abstract_state::AbstractState;
+use crate::abstract_state::{AbstractState, BorrowState};
 use vm::file_format::SignatureToken;
 
 /// Determine whether the stack is at least of size `index`. If the optional `token` argument
@@ -21,16 +21,6 @@ pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
     false
 }
 
-/// Determine whether a token on the stack and a token in the locals have the same type
-pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
-    if stack_has(state, index1, None) {
-        if let Some((token, _)) = state.get_local(index2) {
-            return state.stack_peek(index1) == Some(token.clone());
-        }
-    }
-    false
-}
-
 /// Pop from the top of the stack.
 pub fn stack_pop(state: &AbstractState) -> AbstractState {
     let mut state = state.clone();
@@ -38,69 +28,66 @@ pub fn stack_pop(state: &AbstractState) -> AbstractState {
     state
 }
 
-/// Push to the top of the stack.
+/// Push given token to the top of the stack.
 pub fn stack_push(state: &AbstractState, token: SignatureToken) -> AbstractState {
     let mut state = state.clone();
     state.stack_push(token);
     state
 }
 
-/// Check whether the local at `index` is available.
-pub fn local_available(state: &AbstractState, index: u8) -> bool {
-    state.local_available(index as usize)
-}
-
-/// Push a copy of the local at `index` to the stack.
-pub fn stack_push_local_copy(state: &AbstractState, index: u8) -> AbstractState {
-    // TODO: Change to precondition once MIRAI is integrated
-    assert!(
-        state.get_local(index as usize).is_some(),
-        "Failed to copy local to stack"
-    );
-    let (token, _) = state.get_local(index as usize).unwrap();
-    stack_push(state, token.clone())
-}
-
-/// Move a local at `index` to the stack.
-pub fn stack_push_local_move(state: &AbstractState, index: u8) -> AbstractState {
-    // TODO: Change to precondition once MIRAI is integrated
-    assert!(
-        state.get_local(index as usize).is_some(),
-        "Failed to move local to stack"
-    );
+/// Push to the top of the stack from the register.
+pub fn stack_push_register(state: &AbstractState) -> AbstractState {
     let mut state = state.clone();
-    let (token, _) = state.move_local(index as usize).unwrap().clone();
-    stack_push(&state, token)
-}
-
-/// Push a reference to the local at `index` to the stack.
-pub fn stack_push_local_borrow(state: &AbstractState, mut_: bool, index: u8) -> AbstractState {
-    // TODO: Change to precondition once MIRAI is integrated
-    assert!(
-        state.get_local(index as usize).is_some(),
-        "Failed to borrow local to stack"
-    );
-    let state = state.clone();
-    let (inner_token, _) = state.get_local(index as usize).unwrap().clone();
-    let ref_token = if mut_ {
-        SignatureToken::MutableReference(Box::new(inner_token))
-    } else {
-        SignatureToken::Reference(Box::new(inner_token))
-    };
-    stack_push(&state, ref_token)
-}
-
-/// Pop an element from the stack and insert it into the locals at `index`
-pub fn stack_pop_local_insert(state: &AbstractState, index: u8) -> AbstractState {
-    // TODO: Change to precondition once MIRAI is integrated
-    assert!(
-        state.stack_peek(0).is_some(),
-        "Failed to insert local from stack"
-    );
-    let mut state = state.clone();
-    let token = state.stack_peek(0).unwrap();
-    state.insert_local(index as usize, token.clone());
+    state.stack_push_register();
     state
+}
+
+/// Check whether the local at `index` exists
+pub fn local_exists(state: &AbstractState, index: u8) -> bool {
+    state.local_exists(index as usize)
+}
+
+/// Check whether the local at `index` is available (`true`) or unavailable (`false`)
+pub fn local_is(state: &AbstractState, index: u8, availability: BorrowState) -> bool {
+    state.local_is(index as usize, availability)
+}
+
+/// Set the availability of local at `index`
+pub fn local_set(state: &AbstractState, index: u8, availability: BorrowState) -> AbstractState {
+    let mut state = state.clone();
+    state.local_set(index as usize, availability);
+    state
+}
+
+/// Put copy of the local at `index` in register
+pub fn local_take(state: &AbstractState, index: u8) -> AbstractState {
+    let mut state = state.clone();
+    state.local_take(index as usize);
+    state
+}
+
+/// Put reference to local at `index` in register
+pub fn local_take_borrow(state: &AbstractState, index: u8, mutable: bool) -> AbstractState {
+    let mut state = state.clone();
+    state.local_take_borrow(index as usize, mutable);
+    state
+}
+
+/// Insert the register value into the locals at `index`
+pub fn local_place(state: &AbstractState, index: u8) -> AbstractState {
+    let mut state = state.clone();
+    state.local_place(index as usize);
+    state
+}
+
+/// Determine whether a token on the stack and a token in the locals have the same type
+pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
+    if stack_has(state, index1, None) {
+        if let Some((token, _)) = state.local_get(index2) {
+            return state.stack_peek(index1) == Some(token.clone());
+        }
+    }
+    false
 }
 
 /// Wrapper for enclosing the arguments of `stack_has` so that only the `state` needs
@@ -117,15 +104,6 @@ macro_rules! state_stack_has {
 macro_rules! state_stack_has_polymorphic_eq {
     ($e1: expr, $e2: expr) => {
         Box::new(move |state| stack_has_polymorphic_eq(state, $e1, $e2))
-    };
-}
-
-/// Wrapper for determining whether a token on the stack and a token in the locals
-/// have the same type
-#[macro_export]
-macro_rules! state_stack_local_polymorphic_eq {
-    ($e1: expr, $e2: expr) => {
-        Box::new(move |state| stack_local_polymorphic_eq(state, $e1, $e2))
     };
 }
 
@@ -147,48 +125,75 @@ macro_rules! state_stack_push {
     };
 }
 
-/// Wrapper for enclosing the arguments of `stack_push_local_copy` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `stack_push_register` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_stack_push_local_copy {
-    ($e: expr) => {
-        Box::new(move |state| stack_push_local_copy(state, $e))
+macro_rules! state_stack_push_register {
+    () => {
+        Box::new(move |state| stack_push_register(state))
     };
 }
 
-/// Wrapper for enclosing the arguments of `stack_push_local_move` so that only the `state` needs
-/// to be given.
+/// Wrapper for determining whether a token on the stack and a token in the locals
+/// have the same type
 #[macro_export]
-macro_rules! state_stack_push_local_move {
-    ($e: expr) => {
-        Box::new(move |state| stack_push_local_move(state, $e))
+macro_rules! state_stack_local_polymorphic_eq {
+    ($e1: expr, $e2: expr) => {
+        Box::new(move |state| stack_local_polymorphic_eq(state, $e1, $e2))
     };
 }
 
-/// Wrapper for enclosing the arguments of `stack_push_local_borrow` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_exists` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_stack_push_local_borrow {
-    ($mut_: expr, $e: expr) => {
-        Box::new(move |state| stack_push_local_borrow(state, $mut_, $e))
+macro_rules! state_local_exists {
+    ($e: expr) => {
+        Box::new(move |state| local_exists(state, $e))
     };
 }
 
-/// Wrapper for enclosing the arguments of `stack_pop_local_insert` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_exists` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_stack_pop_local_insert {
-    ($e: expr) => {
-        Box::new(move |state| stack_pop_local_insert(state, $e))
+macro_rules! state_local_is {
+    ($e: expr, $a: expr) => {
+        Box::new(move |state| local_is(state, $e, $a))
     };
 }
 
-/// Wrapper for enclosing the arguments of `local_available` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_set` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_local_available {
+macro_rules! state_local_set {
+    ($e: expr, $a: expr) => {
+        Box::new(move |state| local_set(state, $e, $a))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `local_get` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_local_take {
     ($e: expr) => {
-        Box::new(move |state| local_available(state, $e))
+        Box::new(move |state| local_take(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `local_get_borrow` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_local_take_borrow {
+    ($e: expr, $mutable: expr) => {
+        Box::new(move |state| local_take_borrow(state, $e, $mutable))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_local_insert` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_local_place {
+    ($e: expr) => {
+        Box::new(move |state| local_place(state, $e))
     };
 }
 
