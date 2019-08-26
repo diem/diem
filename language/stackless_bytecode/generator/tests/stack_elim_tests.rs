@@ -41,6 +41,7 @@ fn transform_code_with_refs() {
         FreezeRef(10, 9),
         StLoc(4, 10),
         MoveLoc(11, 4),
+        NoOp,
         MoveLoc(12, 3),
         ReadRef(13, 12),
         Ret(vec![13]),
