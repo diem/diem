@@ -25,7 +25,7 @@ use crypto::{
     },
     HashValue,
 };
-use failure::{Fail, Result};
+use failure::{Fail, Result, *};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest_derive::Arbitrary;
@@ -85,14 +85,12 @@ impl NodeKey {
         self.version = version;
     }
 
-    /// Serializes to bytes for physical storage.
+    /// Serializes to bytes for physical storage enforcing the same order as that in memory.
     pub fn encode(&self) -> Result<Vec<u8>> {
         let mut out = vec![];
         out.write_u64::<BigEndian>(self.version())?;
+        out.write_u8(self.nibble_path().num_nibbles() as u8)?;
         out.write_all(self.nibble_path().bytes())?;
-        if self.nibble_path().num_nibbles() != 0 && self.nibble_path().num_nibbles() % 2 == 0 {
-            out.write_u8(0x01)?;
-        }
         Ok(out)
     }
 
@@ -100,12 +98,16 @@ impl NodeKey {
     pub fn decode(val: &[u8]) -> Result<NodeKey> {
         let mut reader = Cursor::new(val);
         let version = reader.read_u64::<BigEndian>()?;
-        let mut nibble_bytes = vec![];
+        let num_nibbles = reader.read_u8()? as usize;
+        let mut nibble_bytes = Vec::with_capacity((num_nibbles + 1) / 2);
         reader.read_to_end(&mut nibble_bytes)?;
-        let nibble_path = if nibble_bytes.is_empty() {
-            NibblePath::new(nibble_bytes)
-        } else if *nibble_bytes.last().expect("checked non-emptyness") == 0x01 {
-            nibble_bytes.pop();
+        ensure!(
+            (num_nibbles + 1) / 2 == nibble_bytes.len(),
+            "encoded num_nibbles {} mismatches nibble path bytes {:?}",
+            num_nibbles,
+            nibble_bytes
+        );
+        let nibble_path = if num_nibbles % 2 == 0 {
             NibblePath::new(nibble_bytes)
         } else {
             NibblePath::new_odd(nibble_bytes)
