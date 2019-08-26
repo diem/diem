@@ -9,19 +9,19 @@ module LibraAccount {
 
     // Every Libra account has a LibraAccount.T resource
     resource T {
-        // The coins stored in this account
-        balance: LibraCoin.T,
         // The current authentication key.
         // This can be different than the key used to create the account
         authentication_key: bytearray,
+        // The coins stored in this account
+        balance: LibraCoin.T,
+        delegated_withdrawal_capability: bool,
+        // Event handle for received event
+        received_events: Event.Handle,
+        // Event handle for sent event
+        sent_events: Event.Handle,
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
-        // Event handle for sent event
-        sent_events: Event.Handle,
-        // Event handle for received event
-        received_events: Event.Handle,
-        delegated_withdrawal_capability: bool,
     }
 
     // The holder of WithdrawalCapability for account_address can withdraw Libra from
@@ -33,18 +33,18 @@ module LibraAccount {
 
     // Message for sent events
     struct SentPaymentEvent {
-        // The address that was paid
-        payee: address,
         // The amount of LibraCoin.T sent
         amount: u64,
+        // The address that was paid
+        payee: address,
     }
 
     // Message for received events
     struct ReceivedPaymentEvent {
-        // The address that sent the coin
-        payer: address,
         // The amount of LibraCoin.T received
         amount: u64,
+        // The address that sent the coin
+        payer: address,
     }
 
     // Creates a new LibraAccount.T
@@ -59,12 +59,12 @@ module LibraAccount {
         zero_balance = LibraCoin.zero();
 
         return T {
-            balance: move(zero_balance),
             authentication_key: move(auth_key),
-            sequence_number: 0,
-            sent_events: move(sent_handle),
-            received_events: move(received_handle),
+            balance: move(zero_balance),
             delegated_withdrawal_capability: false,
+            received_events: move(received_handle),
+            sent_events: move(sent_handle),
+            sequence_number: 0,
         };
     }
 
@@ -87,7 +87,7 @@ module LibraAccount {
         sender = get_txn_sender();
         sender_account_ref = borrow_global<T>(copy(sender));
         // Log a send event
-        sent_event = SentPaymentEvent { payee: copy(payee), amount: copy(deposit_value) };
+        sent_event = SentPaymentEvent { amount: copy(deposit_value), payee: copy(payee) };
 
         sent_event_bytes = Self.sent_event_to_bytes(&sent_event);
         Event.emit_event(&mut move(sender_account_ref).sent_events, move(sent_event_bytes));
@@ -97,7 +97,7 @@ module LibraAccount {
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
         // Log a received event
-        received_event = ReceivedPaymentEvent { payer: move(sender), amount: move(deposit_value) };
+        received_event = ReceivedPaymentEvent { amount: move(deposit_value), payer: move(sender) };
         received_event_bytes = Self.received_event_to_bytes(&received_event);
         Event.emit_event(&mut move(payee_account_ref).received_events, move(received_event_bytes));
         return;

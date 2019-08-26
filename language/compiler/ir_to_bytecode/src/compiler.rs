@@ -513,11 +513,11 @@ fn compile_fields(
                 fields: FieldDefinitionIndex(pool_len as TableIndex),
             };
 
-            for (f, ty) in fields {
+            for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
                 let name = context.string_index(f.name())?;
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
-                context.declare_field(sh_idx, f, sig_token)?;
+                context.declare_field(sh_idx, f, sig_token, decl_order)?;
                 field_pool.push(FieldDefinition {
                     struct_: sh_idx,
                     name,
@@ -798,7 +798,7 @@ fn compile_command(
             code.push(Bytecode::Unpack(def_idx, type_actuals_id));
             function_frame.pop()?;
 
-            for lhs_variable in bindings.values().rev() {
+            for (_, lhs_variable) in bindings.iter().rev() {
                 let loc_idx = function_frame.get_local(&lhs_variable.value)?;
                 let st_loc = Bytecode::StLoc(loc_idx);
                 code.push(st_loc);
@@ -929,8 +929,21 @@ fn compile_expression(
             let type_actuals_id = context.locals_signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
 
+            let self_name = ModuleName::new(ModuleName::SELF.to_string());
+            let ident = QualifiedStructIdent {
+                module: self_name,
+                name: name.clone(),
+            };
+            let sh_idx = context.struct_handle_index(ident)?;
+
             let num_fields = fields.len();
-            for (_, e) in fields {
+            for (field_order, (field, e)) in fields.into_iter().enumerate() {
+                // Check that the fields are specified in order matching the definition.
+                let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
+                if field_order != decl_order {
+                    bail!("Field {} defined out of order for struct {}", field, name);
+                }
+
                 compile_expression(context, function_frame, code, e)?;
             }
             code.push(Bytecode::Pack(def_idx, type_actuals_id));
@@ -939,12 +952,6 @@ fn compile_expression(
             }
             function_frame.push()?;
 
-            let self_name = ModuleName::new(ModuleName::SELF.to_string());
-            let ident = QualifiedStructIdent {
-                module: self_name,
-                name,
-            };
-            let sh_idx = context.struct_handle_index(ident)?;
             vec_deque![InferredType::Struct(sh_idx)]
         }
         Exp::UnaryExp(op, e) => {
@@ -1048,7 +1055,7 @@ fn compile_expression(
                 None => bail!("Impossible no expression to borrow"),
             };
             let sh_idx = loc_type.get_struct_handle()?;
-            let (fd_idx, field_type) = context.field(sh_idx, field)?;
+            let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token(&field_type));
             if is_mutable {

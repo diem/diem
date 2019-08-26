@@ -168,7 +168,7 @@ pub struct Context<'a> {
     struct_defs: HashMap<StructName, TableIndex>,
 
     // queryable pools
-    fields: HashMap<(StructHandleIndex, Field), (TableIndex, SignatureToken)>,
+    fields: HashMap<(StructHandleIndex, Field), (TableIndex, SignatureToken, usize)>,
     function_handles: HashMap<(ModuleName, FunctionName), (FunctionHandle, FunctionHandleIndex)>,
     function_signatures:
         HashMap<(ModuleName, FunctionName), (FunctionSignature, FunctionSignatureIndex)>,
@@ -359,10 +359,12 @@ impl<'a> Context<'a> {
         &self,
         s: StructHandleIndex,
         f: Field,
-    ) -> Result<(FieldDefinitionIndex, SignatureToken)> {
+    ) -> Result<(FieldDefinitionIndex, SignatureToken, usize)> {
         match self.fields.get(&(s, f.clone())) {
             None => bail!("Unbound field {}", f),
-            Some((idx, token)) => Ok((FieldDefinitionIndex(*idx), token.clone())),
+            Some((idx, token, decl_order)) => {
+                Ok((FieldDefinitionIndex(*idx), token.clone(), *decl_order))
+            }
         }
     }
 
@@ -499,6 +501,7 @@ impl<'a> Context<'a> {
         s: StructHandleIndex,
         f: Field,
         token: SignatureToken,
+        decl_order: usize,
     ) -> Result<FieldDefinitionIndex> {
         let idx = self.fields.len();
         if idx > TABLE_MAX_SIZE {
@@ -508,7 +511,7 @@ impl<'a> Context<'a> {
         Ok(FieldDefinitionIndex(
             self.fields
                 .entry((s, f))
-                .or_insert((idx as TableIndex, token))
+                .or_insert((idx as TableIndex, token, decl_order))
                 .0,
         ))
     }

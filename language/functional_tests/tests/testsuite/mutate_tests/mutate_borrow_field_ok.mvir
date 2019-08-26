@@ -2,7 +2,7 @@ module Test {
     struct T{v: u64}
 
     public new(g: u64): Self.T {
-        return T{g: move(g)};
+        return T{v: move(g)};
     }
     
     public thousand(t : &mut Self.T) {
