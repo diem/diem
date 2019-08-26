@@ -24,3 +24,4 @@ termion = "1.5.3"
 
 benchmark = { path = "../../benchmark", features = ["testing"]}
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+debug_interface = { path = "../../common/debug_interface"}

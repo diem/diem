@@ -42,6 +42,10 @@ impl Instance {
     pub fn short_hash(&self) -> &String {
         &self.short_hash
     }
+
+    pub fn ip(&self) -> &String {
+        &self.ip
+    }
 }
 
 impl fmt::Display for Instance {
