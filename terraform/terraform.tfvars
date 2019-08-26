@@ -3,6 +3,10 @@ peer_ids = ["8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f", 
 #api_sources_ipv4 = []  # Specify a list of IPv4 IPs/CIDRs which can access API load balancers
 #ssh_sources_ipv4 = []  # Specify a list of IPv4 IPs/CIDRs which can SSH to instances
 #ssh_sources_ipv6 = []  # Specify a list of IPv6 IPs/CIDRs which can SSH to instances
+#
+#validator_node_sources_ipv4 = []
+#validator_node_sources_ipv6 = []
+#
 
 #ssh_pub_key       =  ""  # Specify the content of your SSH public key
 #ssh_priv_key_file =  ""  # Specify the filename of your SSH private key

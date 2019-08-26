@@ -18,6 +18,7 @@ locals {
   ebs_types = ["t2", "t3", "m5", "c5"]
 
   cpu_by_instance = {
+    "t2.small"     = 1024
     "t2.large"     = 2048
     "t2.medium"    = 2048
     "t3.medium"    = 2048
@@ -42,6 +43,7 @@ locals {
   }
 
   mem_by_instance = {
+    "t2.small"     = 1800
     "t2.medium"    = 3943
     "t2.large"     = 7975
     "t3.medium"    = 3884
@@ -178,7 +180,8 @@ data "template_file" "node_config" {
   template = file("${var.validator_set}/node.config.toml")
 
   vars = {
-    self_ip = element(aws_instance.validator.*.private_ip, count.index)
+    self_ip = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
+
   }
 }
 
@@ -186,7 +189,8 @@ data "template_file" "seed_peers" {
   template = file("templates/seed_peers.config.toml")
 
   vars = {
-    validators = join(",", formatlist("%s:%s", slice(var.peer_ids, 0, 3), slice(aws_instance.validator.*.private_ip, 0, 3)))
+    validators = join(",", formatlist("%s:%s", slice(var.peer_ids, 0, 3), var.validator_use_public_ip == true ? slice(aws_instance.validator.*.public_ip, 0, 3) : slice(aws_instance.validator.*.private_ip, 0, 3)))
+
   }
 }
 
