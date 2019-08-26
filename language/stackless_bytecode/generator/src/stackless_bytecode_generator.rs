@@ -92,6 +92,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         match bytecode {
             Bytecode::Pop => {
                 self.temp_stack.pop();
+                self.code.push(StacklessBytecode::NoOp);
             }
             Bytecode::BrTrue(code_offset) => {
                 let temp_index = self.temp_stack.pop().unwrap();
