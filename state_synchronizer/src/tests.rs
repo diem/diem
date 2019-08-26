@@ -234,15 +234,13 @@ impl SynchronizerEnv {
         }
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
-                sender_a,
-                events_a,
+                vec![(sender_a, events_a)],
                 &config,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
                 vec![peers[1]],
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
-                sender_b,
-                events_b,
+                vec![(sender_b, events_b)],
                 &get_test_config().0,
                 MockExecutorProxy::new(peers[1], handler),
                 vec![],
