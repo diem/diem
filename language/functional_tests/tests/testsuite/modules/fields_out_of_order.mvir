@@ -1,0 +1,11 @@
+// check: defined out of order
+
+module M {
+    struct T {
+        x: u64,
+        y: u64
+    }
+    public new(): Self.T {
+        return T { y: 1, x: 2 };
+    }
+}

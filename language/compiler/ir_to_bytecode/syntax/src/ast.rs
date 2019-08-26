@@ -3,7 +3,7 @@
 
 use codespan::{ByteIndex, Span};
 use std::{
-    collections::{BTreeMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     fmt,
     ops::Deref,
 };
@@ -189,7 +189,7 @@ pub struct QualifiedStructIdent {
 /// The file newtype
 pub type Field = types::access_path::Field;
 /// A field map
-pub type Fields<T> = BTreeMap<Field, T>;
+pub type Fields<T> = Vec<(Field, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -1165,7 +1165,7 @@ fn intersperse<T: fmt::Display>(items: &[T], join: &str) -> String {
     })
 }
 
-fn format_fields<T: fmt::Display>(fields: &Fields<T>) -> String {
+fn format_fields<T: fmt::Display>(fields: &[(Field, T)]) -> String {
     fields.iter().fold(String::new(), |acc, (field, val)| {
         format!("{} {}: {},", acc, field, val)
     })

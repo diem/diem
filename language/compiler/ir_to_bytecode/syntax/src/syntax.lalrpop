@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::collections::BTreeMap;
 use codespan::{ByteIndex, Span};
 
 use crate::ast::{ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule};
@@ -180,7 +179,7 @@ Term: Exp = {
         Exp::Pack(
             StructName::new(name),
             type_actuals,
-            fs.into_iter().collect::<BTreeMap<Field, Exp_>>()
+            fs.into_iter().collect::<Vec<_>>()
         )
     },
     "(" <exps: Comma<Sp<Exp>>> ")" => Exp::ExprList(exps),
@@ -521,7 +520,7 @@ StructDecl: StructDefinition = {
         let (name, type_formals) = name_and_type_formals;
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
-            fields.insert(field, type_);
+            fields.push((field, type_));
         }
         StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)
     },

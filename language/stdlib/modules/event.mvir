@@ -40,7 +40,7 @@ module Event {
 
         exists_counter = exists<HandleIdGenerator>(copy(sender));
         if (!move(exists_counter)) {
-            move_to_sender<HandleIdGenerator>(HandleIdGenerator { count: 0 });
+            move_to_sender<HandleIdGenerator>(HandleIdGenerator { counter: 0 });
         }
         counter = borrow_global<HandleIdGenerator>(copy(sender));
 
@@ -59,7 +59,7 @@ module Event {
 
     // Use the sender's HandleIdGenerator to generate a unique event handle that one can emit an event to.
     public new_event_handle(): Self.Handle acquires HandleIdGenerator {
-        return Handle {guid: Self.fresh_guid(), counter: 0};
+        return Handle {counter: 0, guid: Self.fresh_guid()};
     }
 
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
@@ -84,7 +84,7 @@ module Event {
     public destroy(handle: Self.Handle) {
         let guid: bytearray;
         let count: u64;
-        Handle { guid, count } = move(handle);
+        Handle { count, guid } = move(handle);
         return;
     }
 

@@ -5,7 +5,7 @@ module Test {
     public new_t(): Self.T {
         let x: Self.T;
         x = X { };
-        return T { i: 0, x: move(x), b: false };
+        return T { i: 0, x: move(x) };
     }
 
     public destroy_t(t: Self.T): u64 * Self.X * bool {
@@ -33,9 +33,6 @@ main() {
 
     return;
 }
-
-// check: VerificationError
-// check: PositiveStackSizeAtBlockEnd
 
 // check: VerificationError
 // check: NegativeStackSizeInsideBlock
