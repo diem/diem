@@ -188,12 +188,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             return;
         }
 
-        if requested_version > self.target_version() {
-            self.peer_manager
-                .set_peers(target.signatures().keys().copied().collect());
-            self.target = Some(target);
-            self.request_next_chunk(0).await;
-        }
+        self.peer_manager
+            .set_peers(target.signatures().keys().copied().collect());
+        self.target = Some(target);
+        self.request_next_chunk(0).await;
         self.callback = Some(callback);
     }
 
