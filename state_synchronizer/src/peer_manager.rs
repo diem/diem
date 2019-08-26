@@ -5,32 +5,35 @@ use crate::PeerId;
 use network::validator_network::StateSynchronizerSender;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-use types::account_address::AccountAddress;
 
 #[derive(Default)]
 pub struct PeerInfo {
     is_alive: bool,
+    is_upstream: bool,
 }
 
 impl PeerInfo {
-    pub fn new(is_alive: bool) -> Self {
-        Self { is_alive }
+    pub fn new(is_alive: bool, is_upstream: bool) -> Self {
+        Self {
+            is_alive,
+            is_upstream,
+        }
     }
 }
 
 pub struct PeerManager {
-    upstream_peers: HashMap<PeerId, PeerInfo>,
+    peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
 }
 
 impl PeerManager {
     pub fn new(peer_ids: Vec<PeerId>) -> Self {
-        let upstream_peers = peer_ids
+        let peers = peer_ids
             .into_iter()
-            .map(|peer_id| (peer_id, PeerInfo::default()))
+            .map(|peer_id| (peer_id, PeerInfo::new(false, true)))
             .collect();
         Self {
-            upstream_peers,
+            peers,
             network_senders: HashMap::new(),
         }
     }
@@ -38,31 +41,33 @@ impl PeerManager {
     pub fn set_peers(&mut self, peer_ids: Vec<PeerId>) {
         let new_peers = peer_ids
             .into_iter()
-            .map(|peer_id| (peer_id, PeerInfo::new(true)))
+            .map(|peer_id| (peer_id, PeerInfo::new(true, true)))
             .collect();
-        self.upstream_peers = new_peers;
+        self.peers = new_peers;
     }
 
     pub fn enable_peer(&mut self, peer_id: PeerId, sender: StateSynchronizerSender) {
         self.network_senders.insert(peer_id, sender);
-        if let Some(peer_info) = self.upstream_peers.get_mut(&peer_id) {
+        if let Some(peer_info) = self.peers.get_mut(&peer_id) {
             peer_info.is_alive = true;
-        };
+        } else {
+            self.peers.insert(peer_id, PeerInfo::new(true, false));
+        }
     }
 
     pub fn disable_peer(&mut self, peer_id: &PeerId) {
         self.network_senders.remove(&peer_id);
-        if let Some(peer_info) = self.upstream_peers.get_mut(peer_id) {
+        if let Some(peer_info) = self.peers.get_mut(peer_id) {
             peer_info.is_alive = false;
         };
     }
 
     pub fn is_empty(&self) -> bool {
-        self.get_active_peer_ids().is_empty()
+        self.get_active_upstream_peer_ids().is_empty()
     }
 
-    pub fn pick_peer(&mut self) -> Option<(AccountAddress, StateSynchronizerSender)> {
-        let active_peers = self.get_active_peer_ids();
+    pub fn pick_peer(&mut self) -> Option<(PeerId, StateSynchronizerSender)> {
+        let active_peers = self.get_active_upstream_peer_ids();
         if !active_peers.is_empty() {
             let idx = thread_rng().gen_range(0, active_peers.len());
             let peer_id = *active_peers[idx];
@@ -73,10 +78,10 @@ impl PeerManager {
         None
     }
 
-    fn get_active_peer_ids(&self) -> Vec<&AccountAddress> {
-        self.upstream_peers
+    fn get_active_upstream_peer_ids(&self) -> Vec<&PeerId> {
+        self.peers
             .iter()
-            .filter(|&(_, peer_info)| peer_info.is_alive)
+            .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)
             .map(|(peer_id, _)| peer_id)
             .collect()
     }
