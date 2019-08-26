@@ -12,9 +12,7 @@ pub use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
 pub use types::{
     account_address::AccountAddress,
-    transaction::{
-        Program, RawTransaction, RawTransactionBytes, TransactionArgument, TransactionPayload,
-    },
+    transaction::{Program, RawTransaction, TransactionArgument, TransactionPayload},
 };
 pub use vm_genesis;
 

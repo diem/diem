@@ -17,7 +17,6 @@ use crate::{
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
-use canonical_serialization::SimpleSerializer;
 pub use libra_crypto::hash::CryptoHash;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
@@ -25,7 +24,7 @@ use std::{collections::HashMap, path::Path};
 use types::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
-    transaction::{RawTransaction, RawTransactionBytes, SignedTransaction},
+    transaction::{RawTransaction, SignedTransaction},
     transaction_helpers::TransactionSigner,
 };
 
@@ -153,11 +152,8 @@ impl WalletLibrary {
     /// AccountAddress is not contained in the addr_map, then this function will return an Error
     pub fn sign_txn(&self, txn: RawTransaction) -> Result<SignedTransaction> {
         if let Some(child) = self.addr_map.get(&txn.sender()) {
-            let raw_bytes = SimpleSerializer::<Vec<u8>>::serialize(&txn)?;
-            let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
-
             let child_key = self.key_factory.private_child(child.clone())?;
-            let signature = child_key.sign(txn_hashvalue);
+            let signature = child_key.sign(txn.hash());
             let public_key = child_key.get_public();
 
             let mut signed_txn = ProtoSignedTransaction::new();

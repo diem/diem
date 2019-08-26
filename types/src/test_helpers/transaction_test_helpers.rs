@@ -4,13 +4,9 @@
 use crate::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
-    transaction::{
-        Program, RawTransaction, RawTransactionBytes, SignatureCheckedTransaction,
-        SignedTransaction,
-    },
+    transaction::{Program, RawTransaction, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
-use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, hash::CryptoHash, traits::*};
 use proto_conv::IntoProto;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -40,9 +36,7 @@ pub fn get_test_signed_transaction(
         Duration::from_secs(expiration_time),
     );
 
-    let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn).unwrap();
-    let hash = RawTransactionBytes(&bytes).hash();
-    let signature = private_key.sign_message(&hash);
+    let signature = private_key.sign_message(&raw_txn.hash());
 
     let mut signed_txn = ProtoSignedTransaction::new();
     signed_txn.set_raw_txn(raw_txn.into_proto());
@@ -71,9 +65,7 @@ pub fn get_test_unchecked_transaction(
         Duration::from_secs(expiration_time),
     );
 
-    let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn).unwrap();
-    let hash = RawTransactionBytes(&bytes).hash();
-    let signature = private_key.sign_message(&hash);
+    let signature = private_key.sign_message(&raw_txn.hash());
 
     SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature)
 }
