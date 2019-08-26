@@ -241,8 +241,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         )]);
 
     let state_synchronizer = StateSynchronizer::bootstrap(
-        state_sync_network_sender,
-        state_sync_network_events,
+        vec![(state_sync_network_sender, state_sync_network_events)],
         &node_config,
         vec![], // TODO: pass in empty vector for now, will be derived from node config later
     );

@@ -11,7 +11,7 @@ use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
     compat::Stream01CompatExt,
-    stream::{futures_unordered::FuturesUnordered, Fuse},
+    stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
 use logger::prelude::*;
@@ -39,13 +39,8 @@ pub enum CoordinatorMessage {
 /// used to coordinate synchronization process
 /// handles external sync requests and drives synchronization with remote peers
 pub(crate) struct SyncCoordinator<T> {
-    // used for interaction with remote peers
-    network_sender: StateSynchronizerSender,
-    // used for receiving events from peers
-    network_events: Fuse<StateSynchronizerEvents>,
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
-
     // last committed version that validator is aware of
     known_version: u64,
     // target state to sync to
@@ -70,16 +65,12 @@ pub(crate) struct SyncCoordinator<T> {
 
 impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
-        network_sender: StateSynchronizerSender,
-        network_events: StateSynchronizerEvents,
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         node_config: &NodeConfig,
         executor_proxy: T,
         upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         Self {
-            network_sender,
-            network_events: network_events.fuse(),
             client_events,
             known_version: 0,
             target: None,
@@ -94,7 +85,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
-    pub async fn start(mut self) {
+    pub async fn start(mut self, network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>) {
         self.known_version = self
             .executor_proxy
             .get_latest_version()
@@ -105,6 +96,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             Interval::new_interval(Duration::from_millis(self.config.tick_interval_ms))
                 .compat()
                 .fuse();
+
+        let network_senders: Vec<StateSynchronizerSender> =
+            network.iter().map(|t| t.0.clone()).collect();
+        let events: Vec<_> = network
+            .into_iter()
+            .enumerate()
+            .map(|(idx, t)| t.1.map(move |e| (idx, e)))
+            .collect();
+        let mut network_events = select_all(events).fuse();
 
         loop {
             ::futures::select! {
@@ -121,12 +121,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         }
                     };
                 },
-                network_event = self.network_events.select_next_some() => {
+                (idx, network_event) = network_events.select_next_some() => {
                     match network_event {
                         Ok(event) => {
                             match event {
                                 Event::NewPeer(peer_id) => {
-                                    self.peer_manager.enable_peer(&peer_id);
+                                    self.peer_manager.enable_peer(peer_id, network_senders[idx].clone());
                                     self.check_progress().await;
                                 }
                                 Event::LostPeer(peer_id) => {
@@ -260,14 +260,22 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
             Ok(())
         } else {
-            self.deliver_chunk(
-                peer_id,
-                request.known_version,
-                request.limit,
-                target,
-                self.network_sender.clone(),
-            )
-            .await
+            match self.peer_manager.get_network_sender(&peer_id) {
+                Some(sender) => {
+                    self.deliver_chunk(
+                        peer_id,
+                        request.known_version,
+                        request.limit,
+                        target,
+                        sender,
+                    )
+                    .await
+                }
+                None => Err(format_err!(
+                    "[state sync] failed to find network for peer {}",
+                    peer_id
+                )),
+            }
         }
     }
 
@@ -366,7 +374,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     async fn request_next_chunk(&mut self, offset: u64) {
         if self.autosync || self.known_version + offset < self.target_version() {
-            if let Some(peer_id) = self.peer_manager.pick_peer() {
+            if let Some((peer_id, mut sender)) = self.peer_manager.pick_peer() {
                 let mut req = GetChunkRequest::new();
                 req.set_known_version(self.known_version + offset);
                 req.set_limit(self.config.chunk_limit);
@@ -390,7 +398,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 let mut msg = StateSynchronizerMsg::new();
                 msg.set_chunk_request(req);
 
-                if self.network_sender.send_to(peer_id, msg).await.is_err() {
+                if sender.send_to(peer_id, msg).await.is_err() {
                     error!("[state sync] failed to send p2p message");
                 }
             }
@@ -427,18 +435,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }
             });
 
-        let mut futures: FuturesUnordered<_> = ready
-            .into_iter()
-            .map(|(peer_id, known_version, limit)| {
-                self.deliver_chunk(
+        let mut futures = FuturesUnordered::new();
+        for (peer_id, known_version, limit) in ready {
+            if let Some(sender) = self.peer_manager.get_network_sender(&peer_id) {
+                futures.push(self.deliver_chunk(
                     peer_id,
                     known_version,
                     limit,
                     ledger_info.clone(),
-                    self.network_sender.clone(),
-                )
-            })
-            .collect();
+                    sender,
+                ));
+            }
+        }
         while let Some(res) = futures.next().await {
             if let Err(err) = res {
                 error!("[state sync] failed to notify subscriber {:?}", err);
