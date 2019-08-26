@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    abstract_state::AbstractState, state_local_available, state_never, state_stack_has,
-    state_stack_has_polymorphic_eq, state_stack_local_polymorphic_eq, state_stack_pop,
-    state_stack_pop_local_insert, state_stack_push, state_stack_push_local_borrow,
-    state_stack_push_local_copy, state_stack_push_local_move, transitions::*,
+    abstract_state::{AbstractState, BorrowState},
+    state_local_exists, state_local_is, state_local_place, state_local_set, state_local_take,
+    state_local_take_borrow, state_never, state_stack_has, state_stack_has_polymorphic_eq,
+    state_stack_local_polymorphic_eq, state_stack_pop, state_stack_push, state_stack_push_register,
+    transitions::*,
 };
 use vm::file_format::{Bytecode, SignatureToken};
 
@@ -54,28 +55,55 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             effects: vec![state_stack_push!(SignatureToken::ByteArray)],
         },
         Bytecode::CopyLoc(i) => Summary {
-            preconditions: vec![state_local_available!(i)],
-            effects: vec![state_stack_push_local_copy!(i)],
+            preconditions: vec![
+                state_local_exists!(i),
+                state_local_is!(i, BorrowState::Available),
+            ],
+            effects: vec![state_local_take!(i), state_stack_push_register!()],
         },
         Bytecode::MoveLoc(i) => Summary {
-            preconditions: vec![state_local_available!(i)],
-            effects: vec![state_stack_push_local_move!(i)],
+            preconditions: vec![
+                state_local_exists!(i),
+                state_local_is!(i, BorrowState::Available),
+            ],
+            effects: vec![
+                state_local_take!(i),
+                state_stack_push_register!(),
+                state_local_set!(i, BorrowState::Unavailable),
+            ],
         },
         Bytecode::StLoc(i) => Summary {
             preconditions: vec![
                 state_stack_has!(0, None),
-                state_local_available!(i),
+                // TODO: This covers storing on an unrestricted local only
+                state_local_exists!(i),
                 state_stack_local_polymorphic_eq!(0, i as usize),
             ],
-            effects: vec![state_stack_pop_local_insert!(i), state_stack_pop!()],
+            effects: vec![
+                state_stack_pop!(),
+                state_local_place!(i),
+                state_local_set!(i, BorrowState::Available),
+            ],
         },
         Bytecode::MutBorrowLoc(i) => Summary {
-            preconditions: vec![state_local_available!(i)],
-            effects: vec![state_stack_push_local_borrow!(true, i)],
+            preconditions: vec![
+                state_local_exists!(i),
+                state_local_is!(i, BorrowState::Available),
+            ],
+            effects: vec![
+                state_local_take_borrow!(i, true),
+                state_stack_push_register!(),
+            ],
         },
         Bytecode::ImmBorrowLoc(i) => Summary {
-            preconditions: vec![state_local_available!(i)],
-            effects: vec![state_stack_push_local_borrow!(false, i)],
+            preconditions: vec![
+                state_local_exists!(i),
+                state_local_is!(i, BorrowState::Available),
+            ],
+            effects: vec![
+                state_local_take_borrow!(i, false),
+                state_stack_push_register!(),
+            ],
         },
         Bytecode::Add => Summary {
             preconditions: vec![

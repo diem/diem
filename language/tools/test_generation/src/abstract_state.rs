@@ -23,6 +23,10 @@ pub struct AbstractState {
 
     /// A HashMap mapping local indicies to `SignatureToken`s and `BorrowState`s
     locals: HashMap<usize, (SignatureToken, BorrowState)>,
+
+    /// Temporary location for storing the results of instruction effects for
+    /// access by subsequent instructions
+    register: Option<SignatureToken>,
 }
 
 impl AbstractState {
@@ -32,6 +36,7 @@ impl AbstractState {
         AbstractState {
             stack: Vec::new(),
             locals: HashMap::new(),
+            register: None,
         }
     }
 
@@ -41,7 +46,15 @@ impl AbstractState {
         AbstractState {
             stack: Vec::new(),
             locals,
+            register: None,
         }
+    }
+
+    /// Get the register value and set it to `None`
+    fn get_register(&mut self) -> Option<SignatureToken> {
+        let value = self.register.clone();
+        self.register = None;
+        value
     }
 
     /// Add a `SignatureToken` to the stack
@@ -49,9 +62,18 @@ impl AbstractState {
         self.stack.push(item);
     }
 
-    /// Remove a `SignatureToken` from the stack if it exists
-    pub fn stack_pop(&mut self) -> Option<SignatureToken> {
-        self.stack.pop()
+    /// Add a `SignatureToken` to the stack from the register
+    pub fn stack_push_register(&mut self) {
+        if let Some(token) = self.get_register() {
+            self.stack.push(token);
+        } else {
+            panic!("Error: No value in register");
+        }
+    }
+
+    /// Remove a `SignatureToken` from the stack if it exists to the register
+    pub fn stack_pop(&mut self) {
+        self.register = self.stack.pop();
     }
 
     /// Get the `SignatureToken` at index `index` on the stack if it exists.
@@ -69,36 +91,64 @@ impl AbstractState {
         self.stack.len()
     }
 
-    /// Check whether a local is available. Defaults to false if no local is
-    /// present at index `i`.
-    pub fn local_available(&self, i: usize) -> bool {
-        if let Some((_, borrow_state)) = self.locals.get(&i) {
-            return *borrow_state == BorrowState::Available;
-        }
-        false
+    /// Check if the local at index `i` exists
+    pub fn local_exists(&self, i: usize) -> bool {
+        self.locals.get(&i).is_some()
     }
 
     /// Get the local at index `i` if it exists
-    pub fn get_local(&self, i: usize) -> Option<&(SignatureToken, BorrowState)> {
+    pub fn local_get(&self, i: usize) -> Option<&(SignatureToken, BorrowState)> {
         self.locals.get(&i)
     }
 
-    /// Get the local at index `i` and set it to `Unavailable`
-    pub fn move_local(&mut self, i: usize) -> Option<&(SignatureToken, BorrowState)> {
-        // TODO: Change to precondition once MIRAI is integrated
-        assert!(self.get_local(i).is_some(), "Failed to move local");
-        let (local, _) = self.get_local(i).unwrap().clone();
-        self.locals.insert(i, (local, BorrowState::Unavailable));
-        self.locals.get(&i)
+    /// Place the local at index `i` if it exists into the register
+    pub fn local_take(&mut self, i: usize) {
+        checked_precondition!(self.local_exists(i), "Failed to get local");
+        let (token, _) = self.locals.get(&i).unwrap();
+        self.register = Some(token.clone());
+    }
+
+    /// Place a reference to the local at index `i` if it exists into the register
+    pub fn local_take_borrow(&mut self, i: usize, mutable: bool) {
+        checked_precondition!(self.local_exists(i), "Failed to get reference to local");
+        let (token, _) = self.locals.get(&i).unwrap();
+        let ref_token = if mutable {
+            SignatureToken::MutableReference(Box::new(token.clone()))
+        } else {
+            SignatureToken::Reference(Box::new(token.clone()))
+        };
+        self.register = Some(ref_token);
+    }
+
+    /// Set the availability of the local at index `i`
+    pub fn local_set(&mut self, i: usize, availability: BorrowState) {
+        checked_precondition!(self.local_exists(i), "Failed to change local availability");
+        let (token, _) = self.locals.get(&i).unwrap().clone();
+        self.locals.insert(i, (token, availability));
+    }
+
+    /// Check whether a local is in a particular `BorrowState`
+    pub fn local_is(&self, i: usize, availability: BorrowState) -> bool {
+        checked_precondition!(self.local_exists(i), "Failed to check local availability");
+        let (_, availability1) = self.locals.get(&i).unwrap();
+        availability == *availability1
     }
 
     /// Insert a local at index `i` as `Available`
-    pub fn insert_local(&mut self, i: usize, token: SignatureToken) {
-        // TODO: What should the behavior be if there is already a local at i?
+    pub fn local_insert(&mut self, i: usize, token: SignatureToken, availability: BorrowState) {
+        self.locals.insert(i, (token, availability));
+    }
+
+    /// Insert a local at index `i` as `Available` from the register
+    pub fn local_place(&mut self, i: usize) {
+        let value = self.get_register();
+        assert!(value.is_some(), "Failed to insert local from stack");
+        let token = value.unwrap();
         self.locals
             .insert(i, (token.clone(), BorrowState::Available));
     }
 
+    /// Get all of the locals
     pub fn get_locals(&self) -> &HashMap<usize, (SignatureToken, BorrowState)> {
         &self.locals
     }
