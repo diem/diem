@@ -1,10 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
-use ::canonical_serialization::SimpleSerializer;
 use cli::{
-    client_proxy::ClientProxy, AccountAddress, CryptoHash, RawTransactionBytes,
-    TransactionArgument, TransactionPayload,
+    client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
 use config::config::RoleType;
 use config_builder::swarm_config::LibraSwarmTopology;
@@ -392,12 +390,8 @@ fn test_external_transaction_signer() {
 
     assert_eq!(unsigned_txn.sender(), sender_address);
 
-    // extract the hash to sign from the raw transaction
-    let raw_bytes = SimpleSerializer::<Vec<u8>>::serialize(&unsigned_txn).unwrap();
-    let txn_hashvalue = RawTransactionBytes(&raw_bytes).hash();
-
     // sign the transaction with the private key
-    let signature = private_key.sign_message(&txn_hashvalue);
+    let signature = private_key.sign_message(&unsigned_txn.hash());
 
     // submit the transaction
     let submit_txn_result =

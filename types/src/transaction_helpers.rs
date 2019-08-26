@@ -4,9 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
-    transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction},
+    transaction::{Program, RawTransaction, SignedTransaction},
 };
-use canonical_serialization::SimpleSerializer;
 use chrono::Utc;
 use crypto::{
     ed25519::*,
@@ -72,9 +71,7 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
 
 impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
-        let bytes = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn)?;
-        let hash = RawTransactionBytes(&bytes).hash();
-        let signature = self.private_key.sign_message(&hash);
+        let signature = self.private_key.sign_message(&raw_txn.hash());
         Ok(SignedTransaction::craft_signed_transaction_for_client(
             raw_txn,
             self.public_key.clone(),

@@ -170,9 +170,7 @@ impl RawTransaction {
         private_key: &Ed25519PrivateKey,
         public_key: Ed25519PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
-        let raw_txn_bytes = SimpleSerializer::<Vec<u8>>::serialize(&self)?;
-        let hash = RawTransactionBytes(&raw_txn_bytes).hash();
-        let signature = private_key.sign_message(&hash);
+        let signature = private_key.sign_message(&self.hash());
         Ok(SignatureCheckedTransaction(SignedTransaction {
             // Will be cleaned up after eliminating raw_txn_bytes below
             raw_txn: self.clone(),
@@ -230,14 +228,16 @@ impl RawTransaction {
     }
 }
 
-pub struct RawTransactionBytes<'a>(pub &'a [u8]);
-
-impl<'a> CryptoHash for RawTransactionBytes<'a> {
+impl CryptoHash for RawTransaction {
     type Hasher = RawTransactionHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(self.0);
+        state.write(
+            SimpleSerializer::<Vec<u8>>::serialize(self)
+                .expect("Failed to serialize RawTransaction")
+                .as_slice(),
+        );
         state.finish()
     }
 }
@@ -530,9 +530,8 @@ impl SignedTransaction {
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
     /// the signature is valid.
     pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
-        let raw_txn_bytes = SimpleSerializer::<Vec<u8>>::serialize(&self.raw_txn)?;
-        let hash = RawTransactionBytes(&raw_txn_bytes).hash();
-        self.public_key.verify_signature(&hash, &self.signature)?;
+        self.public_key
+            .verify_signature(&self.raw_txn.hash(), &self.signature)?;
         Ok(SignatureCheckedTransaction(self))
     }
 
