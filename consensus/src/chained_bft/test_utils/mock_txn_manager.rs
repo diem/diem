@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::{StateComputeResult, TxnManager};
+use crate::state_replication::{SpeculationResult, TxnManager};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt, SinkExt};
 use std::{
@@ -65,7 +65,7 @@ impl TxnManager for MockTransactionManager {
     fn commit_txns<'a>(
         &'a self,
         txns: &Self::Payload,
-        _compute_result: &StateComputeResult,
+        _compute_result: &SpeculationResult,
         _timestamp_usecs: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         let committed_tns = txns.clone();

@@ -92,7 +92,7 @@ impl QuorumCert {
         self.certified_block_round
     }
 
-    pub fn ledger_info(&self) -> &LedgerInfoWithSignatures<Ed25519Signature> {
+    pub fn ledger_info_with_sigs(&self) -> &LedgerInfoWithSignatures<Ed25519Signature> {
         &self.signed_ledger_info
     }
 

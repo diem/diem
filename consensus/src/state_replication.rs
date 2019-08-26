@@ -12,17 +12,17 @@ use types::{
     ledger_info::LedgerInfoWithSignatures, transaction::Version, validator_set::ValidatorSet,
 };
 
-/// A structure that specifies the result of the execution.
-/// The execution is responsible for generating the ID of the new state, which is returned in the
-/// result.
+/// A structure that specifies the result of the speculative execution.
+/// The execution is responsible for generating the root hash of the new state tree, which is
+/// returned in the result.
 ///
 /// Not every transaction in the payload succeeds: the returned vector keeps the boolean status
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
-pub struct StateComputeResult {
-    /// The new state generated after the execution.
-    pub new_state_id: HashValue,
+pub struct SpeculationResult {
+    /// The new state to be agreed  generated after the execution.
+    pub state_to_certify: ExecutedState,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
@@ -53,7 +53,7 @@ pub trait TxnManager: Send + Sync {
     fn commit_txns<'a>(
         &'a self,
         txns: &Self::Payload,
-        compute_result: &StateComputeResult,
+        compute_result: &SpeculationResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         timestamp_usecs: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
@@ -61,7 +61,7 @@ pub trait TxnManager: Send + Sync {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutedState {
-    pub state_id: HashValue,
+    pub state_root_Hash: HashValue,
     pub version: Version,
 }
 
@@ -101,7 +101,7 @@ pub trait StateComputer: Send + Sync {
         block_id: HashValue,
         // Transactions to execute.
         transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<SpeculationResult>> + Send>>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(

@@ -289,7 +289,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         Box::new(StorageWriteProxy::new(Arc::clone(&self.db)))
     }
 
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<Arc<QuorumCert>>) -> Result<()> {
         self.db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)
     }

@@ -13,7 +13,7 @@ mod block_tree;
 
 use crate::{
     chained_bft::safety::vote_msg::VoteMsgVerificationError,
-    state_replication::{ExecutedState, StateComputeResult},
+    state_replication::{ExecutedState, SpeculationResult},
 };
 pub use block_store::{BlockStore, NeedFetchResult};
 use network::protocols::rpc::error::RpcError;
@@ -161,7 +161,7 @@ pub trait BlockReader: Send + Sync {
     fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState>;
 
     /// Try to get an execution result given the specified block id.
-    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
+    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<SpeculationResult>>;
 
     /// Get the current root block of the BlockTree.
     fn root(&self) -> Arc<Block<Self::Payload>>;

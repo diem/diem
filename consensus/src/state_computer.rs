@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::QuorumCert,
     counters,
-    state_replication::{StateComputeResult, StateComputer},
+    state_replication::{SpeculationResult, StateComputer},
 };
 use crypto::{ed25519::*, HashValue};
 use execution_proto::proto::{
@@ -45,7 +45,7 @@ impl ExecutionProxy {
     fn process_exec_response(
         response: ExecuteBlockResponse,
         pre_execution_instant: Instant,
-    ) -> StateComputeResult {
+    ) -> SpeculationResult {
         let execution_block_response = execution_proto::ExecuteBlockResponse::from_proto(response)
             .expect("Couldn't decode ExecutionBlockResponse from protobuf");
         let execution_duration = pre_execution_instant.elapsed();
@@ -77,7 +77,7 @@ impl ExecutionProxy {
             compute_status.push(status);
         }
 
-        StateComputeResult {
+        SpeculationResult {
             new_state_id: execution_block_response.root_hash(),
             compute_status,
             num_successful_txns,
@@ -97,7 +97,7 @@ impl StateComputer for ExecutionProxy {
         block_id: HashValue,
         // Transactions to execute.
         transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<SpeculationResult>> + Send>> {
         let mut exec_req = ExecuteBlockRequest::new();
         exec_req.set_parent_block_id(parent_block_id.to_vec());
         exec_req.set_block_id(block_id.to_vec());

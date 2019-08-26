@@ -7,7 +7,7 @@ use crate::{
         consensus_types::quorum_cert::QuorumCert,
         safety::vote_msg::VoteMsgVerificationError,
     },
-    state_replication::ExecutedState,
+    state_replication::{ExecutedState, SpeculationResult},
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
@@ -24,10 +24,12 @@ use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     fmt::{Display, Formatter},
+    sync::Arc,
 };
+
 use types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
@@ -37,6 +39,8 @@ use types::{
 #[cfg(test)]
 #[path = "block_test.rs"]
 pub mod block_test;
+
+type Votes = HashMap<HashValue, LedgerInfoWithSignatures<Ed25519Signature>>;
 
 #[derive(Debug)]
 pub enum BlockVerificationError {
@@ -102,9 +106,26 @@ pub struct Block<T> {
     timestamp_usecs: u64,
     /// Contains the quorum certified ancestor and whether the quorum certified ancestor was
     /// voted on successfully
-    quorum_cert: QuorumCert,
+    quorum_cert: Arc<QuorumCert>,
+    /// The quorum certificate (2f + 1 votes) that certifies this block if available.
+    certified_by_quorum_cert: Option<Arc<QuorumCert>>,
     /// If a block is a real proposal, contains its author and signature.
     block_source: BlockSource,
+    /// The set of children for cascading pruning. Note: a block may have multiple children.
+    children: HashSet<HashValue>,
+    /// Keeps the speculative execution results of the current block if has been executed.
+    /// The state compute results is calculated toward all the pending blocks prior to insertion to
+    /// the tree (the initial root node might not have it, because it's been already
+    /// committed). The execution results are not persisted: they're recalculated again for the
+    /// pending blocks upon restart.
+    speculation_result: Option<SpeculationResult>,
+    /// `votes` might keep multiple LedgerInfos per proposed block in order
+    /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
+    /// to be collected only for all the votes that have identical state root hash.
+    /// The vote digest is a hash that covers both the proposal id and the state id.
+    /// Thus, the structure of `votes` is as follows:
+    /// `HashMap<vote_digest, LedgerInfoWithSignatures>>`
+    votes: Votes,
 }
 
 impl<T> Display for Block<T> {
@@ -170,6 +191,7 @@ where
                 author: genesis_validator_signer.author(),
                 signature,
             },
+            speculation_result: None,
         }
     }
 
@@ -351,8 +373,40 @@ where
         self.timestamp_usecs
     }
 
-    pub fn quorum_cert(&self) -> &QuorumCert {
+    pub fn children(&self) -> &HashSet<HashValue> {
+        &self.children
+    }
+
+    pub fn add_child(&mut self, child_id: HashValue) {
+        assert!(
+            self.children.insert(child_id),
+            "Block {:x} already existed.",
+            child_id,
+        );
+    }
+
+    pub fn speculation_result(&self) -> &Option<SpeculationResult> {
+        &self.speculation_result
+    }
+
+    pub fn set_speculation_result(&mut self, speculation_result: SpeculationResult) {
+        self.speculation_result = Some(speculation_result)
+    }
+
+    pub fn quorum_cert(&self) -> &Arc<QuorumCert> {
         &self.quorum_cert
+    }
+
+    pub fn certified_by_quorum_cert(&self) -> &Option<Arc<QuorumCert>> {
+        &self.certified_by_quorum_cert
+    }
+
+    pub fn set_certified_by_quorum_cert(&mut self, qc: Arc<QuorumCert>) {
+        self.certified_by_quorum_cert = Some(qc);
+    }
+
+    pub fn get_votes_mut(&mut self) -> &mut Votes {
+        &mut self.votes
     }
 
     pub fn author(&self) -> Option<Author> {

@@ -108,10 +108,10 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_blocks_and_quorum_certificates<T: Payload>(
+    pub fn save_blocks_and_quorum_certificates<T: Payload, Q: AsRef<QuorumCert>>(
         &self,
         block_data: Vec<Block<T>>,
-        qc_data: Vec<QuorumCert>,
+        qc_data: Vec<Q>,
     ) -> Result<()> {
         ensure!(
             !block_data.is_empty() || !qc_data.is_empty(),
@@ -124,7 +124,7 @@ impl ConsensusDB {
             .collect::<Result<()>>()?;
         qc_data
             .iter()
-            .map(|qc| batch.put::<QCSchema>(&qc.certified_block_id(), qc))
+            .map(|qc| batch.put::<QCSchema>(&qc.certified_block_id(), qc.as_ref()))
             .collect::<Result<()>>()?;
         self.commit(batch)
     }

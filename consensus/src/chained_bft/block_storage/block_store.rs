@@ -14,7 +14,7 @@ use crate::{
 use crypto::HashValue;
 use logger::prelude::*;
 
-use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::StateComputeResult};
+use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::SpeculationResult};
 use crypto::{ed25519::*, hash::CryptoHash};
 use mirai_annotations::checked_precondition;
 use std::{
@@ -41,17 +41,17 @@ pub enum NeedFetchResult {
 /// and is thread-safe.
 ///
 /// Example tree block structure based on parent links.
-///                         | -> A3
-/// Genesis -> B0 -> B1 -> B2 -> B3
-///             | -> C1 -> C2
-///                         | -> D3
+///                         ┌--> A3
+/// Genesis -> B0--> B1--> B2--> B3
+///             └--> C1--> C2
+///                         └--> D3
 ///
 /// Example corresponding tree block structure for the QC links (must follow QC constraints).
-///                         | -> A3
-/// Genesis -> B0 -> B1 -> B2 -> B3
-///             | -> C1
-///             | -------> C2
-///             | -------------> D3
+///                         ┌--> A3
+/// Genesis -> B0--> B1--> B2--> B3
+///             └--> C1
+///             └--------> C2
+///             └--------------> D3
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
     validator_signer: ValidatorSigner<Ed25519PrivateKey>,
@@ -92,41 +92,34 @@ impl<T: Payload> BlockStore<T> {
     }
 
     async fn build_block_tree(
-        root: (Block<T>, QuorumCert, QuorumCert),
+        root: Block<T>,
+        highest_ledger_info: Arc<QuorumCert>,
         blocks: Vec<Block<T>>,
-        quorum_certs: Vec<QuorumCert>,
+        quorum_certs: Vec<Arc<QuorumCert>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
-        let mut tree = BlockTree::new(root.0, root.1, root.2, max_pruned_blocks_in_mem);
+        let mut tree = BlockTree::new(root, root.1, root.2, max_pruned_blocks_in_mem);
         let quorum_certs = quorum_certs
             .into_iter()
             .map(|qc| (qc.certified_block_id(), qc))
             .collect::<HashMap<_, _>>();
         for block in blocks {
-            let compute_res = state_computer
+            let speculation_result = state_computer
                 .compute(block.parent_id(), block.id(), block.get_payload())
                 .await
                 .expect("fail to rebuild scratchpad");
-            let version = tree
-                .get_state_for_block(block.parent_id())
-                .expect("parent state does not exist")
-                .version
-                + compute_res.num_successful_txns;
-            let executed_state = ExecutedState {
-                state_id: compute_res.new_state_id,
-                version,
-            };
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(
                     qc.certified_state(),
-                    executed_state,
-                    "We have inconsistent executed state with Quorum Cert for block {}",
+                    speculation_result.state_to_certify,
+                    "We have inconsistent state to agree with Quorum Cert for block {}",
                     block.id()
                 );
             }
-            tree.insert_block(block, executed_state, compute_res)
+            block.set_speculation_result(speculation_result);
+            tree.insert_block(block)
                 .expect("Block insertion failed while build the tree");
         }
         quorum_certs.into_iter().for_each(|(_, qc)| {
@@ -173,7 +166,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+    ) -> Result<&Block<T>, InsertError> {
         if let Some(existing_block) = self.inner.read().unwrap().get_block(block.id()) {
             return Ok(existing_block);
         }
@@ -187,7 +180,7 @@ impl<T: Payload> BlockStore<T> {
                 return Err(e);
             }
         };
-        let compute_res = self
+        let speculation_result = self
             .state_computer
             .compute(parent_id, block.id(), block.get_payload())
             .await
@@ -195,20 +188,15 @@ impl<T: Payload> BlockStore<T> {
                 error!("Execution failure for block {}: {:?}", block, e);
                 InsertError::StateComputerError
             })?;
+        block.set_speculation_result(speculation_result);
 
-        let version = parent_exec_version + compute_res.num_successful_txns;
-
-        let state = ExecutedState {
-            state_id: compute_res.new_state_id,
-            version,
-        };
         self.storage
-            .save_tree(vec![block.clone()], vec![])
+            .save_tree(vec![block.clone()])
             .map_err(|_| InsertError::StorageFailure)?;
         self.inner
             .write()
             .unwrap()
-            .insert_block(block, state, compute_res)
+            .insert_block(block)
             .map_err(|e| e.into())
     }
 
@@ -423,7 +411,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().get_state_for_block(block_id)
     }
 
-    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {
+    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<SpeculationResult>> {
         self.inner.read().unwrap().get_compute_result(block_id)
     }
 
@@ -512,7 +500,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         block: Block<T>,
     ) -> Result<Arc<Block<T>>, InsertError> {
-        self.insert_single_quorum_cert(block.quorum_cert().clone())?;
+        self.insert_single_quorum_cert(block.ancestor_quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }
 }

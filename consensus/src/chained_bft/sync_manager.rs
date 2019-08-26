@@ -195,21 +195,24 @@ where
             deadline,
             preferred_peer: peer,
         };
-        let mut blocks = retriever
+        // Get the most recent 3 blocks according to 3-chain rule in the reversed order, where the
+        // last block is B0 and will be treated as the root.
+        let mut three_chain_blocks = retriever
             .retrieve_block_for_qc(&highest_ledger_info, 3)
             .await?;
-        assert_eq!(
-            blocks.last().expect("should have 3-chain").id(),
-            committed_block_id
-        );
-        let mut quorum_certs = vec![];
-        quorum_certs.push(highest_ledger_info.clone());
-        quorum_certs.push(blocks[0].quorum_cert().clone());
-        quorum_certs.push(blocks[1].quorum_cert().clone());
+        assert_eq!(three_chain_blocks.len(), 3, "should have 3-chain");
+
+        // ensure it's [b0, b1, b2]
+        three_chain_blocks.reverse();
+        assert_eq!(three_chain_blocks[2].id(), committed_block_id);
+        three_chain_blocks[0]
+            .set_certified_by_quorum_cert(Arc::clone(three_chain_blocks[1].quorum_cert()));
+        three_chain_blocks[1]
+            .set_certified_by_quorum_cert(Arc::clone(three_chain_blocks[2].quorum_cert()));
+        three_chain_blocks[2].set_certified_by_quorum_cert(Arc::new(highest_ledger_info.clone()));
         // If a node restarts in the middle of state synchronization, it is going to try to catch up
         // to the stored quorum certs as the new root.
-        self.storage
-            .save_tree(blocks.clone(), quorum_certs.clone())?;
+        self.storage.save_tree(three_chain_blocks.clone())?;
         let pre_sync_instance = Instant::now();
         match self
             .state_computer
@@ -230,15 +233,10 @@ where
             ),
         };
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
-        let root = (
-            blocks.pop().expect("should have 3-chain"),
-            quorum_certs.last().expect("should have 3-chain").clone(),
-            highest_ledger_info.clone(),
-        );
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
-        // ensure it's [b1, b2]
-        blocks.reverse();
-        self.block_store.rebuild(root, blocks, quorum_certs).await;
+        self.block_store
+            .rebuild(three_chain_blocks, quorum_certs)
+            .await;
         Ok(())
     }
 }
@@ -286,7 +284,8 @@ impl BlockRetriever {
         T: Payload,
     {
         let block_id = qc.certified_block_id();
-        let mut peers: Vec<&AccountAddress> = qc.ledger_info().signatures().keys().collect();
+        let mut peers: Vec<&AccountAddress> =
+            qc.ledger_info_with_sigs().signatures().keys().collect();
         let mut attempt = 0_u32;
         loop {
             if peers.is_empty() {

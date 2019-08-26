@@ -3,7 +3,7 @@
 
 use crate::{
     counters,
-    state_replication::{StateComputeResult, TxnManager},
+    state_replication::{SpeculationResult, TxnManager},
 };
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
@@ -33,7 +33,7 @@ impl MempoolProxy {
     /// Generate mempool commit transactions request given the set of txns and their status
     fn gen_commit_transactions_request(
         txns: &[SignedTransaction],
-        compute_result: &StateComputeResult,
+        compute_result: &SpeculationResult,
         timestamp_usecs: u64,
     ) -> CommitTransactionsRequest {
         let mut all_updates = Vec::new();
@@ -127,7 +127,7 @@ impl TxnManager for MempoolProxy {
     fn commit_txns<'a>(
         &'a self,
         txns: &Self::Payload,
-        compute_result: &StateComputeResult,
+        compute_result: &SpeculationResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         timestamp_usecs: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
