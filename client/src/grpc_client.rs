@@ -29,7 +29,7 @@ use types::{
     },
     transaction::{SignedTransaction, Version},
     validator_verifier::ValidatorVerifier,
-    vm_error::{VMStatus, VMValidationStatus},
+    vm_error::StatusCode,
 };
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
@@ -86,7 +86,7 @@ impl GRPCClient {
                 bail!("Transaction failed with AC status: {:?}", ac_status,);
             }
         } else if let Some(vm_error) = completed_resp.vm_error {
-            if vm_error == VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld) {
+            if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
                 if let Some(sender_account) = sender_account_opt {
                     sender_account.sequence_number =
                         self.get_sequence_number(sender_account.address)?;

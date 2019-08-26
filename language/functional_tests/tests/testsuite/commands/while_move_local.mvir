@@ -1,5 +1,5 @@
-// check: VerificationError
-// check: MoveLocUnavailableError
+// check: VerificationFailure
+// check: MOVELOC_UNAVAILABLE_ERROR
 
 main() {
     let x: u64;

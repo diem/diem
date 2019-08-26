@@ -3,10 +3,6 @@ module Hash {
     native public sha3_256(data: bytearray): bytearray;
 }
 
-// check: VerificationError
-// check: FunctionHandle
-// check: MissingDependency
-
-// check: VerificationError
-// check: FunctionHandle
-// check: MissingDependency
+// check: VerificationFailure
+// check: MISSING_DEPENDENCY
+// check: MISSING_DEPENDENCY

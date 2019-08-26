@@ -14,7 +14,7 @@ use proptest_derive::Arbitrary;
 use proptest_helpers::Index;
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Represents a create-account transaction performed in the account universe.
@@ -91,13 +91,11 @@ impl AUTransactionGen for CreateExistingAccountGen {
         let status = if enough_max_gas {
             sender.sequence_number += 1;
             sender.balance -= *gas_costs::CREATE_EXISTING_ACCOUNT;
-            TransactionStatus::Keep(VMStatus::Execution(
-                ExecutionStatus::CannotWriteExistingResource,
-            ))
+            TransactionStatus::Keep(VMStatus::new(StatusCode::CANNOT_WRITE_EXISTING_RESOURCE))
         } else {
             // Not enough gas to get past the prologue.
-            TransactionStatus::Discard(VMStatus::Validation(
-                VMValidationStatus::InsufficientBalanceForTransactionFee,
+            TransactionStatus::Discard(VMStatus::new(
+                StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
             ))
         };
 

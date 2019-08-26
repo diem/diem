@@ -7,7 +7,8 @@ use invalid_mutations::signature::{
     FieldRefMutation,
 };
 use proptest::{collection::vec, prelude::*};
-use vm::{errors::VMStaticViolation, file_format::CompiledModule};
+use types::vm_error::StatusCode;
+use vm::file_format::CompiledModule;
 
 proptest! {
     #[test]
@@ -37,12 +38,16 @@ proptest! {
         // out.
         let mut actual_violations: Vec<_> = actual_violations
             .into_iter()
-            .filter(|err| match &err.err {
-                VMStaticViolation::InvalidFieldDefReference(..) => false,
-                _ => true,
-            })
+            .filter(|err| err.major_status != StatusCode::INVALID_FIELD_DEF_REFERENCE)
             .collect();
         actual_violations.sort();
+        // The error messages are slightly different from the invalid mutations, so clean these out
+        for violation in actual_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
+        for violation in expected_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
         prop_assert_eq!(expected_violations, actual_violations);
     }
 
@@ -65,6 +70,13 @@ proptest! {
         // Note that this shouldn't cause any InvalidSignatureToken errors because there are no
         // double references involved. So no filtering is required here.
         actual_violations.sort();
+        // The error messages are slightly different from the invalid mutations, so clean these out
+        for violation in actual_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
+        for violation in expected_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
         prop_assert_eq!(expected_violations, actual_violations);
     }
 }

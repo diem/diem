@@ -328,18 +328,15 @@ pub fn encode_genesis_transaction_with_validator(
             txn_data.sender = genesis_addr;
 
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
-            txn_executor.create_account(genesis_addr).unwrap().unwrap();
+            txn_executor.create_account(genesis_addr).unwrap();
             txn_executor
                 .create_account(account_config::core_code_address())
-                .unwrap()
                 .unwrap();
             txn_executor
                 .execute_function(&BLOCK_MODULE, &INITIALIZE, vec![])
-                .unwrap()
                 .unwrap();
             txn_executor
                 .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
-                .unwrap()
                 .unwrap();
 
             txn_executor
@@ -348,7 +345,6 @@ pub fn encode_genesis_transaction_with_validator(
                     &MINT_TO_ADDRESS,
                     vec![Local::address(genesis_addr), Local::u64(INIT_BALANCE)],
                 )
-                .unwrap()
                 .unwrap();
 
             txn_executor
@@ -357,7 +353,6 @@ pub fn encode_genesis_transaction_with_validator(
                     &ROTATE_AUTHENTICATION_KEY,
                     vec![Local::bytearray(genesis_auth_key)],
                 )
-                .unwrap()
                 .unwrap();
 
             // Bump the sequence number for the Association account. If we don't do this and a
@@ -366,7 +361,6 @@ pub fn encode_genesis_transaction_with_validator(
             // number 0
             txn_executor
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
-                .unwrap()
                 .unwrap();
 
             let stdlib_modules = modules
@@ -379,7 +373,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .collect();
 
             txn_executor
-                .make_write_set(stdlib_modules, Ok(Ok(())))
+                .make_write_set(stdlib_modules, Ok(()))
                 .unwrap()
                 .write_set()
                 .clone()

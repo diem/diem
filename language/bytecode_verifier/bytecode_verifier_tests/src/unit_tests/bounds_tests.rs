@@ -6,13 +6,14 @@ use invalid_mutations::bounds::{
     OutOfBoundsMutation,
 };
 use proptest::{collection::vec, prelude::*};
-use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use types::{
+    account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
+    vm_error::StatusCode,
+};
 use vm::{
     check_bounds::BoundsChecker,
-    errors::{VMStaticViolation, VerificationError},
     file_format::{CompiledModule, CompiledModuleMut},
     proptest_types::CompiledModuleStrategyGen,
-    IndexKind,
 };
 
 proptest! {
@@ -50,6 +51,12 @@ proptest! {
         let bounds_checker = BoundsChecker::new(&module);
         let mut actual_violations = bounds_checker.verify();
         actual_violations.sort();
+        for violation in actual_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
+        for violation in expected_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
         prop_assert_eq!(expected_violations, actual_violations);
     }
 
@@ -68,6 +75,12 @@ proptest! {
         let bounds_checker = BoundsChecker::new(&module);
         let mut actual_violations = bounds_checker.verify();
         actual_violations.sort();
+        for violation in actual_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
+        for violation in expected_violations.iter_mut() {
+            violation.set_message("".to_string())
+        }
         prop_assert_eq!(expected_violations, actual_violations);
     }
 
@@ -85,16 +98,10 @@ proptest! {
         module.byte_array_pool = byte_array_pool;
 
         let bounds_checker = BoundsChecker::new(&module);
-        let actual_violations = bounds_checker.verify();
+        let actual_violations: Vec<StatusCode> = bounds_checker.verify().into_iter().map(|status| status.major_status).collect();
         prop_assert_eq!(
             actual_violations,
-            vec![
-                VerificationError {
-                    kind: IndexKind::ModuleHandle,
-                    idx: 0,
-                    err: VMStaticViolation::NoModuleHandles,
-                },
-            ]
+            vec![StatusCode::NO_MODULE_HANDLES]
         );
     }
 }

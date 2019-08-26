@@ -34,5 +34,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: PositiveStackSizeAtBlockEnd
+// check: VerificationFailure
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END

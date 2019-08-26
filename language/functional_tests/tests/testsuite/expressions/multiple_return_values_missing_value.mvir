@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: NegativeStackSizeInsideBlock(0, 3) }
+// check: VerificationFailure
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
 
 module Test {
     resource T { }

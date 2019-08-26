@@ -6,6 +6,7 @@ mod mock_vm_test;
 
 use config::config::VMConfig;
 use crypto::ed25519::compat;
+use lazy_static::lazy_static;
 use state_view::StateView;
 use std::collections::HashMap;
 use types::{
@@ -17,7 +18,7 @@ use types::{
         Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionOutput,
         TransactionPayload, TransactionStatus,
     },
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use vm_runtime::VMExecutor;
@@ -35,12 +36,14 @@ enum Transaction {
     },
 }
 
-pub const KEEP_STATUS: TransactionStatus =
-    TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed));
+lazy_static! {
+    pub static ref KEEP_STATUS: TransactionStatus =
+        TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
 
-// We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
-pub const DISCARD_STATUS: TransactionStatus =
-    TransactionStatus::Discard(VMStatus::Execution(ExecutionStatus::Aborted(10)));
+    // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
+    pub static ref DISCARD_STATUS: TransactionStatus =
+        TransactionStatus::Discard(VMStatus::new(StatusCode::ABORTED).with_sub_status(10));
+}
 
 pub struct MockVM;
 
@@ -56,7 +59,8 @@ impl VMExecutor for MockVM {
                 1,
                 "Genesis block should have only one transaction."
             );
-            let output = TransactionOutput::new(gen_genesis_writeset(), vec![], 0, KEEP_STATUS);
+            let output =
+                TransactionOutput::new(gen_genesis_writeset(), vec![], 0, KEEP_STATUS.clone());
             return vec![output];
         }
 
@@ -78,7 +82,12 @@ impl VMExecutor for MockVM {
 
                     let write_set = gen_mint_writeset(sender, new_balance, new_seqnum);
                     let events = gen_events(sender);
-                    outputs.push(TransactionOutput::new(write_set, events, 0, KEEP_STATUS));
+                    outputs.push(TransactionOutput::new(
+                        write_set,
+                        events,
+                        0,
+                        KEEP_STATUS.clone(),
+                    ));
                 }
                 Transaction::Payment {
                     sender,
@@ -92,7 +101,7 @@ impl VMExecutor for MockVM {
                             WriteSet::default(),
                             vec![],
                             0,
-                            DISCARD_STATUS,
+                            DISCARD_STATUS.clone(),
                         ));
                         continue;
                     }
@@ -118,7 +127,7 @@ impl VMExecutor for MockVM {
                         write_set,
                         events,
                         0,
-                        TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)),
+                        TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
                     ));
                 }
             }

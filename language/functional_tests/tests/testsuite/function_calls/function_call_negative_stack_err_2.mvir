@@ -1,5 +1,5 @@
-//check: VerificationError
-//check: NegativeStackSizeInsideBlock(0, 4)
+// check: VerificationFailure
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
 
 module A {
     public push_u64(): u64  {

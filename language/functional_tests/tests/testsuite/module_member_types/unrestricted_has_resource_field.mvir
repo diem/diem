@@ -1,4 +1,5 @@
-// check: VerificationError { kind: StructDefinition, idx: 0, err: InvalidResourceField }
+// check: VerificationFailure
+// check: INVALID_RESOURCE_FIELD
 
 module Test {
     import 0x0.LibraCoin;

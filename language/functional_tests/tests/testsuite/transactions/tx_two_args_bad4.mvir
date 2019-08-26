@@ -7,4 +7,4 @@ main(val: u64, addr: address) {
 }
 
 // check: Discard
-// check: TypeMismatch
+// check: TYPE_MISMATCH

@@ -11,9 +11,10 @@ use crate::{
 };
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::VMStaticViolation,
+    errors::{err_at_offset, VMResult},
     file_format::{
         Bytecode, CompiledModule, FieldDefinitionIndex, FunctionDefinition, Kind, LocalIndex,
         LocalsSignatureIndex, SignatureToken, StructDefinitionIndex,
@@ -36,7 +37,7 @@ pub struct TypeAndMemorySafetyAnalysis<'a> {
     locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
     stack: Vec<StackAbstractValue>,
     next_nonce: usize,
-    errors: Vec<VMStaticViolation>,
+    errors: Vec<VMStatus>,
 }
 
 impl<'a> TypeAndMemorySafetyAnalysis<'a> {
@@ -44,7 +45,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Vec<VMStaticViolation> {
+    ) -> Vec<VMStatus> {
         let module_view = ModuleView::new(module);
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
@@ -80,7 +81,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             match inv.pre() {
                 BlockPrecondition::JoinFailure => verifier
                     .errors
-                    .push(VMStaticViolation::JoinFailure(*block_id as usize)),
+                    .push(err_at_offset(StatusCode::JOIN_FAILURE, *block_id as usize)),
                 BlockPrecondition::State(_) => (),
             }
         }
@@ -155,33 +156,43 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         offset: usize,
         mut_: bool,
         field_definition_index: FieldDefinitionIndex,
-    ) -> Result<(), VMStaticViolation> {
+    ) -> VMResult<()> {
         let operand = self.stack.pop().unwrap();
         let struct_handle_index =
             match SignatureToken::get_struct_handle_from_reference(&operand.signature) {
                 Some(struct_handle_index) => struct_handle_index,
                 None => {
-                    return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ));
                 }
             };
         if !self
             .module()
             .is_field_in_struct(field_definition_index, struct_handle_index)
         {
-            return Err(VMStaticViolation::BorrowFieldBadFieldError(offset));
+            return Err(err_at_offset(
+                StatusCode::BORROWFIELD_BAD_FIELD_ERROR,
+                offset,
+            ));
         }
 
         let operand_nonce = operand.value.extract_nonce().unwrap();
         let nonce = self.get_nonce(state);
         if mut_ {
             if !operand.signature.is_mutable_reference() {
-                return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
+                return Err(err_at_offset(
+                    StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
+                    offset,
+                ));
             }
 
             let borrowed_nonces =
                 state.borrowed_nonces_for_field(field_definition_index, operand_nonce);
             if !Self::write_borrow_ok(borrowed_nonces) {
-                return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
+                return Err(err_at_offset(
+                    StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
                     offset,
                 ));
             }
@@ -191,7 +202,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let borrowed_nonces =
                     state.borrowed_nonces_for_field(field_definition_index, operand_nonce);
                 if !self.freeze_ok(&state, &borrowed_nonces) {
-                    return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
+                    return Err(err_at_offset(
+                        StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
                         offset,
                     ));
                 }
@@ -228,31 +240,40 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         offset: usize,
         mut_: bool,
         idx: LocalIndex,
-    ) -> Result<(), VMStaticViolation> {
+    ) -> VMResult<()> {
         let loc_signature = self.locals_signature_view.token_at(idx).as_inner().clone();
 
         if loc_signature.is_reference() {
-            return Err(VMStaticViolation::BorrowLocReferenceError(offset));
+            return Err(err_at_offset(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
         }
         if !state.is_available(idx) {
-            return Err(VMStaticViolation::BorrowLocUnavailableError(offset));
+            return Err(err_at_offset(
+                StatusCode::BORROWLOC_UNAVAILABLE_ERROR,
+                offset,
+            ));
         }
 
         if mut_ {
             if !state.is_full(state.local(idx)) {
-                return Err(VMStaticViolation::BorrowLocExistsBorrowError(offset));
+                return Err(err_at_offset(
+                    StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
+                    offset,
+                ));
             }
         } else {
             let borrowed_nonces = match state.local(idx) {
                 AbstractValue::Reference(_) => {
                     // TODO This should really be a VMInvariantViolation
                     // But it is not supported in the verifier currently
-                    return Err(VMStaticViolation::BorrowLocReferenceError(offset));
+                    return Err(err_at_offset(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
                 }
                 AbstractValue::Value(_, nonces) => nonces,
             };
             if !self.freeze_ok(state, &borrowed_nonces) {
-                return Err(VMStaticViolation::BorrowLocExistsBorrowError(offset));
+                return Err(err_at_offset(
+                    StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
+                    offset,
+                ));
             }
         }
 
@@ -277,15 +298,18 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         mut_: bool,
         idx: StructDefinitionIndex,
         type_actuals_idx: LocalsSignatureIndex,
-    ) -> Result<(), VMStaticViolation> {
+    ) -> VMResult<()> {
         let struct_definition = self.module().struct_def_at(idx);
         if !StructDefinitionView::new(self.module(), struct_definition).is_nominal_resource() {
-            return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
+            return Err(err_at_offset(
+                StatusCode::BORROWGLOBAL_NO_RESOURCE_ERROR,
+                offset,
+            ));
         }
 
         if mut_ {
             if !state.global(idx).is_empty() {
-                return Err(VMStaticViolation::GlobalReferenceError(offset));
+                return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
             }
         } else {
             let freeze_ok = state
@@ -293,7 +317,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 .map(|globals| self.freeze_ok(state, globals))
                 .unwrap_or(true);
             if !freeze_ok {
-                return Err(VMStaticViolation::GlobalReferenceError(offset));
+                return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
             }
         }
 
@@ -304,7 +328,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
         let operand = self.stack.pop().unwrap();
         if operand.signature != SignatureToken::Address {
-            return Err(VMStaticViolation::BorrowGlobalTypeMismatchError(offset));
+            return Err(err_at_offset(
+                StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
+                offset,
+            ));
         }
 
         let nonce = self.get_nonce(state);
@@ -327,14 +354,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         state: &mut AbstractState,
         bytecode: &Bytecode,
         offset: usize,
-    ) -> Result<(), VMStaticViolation> {
+    ) -> VMResult<()> {
         match bytecode {
             Bytecode::Pop => {
                 let operand = self.stack.pop().unwrap();
                 let kind = SignatureTokenView::new(self.module(), &operand.signature)
                     .kind(self.type_formals());
                 if kind != Kind::Unrestricted {
-                    return Err(VMStaticViolation::PopResourceError(offset));
+                    return Err(err_at_offset(StatusCode::POP_RESOURCE_ERROR, offset));
                 }
 
                 if let AbstractValue::Reference(nonce) = operand.value {
@@ -347,7 +374,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != SignatureToken::Bool {
-                    Err(VMStaticViolation::BrTypeMismatchError(offset))
+                    Err(err_at_offset(StatusCode::BR_TYPE_MISMATCH_ERROR, offset))
                 } else {
                     Ok(())
                 }
@@ -356,13 +383,16 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::StLoc(idx) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != *self.locals_signature_view.token_at(*idx).as_inner() {
-                    return Err(VMStaticViolation::StLocTypeMismatchError(offset));
+                    return Err(err_at_offset(StatusCode::STLOC_TYPE_MISMATCH_ERROR, offset));
                 }
                 if state.is_available(*idx) {
                     if state.is_local_safe_to_destroy(*idx) {
                         state.destroy_local(*idx);
                     } else {
-                        return Err(VMStaticViolation::StLocUnsafeToDestroyError(offset));
+                        return Err(err_at_offset(
+                            StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR,
+                            offset,
+                        ));
                     }
                 }
                 state.insert_local(*idx, operand.value);
@@ -372,7 +402,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Abort => {
                 let error_code = self.stack.pop().unwrap();
                 if error_code.signature != SignatureToken::U64 {
-                    return Err(VMStaticViolation::AbortTypeMismatchError(offset));
+                    return Err(err_at_offset(StatusCode::ABORT_TYPE_MISMATCH_ERROR, offset));
                 }
                 *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
                 Ok(())
@@ -387,7 +417,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 {
                     let operand = self.stack.pop().unwrap();
                     if operand.signature != *return_type_view.as_inner() {
-                        return Err(VMStaticViolation::RetTypeMismatchError(offset));
+                        return Err(err_at_offset(StatusCode::RET_TYPE_MISMATCH_ERROR, offset));
                     }
                 }
                 for idx in 0..self.locals_signature_view.len() {
@@ -398,7 +428,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     }
                 }
                 if !state.is_safe_to_destroy() {
-                    return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
+                        offset,
+                    ));
                 }
 
                 *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
@@ -419,10 +452,16 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         });
                         Ok(())
                     } else {
-                        Err(VMStaticViolation::FreezeRefExistsMutableBorrowError(offset))
+                        Err(err_at_offset(
+                            StatusCode::FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR,
+                            offset,
+                        ))
                     }
                 } else {
-                    Err(VMStaticViolation::FreezeRefTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::FREEZEREF_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -477,7 +516,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::CopyLoc(idx) => {
                 let signature_view = self.locals_signature_view.token_at(*idx);
                 if !state.is_available(*idx) {
-                    Err(VMStaticViolation::CopyLocUnavailableError(offset))
+                    Err(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
                 } else if signature_view.is_reference() {
                     let nonce = self.get_nonce(state);
                     state.borrow_from_local_reference(*idx, nonce);
@@ -489,7 +528,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 } else {
                     match signature_view.kind(self.type_formals()) {
                         Kind::Resource | Kind::All => {
-                            Err(VMStaticViolation::CopyLocResourceError(offset))
+                            Err(err_at_offset(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
                         }
                         Kind::Unrestricted => {
                             if state.is_full(state.local(*idx)) {
@@ -499,7 +538,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                                 });
                                 Ok(())
                             } else {
-                                Err(VMStaticViolation::CopyLocExistsBorrowError(offset))
+                                Err(err_at_offset(
+                                    StatusCode::COPYLOC_EXISTS_BORROW_ERROR,
+                                    offset,
+                                ))
                             }
                         }
                     }
@@ -509,13 +551,16 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::MoveLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 if !state.is_available(*idx) {
-                    Err(VMStaticViolation::MoveLocUnavailableError(offset))
+                    Err(err_at_offset(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
                 } else if signature.is_reference() || state.is_full(state.local(*idx)) {
                     let value = state.remove_local(*idx);
                     self.stack.push(StackAbstractValue { signature, value });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::MoveLocExistsBorrowError(offset))
+                    Err(err_at_offset(
+                        StatusCode::MOVELOC_EXISTS_BORROW_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -536,7 +581,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     .function_acquired_resources(&function_handle);
                 for acquired_resource in &function_acquired_resources {
                     if !state.global(*acquired_resource).is_empty() {
-                        return Err(VMStaticViolation::GlobalReferenceError(offset));
+                        return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
                     }
                 }
 
@@ -547,10 +592,13 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 for arg_type in function_signature.arg_types.iter().rev() {
                     let arg = self.stack.pop().unwrap();
                     if arg.signature != arg_type.substitute(type_actuals) {
-                        return Err(VMStaticViolation::CallTypeMismatchError(offset));
+                        return Err(err_at_offset(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
                     }
                     if arg_type.is_mutable_reference() && !state.is_full(&arg.value) {
-                        return Err(VMStaticViolation::CallBorrowedMutableReferenceError(offset));
+                        return Err(err_at_offset(
+                            StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
+                            offset,
+                        ));
                     }
                     if let AbstractValue::Reference(nonce) = arg.value {
                         all_references_to_borrow_from.insert(nonce);
@@ -602,7 +650,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     None => {
                         // TODO pack on native error
                         self.errors
-                            .push(VMStaticViolation::PackTypeMismatchError(offset));
+                            .push(err_at_offset(StatusCode::PACK_TYPE_MISMATCH_ERROR, offset));
                     }
                     Some(fields) => {
                         for field_definition_view in fields.rev() {
@@ -615,8 +663,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             // TODO: is it necessary to verify kind constraints here?
                             let arg = self.stack.pop().unwrap();
                             if arg.signature != field_type {
-                                self.errors
-                                    .push(VMStaticViolation::PackTypeMismatchError(offset));
+                                self.errors.push(err_at_offset(
+                                    StatusCode::PACK_TYPE_MISMATCH_ERROR,
+                                    offset,
+                                ));
                             }
                         }
                     }
@@ -640,7 +690,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 // declared. TODO: is it safe to not call verify the kinds if the types are equal?
                 let arg = self.stack.pop().unwrap();
                 if arg.signature != struct_type {
-                    return Err(VMStaticViolation::UnpackTypeMismatchError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::UNPACK_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ));
                 }
 
                 // For each field, push an abstract value to the stack.
@@ -649,8 +702,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 match struct_definition_view.fields() {
                     None => {
                         // TODO unpack on native error
-                        self.errors
-                            .push(VMStaticViolation::UnpackTypeMismatchError(offset));
+                        self.errors.push(err_at_offset(
+                            StatusCode::UNPACK_TYPE_MISMATCH_ERROR,
+                            offset,
+                        ));
                     }
                     Some(fields) => {
                         for field_definition_view in fields {
@@ -679,11 +734,17 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     value: operand_value,
                 } = self.stack.pop().unwrap();
                 if !operand_signature.is_reference() {
-                    return Err(VMStaticViolation::ReadRefTypeMismatchError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::READREF_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ));
                 }
                 let operand_nonce = operand_value.extract_nonce().unwrap();
                 if !self.is_readable_reference(state, &operand_signature, operand_nonce) {
-                    Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset))
+                    Err(err_at_offset(
+                        StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
+                        offset,
+                    ))
                 } else {
                     let inner_signature = *match operand_signature {
                         SignatureToken::Reference(signature) => signature,
@@ -694,7 +755,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         .kind(self.type_formals())
                         != Kind::Unrestricted
                     {
-                        Err(VMStaticViolation::ReadRefResourceError(offset))
+                        Err(err_at_offset(StatusCode::READREF_RESOURCE_ERROR, offset))
                     } else {
                         self.stack.push(StackAbstractValue {
                             signature: inner_signature,
@@ -714,22 +775,31 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         .kind(self.type_formals());
                     match kind {
                         Kind::Resource | Kind::All => {
-                            Err(VMStaticViolation::WriteRefResourceError(offset))
+                            Err(err_at_offset(StatusCode::WRITEREF_RESOURCE_ERROR, offset))
                         }
                         Kind::Unrestricted => {
                             if val_operand.signature != *signature {
-                                Err(VMStaticViolation::WriteRefTypeMismatchError(offset))
+                                Err(err_at_offset(
+                                    StatusCode::WRITEREF_TYPE_MISMATCH_ERROR,
+                                    offset,
+                                ))
                             } else if state.is_full(&ref_operand.value) {
                                 let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap();
                                 state.destroy_nonce(ref_operand_nonce);
                                 Ok(())
                             } else {
-                                Err(VMStaticViolation::WriteRefExistsBorrowError(offset))
+                                Err(err_at_offset(
+                                    StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
+                                    offset,
+                                ))
                             }
                         }
                     }
                 } else {
-                    Err(VMStaticViolation::WriteRefNoMutableReferenceError(offset))
+                    Err(err_at_offset(
+                        StatusCode::WRITEREF_NO_MUTABLE_REFERENCE_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -752,7 +822,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::IntegerOpTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -768,7 +841,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::BooleanOpTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::BOOLEAN_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -781,7 +857,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::BooleanOpTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::BOOLEAN_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -796,14 +875,20 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         if self.is_readable_reference(state, &operand1.signature, nonce) {
                             state.destroy_nonce(nonce);
                         } else {
-                            return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
+                            return Err(err_at_offset(
+                                StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
+                                offset,
+                            ));
                         }
                     }
                     if let AbstractValue::Reference(nonce) = operand2.value {
                         if self.is_readable_reference(state, &operand2.signature, nonce) {
                             state.destroy_nonce(nonce);
                         } else {
-                            return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
+                            return Err(err_at_offset(
+                                StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
+                                offset,
+                            ));
                         }
                     }
                     self.stack.push(StackAbstractValue {
@@ -812,7 +897,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::EqualityOpTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::EQUALITY_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -828,7 +916,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::IntegerOpTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -837,7 +928,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()
                 {
-                    return Err(VMStaticViolation::ExistsNoResourceError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ));
                 }
 
                 let type_actuals = &self.module().locals_signature_at(*type_actuals_idx).0;
@@ -853,7 +947,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::ExistsResourceTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -870,9 +967,12 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()
                 {
-                    return Err(VMStaticViolation::MoveFromNoResourceError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::MOVEFROM_NO_RESOURCE_ERROR,
+                        offset,
+                    ));
                 } else if !state.global(*idx).is_empty() {
-                    return Err(VMStaticViolation::GlobalReferenceError(offset));
+                    return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
                 }
 
                 let type_actuals = &self.module().locals_signature_at(*type_actuals_idx).0;
@@ -888,7 +988,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     });
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::MoveFromTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::MOVEFROM_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -897,7 +1000,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()
                 {
-                    return Err(VMStaticViolation::MoveToSenderNoResourceError(offset));
+                    return Err(err_at_offset(
+                        StatusCode::MOVETOSENDER_NO_RESOURCE_ERROR,
+                        offset,
+                    ));
                 }
 
                 let type_actuals = &self.module().locals_signature_at(*type_actuals_idx).0;
@@ -909,7 +1015,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if value_operand.signature == struct_type {
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::MoveToSenderTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::MOVETOSENDER_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
 
@@ -945,7 +1054,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if operand.signature == SignatureToken::Address {
                     Ok(())
                 } else {
-                    Err(VMStaticViolation::CreateAccountTypeMismatchError(offset))
+                    Err(err_at_offset(
+                        StatusCode::CREATEACCOUNT_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
                 }
             }
         }
@@ -954,7 +1066,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
 impl<'a> TransferFunctions for TypeAndMemorySafetyAnalysis<'a> {
     type State = AbstractState;
-    type AnalysisError = VMStaticViolation;
+    type AnalysisError = VMStatus;
 
     fn execute(
         &mut self,

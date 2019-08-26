@@ -100,7 +100,7 @@ module PaymentChannel {
    //
    // The inclusion of Hash(preimage) ensures that multi-hop payments are possible, i.e.
    //                              Alice -> Bob -> Charlie
-   // If Alice wants to pay Charlie, she needs to send an update transaction to Bob and 
+   // If Alice wants to pay Charlie, she needs to send an update transaction to Bob and
    // there needs to be some assurance that Bob can only claim this update if and only if
    // he forwards the same amount to Charlie via an update on the Bob -> Charlie channel.
    // Therefore, Charlie generates some <preimage> and hashes it to arrive at Hash(<preimage>).
@@ -150,7 +150,7 @@ module PaymentChannel {
         message = BytearrayUtil.bytearray_concat(move(partial_with_hash), move(commit_to_bytes));
         ver = Signature.ed25519_verify(move(signature), move(public_key), move(message));
         return move(ver);
-    } 
+    }
 
     // Public on-chain update function that allows to update the internal state of the payment channel.
     // This function is called by the `close` method before withdrawing the funds in order to update the

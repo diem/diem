@@ -9,5 +9,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: FreezeRefTypeMismatchError
+// check: VerificationFailure
+// check: FREEZEREF_TYPE_MISMATCH_ERROR

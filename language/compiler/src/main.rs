@@ -11,8 +11,11 @@ use serde_json;
 use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
-use types::{access_path::AccessPath, account_address::AccountAddress, transaction::Program};
-use vm::{errors::VerificationError, file_format::CompiledModule};
+use types::{
+    access_path::AccessPath, account_address::AccountAddress, transaction::Program,
+    vm_error::VMStatus,
+};
+use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -47,7 +50,7 @@ struct Args {
     pub deps_path: Option<String>,
 }
 
-fn print_errors_and_exit(verification_errors: &[VerificationError]) -> ! {
+fn print_errors_and_exit(verification_errors: &[VMStatus]) -> ! {
     println!("Verification failed. Errors below:");
     for e in verification_errors {
         println!("{:?}", e);

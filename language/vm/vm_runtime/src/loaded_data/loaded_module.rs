@@ -5,10 +5,13 @@
 use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
 use std::{collections::HashMap, sync::RwLock};
-use types::identifier::Identifier;
+use types::{
+    identifier::Identifier,
+    vm_error::{StatusCode, VMStatus},
+};
 use vm::{
     access::ModuleAccess,
-    errors::VMInvariantViolation,
+    errors::VMResult,
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionDefinitionIndex, StructDefinitionIndex,
         StructFieldInformation, TableIndex,
@@ -142,14 +145,11 @@ impl LoadedModule {
         cached.replace(def);
     }
 
-    pub fn get_field_offset(
-        &self,
-        idx: FieldDefinitionIndex,
-    ) -> Result<TableIndex, VMInvariantViolation> {
+    pub fn get_field_offset(&self, idx: FieldDefinitionIndex) -> VMResult<TableIndex> {
         self.field_offsets
             .get(idx.into_index())
             .cloned()
-            .ok_or(VMInvariantViolation::LinkerError)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
     }
 }
 

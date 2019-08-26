@@ -4,9 +4,10 @@
 //! This module implements a checker for verifying signature tokens used in types of function
 //! parameters, locals, and fields of structs are well-formed. References can only occur at the
 //! top-level in all tokens.  Additionally, references cannot occur at all in field types.
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{VMStaticViolation, VerificationError},
+    errors::append_err_info,
     file_format::{CompiledModule, SignatureToken},
     views::{
         FieldDefinitionView, FunctionSignatureView, LocalsSignatureView, ModuleView,
@@ -26,7 +27,7 @@ impl<'a> SignatureChecker<'a> {
         }
     }
 
-    pub fn verify(self) -> Vec<VerificationError> {
+    pub fn verify(self) -> Vec<VMStatus> {
         let mut errors: Vec<Vec<_>> = vec![];
 
         errors.push(Self::verify_impl(
@@ -47,11 +48,8 @@ impl<'a> SignatureChecker<'a> {
             .fields()
             .enumerate()
             .filter_map(move |(idx, view)| {
-                check_signature_refs(&view).map(move |err| VerificationError {
-                    kind: IndexKind::FieldDefinition,
-                    idx,
-                    err,
-                })
+                check_signature_refs(&view)
+                    .map(move |err| append_err_info(err, IndexKind::FieldDefinition, idx))
             })
             .collect();
         errors.push(signature_ref_errors);
@@ -63,13 +61,13 @@ impl<'a> SignatureChecker<'a> {
     fn verify_impl(
         kind: IndexKind,
         views: impl Iterator<Item = impl SignatureCheck>,
-    ) -> Vec<VerificationError> {
+    ) -> Vec<VMStatus> {
         views
             .enumerate()
             .map(move |(idx, view)| {
                 view.check_signatures()
                     .into_iter()
-                    .map(move |err| VerificationError { kind, idx, err })
+                    .map(move |err| append_err_info(err, kind, idx))
             })
             .flatten()
             .collect()
@@ -77,11 +75,11 @@ impl<'a> SignatureChecker<'a> {
 }
 
 trait SignatureCheck {
-    fn check_signatures(&self) -> Vec<VMStaticViolation>;
+    fn check_signatures(&self) -> Vec<VMStatus>;
 }
 
 impl<'a, T: ModuleAccess> SignatureCheck for FunctionSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStaticViolation> {
+    fn check_signatures(&self) -> Vec<VMStatus> {
         self.return_tokens()
             .filter_map(|token| check_structure(token.as_inner()))
             .chain(
@@ -93,7 +91,7 @@ impl<'a, T: ModuleAccess> SignatureCheck for FunctionSignatureView<'a, T> {
 }
 
 impl<'a, T: ModuleAccess> SignatureCheck for TypeSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStaticViolation> {
+    fn check_signatures(&self) -> Vec<VMStatus> {
         check_structure(self.token().as_inner())
             .into_iter()
             .collect()
@@ -101,7 +99,7 @@ impl<'a, T: ModuleAccess> SignatureCheck for TypeSignatureView<'a, T> {
 }
 
 impl<'a, T: ModuleAccess> SignatureCheck for LocalsSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStaticViolation> {
+    fn check_signatures(&self) -> Vec<VMStatus> {
         self.tokens()
             .filter_map(|token| check_structure(token.as_inner()))
             .collect()
@@ -112,21 +110,21 @@ impl<'a, T: ModuleAccess> SignatureCheck for LocalsSignatureView<'a, T> {
 /// references or mutable references.
 pub(crate) fn check_signature_refs(
     view: &FieldDefinitionView<'_, CompiledModule>,
-) -> Option<VMStaticViolation> {
+) -> Option<VMStatus> {
     let type_signature = view.type_signature();
     let token = type_signature.token();
     let kind = token.signature_token_kind();
     match kind {
-        SignatureTokenKind::Reference | SignatureTokenKind::MutableReference => Some(
-            VMStaticViolation::InvalidFieldDefReference(token.as_inner().clone(), kind),
-        ),
+        SignatureTokenKind::Reference | SignatureTokenKind::MutableReference => {
+            Some(VMStatus::new(StatusCode::INVALID_FIELD_DEF_REFERENCE))
+        }
         SignatureTokenKind::Value => None,
     }
 }
 
 /// Check that this token is structurally correct.
 /// In particular, check that the token has a reference only at the top level.
-pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStaticViolation> {
+pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStatus> {
     use SignatureToken::*;
 
     let inner_token_opt = match token {
@@ -136,11 +134,13 @@ pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStaticViolatio
     };
     if let Some(inner_token) = inner_token_opt {
         if inner_token.is_reference() {
-            return Some(VMStaticViolation::InvalidSignatureToken(
+            let msg = format!(
+                "Invalid token {:#?} of kind {} with inner token {}",
                 token.clone(),
                 token.signature_token_kind(),
                 inner_token.signature_token_kind(),
-            ));
+            );
+            return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN).with_message(msg));
         }
     }
     None

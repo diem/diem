@@ -17,5 +17,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: EqualityOpTypeMismatchError
+// check: VerificationFailure
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR

@@ -19,7 +19,6 @@ use types::{
 };
 use vm::{
     access::*,
-    assert_ok,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, MemberCount,
@@ -420,7 +419,6 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Invariant violation while looking up module")
             .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Lookup] Unable to find module");
         let struct_def_idx = if self.struct_handle_table.contains_key(&module_id) {
@@ -470,7 +468,6 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Invariant violation while looking up module")
             .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Lookup] Unable to find module");
         let function_def_idx = if self.function_handle_table.contains_key(&module_id) {
@@ -877,10 +874,10 @@ where
 
         // Populate the locals of the frame
         for (local_index, local) in stack_state.local_mapping.into_iter() {
-            assert_ok!(stk
-                .top_frame_mut()
+            stk.top_frame_mut()
                 .expect("[Stack Transition] Unable to get top frame on execution stack.")
-                .store_local(local_index, local));
+                .store_local(local_index, local)
+                .unwrap();
         }
         (stack_state.instr, stack_state.size)
     }

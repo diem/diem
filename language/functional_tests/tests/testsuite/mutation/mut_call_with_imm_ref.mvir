@@ -1,4 +1,5 @@
-//check: VerificationError { kind: FunctionDefinition, idx: 2, err: CallTypeMismatchError(4) }
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR
 
 module Token {
     resource T{value: u64}

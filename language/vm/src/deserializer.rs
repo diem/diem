@@ -8,13 +8,20 @@ use std::{
     convert::TryInto,
     io::{Cursor, Read},
 };
-use types::{account_address::ADDRESS_LENGTH, byte_array::ByteArray, identifier::Identifier};
+use types::{
+    account_address::ADDRESS_LENGTH,
+    byte_array::ByteArray,
+    identifier::Identifier,
+    vm_error::{StatusCode, VMStatus},
+};
 
 impl CompiledScript {
     /// Deserializes a &[u8] slice into a `CompiledScript` instance.
     pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
         let deserialized = CompiledScriptMut::deserialize_no_check_bounds(binary)?;
-        deserialized.freeze().map_err(|_| BinaryError::Malformed)
+        deserialized
+            .freeze()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -30,7 +37,9 @@ impl CompiledModule {
     /// Deserialize a &[u8] slice into a `CompiledModule` instance.
     pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
         let deserialized = CompiledModuleMut::deserialize_no_check_bounds(binary)?;
-        deserialized.freeze().map_err(|_| BinaryError::Malformed)
+        deserialized
+            .freeze()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -91,33 +100,33 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u8> {
     let mut magic = [0u8; BinaryConstants::LIBRA_MAGIC_SIZE];
     if let Ok(count) = cursor.read(&mut magic) {
         if count != BinaryConstants::LIBRA_MAGIC_SIZE {
-            return Err(BinaryError::Malformed);
+            return Err(VMStatus::new(StatusCode::MALFORMED));
         } else if magic != BinaryConstants::LIBRA_MAGIC {
-            return Err(BinaryError::BadMagic);
+            return Err(VMStatus::new(StatusCode::BAD_MAGIC));
         }
     } else {
-        return Err(BinaryError::Malformed);
+        return Err(VMStatus::new(StatusCode::MALFORMED));
     }
     let major_ver = 1u8;
     let minor_ver = 0u8;
     if let Ok(ver) = cursor.read_u8() {
         if ver != major_ver {
-            return Err(BinaryError::UnknownVersion);
+            return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
         }
     } else {
-        return Err(BinaryError::Malformed);
+        return Err(VMStatus::new(StatusCode::MALFORMED));
     }
     if let Ok(ver) = cursor.read_u8() {
         if ver != minor_ver {
-            return Err(BinaryError::UnknownVersion);
+            return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
         }
     } else {
-        return Err(BinaryError::Malformed);
+        return Err(VMStatus::new(StatusCode::MALFORMED));
     }
     if let Ok(count) = cursor.read_u8() {
         Ok(count)
     } else {
-        Err(BinaryError::Malformed)
+        Err(VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -143,7 +152,7 @@ fn read_table(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Table> {
         let count = read_u32_internal(cursor)?;
         Ok(Table::new(TableType::from_u8(kind)?, table_offset, count))
     } else {
-        Err(BinaryError::Malformed)
+        Err(VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -159,24 +168,24 @@ fn check_tables(tables: &mut Vec<Table>, end_tables: u64, length: u64) -> Binary
     for table in tables {
         let offset = u64::from(table.offset);
         if offset != current_offset {
-            return Err(BinaryError::BadHeaderTable);
+            return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
         }
         if table.count == 0 {
-            return Err(BinaryError::BadHeaderTable);
+            return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
         }
         let count = u64::from(table.count);
         if let Some(checked_offset) = current_offset.checked_add(count) {
             current_offset = checked_offset;
         }
         if current_offset > length {
-            return Err(BinaryError::BadHeaderTable);
+            return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
         }
         if !table_types.insert(table.kind) {
-            return Err(BinaryError::DuplicateTable);
+            return Err(VMStatus::new(StatusCode::DUPLICATE_TABLE));
         }
     }
     if current_offset != length {
-        return Err(BinaryError::BadHeaderTable);
+        return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
     }
     Ok(())
 }
@@ -376,7 +385,7 @@ fn build_module_tables(
             | TableType::LOCALS_SIGNATURES => {
                 continue;
             }
-            TableType::MAIN => return Err(BinaryError::Malformed),
+            TableType::MAIN => return Err(VMStatus::new(StatusCode::MALFORMED)),
         }
     }
     Ok(())
@@ -412,7 +421,7 @@ fn build_script_tables(
                 continue;
             }
             TableType::STRUCT_DEFS | TableType::FIELD_DEFS | TableType::FUNCTION_DEFS => {
-                return Err(BinaryError::Malformed);
+                return Err(VMStatus::new(StatusCode::MALFORMED));
             }
         }
     }
@@ -502,13 +511,13 @@ fn load_address_pool(
 ) -> BinaryLoaderResult<()> {
     let mut start = table.offset as usize;
     if table.count as usize % ADDRESS_LENGTH != 0 {
-        return Err(BinaryError::Malformed);
+        return Err(VMStatus::new(StatusCode::MALFORMED));
     }
     for _i in 0..table.count as usize / ADDRESS_LENGTH {
         let end_addr = start + ADDRESS_LENGTH;
         let address = (&binary[start..end_addr]).try_into();
         if address.is_err() {
-            return Err(BinaryError::Malformed);
+            return Err(VMStatus::new(StatusCode::MALFORMED));
         }
         start = end_addr;
 
@@ -529,16 +538,16 @@ fn load_identifiers(
     while cursor.position() < u64::from(table.count) {
         let size = read_uleb_u32_internal(&mut cursor)? as usize;
         if size > std::u16::MAX as usize {
-            return Err(BinaryError::Malformed);
+            return Err(VMStatus::new(StatusCode::MALFORMED));
         }
         let mut buffer: Vec<u8> = vec![0u8; size];
         if let Ok(count) = cursor.read(&mut buffer) {
             if count != size {
-                return Err(BinaryError::Malformed);
+                return Err(VMStatus::new(StatusCode::MALFORMED));
             }
             let s = match Identifier::from_utf8(buffer) {
                 Ok(bytes) => bytes,
-                Err(_) => return Err(BinaryError::Malformed),
+                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
             };
 
             identifiers.push(s);
@@ -559,16 +568,16 @@ fn load_user_strings(
     while cursor.position() < u64::from(table.count) {
         let size = read_uleb_u32_internal(&mut cursor)? as usize;
         if size > std::u16::MAX as usize {
-            return Err(BinaryError::Malformed);
+            return Err(VMStatus::new(StatusCode::MALFORMED));
         }
         let mut buffer: Vec<u8> = vec![0u8; size];
         if let Ok(count) = cursor.read(&mut buffer) {
             if count != size {
-                return Err(BinaryError::Malformed);
+                return Err(VMStatus::new(StatusCode::MALFORMED));
             }
             let us = match VMString::from_utf8(buffer) {
                 Ok(bytes) => bytes,
-                Err(_) => return Err(BinaryError::Malformed),
+                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
             };
 
             user_strings.push(us);
@@ -589,12 +598,12 @@ fn load_byte_array_pool(
     while cursor.position() < u64::from(table.count) {
         let size = read_uleb_u32_internal(&mut cursor)? as usize;
         if size > std::u16::MAX as usize {
-            return Err(BinaryError::Malformed);
+            return Err(VMStatus::new(StatusCode::MALFORMED));
         }
         let mut byte_array: Vec<u8> = vec![0u8; size];
         if let Ok(count) = cursor.read(&mut byte_array) {
             if count != size {
-                return Err(BinaryError::Malformed);
+                return Err(VMStatus::new(StatusCode::MALFORMED));
             }
 
             byte_arrays.push(ByteArray::new(byte_array));
@@ -615,7 +624,7 @@ fn load_type_signatures(
     while cursor.position() < u64::from(table.count) {
         if let Ok(byte) = cursor.read_u8() {
             if byte != SignatureType::TYPE_SIGNATURE as u8 {
-                return Err(BinaryError::UnexpectedSignatureType);
+                return Err(VMStatus::new(StatusCode::UNEXPECTED_SIGNATURE_TYPE));
             }
         }
         let token = load_signature_token(&mut cursor)?;
@@ -636,12 +645,14 @@ fn load_function_signatures(
     while cursor.position() < u64::from(table.count) {
         if let Ok(byte) = cursor.read_u8() {
             if byte != SignatureType::FUNCTION_SIGNATURE as u8 {
-                return Err(BinaryError::UnexpectedSignatureType);
+                return Err(VMStatus::new(StatusCode::UNEXPECTED_SIGNATURE_TYPE));
             }
         }
 
         // Return signature
-        let token_count = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+        let token_count = cursor
+            .read_u8()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
         let mut returns_signature: Vec<SignatureToken> = Vec::new();
         for _i in 0..token_count {
             let token = load_signature_token(&mut cursor)?;
@@ -649,7 +660,9 @@ fn load_function_signatures(
         }
 
         // Arguments signature
-        let token_count = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+        let token_count = cursor
+            .read_u8()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
         let mut args_signature: Vec<SignatureToken> = Vec::new();
         for _i in 0..token_count {
             let token = load_signature_token(&mut cursor)?;
@@ -677,11 +690,13 @@ fn load_locals_signatures(
     while cursor.position() < u64::from(table.count) {
         if let Ok(byte) = cursor.read_u8() {
             if byte != SignatureType::LOCAL_SIGNATURE as u8 {
-                return Err(BinaryError::UnexpectedSignatureType);
+                return Err(VMStatus::new(StatusCode::UNEXPECTED_SIGNATURE_TYPE));
             }
         }
 
-        let token_count = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+        let token_count = cursor
+            .read_u8()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
         let mut local_signature: Vec<SignatureToken> = Vec::new();
         for _i in 0..token_count {
             let token = load_signature_token(&mut cursor)?;
@@ -721,7 +736,7 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
             }
         }
     } else {
-        Err(BinaryError::Malformed)
+        Err(VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -741,7 +756,7 @@ fn load_nominal_resource_flag(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<
             SerializedNominalResourceFlag::NORMAL_STRUCT => false,
         })
     } else {
-        Err(BinaryError::Malformed)
+        Err(VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -753,7 +768,7 @@ fn load_kind(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Kind> {
             SerializedKind::RESOURCE => Kind::Resource,
         })
     } else {
-        Err(BinaryError::Malformed)
+        Err(VMStatus::new(StatusCode::MALFORMED))
     }
 }
 
@@ -779,17 +794,17 @@ fn load_struct_defs(
         let struct_handle = read_uleb_u16_internal(&mut cursor)?;
         let field_information_flag = match cursor.read_u8() {
             Ok(byte) => SerializedNativeStructFlag::from_u8(byte)?,
-            Err(_) => return Err(BinaryError::Malformed),
+            Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
         };
         let field_information = match field_information_flag {
             SerializedNativeStructFlag::NATIVE => {
                 let field_count = read_uleb_u16_internal(&mut cursor)?;
                 if field_count != 0 {
-                    return Err(BinaryError::Malformed);
+                    return Err(VMStatus::new(StatusCode::MALFORMED));
                 }
                 let fields_u16 = read_uleb_u16_internal(&mut cursor)?;
                 if fields_u16 != 0 {
-                    return Err(BinaryError::Malformed);
+                    return Err(VMStatus::new(StatusCode::MALFORMED));
                 }
                 StructFieldInformation::Native
             }
@@ -853,7 +868,9 @@ fn load_function_defs(
 fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionDefinition> {
     let function = read_uleb_u16_internal(cursor)?;
 
-    let flags = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+    let flags = cursor
+        .read_u8()
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
     let code_unit = load_code_unit(cursor)?;
     Ok(FunctionDefinition {
@@ -868,7 +885,9 @@ fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionD
 fn load_struct_definition_indices(
     cursor: &mut Cursor<&[u8]>,
 ) -> BinaryLoaderResult<Vec<StructDefinitionIndex>> {
-    let len = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+    let len = cursor
+        .read_u8()
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
     let mut indices = vec![];
     for _ in 0..len {
         indices.push(StructDefinitionIndex(read_uleb_u16_internal(cursor)?));
@@ -895,7 +914,9 @@ fn load_code_unit(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<CodeUnit> {
 fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoaderResult<()> {
     let bytecode_count = read_u16_internal(cursor)?;
     while code.len() < bytecode_count as usize {
-        let byte = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+        let byte = cursor
+            .read_u8()
+            .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
         let bytecode = match Opcodes::from_u8(byte)? {
             Opcodes::POP => Bytecode::Pop,
             Opcodes::RET => Bytecode::Ret,
@@ -926,23 +947,33 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::LD_TRUE => Bytecode::LdTrue,
             Opcodes::LD_FALSE => Bytecode::LdFalse,
             Opcodes::COPY_LOC => {
-                let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+                let idx = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
                 Bytecode::CopyLoc(idx)
             }
             Opcodes::MOVE_LOC => {
-                let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+                let idx = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
                 Bytecode::MoveLoc(idx)
             }
             Opcodes::ST_LOC => {
-                let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+                let idx = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
                 Bytecode::StLoc(idx)
             }
             Opcodes::MUT_BORROW_LOC => {
-                let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+                let idx = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
                 Bytecode::MutBorrowLoc(idx)
             }
             Opcodes::IMM_BORROW_LOC => {
-                let idx = cursor.read_u8().map_err(|_| BinaryError::Malformed)?;
+                let idx = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
                 Bytecode::ImmBorrowLoc(idx)
             }
             Opcodes::MUT_BORROW_FIELD => {
@@ -1042,29 +1073,29 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
 //
 
 fn read_uleb_u16_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u16> {
-    read_uleb128_as_u16(cursor).map_err(|_| BinaryError::Malformed)
+    read_uleb128_as_u16(cursor).map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 fn read_uleb_u32_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u32> {
-    read_uleb128_as_u32(cursor).map_err(|_| BinaryError::Malformed)
+    read_uleb128_as_u32(cursor).map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 fn read_u16_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u16> {
     cursor
         .read_u16::<LittleEndian>()
-        .map_err(|_| BinaryError::Malformed)
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 fn read_u32_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u32> {
     cursor
         .read_u32::<LittleEndian>()
-        .map_err(|_| BinaryError::Malformed)
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 fn read_u64_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u64> {
     cursor
         .read_u64::<LittleEndian>()
-        .map_err(|_| BinaryError::Malformed)
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 impl TableType {
@@ -1084,7 +1115,7 @@ impl TableType {
             0xC => Ok(TableType::TYPE_SIGNATURES),
             0xD => Ok(TableType::FUNCTION_SIGNATURES),
             0xE => Ok(TableType::LOCALS_SIGNATURES),
-            _ => Err(BinaryError::UnknownTableType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_TABLE_TYPE)),
         }
     }
 }
@@ -1096,7 +1127,7 @@ impl SignatureType {
             0x1 => Ok(SignatureType::TYPE_SIGNATURE),
             0x2 => Ok(SignatureType::FUNCTION_SIGNATURE),
             0x3 => Ok(SignatureType::LOCAL_SIGNATURE),
-            _ => Err(BinaryError::UnknownSignatureType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_SIGNATURE_TYPE)),
         }
     }
 }
@@ -1113,7 +1144,7 @@ impl SerializedType {
             0x7 => Ok(SerializedType::STRUCT),
             0x8 => Ok(SerializedType::BYTEARRAY),
             0x9 => Ok(SerializedType::TYPE_PARAMETER),
-            _ => Err(BinaryError::UnknownSerializedType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
 }
@@ -1123,7 +1154,7 @@ impl SerializedNominalResourceFlag {
         match value {
             0x1 => Ok(SerializedNominalResourceFlag::NOMINAL_RESOURCE),
             0x2 => Ok(SerializedNominalResourceFlag::NORMAL_STRUCT),
-            _ => Err(BinaryError::UnknownSerializedType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
 }
@@ -1134,7 +1165,7 @@ impl SerializedKind {
             0x1 => Ok(SerializedKind::ALL),
             0x2 => Ok(SerializedKind::UNRESTRICTED),
             0x3 => Ok(SerializedKind::RESOURCE),
-            _ => Err(BinaryError::UnknownSerializedType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
 }
@@ -1144,7 +1175,7 @@ impl SerializedNativeStructFlag {
         match value {
             0x1 => Ok(SerializedNativeStructFlag::NATIVE),
             0x2 => Ok(SerializedNativeStructFlag::DECLARED),
-            _ => Err(BinaryError::UnknownSerializedType),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
 }
@@ -1206,7 +1237,7 @@ impl Opcodes {
             0x34 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
             0x35 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
             0x36 => Ok(Opcodes::FREEZE_REF),
-            _ => Err(BinaryError::UnknownOpcode),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }
 }

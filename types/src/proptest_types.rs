@@ -18,7 +18,7 @@ use crate::{
         TransactionStatus, TransactionToCommit, Version,
     },
     validator_change::ValidatorChangeEventWithProof,
-    vm_error::VMStatus,
+    vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use crypto::{
@@ -393,6 +393,35 @@ impl TransactionPayload {
     /// Similar to `write_set_strategy` except generates a valid write set for the genesis block.
     pub fn genesis_strategy() -> impl Strategy<Value = Self> {
         WriteSet::genesis_strategy().prop_map(TransactionPayload::WriteSet)
+    }
+}
+
+/// The `Arbitrary` impl only generates validation statuses since the full enum is too large.
+impl Arbitrary for StatusCode {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        prop_oneof![
+            Just(StatusCode::UNKNOWN_VALIDATION_STATUS),
+            Just(StatusCode::INVALID_SIGNATURE),
+            Just(StatusCode::INVALID_AUTH_KEY),
+            Just(StatusCode::SEQUENCE_NUMBER_TOO_OLD),
+            Just(StatusCode::SEQUENCE_NUMBER_TOO_NEW),
+            Just(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
+            Just(StatusCode::TRANSACTION_EXPIRED),
+            Just(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
+            Just(StatusCode::REJECTED_WRITE_SET),
+            Just(StatusCode::INVALID_WRITE_SET),
+            Just(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE),
+            Just(StatusCode::UNKNOWN_SCRIPT),
+            Just(StatusCode::UNKNOWN_MODULE),
+            Just(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND),
+            Just(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS),
+            Just(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND),
+            Just(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND),
+        ]
+        .boxed()
     }
 }
 

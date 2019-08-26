@@ -1,5 +1,5 @@
 // check:  VerificationFailure
-// check: MoveLocExistsBorrowError
+// check: MOVELOC_EXISTS_BORROW_ERROR
 
 main() {
     let v: u64;

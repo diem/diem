@@ -9,5 +9,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: PopResourceError(4)
+// check: VerificationFailure
+// check: POP_RESOURCE_ERROR

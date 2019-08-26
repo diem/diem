@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefExistsBorrowError(10) }
+// check: VerificationFailure
+// check: WRITEREF_EXISTS_BORROW_ERROR
 
 module B {
     struct T{g: u64}

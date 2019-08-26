@@ -14,10 +14,13 @@ use crate::{
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use crypto::ed25519::compat;
 use std::collections::HashMap;
-use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
+use types::{
+    access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray,
+    vm_error::StatusCode,
+};
 use vm::{
     access::ModuleAccess,
-    errors::{VMErrorKind, VMInvariantViolation, VMResult},
+    errors::VMResult,
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
@@ -45,7 +48,7 @@ impl FakeDataCache {
 }
 
 impl RemoteCache for FakeDataCache {
-    fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation> {
+    fn get(&self, _access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         Ok(None)
     }
 }
@@ -103,7 +106,7 @@ fn test_simple_instruction_impl<'alloc, 'txn>(
         .top_frame_mut()?
         .set_with_states(0, local_before);
     vm.execution_stack.set_stack(value_stack_before);
-    let offset = try_runtime!(vm.execute_block(code.as_slice(), 0));
+    let offset = vm.execute_block(code.as_slice(), 0)?;
     let stack_before_and_after = vm
         .execution_stack
         .get_value_stack()
@@ -118,7 +121,7 @@ fn test_simple_instruction_impl<'alloc, 'txn>(
         assert!(l_before.clone().equals(l_after).unwrap())
     }
     assert_eq!(offset, expected_offset);
-    Ok(Ok(()))
+    Ok(())
 }
 
 fn test_simple_instruction<'alloc, 'txn>(
@@ -139,7 +142,6 @@ fn test_simple_instruction<'alloc, 'txn>(
         local_after,
         expected_offset,
     )
-    .unwrap()
     .unwrap();
 }
 
@@ -158,9 +160,7 @@ fn test_binop_instruction<'alloc, 'txn>(
     stack: Vec<Local>,
     expected_value: Local,
 ) {
-    test_binop_instruction_impl(vm, instr, stack, expected_value)
-        .unwrap()
-        .unwrap()
+    test_binop_instruction_impl(vm, instr, stack, expected_value).unwrap()
 }
 
 fn test_binop_instruction_overflow<'alloc, 'txn>(
@@ -170,10 +170,9 @@ fn test_binop_instruction_overflow<'alloc, 'txn>(
 ) {
     assert_eq!(
         test_binop_instruction_impl(vm, instr, stack, Local::u64(0))
-            .unwrap()
             .unwrap_err()
-            .err,
-        VMErrorKind::ArithmeticError
+            .major_status,
+        StatusCode::ARITHMETIC_ERROR
     );
 }
 
@@ -189,7 +188,6 @@ fn test_simple_instruction_transition() {
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
     vm.execution_stack
         .push_frame(entry_func)
-        .unwrap()
         .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(
@@ -343,21 +341,19 @@ fn test_simple_instruction_transition() {
         1,
     );
 
-    assert_eq!(
-        test_simple_instruction_impl(
-            &mut vm,
-            Bytecode::Abort,
-            vec![Local::u64(777)],
-            vec![],
-            vec![],
-            vec![],
-            1
-        )
-        .unwrap()
-        .unwrap_err()
-        .err,
-        VMErrorKind::Aborted(777)
-    );
+    let err = test_simple_instruction_impl(
+        &mut vm,
+        Bytecode::Abort,
+        vec![Local::u64(777)],
+        vec![],
+        vec![],
+        vec![],
+        1,
+    )
+    .unwrap_err();
+
+    assert_eq!(err.major_status, StatusCode::ABORTED);
+    assert_eq!(err.sub_status, Some(777));
 }
 
 #[test]
@@ -374,7 +370,6 @@ fn test_arith_instructions() {
 
     vm.execution_stack
         .push_frame(entry_func)
-        .unwrap()
         .expect("push to empty execution stack should succeed");
 
     test_binop_instruction(
@@ -668,14 +663,9 @@ fn test_call() {
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new_from_module(module, &allocator).unwrap();
     let fake_func = {
-        let fake_mod_entry = module_cache
-            .get_loaded_module(&mod_id)
-            .unwrap()
-            .unwrap()
-            .unwrap();
+        let fake_mod_entry = module_cache.get_loaded_module(&mod_id).unwrap().unwrap();
         module_cache
             .resolve_function_ref(fake_mod_entry, FunctionHandleIndex::new(0))
-            .unwrap()
             .unwrap()
             .unwrap()
     };
@@ -684,7 +674,6 @@ fn test_call() {
         TransactionExecutor::new(module_cache, &data_cache, TransactionMetadata::default());
     vm.execution_stack
         .push_frame(fake_func)
-        .unwrap()
         .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(
@@ -749,7 +738,6 @@ fn test_transaction_info() {
 
     vm.execution_stack
         .push_frame(entry_func)
-        .unwrap()
         .expect("push to empty execution stack should succeed");
 
     test_simple_instruction(

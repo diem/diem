@@ -7,5 +7,6 @@ main(val: u64, addr: address) {
     return;
 }
 
-// check: Execution
-// check: Aborted(42)
+// check: Keep
+// check: ABORTED
+// check: 42

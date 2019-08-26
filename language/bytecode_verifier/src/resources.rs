@@ -3,12 +3,8 @@
 
 //! This module implements a checker for verifying that a non-resource struct does not
 //! have resource fields inside it.
-use vm::{
-    errors::{VMStaticViolation, VerificationError},
-    file_format::CompiledModule,
-    views::ModuleView,
-    IndexKind,
-};
+use types::vm_error::{StatusCode, VMStatus};
+use vm::{errors::verification_error, file_format::CompiledModule, views::ModuleView, IndexKind};
 
 pub struct ResourceTransitiveChecker<'a> {
     module_view: ModuleView<'a, CompiledModule>,
@@ -21,7 +17,7 @@ impl<'a> ResourceTransitiveChecker<'a> {
         }
     }
 
-    pub fn verify(self) -> Vec<VerificationError> {
+    pub fn verify(self) -> Vec<VMStatus> {
         let mut errors = vec![];
         for (idx, struct_def) in self.module_view.structs().enumerate() {
             if !struct_def.is_nominal_resource() {
@@ -34,11 +30,11 @@ impl<'a> ResourceTransitiveChecker<'a> {
                                 .contains_nominal_resource(struct_def.type_formals())
                         });
                         if any_resource_field {
-                            errors.push(VerificationError {
-                                kind: IndexKind::StructDefinition,
+                            errors.push(verification_error(
+                                IndexKind::StructDefinition,
                                 idx,
-                                err: VMStaticViolation::InvalidResourceField,
-                            });
+                                StatusCode::INVALID_RESOURCE_FIELD,
+                            ));
                         }
                     }
                 }

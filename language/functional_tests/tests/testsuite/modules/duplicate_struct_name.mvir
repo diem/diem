@@ -1,4 +1,5 @@
-// check: VerificationError { kind: StructDefinition, idx: 1, err: DuplicateElement }
+// check: VerificationFailure
+// check: DUPLICATE_ELEMENT
 
 module M {
     struct T{}

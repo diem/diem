@@ -7,6 +7,7 @@ main() {
     abort 0;
 }
 
-// not: VerificationError
+// not: VerificationFailure
 
-// check: Aborted(0)
+// check: ABORTED
+// check: 0

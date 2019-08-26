@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::compile_and_execute;
-use vm::assert_ok;
 
 #[test]
 fn simple_unpack() {
@@ -35,5 +34,5 @@ main() {
     return;
 }",
     );
-    assert_ok!(compile_and_execute(&program, vec![]));
+    assert!(compile_and_execute(&program, vec![]).is_ok());
 }

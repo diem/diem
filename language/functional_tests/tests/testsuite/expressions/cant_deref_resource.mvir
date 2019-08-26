@@ -1,5 +1,5 @@
-// check: VerificationError
-// check: ReadRefResourceError(11)
+// check: VerificationFailure
+// check: READREF_RESOURCE_ERROR
 
 module Token {
     resource T {v: u64}

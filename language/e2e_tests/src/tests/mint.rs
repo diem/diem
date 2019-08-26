@@ -6,10 +6,11 @@ use crate::{
     common_transactions::mint_txn,
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
+    transaction_status_eq,
 };
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 #[test]
@@ -31,7 +32,7 @@ fn mint_to_existing() {
     let txn_output = output.get(0).expect("must have a transaction output");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
     println!("write set {:?}", txn_output.write_set());
     executor.apply_write_set(txn_output.write_set());
@@ -69,10 +70,10 @@ fn mint_to_new_account() {
     let txns: Vec<SignedTransaction> = vec![txn];
     let output = executor.execute_block(txns);
     let txn_output = output.get(0).expect("must have a transaction output");
-    assert_eq!(
-        output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
-    );
+    assert!(transaction_status_eq(
+        &output[0].status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+    ));
     executor.apply_write_set(txn_output.write_set());
 
     // check that numbers in stored DB are correct
@@ -96,8 +97,8 @@ fn mint_to_new_account() {
     let txns: Vec<SignedTransaction> = vec![txn];
     let output = executor.execute_block(txns);
 
-    assert_eq!(
-        output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::MissingData))
-    );
+    assert!(transaction_status_eq(
+        &output[0].status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::MISSING_DATA))
+    ));
 }

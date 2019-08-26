@@ -43,14 +43,8 @@ module M {
     }
 }
 
-// check: VerificationError
-// check: RetUnsafeToDestroyError
-
-// check: VerificationError
-// check: RetUnsafeToDestroyError
-
-// check: VerificationError
-// check: RetUnsafeToDestroyError
-
-// check: VerificationError
-// check: RetUnsafeToDestroyError
+// check: VerificationFailure
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: RET_UNSAFE_TO_DESTROY_ERROR

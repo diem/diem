@@ -1,4 +1,6 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 2, err: MoveLocUnavailableError(9) }
+// check: VerificationFailure
+// check: MOVELOC_UNAVAILABLE_ERROR
+
 module Token {
     resource T{value: u64}
     public new(m: u64): Self.T {

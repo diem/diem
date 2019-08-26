@@ -11,5 +11,5 @@ module A {
     }
 }
 
-// check: VerificationError
-// check: RetUnsafeToDestroyError
+// check: VerificationFailure
+// check: RET_UNSAFE_TO_DESTROY_ERROR
