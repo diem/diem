@@ -1,7 +1,7 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        consensus_types::proposal_msg::ProposalMsg,
+        consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
@@ -177,7 +177,19 @@ pub fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    let proposal = match ProposalMsg::<TestPayload>::from_proto(proposal) {
+    let proposal = match ProposalUncheckedSignatures::<TestPayload>::from_proto(proposal) {
+        Ok(xx) => xx,
+        Err(_) => {
+            if cfg!(test) {
+                panic!();
+            }
+            return;
+        }
+    };
+
+    let proposal: ProposalMsg<TestPayload> = proposal.into();
+
+    let proposal = match proposal.verify_well_formed() {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

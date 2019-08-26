@@ -306,10 +306,31 @@ where
         &self.payload
     }
 
-    pub fn verify(
+    /// Verifies that the proposal and the QC are correctly signed.
+    /// If this is the genesis block, we skip these checks.
+    pub fn validate_signatures(
         &self,
         validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), BlockVerificationError> {
+        // if genesis block, we don't verify anything
+        if self.is_genesis_block() {
+            return Ok(());
+        }
+        // verify signature from leader if it's a real proposal
+        if let BlockSource::Proposal { author, signature } = &self.block_source {
+            signature
+                .verify(validator, *author, self.hash())
+                .map_err(|_| BlockVerificationError::SigVerifyError)?;
+        }
+        // verify signatures of quorum cert
+        self.quorum_cert
+            .verify(validator)
+            .map_err(BlockVerificationError::QCVerificationError)
+    }
+
+    /// Makes sure that the proposal makes sense, independently of the current state.
+    /// If this is the genesis block, we skip these checks.
+    pub fn verify_well_formed(&self) -> ::std::result::Result<(), BlockVerificationError> {
         if self.is_genesis_block() {
             return Ok(());
         }
@@ -324,17 +345,11 @@ where
         {
             return Err(BlockVerificationError::InvalidBlockRound);
         }
-        if let BlockSource::Proposal { author, signature } = &self.block_source {
-            signature
-                .verify(validator, *author, self.hash())
-                .map_err(|_| BlockVerificationError::SigVerifyError)?;
-        } else if self.payload != T::default() {
-            // NIL block must not carry payload
+        // NIL block must not carry payload
+        if self.block_source == BlockSource::NilBlock && self.payload != T::default() {
             return Err(BlockVerificationError::NilBlockWithPayload);
         }
-        self.quorum_cert
-            .verify(validator)
-            .map_err(BlockVerificationError::QCVerificationError)
+        Ok(())
     }
 
     pub fn id(&self) -> HashValue {

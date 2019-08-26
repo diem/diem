@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::{Author, Payload},
+    common::{Author, Payload, Round},
     consensus_types::{block::Block, sync_info::SyncInfo},
 };
 use failure::prelude::*;
@@ -15,17 +15,73 @@ use types::crypto_proxies::ValidatorVerifier;
 /// choice (typically depends on round and proposer info).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProposalMsg<T> {
-    pub proposal: Block<T>,
-    pub sync_info: SyncInfo,
+    proposal: Block<T>,
+    sync_info: SyncInfo,
+}
+
+/// A ProposalMsg is only accessible after verifying the signatures of a ProposalUncheckedSignatures
+/// via the `validate_signatures` function.
+pub struct ProposalUncheckedSignatures<T>(ProposalMsg<T>);
+
+impl<T: Payload> FromProto for ProposalUncheckedSignatures<T> {
+    type ProtoType = ProtoProposal;
+
+    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
+        let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
+        let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
+        Ok(ProposalUncheckedSignatures(ProposalMsg::new(
+            proposal, sync_info,
+        )))
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl<T: Payload> From<ProposalUncheckedSignatures<T>> for ProposalMsg<T> {
+    fn from(proposal: ProposalUncheckedSignatures<T>) -> Self {
+        proposal.0
+    }
+}
+
+impl<T: Payload> ProposalUncheckedSignatures<T> {
+    /// Validates the signatures of the proposal. This includes the leader's signature over the
+    /// block and the QC, the timeout certificate signatures and the highest_ledger_info signatures.
+    pub fn validate_signatures(self, validator: &ValidatorVerifier) -> Result<ProposalMsg<T>> {
+        // verify block leader's signature and QC
+        self.0
+            .proposal
+            .validate_signatures(validator)
+            .map_err(|e| format_err!("{:?}", e))?;
+        // if there is a timeout certificate, verify its signatures
+        if let Some(tc) = self.0.sync_info.highest_timeout_certificate() {
+            tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
+        }
+        // verify the QC signatures of highest_ledger_info
+        self.0
+            .sync_info
+            .highest_ledger_info()
+            .verify(validator)
+            .map_err(|e| format_err!("{:?}", e))?;
+        // return proposal
+        Ok(self.0)
+    }
 }
 
 impl<T: Payload> ProposalMsg<T> {
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
+    /// Creates a new proposal.
+    pub fn new(proposal: Block<T>, sync_info: SyncInfo) -> Self {
+        Self {
+            proposal,
+            sync_info,
+        }
+    }
+
+    /// Verifies that the ProposalMsg is well-formed.
+    pub fn verify_well_formed(self) -> Result<Self> {
         if self.proposal.is_nil_block() {
             return Err(format_err!("Proposal {} for a NIL block", self.proposal));
         }
         self.proposal
-            .verify(validator)
+            .verify_well_formed()
             .map_err(|e| format_err!("{:?}", e))?;
         ensure!(
             self.proposal.round() > 0,
@@ -41,7 +97,6 @@ impl<T: Payload> ProposalMsg<T> {
         let previous_round = self.proposal.round() - 1;
         if let Some(tc) = self.sync_info.highest_timeout_certificate() {
             let previous_round = self.proposal.round() - 1;
-            tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
             ensure!(
                 tc.round() == previous_round,
                 "Proposal for {} has a timeout certificate with an incorrect round={}",
@@ -67,12 +122,23 @@ impl<T: Payload> ProposalMsg<T> {
                 self.proposal
             ));
         }
-        self.sync_info
-            .highest_ledger_info()
-            .verify(validator)
-            .map_err(|e| format_err!("{:?}", e))?;
+        Ok(self)
+    }
 
-        Ok(())
+    pub fn proposal(&self) -> &Block<T> {
+        &self.proposal
+    }
+
+    pub fn take_proposal(self) -> Block<T> {
+        self.proposal
+    }
+
+    pub fn sync_info(&self) -> &SyncInfo {
+        &self.sync_info
+    }
+
+    pub fn round(&self) -> Round {
+        self.proposal.round()
     }
 
     pub fn proposer(&self) -> Author {
@@ -100,18 +166,5 @@ impl<T: Payload> IntoProto for ProposalMsg<T> {
         proto.set_proposed_block(self.proposal.into_proto());
         proto.set_sync_info(self.sync_info.into_proto());
         proto
-    }
-}
-
-impl<T: Payload> FromProto for ProposalMsg<T> {
-    type ProtoType = ProtoProposal;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
-        let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
-        Ok(ProposalMsg {
-            proposal,
-            sync_info,
-        })
     }
 }

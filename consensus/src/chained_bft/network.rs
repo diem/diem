@@ -6,7 +6,10 @@ use crate::{
         block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
         consensus_types::{
-            block::Block, proposal_msg::ProposalMsg, sync_info::SyncInfo, timeout_msg::TimeoutMsg,
+            block::Block,
+            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+            sync_info::SyncInfo,
+            timeout_msg::TimeoutMsg,
             vote_msg::VoteMsg,
         },
         epoch_manager::EpochManager,
@@ -197,23 +200,29 @@ impl ConsensusNetworkImpl {
             .await?;
         let mut blocks = vec![];
         for block in res_block.take_blocks().into_iter() {
-            if let Ok(block) = Block::from_proto(block) {
-                if block.verify(self.epoch_mgr.validators().as_ref()).is_err() {
-                    return Err(BlockRetrievalFailure::InvalidSignature);
+            match Block::from_proto(block) {
+                Ok(block) => {
+                    block
+                        .validate_signatures(self.epoch_mgr.validators().as_ref())
+                        .map_err(|_| BlockRetrievalFailure::InvalidSignature)?;
+                    block
+                        .verify_well_formed()
+                        .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
+                    blocks.push(block);
                 }
-                blocks.push(block);
-            } else {
-                return Err(BlockRetrievalFailure::InvalidResponse);
-            }
+                _ => {
+                    return Err(BlockRetrievalFailure::InvalidResponse);
+                }
+            };
         }
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse {
             status: res_block.get_status(),
             blocks,
         };
-        if response.verify(block_id, num_blocks).is_err() {
-            return Err(BlockRetrievalFailure::InvalidResponse);
-        }
+        response
+            .verify(block_id, num_blocks)
+            .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
         Ok(response)
     }
 
@@ -323,7 +332,13 @@ where
             match message {
                 Event::Message((peer_id, mut msg)) => {
                     let r = if msg.has_proposal() {
-                        self.process_proposal(&mut msg).await
+                        self.process_proposal(&mut msg).await.map_err(|e| {
+                            security_log(SecurityEvent::InvalidConsensusProposal)
+                                .error(&e)
+                                .data(&msg)
+                                .log();
+                            e
+                        })
                     } else if msg.has_vote() {
                         self.process_vote(&mut msg).await
                     } else if msg.has_timeout_msg() {
@@ -360,16 +375,10 @@ where
     }
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalMsg::<T>::from_proto(msg.take_proposal())?;
-        proposal
-            .verify(self.epoch_mgr.validators().as_ref())
-            .map_err(|e| {
-                security_log(SecurityEvent::InvalidConsensusProposal)
-                    .error(&e)
-                    .data(&proposal)
-                    .log();
-                e
-            })?;
+        let proposal = ProposalUncheckedSignatures::<T>::from_proto(msg.take_proposal())?;
+        let proposal = proposal
+            .validate_signatures(self.epoch_mgr.validators().as_ref())?
+            .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
         self.proposal_tx.send(proposal).await?;
         Ok(())
