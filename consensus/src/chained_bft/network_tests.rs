@@ -368,10 +368,10 @@ fn test_network_api() {
     );
     let previous_block = Block::make_genesis_block();
     let previous_qc = QuorumCert::certificate_for_genesis();
-    let proposal = ProposalMsg {
-        proposal: Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
-        sync_info: SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
-    };
+    let proposal = ProposalMsg::new(
+        Block::make_block(&previous_block, 0, 1, 0, previous_qc.clone(), &signers[0]),
+        SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
+    );
     block_on(async move {
         nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;
         playground

@@ -216,7 +216,10 @@ fn test_nil_block() {
     assert!(nil_block.author().is_none());
 
     let dummy_verifier = Arc::new(ValidatorVerifier::new(HashMap::new()));
-    assert!(nil_block.verify(dummy_verifier.as_ref()).is_ok());
+    assert!(nil_block
+        .validate_signatures(dummy_verifier.as_ref())
+        .is_ok());
+    assert!(nil_block.verify_well_formed().is_ok());
 
     let signer = ValidatorSigner::random(None);
     let payload = 101;

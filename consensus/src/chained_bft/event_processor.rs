@@ -186,10 +186,7 @@ impl<T: Payload> EventProcessor<T> {
             timeout_certificate,
         );
         // return proposal
-        Ok(ProposalMsg {
-            proposal,
-            sync_info,
-        })
+        Ok(ProposalMsg::new(proposal, sync_info))
     }
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
@@ -212,29 +209,29 @@ impl<T: Payload> EventProcessor<T> {
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
         let current_round = self.pacemaker.current_round();
-        if proposal_msg.proposal.round() < current_round {
+        if proposal_msg.round() < current_round {
             warn!(
                 "Proposal {} is ignored because its round {} < current round {}",
                 proposal_msg,
-                proposal_msg.proposal.round(),
+                proposal_msg.round(),
                 current_round
             );
             return None;
         }
         if self
             .proposer_election
-            .is_valid_proposer(proposal_msg.proposer(), proposal_msg.proposal.round())
+            .is_valid_proposer(proposal_msg.proposer(), proposal_msg.round())
             .is_none()
         {
             warn!(
                 "Proposer {} for block {} is not a valid proposer for this round",
                 proposal_msg.proposer(),
-                proposal_msg.proposal
+                proposal_msg.proposal()
             );
             return None;
         }
         if let Err(e) = self
-            .sync_up(&proposal_msg.sync_info, proposal_msg.proposer(), true)
+            .sync_up(proposal_msg.sync_info(), proposal_msg.proposer(), true)
             .await
         {
             warn!(
@@ -246,18 +243,18 @@ impl<T: Payload> EventProcessor<T> {
 
         // pacemaker may catch up with the SyncInfo, check again
         let current_round = self.pacemaker.current_round();
-        if proposal_msg.proposal.round() != current_round {
+        if proposal_msg.round() != current_round {
             warn!(
                 "Proposal {} is ignored because its round {} != current round {}",
                 proposal_msg,
-                proposal_msg.proposal.round(),
+                proposal_msg.round(),
                 current_round
             );
             return None;
         }
 
         self.proposer_election
-            .process_proposal(proposal_msg.proposal)
+            .process_proposal(proposal_msg.take_proposal())
     }
 
     /// Upon receiving TimeoutMsg, ensure that any branches with higher quorum certificates are

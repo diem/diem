@@ -6,7 +6,10 @@ use crate::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
         common::Author,
-        consensus_types::{proposal_msg::ProposalMsg, vote_msg::VoteMsg},
+        consensus_types::{
+            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+            vote_msg::VoteMsg,
+        },
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         test_utils::{MockStateComputer, MockStorage, MockTransactionManager, TestPayload},
@@ -213,11 +216,14 @@ fn basic_start_test() {
         let mut msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
-        assert_eq!(first_proposal.proposal.height(), 1);
-        assert_eq!(first_proposal.proposal.parent_id(), genesis.id());
+        let first_proposal: ProposalMsg<Vec<u64>> =
+            ProposalUncheckedSignatures::<Vec<u64>>::from_proto(msg[0].1.take_proposal())
+                .unwrap()
+                .into();
+        assert_eq!(first_proposal.proposal().height(), 1);
+        assert_eq!(first_proposal.proposal().parent_id(), genesis.id());
         assert_eq!(
-            first_proposal.proposal.quorum_cert().certified_block_id(),
+            first_proposal.proposal().quorum_cert().certified_block_id(),
             genesis.id()
         );
     });
@@ -280,11 +286,14 @@ fn basic_full_round(num_nodes: usize, quorum_size: usize, proposer_type: Consens
         let mut broadcast_proposals_2 = playground
             .wait_for_messages(num_messages_to_send, NetworkPlayground::proposals_only)
             .await;
-        let next_proposal =
-            ProposalMsg::<Vec<u64>>::from_proto(broadcast_proposals_2[0].1.take_proposal())
-                .unwrap();
-        assert!(next_proposal.proposal.round() >= 2);
-        assert!(next_proposal.proposal.height() >= 2);
+        let next_proposal: ProposalMsg<Vec<u64>> =
+            ProposalUncheckedSignatures::<Vec<u64>>::from_proto(
+                broadcast_proposals_2[0].1.take_proposal(),
+            )
+            .unwrap()
+            .into();
+        assert!(next_proposal.proposal().round() >= 2);
+        assert!(next_proposal.proposal().height() >= 2);
     });
 }
 
@@ -718,8 +727,11 @@ fn aggregate_timeout_votes() {
         let mut msg = playground
             .wait_for_messages(2, NetworkPlayground::proposals_only)
             .await;
-        let first_proposal = ProposalMsg::<Vec<u64>>::from_proto(msg[0].1.take_proposal()).unwrap();
-        let proposal_id = first_proposal.proposal.id();
+        let first_proposal: ProposalMsg<Vec<u64>> =
+            ProposalUncheckedSignatures::<Vec<u64>>::from_proto(msg[0].1.take_proposal())
+                .unwrap()
+                .into();
+        let proposal_id = first_proposal.proposal().id();
         playground.drop_message_for(&nodes[0].author, nodes[1].author);
         playground.drop_message_for(&nodes[0].author, nodes[2].author);
 
