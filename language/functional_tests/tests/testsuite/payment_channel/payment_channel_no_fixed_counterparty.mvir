@@ -8,7 +8,7 @@ module PaymentChannel {
 
     // This is the PaymentChannel resource
     // It keeps track of the balances for funder and counterparty
-    // 
+    //
     resource T {
         funder_capacity: LibraCoin.T,
         counterparty_capacity: LibraCoin.T,
@@ -97,7 +97,7 @@ module PaymentChannel {
         message = BytearrayUtil.bytearray_concat(move(partial_concat), move(commit_to_bytes));
         ver = Signature.ed25519_verify(move(signature), move(public_key), move(message));
         return move(ver);
-    } 
+    }
 
     public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
         let sender: address;

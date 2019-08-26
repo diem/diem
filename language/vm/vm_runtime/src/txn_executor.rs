@@ -27,7 +27,7 @@ use types::{
     transaction::{
         TransactionArgument, TransactionOutput, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
 use vm::{
@@ -137,17 +137,17 @@ where
         Option<T>: From<MutVal>,
         F: FnOnce(T, T) -> Option<Local>,
     {
-        let rhs = try_runtime!(self.execution_stack.pop_as::<T>());
-        let lhs = try_runtime!(self.execution_stack.pop_as::<T>());
+        let rhs = self.execution_stack.pop_as::<T>()?;
+        let lhs = self.execution_stack.pop_as::<T>()?;
         let result = f(lhs, rhs);
         if let Some(v) = result {
-            try_runtime!(self.execution_stack.push(v));
-            Ok(Ok(()))
+            self.execution_stack.push(v)?;
+            Ok(())
         } else {
-            Ok(Err(VMRuntimeError {
-                loc: self.execution_stack.location()?,
-                err: VMErrorKind::ArithmeticError,
-            }))
+            Err(vm_error(
+                self.execution_stack.location()?,
+                StatusCode::ARITHMETIC_ERROR,
+            ))
         }
     }
 
@@ -168,7 +168,7 @@ where
     }
 
     /// This function will execute the code sequence starting from the beginning_offset, and return
-    /// Ok(Ok(offset)) when the instruction sequence hit a branch, either by calling into a new
+    /// Ok(offset) when the instruction sequence hit a branch, either by calling into a new
     /// function, branches, function return, etc. The return value will be the pc for the next
     /// instruction to be executed.
     #[allow(clippy::cognitive_complexity)]
@@ -181,87 +181,86 @@ where
         for instruction in &code[beginning_offset as usize..] {
             // FIXME: Once we add in memory ops, we will need to pass in the current memory size to
             // this function.
-            try_runtime!(self.gas_meter.calculate_and_consume(
+            self.gas_meter.calculate_and_consume(
                 &instruction,
                 &self.execution_stack,
-                AbstractMemorySize::new(1)
-            ));
+                AbstractMemorySize::new(1),
+            )?;
 
             match instruction.clone() {
                 Bytecode::Pop => {
                     self.execution_stack.pop()?;
                 }
                 Bytecode::Ret => {
-                    try_runtime!(self.execution_stack.pop_call());
+                    self.execution_stack.pop_call()?;
                     if self.execution_stack.is_call_stack_empty() {
-                        return Ok(Ok(0));
+                        return Ok(0);
                     } else {
-                        return Ok(Ok(self.execution_stack.top_frame()?.get_pc() + 1));
+                        return Ok(self.execution_stack.top_frame()?.get_pc() + 1);
                     }
                 }
                 Bytecode::BrTrue(offset) => {
-                    if try_runtime!(self.execution_stack.pop_as::<bool>()) {
-                        return Ok(Ok(offset));
+                    if self.execution_stack.pop_as::<bool>()? {
+                        return Ok(offset);
                     }
                 }
                 Bytecode::BrFalse(offset) => {
-                    let stack_top = try_runtime!(self.execution_stack.pop_as::<bool>());
+                    let stack_top = self.execution_stack.pop_as::<bool>()?;
                     if !stack_top {
-                        return Ok(Ok(offset));
+                        return Ok(offset);
                     }
                 }
-                Bytecode::Branch(offset) => return Ok(Ok(offset)),
+                Bytecode::Branch(offset) => return Ok(offset),
                 Bytecode::LdConst(int_const) => {
-                    try_runtime!(self.execution_stack.push(Local::u64(int_const)));
+                    self.execution_stack.push(Local::u64(int_const))?;
                 }
                 Bytecode::LdAddr(idx) => {
                     let top_frame = self.execution_stack.top_frame()?;
                     let addr_ref = top_frame.module().address_at(idx);
-                    try_runtime!(self.execution_stack.push(Local::address(*addr_ref)));
+                    self.execution_stack.push(Local::address(*addr_ref))?;
                 }
                 Bytecode::LdStr(idx) => {
                     let top_frame = self.execution_stack.top_frame()?;
                     let string_ref = top_frame.module().user_string_at(idx);
-                    try_runtime!(self.execution_stack.push(Local::string(string_ref.into())));
+                    self.execution_stack
+                        .push(Local::string(string_ref.into()))?;
                 }
                 Bytecode::LdByteArray(idx) => {
                     let top_frame = self.execution_stack.top_frame()?;
                     let byte_array = top_frame.module().byte_array_at(idx);
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::bytearray(byte_array.clone())));
+                    self.execution_stack
+                        .push(Local::bytearray(byte_array.clone()))?;
                 }
                 Bytecode::LdTrue => {
-                    try_runtime!(self.execution_stack.push(Local::bool(true)));
+                    self.execution_stack.push(Local::bool(true))?;
                 }
                 Bytecode::LdFalse => {
-                    try_runtime!(self.execution_stack.push(Local::bool(false)));
+                    self.execution_stack.push(Local::bool(false))?;
                 }
                 Bytecode::CopyLoc(idx) => {
                     let local = self.execution_stack.top_frame()?.get_local(idx)?.clone();
-                    try_runtime!(self.execution_stack.push(local));
+                    self.execution_stack.push(local)?;
                 }
                 Bytecode::MoveLoc(idx) => {
                     let local = self
                         .execution_stack
                         .top_frame_mut()?
                         .invalidate_local(idx)?;
-                    try_runtime!(self.execution_stack.push(local));
+                    self.execution_stack.push(local)?;
                 }
                 Bytecode::StLoc(idx) => {
                     let stack_top = self.execution_stack.pop()?;
-                    try_runtime!(self
-                        .execution_stack
+                    self.execution_stack
                         .top_frame_mut()?
-                        .store_local(idx, stack_top));
+                        .store_local(idx, stack_top)?;
                 }
                 Bytecode::Call(idx, _) => {
                     let self_module = &self.execution_stack.top_frame()?.module();
-                    let callee_function_ref = try_runtime!(self
+                    let callee_function_ref = self
                         .execution_stack
                         .module_cache
-                        .resolve_function_ref(self_module, idx))
-                    .ok_or(VMInvariantViolation::LinkerError)?;
+                        .resolve_function_ref(self_module, idx)?
+                        .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
 
                     if callee_function_ref.is_native() {
                         let module = callee_function_ref.module();
@@ -269,17 +268,17 @@ where
                         let function_name = callee_function_ref.name();
                         let native_function =
                             match dispatch_native_function(&module_id, function_name) {
-                                None => return Err(VMInvariantViolation::LinkerError),
+                                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
                                 Some(native_function) => native_function,
                             };
                         if module_id == *EVENT_MODULE
                             && function_name == EMIT_EVENT_NAME.as_ident_str()
                         {
-                            let msg = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
-                            let count = try_runtime!(self.execution_stack.pop_as::<u64>());
-                            let key = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
+                            let msg = self.execution_stack.pop_as::<ByteArray>()?;
+                            let count = self.execution_stack.pop_as::<u64>()?;
+                            let key = self.execution_stack.pop_as::<ByteArray>()?;
                             let guid = EventKey::try_from(key.as_bytes())
-                                .map_err(|_| VMInvariantViolation::EventKeyMismatch)?;
+                                .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
 
                             // TODO:
                             // 1. Rename the AccessPath here to a new type that represents such
@@ -295,7 +294,7 @@ where
                                 // assertion is here to make sure
                                 // the view the type checker had lines up with the
                                 // execution of the native function
-                                return Err(VMInvariantViolation::LinkerError);
+                                return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                             }
                             for _ in 0..expected_args {
                                 arguments.push_front(self.execution_stack.pop()?);
@@ -304,38 +303,37 @@ where
                             {
                                 NativeReturnStatus::InvalidArguments => {
                                     // TODO: better error
-                                    return Err(VMInvariantViolation::LinkerError);
+                                    return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                                 }
                                 NativeReturnStatus::Aborted { cost, error_code } => {
-                                    try_runtime!(self
-                                        .gas_meter
-                                        .consume_gas(GasUnits::new(cost), &self.execution_stack));
-                                    return Ok(Err(VMRuntimeError {
-                                        loc: self.execution_stack.location()?,
-                                        err: VMErrorKind::Aborted(error_code),
-                                    }));
+                                    self.gas_meter
+                                        .consume_gas(GasUnits::new(cost), &self.execution_stack)?;
+                                    return Err(vm_error(
+                                        self.execution_stack.location()?,
+                                        StatusCode::ABORTED,
+                                    )
+                                    .with_sub_status(error_code));
                                 }
                                 NativeReturnStatus::Success {
                                     cost,
                                     return_values,
                                 } => (cost, return_values),
                             };
-                            try_runtime!(self
-                                .gas_meter
-                                .consume_gas(GasUnits::new(cost), &self.execution_stack));
+                            self.gas_meter
+                                .consume_gas(GasUnits::new(cost), &self.execution_stack)?;
                             for value in return_values {
-                                try_runtime!(self.execution_stack.push(value));
+                                self.execution_stack.push(value)?;
                             }
                         }
                     // Call stack is not reconstructed for a native call, so we just
                     // proceed on to next instruction.
                     } else {
                         self.execution_stack.top_frame_mut()?.jump(pc);
-                        try_runtime!(self.execution_stack.push_call(callee_function_ref));
+                        self.execution_stack.push_call(callee_function_ref)?;
                         // Call stack is reconstructed, the next instruction to execute will be the
                         // first instruction of the callee function. Thus we should break here to
                         // restart the instruction sequence from there.
-                        return Ok(Ok(0));
+                        return Ok(0);
                     }
                 }
                 Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
@@ -346,13 +344,13 @@ where
                         .borrow_local()
                     {
                         Some(v) => {
-                            try_runtime!(self.execution_stack.push(v));
+                            self.execution_stack.push(v)?;
                         }
                         None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     }
                 }
@@ -368,13 +366,13 @@ where
                         .borrow_field(u32::from(field_offset))
                     {
                         Some(v) => {
-                            try_runtime!(self.execution_stack.push(v));
+                            self.execution_stack.push(v)?;
                         }
                         None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     }
                 }
@@ -390,13 +388,13 @@ where
                         .collect();
                     match args {
                         Some(args) => {
-                            try_runtime!(self.execution_stack.push(Local::struct_(args)));
+                            self.execution_stack.push(Local::struct_(args))?;
                         }
                         None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     }
                 }
@@ -406,35 +404,33 @@ where
                         Some(v) => match &*v.peek() {
                             Value::Struct(fields) => {
                                 for value in fields {
-                                    try_runtime!(self
-                                        .execution_stack
-                                        .push(Local::Value(value.clone())));
+                                    self.execution_stack.push(Local::Value(value.clone()))?;
                                 }
                             }
                             _ => {
-                                return Ok(Err(VMRuntimeError {
-                                    loc: self.execution_stack.location()?,
-                                    err: VMErrorKind::TypeError,
-                                }))
+                                return Err(vm_error(
+                                    self.execution_stack.location()?,
+                                    StatusCode::TYPE_ERROR,
+                                ));
                             }
                         },
                         None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     }
                 }
                 Bytecode::ReadRef => match self.execution_stack.pop()?.read_reference() {
                     Some(v) => {
-                        try_runtime!(self.execution_stack.push(v));
+                        self.execution_stack.push(v)?;
                     }
                     None => {
-                        return Ok(Err(VMRuntimeError {
-                            loc: self.execution_stack.location()?,
-                            err: VMErrorKind::TypeError,
-                        }))
+                        return Err(vm_error(
+                            self.execution_stack.location()?,
+                            StatusCode::TYPE_ERROR,
+                        ));
                     }
                 },
                 Bytecode::WriteRef => {
@@ -445,34 +441,34 @@ where
                             mutate_ref.mutate_reference(v);
                         }
                         None => {
-                            return Ok(Err(VMRuntimeError {
-                                loc: self.execution_stack.location()?,
-                                err: VMErrorKind::TypeError,
-                            }))
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     }
                 }
                 // Arithmetic Operations
-                Bytecode::Add => try_runtime!(self.binop_int(u64::checked_add)),
-                Bytecode::Sub => try_runtime!(self.binop_int(u64::checked_sub)),
-                Bytecode::Mul => try_runtime!(self.binop_int(u64::checked_mul)),
-                Bytecode::Mod => try_runtime!(self.binop_int(u64::checked_rem)),
-                Bytecode::Div => try_runtime!(self.binop_int(u64::checked_div)),
-                Bytecode::BitOr => try_runtime!(self.binop_int(|l: u64, r| Some(l | r))),
-                Bytecode::BitAnd => try_runtime!(self.binop_int(|l: u64, r| Some(l & r))),
-                Bytecode::Xor => try_runtime!(self.binop_int(|l: u64, r| Some(l ^ r))),
-                Bytecode::Or => try_runtime!(self.binop_bool(|l, r| l || r)),
-                Bytecode::And => try_runtime!(self.binop_bool(|l, r| l && r)),
-                Bytecode::Lt => try_runtime!(self.binop_bool(|l: u64, r| l < r)),
-                Bytecode::Gt => try_runtime!(self.binop_bool(|l: u64, r| l > r)),
-                Bytecode::Le => try_runtime!(self.binop_bool(|l: u64, r| l <= r)),
-                Bytecode::Ge => try_runtime!(self.binop_bool(|l: u64, r| l >= r)),
+                Bytecode::Add => self.binop_int(u64::checked_add)?,
+                Bytecode::Sub => self.binop_int(u64::checked_sub)?,
+                Bytecode::Mul => self.binop_int(u64::checked_mul)?,
+                Bytecode::Mod => self.binop_int(u64::checked_rem)?,
+                Bytecode::Div => self.binop_int(u64::checked_div)?,
+                Bytecode::BitOr => self.binop_int(|l: u64, r| Some(l | r))?,
+                Bytecode::BitAnd => self.binop_int(|l: u64, r| Some(l & r))?,
+                Bytecode::Xor => self.binop_int(|l: u64, r| Some(l ^ r))?,
+                Bytecode::Or => self.binop_bool(|l, r| l || r)?,
+                Bytecode::And => self.binop_bool(|l, r| l && r)?,
+                Bytecode::Lt => self.binop_bool(|l: u64, r| l < r)?,
+                Bytecode::Gt => self.binop_bool(|l: u64, r| l > r)?,
+                Bytecode::Le => self.binop_bool(|l: u64, r| l <= r)?,
+                Bytecode::Ge => self.binop_bool(|l: u64, r| l >= r)?,
                 Bytecode::Abort => {
-                    let error_code = try_runtime!(self.execution_stack.pop_as::<u64>());
-                    return Ok(Err(VMRuntimeError {
-                        loc: self.execution_stack.location()?,
-                        err: VMErrorKind::Aborted(error_code),
-                    }));
+                    let error_code = self.execution_stack.pop_as::<u64>()?;
+                    return Err(
+                        vm_error(self.execution_stack.location()?, StatusCode::ABORTED)
+                            .with_sub_status(error_code),
+                    );
                 }
 
                 // TODO: Should we emit different eq for different primitive type values?
@@ -481,145 +477,137 @@ where
                 Bytecode::Eq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    try_runtime!(self.execution_stack.push(Local::bool(lhs.equals(rhs)?)));
+                    self.execution_stack.push(Local::bool(lhs.equals(rhs)?))?;
                 }
                 Bytecode::Neq => {
                     let lhs = self.execution_stack.pop()?;
                     let rhs = self.execution_stack.pop()?;
-                    try_runtime!(self.execution_stack.push(Local::bool(lhs.not_equals(rhs)?)));
+                    self.execution_stack
+                        .push(Local::bool(lhs.not_equals(rhs)?))?;
                 }
                 Bytecode::GetTxnGasUnitPrice => {
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::u64(self.txn_data.gas_unit_price().get())));
+                    self.execution_stack
+                        .push(Local::u64(self.txn_data.gas_unit_price().get()))?;
                 }
                 Bytecode::GetTxnMaxGasUnits => {
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::u64(self.txn_data.max_gas_amount().get())));
+                    self.execution_stack
+                        .push(Local::u64(self.txn_data.max_gas_amount().get()))?;
                 }
                 Bytecode::GetTxnSequenceNumber => {
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::u64(self.txn_data.sequence_number())));
+                    self.execution_stack
+                        .push(Local::u64(self.txn_data.sequence_number()))?;
                 }
                 Bytecode::GetTxnSenderAddress => {
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::address(self.txn_data.sender())));
+                    self.execution_stack
+                        .push(Local::address(self.txn_data.sender()))?;
                 }
                 Bytecode::GetTxnPublicKey => {
-                    try_runtime!(self.execution_stack.push(Local::bytearray(ByteArray::new(
+                    self.execution_stack.push(Local::bytearray(ByteArray::new(
                         self.txn_data.public_key().to_bytes().to_vec(),
-                    ))));
+                    )))?;
                 }
                 Bytecode::MutBorrowGlobal(idx, _) | Bytecode::ImmBorrowGlobal(idx, _) => {
-                    let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
+                    let address = self.execution_stack.pop_as::<AccountAddress>()?;
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
-                    if let Some(struct_def) = try_runtime!(self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
-                    {
-                        let global_ref =
-                            try_runtime!(self.data_view.borrow_global(&ap, struct_def));
-                        try_runtime!(self.gas_meter.calculate_and_consume(
+                    if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+                        curr_module,
+                        idx,
+                        &self.gas_meter,
+                    )? {
+                        let global_ref = self.data_view.borrow_global(&ap, struct_def)?;
+                        self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
-                            global_ref.size()
-                        ));
-                        try_runtime!(self.execution_stack.push(Local::GlobalRef(global_ref)));
+                            global_ref.size(),
+                        )?;
+                        self.execution_stack.push(Local::GlobalRef(global_ref))?;
                     } else {
-                        return Err(VMInvariantViolation::LinkerError);
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::Exists(idx, _) => {
-                    let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
+                    let address = self.execution_stack.pop_as::<AccountAddress>()?;
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
-                    if let Some(struct_def) = try_runtime!(self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
-                    {
+                    if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+                        curr_module,
+                        idx,
+                        &self.gas_meter,
+                    )? {
                         let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
-                        try_runtime!(self.gas_meter.calculate_and_consume(
+                        self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
-                            mem_size
-                        ));
-                        try_runtime!(self.execution_stack.push(Local::bool(exists)));
+                            mem_size,
+                        )?;
+                        self.execution_stack.push(Local::bool(exists))?;
                     } else {
-                        return Err(VMInvariantViolation::LinkerError);
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::MoveFrom(idx, _) => {
-                    let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
+                    let address = self.execution_stack.pop_as::<AccountAddress>()?;
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);
-                    if let Some(struct_def) = try_runtime!(self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
-                    {
-                        let resource =
-                            try_runtime!(self.data_view.move_resource_from(&ap, struct_def));
-                        try_runtime!(self.gas_meter.calculate_and_consume(
+                    if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+                        curr_module,
+                        idx,
+                        &self.gas_meter,
+                    )? {
+                        let resource = self.data_view.move_resource_from(&ap, struct_def)?;
+                        self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
-                            resource.size()
-                        ));
-                        try_runtime!(self.execution_stack.push(resource));
+                            resource.size(),
+                        )?;
+                        self.execution_stack.push(resource)?;
                     } else {
-                        return Err(VMInvariantViolation::LinkerError);
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::MoveToSender(idx, _) => {
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, self.txn_data.sender());
-                    if let Some(struct_def) = try_runtime!(self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
-                    {
+                    if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+                        curr_module,
+                        idx,
+                        &self.gas_meter,
+                    )? {
                         let local = self.execution_stack.pop()?;
 
                         if let Some(resource) = local.value() {
-                            try_runtime!(self.gas_meter.calculate_and_consume(
+                            self.gas_meter.calculate_and_consume(
                                 &instruction,
                                 &self.execution_stack,
-                                resource.size()
-                            ));
-                            try_runtime!(self
-                                .data_view
-                                .move_resource_to(&ap, struct_def, resource));
+                                resource.size(),
+                            )?;
+                            self.data_view.move_resource_to(&ap, struct_def, resource)?;
                         } else {
-                            return Ok(Err(VMRuntimeError {
-                                loc: Location::new(),
-                                err: VMErrorKind::TypeError,
-                            }));
+                            return Err(vm_error(
+                                self.execution_stack.location()?,
+                                StatusCode::TYPE_ERROR,
+                            ));
                         }
                     } else {
-                        return Err(VMInvariantViolation::LinkerError);
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::CreateAccount => {
-                    let addr = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
-                    try_runtime!(self.create_account(addr));
+                    let addr = self.execution_stack.pop_as::<AccountAddress>()?;
+                    self.create_account(addr)?;
                 }
                 Bytecode::FreezeRef => {
                     // FreezeRef should just be a null op as we don't distinguish between mut and
                     // immut ref at runtime.
                 }
                 Bytecode::Not => {
-                    let top = try_runtime!(self.execution_stack.pop_as::<bool>());
-                    try_runtime!(self.execution_stack.push(Local::bool(!top)));
+                    let top = self.execution_stack.pop_as::<bool>()?;
+                    self.execution_stack.push(Local::bool(!top))?;
                 }
                 Bytecode::GetGasRemaining => {
-                    try_runtime!(self
-                        .execution_stack
-                        .push(Local::u64(self.gas_meter.remaining_gas().get())));
+                    self.execution_stack
+                        .push(Local::u64(self.gas_meter.remaining_gas().get()))?;
                 }
             }
             pc += 1;
@@ -628,9 +616,9 @@ where
         if cfg!(test) || cfg!(feature = "instruction_synthesis") {
             // In order to test the behavior of an instruction stream, hitting end of the code
             // should report no error so that we can check the locals.
-            Ok(Ok(code.len() as CodeOffset))
+            Ok(code.len() as CodeOffset)
         } else {
-            Err(VMInvariantViolation::ProgramCounterOverflow)
+            Err(VMStatus::new(StatusCode::PC_OVERFLOW))
         }
     }
 
@@ -646,47 +634,45 @@ where
             // The `push_result` will either be `Ok(Ok())` or `Ok(Err())`; `unwrap()`
             // is safe on the first Result.
             assume!(push_result.is_ok());
-            push_result
-                .unwrap()
-                .expect("Stack should be empty at beginning of function");
+            push_result.expect("Stack should be empty at beginning of function");
         }
     }
 
     /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub fn create_account(&mut self, addr: AccountAddress) -> VMResult<()> {
-        let account_module = try_runtime!(self
+        let account_module = self
             .execution_stack
             .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE))
-        .ok_or(VMInvariantViolation::LinkerError)?;
+            .get_loaded_module(&ACCOUNT_MODULE)?
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
 
         // TODO: Currently the event counter will cause the gas cost for create account be flexible.
         //       We either need to fix the gas stability test cases in tests or we need to come up
         //       with some better ideas for the event counter creation.
         self.gas_meter.disable_metering();
         // Address will be used as the initial authentication key.
-        try_runtime!(self.execute_function(
+        self.execute_function(
             &ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             vec![Local::bytearray(ByteArray::new(addr.to_vec()))],
-        ));
+        )?;
         self.gas_meter.enable_metering();
 
         let account_resource = self
             .execution_stack
             .pop()?
             .value()
-            .ok_or(VMInvariantViolation::LinkerError)?;
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let account_struct_id = account_module
             .struct_defs_table
             .get(&*ACCOUNT_STRUCT_NAME)
-            .ok_or(VMInvariantViolation::LinkerError)?;
-        let account_struct_def = try_runtime!(self
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let account_struct_def = self
             .execution_stack
             .module_cache
-            .resolve_struct_def(account_module, *account_struct_id, &self.gas_meter))
-        .ok_or(VMInvariantViolation::LinkerError)?;
+            .resolve_struct_def(account_module, *account_struct_id, &self.gas_meter)?
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
         let account_path = make_access_path(account_module, *account_struct_id, addr);
@@ -715,21 +701,20 @@ where
     /// Generate the TransactionOutput on failure. There can be two possibilities:
     /// 1. The transaction encounters some runtime error, such as out of gas, arithmetic overflow,
     /// etc. In this scenario, we are going to keep this transaction and charge proper gas to the
-    /// sender. 2. The transaction encounters `VMInvariantError`, which indicates some
+    /// sender. 2. The transaction encounters VM invariant violation error type which indicates some
     /// properties should have been guaranteed failed. Such transaction should be discarded for
     /// sanity but this implies a bug in the VM that we should take care of.
     pub(crate) fn failed_transaction_cleanup(&mut self, result: VMResult<()>) -> TransactionOutput {
         // Discard all the local writes, restart execution from a clean state.
         self.clear();
         match self.run_epilogue() {
-            Ok(Ok(_)) => match self.make_write_set(vec![], result) {
+            Ok(_) => match self.make_write_set(vec![], result) {
                 Ok(trans_out) => trans_out,
-                Err(err) => error_output(&err),
+                Err(err) => error_output(err),
             },
             // Running epilogue shouldn't fail here as we've already checked for enough balance in
             // the prologue
-            Ok(Err(err)) => error_output(&err),
-            Err(err) => error_output(&err),
+            Err(err) => error_output(err),
         }
     }
 
@@ -747,15 +732,17 @@ where
         // First run the epilogue
         match self.run_epilogue() {
             // If epilogue runs successfully, try to emit the writeset.
-            Ok(Ok(_)) => match self.make_write_set(to_be_published_modules, Ok(Ok(()))) {
+            Ok(_) => match self.make_write_set(to_be_published_modules, Ok(())) {
                 // This step could fail if the program has dangling global reference
                 Ok(trans_out) => trans_out,
                 // In case of failure, run the cleanup code.
-                Err(err) => self.failed_transaction_cleanup(Ok(Err(err))),
+                Err(err) => self.failed_transaction_cleanup(Err(err)),
             },
             // If the sender depleted its balance and can't pay for the gas, run the cleanup code.
-            Ok(Err(err)) => self.failed_transaction_cleanup(Ok(Err(err))),
-            Err(err) => error_output(&err),
+            Err(err) => match err.status_type() {
+                StatusType::InvariantViolation => error_output(err),
+                _ => self.failed_transaction_cleanup(Err(err)),
+            },
         }
     }
 
@@ -767,11 +754,10 @@ where
         // The callers of this function verify the transaction before executing it. Transaction
         // verification ensures the following condition.
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
-        try_runtime!(self
-            .gas_meter
-            .charge_transaction_gas(txn_size, &self.execution_stack));
+        self.gas_meter
+            .charge_transaction_gas(txn_size, &self.execution_stack)?;
         let beginning_height = self.execution_stack.call_stack_height();
-        try_runtime!(self.execution_stack.push_call(func));
+        self.execution_stack.push_call(func)?;
         // We always start execution from the first instruction.
         let mut pc = 0;
 
@@ -781,14 +767,14 @@ where
             let code = self.execution_stack.top_frame()?.code_definition();
 
             // Get the pc for the next instruction to be executed.
-            pc = try_runtime!(self.execute_block(code, pc));
+            pc = self.execute_block(code, pc)?;
 
             if self.execution_stack.call_stack_height() == beginning_height {
-                return Ok(Ok(()));
+                return Ok(());
             }
         }
 
-        Ok(Ok(()))
+        Ok(())
     }
 
     /// Execute a function.
@@ -802,26 +788,29 @@ where
         function_name: &IdentStr,
         args: Vec<Local>,
     ) -> VMResult<()> {
-        let loaded_module =
-            match try_runtime!(self.execution_stack.module_cache.get_loaded_module(module)) {
-                Some(module) => module,
-                None => return Err(VMInvariantViolation::LinkerError),
-            };
+        let loaded_module = match self
+            .execution_stack
+            .module_cache
+            .get_loaded_module(module)?
+        {
+            Some(module) => module,
+            None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
+        };
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
-            .ok_or(VMInvariantViolation::LinkerError)?;
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func = FunctionRef::new(loaded_module, *func_idx);
 
         for arg in args.into_iter() {
-            try_runtime!(self.execution_stack.push(arg));
+            self.execution_stack.push(arg)?;
         }
 
         self.execute_function_impl(func)
     }
 
     /// Get the value on the top of the value stack.
-    pub fn pop_stack(&mut self) -> Result<Local, VMInvariantViolation> {
+    pub fn pop_stack(&mut self) -> VMResult<Local> {
         self.execution_stack.pop()
     }
 
@@ -831,7 +820,7 @@ where
         &mut self,
         to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
         result: VMResult<()>,
-    ) -> VMRuntimeResult<TransactionOutput> {
+    ) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
         let gas: u64 = self
@@ -847,24 +836,21 @@ where
             self.event_data.clone(),
             gas,
             match result {
-                Ok(Ok(())) => {
-                    TransactionStatus::from(VMStatus::Execution(ExecutionStatus::Executed))
-                }
-                Ok(Err(ref err)) => TransactionStatus::from(VMStatus::from(err)),
-                Err(ref err) => TransactionStatus::from(VMStatus::from(err)),
+                Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
+                Err(err) => TransactionStatus::from(err),
             },
         ))
     }
 }
 
 #[inline]
-fn error_output(err: impl Into<VMStatus>) -> TransactionOutput {
+fn error_output(err: VMStatus) -> TransactionOutput {
     // Since this transaction will be discarded, no writeset will be included.
     TransactionOutput::new(
         WriteSet::default(),
         vec![],
         0,
-        TransactionStatus::Discard(err.into()),
+        TransactionStatus::Discard(err),
     )
 }
 

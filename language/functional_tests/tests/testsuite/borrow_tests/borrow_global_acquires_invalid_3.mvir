@@ -56,11 +56,7 @@ module A {
 
 }
 
-// check: VerificationError
-// check: GlobalReferenceError
-
-// check: VerificationError
-// check: GlobalReferenceError
-
-// check: VerificationError
-// check: GlobalReferenceError
+// check: VerificationFailure
+// check: GLOBAL_REFERENCE_ERROR
+// check: GLOBAL_REFERENCE_ERROR
+// check: GLOBAL_REFERENCE_ERROR

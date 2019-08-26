@@ -14,7 +14,7 @@ main(receiver: address) {
     coins = LibraAccount.withdraw_from_sender(200);
     LibraAccount.deposit(move(receiver), move(coins));
 
-    return;    
+    return;
 }
 
 

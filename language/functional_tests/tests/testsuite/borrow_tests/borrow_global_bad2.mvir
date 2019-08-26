@@ -13,5 +13,5 @@ module A {
     }
 }
 
-// check: VerificationError
-// check: GlobalReferenceError
+// check: VerificationFailure
+// check: GLOBAL_REFERENCE_ERROR

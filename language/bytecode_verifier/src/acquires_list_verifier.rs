@@ -11,9 +11,10 @@
 //! - No additional resources (no extraneous resources not actually acquired)
 
 use std::collections::BTreeSet;
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::VMStaticViolation,
+    errors::err_at_offset,
     file_format::{Bytecode, CompiledModule, FunctionDefinition, StructDefinitionIndex},
     views::{FunctionDefinitionView, ModuleView, StructDefinitionView, ViewInternals},
 };
@@ -22,14 +23,14 @@ pub struct AcquiresVerifier<'a> {
     module_view: ModuleView<'a, CompiledModule>,
     annotated_acquires: BTreeSet<StructDefinitionIndex>,
     actual_acquires: BTreeSet<StructDefinitionIndex>,
-    errors: Vec<VMStaticViolation>,
+    errors: Vec<VMStatus>,
 }
 
 impl<'a> AcquiresVerifier<'a> {
     pub fn verify(
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
-    ) -> Vec<VMStaticViolation> {
+    ) -> Vec<VMStatus> {
         let annotated_acquires = function_definition
             .acquires_global_resources
             .iter()
@@ -49,17 +50,17 @@ impl<'a> AcquiresVerifier<'a> {
 
         for annotation in verifier.annotated_acquires {
             if !verifier.actual_acquires.contains(&annotation) {
-                verifier
-                    .errors
-                    .push(VMStaticViolation::ExtraneousAcquiresResourceAnnotationError)
+                verifier.errors.push(VMStatus::new(
+                    StatusCode::EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                ))
             }
 
             let struct_def = module.struct_defs().get(annotation.0 as usize).unwrap();
             let struct_def_view = StructDefinitionView::new(module, struct_def);
             if !struct_def_view.is_nominal_resource() {
-                verifier
-                    .errors
-                    .push(VMStaticViolation::InvalidAcquiresResourceAnnotationError)
+                verifier.errors.push(VMStatus::new(
+                    StatusCode::INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                ))
             }
         }
 
@@ -75,10 +76,10 @@ impl<'a> AcquiresVerifier<'a> {
                     .function_acquired_resources(&function_handle);
                 for acquired_resource in &function_acquired_resources {
                     if !self.annotated_acquires.contains(acquired_resource) {
-                        self.errors
-                            .push(VMStaticViolation::MissingAcquiresResourceAnnotationError(
-                                offset,
-                            ))
+                        self.errors.push(err_at_offset(
+                            StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                            offset,
+                        ))
                     }
                 }
                 self.actual_acquires
@@ -88,10 +89,10 @@ impl<'a> AcquiresVerifier<'a> {
             | Bytecode::MutBorrowGlobal(idx, _)
             | Bytecode::ImmBorrowGlobal(idx, _) => {
                 if !self.annotated_acquires.contains(idx) {
-                    self.errors
-                        .push(VMStaticViolation::MissingAcquiresResourceAnnotationError(
-                            offset,
-                        ))
+                    self.errors.push(err_at_offset(
+                        StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                        offset,
+                    ))
                 }
                 self.actual_acquires.insert(*idx);
             }

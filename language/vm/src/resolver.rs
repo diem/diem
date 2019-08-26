@@ -5,14 +5,17 @@
 //! another. This functionaliy is used in verify_module_dependencies and verify_script_dependencies.
 use crate::{
     access::ModuleAccess,
-    errors::VMStaticViolation,
     file_format::{
         AddressPoolIndex, FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex,
         SignatureToken, StructHandle, StructHandleIndex,
     },
 };
 use std::collections::BTreeMap;
-use types::{account_address::AccountAddress, identifier::Identifier};
+use types::{
+    account_address::AccountAddress,
+    identifier::Identifier,
+    vm_error::{StatusCode, VMStatus},
+};
 
 /// Resolution context for importing types
 pub struct Resolver {
@@ -55,7 +58,7 @@ impl Resolver {
         &self,
         dependency: &impl ModuleAccess,
         sig_token: &SignatureToken,
-    ) -> Result<SignatureToken, VMStaticViolation> {
+    ) -> Result<SignatureToken, VMStatus> {
         match sig_token {
             SignatureToken::Bool
             | SignatureToken::U64
@@ -72,22 +75,22 @@ impl Resolver {
                     address: *self
                         .address_map
                         .get(defining_module_address)
-                        .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                     name: *self
                         .identifier_map
                         .get(defining_module_name)
-                        .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                 };
                 let struct_name = dependency.identifier_at(struct_handle.name);
                 let local_struct_handle = StructHandle {
                     module: *self
                         .module_handle_map
                         .get(&local_module_handle)
-                        .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                     name: *self
                         .identifier_map
                         .get(struct_name)
-                        .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                     is_nominal_resource: struct_handle.is_nominal_resource,
                     type_formals: struct_handle.type_formals.clone(),
                 };
@@ -95,11 +98,11 @@ impl Resolver {
                     *self
                         .struct_handle_map
                         .get(&local_struct_handle)
-                        .ok_or(VMStaticViolation::TypeResolutionFailure)?,
+                        .ok_or_else(|| VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE))?,
                     types
                         .iter()
                         .map(|t| self.import_signature_token(dependency, &t))
-                        .collect::<Result<Vec<_>, VMStaticViolation>>()?,
+                        .collect::<Result<Vec<_>, VMStatus>>()?,
                 ))
             }
             SignatureToken::Reference(sub_sig_token) => Ok(SignatureToken::Reference(Box::new(
@@ -119,7 +122,7 @@ impl Resolver {
         &self,
         dependency: &impl ModuleAccess,
         func_sig: &FunctionSignature,
-    ) -> Result<FunctionSignature, VMStaticViolation> {
+    ) -> Result<FunctionSignature, VMStatus> {
         let mut return_types = Vec::<SignatureToken>::new();
         let mut arg_types = Vec::<SignatureToken>::new();
         for e in &func_sig.return_types {

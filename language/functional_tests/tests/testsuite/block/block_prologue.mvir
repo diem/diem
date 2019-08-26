@@ -18,4 +18,5 @@ main() {
     return;
 }
 
-// check: Aborted(99)
+// check: ABORTED
+// check: 99

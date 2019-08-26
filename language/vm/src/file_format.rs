@@ -27,11 +27,7 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::ModuleAccess,
-    check_bounds::BoundsChecker,
-    errors::{VMInvariantViolation, VerificationError},
-    internals::ModuleIndex,
-    vm_string::VMString,
+    access::ModuleAccess, check_bounds::BoundsChecker, internals::ModuleIndex, vm_string::VMString,
     IndexKind, SignatureTokenKind,
 };
 use lazy_static::lazy_static;
@@ -44,6 +40,7 @@ use types::{
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Generic index into one of the tables in the binary format.
@@ -316,10 +313,10 @@ pub struct StructDefinition {
 }
 
 impl StructDefinition {
-    pub fn declared_field_count(&self) -> Result<MemberCount, VMInvariantViolation> {
+    pub fn declared_field_count(&self) -> Result<MemberCount, VMStatus> {
         match &self.field_information {
             // TODO we might want a more informative error here
-            StructFieldInformation::Native => Err(VMInvariantViolation::LinkerError),
+            StructFieldInformation::Native => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             StructFieldInformation::Declared { field_count, .. } => Ok(*field_count),
         }
     }
@@ -1354,7 +1351,7 @@ impl CompiledScript {
 impl CompiledScriptMut {
     /// Converts this instance into `CompiledScript` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> Result<CompiledScript, Vec<VerificationError>> {
+    pub fn freeze(self) -> Result<CompiledScript, Vec<VMStatus>> {
         let fake_module = self.into_module();
         Ok(fake_module.freeze()?.into_script())
     }
@@ -1568,7 +1565,7 @@ impl CompiledModuleMut {
 
     /// Converts this instance into `CompiledModule` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> Result<CompiledModule, Vec<VerificationError>> {
+    pub fn freeze(self) -> Result<CompiledModule, Vec<VMStatus>> {
         let errors = BoundsChecker::new(&self).verify();
         if errors.is_empty() {
             Ok(CompiledModule(self))

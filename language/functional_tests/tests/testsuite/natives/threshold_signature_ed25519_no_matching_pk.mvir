@@ -28,4 +28,5 @@ main() {
     return;
 }
 
-// check: Aborted(248665376)
+// check: ABORTED
+// check: 248665376

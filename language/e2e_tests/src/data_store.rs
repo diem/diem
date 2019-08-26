@@ -125,10 +125,7 @@ impl StateView for FakeDataStore {
 
 // This is used by the `process_transaction` API.
 impl RemoteCache for FakeDataStore {
-    fn get(
-        &self,
-        access_path: &AccessPath,
-    ) -> ::std::result::Result<Option<Vec<u8>>, VMInvariantViolation> {
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         Ok(StateView::get(self, access_path).expect("it should not error"))
     }
 }

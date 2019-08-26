@@ -9,5 +9,5 @@ main() {
   x = 7;
 }
 
-// check: VerificationError
-// check: InvalidFallThrough
+// check: VerificationFailure
+// check: INVALID_FALL_THROUGH

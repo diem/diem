@@ -32,7 +32,6 @@ default-features = false
 features = ["push"]
 
 [dev-dependencies]
-assert_matches = "1.3.0"
 compiler = { path = "../../compiler" }
 
 types = { path = "../../../types", features = ["testing"] }

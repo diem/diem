@@ -2,5 +2,5 @@ module M {
     struct T{f: u64, f: u64}
 }
 
-// check: VerificationError
-// check: DuplicateElement
+// check: VerificationFailure
+// check: DUPLICATE_ELEMENT

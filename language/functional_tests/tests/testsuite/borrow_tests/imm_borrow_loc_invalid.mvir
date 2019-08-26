@@ -47,5 +47,5 @@ module Tester {
     }
 }
 
-// check: VerificationError
-// check: BorrowLocExistsBorrowError
+// check: VerificationFailure
+// check: BORROWLOC_EXISTS_BORROW_ERROR

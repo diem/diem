@@ -8,10 +8,9 @@ use ir_to_bytecode::{
     parser::{parse_module, parse_program},
 };
 use stdlib::stdlib_modules;
-use types::account_address::AccountAddress;
+use types::{account_address::AccountAddress, vm_error::VMStatus};
 use vm::{
     access::ScriptAccess,
-    errors::VerificationError,
     file_format::{CompiledModule, CompiledScript},
 };
 
@@ -35,7 +34,7 @@ macro_rules! instr_count {
 fn compile_script_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledScript, Vec<VerificationError>)> {
+) -> Result<(CompiledScript, Vec<VMStatus>)> {
     let parsed_program = parse_program(code).unwrap();
     let compiled_program = compile_program(AccountAddress::default(), parsed_program, &deps)?;
 
@@ -87,7 +86,7 @@ pub fn compile_script_string_and_assert_error(
 fn compile_module_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledModule, Vec<VerificationError>)> {
+) -> Result<(CompiledModule, Vec<VMStatus>)> {
     let address = AccountAddress::default();
     let module = parse_module(code).unwrap();
     let compiled_module = compile_module(address, module, &deps)?;

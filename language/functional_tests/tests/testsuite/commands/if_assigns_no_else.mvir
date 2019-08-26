@@ -7,5 +7,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: CopyLocUnavailableError
+// check: VerificationFailure
+// check: COPYLOC_UNAVAILABLE_ERROR

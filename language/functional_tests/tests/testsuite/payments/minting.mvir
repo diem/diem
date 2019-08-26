@@ -11,5 +11,6 @@ main() {
   return;
 }
 
-// will fail with MissingData because non-Association sender doesn't have the mint capability
-// check: Execution(MissingData)
+// will fail with MISSING_DATA because non-Association sender doesn't have the mint capability
+// check: Keep
+// check: MISSING_DATA

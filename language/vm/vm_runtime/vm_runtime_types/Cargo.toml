@@ -24,6 +24,7 @@ features = ["push"]
 
 [dev-dependencies]
 types = { path = "../../../../types", features = ["testing"] }
+vm = { path = "../../", features = ["testing"]}
 
 [features]
 instruction_synthesis = []

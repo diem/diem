@@ -1,4 +1,4 @@
-// check: VerificationError
+// check: VerificationFailure
 
 main() {
     let x: u64;

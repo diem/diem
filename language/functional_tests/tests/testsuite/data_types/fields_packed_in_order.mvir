@@ -21,4 +21,5 @@ main() {
   m = M.new();
   return;
 }
-// check: Aborted(42)
+// check: ABORTED
+// check: 42

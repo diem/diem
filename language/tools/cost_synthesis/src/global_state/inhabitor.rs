@@ -113,7 +113,6 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Invariant violation while looking up module")
             .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Lookup] Unable to find module");
         let struct_def_idx = if self.struct_handle_table.contains_key(&module_id) {

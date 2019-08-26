@@ -8,5 +8,5 @@ module A {
 
 }
 
-// check: VerificationError
-// check: MissingAcquiresResourceAnnotationError
+// check: VerificationFailure
+// check: MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR

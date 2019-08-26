@@ -1,5 +1,5 @@
 main() {
 }
 
-// check: VerificationError
-// check: InvalidFallThrough
+// check: VerificationFailure
+// check: INVALID_FALL_THROUGH

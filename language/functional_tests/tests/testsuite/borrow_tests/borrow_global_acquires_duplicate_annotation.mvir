@@ -8,5 +8,5 @@ module A {
 
 }
 
-// check: VerificationError
-// check: DuplicateAcquiresResourceAnnotationError
+// check: VerificationFailure
+// check: DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR

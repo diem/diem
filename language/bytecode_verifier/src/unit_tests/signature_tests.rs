@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::signature::check_structure;
-use vm::{
-    errors::VMStaticViolation,
-    file_format::{SignatureToken, StructHandleIndex},
-    SignatureTokenKind,
-};
+use types::vm_error::StatusCode;
+use vm::file_format::{SignatureToken, StructHandleIndex};
 
 #[test]
 fn test_sig_token_structure() {
@@ -23,20 +20,16 @@ fn test_sig_token_structure() {
     // Invalid cases.
     let ref_ref_token = SignatureToken::Reference(Box::new(ref_token.clone()));
     assert_eq!(
-        check_structure(&ref_ref_token),
-        Some(VMStaticViolation::InvalidSignatureToken(
-            ref_ref_token.clone(),
-            SignatureTokenKind::Reference,
-            SignatureTokenKind::Reference,
-        ))
+        check_structure(&ref_ref_token)
+            .expect("Invalid sig token structure")
+            .major_status,
+        StatusCode::INVALID_SIGNATURE_TOKEN
     );
     let ref_mut_ref_token = SignatureToken::Reference(Box::new(mut_ref_token.clone()));
     assert_eq!(
-        check_structure(&ref_mut_ref_token),
-        Some(VMStaticViolation::InvalidSignatureToken(
-            ref_mut_ref_token.clone(),
-            SignatureTokenKind::Reference,
-            SignatureTokenKind::MutableReference,
-        ))
+        check_structure(&ref_mut_ref_token)
+            .expect("Invalid sig token structure")
+            .major_status,
+        StatusCode::INVALID_SIGNATURE_TOKEN
     );
 }

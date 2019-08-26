@@ -4,7 +4,6 @@
 //! Defines accessors for compiled modules.
 
 use crate::{
-    errors::VMStaticViolation,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, CompiledModuleMut, CompiledScript,
         FieldDefinition, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex,
@@ -15,13 +14,13 @@ use crate::{
     },
     internals::ModuleIndex,
     vm_string::{VMStr, VMString},
-    IndexKind,
 };
 use types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Represents accessors for a compiled module.
@@ -291,7 +290,7 @@ impl CompiledModuleMut {
         &self,
         field_count: MemberCount,
         first_field: FieldDefinitionIndex,
-    ) -> Option<VMStaticViolation> {
+    ) -> Option<VMStatus> {
         let first_field = first_field.into_index();
         let field_count = field_count as usize;
         // Both first_field and field_count are u16 so this is guaranteed to not overflow.
@@ -299,12 +298,14 @@ impl CompiledModuleMut {
         // [first_field, last_field).
         let last_field = first_field + field_count;
         if last_field > self.field_defs.len() {
-            Some(VMStaticViolation::RangeOutOfBounds(
-                IndexKind::FieldDefinition,
-                self.field_defs.len(),
+            let msg = format!(
+                "Field definition range [{},{}) out of range for {}",
                 first_field,
                 last_field,
-            ))
+                self.field_defs.len()
+            );
+            let status = VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS).with_message(msg);
+            Some(status)
         } else {
             None
         }

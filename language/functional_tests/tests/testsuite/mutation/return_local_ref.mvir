@@ -1,5 +1,5 @@
-// check: VerificationError
-// check: RetUnsafeToDestroyError
+// check: VerificationFailure
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
 module Tester {
     public no(): &u64 {

@@ -1,8 +1,5 @@
-//check: VerificationError
-//check: PositiveStackSizeAtBlockEnd(2)
-
-//check: VerificationError
-//check: PositiveStackSizeAtBlockEnd(4)
+// check: VerificationFailure
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
 
 main() {
     if (true) { (4); }

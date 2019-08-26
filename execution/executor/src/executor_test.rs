@@ -187,7 +187,11 @@ fn test_executor_status() {
             .unwrap();
 
     assert_eq!(
-        vec![KEEP_STATUS, KEEP_STATUS, DISCARD_STATUS],
+        vec![
+            KEEP_STATUS.clone(),
+            KEEP_STATUS.clone(),
+            DISCARD_STATUS.clone()
+        ],
         response.status()
     );
 }

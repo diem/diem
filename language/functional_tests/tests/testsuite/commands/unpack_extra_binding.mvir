@@ -34,6 +34,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: NegativeStackSizeInsideBlock
-
+// check: VerificationFailure
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK

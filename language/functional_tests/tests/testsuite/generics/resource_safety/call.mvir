@@ -11,4 +11,4 @@ module M {
     }
 }
 
-// check: CopyLocResourceError
+// check: COPYLOC_RESOURCE_ERROR

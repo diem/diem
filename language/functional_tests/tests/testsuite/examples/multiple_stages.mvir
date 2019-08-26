@@ -36,6 +36,7 @@ main() {
 // check: CompiledModule
 // check: FunctionDefinition
 
-// not: VerificationError
+// not: VerificationFailure
 
-// check: Aborted(42)
+// check: ABORTED
+// check: 42

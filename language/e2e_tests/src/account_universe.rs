@@ -30,7 +30,7 @@ use proptest::{prelude::*, strategy::Union};
 use std::fmt;
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 lazy_static! {
@@ -184,7 +184,7 @@ pub fn txn_one_account_result(
             sender.sent_events_count += 1;
             sender.balance -= to_deduct;
             (
-                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)),
+                TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
                 true,
             )
         }
@@ -195,7 +195,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= gas_cost;
             (
-                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(6))),
+                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(6)),
                 false,
             )
         }
@@ -206,15 +206,15 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= low_gas_cost;
             (
-                TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(10))),
+                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10)),
                 false,
             )
         }
         (false, _, _) => {
             // Not enough gas to pass validation. Nothing will happen.
             (
-                TransactionStatus::Discard(VMStatus::Validation(
-                    VMValidationStatus::InsufficientBalanceForTransactionFee,
+                TransactionStatus::Discard(VMStatus::new(
+                    StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
                 )),
                 false,
             )

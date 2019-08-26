@@ -10,5 +10,5 @@ module Duplicate {
   resource T2 { f: bool }
 }
 
-// check: VMExecutionFailure
-// check: DuplicateModuleName
+// check: Keep
+// check: DUPLICATE_MODULE_NAME

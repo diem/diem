@@ -21,7 +21,6 @@ vm_runtime = { path = "../vm/vm_runtime" }
 vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-assert_matches = "1.3.0"
 proptest_helpers = { path = "../../common/proptest_helpers" }
 protobuf = "~2.7"
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }

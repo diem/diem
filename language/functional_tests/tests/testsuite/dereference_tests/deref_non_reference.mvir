@@ -1,5 +1,5 @@
-// check: VerificationError
-// check: ReadRefTypeMismatchError
+// check: VerificationFailure
+// check: READREF_TYPE_MISMATCH_ERROR
 
 main() {
     let x: u64;

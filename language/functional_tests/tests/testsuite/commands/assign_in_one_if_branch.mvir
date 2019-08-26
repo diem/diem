@@ -16,4 +16,4 @@ main() {
     return;
 }
 
-// check: VerificationError
+// check: VerificationFailure

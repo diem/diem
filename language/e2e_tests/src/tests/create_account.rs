@@ -8,7 +8,7 @@ use crate::{
 };
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 #[test]
@@ -29,7 +29,7 @@ fn create_account() {
     let txn_output = output.get(0).expect("must have a transaction output");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
     println!("write set {:?}", txn_output.write_set());
     executor.apply_write_set(txn_output.write_set());
@@ -68,7 +68,7 @@ fn create_account_zero_balance() {
     let txn_output = output.get(0).expect("must have a transaction output");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
     println!("write set {:?}", txn_output.write_set());
     executor.apply_write_set(txn_output.write_set());

@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 2, err: WriteRefResourceError(5) }
+// check: VerificationFailure
+// check: WRITEREF_RESOURCE_ERROR
 
 module RTest {
     import 0x0.LibraCoin;
