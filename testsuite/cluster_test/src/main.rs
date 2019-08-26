@@ -5,7 +5,7 @@ use cluster_test::{
     deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
     effects::{Effect, Reboot},
     experiments::{Experiment, RebootRandomValidators},
-    health::{AwsLogTail, HealthCheckRunner},
+    health::{DebugPortLogThread, HealthCheckRunner, LogTail},
     slack::SlackClient,
     suite::ExperimentSuite,
 };
@@ -45,7 +45,7 @@ pub fn main() {
 }
 
 struct ClusterTestRunner {
-    logs: AwsLogTail,
+    logs: LogTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
     deployment_manager: DeploymentManager,
@@ -60,14 +60,18 @@ impl ClusterTestRunner {
             .value_of(ARG_WORKPLACE)
             .expect("workplace should be set");
         let aws = Aws::new(workplace.into());
+        let peers = matches.values_of_lossy(ARG_PEERS);
         let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+        let cluster = match peers {
+            None => cluster,
+            Some(peers) => cluster.sub_cluster(peers),
+        };
         println!("Discovered {} peers", cluster.instances().len());
         let log_tail_started = Instant::now();
-        let logs =
-            AwsLogTail::spawn_new(aws.clone(), &cluster).expect("Failed to start aws log tail");
+        let logs = DebugPortLogThread::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
         println!(
-            "Aws log thread started in {} ms",
+            "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
@@ -143,8 +147,9 @@ impl ClusterTestRunner {
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            self.run_single_experiment(experiment)
-                .map_err(move |e| format_err!("Experiment {} failed: {}", experiment_name, e))?;
+            self.run_single_experiment(experiment).map_err(move |e| {
+                format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
+            })?;
             thread::sleep(self.experiment_interval);
         }
         println!(
@@ -344,16 +349,24 @@ const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
 const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
 const ARG_REBOOT: &str = "reboot";
+const ARG_PEERS: &str = "peers";
 
 fn arg_matches() -> ArgMatches<'static> {
-    let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
-    let run = Arg::with_name(ARG_RUN).long("--run");
-    let run_once = Arg::with_name(ARG_RUN_ONCE).long("--run-once");
+    // Parameters
     let workplace = Arg::with_name(ARG_WORKPLACE)
         .long("--workplace")
         .short("-w")
         .takes_value(true)
         .required(true);
+    let peers = Arg::with_name(ARG_PEERS)
+        .long("--peers")
+        .short("-p")
+        .takes_value(true)
+        .use_delimiter(true);
+    // Actions
+    let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
+    let run = Arg::with_name(ARG_RUN).long("--run");
+    let run_once = Arg::with_name(ARG_RUN_ONCE).long("--run-once");
     let tail_logs = Arg::with_name(ARG_TAIL_LOGS).long("--tail-logs");
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
     let reboot = Arg::with_name(ARG_REBOOT)
@@ -375,7 +388,10 @@ fn arg_matches() -> ArgMatches<'static> {
         .author("Libra Association <opensource@libra.org>")
         .group(action_group)
         .args(&[
+            // parameters
             workplace,
+            peers,
+            // actions
             run,
             run_once,
             tail_logs,

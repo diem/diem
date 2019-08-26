@@ -1,12 +1,16 @@
+mod aws_log_tail;
 mod commit_check;
+mod debug_interface_log_tail;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
+pub use aws_log_tail::AwsLogThread;
 pub use commit_check::CommitHistoryHealthCheck;
+pub use debug_interface_log_tail::DebugPortLogThread;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
-pub use log_tail::AwsLogTail;
+pub use log_tail::LogTail;
 use std::{
     collections::HashMap,
     env, fmt,
@@ -130,6 +134,7 @@ impl HealthCheckRunner {
                 println!();
             }
         }
+        println!();
         println!();
 
         failed
