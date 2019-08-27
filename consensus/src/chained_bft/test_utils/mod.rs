@@ -16,7 +16,6 @@ use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 use tokio::runtime;
-use tools::output_capture::OutputCapture;
 use types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
     ledger_info::LedgerInfo,
@@ -198,19 +197,20 @@ pub fn placeholder_certificate_for_block(
     )
 }
 
+fn nocapture() -> bool {
+    ::std::env::args().any(|arg| arg == "--nocapture")
+}
+
 pub fn consensus_runtime() -> runtime::Runtime {
-    set_simple_logger("consensus");
-    let capture = OutputCapture::grab();
+    if nocapture() {
+        set_simple_logger("consensus");
+    }
+
     runtime::Builder::new()
-        .after_start(move || capture.apply())
         .build()
         .expect("Failed to create Tokio runtime!")
 }
 
 pub fn with_smr_id(id: String) -> impl Fn() {
-    let capture = OutputCapture::grab();
-    move || {
-        capture.apply();
-        set_simple_logger_prefix(format!("{}[{}]{}", Fg(LightBlack), id.clone(), Fg(Reset)))
-    }
+    move || set_simple_logger_prefix(format!("{}[{}]{}", Fg(LightBlack), id, Fg(Reset)))
 }

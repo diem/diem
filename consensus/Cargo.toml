@@ -40,7 +40,6 @@ proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
-tools = { path = "../common/tools" }
 types = { path = "../types" }
 debug_interface = { path = "../common/debug_interface" }
 
