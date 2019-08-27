@@ -28,7 +28,6 @@ fn setup_env(
         topology,
         false, /* disable_logging */
         faucet_account_keypair,
-        true, /* tee_logs */
         None, /* config_dir */
         template_path,
     );

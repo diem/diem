@@ -82,9 +82,8 @@ mod tests {
             topology, /* num_nodes */
             true,     /* disable_logging */
             faucet_account_keypair,
-            false, /* tee_logs */
-            None,  /* config_dir */
-            None,  /* template_path */
+            None, /* config_dir */
+            None, /* template_path */
         );
         let mut args = BenchOpt {
             validator_addresses: Vec::new(),
