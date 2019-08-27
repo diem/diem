@@ -156,55 +156,72 @@ pub fn setup_network(
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
     let role: RoleType = (&config.role).into();
-    let trusted_peers = config
-        .trusted_peers
-        .get_trusted_network_peers()
-        .clone()
-        .into_iter()
-        .map(|(peer_id, (signing_public_key, identity_public_key))| {
-            (
-                peer_id,
-                NetworkPublicKeys {
-                    signing_public_key,
-                    identity_public_key,
-                },
-            )
-        })
-        .collect();
-    let seed_peers = config
-        .seed_peers
-        .seed_peers
-        .clone()
-        .into_iter()
-        .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
-        .collect();
-    let network_signing_private = config.peer_keypairs.take_network_signing_private()
-        .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
-    let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
-    let listen_addr = config.listen_address.clone();
-    let advertised_addr = config.advertised_address.clone();
-    let mut network_builder = NetworkBuilder::new(runtime.executor(), peer_id, listen_addr, role);
-    if config.enable_encryption_and_authentication {
-        network_builder
-            .transport(TransportType::TcpNoise)
-            .identity_keys(config.peer_keypairs.get_network_identity_keypair());
-    } else {
-        network_builder.transport(TransportType::Tcp);
-    };
-    let (_listen_addr, network_provider) = network_builder
-        .advertised_address(advertised_addr)
-        .seed_peers(seed_peers)
-        .trusted_peers(trusted_peers)
-        .signing_keys((network_signing_private, network_signing_public))
-        .discovery_interval_ms(config.discovery_interval_ms)
-        .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+    let mut network_builder = NetworkBuilder::new(
+        runtime.executor(),
+        peer_id,
+        config.listen_address.clone(),
+        role,
+    );
+    network_builder
+        .permissioned(config.is_permissioned)
+        .advertised_address(config.advertised_address.clone())
         .direct_send_protocols(vec![
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
         ])
-        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)])
-        .build();
+        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
+    if config.is_permissioned {
+        // If the node wants to run in permissioned mode, it should also have authentication and
+        // encryption.
+        assert!(
+            config.enable_encryption_and_authentication,
+            "Permissioned network end-points should use authentication"
+        );
+        let trusted_peers = config
+            .trusted_peers
+            .get_trusted_network_peers()
+            .clone()
+            .into_iter()
+            .map(|(peer_id, (signing_public_key, identity_public_key))| {
+                (
+                    peer_id,
+                    NetworkPublicKeys {
+                        signing_public_key,
+                        identity_public_key,
+                    },
+                )
+            })
+            .collect();
+        let seed_peers = config
+            .seed_peers
+            .seed_peers
+            .clone()
+            .into_iter()
+            .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
+            .collect();
+        let network_signing_private = config.peer_keypairs.take_network_signing_private()
+            .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
+        let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+        network_builder
+            .transport(TransportType::TcpNoise(Some(
+                config.peer_keypairs.get_network_identity_keypair(),
+            )))
+            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+            .seed_peers(seed_peers)
+            .trusted_peers(trusted_peers)
+            .signing_keys((network_signing_private, network_signing_public))
+            .discovery_interval_ms(config.discovery_interval_ms);
+    } else if config.enable_encryption_and_authentication {
+        // Even if a network end-point is permissionless, it might want to prove its identity to
+        // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
+        network_builder.transport(TransportType::PermissionlessTcpNoise(Some(
+            config.peer_keypairs.get_network_identity_keypair(),
+        )));
+    } else {
+        network_builder.transport(TransportType::Tcp);
+    }
+    let (_listen_addr, network_provider) = network_builder.build();
     (runtime, network_provider)
 }
 

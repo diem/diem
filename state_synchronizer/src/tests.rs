@@ -172,9 +172,9 @@ impl SynchronizerEnv {
         let (a_signing_private_key, a_signing_public_key) = compat::generate_keypair(&mut rng);
         let (b_signing_private_key, b_signing_public_key) = compat::generate_keypair(&mut rng);
         // Setup identity public keys.
-        let (a_identity_private_key, a_identity_public_key) =
+        let (_a_identity_private_key, a_identity_public_key) =
             x25519::compat::generate_keypair(&mut rng);
-        let (b_identity_private_key, b_identity_public_key) =
+        let (_b_identity_private_key, b_identity_public_key) =
             x25519::compat::generate_keypair(&mut rng);
 
         let trusted_peers: HashMap<_, _> = vec![
@@ -203,7 +203,6 @@ impl SynchronizerEnv {
             RoleType::Validator,
         )
         .signing_keys((b_signing_private_key, b_signing_public_key))
-        .identity_keys((b_identity_private_key, b_identity_public_key))
         .trusted_peers(trusted_peers.clone())
         .transport(TransportType::Memory)
         .direct_send_protocols(protocols.clone())
@@ -221,7 +220,6 @@ impl SynchronizerEnv {
         )
         .transport(TransportType::Memory)
         .signing_keys((a_signing_private_key, a_signing_public_key))
-        .identity_keys((a_identity_private_key, a_identity_public_key))
         .trusted_peers(trusted_peers.clone())
         .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
         .direct_send_protocols(protocols.clone())
