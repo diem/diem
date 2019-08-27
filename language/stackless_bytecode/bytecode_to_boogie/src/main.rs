@@ -1,18 +1,27 @@
 use bytecode_to_boogie::translator::BoogieTranslator;
 use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_program},
+    parser::{parse_module, parse_program},
+};
 use std::{
     env,
     fs::{self, File},
     io::prelude::*,
 };
+use stdlib::stdlib_modules;
 use types::account_address::AccountAddress;
 
 // mod translator;
 fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
-    let mut verified_modules = vec![];
+    let mut verified_modules = stdlib_modules().to_vec();
+    let files_len = file_names.len();
+    let dep_files = &file_names[0..files_len - 1];
+
+    // assuming the last file is a program that might contain a script
+    let main_file = &file_names[files_len - 1];
     let address = &AccountAddress::default();
-    for file_name in file_names {
+    for file_name in dep_files {
         let code = fs::read_to_string(file_name).unwrap();
         let module = parse_module(&code).unwrap();
         let compiled_module =
@@ -28,6 +37,26 @@ fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
             }
         }
     }
+    let main_code = fs::read_to_string(main_file).unwrap();
+    let program = parse_program(&main_code).unwrap();
+    let address = &AccountAddress::default();
+    let compiled_program =
+        compile_program(&address, &program, &verified_modules).expect("program failed to compile");
+    let mut main_modules = compiled_program.modules;
+    main_modules.push(compiled_program.script.into_module());
+    for module in main_modules {
+        let verified_module_res = VerifiedModule::new(module);
+
+        match verified_module_res {
+            Err(e) => {
+                panic!("{:?}", e);
+            }
+            Ok(verified_module) => {
+                verified_modules.push(verified_module);
+            }
+        }
+    }
+
     verified_modules
 }
 

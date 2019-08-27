@@ -1,12 +1,13 @@
-use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
-    stackless_bytecode_generator::StacklessModuleGenerator,
+    stackless_bytecode_generator::StacklessProgramGenerator,
 };
+use stdlib::stdlib_modules;
 use types::account_address::AccountAddress;
 use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, FieldDefinitionIndex,
-    FunctionHandleIndex, SignatureToken, StructDefinitionIndex, StructHandleIndex,
+    AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandleIndex,
+    SignatureToken, StructDefinitionIndex, StructHandleIndex,
 };
 
 #[test]
@@ -523,13 +524,42 @@ fn transform_code_with_module_builtins() {
     assert_eq!(actual_types, expected_types);
 }
 
+#[test]
+fn transform_program_with_script() {
+    let code = String::from(
+        "
+        import 0x0.LibraAccount;
+        main (payee: address, amount: u64) {
+            LibraAccount.pay_from_sender(move(payee), move(amount));
+            return;
+        }
+        ",
+    );
+    let (actual_code, actual_types) = generate_code_from_string(code);
+    let expected_code = vec![
+        MoveLoc(2, 0),
+        MoveLoc(3, 1),
+        Call(vec![], FunctionHandleIndex::new(1), vec![2, 3]),
+        Ret(vec![]),
+    ];
+    let expected_types = vec![
+        SignatureToken::Address,
+        SignatureToken::U64,
+        SignatureToken::Address,
+        SignatureToken::U64,
+    ];
+    assert_eq!(actual_code, expected_code);
+    assert_eq!(actual_types, expected_types);
+}
+
 fn generate_code_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
     let address = &AccountAddress::default();
-    let module = parse_module(&code).unwrap();
-    let deps: Vec<CompiledModule> = vec![];
-    let compiled_module_res = compile_module(&address, &module, &deps).unwrap();
-    let res = StacklessModuleGenerator::new(&compiled_module_res).generate_module();
-    let code = res[0].code.clone();
-    let types = res[0].local_types.clone();
+    let program = parse_program(&code).unwrap();
+    let deps = stdlib_modules();
+    let compiled_program = compile_program(&address, &program, deps).unwrap();
+    println!("{:?}", compiled_program);
+    let res = StacklessProgramGenerator::new(compiled_program).generate_program();
+    let code = res.module_functions[0][0].code.clone();
+    let types = res.module_functions[0][0].local_types.clone();
     (code, types)
 }
