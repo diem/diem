@@ -11,7 +11,7 @@ use debug_interface::{
         node_debug_interface_grpc::NodeDebugInterfaceClient,
     },
 };
-use grpcio::{ChannelBuilder, EnvBuilder};
+use grpcio::{self, ChannelBuilder, EnvBuilder};
 use serde_json::{self, value as json};
 use std::{
     env,
@@ -55,7 +55,8 @@ impl DebugPortLogThread {
     pub fn run(self) {
         let print_failures = env::var("VERBOSE").is_ok();
         loop {
-            match self.client.get_events(&GetEventsRequest::new()) {
+            let opts = grpcio::CallOption::default().timeout(Duration::from_secs(5));
+            match self.client.get_events_opt(&GetEventsRequest::new(), opts) {
                 Err(e) => {
                     if print_failures {
                         println!("Failed to get events from {}: {:?}", self.instance, e);
