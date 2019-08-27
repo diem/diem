@@ -12,7 +12,7 @@ use crate::{
     ledger_counters::LedgerCounter,
     schema::{
         event::EventSchema, event_accumulator::EventAccumulatorSchema,
-        event_by_access_path::EventByAccessPathSchema,
+        event_by_key::EventByKeySchema,
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
@@ -24,9 +24,9 @@ use failure::prelude::*;
 use schemadb::{schema::ValueCodec, ReadOptions, DB};
 use std::{convert::TryFrom, sync::Arc};
 use types::{
-    access_path::AccessPath,
     account_address::AccountAddress,
     contract_event::ContractEvent,
+    event::EventKey,
     proof::{position::Position, AccumulatorProof, EventProof},
     transaction::Version,
 };
@@ -86,28 +86,26 @@ impl EventStore {
         Ok((event, proof))
     }
 
-    fn get_txn_ver_by_seq_num(&self, access_path: &AccessPath, seq_num: u64) -> Result<u64> {
+    fn get_txn_ver_by_seq_num(&self, event_key: &EventKey, seq_num: u64) -> Result<u64> {
         let (ver, _) = self
             .db
-            .get::<EventByAccessPathSchema>(&(access_path.clone(), seq_num))?
+            .get::<EventByKeySchema>(&(*event_key, seq_num))?
             .ok_or_else(|| format_err!("Index entry should exist for seq_num {}", seq_num))?;
         Ok(ver)
     }
 
-    /// Get the latest sequence number on `access_path` considering all transactions with versions
+    /// Get the latest sequence number on `event_key` considering all transactions with versions
     /// no greater than `ledger_version`.
     pub fn get_latest_sequence_number(
         &self,
         ledger_version: Version,
-        access_path: &AccessPath,
+        event_key: &EventKey,
     ) -> Result<Option<u64>> {
-        let mut iter = self
-            .db
-            .iter::<EventByAccessPathSchema>(ReadOptions::default())?;
-        iter.seek_for_prev(&(access_path.clone(), u64::max_value()));
+        let mut iter = self.db.iter::<EventByKeySchema>(ReadOptions::default())?;
+        iter.seek_for_prev(&(*event_key, u64::max_value()));
         if let Some(res) = iter.next() {
-            let ((path, mut seq), (ver, _idx)) = res?;
-            if path == *access_path {
+            let ((key, mut seq), (ver, _idx)) = res?;
+            if key == *event_key {
                 if ver <= ledger_version {
                     return Ok(Some(seq));
                 }
@@ -121,7 +119,7 @@ impl EventStore {
                 while seq > 0 && n_try_recent > 0 {
                     seq -= 1;
                     n_try_recent -= 1;
-                    let ver = self.get_txn_ver_by_seq_num(access_path, seq)?;
+                    let ver = self.get_txn_ver_by_seq_num(event_key, seq)?;
                     if ver <= ledger_version {
                         return Ok(Some(seq));
                     }
@@ -131,7 +129,7 @@ impl EventStore {
                 let (mut begin, mut end) = (0, seq);
                 while begin < end {
                     let mid = end - (end - begin) / 2;
-                    let ver = self.get_txn_ver_by_seq_num(access_path, mid)?;
+                    let ver = self.get_txn_ver_by_seq_num(event_key, mid)?;
                     if ver <= ledger_version {
                         begin = mid;
                     } else {
@@ -144,12 +142,12 @@ impl EventStore {
         Ok(None)
     }
 
-    /// Given access path and start sequence number, return events identified by transaction index
-    /// and index among all events yielded by the same transaction. Result won't contain records
-    /// with a txn_version > `ledger_version` and is in ascending order.
-    pub fn lookup_events_by_access_path(
+    /// Given `event_key` and `start_seq_num`, returns events identified by transaction version and
+    /// index among all events emitted by the same transaction. Result won't contain records with a
+    /// transaction version > `ledger_version` and is in ascending order.
+    pub fn lookup_events_by_key(
         &self,
-        access_path: &AccessPath,
+        event_key: &EventKey,
         start_seq_num: u64,
         limit: u64,
         ledger_version: u64,
@@ -160,16 +158,14 @@ impl EventStore {
             u64,     // index among events for the same transaction
         )>,
     > {
-        let mut iter = self
-            .db
-            .iter::<EventByAccessPathSchema>(ReadOptions::default())?;
-        iter.seek(&(access_path.clone(), start_seq_num))?;
+        let mut iter = self.db.iter::<EventByKeySchema>(ReadOptions::default())?;
+        iter.seek(&(*event_key, start_seq_num))?;
 
         let mut result = Vec::new();
         let mut cur_seq = start_seq_num;
         for res in iter.take(limit as usize) {
             let ((path, seq), (ver, idx)) = res?;
-            if path != *access_path || ver > ledger_version {
+            if path != *event_key || ver > ledger_version {
                 break;
             }
             ensure!(
@@ -196,15 +192,14 @@ impl EventStore {
         cs.counter_bumps
             .bump(LedgerCounter::EventsCreated, events.len());
 
-        // EventSchema and EventByAccessPathSchema updates
+        // EventSchema and EventByKeySchema updates
         events
             .iter()
             .enumerate()
             .map(|(idx, event)| {
-                // TODO: Clean up the EventByAccessPathSchema
                 cs.batch.put::<EventSchema>(&(version, idx as u64), event)?;
-                cs.batch.put::<EventByAccessPathSchema>(
-                    &(event.key().as_access_path()?, event.sequence_number()),
+                cs.batch.put::<EventByKeySchema>(
+                    &(*event.key(), event.sequence_number()),
                     &(version, idx as u64),
                 )?;
                 Ok(())

@@ -747,8 +747,8 @@
           "scopedVars": {
             "cf_name": {
               "selected": false,
-              "text": "event_by_access_path",
-              "value": "event_by_access_path"
+              "text": "event_by_key",
+              "value": "event_by_key"
             }
           },
           "seriesOverrides": [],

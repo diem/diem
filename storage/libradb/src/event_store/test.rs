@@ -114,7 +114,7 @@ proptest! {
     }
 }
 
-fn traverse_events_by_event_key(
+fn traverse_events_by_key(
     store: &EventStore,
     event_key: &EventKey,
     ledger_version: Version,
@@ -127,12 +127,7 @@ fn traverse_events_by_event_key(
     let mut last_batch_len = LIMIT;
     loop {
         let mut batch = store
-            .lookup_events_by_access_path(
-                &event_key.as_access_path().unwrap(),
-                seq_num,
-                LIMIT,
-                ledger_version,
-            )
+            .lookup_events_by_key(&event_key, seq_num, LIMIT, ledger_version)
             .unwrap();
         if last_batch_len < LIMIT {
             assert!(batch.is_empty());
@@ -219,7 +214,7 @@ fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
 
     // Fetch and check.
     events_by_event_key.into_iter().for_each(|(path, events)| {
-        let traversed = traverse_events_by_event_key(&store, &path, ledger_version_plus_one);
+        let traversed = traverse_events_by_key(&store, &path, ledger_version_plus_one);
         assert_eq!(events, traversed);
     });
 }

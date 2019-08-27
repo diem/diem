@@ -104,7 +104,7 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
-            (EVENT_BY_ACCESS_PATH_CF_NAME, ColumnFamilyOptions::default()),
+            (EVENT_BY_KEY_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
             (
                 JELLYFISH_MERKLE_NODE_CF_NAME,
@@ -184,10 +184,10 @@ impl LibraDB {
         ))
     }
 
-    /// Returns events specified by `access_path` with sequence number in range designated by
+    /// Returns events specified by `query_path` with sequence number in range designated by
     /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
-    /// `limit` events that were emitted after `start_event_seq_num`. Otherwise it will return up to
-    /// `limit` events in the reverse order. Both cases are inclusive.
+    /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
+    /// to `limit` events in the reverse order. Both cases are inclusive.
     fn get_events_by_event_access_path(
         &self,
         query_path: &AccessPath,
@@ -208,13 +208,12 @@ impl LibraDB {
         };
         let event_key = account_resource
             .get_event_handle_by_query_path(query_path)?
-            .key()
-            .as_access_path()?;
+            .key();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
             // In the case of no events on that path, use 0 and expect empty result below.
             self.event_store
-                .get_latest_sequence_number(ledger_version, &event_key)?
+                .get_latest_sequence_number(ledger_version, event_key)?
                 .unwrap_or(0)
         } else {
             start_seq_num
@@ -224,7 +223,7 @@ impl LibraDB {
         let (first_seq, real_limit) = get_first_seq_num_and_limit(ascending, cursor, limit)?;
 
         // Query the index.
-        let mut event_keys = self.event_store.lookup_events_by_access_path(
+        let mut event_keys = self.event_store.lookup_events_by_key(
             &event_key,
             first_seq,
             real_limit,
