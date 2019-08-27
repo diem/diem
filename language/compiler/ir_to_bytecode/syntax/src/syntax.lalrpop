@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::collections::BTreeMap;
 use codespan::{ByteIndex, Span};
 
-use crate::ast::{ModuleDefinition, StructDefinition, Script, Program};
+use crate::ast::{ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule};
 use crate::ast::{
     FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
     Block, Cmd, CopyableVal, Spanned, Kind, TypeVar,
@@ -569,4 +569,9 @@ pub Module : ModuleDefinition = {
         <structs: (StructDecl)*>
         <functions: (FunctionDecl)*>
     "}" => ModuleDefinition::new(n.to_string(), imports, structs, functions),
+}
+
+pub ScriptOrModule: ScriptOrModule = {
+    <s: Script> => ScriptOrModule::Script(s),
+    <m: Module> => ScriptOrModule::Module(m),
 }

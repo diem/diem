@@ -103,7 +103,7 @@ pub fn parse_input(s: &str) -> Result<(GlobalConfig, Vec<Directive>, Vec<Transac
             let config = TransactionConfig::build(&global_config, &config)?;
             Ok(Transaction {
                 config,
-                program: substitute_addresses(&global_config.accounts, &text.join("\n")),
+                input: substitute_addresses(&global_config.accounts, &text.join("\n")),
             })
         })
         .collect::<Result<Vec<_>>>()?;

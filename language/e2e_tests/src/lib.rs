@@ -32,6 +32,7 @@ mod proptest_types;
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
     let address = AccountAddress::default();
+    println!("{}", address);
     let compiler = Compiler {
         code: program,
         address,
