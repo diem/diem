@@ -4,6 +4,7 @@
 pub mod abstract_state;
 pub mod bytecode_generator;
 pub mod common;
+pub mod control_flow_graph;
 pub mod summaries;
 pub mod transitions;
 
@@ -55,7 +56,7 @@ pub fn run_generation(iterations: usize) {
     let mut valid_programs: u64 = 0;
     for _ in 0..iterations {
         let module =
-            ModuleBuilder::new(2, Some(Box::new(generate_bytecode))).materialize_unverified();
+            ModuleBuilder::new(1, Some(Box::new(generate_bytecode))).materialize_unverified();
         valid_programs += run_verifier(module);
     }
 
