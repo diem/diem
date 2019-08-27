@@ -75,7 +75,7 @@ pub trait TableAccess {
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle>;
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle>;
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String>;
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str>;
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress>;
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature>;
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature>;
@@ -108,7 +108,7 @@ impl TableAccess for CompiledScriptMut {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         match self.string_pool.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
             Some(s) => Ok(s),
@@ -173,7 +173,7 @@ impl TableAccess for CompiledModuleMut {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         match self.string_pool.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
             Some(s) => Ok(s),
