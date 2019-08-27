@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::abstract_state::BorrowState;
+use crate::abstract_state::{AbstractValue, BorrowState};
 use rand::{rngs::StdRng, Rng};
 use std::collections::HashMap;
 use vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
@@ -10,7 +10,7 @@ use vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
 type BlockIDSize = u16;
 
 /// This type represents the locals that a basic block has
-type BlockLocals = HashMap<usize, (SignatureToken, BorrowState)>;
+type BlockLocals = HashMap<usize, (AbstractValue, BorrowState)>;
 
 /// This represents a basic block in a control flow graph
 #[derive(Debug, Clone)]
@@ -152,7 +152,8 @@ impl CFG {
             .locals_out
             .len();
         for local_index in 0..locals_len {
-            let token = self.basic_blocks.get(&block_ids[0]).unwrap().locals_out[&local_index]
+            let abstract_value = self.basic_blocks.get(&block_ids[0]).unwrap().locals_out
+                [&local_index]
                 .0
                 .clone();
             let mut availability = BorrowState::Available;
@@ -165,7 +166,7 @@ impl CFG {
                     availability = BorrowState::Unavailable;
                 }
             }
-            locals_out.insert(local_index, (token, availability));
+            locals_out.insert(local_index, (abstract_value, availability));
         }
         locals_out
     }
@@ -194,7 +195,15 @@ impl CFG {
                 basic_block.locals_in = locals
                     .iter()
                     .enumerate()
-                    .map(|(i, token)| (i, (token.clone(), BorrowState::Available)))
+                    .map(|(i, token)| {
+                        (
+                            i,
+                            (
+                                AbstractValue::new_primitive(token.clone()),
+                                BorrowState::Available,
+                            ),
+                        )
+                    })
                     .collect();
             } else {
                 basic_block.locals_in = cfg_copy.merge_locals(cfg_copy.get_parent_ids(*block_id));

@@ -304,12 +304,12 @@ impl BytecodeGenerator {
             }
         }
         // Fix local availability
-        for (i, (token_type, target_availability)) in abstract_state_out.get_locals().iter() {
+        for (i, (abstract_value, target_availability)) in abstract_state_out.get_locals().iter() {
             if let Some((_, current_availability)) = state.local_get(*i) {
                 if *target_availability == BorrowState::Available
                     && *current_availability == BorrowState::Unavailable
                 {
-                    let next_instruction = match token_type {
+                    let next_instruction = match abstract_value.token {
                         SignatureToken::String => Bytecode::LdStr(StringPoolIndex::new(0)),
                         SignatureToken::Address => Bytecode::LdAddr(AddressPoolIndex::new(0)),
                         SignatureToken::U64 => Bytecode::LdConst(0),
@@ -317,7 +317,7 @@ impl BytecodeGenerator {
                         SignatureToken::ByteArray => {
                             Bytecode::LdByteArray(ByteArrayPoolIndex::new(0))
                         }
-                        _ => unimplemented!("Unsupported return type: {:#?}", token_type),
+                        _ => unimplemented!("Unsupported return type: {:#?}", abstract_value.token),
                     };
                     state = self.apply_instruction(state, &mut bytecode, next_instruction);
                     state = self.apply_instruction(state, &mut bytecode, Bytecode::StLoc(*i as u8));
