@@ -16,7 +16,23 @@ impl Instance {
         Instance { short_hash, ip }
     }
 
+    pub fn run_cmd_tee_err<I, S>(&self, args: I) -> failure::Result<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        self.run_cmd_inner(false, args)
+    }
+
     pub fn run_cmd<I, S>(&self, args: I) -> failure::Result<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        self.run_cmd_inner(true, args)
+    }
+
+    pub fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> failure::Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -29,7 +45,10 @@ impl Instance {
             ssh_dest.as_str(),
         ];
         let mut ssh_cmd = Command::new("ssh");
-        ssh_cmd.args(ssh_args).args(args).stderr(Stdio::null());
+        ssh_cmd.args(ssh_args).args(args);
+        if no_std_err {
+            ssh_cmd.stderr(Stdio::null());
+        }
         let status = ssh_cmd.status()?;
         ensure!(
             status.success(),

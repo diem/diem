@@ -310,9 +310,9 @@ impl ClusterTestRunner {
         thread::sleep(Duration::from_secs(10));
         println!("Starting...");
         for instance in self.cluster.instances() {
-            instance
-                .run_cmd(vec!["sudo", "rm", "-rf", "/data/libra/"])
-                .expect("Failed to wipe");
+            if let Err(e) = instance.run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/"]) {
+                println!("Failed to wipe {}: {:?}", instance, e);
+            }
         }
         println!("Done");
     }
