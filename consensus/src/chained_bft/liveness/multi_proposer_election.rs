@@ -44,8 +44,18 @@ pub struct MultiProposer<T> {
 }
 
 impl<T> MultiProposer<T> {
-    pub fn new(proposers: Vec<Author>, num_proposers_per_round: usize) -> Self {
+    pub fn new(proposers: Vec<Author>, mut num_proposers_per_round: usize) -> Self {
         assert!(num_proposers_per_round > 0);
+        if num_proposers_per_round > proposers.len() {
+            error!(
+                "num_proposers_per_round = {}, while there are just {} proposers, adjusting to {}",
+                num_proposers_per_round,
+                proposers.len(),
+                proposers.len()
+            );
+            num_proposers_per_round = proposers.len();
+        }
+
         assert!(num_proposers_per_round <= proposers.len());
         Self {
             proposers,

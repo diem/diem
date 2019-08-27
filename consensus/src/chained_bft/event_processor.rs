@@ -268,12 +268,8 @@ impl<T: Payload> EventProcessor<T> {
             return;
         };
         if let Some(vote) = timeout_msg.pacemaker_timeout().vote_msg() {
-            if let Some(_qc) = self
-                .add_vote(vote.clone(), self.epoch_mgr.quorum_size())
-                .await
-            {
-                counters::TIMEOUT_VOTES_FORM_QC_COUNT.inc();
-            }
+            self.add_vote(vote.clone(), self.epoch_mgr.quorum_size())
+                .await;
         }
         if let Some(new_round_event) = self.pacemaker.process_remote_timeout(
             timeout_msg.pacemaker_timeout().clone(),
@@ -446,11 +442,13 @@ impl<T: Payload> EventProcessor<T> {
         let block = match self.proposer_election.take_backup_proposal(round) {
             Some(b) => {
                 debug!("Planning to vote for a backup proposal {}", b);
+                counters::VOTE_SECONDARY_PROPOSAL_COUNT.inc();
                 b
             }
             None => {
                 let nil_block = self.proposal_generator.generate_nil_block(round)?;
                 debug!("Planning to vote for a NIL block {}", nil_block);
+                counters::VOTE_NIL_COUNT.inc();
                 nil_block
             }
         };

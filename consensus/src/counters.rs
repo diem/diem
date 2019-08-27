@@ -28,9 +28,6 @@ pub static ref PREFERRED_BLOCK_ROUND: IntGauge = OP_COUNTERS.gauge("preferred_bl
 /// This counter is set to the last round reported by the local pacemaker.
 pub static ref CURRENT_ROUND: IntGauge = OP_COUNTERS.gauge("current_round");
 
-/// Count of the block proposals sent by this validator since last restart.
-pub static ref PROPOSALS_COUNT: IntCounter = OP_COUNTERS.counter("proposals_count");
-
 /// Count of the committed blocks since last restart.
 pub static ref COMMITTED_BLOCKS_COUNT: IntCounter = OP_COUNTERS.counter("committed_blocks_count");
 
@@ -43,6 +40,21 @@ pub static ref SUCCESS_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("success_txn
 /// Count of failed txns in the committed blocks since last restart.
 /// FAILED_TXNS_COUNT + SUCCESS_TXN_COUNT == COMMITTED_TXNS_COUNT
 pub static ref FAILED_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("failed_txns_count");
+
+//////////////////////
+// PROPOSAL ELECTION
+//////////////////////
+
+/// Count of the block proposals sent by this validator since last restart
+/// (both primary and secondary)
+pub static ref PROPOSALS_COUNT: IntCounter = OP_COUNTERS.counter("proposals_count");
+
+/// Count the number of times a validator voted for secondary proposals (upon timeout) since
+/// last restart.
+pub static ref VOTE_SECONDARY_PROPOSAL_COUNT: IntCounter = OP_COUNTERS.counter("vote_secondary_proposal_count");
+
+/// Count the number of times a validator voted for a nil block since last restart.
+pub static ref VOTE_NIL_COUNT: IntCounter = OP_COUNTERS.counter("vote_nil_count");
 
 //////////////////////
 // PACEMAKER COUNTERS
@@ -61,9 +73,6 @@ pub static ref TIMEOUT_COUNT: IntCounter = OP_COUNTERS.counter("timeout_count");
 
 /// The timeout of the current round.
 pub static ref ROUND_TIMEOUT_MS: IntGauge = OP_COUNTERS.gauge("round_timeout_ms");
-
-/// Count the number of cases, in which the vote carried by a timeout message helps to form a QC
-pub static ref TIMEOUT_VOTES_FORM_QC_COUNT: IntCounter = OP_COUNTERS.counter("timeout_votes_form_qc_count");
 
 ////////////////////////
 // SYNCMANAGER COUNTERS
