@@ -6,9 +6,9 @@ use crate::{
     parser::ast::{
         self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Function, FunctionBody,
         FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse,
-        LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
-        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
-        While,
+        LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName, Program, Script,
+        Statement, StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp,
+        Var, Var_, While,
     },
 };
 
@@ -25,7 +25,7 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule,
-        CompiledModuleMut, CompiledProgram, CompiledScriptMut, FieldDefinition,
+        CompiledModuleMut, CompiledProgram, CompiledScript, CompiledScriptMut, FieldDefinition,
         FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
         FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature,
         LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
@@ -1176,7 +1176,7 @@ fn compile_module_impl<'a>(
 // Transaction/Script compilation
 //
 
-/// Compile a transaction program
+/// Compile a transaction program.
 pub fn compile_program<'a, T: 'a + ModuleAccess>(
     address: &AccountAddress,
     program: &Program,
@@ -1204,14 +1204,31 @@ fn compile_program_impl(
         modules.push(module);
     }
 
+    let deps: Vec<_> = deps.into_iter().chain(modules.iter()).collect();
+    let compiled_script = compile_script_impl(address, &program.script, deps)?;
+
+    Ok(CompiledProgram::new(modules, compiled_script))
+}
+
+/// Compile a script.
+pub fn compile_script<'a, T: 'a + ModuleAccess>(
+    address: &AccountAddress,
+    script: &Script,
+    deps: impl IntoIterator<Item = &'a T>,
+) -> Result<CompiledScript> {
+    let deps: Vec<&CompiledModule> = deps.into_iter().map(|dep| dep.as_module()).collect();
+    compile_script_impl(address, script, deps)
+}
+
+pub fn compile_script_impl(
+    address: &AccountAddress,
+    script: &Script,
+    deps: Vec<&CompiledModule>,
+) -> Result<CompiledScript> {
     // Compile transaction script
-    let func_def: FunctionDefinition;
     let compiled_script = CompiledScriptMut::default();
 
-    let scope = {
-        let deps = deps.iter().copied().chain(&modules);
-        ScriptScope::new(compiled_script, deps)
-    };
+    let scope = ScriptScope::new(compiled_script, deps);
     let mut compiler = Compiler::new(scope);
 
     // Create an empty locals signature with index 0.
@@ -1226,7 +1243,8 @@ fn compile_program_impl(
     let mh_idx = compiler.make_module_handle(addr_idx, name_idx)?;
     assert_eq!(mh_idx.0, 0);
 
-    for import in &program.script.imports {
+    // Import modules.
+    for import in &script.imports {
         compiler.import_module(
             match &import.ident {
                 ModuleIdent::Transaction(_) => address,
@@ -1237,16 +1255,13 @@ fn compile_program_impl(
         )?;
     }
 
-    func_def = compiler.compile_main(&program.script.main)?;
+    // Compile the main function.
+    compiler.scope.script.main = compiler.compile_main(&script.main)?;
 
-    let mut script = compiler.scope.script;
-    script.main = func_def;
-    let script = match script.freeze() {
-        Ok(script) => script,
+    match compiler.scope.script.freeze() {
+        Ok(compiled_script) => Ok(compiled_script),
         Err(errs) => bail_err!(InternalCompilerError::BoundsCheckErrors(errs)),
-    };
-
-    Ok(CompiledProgram::new(modules, script))
+    }
 }
 
 impl<S: Scope + Sized> Compiler<S> {

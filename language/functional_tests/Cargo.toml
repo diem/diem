@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+ir_to_bytecode_syntax = { path = "../compiler/ir_to_bytecode/syntax" }
 ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 stdlib = { path = "../stdlib" }
 types = { path = "../../types" }

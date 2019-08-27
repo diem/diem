@@ -5,20 +5,28 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::verifier::{VerifiedModule, VerifiedProgram};
+use bytecode_verifier::verifier::{
+    verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
+};
 use config::config::VMPublishingOption;
-use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_script},
+    parser::parse_script_or_module,
+};
+use ir_to_bytecode_syntax::ast::ScriptOrModule;
 use language_e2e_tests::{account::AccountData, executor::FakeExecutor};
 use std::{str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
-use transaction_builder::transaction::{make_transaction_program, serialize_program};
 use types::{
-    transaction::{RawTransaction, TransactionArgument, TransactionOutput, TransactionStatus},
+    transaction::{
+        Module as TransactionModule, RawTransaction, Script as TransactionScript,
+        SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
+    },
     vm_error::{ExecutionStatus, VMStatus},
 };
 use vm::{
-    access::ModuleAccess,
-    file_format::{CompiledModule, CompiledProgram, CompiledScript},
+    errors::VerificationStatus,
+    file_format::{CompiledModule, CompiledScript},
 };
 
 /// A transaction to be evaluated by the testing infra.
@@ -26,7 +34,7 @@ use vm::{
 #[derive(Debug)]
 pub struct Transaction {
     pub config: TransactionConfig,
-    pub program: String,
+    pub input: String,
 }
 
 /// Indicates one step in the pipeline the given move module/program goes through.
@@ -34,8 +42,6 @@ pub struct Transaction {
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Stage {
     Parser,
-    // Right now parser is a separate stage.
-    // However it could be merged into the compiler.
     Compiler,
     Verifier,
     Serializer,
@@ -104,33 +110,112 @@ impl EvaluationResult {
     }
 }
 
-fn do_verify_program(program: CompiledProgram, deps: &[VerifiedModule]) -> Result<VerifiedProgram> {
-    Ok(VerifiedProgram::new(program, deps).map_err(ErrorKind::VerificationFailure)?)
+/// Verifies a script & its dependencies.
+fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<VerifiedScript> {
+    let verified_script = match VerifiedScript::new(script) {
+        Ok(verified_script) => verified_script,
+        Err((_, errs)) => {
+            return Err(ErrorKind::VerificationFailure(
+                errs.into_iter()
+                    .map(VerificationStatus::Script)
+                    .collect::<Vec<_>>(),
+            )
+            .into())
+        }
+    };
+    let errs = verify_script_dependencies(&verified_script, deps);
+    if !errs.is_empty() {
+        return Err(ErrorKind::VerificationFailure(
+            errs.into_iter()
+                // TODO: should this be VerificationStatus::Dependency?
+                .map(VerificationStatus::Script)
+                .collect::<Vec<_>>(),
+        )
+        .into());
+    }
+    Ok(verified_script)
 }
 
-/// Runs a single transaction using the fake executor.
-fn run_transaction(
-    exec: &mut FakeExecutor,
+/// Verifies a module & its dependencies.
+fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<VerifiedModule> {
+    let verified_module = match VerifiedModule::new(module) {
+        Ok(verified_module) => verified_module,
+        Err((_, errs)) => {
+            return Err(ErrorKind::VerificationFailure(
+                errs.into_iter()
+                    .map(VerificationStatus::Script)
+                    .collect::<Vec<_>>(),
+            )
+            .into())
+        }
+    };
+    let errs = verify_module_dependencies(&verified_module, deps);
+    if !errs.is_empty() {
+        return Err(ErrorKind::VerificationFailure(
+            errs.into_iter()
+                // TODO: should this be VerificationStatus::Dependency?
+                .map(VerificationStatus::Script)
+                .collect::<Vec<_>>(),
+        )
+        .into());
+    }
+    Ok(verified_module)
+}
+
+/// Creates and signs a script transaction.
+fn make_script_transaction(
+    exec: &FakeExecutor,
     data: &AccountData,
-    program: &CompiledProgram,
-    args: &[TransactionArgument],
-) -> Result<TransactionOutput> {
+    script: CompiledScript,
+    args: Vec<TransactionArgument>,
+) -> Result<SignedTransaction> {
+    let mut blob = vec![];
+    script.serialize(&mut blob)?;
+    let script = TransactionScript::new(blob, args);
+
     let account = data.account();
-
-    let program = make_transaction_program(program, args)?;
     let account_resource = exec.read_account_resource(&account).unwrap();
-
-    let transaction = RawTransaction::new(
+    Ok(RawTransaction::new_script(
         *data.address(),
         account_resource.sequence_number(),
-        program,
+        script,
         account_resource.balance(),
         1,
         Duration::from_secs(u64::max_value()),
     )
     .sign(&account.privkey, account.pubkey.clone())?
-    .into_inner();
+    .into_inner())
+}
 
+/// Creates and signs a module transaction.
+fn make_module_transaction(
+    exec: &FakeExecutor,
+    data: &AccountData,
+    module: CompiledModule,
+) -> Result<SignedTransaction> {
+    let mut blob = vec![];
+    module.serialize(&mut blob)?;
+    let module = TransactionModule::new(blob);
+
+    let account = data.account();
+    let account_resource = exec.read_account_resource(&account).unwrap();
+    Ok(RawTransaction::new_module(
+        *data.address(),
+        account_resource.sequence_number(),
+        module,
+        account_resource.balance(),
+        1,
+        Duration::from_secs(u64::max_value()),
+    )
+    .sign(&account.privkey, account.pubkey.clone())?
+    .into_inner())
+}
+
+/// Runs a single transaction using the fake executor.
+fn run_transaction(
+    exec: &mut FakeExecutor,
+    transaction: SignedTransaction,
+) -> Result<TransactionOutput> {
     let mut outputs = exec.execute_block(vec![transaction]);
     if outputs.len() == 1 {
         let output = outputs.pop().unwrap();
@@ -144,30 +229,35 @@ fn run_transaction(
     }
 }
 
-/// Serializes the program then deserializes it.
-fn run_serializer_round_trip(program: &CompiledProgram) -> Result<()> {
-    let (script_blob, module_blobs) = serialize_program(program)?;
+/// Serializes the script then deserializes it.
+fn serialize_and_deserialize_script(script: &CompiledScript) -> Result<()> {
+    let mut script_blob = vec![];
+    script.serialize(&mut script_blob)?;
+    let deserialized_script = CompiledScript::deserialize(&script_blob)?;
 
-    assert_eq!(module_blobs.len(), program.modules.len());
-
-    let script = CompiledScript::deserialize(&script_blob)?;
-    if script != program.script {
+    if *script != deserialized_script {
         return Err(ErrorKind::Other(
             "deserialized script different from original one".to_string(),
         )
         .into());
     }
 
-    for (i, blob) in module_blobs.iter().enumerate() {
-        let module = CompiledModule::deserialize(blob)?;
-        if module != program.modules[i] {
-            return Err(ErrorKind::Other(format!(
-                "deserialized module {} different from original one",
-                program.modules[i].name()
-            ))
-            .into());
-        }
+    Ok(())
+}
+
+/// Serializes the module then deserializes it.
+fn serialize_and_deserialize_module(module: &CompiledModule) -> Result<()> {
+    let mut module_blob = vec![];
+    module.serialize(&mut module_blob)?;
+    let deserialized_module = CompiledModule::deserialize(&module_blob)?;
+
+    if *module != deserialized_module {
+        return Err(ErrorKind::Other(
+            "deserialized module different from original one".to_string(),
+        )
+        .into());
     }
+
     Ok(())
 }
 
@@ -212,66 +302,102 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
         // insert a barrier in the output
         res.outputs.push(EvaluationOutput::Transaction);
 
-        // stage 1: parse the program
+        // stage 1: parse the script/module
         if transaction.config.is_stage_disabled(Stage::Parser) {
             continue;
         }
         res.outputs.push(EvaluationOutput::Stage(Stage::Parser));
-        let parsed_program = unwrap_or_log!(parse_program(&transaction.program), res);
-        res.outputs
-            .push(EvaluationOutput::Output(format!("{:?}", parsed_program)));
+        let parsed_script_or_module =
+            unwrap_or_log!(parse_script_or_module(&transaction.input), res);
+        res.outputs.push(EvaluationOutput::Output(format!(
+            "{:?}",
+            parsed_script_or_module
+        )));
 
-        // stage 2: compile the program
-        if transaction.config.is_stage_disabled(Stage::Compiler) {
-            continue;
-        }
-        res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
-        let compiled_program = unwrap_or_log!(compile_program(addr, &parsed_program, &deps), res);
-        res.outputs
-            .push(EvaluationOutput::Output(format!("{:?}", compiled_program)));
+        match parsed_script_or_module {
+            ScriptOrModule::Script(parsed_script) => {
+                // stage 2: compile the script
+                if transaction.config.is_stage_disabled(Stage::Compiler) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
 
-        // stage 3: verify the program
-        let compiled_program = if !transaction.config.is_stage_disabled(Stage::Verifier) {
-            res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
-            let verified_program = unwrap_or_log!(do_verify_program(compiled_program, &deps), res);
-            res.outputs.push(EvaluationOutput::Output("".to_string()));
+                let compiled_script =
+                    unwrap_or_log!(compile_script(addr, &parsed_script, &deps), res);
+                res.outputs
+                    .push(EvaluationOutput::Output(format!("{:?}", compiled_script)));
 
-            let new_modules = verified_program.modules().to_vec();
-            // This has to be before deps.extend since verified_program holds a reference to the
-            // deps.
-            let compiled_program = verified_program.into_inner();
-            deps.extend(new_modules);
+                // stage 3: verify the script
+                if transaction.config.is_stage_disabled(Stage::Verifier) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
+                let compiled_script =
+                    unwrap_or_log!(do_verify_script(compiled_script, &deps), res).into_inner();
 
-            compiled_program
-        } else {
-            // Add the to-be-published modules to the dependency list without using verifier.
-            let new_modules = compiled_program
-                .modules
-                .iter()
-                .map(|m| VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(m.clone()));
-            deps.extend(new_modules);
+                // stage 4: serializer round trip
+                if !transaction.config.is_stage_disabled(Stage::Serializer) {
+                    res.outputs.push(EvaluationOutput::Stage(Stage::Serializer));
+                    unwrap_or_log!(serialize_and_deserialize_script(&compiled_script), res);
+                }
 
-            compiled_program
-        };
+                // stage 5: execute the script
+                if transaction.config.is_stage_disabled(Stage::Runtime) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
+                let script_transaction = make_script_transaction(
+                    &exec,
+                    data,
+                    compiled_script,
+                    transaction.config.args.clone(),
+                )?;
+                let txn_output =
+                    unwrap_or_log!(run_transaction(&mut exec, script_transaction), res);
+                exec.apply_write_set(txn_output.write_set());
+            }
+            ScriptOrModule::Module(parsed_module) => {
+                // stage 2: compile the module
+                if transaction.config.is_stage_disabled(Stage::Compiler) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Compiler));
 
-        // stage 4: serializer round trip
-        if !transaction.config.is_stage_disabled(Stage::Serializer) {
-            res.outputs.push(EvaluationOutput::Stage(Stage::Serializer));
-            unwrap_or_log!(run_serializer_round_trip(&compiled_program), res);
-        }
+                let compiled_module =
+                    unwrap_or_log!(compile_module(addr, &parsed_module, &deps), res);
+                res.outputs
+                    .push(EvaluationOutput::Output(format!("{:?}", compiled_module)));
 
-        // stage 5: execute the program
-        if !transaction.config.is_stage_disabled(Stage::Runtime) {
-            res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
-            let txn_output = unwrap_or_log!(
-                run_transaction(&mut exec, data, &compiled_program, &transaction.config.args),
-                res
-            );
-            res.outputs
-                .push(EvaluationOutput::Output(format!("{:?}", txn_output)));
+                // module is added to the list of dependencies despite it passes the verifier or
+                // not
+                deps.push(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
+                    compiled_module.clone(),
+                ));
 
-            // apply the writeset
-            exec.apply_write_set(txn_output.write_set());
+                // stage 3: verify the module
+                if transaction.config.is_stage_disabled(Stage::Verifier) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Verifier));
+                let compiled_module =
+                    unwrap_or_log!(do_verify_module(compiled_module, &deps), res).into_inner();
+
+                // stage 4: serializer round trip
+                if !transaction.config.is_stage_disabled(Stage::Serializer) {
+                    res.outputs.push(EvaluationOutput::Stage(Stage::Serializer));
+                    unwrap_or_log!(serialize_and_deserialize_module(&compiled_module), res);
+                }
+
+                // stage 5: publish the module
+                if transaction.config.is_stage_disabled(Stage::Runtime) {
+                    continue;
+                }
+                res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
+                let module_transaction = make_module_transaction(&exec, data, compiled_module)?;
+                let txn_output =
+                    unwrap_or_log!(run_transaction(&mut exec, module_transaction), res);
+                exec.apply_write_set(txn_output.write_set());
+            }
         }
     }
 

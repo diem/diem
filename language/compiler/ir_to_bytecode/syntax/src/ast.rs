@@ -24,14 +24,27 @@ pub type Loc = Span<ByteIndex>;
 //**************************************************************************************************
 // Program
 //**************************************************************************************************
+
 #[derive(Debug, Clone)]
 /// A set of move modules and a Move transaction script
-
 pub struct Program {
     /// The modules to publish
     pub modules: Vec<ModuleDefinition>,
     /// The transaction script to execute
     pub script: Script,
+}
+
+//**************************************************************************************************
+// ScriptOrModule
+//**************************************************************************************************
+
+#[derive(Debug, Clone)]
+/// A script or a module, used to represent the two types of transactions.
+pub enum ScriptOrModule {
+    /// The script to execute.
+    Script(Script),
+    /// The module to publish.
+    Module(ModuleDefinition),
 }
 
 //**************************************************************************************************

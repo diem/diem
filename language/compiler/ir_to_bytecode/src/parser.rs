@@ -25,6 +25,17 @@ fn strip_comments(string: &str) -> String {
     line_comments.replace_all(string, "$1").into_owned()
 }
 
+/// Given the raw input of a file, creates a `ScriptOrModule` enum
+/// Fails with `Err(_)` if the text cannot be parsed`
+pub fn parse_script_or_module(s: &str) -> Result<ast::ScriptOrModule> {
+    let stripped_string = &strip_comments(s);
+    let parser = syntax::ScriptOrModuleParser::new();
+    match parser.parse(stripped_string) {
+        Ok(result) => Ok(result),
+        Err(e) => handle_error(e, s),
+    }
+}
+
 /// Given the raw input of a file, creates a `Program` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_program(program_str: &str) -> Result<ast::Program> {
