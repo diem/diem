@@ -67,7 +67,7 @@ impl ModuleId {
         ModuleId { address, name }
     }
 
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &str {
         &self.name
     }
 

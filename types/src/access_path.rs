@@ -73,7 +73,7 @@ impl Field {
         Field(s.to_string())
     }
 
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &str {
         &self.0
     }
 }

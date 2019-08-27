@@ -337,7 +337,7 @@ impl ModuleBuilder {
         let (mut names, mut addresses) = self
             .known_modules
             .keys()
-            .map(|key| (key.name().clone(), key.address()))
+            .map(|key| (key.name().to_string(), key.address()))
             .unzip();
 
         let address_pool_offset = self.module.address_pool.len() as TableIndex;
