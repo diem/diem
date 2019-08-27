@@ -8,7 +8,7 @@
 
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
-pub(crate) mod event_by_access_path;
+pub(crate) mod event_by_key;
 pub(crate) mod jellyfish_merkle_node;
 pub(crate) mod ledger_counters;
 pub(crate) mod ledger_info;
@@ -22,7 +22,7 @@ use failure::prelude::*;
 use schemadb::ColumnFamilyName;
 
 pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
-pub(super) const EVENT_BY_ACCESS_PATH_CF_NAME: ColumnFamilyName = "event_by_access_path";
+pub(super) const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";
 pub(super) const EVENT_CF_NAME: ColumnFamilyName = "event";
 pub(super) const JELLYFISH_MERKLE_NODE_CF_NAME: ColumnFamilyName = "jellyfish_merkle_node";
 pub(super) const LEDGER_COUNTERS_CF_NAME: ColumnFamilyName = "ledger_counters";
@@ -36,16 +36,6 @@ fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     ensure!(
         data.len() == len,
         "Unexpected data len {}, expected {}.",
-        data.len(),
-        len,
-    );
-    Ok(())
-}
-
-fn ensure_slice_len_gt(data: &[u8], len: usize) -> Result<()> {
-    ensure!(
-        data.len() > len,
-        "Unexpected data len {}, expected greater than {}.",
         data.len(),
         len,
     );

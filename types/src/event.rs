@@ -1,6 +1,6 @@
 #![allow(clippy::unit_arg)]
 
-use crate::{access_path::AccessPath, account_address::AccountAddress};
+use crate::account_address::AccountAddress;
 #[cfg(any(test, feature = "testing"))]
 use canonical_serialization::SimpleSerializer;
 use canonical_serialization::{
@@ -41,13 +41,6 @@ impl EventKey {
     /// Convert event key into a byte array.
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
-    }
-
-    /// Return the AccessPath to where this event is stored in EventStore.
-    /// TODO: Clean up this API by creating a new type wrapper for this new key type.
-    pub fn as_access_path(&self) -> Result<AccessPath> {
-        let key = AccountAddress::try_from(&self.0)?;
-        Ok(AccessPath::new(key, vec![]))
     }
 
     #[cfg(any(test, feature = "testing"))]
