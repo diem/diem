@@ -9,7 +9,6 @@ set -e
 allowed_features=(
   "--and" "--not" "-e" "async_await"
   "--and" "--not" "-e" "custom_test_frameworks"
-  "--and" "--not" "-e" "set_stdio"
 )
 
 # Search for nightly features
