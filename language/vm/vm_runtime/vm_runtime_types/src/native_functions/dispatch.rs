@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{hash, primitive_helpers, signature, vector};
-use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
+use crate::{
+    loaded_data::types::Type, native_structs::dispatch::dispatch_native_struct, value::Local,
+};
 use std::collections::{HashMap, VecDeque};
 use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
@@ -29,8 +31,8 @@ pub enum NativeReturnStatus {
 
 /// Struct representing the expected definition for a native function
 pub struct NativeFunction {
-    /// Given the vector of aguments, it executes the native function
-    pub dispatch: fn(VecDeque<Local>) -> NativeReturnStatus,
+    /// Given the vector of type actuals and arguments, it executes the native function
+    pub dispatch: fn(VecDeque<Type>, VecDeque<Local>) -> NativeReturnStatus,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context
@@ -55,7 +57,16 @@ pub fn dispatch_native_function(
 
 macro_rules! add {
     ($m:ident, $addr:expr, $module:expr, $name:expr, $dis:expr, $args:expr, $ret:expr) => {{
-        add!($m, $addr, $module, $name, $dis, vec![], $args, $ret)
+        add!(
+            $m,
+            $addr,
+            $module,
+            $name,
+            |_, args| $dis(args),
+            vec![],
+            $args,
+            $ret
+        )
     }};
     ($m:ident, $addr:expr, $module:expr, $name:expr, $dis:expr, $kinds:expr, $args:expr, $ret:expr) => {{
         let expected_signature = FunctionSignature {

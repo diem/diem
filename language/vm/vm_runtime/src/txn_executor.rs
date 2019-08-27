@@ -299,26 +299,28 @@ where
                             for _ in 0..expected_args {
                                 arguments.push_front(self.execution_stack.pop()?);
                             }
-                            let (cost, return_values) = match (native_function.dispatch)(arguments)
-                            {
-                                NativeReturnStatus::InvalidArguments => {
-                                    // TODO: better error
-                                    return Err(VMInvariantViolation::LinkerError);
-                                }
-                                NativeReturnStatus::Aborted { cost, error_code } => {
-                                    try_runtime!(self
-                                        .gas_meter
-                                        .consume_gas(GasUnits::new(cost), &self.execution_stack));
-                                    return Ok(Err(VMRuntimeError {
-                                        loc: self.execution_stack.location()?,
-                                        err: VMErrorKind::Aborted(error_code),
-                                    }));
-                                }
-                                NativeReturnStatus::Success {
-                                    cost,
-                                    return_values,
-                                } => (cost, return_values),
-                            };
+                            // TODO: Fill in the type actuals from the Call instruction.
+                            let (cost, return_values) =
+                                match (native_function.dispatch)(VecDeque::new(), arguments) {
+                                    NativeReturnStatus::InvalidArguments => {
+                                        // TODO: better error
+                                        return Err(VMInvariantViolation::LinkerError);
+                                    }
+                                    NativeReturnStatus::Aborted { cost, error_code } => {
+                                        try_runtime!(self.gas_meter.consume_gas(
+                                            GasUnits::new(cost),
+                                            &self.execution_stack
+                                        ));
+                                        return Ok(Err(VMRuntimeError {
+                                            loc: self.execution_stack.location()?,
+                                            err: VMErrorKind::Aborted(error_code),
+                                        }));
+                                    }
+                                    NativeReturnStatus::Success {
+                                        cost,
+                                        return_values,
+                                    } => (cost, return_values),
+                                };
                             try_runtime!(self
                                 .gas_meter
                                 .consume_gas(GasUnits::new(cost), &self.execution_stack));
