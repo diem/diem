@@ -20,6 +20,7 @@ pub mod proto;
 pub mod test_helpers;
 pub mod transaction;
 pub mod transaction_helpers;
+pub mod user_string;
 pub mod validator_change;
 pub mod validator_public_keys;
 pub mod validator_set;
