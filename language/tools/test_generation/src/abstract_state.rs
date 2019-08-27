@@ -25,7 +25,7 @@ pub struct AbstractState {
     locals: HashMap<usize, (SignatureToken, BorrowState)>,
 
     /// Temporary location for storing the results of instruction effects for
-    /// access by subsequent instructions
+    /// access by subsequent instructions' effects
     register: Option<SignatureToken>,
 }
 
