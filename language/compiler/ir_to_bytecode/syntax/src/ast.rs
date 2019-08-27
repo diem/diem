@@ -584,7 +584,7 @@ impl ModuleName {
     }
 
     /// Accessor for the module name's string value
-    pub fn name_ref(&self) -> &String {
+    pub fn name_ref(&self) -> &str {
         &self.0
     }
 }
@@ -718,7 +718,7 @@ impl StructName {
     }
 
     /// Accessor for the name of the struct
-    pub fn name_ref(&self) -> &String {
+    pub fn name_ref(&self) -> &str {
         &self.0
     }
 }
@@ -772,7 +772,7 @@ impl FunctionName {
     }
 
     /// Accessor for the name of the function
-    pub fn name_ref(&self) -> &String {
+    pub fn name_ref(&self) -> &str {
         &self.0
     }
 }
