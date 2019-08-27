@@ -25,6 +25,7 @@ pub mod resolver;
 pub mod serializer;
 pub mod transaction_metadata;
 pub mod views;
+pub mod vm_string;
 
 #[cfg(test)]
 mod unit_tests;
