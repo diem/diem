@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    output_tee::{OutputTee, OutputTeeGuard},
-    utils,
-};
+use crate::utils;
 use config::config::{NodeConfig, RoleType};
 use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfig, SwarmConfigBuilder};
 use crypto::{ed25519::*, test_utils::KeyPair};
@@ -17,11 +14,10 @@ use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Child, Command},
     str::FromStr,
 };
 use tempfile::TempDir;
-use tools::output_capture::OutputCapture;
 
 const LIBRA_NODE_BIN: &str = "libra_node";
 
@@ -31,7 +27,6 @@ pub struct LibraNode {
     ac_port: u16,
     peer_id: String,
     log: PathBuf,
-    output_tee_guard: Option<OutputTeeGuard>,
 }
 
 impl Drop for LibraNode {
@@ -49,9 +44,6 @@ impl Drop for LibraNode {
                 }
             }
         }
-        if let Some(output_tee_guard) = self.output_tee_guard.take() {
-            output_tee_guard.join();
-        }
     }
 }
 
@@ -61,7 +53,6 @@ impl LibraNode {
         config_path: &Path,
         logdir: &Path,
         disable_logging: bool,
-        tee_logs: bool,
     ) -> Result<Self> {
         let peer_id = config.network.peer_id.clone();
         let log = logdir.join(format!("{}.log", SwarmConfig::get_alias(&config)));
@@ -80,32 +71,13 @@ impl LibraNode {
             node_command.arg("-d");
         }
 
-        if tee_logs {
-            node_command.stdout(Stdio::piped()).stderr(Stdio::piped());
-        } else {
-            node_command
-                .stdout(log_file.try_clone()?)
-                .stderr(log_file.try_clone()?);
-        };
+        node_command
+            .stdout(log_file.try_clone()?)
+            .stderr(log_file.try_clone()?);
 
-        let mut node = node_command
+        let node = node_command
             .spawn()
             .context("Error launching node process")?;
-
-        let output_tee_guard = if tee_logs {
-            let prefix = format!("[{}] ", &peer_id[..8]);
-            let capture = OutputCapture::grab();
-            let tee = OutputTee::new(
-                capture,
-                Box::new(log_file),
-                Box::new(node.stdout.take().expect("Can't get child stdout")),
-                Box::new(node.stderr.take().expect("Can't get child stderr")),
-                prefix,
-            );
-            Some(tee.start())
-        } else {
-            None
-        };
 
         let debug_client = NodeDebugClient::new(
             "localhost",
@@ -117,7 +89,6 @@ impl LibraNode {
             ac_port: config.admission_control.admission_control_service_port,
             peer_id,
             log,
-            output_tee_guard,
         })
     }
 
@@ -233,7 +204,6 @@ pub struct LibraSwarm {
     pub validator_nodes: HashMap<String, LibraNode>,
     pub full_nodes: Vec<LibraNode>,
     pub config: SwarmConfig,
-    tee_logs: bool,
 }
 
 #[derive(Debug, Fail)]
@@ -254,7 +224,6 @@ impl LibraSwarm {
         topology: LibraSwarmTopology,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-        tee_logs: bool,
         config_dir: Option<String>,
         template_path: Option<String>,
     ) -> Self {
@@ -266,7 +235,6 @@ impl LibraSwarm {
                 topology.clone(),
                 disable_logging,
                 faucet_account_keypair.clone(),
-                tee_logs,
                 swarm_config_dir,
                 &template_path,
             ) {
@@ -305,7 +273,6 @@ impl LibraSwarm {
         topology: LibraSwarmTopology,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-        tee_logs: bool,
         dir: LibraSwarmDir,
         template_path: &Option<String>,
     ) -> std::result::Result<Self, SwarmLaunchFailure> {
@@ -331,18 +298,11 @@ impl LibraSwarm {
             validator_nodes: HashMap::new(),
             full_nodes: vec![],
             config,
-            tee_logs,
         };
         // For each config launch a node
         for (path, node_config) in swarm.config.get_configs() {
-            let node = LibraNode::launch(
-                &node_config,
-                &path,
-                &logs_dir_path,
-                disable_logging,
-                tee_logs,
-            )
-            .unwrap();
+            let node =
+                LibraNode::launch(&node_config, &path, &logs_dir_path, disable_logging).unwrap();
             match (&node_config.network.role).into() {
                 RoleType::Validator => {
                     swarm.validator_nodes.insert(node.peer_id(), node);
@@ -570,9 +530,7 @@ impl LibraSwarm {
                 )[..],
             );
         let logs_dir_path = self.dir.as_ref().map(|x| x.as_ref().join("logs")).unwrap();
-        let mut node =
-            LibraNode::launch(config, path, &logs_dir_path, disable_logging, self.tee_logs)
-                .unwrap();
+        let mut node = LibraNode::launch(config, path, &logs_dir_path, disable_logging).unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.validator_nodes.insert(peer_id, node);

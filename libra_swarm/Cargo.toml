@@ -20,7 +20,6 @@ failure = { path = "../common/failure_ext", package = "failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 logger = { path = "../common/logger" }
 crypto = { path = "../crypto/crypto" }
-tools = { path = "../common/tools" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"]}

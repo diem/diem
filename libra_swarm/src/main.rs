@@ -52,7 +52,6 @@ fn main() {
         topology,
         !args.enable_logging,
         faucet_account_keypair,
-        false, /* tee_logs */
         args.config_dir.clone(),
         None, /* template_path */
     );

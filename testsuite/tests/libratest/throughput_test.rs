@@ -42,7 +42,6 @@ rusty_fork_test! {
             topology,
             true,   /* disable_logging */
             faucet_account_keypair,
-            false,  /* tee_logs */
             None,   /* config_dir */
             None,   /* template_path */
         );
