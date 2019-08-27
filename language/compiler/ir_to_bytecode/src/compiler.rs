@@ -529,7 +529,7 @@ trait Scope {
         mh_idx: ModuleHandleIndex,
         struct_name: &str,
     ) -> Result<&StructHandle>;
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String>;
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str>;
     fn get_struct_def_at(&self, idx: StructDefinitionIndex) -> Result<&StructDefinition>;
     fn get_struct_handle_at(&self, idx: StructHandleIndex) -> Result<&StructHandle>;
     fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex>;
@@ -767,7 +767,7 @@ impl<'a> Scope for ModuleScope<'a> {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         self.module.get_string_at(idx)
     }
 
@@ -841,7 +841,7 @@ impl<'a> Scope for ModuleScope<'a> {
     fn get_name(&self) -> Result<String> {
         let mh = self.module.get_module_at(ModuleHandleIndex::new(0))?;
         let name_ref = self.module.get_string_at(mh.name)?;
-        Ok(name_ref.clone())
+        Ok(name_ref.to_string())
     }
 }
 
@@ -1024,7 +1024,7 @@ impl<'a> Scope for ScriptScope<'a> {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
+    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         self.script.get_string_at(idx)
     }
 
