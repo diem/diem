@@ -524,7 +524,13 @@ pub struct NetworkConfig {
     pub advertised_address: Multiaddr,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
+    // Flag to toggle if Noise is used for encryption and authentication.
     pub enable_encryption_and_authentication: bool,
+    // If the network is permissioned, only trusted peers are allowed to connect. Otherwise, any
+    // node can connect. If this flag is set to true, the `enable_encryption_and_authentication`
+    // must also be set to true.
+    pub is_permissioned: bool,
+    // The role of the node in the network. One of: {"validator", "full_node"}.
     pub role: String,
     // peer_keypairs contains all the node's private keys,
     // it is filled later on from peer_keypairs_file.
@@ -552,6 +558,7 @@ impl Default for NetworkConfig {
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_encryption_and_authentication: true,
+            is_permissioned: true,
             peer_keypairs_file: PathBuf::from("peer_keypairs.config.toml"),
             peer_keypairs: KeyPairs::default(),
             trusted_peers_file: PathBuf::from("trusted_peers.config.toml"),
@@ -572,6 +579,7 @@ impl Clone for NetworkConfig {
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_encryption_and_authentication: self.enable_encryption_and_authentication,
+            is_permissioned: self.is_permissioned,
             role: self.role.clone(),
             peer_keypairs: self.peer_keypairs.clone(),
             peer_keypairs_file: self.peer_keypairs_file.clone(),

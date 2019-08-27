@@ -209,6 +209,7 @@ impl SwarmConfig {
             enable_encryption_and_authentication: template
                 .network
                 .enable_encryption_and_authentication,
+            is_permissioned: template.network.is_permissioned,
         };
         let mut config = NodeConfig {
             base: base_config,

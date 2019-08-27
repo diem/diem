@@ -93,7 +93,7 @@ pub struct NetworkProvider<TSubstream> {
     /// Channel over which we receive notifications from DirectSend actor.
     ds_notifs_rx: channel::Receiver<DirectSendNotification>,
     /// Channel over which we send requests to the ConnectivityManager actor.
-    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+    conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     /// Channel to receive requests from other actors.
     requests_rx: channel::Receiver<NetworkRequest>,
     /// Channel over which other actors send requests to network.
@@ -237,7 +237,7 @@ where
         rpc_notifs_rx: channel::Receiver<RpcNotification>,
         ds_reqs_tx: channel::Sender<DirectSendRequest>,
         ds_notifs_rx: channel::Receiver<DirectSendNotification>,
-        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+        conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
         requests_rx: channel::Receiver<NetworkRequest>,
         requests_tx: channel::Sender<NetworkRequest>,
         max_concurrent_reqs: u32,
@@ -264,7 +264,7 @@ where
         req: NetworkRequest,
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
-        mut conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+        conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     ) {
         trace!("NetworkRequest::{:?}", req);
         match req {
@@ -283,6 +283,9 @@ where
                     .unwrap();
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
+                let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx
+                    .clone()
+                    .expect("Received requst to update eligible nodes in permissionless network");
                 conn_mgr_reqs_tx
                     .send(ConnectivityRequest::UpdateEligibleNodes(nodes))
                     .await
