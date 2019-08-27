@@ -24,7 +24,7 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
-pub use mock_state_computer::MockStateComputer;
+pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
 

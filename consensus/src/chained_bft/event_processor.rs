@@ -21,7 +21,7 @@ use crate::{
         epoch_manager::EpochManager,
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
-            proposal_generator::ProposalGenerator,
+            proposal_generator::{ProposalGenerationError, ProposalGenerator},
             proposer_election::ProposerElection,
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
@@ -44,6 +44,10 @@ use types::crypto_proxies::LedgerInfoWithSignatures;
 #[cfg(test)]
 #[path = "event_processor_test.rs"]
 mod event_processor_test;
+
+#[cfg(any(feature = "fuzzing", test))]
+#[path = "event_processor_fuzzing.rs"]
+pub mod event_processor_fuzzing;
 
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
@@ -141,24 +145,32 @@ impl<T: Payload> EventProcessor<T> {
         {
             return;
         }
+        let proposal_msg = match self.generate_proposal(new_round_event).await {
+            Ok(x) => x,
+            Err(e) => {
+                error!("Error while generating proposal: {:?}", e);
+                return;
+            }
+        };
+        let mut network = self.network.clone();
+        network.broadcast_proposal(proposal_msg).await;
+        counters::PROPOSALS_COUNT.inc();
+    }
 
+    async fn generate_proposal(
+        &self,
+        new_round_event: NewRoundEvent,
+    ) -> Result<ProposalMsg<T>, ProposalGenerationError> {
         // Proposal generator will ensure that at most one proposal is generated per round
-        let proposal = match self
+        let proposal = self
             .proposal_generator
             .generate_proposal(
                 new_round_event.round,
                 self.pacemaker.current_round_deadline(),
             )
-            .await
-        {
-            Err(e) => {
-                error!("Error while generating proposal: {:?}", e);
-                return;
-            }
-            Ok(proposal) => proposal,
-        };
-        let mut network = self.network.clone();
+            .await?;
         debug!("Propose {}", proposal);
+        // should we include a TC?
         let timeout_certificate = match &new_round_event.reason {
             NewRoundReason::Timeout { cert }
                 if cert.round() > proposal.quorum_cert().certified_block_round() =>
@@ -167,18 +179,17 @@ impl<T: Payload> EventProcessor<T> {
             }
             _ => None,
         };
+
         let sync_info = SyncInfo::new(
             (*proposal.quorum_cert()).clone(),
             (*self.block_store.highest_ledger_info()).clone(),
             timeout_certificate,
         );
-        network
-            .broadcast_proposal(ProposalMsg {
-                proposal,
-                sync_info,
-            })
-            .await;
-        counters::PROPOSALS_COUNT.inc();
+        // return proposal
+        Ok(ProposalMsg {
+            proposal,
+            sync_info,
+        })
     }
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid

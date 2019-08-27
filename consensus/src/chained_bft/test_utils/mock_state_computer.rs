@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::consensus_types::quorum_cert::QuorumCert,
+    chained_bft::{consensus_types::quorum_cert::QuorumCert, test_utils::TestPayload},
     state_replication::{StateComputeResult, StateComputer},
 };
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
@@ -60,6 +60,37 @@ impl StateComputer for MockStateComputer {
         self.commit_callback
             .unbounded_send(commit.ledger_info().clone())
             .expect("Fail to notify about sync");
+        async { Ok(true) }.boxed()
+    }
+}
+
+pub struct EmptyStateComputer;
+
+impl StateComputer for EmptyStateComputer {
+    type Payload = TestPayload;
+    fn compute(
+        &self,
+        _parent_id: HashValue,
+        _block_id: HashValue,
+        _transactions: &Self::Payload,
+    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+        future::ok(StateComputeResult {
+            new_state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+            compute_status: vec![],
+            num_successful_txns: 0,
+            validators: None,
+        })
+        .boxed()
+    }
+
+    fn commit(
+        &self,
+        _commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        future::ok(()).boxed()
+    }
+
+    fn sync_to(&self, _commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         async { Ok(true) }.boxed()
     }
 }
