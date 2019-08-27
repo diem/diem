@@ -1,6 +1,7 @@
 //! This module translates the bytecode of a module to Boogie code.
 
 use bytecode_verifier::VerifiedModule;
+use num::{BigInt, Num};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
@@ -185,6 +186,8 @@ impl<'a> ModuleTranslator<'a> {
         // translation of stackless bytecode
         for (idx, function_def) in self.module.function_defs().iter().enumerate() {
             if function_def.is_native() {
+                res.push_str(&self.generate_function_sig(idx, false, &None));
+                res.push_str(";\n");
                 continue;
             }
             res.push_str(&self.translate_function(idx));
@@ -404,7 +407,7 @@ impl<'a> ModuleTranslator<'a> {
             LdConst(idx, num) => vec![format!("call t{} := LdConst({});", idx, num)],
             LdAddr(idx, addr_idx) => {
                 let addr = self.module.address_pool()[(*addr_idx).into_index()];
-                let addr_int = u64::from_str_radix(&addr.to_string(), 16).unwrap();
+                let addr_int = BigInt::from_str_radix(&addr.to_string(), 16).unwrap();
                 vec![format!("call t{} := LdAddr({});", idx, addr_int)]
             }
             Not(dest, operand) => vec![format!("call t{} := Not(t{});", dest, operand)],
@@ -497,12 +500,12 @@ impl<'a> ModuleTranslator<'a> {
         }
         if inline {
             format!(
-                "procedure {{:inline 1}} {}_inline (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})\n",
+                "procedure {{:inline 1}} {}_inline (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
                 fun_name, args, rets
             )
         } else {
             format!(
-                "procedure {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})\n",
+                "procedure {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
                 fun_name, args, rets
             )
         }
@@ -518,7 +521,7 @@ impl<'a> ModuleTranslator<'a> {
         let function_def = &self.module.function_defs()[idx];
         let code = &self.stackless_bytecode[idx];
 
-        res.push_str("{\n");
+        res.push_str("\n{\n");
         res.push_str("    // declare local variables\n".into());
 
         let function_handle = self.module.function_handle_at(function_def.function);
@@ -720,9 +723,12 @@ impl<'a> ModuleTranslator<'a> {
     fn function_name_from_handle_index(&self, idx: FunctionHandleIndex) -> String {
         let function_handle = self.module.function_handle_at(idx);
         let module_handle_index = function_handle.module;
-        let module_name = self
+        let mut module_name = self
             .module
             .string_at(self.module.module_handle_at(module_handle_index).name);
+        if module_name == "<SELF>" {
+            module_name = "self";
+        } // boogie doesn't allow '<' or '>'
         let function_handle_view = FunctionHandleView::new(self.module, function_handle);
         let function_name = function_handle_view.name();
         format!("{}_{}", module_name, function_name)
