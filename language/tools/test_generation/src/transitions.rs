@@ -1,14 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::abstract_state::{AbstractState, BorrowState};
-use vm::file_format::SignatureToken;
+use crate::abstract_state::{AbstractState, AbstractValue, BorrowState};
+use vm::file_format::Kind;
 
-/// Determine whether the stack is at least of size `index`. If the optional `token` argument
-/// is some `SignatureToken`, check whether the type at `index` is that token.
-pub fn stack_has(state: &AbstractState, index: usize, token: Option<SignatureToken>) -> bool {
-    match token {
-        Some(token) => index < state.stack_len() && state.stack_peek(index) == Some(token),
+/// Determine whether the stack is at least of size `index`. If the optional `abstract_value`
+/// argument is some `AbstractValue`, check whether the type at `index` is that abstract_value.
+pub fn stack_has(
+    state: &AbstractState,
+    index: usize,
+    abstract_value: Option<AbstractValue>,
+) -> bool {
+    match abstract_value {
+        Some(abstract_value) => {
+            index < state.stack_len() && state.stack_peek(index) == Some(abstract_value)
+        }
         None => index < state.stack_len(),
     }
 }
@@ -28,10 +34,10 @@ pub fn stack_pop(state: &AbstractState) -> AbstractState {
     state
 }
 
-/// Push given token to the top of the stack.
-pub fn stack_push(state: &AbstractState, token: SignatureToken) -> AbstractState {
+/// Push given abstract_value to the top of the stack.
+pub fn stack_push(state: &AbstractState, abstract_value: AbstractValue) -> AbstractState {
     let mut state = state.clone();
-    state.stack_push(token);
+    state.stack_push(abstract_value);
     state
 }
 
@@ -47,9 +53,14 @@ pub fn local_exists(state: &AbstractState, index: u8) -> bool {
     state.local_exists(index as usize)
 }
 
-/// Check whether the local at `index` is available (`true`) or unavailable (`false`)
-pub fn local_is(state: &AbstractState, index: u8, availability: BorrowState) -> bool {
-    state.local_is(index as usize, availability)
+/// Check whether the local at `index` is of the given availability
+pub fn local_availability_is(state: &AbstractState, index: u8, availability: BorrowState) -> bool {
+    state.local_availability_is(index as usize, availability)
+}
+
+/// Check whether the local at `index` is of the given kind
+pub fn local_kind_is(state: &AbstractState, index: u8, kind: Kind) -> bool {
+    state.local_kind_is(index as usize, kind)
 }
 
 /// Set the availability of local at `index`
@@ -80,11 +91,12 @@ pub fn local_place(state: &AbstractState, index: u8) -> AbstractState {
     state
 }
 
-/// Determine whether a token on the stack and a token in the locals have the same type
+/// Determine whether a abstract_value on the stack and a abstract_value in the locals have the same
+/// type
 pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
     if stack_has(state, index1, None) {
-        if let Some((token, _)) = state.local_get(index2) {
-            return state.stack_peek(index1) == Some(token.clone());
+        if let Some((abstract_value, _)) = state.local_get(index2) {
+            return state.stack_peek(index1) == Some(abstract_value.clone());
         }
     }
     false
@@ -99,7 +111,8 @@ macro_rules! state_stack_has {
     };
 }
 
-/// Wrapper for determining whether two tokens on the stack have the same type
+/// Wrapper for for enclosing the arguments of `stack_has_polymorphic_eq` so that only the `state`
+/// needs to be given.
 #[macro_export]
 macro_rules! state_stack_has_polymorphic_eq {
     ($e1: expr, $e2: expr) => {
@@ -134,8 +147,8 @@ macro_rules! state_stack_push_register {
     };
 }
 
-/// Wrapper for determining whether a token on the stack and a token in the locals
-/// have the same type
+/// Wrapper for enclosing the arguments of `stack_local_polymorphic_eq` so that only the `state`
+/// needs to be given.
 #[macro_export]
 macro_rules! state_stack_local_polymorphic_eq {
     ($e1: expr, $e2: expr) => {
@@ -152,12 +165,21 @@ macro_rules! state_local_exists {
     };
 }
 
-/// Wrapper for enclosing the arguments of `local_exists` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_availability_is` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_local_is {
+macro_rules! state_local_availability_is {
     ($e: expr, $a: expr) => {
-        Box::new(move |state| local_is(state, $e, $a))
+        Box::new(move |state| local_availability_is(state, $e, $a))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `local_kind_is` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_local_kind_is {
+    ($e: expr, $a: expr) => {
+        Box::new(move |state| local_kind_is(state, $e, $a))
     };
 }
 
@@ -170,7 +192,7 @@ macro_rules! state_local_set {
     };
 }
 
-/// Wrapper for enclosing the arguments of `local_get` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_take` so that only the `state` needs
 /// to be given.
 #[macro_export]
 macro_rules! state_local_take {
@@ -179,7 +201,7 @@ macro_rules! state_local_take {
     };
 }
 
-/// Wrapper for enclosing the arguments of `local_get_borrow` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_take_borrow` so that only the `state` needs
 /// to be given.
 #[macro_export]
 macro_rules! state_local_take_borrow {
@@ -188,7 +210,7 @@ macro_rules! state_local_take_borrow {
     };
 }
 
-/// Wrapper for enclosing the arguments of `stack_local_insert` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `local_palce` so that only the `state` needs
 /// to be given.
 #[macro_export]
 macro_rules! state_local_place {

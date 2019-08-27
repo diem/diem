@@ -1,5 +1,5 @@
 extern crate test_generation;
-use test_generation::abstract_state::AbstractState;
+use test_generation::abstract_state::{AbstractState, AbstractValue};
 use vm::file_format::{Bytecode, SignatureToken};
 
 mod common;
@@ -10,7 +10,7 @@ fn bytecode_gettxngasunitprice() {
     let state2 = common::run_instruction(Bytecode::GetTxnGasUnitPrice, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
 }
@@ -21,7 +21,7 @@ fn bytecode_gettxnmaxgasunits() {
     let state2 = common::run_instruction(Bytecode::GetTxnMaxGasUnits, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
 }
@@ -32,7 +32,7 @@ fn bytecode_gettxnsequencenumber() {
     let state2 = common::run_instruction(Bytecode::GetTxnSequenceNumber, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
 }
@@ -43,7 +43,7 @@ fn bytecode_getgasremaining() {
     let state2 = common::run_instruction(Bytecode::GetGasRemaining, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
 }

@@ -1,22 +1,29 @@
 extern crate test_generation;
-use test_generation::abstract_state::{AbstractState, BorrowState};
-use vm::file_format::{Bytecode, SignatureToken};
+use test_generation::abstract_state::{AbstractState, AbstractValue, BorrowState};
+use vm::file_format::{Bytecode, Kind, SignatureToken};
 
 mod common;
 
 #[test]
 fn bytecode_copyloc() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Available);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Available,
+    );
     let state2 = common::run_instruction(Bytecode::CopyLoc(0), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
     assert_eq!(
         state2.local_get(0),
-        Some(&(SignatureToken::U64, BorrowState::Available)),
+        Some(&(
+            AbstractValue::new_primitive(SignatureToken::U64),
+            BorrowState::Available
+        )),
         "locals signature postcondition not met"
     );
 }
@@ -32,23 +39,34 @@ fn bytecode_copyloc_no_local() {
 #[should_panic]
 fn bytecode_copyloc_local_unavailable() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Unavailable);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Unavailable,
+    );
     common::run_instruction(Bytecode::CopyLoc(0), state1);
 }
 
 #[test]
 fn bytecode_moveloc() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Available);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Available,
+    );
     let state2 = common::run_instruction(Bytecode::MoveLoc(0), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
     assert_eq!(
         state2.local_get(0),
-        Some(&(SignatureToken::U64, BorrowState::Unavailable)),
+        Some(&(
+            AbstractValue::new_primitive(SignatureToken::U64),
+            BorrowState::Unavailable
+        )),
         "locals signature postcondition not met"
     );
 }
@@ -64,25 +82,37 @@ fn bytecode_moveloc_no_local() {
 #[should_panic]
 fn bytecode_moveloc_local_unavailable() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Unavailable);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Unavailable,
+    );
     common::run_instruction(Bytecode::MoveLoc(0), state1);
 }
 
 #[test]
 fn bytecode_borrowloc() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Available);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Available,
+    );
     let state2 = common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::MutableReference(Box::new(
-            SignatureToken::U64
-        ))),
+        Some(AbstractValue::new_reference(
+            SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
+            Kind::Unrestricted
+        )),
         "stack type postcondition not met"
     );
     assert_eq!(
         state2.local_get(0),
-        Some(&(SignatureToken::U64, BorrowState::Available)),
+        Some(&(
+            AbstractValue::new_primitive(SignatureToken::U64),
+            BorrowState::Available
+        )),
         "locals signature postcondition not met"
     );
 }
@@ -90,16 +120,26 @@ fn bytecode_borrowloc() {
 #[test]
 fn bytecode_imm_borrowloc() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Available);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Available,
+    );
     let state2 = common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::Reference(Box::new(SignatureToken::U64))),
+        Some(AbstractValue::new_reference(
+            SignatureToken::Reference(Box::new(SignatureToken::U64),),
+            Kind::Unrestricted
+        )),
         "stack type postcondition not met"
     );
     assert_eq!(
         state2.local_get(0),
-        Some(&(SignatureToken::U64, BorrowState::Available)),
+        Some(&(
+            AbstractValue::new_primitive(SignatureToken::U64),
+            BorrowState::Available
+        )),
         "locals signature postcondition not met"
     );
 }
@@ -122,7 +162,11 @@ fn bytecode_imm_borrowloc_no_local() {
 #[should_panic]
 fn bytecode_borrowloc_local_unavailable() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Unavailable);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Unavailable,
+    );
     common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
 }
 
@@ -130,6 +174,10 @@ fn bytecode_borrowloc_local_unavailable() {
 #[should_panic]
 fn bytecode_imm_borrowloc_local_unavailable() {
     let mut state1 = AbstractState::new();
-    state1.local_insert(0, SignatureToken::U64, BorrowState::Unavailable);
+    state1.local_insert(
+        0,
+        AbstractValue::new_primitive(SignatureToken::U64),
+        BorrowState::Unavailable,
+    );
     common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
 }

@@ -1,5 +1,5 @@
 extern crate test_generation;
-use test_generation::abstract_state::AbstractState;
+use test_generation::abstract_state::{AbstractState, AbstractValue};
 use vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken, StringPoolIndex};
 
 mod common;
@@ -10,7 +10,7 @@ fn bytecode_ldconst() {
     let state2 = common::run_instruction(Bytecode::LdConst(0), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::U64),
+        Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
     );
 }
@@ -21,7 +21,7 @@ fn bytecode_ldtrue() {
     let state2 = common::run_instruction(Bytecode::LdTrue, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::Bool),
+        Some(AbstractValue::new_primitive(SignatureToken::Bool)),
         "stack type postcondition not met"
     );
 }
@@ -32,7 +32,7 @@ fn bytecode_ldfalse() {
     let state2 = common::run_instruction(Bytecode::LdFalse, state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::Bool),
+        Some(AbstractValue::new_primitive(SignatureToken::Bool)),
         "stack type postcondition not met"
     );
 }
@@ -43,7 +43,7 @@ fn bytecode_ldstr() {
     let state2 = common::run_instruction(Bytecode::LdStr(StringPoolIndex::new(0)), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::String),
+        Some(AbstractValue::new_primitive(SignatureToken::String)),
         "stack type postcondition not met"
     );
 }
@@ -54,7 +54,7 @@ fn bytecode_ldaddr() {
     let state2 = common::run_instruction(Bytecode::LdAddr(AddressPoolIndex::new(0)), state1);
     assert_eq!(
         state2.stack_peek(0),
-        Some(SignatureToken::Address),
+        Some(AbstractValue::new_primitive(SignatureToken::Address)),
         "stack type postcondition not met"
     );
 }
