@@ -1,6 +1,5 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 //! Helpers for fuzz testing.
 
 use lazy_static::lazy_static;

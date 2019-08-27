@@ -65,3 +65,7 @@ types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
 proptest = "0.9.4"
+
+[features]
+default = []
+fuzzing = []

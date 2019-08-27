@@ -51,7 +51,7 @@ use tokio::runtime::TaskExecutor;
 use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is setting up node environment for the test.
-struct NodeSetup {
+pub struct NodeSetup {
     author: Author,
     block_store: Arc<BlockStore<TestPayload>>,
     event_processor: EventProcessor<TestPayload>,
