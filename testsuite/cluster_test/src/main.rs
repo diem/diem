@@ -186,7 +186,7 @@ impl ClusterTestRunner {
         });
 
         // We expect experiments completes and cluster go into healthy state within timeout
-        let experiment_deadline = Instant::now() + Duration::from_secs(5 * 60);
+        let experiment_deadline = Instant::now() + Duration::from_secs(10 * 60);
 
         loop {
             if Instant::now() > experiment_deadline {
