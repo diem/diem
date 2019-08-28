@@ -5,8 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::BlockStore,
         common::Round,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        safety::vote_msg::VoteMsg,
+        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
     },
     state_replication::ExecutedState,
 };
@@ -162,7 +161,7 @@ pub fn placeholder_certificate_for_block(
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteMsg::vote_digest(
+    let consensus_data_hash = VoteData::vote_digest(
         certified_block_id,
         certified_block_state,
         certified_block_round,

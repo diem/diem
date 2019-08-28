@@ -11,6 +11,7 @@ use crate::{
             quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+            vote_data::VoteData,
         },
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
@@ -257,13 +258,15 @@ fn basic_new_rank_event_test() {
         // Simulate a case with a1 receiving enough votes for a QC: a new proposal
         // should be a child of a1 and carry its QC.
         let vote_msg = VoteMsg::new(
-            a1.id(),
-            node.block_store.get_state_for_block(a1.id()).unwrap(),
-            a1.round(),
-            a1.quorum_cert().certified_parent_block_id(),
-            a1.quorum_cert().certified_parent_block_round(),
-            a1.quorum_cert().certified_grandparent_block_id(),
-            a1.quorum_cert().certified_grandparent_block_round(),
+            VoteData::new(
+                a1.id(),
+                node.block_store.get_state_for_block(a1.id()).unwrap(),
+                a1.round(),
+                a1.quorum_cert().certified_parent_block_id(),
+                a1.quorum_cert().certified_parent_block_round(),
+                a1.quorum_cert().certified_grandparent_block_id(),
+                a1.quorum_cert().certified_grandparent_block_round(),
+            ),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
             node.block_store.signer(),
@@ -331,7 +334,7 @@ fn process_successful_proposal_test() {
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
-        assert_eq!(pending_for_proposer[0].proposed_block_id(), proposal_id);
+        assert_eq!(pending_for_proposer[0].block_id(), proposal_id);
         assert_eq!(
             *node.storage.shared_storage.state.lock().unwrap(),
             ConsensusState::new(1, 0),
@@ -382,7 +385,7 @@ fn process_old_proposal_test() {
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
-        assert_eq!(pending_for_me[0].proposed_block_id(), new_block_id);
+        assert_eq!(pending_for_me[0].block_id(), new_block_id);
         assert!(node.block_store.get_block(old_block_id).is_some());
     });
 }
@@ -643,7 +646,7 @@ fn process_votes_basic_test() {
     let mut inserter = TreeInserter::new(node.block_store.clone());
     let a1 =
         inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let vote_msg = VoteMsg::new(
+    let vote_data = VoteData::new(
         a1.id(),
         node.block_store.get_state_for_block(a1.id()).unwrap(),
         a1.round(),
@@ -651,6 +654,9 @@ fn process_votes_basic_test() {
         a1.quorum_cert().certified_parent_block_round(),
         a1.quorum_cert().certified_grandparent_block_id(),
         a1.quorum_cert().certified_parent_block_round(),
+    );
+    let vote_msg = VoteMsg::new(
+        vote_data,
         node.block_store.signer().author(),
         placeholder_ledger_info(),
         node.block_store.signer(),
@@ -819,7 +825,7 @@ fn nil_vote_on_timeout() {
         .unwrap();
         assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
         let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
-        assert_eq!(vote_msg.round(), 1);
+        assert_eq!(vote_msg.block_round(), 1);
         assert_eq!(vote_msg.parent_block_id(), genesis_id);
     });
 }

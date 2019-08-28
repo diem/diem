@@ -252,7 +252,7 @@ where
         vote_msg: &VoteMsg,
         min_votes_for_qc: usize,
     ) -> VoteReceptionResult {
-        let block_id = vote_msg.proposed_block_id();
+        let block_id = vote_msg.block_id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
@@ -266,7 +266,7 @@ where
         // Note that the digest covers not just the proposal id, but also the resulting
         // state id as well as the round number. In other words, if two different voters have the
         // same digest then they reached the same state following the same proposals.
-        let digest = vote_msg.vote_hash();
+        let digest = vote_msg.vote_data_hash();
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });
@@ -281,7 +281,7 @@ where
             let quorum_cert = QuorumCert::new(
                 block_id,
                 vote_msg.executed_state(),
-                vote_msg.round(),
+                vote_msg.block_round(),
                 li_with_sig.clone(),
                 vote_msg.parent_block_id(),
                 vote_msg.parent_block_round(),
