@@ -12,6 +12,7 @@ use vm::{
         MemberCount, ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
+    vm_string::VMString,
 };
 use vm_runtime::{code_cache::module_cache::ModuleCache, loaded_data::loaded_module::LoadedModule};
 use vm_runtime_types::value::*;
@@ -86,6 +87,10 @@ where
         (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
     }
 
+    fn next_vm_string(&mut self) -> VMString {
+        self.next_str().into()
+    }
+
     fn next_addr(&mut self) -> AccountAddress {
         AccountAddress::new(self.gen.gen())
     }
@@ -146,7 +151,7 @@ where
         match sig_token {
             SignatureToken::Bool => Local::bool(self.next_bool()),
             SignatureToken::U64 => Local::u64(self.next_int()),
-            SignatureToken::String => Local::string(self.next_str()),
+            SignatureToken::String => Local::string(self.next_vm_string()),
             SignatureToken::Address => Local::address(self.next_addr()),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.inhabit(&*sig);

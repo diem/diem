@@ -45,14 +45,15 @@ pub enum TableType {
     FUNCTION_HANDLES        = 0x3,
     ADDRESS_POOL            = 0x4,
     STRING_POOL             = 0x5,
-    BYTE_ARRAY_POOL         = 0x6,
-    MAIN                    = 0x7,
-    STRUCT_DEFS             = 0x8,
-    FIELD_DEFS              = 0x9,
-    FUNCTION_DEFS           = 0xA,
-    TYPE_SIGNATURES         = 0xB,
-    FUNCTION_SIGNATURES     = 0xC,
-    LOCALS_SIGNATURES       = 0xD,
+    USER_STRINGS            = 0x6,
+    BYTE_ARRAY_POOL         = 0x7,
+    MAIN                    = 0x8,
+    STRUCT_DEFS             = 0x9,
+    FIELD_DEFS              = 0xA,
+    FUNCTION_DEFS           = 0xB,
+    TYPE_SIGNATURES         = 0xC,
+    FUNCTION_SIGNATURES     = 0xD,
+    LOCALS_SIGNATURES       = 0xE,
 }
 
 /// Constants for signature kinds (type, function, locals). Those values start a signature blob.

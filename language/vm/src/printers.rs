@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::file_format::*;
+use crate::{file_format::*, vm_string::VMStr};
 use failure::*;
 use hex;
 use std::{collections::VecDeque, fmt};
@@ -76,6 +76,7 @@ pub trait TableAccess {
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle>;
 
     fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str>;
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr>;
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress>;
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature>;
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature>;
@@ -111,6 +112,13 @@ impl TableAccess for CompiledScriptMut {
     fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         match self.string_pool.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
+            Some(s) => Ok(s),
+        }
+    }
+
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
+        match self.user_strings.get(idx.0 as usize) {
+            None => bail!("bad user string index {}", idx),
             Some(s) => Ok(s),
         }
     }
@@ -176,6 +184,13 @@ impl TableAccess for CompiledModuleMut {
     fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
         match self.string_pool.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
+            Some(s) => Ok(s),
+        }
+    }
+
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
+        match self.user_strings.get(idx.0 as usize) {
+            None => bail!("bad user string index {}", idx),
             Some(s) => Ok(s),
         }
     }
@@ -635,7 +650,7 @@ fn display_bytecode<T: TableAccess>(
             display_address(tables.get_address_at(*idx).unwrap(), f)?;
             write!(f, ")")
         }
-        Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_string_at(*idx).unwrap()),
+        Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_user_string_at(*idx).unwrap()),
         Bytecode::MutBorrowField(idx) => {
             write!(f, "MutBorrowField(")?;
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;

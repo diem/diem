@@ -18,6 +18,7 @@ use vm::{
         words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE,
         STRUCT_SIZE,
     },
+    vm_string::VMString,
 };
 
 #[cfg(test)]
@@ -35,7 +36,7 @@ pub enum Value {
     Address(AccountAddress),
     U64(u64),
     Bool(bool),
-    String(String),
+    String(VMString),
     Struct(Vec<MutVal>),
     ByteArray(ByteArray),
 }
@@ -237,7 +238,7 @@ impl MutVal {
         MutVal::new(Value::Bool(b))
     }
 
-    fn string(s: String) -> Self {
+    fn string(s: VMString) -> Self {
         MutVal::new(Value::String(s))
     }
 
@@ -301,7 +302,7 @@ impl Local {
         Local::Value(MutVal::bool(b))
     }
 
-    pub fn string(s: String) -> Self {
+    pub fn string(s: VMString) -> Self {
         Local::Value(MutVal::string(s))
     }
 

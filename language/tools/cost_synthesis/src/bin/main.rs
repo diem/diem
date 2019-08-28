@@ -27,7 +27,7 @@ use vm::{
     errors::VMErrorKind,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
-        FunctionDefinitionIndex, FunctionHandleIndex, StringPoolIndex, StructDefinitionIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
         NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
@@ -134,7 +134,7 @@ fn stack_instructions(options: &Opt) {
         LdFalse,
         LdTrue,
         LdConst(0),
-        LdStr(StringPoolIndex::new(0)),
+        LdStr(UserStringIndex::new(0)),
         LdByteArray(ByteArrayPoolIndex::new(0)),
         LdAddr(AddressPoolIndex::new(0)),
         BrFalse(0),

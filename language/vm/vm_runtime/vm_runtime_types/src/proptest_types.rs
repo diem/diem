@@ -7,6 +7,7 @@ use crate::{
 };
 use proptest::{collection::vec, prelude::*};
 use types::{account_address::AccountAddress, byte_array::ByteArray};
+use vm::vm_string::VMString;
 
 /// Strategies for property-based tests using `Value` instances.
 impl Value {
@@ -16,7 +17,7 @@ impl Value {
             any::<AccountAddress>().prop_map(Value::Address),
             any::<u64>().prop_map(Value::U64),
             any::<bool>().prop_map(Value::Bool),
-            ".*".prop_map(Value::String),
+            any::<VMString>().prop_map(Value::String),
             any::<ByteArray>().prop_map(Value::ByteArray),
         ]
     }

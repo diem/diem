@@ -3,11 +3,14 @@
 
 //! Utilities for property-based testing.
 
-use crate::file_format::{
-    AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
-    FunctionHandle, FunctionSignatureIndex, Kind, MemberCount, ModuleHandle, ModuleHandleIndex,
-    SignatureToken, StringPoolIndex, StructDefinition, StructFieldInformation, StructHandle,
-    StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
+use crate::{
+    file_format::{
+        AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
+        FunctionHandle, FunctionSignatureIndex, Kind, MemberCount, ModuleHandle, ModuleHandleIndex,
+        SignatureToken, StringPoolIndex, StructDefinition, StructFieldInformation, StructHandle,
+        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
+    },
+    vm_string::VMString,
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -107,6 +110,7 @@ impl CompiledModuleStrategyGen {
         // TODO: Should we enable empty ByteArrays in Move, e.g. let byte_array = b"";
         let byte_array_pool_strat = vec(any::<ByteArray>(), 1..=self.size);
         let string_pool_strat = vec(".*", 1..=self.size);
+        let user_strings_strat = vec(any::<VMString>(), 1..=self.size);
 
         let type_signatures_strat = vec(SignatureTokenGen::strategy(), 1..=self.size);
         // Ensure at least one owned non-struct type signature.
@@ -152,7 +156,7 @@ impl CompiledModuleStrategyGen {
         (
             address_pool_strat,
             byte_array_pool_strat,
-            string_pool_strat,
+            (string_pool_strat, user_strings_strat),
             type_signatures_strat,
             owned_non_struct_strat,
             owned_type_sigs_strat,
@@ -168,7 +172,7 @@ impl CompiledModuleStrategyGen {
                 |(
                     address_pool,
                     byte_array_pool,
-                    string_pool,
+                    (string_pool, user_strings),
                     type_signatures,
                     owned_non_structs,
                     owned_type_sigs,
@@ -178,6 +182,7 @@ impl CompiledModuleStrategyGen {
                 )| {
                     let address_pool_len = address_pool.len();
                     let string_pool_len = string_pool.len();
+                    let user_strings_len = user_strings.len();
                     let byte_array_pool_len = byte_array_pool.len();
                     let module_handles_len = module_handles.len();
                     // StDefnMaterializeState adds one new handle for each definition, so the total
@@ -296,6 +301,7 @@ impl CompiledModuleStrategyGen {
                         struct_handles_len,
                         address_pool_len,
                         string_pool_len,
+                        user_strings_len,
                         byte_array_pool_len,
                         function_handles_len,
                         type_signatures_len: type_signatures.len(),
@@ -336,6 +342,7 @@ impl CompiledModuleStrategyGen {
                         locals_signatures,
 
                         string_pool,
+                        user_strings,
                         byte_array_pool,
                         address_pool,
                     }
