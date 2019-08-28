@@ -17,7 +17,7 @@ use futures::{
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::{ledger_info::LedgerInfoWithSignatures, validator_verifier::ValidatorVerifier};
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -49,11 +49,15 @@ impl StateSynchronizer {
 
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
+        let peers_with_public_keys = config.network.trusted_peers.get_trusted_consensus_peers();
+        let validator_verifier = ValidatorVerifier::new(peers_with_public_keys);
+
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             config,
             executor_proxy,
             peer_ids.clone(),
+            validator_verifier,
         );
         executor.spawn(coordinator.start(network).boxed().unit_error().compat());
 
