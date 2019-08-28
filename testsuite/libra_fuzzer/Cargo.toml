@@ -21,7 +21,6 @@ structopt = { version = "0.2.18", default-features = false }
 # List out modules with data structures being fuzzed here.
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
-vm_runtime = { path = "../../language/vm/vm_runtime" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 
 [dev-dependencies]
@@ -31,9 +30,8 @@ rusty-fork = "0.2.2"
 
 types = { path = "../../types", features = ["testing"] }
 vm = { path = "../../language/vm", features = ["testing"] }
-vm_runtime = { path = "../../language/vm/vm_runtime", features = ["testing"] }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
 
 [features]
 default = ["testing"]
-testing = ["types/testing", "vm/testing", "vm_runtime/testing", "vm_runtime_types/testing"]
+testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
