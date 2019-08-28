@@ -52,7 +52,7 @@ use storage_proto::StartupInfo;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{get_account_resource_or_default, AccountResource},
+    account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::EventWithProof,
     get_with_proof::{RequestItem, ResponseItem},
@@ -115,6 +115,10 @@ impl LibraDB {
             (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (
                 TRANSACTION_ACCUMULATOR_CF_NAME,
+                ColumnFamilyOptions::default(),
+            ),
+            (
+                TRANSACTION_BY_ACCOUNT_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
@@ -274,43 +278,17 @@ impl LibraDB {
 
     /// Returns a signed transaction that is the `seq_num`-th one associated with the given account.
     /// If the signed transaction with given `seq_num` doesn't exist, returns `None`.
-    // TODO(gzh): Use binary search for now. We may create seq_num index in the future.
-    fn get_txn_by_account_and_seq(
+    fn get_txn_by_account(
         &self,
         address: AccountAddress,
         seq_num: u64,
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<Option<SignedTransactionWithProof>> {
-        // If txn with seq_num n is at some version, the corresponding account state at the
-        // same version will be the first account state that has seq_num n + 1.
-        let seq_num = seq_num + 1;
-        let (mut start_version, mut end_version) = (0, ledger_version);
-        while start_version < end_version {
-            let mid_version = start_version + (end_version - start_version) / 2;
-            let account_seq_num = self.get_account_seq_num_by_version(address, mid_version)?;
-            if account_seq_num >= seq_num {
-                end_version = mid_version;
-            } else {
-                start_version = mid_version + 1;
-            }
-        }
-        assert_eq!(start_version, end_version);
-
-        let seq_num_found = self.get_account_seq_num_by_version(address, start_version)?;
-        if seq_num_found < seq_num {
-            return Ok(None);
-        } else if seq_num_found > seq_num {
-            // log error
-            bail!("internal error: seq_num is not continuous.")
-        }
-        // start_version cannot be 0 (genesis version).
-        assert_eq!(
-            self.get_account_seq_num_by_version(address, start_version - 1)?,
-            seq_num_found - 1
-        );
-        self.get_transaction_with_proof(start_version, ledger_version, fetch_events)
-            .map(Some)
+        self.transaction_store
+            .lookup_transaction_by_account(address, seq_num, ledger_version)?
+            .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
+            .transpose()
     }
 
     /// Gets the latest version number available in the ledger.
@@ -477,7 +455,7 @@ impl LibraDB {
                     sequence_number,
                     fetch_events,
                 } => {
-                    let signed_transaction_with_proof = self.get_txn_by_account_and_seq(
+                    let signed_transaction_with_proof = self.get_txn_by_account(
                         account,
                         sequence_number,
                         ledger_version,
@@ -685,19 +663,6 @@ impl LibraDB {
         }
 
         Ok(())
-    }
-
-    fn get_account_seq_num_by_version(
-        &self,
-        address: AccountAddress,
-        version: Version,
-    ) -> Result<u64> {
-        let (account_state_blob, _proof) = self
-            .state_store
-            .get_account_state_with_proof_by_version(address, version)?;
-
-        // If an account does not exist, we treat it as if it has sequence number 0.
-        Ok(get_account_resource_or_default(&account_state_blob)?.sequence_number())
     }
 
     fn get_transaction_with_proof(
