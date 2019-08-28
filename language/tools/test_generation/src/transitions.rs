@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::abstract_state::{AbstractState, AbstractValue, BorrowState};
-use vm::file_format::Kind;
+use vm::{
+    access::*,
+    file_format::{CompiledModule, Kind, SignatureToken, StructDefinitionIndex},
+    views::{SignatureTokenView, StructDefinitionView, ViewInternals},
+};
 
 /// Determine whether the stack is at least of size `index`. If the optional `abstract_value`
 /// argument is some `AbstractValue`, check whether the type at `index` is that abstract_value.
@@ -100,6 +104,115 @@ pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: 
         }
     }
     false
+}
+
+/// Determine whether the struct at the given index can be constructed from the values on
+/// the stack.
+pub fn stack_satisfies_struct_signature(
+    state: &AbstractState,
+    struct_index: StructDefinitionIndex,
+) -> bool {
+    let struct_def = state.module.struct_def_at(struct_index);
+    let struct_def = StructDefinitionView::new(&state.module, struct_def);
+    let field_token_views: Vec<SignatureTokenView<'_, CompiledModule>> = struct_def
+        .fields()
+        .into_iter()
+        .flatten()
+        .map(|field| field.type_signature().token())
+        .collect();
+    let mut satisfied = true;
+    for (i, token_view) in field_token_views.iter().enumerate() {
+        let abstract_value = AbstractValue {
+            token: token_view.as_inner().clone(),
+            kind: token_view.kind(),
+        };
+        if !stack_has(state, i, Some(abstract_value)) {
+            satisfied = false;
+        }
+    }
+    satisfied
+}
+
+/// Construct a stack from abstract values on the stack
+/// The stack is stored in the register after creation
+pub fn stack_pack_struct(
+    state: &AbstractState,
+    struct_index: StructDefinitionIndex,
+) -> AbstractState {
+    let state_copy = state.clone();
+    let mut state = state.clone();
+    let struct_def = state_copy.module.struct_def_at(struct_index);
+    let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
+    let tokens: Vec<SignatureToken> = struct_def_view
+        .fields()
+        .into_iter()
+        .flatten()
+        .map(|field| field.type_signature().token().as_inner().clone())
+        .collect();
+    let number_of_pops = tokens.len();
+    for _ in 0..number_of_pops {
+        state = stack_pop(&state);
+    }
+    // The logic for determine the struct kind was sourced from `SignatureTokenView`
+    // TODO: This will need to be updated when struct type actuals are handled
+    let struct_kind = match struct_def_view.is_nominal_resource() {
+        true => Kind::Resource,
+        false => tokens
+            .iter()
+            .map(|token| SignatureTokenView::new(&state.module, token).kind())
+            .fold(Kind::Unrestricted, |acc_kind, next_kind| {
+                match (acc_kind, next_kind) {
+                    (Kind::All, _) | (_, Kind::All) => Kind::All,
+                    (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
+                    (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
+                }
+            }),
+    };
+    let struct_value = AbstractValue::new_struct(
+        SignatureToken::Struct(struct_def.struct_handle, tokens),
+        struct_kind,
+    );
+    state.set_register(struct_value);
+    state
+}
+
+/// Determine if a struct of the given signature is at the top of the stack
+pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
+    if state.stack_len() > 0 {
+        let struct_def = state.module.struct_def_at(struct_index);
+        let struct_value = state.stack_peek(0).unwrap();
+        match struct_value.token {
+            SignatureToken::Struct(struct_handle, _) => struct_handle == struct_def.struct_handle,
+            _ => false,
+        }
+    } else {
+        false
+    }
+}
+
+/// Push the fields of a struct as `AbstractValue`s to the stack
+pub fn stack_unpack_struct(
+    state: &AbstractState,
+    struct_index: StructDefinitionIndex,
+) -> AbstractState {
+    let state_copy = state.clone();
+    let mut state = state.clone();
+    let struct_def = state_copy.module.struct_def_at(struct_index);
+    let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
+    let token_views: Vec<SignatureTokenView<'_, CompiledModule>> = struct_def_view
+        .fields()
+        .into_iter()
+        .flatten()
+        .map(|field| field.type_signature().token())
+        .collect();
+    for token_view in token_views {
+        let abstract_value = AbstractValue {
+            token: token_view.as_inner().clone(),
+            kind: token_view.kind(),
+        };
+        state = stack_push(&state, abstract_value);
+    }
+    state
 }
 
 /// Wrapper for enclosing the arguments of `stack_has` so that only the `state` needs
@@ -216,6 +329,42 @@ macro_rules! state_local_take_borrow {
 macro_rules! state_local_place {
     ($e: expr) => {
         Box::new(move |state| local_place(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_satisfies_struct_signature` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_satisfies_struct_signature {
+    ($e: expr) => {
+        Box::new(move |state| stack_satisfies_struct_signature(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_pack_struct` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_pack_struct {
+    ($e: expr) => {
+        Box::new(move |state| stack_pack_struct(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_has_struct` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_has_struct {
+    ($e: expr) => {
+        Box::new(move |state| stack_has_struct(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_unpack_struct` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_unpack_struct {
+    ($e: expr) => {
+        Box::new(move |state| stack_unpack_struct(state, $e))
     };
 }
 

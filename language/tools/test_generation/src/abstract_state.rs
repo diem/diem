@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
-use vm::file_format::{Kind, SignatureToken};
+use vm::file_format::{empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken};
 
 /// The BorrowState denotes whether a local is `Available` or
 /// has been moved and is `Unavailable`.
@@ -52,6 +52,18 @@ impl AbstractValue {
         );
         AbstractValue { token, kind }
     }
+
+    /// Create a new struct `AbstractValue` given its type and kind
+    pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
+        assert!(
+            match token {
+                SignatureToken::Struct(_, _) => true,
+                _ => false,
+            },
+            "AbstractValue::new_struct must be applied with a struct type"
+        );
+        AbstractValue { token, kind }
+    }
 }
 
 /// An AbstractState represents an abstract view of the execution of the
@@ -69,6 +81,9 @@ pub struct AbstractState {
     /// Temporary location for storing the results of instruction effects for
     /// access by subsequent instructions' effects
     register: Option<AbstractValue>,
+
+    /// The module state
+    pub module: CompiledModule,
 }
 
 impl AbstractState {
@@ -78,24 +93,38 @@ impl AbstractState {
             stack: Vec::new(),
             locals: HashMap::new(),
             register: None,
+            module: empty_module()
+                .freeze()
+                .expect("Empty module should pass the bounds checker"),
         }
     }
 
     /// Create a new AbstractState given a list of `SignatureTokens` that will be
-    /// the (available) locals that the state will have.
-    pub fn from_locals(locals: HashMap<usize, (AbstractValue, BorrowState)>) -> AbstractState {
+    /// the (available) locals that the state will have, as well as the module state
+    pub fn from_locals(
+        module: CompiledModuleMut,
+        locals: HashMap<usize, (AbstractValue, BorrowState)>,
+    ) -> AbstractState {
         AbstractState {
             stack: Vec::new(),
             locals,
             register: None,
+            module: module
+                .freeze()
+                .expect("Module should pass the bounds checker"),
         }
     }
 
     /// Get the register value and set it to `None`
-    fn get_register(&mut self) -> Option<AbstractValue> {
+    fn take_register(&mut self) -> Option<AbstractValue> {
         let value = self.register.clone();
         self.register = None;
         value
+    }
+
+    /// Set the register value and set it to `None`
+    pub fn set_register(&mut self, value: AbstractValue) {
+        self.register = Some(value.clone());
     }
 
     /// Add a `AbstractValue` to the stack
@@ -105,7 +134,7 @@ impl AbstractState {
 
     /// Add a `AbstractValue` to the stack from the register
     pub fn stack_push_register(&mut self) {
-        if let Some(abstract_value) = self.get_register() {
+        if let Some(abstract_value) = self.take_register() {
             self.stack.push(abstract_value);
         } else {
             panic!("Error: No value in register");
@@ -194,7 +223,7 @@ impl AbstractState {
 
     /// Insert a local at index `i` as `Available` from the register
     pub fn local_place(&mut self, i: usize) {
-        let value = self.get_register();
+        let value = self.take_register();
         assert!(value.is_some(), "Failed to insert local from stack");
         let abstract_value = value.unwrap();
         self.locals

@@ -18,7 +18,7 @@ use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use cost_synthesis::module_generator::ModuleBuilder;
 use vm::{
-    file_format::{Bytecode, FunctionSignature, SignatureToken},
+    file_format::{Bytecode, CompiledModuleMut, FunctionSignature, SignatureToken},
     CompiledModule,
 };
 
@@ -41,11 +41,10 @@ fn run_verifier(module: CompiledModule) -> u64 {
 pub fn generate_bytecode(
     arguments: &[SignatureToken],
     signature: &FunctionSignature,
-    target_min: usize,
-    target_max: usize,
+    module: CompiledModuleMut,
 ) -> Vec<Bytecode> {
     let mut bytecode_generator = BytecodeGenerator::new(None);
-    bytecode_generator.generate(arguments, signature, target_min, target_max)
+    bytecode_generator.generate(arguments, signature, module)
 }
 
 /// Run generate_bytecode for 'iterations' iterations and test each generated module

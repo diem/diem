@@ -31,9 +31,3 @@ pub const DEFAULT_FUNCTION_IDX: TableIndex = 0;
 
 /// The type of the value stack.
 pub type Stack = Vec<Local>;
-
-/// The minimum number of instructions to generate for function bodies
-pub const MIN_BYTECODE_INSTRUCTIONS: usize = 10;
-
-/// The maximum number of instructions to generate for function bodies
-pub const MAX_BYTECODE_INSTRUCTIONS: usize = 20;
