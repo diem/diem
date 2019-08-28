@@ -4,7 +4,7 @@
 use crate::{
     counters, executor_proxy::ExecutorProxyTrait, peer_manager::PeerManager, LedgerInfo, PeerId,
 };
-use config::config::{NodeConfig, RoleType, StateSyncConfig};
+use config::config::StateSyncConfig;
 use crypto::ed25519::*;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::prelude::*;
@@ -66,7 +66,7 @@ pub(crate) struct SyncCoordinator<T> {
 impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
-        node_config: &NodeConfig,
+        config: StateSyncConfig,
         executor_proxy: T,
         upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
@@ -74,8 +74,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             client_events,
             known_version: 0,
             target: None,
-            config: node_config.state_sync.clone(),
-            autosync: (RoleType::FullNode == (&node_config.network.role).into()),
+            config,
+            // Note: We use upstream peer ids being non-empty as a proxy for a node being a full
+            // node.
+            autosync: !upstream_peer_ids.is_empty(),
             peer_manager: PeerManager::new(upstream_peer_ids),
             subscriptions: HashMap::new(),
             callback: None,
@@ -192,6 +194,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             return;
         }
 
+        // TODO: Should we be changing peer manager peer set for every target?
         self.peer_manager
             .set_peers(target.signatures().keys().copied().collect());
         self.target = Some(target);

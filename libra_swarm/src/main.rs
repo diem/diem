@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::RoleType;
-use config_builder::swarm_config::LibraSwarmTopology;
 use libra_swarm::{client, swarm::LibraSwarm};
 use std::path::Path;
 use structopt::StructOpt;
@@ -37,9 +36,6 @@ struct Args {
 fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes.unwrap_or(1);
-    // topology indicates structure of the validator network
-    // e.g. num of validators, num of full nodes and their children
-    let topology = LibraSwarmTopology::create_validator_network(num_nodes);
 
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(args.faucet_key_path);
@@ -50,15 +46,15 @@ fn main() {
     );
 
     let swarm = LibraSwarm::launch_swarm(
-        topology,
+        num_nodes,
         !args.enable_logging,
         faucet_account_keypair,
         args.config_dir.clone(),
         None, /* template_path */
     );
 
-    let config = &swarm.config.get_configs()[0].1;
-    let validator_set_file = &config.network.trusted_peers_file;
+    let config = &swarm.config.configs[0].1;
+    let validator_set_file = &config.consensus.consensus_peers_file;
     println!("To run the Libra CLI client in a separate process and connect to the local cluster of nodes you just spawned, use this command:");
     println!(
         "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",

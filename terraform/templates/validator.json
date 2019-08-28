@@ -13,7 +13,8 @@
         ],
         "mountPoints": [
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"},
-            {"sourceVolume": "trusted-peers", "containerPath": "/opt/libra/etc/trusted_peers.config.toml"}
+            {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"},
+            {"sourceVolume": "network-peers", "containerPath": "/opt/libra/etc/network_peers.config.toml"}
         ],
         "environment": [
             {"name": "PEER_ID", "value": "${peer_id}"},
@@ -31,7 +32,8 @@
             {"name": "nofile", "softLimit": 131072, "hardLimit": 131072}
         ],
         "secrets": [
-            {"name": "PEER_KEYPAIRS", "valueFrom": "${secret}"}
+            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"},
+            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"}
         ],
         "logConfiguration": {
             "logDriver": "awslogs",

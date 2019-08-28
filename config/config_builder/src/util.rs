@@ -3,7 +3,7 @@
 
 use config::{
     config::{NodeConfig, NodeConfigHelpers},
-    trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
+    trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
@@ -16,17 +16,29 @@ use vm_genesis::encode_genesis_transaction_with_validator;
 pub fn gen_genesis_transaction<P: AsRef<Path>>(
     path: P,
     faucet_account_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-    trusted_peer_config: &TrustedPeersConfig,
+    consensus_peers_config: &ConsensusPeersConfig,
+    network_peers_config: &NetworkPeersConfig,
 ) -> Result<()> {
-    let validator_set = trusted_peer_config
+    let validator_set = consensus_peers_config
         .peers
         .iter()
-        .map(|(peer_id, peer)| {
+        .map(|peer| {
+            let peer_id = peer.account_address.clone();
             ValidatorPublicKeys::new(
                 AccountAddress::try_from(peer_id.clone()).expect("[config] invalid peer_id"),
-                peer.get_consensus_public().clone().unwrap(),
-                peer.get_network_signing_public().clone(),
-                peer.get_network_identity_public().clone(),
+                peer.consensus_pubkey.clone(),
+                network_peers_config
+                    .peers
+                    .get(&peer_id)
+                    .unwrap()
+                    .network_signing_pubkey
+                    .clone(),
+                network_peers_config
+                    .peers
+                    .get(&peer_id)
+                    .unwrap()
+                    .network_identity_pubkey
+                    .clone(),
             )
         })
         .collect();
@@ -52,10 +64,14 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
     let (private_key, _) = compat::generate_keypair(&mut rng);
     let keypair = KeyPair::from(private_key);
 
+    let (_, test_consensus_peers) = ConfigHelpers::get_test_consensus_config(1, None);
+    let (_, test_network_peers) =
+        ConfigHelpers::get_test_network_peers_config(&test_consensus_peers, None);
     gen_genesis_transaction(
         &config.execution.genesis_file_location,
         &keypair,
-        &TrustedPeersConfigHelpers::get_test_config(1, None).1,
+        &test_consensus_peers,
+        &test_network_peers,
     )
     .expect("[config] failed to create genesis transaction");
     (config, keypair)

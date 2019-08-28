@@ -52,8 +52,8 @@ resource "aws_ecs_task_definition" "faucet" {
   execution_role_arn    = aws_iam_role.ecsTaskExecutionRole.arn
 
   volume {
-    name      = "trusted-peers"
-    host_path = "/opt/libra/trusted_peers.config.toml"
+    name      = "consensus-peers"
+    host_path = "/opt/libra/consensus_peers.config.toml"
   }
 
   placement_constraints {

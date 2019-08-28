@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use config::config::PersistableConfig;
 use std::{fs::File, io::prelude::*};
 use vm_genesis::{default_config, encode_genesis_transaction, GENESIS_KEYPAIR};
 

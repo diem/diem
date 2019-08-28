@@ -156,6 +156,7 @@ where
     // Connect with all the seed peers. If current node is also a seed peer, remove it from the
     // list.
     async fn connect_to_seed_peers(&mut self) {
+        debug!("Connecting to seed peers");
         let self_peer_id =
             PeerId::try_from(self.self_note.get_peer_id()).expect("PeerId parsing failed");
         for (peer_id, peer_info) in self

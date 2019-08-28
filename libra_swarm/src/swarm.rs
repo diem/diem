@@ -3,7 +3,7 @@
 
 use crate::utils;
 use config::config::{NodeConfig, RoleType};
-use config_builder::swarm_config::{LibraSwarmTopology, SwarmConfig, SwarmConfigBuilder};
+use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
@@ -54,7 +54,9 @@ impl LibraNode {
         logdir: &Path,
         disable_logging: bool,
     ) -> Result<Self> {
-        let peer_id = config.network.peer_id.clone();
+        // For now, We consider the peer id on the first network config as the node's peer id.
+        // TODO: Create a peer id independent node identifier.
+        let peer_id = config.networks.get(0).unwrap().peer_id.clone();
         let log = logdir.join(format!("{}.log", SwarmConfig::get_alias(&config)));
         let log_file = File::create(&log)?;
         let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
@@ -221,7 +223,7 @@ pub enum SwarmLaunchFailure {
 
 impl LibraSwarm {
     pub fn launch_swarm(
-        topology: LibraSwarmTopology,
+        num_nodes: usize,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         config_dir: Option<String>,
@@ -232,7 +234,7 @@ impl LibraSwarm {
             let swarm_config_dir = Self::setup_config_dir(&config_dir);
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
             match Self::launch_swarm_attempt(
-                topology.clone(),
+                num_nodes,
                 disable_logging,
                 faucet_account_keypair.clone(),
                 swarm_config_dir,
@@ -274,7 +276,7 @@ impl LibraSwarm {
     }
 
     fn launch_swarm_attempt(
-        topology: LibraSwarmTopology,
+        num_nodes: usize,
         disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         dir: LibraSwarmDir,
@@ -291,7 +293,7 @@ impl LibraSwarm {
 
         config_builder
             .with_ipv4()
-            .with_topology(topology)
+            .with_num_nodes(num_nodes)
             .with_base(base)
             .with_output_dir(&dir)
             .with_faucet_keypair(faucet_account_keypair);
@@ -304,16 +306,13 @@ impl LibraSwarm {
             config,
         };
         // For each config launch a node
-        for (path, node_config) in swarm.config.get_configs() {
+        for (path, node_config) in &swarm.config.configs {
             let node =
                 LibraNode::launch(&node_config, &path, &logs_dir_path, disable_logging).unwrap();
-            match (&node_config.network.role).into() {
-                RoleType::Validator => {
-                    swarm.validator_nodes.insert(node.peer_id(), node);
-                }
-                RoleType::FullNode => {
-                    swarm.full_nodes.push(node);
-                }
+            if node_config.is_validator() {
+                swarm.validator_nodes.insert(node.peer_id(), node);
+            } else {
+                swarm.full_nodes.push(node);
             }
         }
 
@@ -423,7 +422,9 @@ impl LibraSwarm {
         for i in 0..num_attempts {
             debug!(
                 "Wait for catchup, target_commit_round = {}, attempt: {} of {}",
-                last_committed_round, i, num_attempts
+                last_committed_round,
+                i + 1,
+                num_attempts
             );
             for (node, done) in self.validator_nodes.values_mut().zip(done.iter_mut()) {
                 if *done {
@@ -493,7 +494,7 @@ impl LibraSwarm {
     /// Vector with the debug ports of all the validators in the swarm.
     pub fn get_validators_debug_ports(&self) -> Vec<u16> {
         self.config
-            .get_configs()
+            .configs
             .iter()
             .map(|(_, c)| c.debug_interface.admission_control_node_debug_port)
             .collect()
@@ -524,9 +525,9 @@ impl LibraSwarm {
     ) -> std::result::Result<(), SwarmLaunchFailure> {
         let (path, config) = self
             .config
-            .get_configs()
+            .configs
             .iter()
-            .find(|(_path, config)| config.network.peer_id == peer_id)
+            .find(|(_path, config)| config.networks.get(0).unwrap().peer_id == peer_id)
             .expect(
                 &format!(
                     "PeerId {} not found in any of the admission control service ports.",
@@ -546,7 +547,7 @@ impl LibraSwarm {
     }
 
     pub fn get_trusted_peers_config_path(&self) -> String {
-        let (path, _) = self.config.get_trusted_peers_config();
+        let (path, _) = &self.config.consensus_peers;
         path.canonicalize()
             .expect("Unable to get canonical path of trusted peers config file")
             .to_str()
