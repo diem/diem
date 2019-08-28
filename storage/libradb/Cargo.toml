@@ -35,6 +35,7 @@ types = { path = "../../types" }
 
 [dev-dependencies]
 types = { path = "../../types", features = ["testing"]}
+proptest_helpers = { path = "../../common/proptest_helpers" }
 
 [features]
 default = []

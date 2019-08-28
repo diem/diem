@@ -15,6 +15,7 @@ pub(crate) mod ledger_info;
 pub(crate) mod signed_transaction;
 pub(crate) mod stale_node_index;
 pub(crate) mod transaction_accumulator;
+pub(crate) mod transaction_by_account;
 pub(crate) mod transaction_info;
 pub(crate) mod validator;
 
@@ -29,6 +30,7 @@ pub(super) const LEDGER_COUNTERS_CF_NAME: ColumnFamilyName = "ledger_counters";
 pub(super) const STALE_NODE_INDEX_CF_NAME: ColumnFamilyName = "stale_node_index";
 pub(super) const SIGNED_TRANSACTION_CF_NAME: ColumnFamilyName = "signed_transaction";
 pub(super) const TRANSACTION_ACCUMULATOR_CF_NAME: ColumnFamilyName = "transaction_accumulator";
+pub(super) const TRANSACTION_BY_ACCOUNT_CF_NAME: ColumnFamilyName = "transaction_by_account";
 pub(super) const TRANSACTION_INFO_CF_NAME: ColumnFamilyName = "transaction_info";
 pub(super) const VALIDATOR_CF_NAME: ColumnFamilyName = "validator";
 

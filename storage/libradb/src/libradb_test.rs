@@ -10,7 +10,10 @@ use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
-use types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
+use types::{
+    account_config::get_account_resource_or_default, contract_event::ContractEvent,
+    ledger_info::LedgerInfo,
+};
 
 fn test_save_blocks_impl(
     input: Vec<(
@@ -311,6 +314,17 @@ fn verify_committed_transactions(
             txn_info.signed_transaction_hash(),
             txn_to_commit.signed_txn().hash()
         );
+
+        // Fetch and verify transaction itself.
+        let txn = txn_to_commit.signed_txn();
+        let txn_with_proof = db.get_transaction_with_proof(cur_ver, ledger_version, true)?;
+        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+
+        let txn_with_proof = db
+            .get_txn_by_account(txn.sender(), txn.sequence_number(), ledger_version, true)?
+            .unwrap();
+        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+
         let txn_list_with_proof =
             db.get_transactions(cur_ver, 1, ledger_version, true /* fetch_events */)?;
         txn_list_with_proof.verify(ledger_info, Some(cur_ver))?;
