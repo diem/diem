@@ -141,7 +141,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                         }
                                     }
                                     if message.has_chunk_response() {
-                                        self.process_chunk_response(message.take_chunk_response()).await;
+                                    if let Err(err) = self.process_chunk_response(message.take_chunk_response()).await {
+                                            error!("[state sync] failed to process chunk response: {:?}", err);
+                                        }
                                     }
                                 }
                                 _ => {}
@@ -301,7 +303,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// processes batch of transactions downloaded from peer
     /// executes transactions, updates progress state, calls callback if some sync is finished
-    async fn process_chunk_response(&mut self, mut response: GetChunkResponse) {
+    async fn process_chunk_response(&mut self, mut response: GetChunkResponse) -> Result<()> {
         let txn_list_with_proof = response.take_txn_list_with_proof();
 
         if let Some(version) = txn_list_with_proof
@@ -311,11 +313,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .into_option()
         {
             if version != self.known_version + 1 {
-                debug!(
+                return Err(format_err!(
                     "[state sync] non sequential chunk. Known version: {}, received: {}",
-                    self.known_version, version
-                );
-                return;
+                    self.known_version,
+                    version,
+                ));
             }
         }
         // optimistically fetch next chunk
@@ -328,28 +330,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let previous_version = self.known_version;
 
-        match LedgerInfoWithSignatures::<Ed25519Signature>::from_proto(
-            response.take_ledger_info_with_sigs(),
-        ) {
-            Ok(target) => {
-                if let Err(err) = self.store_transactions(target, txn_list_with_proof).await {
-                    error!("[state sync] failed to apply chunk {:?}", err);
-                }
-                counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
-                match self.executor_proxy.get_latest_version().await {
-                    Ok(version) => {
-                        self.commit(version).await;
-                    }
-                    Err(err) => {
-                        error!("[state sync] storage version read failed {:?}", err);
-                    }
-                }
-                debug!("[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}", previous_version, self.known_version, chunk_size);
-            }
-            Err(err) => {
-                error!("[state sync] invalid ledger info {:?}", err);
-            }
-        }
+        let target = LedgerInfo::from_proto(response.take_ledger_info_with_sigs())?;
+        self.executor_proxy.validate_ledger_info(&target)?;
+
+        self.store_transactions(target, txn_list_with_proof).await?;
+
+        counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
+
+        let version = self.executor_proxy.get_latest_version().await?;
+        self.commit(version).await;
+        debug!(
+            "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
+            previous_version, self.known_version, chunk_size
+        );
+
+        Ok(())
     }
 
     /// ensures that StateSynchronizer makes progress
