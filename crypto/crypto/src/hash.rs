@@ -539,8 +539,8 @@ define_hasher! {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of a VoteMsg object.
-    (VoteMsgHasher, VOTE_MSG_HASHER, b"VoteMsg")
+    /// The hasher used to compute the hash of a VoteData object.
+    (VoteDataHasher, VOTE_DATA_HASHER, b"VoteData")
 }
 
 define_hasher! {

@@ -15,6 +15,7 @@ use crate::{
             quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+            vote_data::VoteData,
         },
         epoch_manager::EpochManager,
         liveness::{
@@ -622,13 +623,15 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .ledger_info_placeholder(vote_info.potential_commit_id());
         Ok(VoteMsg::new(
-            proposal_id,
-            executed_state,
-            block.round(),
-            vote_info.parent_block_id(),
-            vote_info.parent_block_round(),
-            vote_info.grandparent_block_id(),
-            vote_info.grandparent_block_round(),
+            VoteData::new(
+                proposal_id,
+                executed_state,
+                block.round(),
+                vote_info.parent_block_id(),
+                vote_info.parent_block_round(),
+                vote_info.grandparent_block_id(),
+                vote_info.grandparent_block_round(),
+            ),
             self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
@@ -642,7 +645,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote: VoteMsg) {
         // Check whether this validator is a valid recipient of the vote.
-        let next_round = vote.round() + 1;
+        let next_round = vote.block_round() + 1;
         if self
             .proposer_election
             .is_valid_proposer(self.author, next_round)

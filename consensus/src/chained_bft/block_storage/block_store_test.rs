@@ -7,6 +7,7 @@ use crate::chained_bft::{
     consensus_types::{
         block::{block_test, Block},
         quorum_cert::QuorumCert,
+        vote_data::VoteData,
     },
     safety::vote_msg::VoteMsg,
     test_utils::{
@@ -62,13 +63,15 @@ fn test_block_store_create_block() {
 
     // certify a1
     let vote_msg = VoteMsg::new(
-        a1_ref.id(),
-        block_store.get_state_for_block(a1_ref.id()).unwrap(),
-        a1_ref.round(),
-        a1_ref.quorum_cert().certified_parent_block_id(),
-        a1_ref.quorum_cert().certified_parent_block_round(),
-        a1_ref.quorum_cert().certified_grandparent_block_id(),
-        a1_ref.quorum_cert().certified_grandparent_block_round(),
+        VoteData::new(
+            a1_ref.id(),
+            block_store.get_state_for_block(a1_ref.id()).unwrap(),
+            a1_ref.round(),
+            a1_ref.quorum_cert().certified_parent_block_id(),
+            a1_ref.quorum_cert().certified_parent_block_round(),
+            a1_ref.quorum_cert().certified_grandparent_block_id(),
+            a1_ref.quorum_cert().certified_grandparent_block_round(),
+        ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
@@ -339,13 +342,15 @@ fn test_insert_vote() {
     let qc_size = 10;
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
         let vote_msg = VoteMsg::new(
-            block.id(),
-            block_store.get_state_for_block(block.id()).unwrap(),
-            block.round(),
-            block.quorum_cert().certified_parent_block_id(),
-            block.quorum_cert().certified_parent_block_round(),
-            block.quorum_cert().certified_grandparent_block_id(),
-            block.quorum_cert().certified_grandparent_block_round(),
+            VoteData::new(
+                block.id(),
+                block_store.get_state_for_block(block.id()).unwrap(),
+                block.round(),
+                block.quorum_cert().certified_parent_block_id(),
+                block.quorum_cert().certified_parent_block_round(),
+                block.quorum_cert().certified_grandparent_block_id(),
+                block.quorum_cert().certified_grandparent_block_round(),
+            ),
             voter.author(),
             placeholder_ledger_info(),
             voter,
@@ -366,13 +371,15 @@ fn test_insert_vote() {
     // Add the final vote to form a QC
     let final_voter = &signers[0];
     let vote_msg = VoteMsg::new(
-        block.id(),
-        block_store.get_state_for_block(block.id()).unwrap(),
-        block.round(),
-        block.quorum_cert().certified_parent_block_id(),
-        block.quorum_cert().certified_parent_block_round(),
-        block.quorum_cert().certified_grandparent_block_id(),
-        block.quorum_cert().certified_grandparent_block_round(),
+        VoteData::new(
+            block.id(),
+            block_store.get_state_for_block(block.id()).unwrap(),
+            block.round(),
+            block.quorum_cert().certified_parent_block_id(),
+            block.quorum_cert().certified_parent_block_round(),
+            block.quorum_cert().certified_grandparent_block_id(),
+            block.quorum_cert().certified_grandparent_block_round(),
+        ),
         final_voter.author(),
         placeholder_ledger_info(),
         final_voter,

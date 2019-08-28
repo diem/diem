@@ -3,8 +3,8 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        safety::vote_msg::{VoteMsg, VoteMsgVerificationError},
+        common::Round, consensus_types::vote_data::VoteData,
+        safety::vote_msg::VoteMsgVerificationError,
     },
     state_replication::ExecutedState,
 };
@@ -125,7 +125,7 @@ impl QuorumCert {
     ///   constant.
     /// - the map of signatures is empty because genesis block is implicitly agreed.
     pub fn certificate_for_genesis() -> QuorumCert {
-        let genesis_digest = VoteMsg::vote_digest(
+        let genesis_digest = VoteData::vote_digest(
             *GENESIS_BLOCK_ID,
             ExecutedState::state_for_genesis(),
             0,
@@ -164,7 +164,7 @@ impl QuorumCert {
         &self,
         validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), VoteMsgVerificationError> {
-        let vote_hash = VoteMsg::vote_digest(
+        let vote_hash = VoteData::vote_digest(
             self.certified_block_id,
             self.certified_state,
             self.certified_block_round,

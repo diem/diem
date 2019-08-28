@@ -14,7 +14,7 @@ use types::proto::{ledger_info, transaction};
 pub use self::{
     consensus::{
         Block, BlockRetrievalStatus, ConsensusMsg, PacemakerTimeout, PacemakerTimeoutCertificate,
-        Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote,
+        Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote, VoteData,
     },
     mempool::MempoolSyncMsg,
     network::{

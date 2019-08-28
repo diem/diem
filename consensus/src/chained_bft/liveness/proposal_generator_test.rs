@@ -4,6 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
+        consensus_types::vote_data::VoteData,
         liveness::proposal_generator::{ProposalGenerationError, ProposalGenerator},
         safety::vote_msg::VoteMsg,
         test_utils::{
@@ -75,13 +76,15 @@ fn test_proposal_generation_parent() {
 
     // Once a1 is certified, it should be the one to choose from
     let vote_msg_a1 = VoteMsg::new(
-        a1.id(),
-        block_store.get_state_for_block(a1.id()).unwrap(),
-        a1.round(),
-        a1.quorum_cert().certified_parent_block_id(),
-        a1.quorum_cert().certified_parent_block_round(),
-        a1.quorum_cert().certified_grandparent_block_id(),
-        a1.quorum_cert().certified_grandparent_block_round(),
+        VoteData::new(
+            a1.id(),
+            block_store.get_state_for_block(a1.id()).unwrap(),
+            a1.round(),
+            a1.quorum_cert().certified_parent_block_id(),
+            a1.quorum_cert().certified_parent_block_round(),
+            a1.quorum_cert().certified_grandparent_block_id(),
+            a1.quorum_cert().certified_grandparent_block_round(),
+        ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
@@ -96,13 +99,15 @@ fn test_proposal_generation_parent() {
 
     // Once b1 is certified, it should be the one to choose from
     let vote_msg_b1 = VoteMsg::new(
-        b1.id(),
-        block_store.get_state_for_block(b1.id()).unwrap(),
-        b1.round(),
-        b1.quorum_cert().certified_parent_block_id(),
-        b1.quorum_cert().certified_parent_block_round(),
-        b1.quorum_cert().certified_grandparent_block_id(),
-        b1.quorum_cert().certified_grandparent_block_round(),
+        VoteData::new(
+            b1.id(),
+            block_store.get_state_for_block(b1.id()).unwrap(),
+            b1.round(),
+            b1.quorum_cert().certified_parent_block_id(),
+            b1.quorum_cert().certified_parent_block_round(),
+            b1.quorum_cert().certified_grandparent_block_id(),
+            b1.quorum_cert().certified_grandparent_block_round(),
+        ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
@@ -131,13 +136,15 @@ fn test_old_proposal_generation() {
     let genesis = block_store.root();
     let a1 = inserter.insert_block(genesis.as_ref(), 1);
     let vote_msg_a1 = VoteMsg::new(
-        a1.id(),
-        block_store.get_state_for_block(a1.id()).unwrap(),
-        a1.round(),
-        a1.quorum_cert().certified_parent_block_id(),
-        a1.quorum_cert().certified_parent_block_round(),
-        a1.quorum_cert().certified_grandparent_block_id(),
-        a1.quorum_cert().certified_grandparent_block_round(),
+        VoteData::new(
+            a1.id(),
+            block_store.get_state_for_block(a1.id()).unwrap(),
+            a1.round(),
+            a1.quorum_cert().certified_parent_block_id(),
+            a1.quorum_cert().certified_parent_block_round(),
+            a1.quorum_cert().certified_grandparent_block_id(),
+            a1.quorum_cert().certified_grandparent_block_round(),
+        ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),

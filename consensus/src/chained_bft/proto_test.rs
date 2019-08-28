@@ -5,6 +5,7 @@ use crate::{
     chained_bft::{
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
+            vote_data::VoteData,
         },
         safety::vote_msg::VoteMsg,
         test_utils::placeholder_ledger_info,
@@ -35,13 +36,15 @@ fn test_proto_convert_proposal() {
 fn test_proto_convert_vote() {
     let signer = ValidatorSigner::random(None);
     let vote = VoteMsg::new(
-        HashValue::random(),
-        ExecutedState::state_for_genesis(),
-        1,
-        HashValue::random(),
-        0,
-        HashValue::random(),
-        0,
+        VoteData::new(
+            HashValue::random(),
+            ExecutedState::state_for_genesis(),
+            1,
+            HashValue::random(),
+            0,
+            HashValue::random(),
+            0,
+        ),
         signer.author(),
         placeholder_ledger_info(),
         &signer,

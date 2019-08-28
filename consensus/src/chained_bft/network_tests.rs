@@ -6,6 +6,7 @@ use crate::{
         common::Author,
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
+            vote_data::VoteData,
         },
         epoch_manager::EpochManager,
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
@@ -353,13 +354,15 @@ fn test_network_api() {
         nodes.push(node);
     }
     let vote = VoteMsg::new(
-        HashValue::random(),
-        ExecutedState::state_for_genesis(),
-        1,
-        HashValue::random(),
-        0,
-        HashValue::random(),
-        0,
+        VoteData::new(
+            HashValue::random(),
+            ExecutedState::state_for_genesis(),
+            1,
+            HashValue::random(),
+            0,
+            HashValue::random(),
+            0,
+        ),
         peers[0],
         placeholder_ledger_info(),
         &signers[0],
