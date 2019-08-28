@@ -14,7 +14,7 @@ use network::proto::GetChunkResponse;
 use proto_conv::IntoProto;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::{crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures};
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
@@ -37,11 +37,17 @@ pub trait ExecutorProxyTrait: Sync + Send {
         limit: u64,
         target: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>>;
+
+    fn validate_ledger_info(
+        &self,
+        target: &LedgerInfoWithSignatures<Ed25519Signature>,
+    ) -> Result<()>;
 }
 
 pub(crate) struct ExecutorProxy {
     storage_client: Arc<StorageReadServiceClient>,
     execution_client: Arc<ExecutionClient>,
+    validator_verifier: ValidatorVerifier,
 }
 
 impl ExecutorProxy {
@@ -56,9 +62,13 @@ impl ExecutorProxy {
             &config.storage.address,
             config.storage.port,
         ));
+        // TODO either pass in the validator verifier or use correct source of trusted peers
+        let peers_with_public_keys = config.network.trusted_peers.get_trusted_consensus_peers();
+        let validator_verifier = ValidatorVerifier::new(peers_with_public_keys);
         Self {
             storage_client,
             execution_client,
+            validator_verifier,
         }
     }
 }
@@ -115,5 +125,10 @@ impl ExecutorProxyTrait for ExecutorProxy {
             Ok(resp)
         }
             .boxed()
+    }
+
+    fn validate_ledger_info(&self, target: &LedgerInfo) -> Result<()> {
+        target.verify(&self.validator_verifier)?;
+        Ok(())
     }
 }

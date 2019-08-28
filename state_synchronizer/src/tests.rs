@@ -145,6 +145,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         let response = (self.handler)(self.mock_chunk_response(known_version));
         async move { response }.boxed()
     }
+
+    fn validate_ledger_info(&self, _target: &LedgerInfo) -> Result<()> {
+        Ok(())
+    }
 }
 
 struct SynchronizerEnv {
