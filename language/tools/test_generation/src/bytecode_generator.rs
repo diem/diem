@@ -9,8 +9,8 @@ use crate::{
 };
 use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
 use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FunctionSignature, SignatureToken,
-    StringPoolIndex,
+    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CompiledModuleMut, FunctionSignature,
+    LocalsSignatureIndex, SignatureToken, StringPoolIndex, StructDefinitionIndex, TableIndex,
 };
 
 /// This type represents bytecode instructions that take a `u8`
@@ -30,6 +30,10 @@ type AddressPoolIndexToBytecode = fn(AddressPoolIndex) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `ByteArrayPoolIndex`
 type ByteArrayPoolIndexToBytecode = fn(ByteArrayPoolIndex) -> Bytecode;
+
+/// This type represents bytecode instructions that take a `StructDefinitionIndex`
+/// and a `LocalsSignatureIndex`
+type StructAndLocalIndexToBytecode = fn(StructDefinitionIndex, LocalsSignatureIndex) -> Bytecode;
 
 /// There are six types of bytecode instructions
 #[derive(Debug, Clone)]
@@ -54,6 +58,9 @@ enum BytecodeType {
 
     /// Instructions that take a `ByteArrayPoolIndex`
     ByteArrayPoolIndex(ByteArrayPoolIndexToBytecode),
+
+    /// Instructions that take a `StructDefinitionIndex` and a `LocalsSignatureIndex`
+    StructAndLocalIndex(StructAndLocalIndexToBytecode),
 }
 
 /// Abstraction for change to the stack size
@@ -139,6 +146,10 @@ impl BytecodeGenerator {
             (StackEffect::Nop, BytecodeType::U16(Bytecode::Branch)),
             (StackEffect::Sub, BytecodeType::U16(Bytecode::BrTrue)),
             (StackEffect::Sub, BytecodeType::U16(Bytecode::BrFalse)),
+            (
+                StackEffect::Sub,
+                BytecodeType::StructAndLocalIndex(Bytecode::Pack),
+            ),
         ];
         let generator = match seed {
             Some(seed) => StdRng::from_seed(seed),
@@ -157,6 +168,7 @@ impl BytecodeGenerator {
         &mut self,
         state: AbstractState,
         locals_len: usize,
+        module: CompiledModuleMut,
     ) -> Vec<(StackEffect, Bytecode)> {
         let mut matches: Vec<(StackEffect, Bytecode)> = Vec::new();
         let instructions = &self.instructions;
@@ -182,16 +194,33 @@ impl BytecodeGenerator {
                     instruction(value)
                 }
                 BytecodeType::StringPoolIndex(instruction) => {
-                    // TODO: Determine correct index
-                    instruction(StringPoolIndex::new(0))
+                    // Select a random string from the module's string pool
+                    instruction(StringPoolIndex::new(
+                        self.rng.gen_range(0, module.string_pool.len()) as TableIndex,
+                    ))
                 }
                 BytecodeType::AddressPoolIndex(instruction) => {
-                    // TODO: Determine correct index
-                    instruction(AddressPoolIndex::new(0))
+                    // Select a random address from the module's address pool
+                    instruction(AddressPoolIndex::new(
+                        self.rng.gen_range(0, module.address_pool.len()) as TableIndex,
+                    ))
                 }
                 BytecodeType::ByteArrayPoolIndex(instruction) => {
-                    // TODO: Determine correct index
-                    instruction(ByteArrayPoolIndex::new(0))
+                    // Select a random byte array from the module's byte array pool
+                    instruction(ByteArrayPoolIndex::new(
+                        self.rng.gen_range(0, module.byte_array_pool.len()) as TableIndex,
+                    ))
+                }
+                BytecodeType::StructAndLocalIndex(instruction) => {
+                    // Select a random struct definition and local signature
+                    instruction(
+                        StructDefinitionIndex::new(
+                            self.rng.gen_range(0, module.struct_defs.len()) as TableIndex
+                        ),
+                        LocalsSignatureIndex::new(
+                            self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
+                        ),
+                    )
                 }
             };
             let summary = summaries::instruction_summary(instruction.clone());
@@ -286,13 +315,17 @@ impl BytecodeGenerator {
         &mut self,
         abstract_state_in: AbstractState,
         abstract_state_out: AbstractState,
+        module: CompiledModuleMut,
     ) -> Vec<Bytecode> {
         let mut bytecode: Vec<Bytecode> = Vec::new();
         let mut state = abstract_state_in.clone();
         // Generate block body
         loop {
-            let candidates =
-                self.candidate_instructions(state.clone(), abstract_state_in.get_locals().len());
+            let candidates = self.candidate_instructions(
+                state.clone(),
+                abstract_state_in.get_locals().len(),
+                module.clone(),
+            );
             if candidates.is_empty() {
                 warn!("No candidates found for state: [{:?}]", state);
                 break;
@@ -342,16 +375,15 @@ impl BytecodeGenerator {
         &mut self,
         locals: &[SignatureToken],
         signature: &FunctionSignature,
-        _target_min: usize,
-        _target_max: usize,
+        module: CompiledModuleMut,
     ) -> Vec<Bytecode> {
         let mut cfg = CFG::new(&mut self.rng, locals, signature, 3);
         let cfg_copy = cfg.clone();
         for (block_id, block) in cfg.get_basic_blocks_mut().iter_mut() {
             debug!("+++++++++++++++++ Starting new block +++++++++++++++++");
-            let state1 = AbstractState::from_locals(block.get_locals_in().clone());
-            let state2 = AbstractState::from_locals(block.get_locals_out().clone());
-            let mut bytecode = self.generate_block(state1, state2.clone());
+            let state1 = AbstractState::from_locals(module.clone(), block.get_locals_in().clone());
+            let state2 = AbstractState::from_locals(module.clone(), block.get_locals_out().clone());
+            let mut bytecode = self.generate_block(state1, state2.clone(), module.clone());
             let mut state_f = state2;
             if cfg_copy.num_children(*block_id) == 2 {
                 // BrTrue, BrFalse: Add bool and branching instruction randomly

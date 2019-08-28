@@ -10,7 +10,7 @@
 use crate::common::*;
 use bytecode_verifier::VerifiedModule;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
+use std::{cmp::min, collections::HashMap};
 use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
 use vm::{
     access::*,
@@ -26,7 +26,7 @@ use vm::{
 };
 
 type BytecodeGenerator =
-    dyn Fn(&[SignatureToken], &FunctionSignature, usize, usize) -> Vec<Bytecode>;
+    dyn Fn(&[SignatureToken], &FunctionSignature, CompiledModuleMut) -> Vec<Bytecode>;
 
 /// A wrapper around a `CompiledModule` containing information needed for generation.
 ///
@@ -114,6 +114,21 @@ impl ModuleBuilder {
         let function_sig_offset = self.module.function_signatures.len();
         self.module.string_pool.append(&mut names);
 
+        self.module.function_handles = sigs
+            .iter()
+            .enumerate()
+            .map(|(i, _)| FunctionHandle {
+                name: StringPoolIndex::new((i + offset) as u16),
+                signature: FunctionSignatureIndex::new((i + function_sig_offset) as u16),
+                module: ModuleHandleIndex::new(0),
+            })
+            .collect();
+        let (local_sigs, mut function_sigs): (Vec<_>, Vec<_>) = sigs.clone().into_iter().unzip();
+        self.module.function_signatures.append(&mut function_sigs);
+        self.module
+            .locals_signatures
+            .append(&mut local_sigs.into_iter().map(LocalsSignature).collect());
+
         self.module.function_defs = sigs
             .iter()
             .enumerate()
@@ -127,12 +142,7 @@ impl ModuleBuilder {
                     locals: LocalsSignatureIndex(i as u16),
                     code: {
                         match &self.bytecode_gen {
-                            Some(bytecode_gen) => bytecode_gen(
-                                &sig.0,
-                                &sig.1,
-                                MIN_BYTECODE_INSTRUCTIONS,
-                                MAX_BYTECODE_INSTRUCTIONS,
-                            ),
+                            Some(bytecode_gen) => bytecode_gen(&sig.0, &sig.1, self.module.clone()),
                             None => {
                                 // Random nonsense to pad this out. We won't look at this at all,
                                 // just non-empty is all that matters.
@@ -143,21 +153,6 @@ impl ModuleBuilder {
                 },
             })
             .collect();
-
-        self.module.function_handles = sigs
-            .iter()
-            .enumerate()
-            .map(|(i, _)| FunctionHandle {
-                name: StringPoolIndex::new((i + offset) as u16),
-                signature: FunctionSignatureIndex::new((i + function_sig_offset) as u16),
-                module: ModuleHandleIndex::new(0),
-            })
-            .collect();
-        let (local_sigs, mut function_sigs): (Vec<_>, Vec<_>) = sigs.into_iter().unzip();
-        self.module.function_signatures.append(&mut function_sigs);
-        self.module
-            .locals_signatures
-            .append(&mut local_sigs.into_iter().map(LocalsSignature).collect());
     }
 
     // Generate `table_size` number of structs. Note that this will not generate nested structs.
@@ -174,7 +169,9 @@ impl ModuleBuilder {
         for struct_idx in 0..self.table_size {
             // Generate a random amount of fields for each struct. Each struct must have at least
             // one field.
-            let num_fields = self.gen.gen_range(1, MAX_FIELDS);
+            let num_fields = self
+                .gen
+                .gen_range(1, min(self.module.string_pool.len(), MAX_FIELDS));
 
             // Generate the struct def. This generates pointers into the module's `field_defs` that
             // are not generated just yet -- we do this beforehand so that we can grab the starting
@@ -190,18 +187,15 @@ impl ModuleBuilder {
             self.module.struct_defs.push(struct_def);
 
             // Generate the fields for the struct.
-            for _ in 0..num_fields {
+            for i in 0..num_fields {
                 let struct_handle_idx = StructHandleIndex::new(struct_idx);
                 // Pick a random base type (non-reference)
                 let typ_idx = TypeSignatureIndex::new(
                     self.gen
                         .gen_range(0, self.module.type_signatures.len() as TableIndex),
                 );
-                // Pick a random name.
-                let str_pool_idx = StringPoolIndex::new(
-                    self.gen
-                        .gen_range(0, self.module.string_pool.len() as TableIndex),
-                );
+                // Pick a name from the string pool.
+                let str_pool_idx = StringPoolIndex::new(i as TableIndex);
                 let field_def = FieldDefinition {
                     struct_: struct_handle_idx,
                     name: str_pool_idx,
@@ -366,8 +360,8 @@ impl ModuleBuilder {
         self.with_account_addresses();
         self.with_strings();
         self.with_bytearrays();
-        self.with_random_functions();
         self.with_structs();
+        self.with_random_functions();
         let module = std::mem::replace(&mut self.module, Self::default_module_with_types());
         let module = module.freeze().expect("should satisfy bounds checker");
         self.known_modules.insert(module.self_id(), module.clone());

@@ -5,8 +5,9 @@ use crate::{
     abstract_state::{AbstractState, AbstractValue, BorrowState},
     state_local_availability_is, state_local_exists, state_local_kind_is, state_local_place,
     state_local_set, state_local_take, state_local_take_borrow, state_never, state_stack_has,
-    state_stack_has_polymorphic_eq, state_stack_local_polymorphic_eq, state_stack_pop,
-    state_stack_push, state_stack_push_register,
+    state_stack_has_polymorphic_eq, state_stack_has_struct, state_stack_local_polymorphic_eq,
+    state_stack_pack_struct, state_stack_pop, state_stack_push, state_stack_push_register,
+    state_stack_satisfies_struct_signature, state_stack_unpack_struct,
     transitions::*,
 };
 use vm::file_format::{Bytecode, Kind, SignatureToken};
@@ -344,6 +345,14 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
         Bytecode::BrFalse(_) => Summary {
             preconditions: vec![state_never!()],
             effects: vec![state_stack_pop!()],
+        },
+        Bytecode::Pack(i, _) => Summary {
+            preconditions: vec![state_stack_satisfies_struct_signature!(i)],
+            effects: vec![state_stack_pack_struct!(i), state_stack_push_register!()],
+        },
+        Bytecode::Unpack(i, _) => Summary {
+            preconditions: vec![state_stack_has_struct!(i)],
+            effects: vec![state_stack_pop!(), state_stack_unpack_struct!(i)],
         },
         _ => Summary {
             preconditions: vec![state_never!()],
