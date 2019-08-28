@@ -166,7 +166,7 @@ impl Arbitrary for AccountInfoUniverse {
 }
 
 #[derive(Arbitrary, Debug)]
-struct RawTransactionGen {
+pub struct RawTransactionGen {
     payload: TransactionPayload,
     max_gas_amount: u64,
     gas_unit_price: u64,
@@ -335,7 +335,7 @@ impl SignatureCheckedTransaction {
 }
 
 #[derive(Arbitrary, Debug)]
-struct SignatureCheckedTransactionGen {
+pub struct SignatureCheckedTransactionGen {
     raw_transaction_gen: RawTransactionGen,
 }
 
