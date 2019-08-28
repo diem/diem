@@ -34,8 +34,8 @@ EXPOSE 9101
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
 
-# Define SEED_PEERS, NODE_CONFIG, PEER_KEYPAIRS, GENESIS_BLOB and PEER_ID environment variables when running
-CMD cd /opt/libra/etc && echo "$NODE_CONFIG" > node.config.toml && echo "$SEED_PEERS" > seed_peers.config.toml && echo "$PEER_KEYPAIRS" > peer_keypairs.config.toml && echo "$GENESIS_BLOB" | base64 -d > genesis.blob && exec /opt/libra/bin/libra_node -f node.config.toml --peer_id "$PEER_ID"
+# Define SEED_PEERS, NODE_CONFIG, NETWORK_KEYPAIRS, CONSENSUS_KEYPAIR, GENESIS_BLOB and PEER_ID environment variables when running
+CMD cd /opt/libra/etc && echo "$NODE_CONFIG" > node.config.toml && echo "$SEED_PEERS" > seed_peers.config.toml && echo "$NETWORK_KEYPAIRS" > network_keypairs.config.toml && echo "$CONSENSUS_KEYPAIR" > consensus_keypair.config.toml && echo "$GENESIS_BLOB" | base64 -d > genesis.blob && exec /opt/libra/bin/libra_node -f node.config.toml --peer_id "$PEER_ID"
 
 ARG BUILD_DATE
 ARG GIT_REV

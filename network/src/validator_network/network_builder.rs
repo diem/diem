@@ -33,6 +33,7 @@ use crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
@@ -309,7 +310,7 @@ impl NetworkBuilder {
     /// Create the configured `NetworkBuilder`
     /// Return the constructed Mempool and Consensus Sender+Events
     pub fn build(&mut self) -> (Multiaddr, Box<dyn LibraNetworkProvider>) {
-        let identity = Identity::new(self.peer_id, self.supported_protocols(), self.role.clone());
+        let identity = Identity::new(self.peer_id, self.supported_protocols(), self.role);
         // Build network based on the transport type
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
@@ -381,6 +382,7 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(ds.start().boxed().unit_error().compat());
+        debug!("Started direct send actor");
 
         // Initialize and start RPC actor.
         let (pm_rpc_notifs_tx, pm_rpc_notifs_rx) = channel::new(
@@ -408,6 +410,7 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(rpc.start().boxed().unit_error().compat());
+        debug!("Started RPC actor");
 
         // Initialize and start HealthChecker.
         let (pm_ping_notifs_tx, pm_ping_notifs_rx) = channel::new(
@@ -431,6 +434,7 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(health_checker.start().boxed().unit_error().compat());
+        debug!("Started health checker");
 
         let mut net_conn_mgr_reqs_tx = None;
 
@@ -462,6 +466,7 @@ impl NetworkBuilder {
             );
             self.executor
                 .spawn(conn_mgr.start().boxed().unit_error().compat());
+            debug!("Started connection manager");
 
             // Initialize and start Discovery actor.
             let (pm_discovery_notifs_tx, pm_discovery_notifs_rx) = channel::new(
@@ -497,6 +502,7 @@ impl NetworkBuilder {
             );
             self.executor
                 .spawn(discovery.start().boxed().unit_error().compat());
+            debug!("Started discovery protocol actor");
         }
 
         let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
@@ -516,6 +522,7 @@ impl NetworkBuilder {
         let listen_addr = peer_mgr.listen_addr().clone();
         self.executor
             .spawn(peer_mgr.start().boxed().unit_error().compat());
+        debug!("Started peer manager");
 
         // Setup communication channels.
         let (network_reqs_tx, network_reqs_rx) =

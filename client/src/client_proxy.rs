@@ -3,7 +3,7 @@
 
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use config::trusted_peers::TrustedPeersConfig;
+use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use futures::{future::Future, stream::Stream};
@@ -115,8 +115,7 @@ impl ClientProxy {
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
-        let validators_config = TrustedPeersConfig::load_config(Path::new(validator_set_file));
-        let validators = validators_config.get_trusted_consensus_peers();
+        let validators = ConsensusPeersConfig::load_config(Path::new(validator_set_file)).peers;
         ensure!(
             !validators.is_empty(),
             "Not able to load validators from trusted peers config!"
@@ -125,7 +124,12 @@ impl ClientProxy {
         // If < 4 validators, all validators have to agree.
         let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
             .into_iter()
-            .map(|(key, value)| (key, value))
+            .map(|peer| {
+                (
+                    AccountAddress::from_str(&peer.account_address).unwrap(),
+                    peer.consensus_pubkey,
+                )
+            })
             .collect();
         let validator_verifier = Arc::new(ValidatorVerifier::new(validator_pubkeys));
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
@@ -1099,7 +1103,7 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use config::trusted_peers::TrustedPeersConfigHelpers;
+    use config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
     use libra_wallet::io_utils;
     use proptest::prelude::*;
     use tools::tempdir::TempPath;
@@ -1109,12 +1113,11 @@ mod tests {
         accounts.reserve(count);
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
-        let trust_peer_file = TempPath::new();
-        let (_, trust_peer_config) = TrustedPeersConfigHelpers::get_test_config(1, None);
-        let trust_peer_path = trust_peer_file.path();
-        trust_peer_config.save_config(&trust_peer_path);
-
-        let val_set_file = trust_peer_path.to_str().unwrap().to_string();
+        let consensus_peer_file = TempPath::new();
+        let consensus_peers_path = consensus_peer_file.path();
+        let (_, consensus_peers_config) = ConfigHelpers::get_test_consensus_config(1, None);
+        consensus_peers_config.save_config(&consensus_peers_path);
+        let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
 
         // We don't need to specify host/port since the client won't be used to connect, only to
         // generate random accounts

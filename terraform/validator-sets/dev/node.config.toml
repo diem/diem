@@ -1,4 +1,4 @@
-[network]
+[[networks]]
 advertised_address = "/ip4/${self_ip}/tcp/6180"
 
 [debug_interface]

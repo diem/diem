@@ -107,23 +107,24 @@ impl ChainedBftProvider {
     /// Retrieve the initial "state" for consensus. This function is synchronous and returns after
     /// reading the local persistent store and retrieving the initial state from the executor.
     fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup {
-        // Keeping the initial set of validators in a node config is embarrassing and we should
-        // all feel bad about it.
-        let peer_id_str = node_config.network.peer_id.clone();
+        let peer_id_str = node_config
+            .get_validator_network_config()
+            .unwrap()
+            .peer_id
+            .clone();
         let author =
             AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
         let private_key = node_config
-            .network
-            .peer_keypairs
+            .consensus
+            .consensus_keypair
             .take_consensus_private()
             .expect(
             "Failed to move a Consensus private key from a NodeConfig, key absent or already read",
         );
         let signer = ValidatorSigner::new(author, private_key);
-        let peers_with_public_keys = node_config
-            .network
-            .trusted_peers
-            .get_trusted_consensus_peers();
+        // Keeping the initial set of validators in a node config is embarrassing and we should
+        // all feel bad about it.
+        let peers_with_public_keys = node_config.consensus.get_consensus_peers();
         let validator = ValidatorVerifier::new(peers_with_public_keys);
         counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);

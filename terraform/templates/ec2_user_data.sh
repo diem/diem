@@ -16,7 +16,8 @@ fi
 mkdir -p /opt/libra
 
 yum -y install awscli
-aws s3 cp ${trusted_peers} /opt/libra/trusted_peers.config.toml
+aws s3 cp ${consensus_peers} /opt/libra/consensus_peers.config.toml
+aws s3 cp ${network_peers} /opt/libra/network_peers.config.toml
 
 echo ECS_CLUSTER=${ecs_cluster} >> /etc/ecs/ecs.config
 systemctl try-restart ecs --no-block

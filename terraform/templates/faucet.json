@@ -9,7 +9,7 @@
             {"containerPort": 8000, "hostPort": 8000}
         ],
         "mountPoints": [
-            {"sourceVolume": "trusted-peers", "containerPath": "/opt/libra/etc/trusted_peers.config.toml"}
+            {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"}
         ],
         "environment": [
             {"name": "AC_PORT", "value": "8000"},

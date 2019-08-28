@@ -51,7 +51,7 @@ impl Identity {
     }
 
     pub fn role(&self) -> RoleType {
-        self.role.clone()
+        self.role
     }
 
     pub fn is_protocol_supported(&self, protocol: &ProtocolId) -> bool {

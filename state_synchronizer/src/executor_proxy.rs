@@ -1,5 +1,5 @@
 use crate::LedgerInfo;
-use config::config::NodeConfig;
+use config::config::{ExecutionConfig, StorageConfig};
 use crypto::ed25519::*;
 use execution_proto::proto::{
     execution::{ExecuteChunkRequest, ExecuteChunkResponse},
@@ -12,9 +12,9 @@ use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
 use network::proto::GetChunkResponse;
 use proto_conv::IntoProto;
-use std::{pin::Pin, sync::Arc};
+use std::{collections::HashMap, pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use types::{crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures};
+use types::{crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures, PeerId};
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
@@ -51,20 +51,22 @@ pub(crate) struct ExecutorProxy {
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(config: &NodeConfig) -> Self {
-        let connection_str = format!("localhost:{}", config.execution.port);
+    pub(crate) fn new(
+        execution_config: &ExecutionConfig,
+        storage_config: &StorageConfig,
+        validators: HashMap<PeerId, Ed25519PublicKey>,
+    ) -> Self {
+        let connection_str = format!("localhost:{}", execution_config.port);
         let env = Arc::new(EnvBuilder::new().name_prefix("grpc-coord-").build());
         let execution_client = Arc::new(ExecutionClient::new(
             ChannelBuilder::new(Arc::clone(&env)).connect(&connection_str),
         ));
         let storage_client = Arc::new(StorageReadServiceClient::new(
             env,
-            &config.storage.address,
-            config.storage.port,
+            &storage_config.address,
+            storage_config.port,
         ));
-        // TODO either pass in the validator verifier or use correct source of trusted peers
-        let peers_with_public_keys = config.network.trusted_peers.get_trusted_consensus_peers();
-        let validator_verifier = ValidatorVerifier::new(peers_with_public_keys);
+        let validator_verifier = ValidatorVerifier::new(validators);
         Self {
             storage_client,
             execution_client,

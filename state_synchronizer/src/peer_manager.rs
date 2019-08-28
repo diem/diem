@@ -49,12 +49,14 @@ impl PeerManager {
     }
 
     pub fn enable_peer(&mut self, peer_id: PeerId, sender: StateSynchronizerSender) {
+        debug!("[state sync] state before: {:?}", self.peers);
         self.network_senders.insert(peer_id, sender);
         if let Some(peer_info) = self.peers.get_mut(&peer_id) {
             peer_info.is_alive = true;
         } else {
             self.peers.insert(peer_id, PeerInfo::new(true, false));
         }
+        debug!("[state sync] state after: {:?}", self.peers);
     }
 
     pub fn disable_peer(&mut self, peer_id: &PeerId) {
