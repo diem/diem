@@ -11,12 +11,17 @@ use crate::{
         FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
         LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex,
         StringPoolIndex, StructDefinition, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TypeSignature, TypeSignatureIndex,
+        TypeSignature, TypeSignatureIndex, UserStringIndex,
     },
     internals::ModuleIndex,
     IndexKind,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    language_storage::ModuleId,
+    user_string::{UserStr, UserString},
+};
 
 /// Represents accessors for a compiled module.
 ///
@@ -68,6 +73,10 @@ pub trait ModuleAccess: Sync {
 
     fn string_at(&self, idx: StringPoolIndex) -> &str {
         self.as_module().as_inner().string_pool[idx.into_index()].as_str()
+    }
+
+    fn user_string_at(&self, idx: UserStringIndex) -> &UserStr {
+        &self.as_module().as_inner().user_strings[idx.into_index()]
     }
 
     fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
@@ -130,6 +139,10 @@ pub trait ModuleAccess: Sync {
 
     fn string_pool(&self) -> &[String] {
         &self.as_module().as_inner().string_pool
+    }
+
+    fn user_strings(&self) -> &[UserString] {
+        &self.as_module().as_inner().user_strings
     }
 
     fn struct_defs(&self) -> &[StructDefinition] {

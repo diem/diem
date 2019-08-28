@@ -15,7 +15,7 @@ mod type_prop_tests;
 pub enum Type {
     Bool,
     U64,
-    String,
+    UserString,
     ByteArray,
     Address,
     Struct(StructDef),
@@ -33,7 +33,7 @@ impl CanonicalSerialize for Type {
         let _: &mut _ = match self {
             Bool => serializer.encode_u8(0x01)?,
             U64 => serializer.encode_u8(0x02)?,
-            String => serializer.encode_u8(0x03)?,
+            UserString => serializer.encode_u8(0x03)?,
             ByteArray => serializer.encode_u8(0x04)?,
             Address => serializer.encode_u8(0x05)?,
             Struct(struct_def) => {
@@ -66,7 +66,7 @@ impl CanonicalDeserialize for Type {
         let ty = match deserializer.decode_u8()? {
             0x01 => Bool,
             0x02 => U64,
-            0x03 => String,
+            0x03 => UserString,
             0x04 => ByteArray,
             0x05 => Address,
             0x06 => Struct(StructDef::deserialize(deserializer)?),

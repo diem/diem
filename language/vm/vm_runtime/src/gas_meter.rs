@@ -174,7 +174,7 @@ impl GasMeter {
             }
             // We charge by the length of the string being stored on the stack.
             Bytecode::LdStr(idx) => {
-                let string_ref = stk.top_frame()?.module().string_at(*idx);
+                let string_ref = stk.top_frame()?.module().user_string_at(*idx);
                 let str_len = AbstractMemorySize::new(string_ref.len() as GasCarrier);
                 let str_len = words_in(str_len);
                 let default_gas = static_cost_instr(instr, str_len);

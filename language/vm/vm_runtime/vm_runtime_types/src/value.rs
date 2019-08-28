@@ -11,6 +11,7 @@ use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
+    user_string::UserString,
 };
 use vm::{
     errors::*,
@@ -35,7 +36,7 @@ pub enum Value {
     Address(AccountAddress),
     U64(u64),
     Bool(bool),
-    String(String),
+    UserString(UserString),
     Struct(Vec<MutVal>),
     ByteArray(ByteArray),
 }
@@ -51,7 +52,7 @@ impl Value {
             // the semantics that we utilize currently, but this string may
             // need to be copied at some later time, so we need to charge based
             // upon the size of the memory that will possibly need to be accessed.
-            Value::String(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
+            Value::UserString(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
             Value::Struct(vals) => vals
                 .iter()
                 .fold(*STRUCT_SIZE, |acc, vl| acc.map2(vl.size(), Add::add)),
@@ -77,7 +78,7 @@ impl Value {
                     Value::Bool(_) => Type::Bool,
                     Value::Address(_) => Type::Address,
                     Value::U64(_) => Type::U64,
-                    Value::String(_) => Type::String,
+                    Value::UserString(_) => Type::UserString,
                     Value::ByteArray(_) => Type::ByteArray,
                     Value::Struct(_) => Type::Struct(val.to_struct_def_FOR_TESTING()),
                 }
@@ -94,7 +95,7 @@ impl Value {
             (Value::Bool(b1), Value::Bool(b2)) => b1 == b2,
             (Value::Address(a1), Value::Address(a2)) => a1 == a2,
             (Value::U64(u1), Value::U64(u2)) => u1 == u2,
-            (Value::String(s1), Value::String(s2)) => s1 == s2,
+            (Value::UserString(s1), Value::UserString(s2)) => s1 == s2,
             (Value::Struct(s1), Value::Struct(s2)) => {
                 if s1.len() != s2.len() {
                     return Err(VMInvariantViolation::InternalTypeError);
@@ -118,7 +119,7 @@ impl Value {
             (Value::Bool(b1), Value::Bool(b2)) => b1 != b2,
             (Value::Address(a1), Value::Address(a2)) => a1 != a2,
             (Value::U64(u1), Value::U64(u2)) => u1 != u2,
-            (Value::String(s1), Value::String(s2)) => s1 != s2,
+            (Value::UserString(s1), Value::UserString(s2)) => s1 != s2,
             (Value::Struct(s1), Value::Struct(s2)) => {
                 if s1.len() != s2.len() {
                     return Err(VMInvariantViolation::InternalTypeError);
@@ -237,8 +238,8 @@ impl MutVal {
         MutVal::new(Value::Bool(b))
     }
 
-    fn string(s: String) -> Self {
-        MutVal::new(Value::String(s))
+    fn user_string(s: UserString) -> Self {
+        MutVal::new(Value::UserString(s))
     }
 
     fn struct_(v: Vec<MutVal>) -> Self {
@@ -301,8 +302,8 @@ impl Local {
         Local::Value(MutVal::bool(b))
     }
 
-    pub fn string(s: String) -> Self {
-        Local::Value(MutVal::string(s))
+    pub fn user_string(s: UserString) -> Self {
+        Local::Value(MutVal::user_string(s))
     }
 
     pub fn struct_(v: Vec<MutVal>) -> Self {

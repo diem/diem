@@ -76,6 +76,7 @@ fn test_module(name: String) -> VerifiedModule {
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
         string_pool: vec![name, "func1".to_string(), "func2".to_string()],
+        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
@@ -145,6 +146,7 @@ fn test_script() -> VerifiedScript {
             "func2".to_string(),
             "main".to_string(),
         ],
+        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
@@ -434,6 +436,7 @@ fn test_multi_level_cache_write_back() {
             "func2".to_string(),
             "main".to_string(),
         ],
+        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }

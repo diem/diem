@@ -12,7 +12,7 @@ use vm::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex, NO_TYPE_ACTUALS,
+        ModuleHandleIndex, SignatureToken, StringPoolIndex, UserStringIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
@@ -70,6 +70,7 @@ fn fake_script() -> VerifiedScript {
         }],
         locals_signatures: vec![LocalsSignature(vec![])],
         string_pool: vec!["hello".to_string()],
+        user_strings: vec!["hello world".into()],
         byte_array_pool: vec![ByteArray::new(vec![0u8; 32])],
         address_pool: vec![AccountAddress::default()],
     }
@@ -264,9 +265,9 @@ fn test_simple_instruction_transition() {
 
     test_simple_instruction(
         &mut vm,
-        Bytecode::LdStr(StringPoolIndex::new(0)),
+        Bytecode::LdStr(UserStringIndex::new(0)),
         vec![],
-        vec![Local::string("hello".to_string())],
+        vec![Local::user_string("hello world".into())],
         vec![],
         vec![],
         1,
@@ -594,6 +595,7 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         function_signatures: function_sigs,
         locals_signatures: local_sigs.into_iter().map(LocalsSignature).collect(),
         string_pool: names,
+        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }

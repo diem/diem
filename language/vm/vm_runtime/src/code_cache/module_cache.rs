@@ -247,7 +247,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         match tok {
             SignatureToken::Bool => Ok(Ok(Some(Type::Bool))),
             SignatureToken::U64 => Ok(Ok(Some(Type::U64))),
-            SignatureToken::String => Ok(Ok(Some(Type::String))),
+            SignatureToken::String => Ok(Ok(Some(Type::UserString))),
             SignatureToken::ByteArray => Ok(Ok(Some(Type::ByteArray))),
             SignatureToken::Address => Ok(Ok(Some(Type::Address))),
             SignatureToken::TypeParameter(_) => unimplemented!(),

@@ -5,7 +5,10 @@
 use crate::common::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
+    user_string::UserString,
+};
 use vm::{
     access::*,
     file_format::{
@@ -86,6 +89,10 @@ where
         (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
     }
 
+    fn next_user_string(&mut self) -> UserString {
+        self.next_str().into()
+    }
+
     fn next_addr(&mut self) -> AccountAddress {
         AccountAddress::new(self.gen.gen())
     }
@@ -146,7 +153,7 @@ where
         match sig_token {
             SignatureToken::Bool => Local::bool(self.next_bool()),
             SignatureToken::U64 => Local::u64(self.next_int()),
-            SignatureToken::String => Local::string(self.next_str()),
+            SignatureToken::String => Local::user_string(self.next_user_string()),
             SignatureToken::Address => Local::address(self.next_addr()),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.inhabit(&*sig);

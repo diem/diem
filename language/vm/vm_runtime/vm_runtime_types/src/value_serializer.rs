@@ -8,7 +8,7 @@ use crate::{
 use canonical_serialization::*;
 use failure::prelude::*;
 use std::convert::TryFrom;
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, user_string::UserString};
 use vm::errors::*;
 
 impl Value {
@@ -51,10 +51,10 @@ fn deserialize_struct(
                     });
                 }
             }
-            Type::String => {
+            Type::UserString => {
                 if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(s) = String::from_utf8(bytes) {
-                        s_vals.push(MutVal::new(Value::String(s)));
+                    if let Ok(s) = UserString::from_utf8(bytes) {
+                        s_vals.push(MutVal::new(Value::UserString(s)));
                         continue;
                     }
                 }
@@ -126,7 +126,7 @@ impl CanonicalSerialize for Value {
             Value::U64(val) => {
                 serializer.encode_u64(*val)?;
             }
-            Value::String(s) => {
+            Value::UserString(s) => {
                 // TODO: must define an api for canonical serializations of string.
                 // Right now we are just using Rust to serialize the string
                 serializer.encode_bytes(s.as_bytes())?;

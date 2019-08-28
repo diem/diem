@@ -6,7 +6,7 @@ use crate::{
     value::{MutVal, Value},
 };
 use proptest::{collection::vec, prelude::*};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, user_string::UserString};
 
 /// Strategies for property-based tests using `Value` instances.
 impl Value {
@@ -16,7 +16,7 @@ impl Value {
             any::<AccountAddress>().prop_map(Value::Address),
             any::<u64>().prop_map(Value::U64),
             any::<bool>().prop_map(Value::Bool),
-            ".*".prop_map(Value::String),
+            any::<UserString>().prop_map(Value::UserString),
             any::<ByteArray>().prop_map(Value::ByteArray),
         ]
     }
@@ -72,7 +72,7 @@ impl Type {
         prop_oneof![
             Just(Bool),
             Just(U64),
-            Just(String),
+            Just(UserString),
             Just(ByteArray),
             Just(Address),
         ]

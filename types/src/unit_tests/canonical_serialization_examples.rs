@@ -205,7 +205,7 @@ fn test_transaction_argument_byte_array_canonical_serialization_example() {
 
 #[test]
 fn test_transaction_argument_string_canonical_serialization_example() {
-    let input = TransactionArgument::String("Hello, World!".to_string());
+    let input = TransactionArgument::String("Hello, World!".into());
     let expected_output: Vec<u8> = vec![
         0x02, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20,
         0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21,
@@ -309,8 +309,8 @@ fn get_common_program() -> Program {
         b"move".to_vec(),
         vec![vec![0xCA], vec![0xFE, 0xD0], vec![0x0D]],
         vec![
-            TransactionArgument::String("CAFE D00D".to_string()),
-            TransactionArgument::String("cafe d00d".to_string()),
+            TransactionArgument::String("CAFE D00D".into()),
+            TransactionArgument::String("cafe d00d".into()),
         ],
     )
 }

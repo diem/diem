@@ -10,7 +10,7 @@ use crate::{
 use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CompiledModuleMut, FunctionSignature,
-    LocalsSignatureIndex, SignatureToken, StringPoolIndex, StructDefinitionIndex, TableIndex,
+    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex, UserStringIndex,
 };
 
 /// This type represents bytecode instructions that take a `u8`
@@ -22,8 +22,8 @@ type U16ToBytecode = fn(u16) -> Bytecode;
 /// This type represents bytecode instructions that take a `u64`
 type U64ToBytecode = fn(u64) -> Bytecode;
 
-/// This type represents bytecode instructions that take a `StringPoolIndex`
-type StringPoolIndexToBytecode = fn(StringPoolIndex) -> Bytecode;
+/// This type represents bytecode instructions that take a `UserStringIndex`
+type UserStringIndexToBytecode = fn(UserStringIndex) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `AddressPoolIndex`
 type AddressPoolIndexToBytecode = fn(AddressPoolIndex) -> Bytecode;
@@ -50,8 +50,8 @@ enum BytecodeType {
     /// Instructions that take a `u64`
     U64(U64ToBytecode),
 
-    /// Instructions that take a `StringPoolIndex`
-    StringPoolIndex(StringPoolIndexToBytecode),
+    /// Instructions that take a `UserStringIndex`
+    UserStringIndex(UserStringIndexToBytecode),
 
     /// Instructions that take an `AddressPoolIndex`
     AddressPoolIndex(AddressPoolIndexToBytecode),
@@ -95,7 +95,7 @@ impl BytecodeGenerator {
             (StackEffect::Add, BytecodeType::U64(Bytecode::LdConst)),
             (
                 StackEffect::Add,
-                BytecodeType::StringPoolIndex(Bytecode::LdStr),
+                BytecodeType::UserStringIndex(Bytecode::LdStr),
             ),
             (
                 StackEffect::Add,
@@ -227,10 +227,10 @@ impl BytecodeGenerator {
                     let value = self.rng.gen_range(0, u64::max_value());
                     instruction(value)
                 }
-                BytecodeType::StringPoolIndex(instruction) => {
-                    // Select a random string from the module's string pool
-                    instruction(StringPoolIndex::new(
-                        self.rng.gen_range(0, module.string_pool.len()) as TableIndex,
+                BytecodeType::UserStringIndex(instruction) => {
+                    // Select a random user string
+                    instruction(UserStringIndex::new(
+                        self.rng.gen_range(0, module.user_strings.len()) as TableIndex,
                     ))
                 }
                 BytecodeType::AddressPoolIndex(instruction) => {
@@ -386,7 +386,7 @@ impl BytecodeGenerator {
                     && *current_availability == BorrowState::Unavailable
                 {
                     let next_instruction = match abstract_value.token {
-                        SignatureToken::String => Bytecode::LdStr(StringPoolIndex::new(0)),
+                        SignatureToken::String => Bytecode::LdStr(UserStringIndex::new(0)),
                         SignatureToken::Address => Bytecode::LdAddr(AddressPoolIndex::new(0)),
                         SignatureToken::U64 => Bytecode::LdConst(0),
                         SignatureToken::Bool => Bytecode::LdFalse,
@@ -445,7 +445,7 @@ impl BytecodeGenerator {
                 // Return: Add return types to last block
                 for token_type in signature.return_types.iter() {
                     let next_instruction = match token_type {
-                        SignatureToken::String => Bytecode::LdStr(StringPoolIndex::new(0)),
+                        SignatureToken::String => Bytecode::LdStr(UserStringIndex::new(0)),
                         SignatureToken::Address => Bytecode::LdAddr(AddressPoolIndex::new(0)),
                         SignatureToken::U64 => Bytecode::LdConst(0),
                         SignatureToken::Bool => Bytecode::LdFalse,

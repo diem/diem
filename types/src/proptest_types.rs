@@ -17,6 +17,7 @@ use crate::{
         TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
+    user_string::UserString,
     validator_change::ValidatorChangeEventWithProof,
     vm_error::VMStatus,
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -481,7 +482,7 @@ impl Arbitrary for TransactionArgument {
             any::<u64>().prop_map(TransactionArgument::U64),
             any::<AccountAddress>().prop_map(TransactionArgument::Address),
             any::<ByteArray>().prop_map(TransactionArgument::ByteArray),
-            ".*".prop_map(TransactionArgument::String),
+            any::<UserString>().prop_map(TransactionArgument::String),
         ]
         .boxed()
     }

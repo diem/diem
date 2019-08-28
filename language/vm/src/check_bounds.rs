@@ -328,7 +328,7 @@ impl FunctionDefinition {
                         check_code_unit_bounds_impl(&module.byte_array_pool, bytecode_offset, *idx)
                     }
                     LdStr(idx) => {
-                        check_code_unit_bounds_impl(&module.string_pool, bytecode_offset, *idx)
+                        check_code_unit_bounds_impl(&module.user_strings, bytecode_offset, *idx)
                     }
                     MutBorrowField(idx) | ImmBorrowField(idx) => {
                         check_code_unit_bounds_impl(&module.field_defs, bytecode_offset, *idx)

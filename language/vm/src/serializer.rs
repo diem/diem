@@ -10,7 +10,7 @@
 use crate::{file_format::*, file_format_common::*};
 use failure::*;
 use std::ops::Deref;
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, user_string::UserString};
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
@@ -81,6 +81,7 @@ struct CommonSerializer {
     function_signatures: (u32, u32),
     locals_signatures: (u32, u32),
     string_pool: (u32, u32),
+    user_strings: (u32, u32),
     address_pool: (u32, u32),
     byte_array_pool: (u32, u32),
 }
@@ -162,6 +163,7 @@ trait CommonTables {
     fn get_struct_handles(&self) -> &[StructHandle];
     fn get_function_handles(&self) -> &[FunctionHandle];
     fn get_string_pool(&self) -> &[String];
+    fn get_user_strings(&self) -> &[UserString];
     fn get_address_pool(&self) -> &[AccountAddress];
     fn get_byte_array_pool(&self) -> &[ByteArray];
     fn get_type_signatures(&self) -> &[TypeSignature];
@@ -184,6 +186,10 @@ impl CommonTables for CompiledScriptMut {
 
     fn get_string_pool(&self) -> &[String] {
         &self.string_pool
+    }
+
+    fn get_user_strings(&self) -> &[UserString] {
+        &self.user_strings
     }
 
     fn get_address_pool(&self) -> &[AccountAddress] {
@@ -222,6 +228,10 @@ impl CommonTables for CompiledModuleMut {
 
     fn get_string_pool(&self) -> &[String] {
         &self.string_pool
+    }
+
+    fn get_user_strings(&self) -> &[UserString] {
+        &self.user_strings
     }
 
     fn get_address_pool(&self) -> &[AccountAddress] {
@@ -720,6 +730,7 @@ impl CommonSerializer {
             function_signatures: (0, 0),
             locals_signatures: (0, 0),
             string_pool: (0, 0),
+            user_strings: (0, 0),
             address_pool: (0, 0),
             byte_array_pool: (0, 0),
         }
@@ -804,6 +815,13 @@ impl CommonSerializer {
         )?;
         checked_serialize_table(
             binary,
+            TableType::USER_STRINGS,
+            self.user_strings.0,
+            start_offset,
+            self.user_strings.1,
+        )?;
+        checked_serialize_table(
+            binary,
             TableType::ADDRESS_POOL,
             self.address_pool.0,
             start_offset,
@@ -831,6 +849,7 @@ impl CommonSerializer {
         self.serialize_function_signatures(binary, tables.get_function_signatures())?;
         self.serialize_locals_signatures(binary, tables.get_locals_signatures())?;
         self.serialize_strings(binary, tables.get_string_pool())?;
+        self.serialize_user_strings(binary, tables.get_user_strings())?;
         self.serialize_addresses(binary, tables.get_address_pool())?;
         self.serialize_byte_arrays(binary, tables.get_byte_array_pool())?;
         Ok(())
@@ -897,6 +916,24 @@ impl CommonSerializer {
                 serialize_string(binary, string)?;
             }
             self.string_pool.1 = checked_calculate_table_size(binary, self.string_pool.0)?;
+        }
+        Ok(())
+    }
+
+    /// Serializes `UserStrings`.
+    fn serialize_user_strings(
+        &mut self,
+        binary: &mut BinaryData,
+        user_strings: &[UserString],
+    ) -> Result<()> {
+        if !user_strings.is_empty() {
+            self.table_count += 1;
+            self.user_strings.0 = check_index_in_binary(binary.len())?;
+            for user_string in user_strings {
+                // User strings and strings use the same serialization.
+                serialize_string(binary, user_string.as_str())?;
+            }
+            self.user_strings.1 = checked_calculate_table_size(binary, self.user_strings.0)?;
         }
         Ok(())
     }

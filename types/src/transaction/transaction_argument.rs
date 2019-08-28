@@ -4,7 +4,7 @@
 //use crate::errors::*;
 use crate::{
     account_address::AccountAddress, byte_array::ByteArray,
-    proto::transaction::TransactionArgument_ArgType,
+    proto::transaction::TransactionArgument_ArgType, user_string::UserString,
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
@@ -19,7 +19,7 @@ pub enum TransactionArgument {
     U64(u64),
     Address(AccountAddress),
     ByteArray(ByteArray),
-    String(String),
+    String(UserString),
 }
 
 impl fmt::Debug for TransactionArgument {
@@ -183,7 +183,7 @@ impl CanonicalSerialize for TransactionArgument {
             }
             TransactionArgument::String(string) => {
                 serializer.encode_u32(TransactionArgument_ArgType::STRING as u32)?;
-                serializer.encode_string(string)?;
+                serializer.encode_struct(string)?;
             }
             TransactionArgument::ByteArray(byte_array) => {
                 serializer.encode_u32(TransactionArgument_ArgType::BYTEARRAY as u32)?;
@@ -206,9 +206,9 @@ impl CanonicalDeserialize for TransactionArgument {
             Some(TransactionArgument_ArgType::ADDRESS) => {
                 Ok(TransactionArgument::Address(deserializer.decode_struct()?))
             }
-            Some(TransactionArgument_ArgType::STRING) => {
-                Ok(TransactionArgument::String(deserializer.decode_string()?))
-            }
+            Some(TransactionArgument_ArgType::STRING) => Ok(TransactionArgument::String(
+                UserString::new(deserializer.decode_string()?),
+            )),
             Some(TransactionArgument_ArgType::BYTEARRAY) => Ok(TransactionArgument::ByteArray(
                 deserializer.decode_struct()?,
             )),
