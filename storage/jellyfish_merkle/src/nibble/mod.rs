@@ -9,7 +9,7 @@ mod nibble_path_test;
 use crate::ROOT_NIBBLE_HEIGHT;
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{fmt, iter::FromIterator, ops::Deref};
+use std::{fmt, iter::FromIterator};
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Nibble(u8);
@@ -32,13 +32,6 @@ impl fmt::LowerHex for Nibble {
         let val = self.0;
         // delegate to u8's implementation
         write!(f, "{:x}", val)
-    }
-}
-
-impl Deref for Nibble {
-    type Target = u8;
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
