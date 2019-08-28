@@ -13,7 +13,8 @@ ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 stackless_bytecode_generator = { path = "../generator"}
 stdlib = { path = "../../stdlib" }
 num = "0.2.0"
-
+functional_tests = { path = "../../functional_tests" }
+datatest = "0.3.5"
 [dev-dependencies]
 proptest = "0.9"
 types = { path = "../../../types", features = ["testing"]}
