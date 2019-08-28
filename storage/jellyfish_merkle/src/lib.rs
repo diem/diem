@@ -61,6 +61,7 @@
 
 #![allow(clippy::unit_arg)]
 
+pub mod iterator;
 #[cfg(test)]
 mod jellyfish_merkle_test;
 #[cfg(test)]
