@@ -9,7 +9,7 @@ use canonical_serialization::*;
 use failure::prelude::*;
 use std::convert::TryFrom;
 use types::{account_address::AccountAddress, byte_array::ByteArray};
-use vm::errors::*;
+use vm::{errors::*, vm_string::VMString};
 
 impl Value {
     /// Serialize this value using `SimpleSerializer`.
@@ -53,7 +53,7 @@ fn deserialize_struct(
             }
             Type::String => {
                 if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(s) = String::from_utf8(bytes) {
+                    if let Ok(s) = VMString::from_utf8(bytes) {
                         s_vals.push(MutVal::new(Value::String(s)));
                         continue;
                     }

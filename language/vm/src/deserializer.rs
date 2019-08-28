@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::*, file_format::*, file_format_common::*};
+use crate::{errors::*, file_format::*, file_format_common::*, vm_string::VMString};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     collections::HashSet,
@@ -195,6 +195,7 @@ trait CommonTables {
     fn get_locals_signatures(&mut self) -> &mut LocalsSignaturePool;
 
     fn get_string_pool(&mut self) -> &mut StringPool;
+    fn get_user_strings(&mut self) -> &mut UserStringPool;
     fn get_byte_array_pool(&mut self) -> &mut ByteArrayPool;
     fn get_address_pool(&mut self) -> &mut AddressPool;
 }
@@ -226,6 +227,10 @@ impl CommonTables for CompiledScriptMut {
 
     fn get_string_pool(&mut self) -> &mut StringPool {
         &mut self.string_pool
+    }
+
+    fn get_user_strings(&mut self) -> &mut UserStringPool {
+        &mut self.user_strings
     }
 
     fn get_byte_array_pool(&mut self) -> &mut ByteArrayPool {
@@ -264,6 +269,10 @@ impl CommonTables for CompiledModuleMut {
 
     fn get_string_pool(&mut self) -> &mut StringPool {
         &mut self.string_pool
+    }
+
+    fn get_user_strings(&mut self) -> &mut UserStringPool {
+        &mut self.user_strings
     }
 
     fn get_byte_array_pool(&mut self) -> &mut ByteArrayPool {
@@ -314,6 +323,9 @@ fn build_common_tables(
             TableType::STRING_POOL => {
                 load_string_pool(binary, table, common.get_string_pool())?;
             }
+            TableType::USER_STRINGS => {
+                load_user_strings(binary, table, common.get_user_strings())?;
+            }
             TableType::BYTE_ARRAY_POOL => {
                 load_byte_array_pool(binary, table, common.get_byte_array_pool())?;
             }
@@ -357,6 +369,7 @@ fn build_module_tables(
             | TableType::FUNCTION_HANDLES
             | TableType::ADDRESS_POOL
             | TableType::STRING_POOL
+            | TableType::USER_STRINGS
             | TableType::BYTE_ARRAY_POOL
             | TableType::TYPE_SIGNATURES
             | TableType::FUNCTION_SIGNATURES
@@ -391,6 +404,7 @@ fn build_script_tables(
             | TableType::FUNCTION_HANDLES
             | TableType::ADDRESS_POOL
             | TableType::STRING_POOL
+            | TableType::USER_STRINGS
             | TableType::BYTE_ARRAY_POOL
             | TableType::TYPE_SIGNATURES
             | TableType::FUNCTION_SIGNATURES
@@ -528,6 +542,36 @@ fn load_string_pool(
             };
 
             strings.push(s);
+        }
+    }
+    Ok(())
+}
+
+/// Builds the `UserStringPool`.
+fn load_user_strings(
+    binary: &[u8],
+    table: &Table,
+    user_strings: &mut UserStringPool,
+) -> BinaryLoaderResult<()> {
+    let start = table.offset as usize;
+    let end = start + table.count as usize;
+    let mut cursor = Cursor::new(&binary[start..end]);
+    while cursor.position() < u64::from(table.count) {
+        let size = read_uleb_u32_internal(&mut cursor)? as usize;
+        if size > std::u16::MAX as usize {
+            return Err(BinaryError::Malformed);
+        }
+        let mut buffer: Vec<u8> = vec![0u8; size];
+        if let Ok(count) = cursor.read(&mut buffer) {
+            if count != size {
+                return Err(BinaryError::Malformed);
+            }
+            let us = match VMString::from_utf8(buffer) {
+                Ok(bytes) => bytes,
+                Err(_) => return Err(BinaryError::Malformed),
+            };
+
+            user_strings.push(us);
         }
     }
     Ok(())
@@ -877,7 +921,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             }
             Opcodes::LD_STR => {
                 let idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::LdStr(StringPoolIndex(idx))
+                Bytecode::LdStr(UserStringIndex(idx))
             }
             Opcodes::LD_TRUE => Bytecode::LdTrue,
             Opcodes::LD_FALSE => Bytecode::LdFalse,
@@ -1020,14 +1064,15 @@ impl TableType {
             0x3 => Ok(TableType::FUNCTION_HANDLES),
             0x4 => Ok(TableType::ADDRESS_POOL),
             0x5 => Ok(TableType::STRING_POOL),
-            0x6 => Ok(TableType::BYTE_ARRAY_POOL),
-            0x7 => Ok(TableType::MAIN),
-            0x8 => Ok(TableType::STRUCT_DEFS),
-            0x9 => Ok(TableType::FIELD_DEFS),
-            0xA => Ok(TableType::FUNCTION_DEFS),
-            0xB => Ok(TableType::TYPE_SIGNATURES),
-            0xC => Ok(TableType::FUNCTION_SIGNATURES),
-            0xD => Ok(TableType::LOCALS_SIGNATURES),
+            0x6 => Ok(TableType::USER_STRINGS),
+            0x7 => Ok(TableType::BYTE_ARRAY_POOL),
+            0x8 => Ok(TableType::MAIN),
+            0x9 => Ok(TableType::STRUCT_DEFS),
+            0xA => Ok(TableType::FIELD_DEFS),
+            0xB => Ok(TableType::FUNCTION_DEFS),
+            0xC => Ok(TableType::TYPE_SIGNATURES),
+            0xD => Ok(TableType::FUNCTION_SIGNATURES),
+            0xE => Ok(TableType::LOCALS_SIGNATURES),
             _ => Err(BinaryError::UnknownTableType),
         }
     }

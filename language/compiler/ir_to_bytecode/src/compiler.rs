@@ -293,6 +293,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         string_pool,
+        user_strings,
         byte_array_pool,
         address_pool,
     } = context.materialize_pools();
@@ -304,6 +305,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         string_pool,
+        user_strings,
         byte_array_pool,
         address_pool,
         main,
@@ -357,6 +359,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         string_pool,
+        user_strings,
         byte_array_pool,
         address_pool,
     } = context.materialize_pools();
@@ -368,6 +371,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         string_pool,
+        user_strings,
         byte_array_pool,
         address_pool,
         struct_defs,

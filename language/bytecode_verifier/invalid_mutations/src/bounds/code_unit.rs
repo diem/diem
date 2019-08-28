@@ -8,8 +8,8 @@ use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
-        FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StringPoolIndex,
-        StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
+        FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StructDefinitionIndex, TableIndex,
+        UserStringIndex, NO_TYPE_ACTUALS,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -167,7 +167,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
 
         // These have to be computed upfront because self.module is being mutated below.
         let address_pool_len = self.module.address_pool.len();
-        let string_pool_len = self.module.string_pool.len();
+        let user_strings_len = self.module.user_strings.len();
         let byte_array_pool_len = self.module.byte_array_pool.len();
         let function_handles_len = self.module.function_handles.len();
         let field_defs_len = self.module.field_defs.len();
@@ -190,10 +190,10 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         LdAddr
                     ),
                     LdStr(_) => new_bytecode!(
-                        string_pool_len,
+                        user_strings_len,
                         bytecode_idx,
                         offset,
-                        StringPoolIndex,
+                        UserStringIndex,
                         LdStr
                     ),
                     LdByteArray(_) => new_bytecode!(

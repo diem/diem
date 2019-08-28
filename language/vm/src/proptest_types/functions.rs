@@ -6,7 +6,8 @@ use crate::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
+        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, UserStringIndex,
+        NO_TYPE_ACTUALS,
     },
     proptest_types::{
         signature::{FunctionSignatureGen, SignatureTokenGen},
@@ -25,6 +26,7 @@ pub struct FnDefnMaterializeState {
     pub struct_handles_len: usize,
     pub address_pool_len: usize,
     pub string_pool_len: usize,
+    pub user_strings_len: usize,
     pub byte_array_pool_len: usize,
     pub type_signatures_len: usize,
     pub field_defs_len: usize,
@@ -286,8 +288,8 @@ impl BytecodeGen {
             BytecodeGen::LdAddr(idx) => Bytecode::LdAddr(AddressPoolIndex::new(
                 idx.index(state.address_pool_len) as TableIndex,
             )),
-            BytecodeGen::LdStr(idx) => Bytecode::LdStr(StringPoolIndex::new(
-                idx.index(state.string_pool_len) as TableIndex,
+            BytecodeGen::LdStr(idx) => Bytecode::LdStr(UserStringIndex::new(
+                idx.index(state.user_strings_len) as TableIndex,
             )),
             BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex::new(
                 idx.index(state.byte_array_pool_len) as TableIndex,

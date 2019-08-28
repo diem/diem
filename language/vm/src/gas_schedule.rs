@@ -9,7 +9,7 @@
 use crate::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StringPoolIndex, StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
+        StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
     },
     serializer::serialize_instruction,
 };
@@ -293,7 +293,7 @@ lazy_static! {
             (Abort, 39, 1),
             (MutBorrowLoc(0), 45, 1),
             (ImmBorrowLoc(0), 45, 1),
-            (LdStr(StringPoolIndex::new(0)), 52, 1),
+            (LdStr(UserStringIndex::new(0)), 52, 1),
             (LdAddr(AddressPoolIndex::new(0)), 36, 1),
             (Ge, 46, 1),
             (Xor, 46, 1),
