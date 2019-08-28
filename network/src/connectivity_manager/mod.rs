@@ -9,6 +9,10 @@
 //! In our current system design, the Consensus actor informs the ConnectivityManager of
 //! eligible nodes, and the Discovery actor infroms it about updates to addresses of eligible
 //! nodes.
+//!
+//! When dialing a peer with a given list of addresses, we attempt each address
+//! in order with a capped exponential backoff delay until we eventually connect
+//! to the peer.
 use crate::{
     common::NetworkPublicKeys,
     peer_manager::{PeerManagerError, PeerManagerNotification, PeerManagerRequestSender},
@@ -54,8 +58,9 @@ pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
     /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
     /// sending over (or dropping) the associated oneshot sender.
     dial_queue: HashMap<PeerId, oneshot::Sender<()>>,
-    /// Tracks status of backoff strategy for connection attempts for each peer.
-    dial_backoffs: HashMap<PeerId, TBackoff>,
+    /// The state of any currently executing dials. Used to keep track of what
+    /// the next dial delay and dial address should be for a given peer.
+    dial_states: HashMap<PeerId, DialState<TBackoff>>,
     /// Backoff strategy.
     backoff_strategy: TBackoff,
     /// Maximum delay b/w 2 consecutive attempts to connect with a disconnected peer.
@@ -83,6 +88,17 @@ enum DialResult {
     Failed(PeerManagerError),
 }
 
+/// The state needed to compute the next dial delay and dial addr for a given
+/// peer.
+#[derive(Debug, Clone)]
+struct DialState<TBackoff> {
+    /// The current state of this peer's backoff delay.
+    backoff: TBackoff,
+    /// The index of the next address to dial. Index of an address in the peer's
+    /// `peer_addresses` entry.
+    addr_idx: usize,
+}
+
 impl<TTicker, TSubstream, TBackoff> ConnectivityManager<TTicker, TSubstream, TBackoff>
 where
     TTicker: Stream + FusedStream + Unpin + 'static,
@@ -107,11 +123,11 @@ where
             peer_mgr_reqs_tx,
             peer_mgr_notifs_rx,
             requests_rx,
-            dial_backoffs: HashMap::new(),
             dial_queue: HashMap::new(),
-            event_id: 0,
+            dial_states: HashMap::new(),
             backoff_strategy,
             max_delay_ms,
+            event_id: 0,
         }
     }
 
@@ -151,6 +167,11 @@ where
         }
     }
 
+    /// Disconnect from all peers that are no longer eligible.
+    ///
+    /// For instance, a validator might leave the validator set after a
+    /// reconfiguration. If we are currently connected to this validator, calling
+    /// this function will close our connection to it.
     async fn close_stale_connections(&mut self) {
         let eligible = self.eligible.read().unwrap().clone();
         let stale_connections: Vec<_> = self
@@ -172,6 +193,11 @@ where
         }
     }
 
+    /// Cancel all pending dials to peers that are no longer eligible.
+    ///
+    /// For instance, a validator might leave the validator set after a
+    /// reconfiguration. If there is a pending dial to this validator, calling
+    /// this function will remove it from the dial queue.
     async fn cancel_stale_dials(&mut self) {
         let eligible = self.eligible.read().unwrap().clone();
         let stale_dials: Vec<_> = self
@@ -193,12 +219,14 @@ where
         let to_connect: Vec<_> = self
             .peer_addresses
             .iter()
-            .filter(|(peer_id, _)| {
+            .filter(|(peer_id, addrs)| {
                 eligible.contains_key(peer_id)
                     && self.connected.get(peer_id).is_none()
                     && self.dial_queue.get(peer_id).is_none()
+                    && !addrs.is_empty()
             })
             .collect();
+
         // We tune max delay depending on the number of peers to which we're not connected. This
         // ensures that if we're disconnected from a large fraction of peers, we keep the retry
         // window smaller.
@@ -211,42 +239,54 @@ where
                             .filter(|(peer_id, _)| self.peer_addresses.contains_key(peer_id))
                             .count() as f64))) as u64,
         );
-        let default_backoff_strategy = self.backoff_strategy.clone();
+
+        // The initial dial state; it has zero dial delay and uses the first
+        // address.
+        let init_dial_state = DialState::new(self.backoff_strategy.clone());
+
         for (p, addrs) in to_connect.into_iter() {
-            info!(
-                "Should be connected to peer: {} at addr(s): {:?}",
-                p.short_str(),
-                addrs,
-            );
             let mut peer_mgr_reqs_tx = self.peer_mgr_reqs_tx.clone();
             let peer_id = *p;
-            let addr = addrs[0].clone();
-            let (cancel_tx, cancel_rx) = oneshot::channel();
+            let dial_state = self
+                .dial_states
+                .entry(peer_id)
+                .or_insert_with(|| init_dial_state.clone());
+
+            // Choose the next addr to dial for this peer. Currently, we just
+            // round-robin the selection, i.e., try the sequence:
+            // addr[0], .., addr[len-1], addr[0], ..
+            let addr = dial_state.next_addr(&addrs).clone();
+
+            // Using the DialState's backoff strategy, compute the delay until
+            // the next dial attempt for this peer.
             let now = Instant::now();
-            let delay = timer::Delay::new(
-                now.checked_add(min(
-                    max_delay,
-                    self.dial_backoffs
-                        .entry(peer_id)
-                        .or_insert_with(|| default_backoff_strategy.clone())
-                        .next()
-                        .unwrap_or(max_delay),
-                ))
-                .unwrap_or_else(Instant::now),
+            let dial_delay = dial_state.next_backoff_delay(max_delay);
+            let dial_time = now.checked_add(dial_delay).unwrap_or_else(Instant::now);
+            let f_delay = timer::Delay::new(dial_time);
+
+            let (cancel_tx, cancel_rx) = oneshot::channel();
+
+            info!(
+                "Create dial future: peer: {}, at address: {}, after delay: {:?}",
+                peer_id.short_str(),
+                addr,
+                dial_delay,
             );
-            // Create future which completes by either dialing after calculated delay or on
-            // cancellation.
+
+            // Create future which completes by either dialing after calculated
+            // delay or on cancellation.
             let f = async move {
                 info!(
-                    "Will dial peer: {} after {:?}",
+                    "Dial future: dialing peer: {}, at address: {}, after delay: {:?}",
                     peer_id.short_str(),
-                    delay.deadline().duration_since(now)
+                    addr,
+                    f_delay.deadline().duration_since(now)
                 );
                 // We dial after a delay. The dial can be cancelled by sending to or dropping
                 // `cancel_rx`.
                 let dial_result = ::futures::select! {
-                    _ = delay.compat().fuse() => {
-                        info!("Dialing peer: {} at address: {}", peer_id.short_str(), addr.clone());
+                    _ = f_delay.compat().fuse() => {
+                        info!("Dialing peer: {}, at addr: {}", peer_id.short_str(), addr);
                         match peer_mgr_reqs_tx.dial_peer(peer_id, addr.clone()).await {
                             Ok(_) => DialResult::Success,
                             Err(e) => DialResult::Failed(e),
@@ -285,6 +325,10 @@ where
         match req {
             ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
                 self.peer_addresses.insert(peer_id, addrs);
+                // Ensure that the next dial attempt starts from the first addr.
+                if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
+                    dial_state.reset_addr();
+                }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {
                 *self.eligible.write().unwrap() = nodes;
@@ -299,9 +343,8 @@ where
         match notif {
             PeerManagerNotification::NewPeer(peer_id, addr) => {
                 self.connected.insert(peer_id, addr);
-                // Remove status of backoff strategy for the connected peer.
-                self.dial_backoffs.remove(&peer_id);
                 // Cancel possible queued dial to this peer.
+                self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
             PeerManagerNotification::LostPeer(peer_id, addr) => {
@@ -355,5 +398,32 @@ fn log_dial_result(peer_id: PeerId, addr: Multiaddr, dial_result: DialResult) {
                 );
             }
         },
+    }
+}
+
+impl<TBackoff> DialState<TBackoff>
+where
+    TBackoff: Iterator<Item = Duration> + Clone,
+{
+    fn new(backoff: TBackoff) -> Self {
+        Self {
+            backoff,
+            addr_idx: 0,
+        }
+    }
+
+    fn reset_addr(&mut self) {
+        self.addr_idx = 0;
+    }
+
+    fn next_addr<'a>(&mut self, addrs: &'a [Multiaddr]) -> &'a Multiaddr {
+        let addr_idx = self.addr_idx;
+        self.addr_idx = self.addr_idx.wrapping_add(1);
+
+        &addrs[addr_idx % addrs.len()]
+    }
+
+    fn next_backoff_delay(&mut self, max_delay: Duration) -> Duration {
+        min(max_delay, self.backoff.next().unwrap_or(max_delay))
     }
 }
