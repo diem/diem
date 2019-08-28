@@ -65,7 +65,11 @@ enum Command {
     },
     /// List fuzz targets
     #[structopt(name = "list")]
-    List,
+    List {
+        /// Only print out names, no descriptions.
+        #[structopt(long = "no-desc", short = "n")]
+        no_desc: bool,
+    },
 }
 
 /// The default directory for corpuses. Also return whether the directory was freshly created.
@@ -142,8 +146,8 @@ fn main() {
             let artifact_dir = artifact_dir.unwrap_or_else(|| default_artifact_dir(target));
             commands::fuzz_target(target, corpus_dir, artifact_dir, args).unwrap();
         }
-        Command::List => {
-            commands::list_targets();
+        Command::List { no_desc } => {
+            commands::list_targets(no_desc);
         }
     }
 }

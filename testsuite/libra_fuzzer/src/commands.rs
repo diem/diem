@@ -107,9 +107,12 @@ pub fn fuzz_target(
 }
 
 /// List all known fuzz targets.
-pub fn list_targets() {
-    println!("Available fuzz targets:\n");
+pub fn list_targets(no_desc: bool) {
     for target in FuzzTarget::all_targets() {
-        println!("  * {0: <24}    {1}", target.name(), target.description())
+        if no_desc {
+            println!("{}", target.name())
+        } else {
+            println!("  * {0: <24}    {1}", target.name(), target.description())
+        }
     }
 }
