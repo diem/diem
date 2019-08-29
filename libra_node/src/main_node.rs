@@ -249,6 +249,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let mut mempool = None;
     let mut consensus = None;
     if let RoleType::Validator = (&node_config.network.role).into() {
+        // Initialize and start mempool.
         instant = Instant::now();
         let (mempool_network_sender, mempool_network_events) = network_provider
             .add_mempool(vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)]);
@@ -259,12 +260,26 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         ));
         debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
-        instant = Instant::now();
+        // Start the network provider.
+        // Note: We need to start network provider before consensus, because the consensus
+        // initialization is blocked on state synchronizer to sync to the initial root ledger info,
+        // which in turn cannot make progress before network initialization because the NewPeer
+        // events which state synchronizer uses to know its peers are delivered by network provider.
+        // If we were to start network provider after consensus, we create a cyclic dependency from
+        // network provider -> consensus -> state synchronizer -> network provier. This deadlock was
+        // observed in GitHub Issue #749. A long term fix might be make consensus initialization
+        // async instead of blocking on state synchronizer.
         let (consensus_network_sender, consensus_network_events) =
             network_provider.add_consensus(vec![
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
+        runtime
+            .executor()
+            .spawn(network_provider.start().unit_error().compat());
+
+        // Initialize and start consensus.
+        instant = Instant::now();
         let mut consensus_provider = make_consensus_provider(
             node_config,
             consensus_network_sender,
@@ -276,12 +291,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             .expect("Failed to start consensus. Can't proceed.");
         consensus = Some(consensus_provider);
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
+    } else {
+        // Start the network provider.
+        runtime
+            .executor()
+            .spawn(network_provider.start().unit_error().compat());
     }
-
-    // Start the network providers.
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
 
