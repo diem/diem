@@ -96,16 +96,24 @@ impl ClusterTestRunner {
         let mut hash_to_tag = None;
         loop {
             if let Some(hash) = self.deployment_manager.latest_hash_changed() {
-                self.slack_message(format!(
-                    "Deploying new version of `{}` tag: `{}`",
+                println!(
+                    "New version of `{}` tag is available: `{}`",
                     SOURCE_TAG, hash
-                ));
-                if let Err(e) = self.redeploy(hash.clone()) {
-                    self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
-                    return;
+                );
+                match self.redeploy(hash.clone()) {
+                    Err(e) => {
+                        self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
+                        return;
+                    }
+                    Ok(true) => {
+                        self.slack_message(format!(
+                            "Deployed new version `{}`, running test suite",
+                            hash
+                        ));
+                        hash_to_tag = Some(hash);
+                    }
+                    Ok(false) => {}
                 }
-                self.slack_message(format!("Deployed new version `{}`", hash));
-                hash_to_tag = Some(hash);
             }
             let suite = ExperimentSuite::new_pre_release(&self.cluster);
             if let Err(e) = self.run_suite(suite) {
@@ -113,10 +121,7 @@ impl ClusterTestRunner {
                 return;
             }
             if let Some(hash_to_tag) = hash_to_tag.take() {
-                self.slack_message(format!(
-                    "Test suite succeed first time for `{}`",
-                    hash_to_tag
-                ));
+                println!("Test suite succeed first time for `{}`", hash_to_tag);
                 if let Err(e) = self
                     .deployment_manager
                     .tag_tested_image(hash_to_tag.clone())
@@ -124,7 +129,10 @@ impl ClusterTestRunner {
                     self.report_failure(format!("Failed to tag tested image: {}", e));
                     return;
                 }
-                self.slack_message(format!("Tagged `{}` as `{}`", hash_to_tag, TESTED_TAG));
+                self.slack_message(format!(
+                    "Test suite passed. Tagged `{}` as `{}`",
+                    hash_to_tag, TESTED_TAG
+                ));
             }
             thread::sleep(self.experiment_interval);
         }
@@ -134,12 +142,15 @@ impl ClusterTestRunner {
         self.slack_message(msg);
     }
 
-    fn redeploy(&mut self, hash: String) -> failure::Result<()> {
-        self.deployment_manager.redeploy(hash);
+    fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
+        if !self.deployment_manager.redeploy(hash) {
+            return Ok(false);
+        }
         println!("Waiting for 60 seconds to allow ECS to restart tasks...");
         thread::sleep(Duration::from_secs(60));
         println!("Waiting until all validators healthy after deployment");
-        self.wait_until_all_healthy()
+        self.wait_until_all_healthy()?;
+        Ok(true)
     }
 
     fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {

@@ -58,17 +58,13 @@ impl DeploymentManager {
     }
 
     pub fn redeploy(&mut self, hash: String) -> bool {
-        println!("Will deploy with digest {}", hash);
-        let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
-        if env::var("ALLOW_DEPLOY") == Ok("yes".to_string()) {
-            self.update_all_services();
-        } else {
-            println!(
-                "ALLOW_DEPLOY var is not set, not doing deploy and updating last_deployed_digest"
-            );
+        if env::var("ALLOW_DEPLOY") != Ok("yes".to_string()) {
+            println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
+            return false;
         }
-        fs::write(LAST_DEPLOYED_FILE, &hash).expect("Failed to write .last_deployed_digest");
-        self.last_deployed_digest = Some(hash);
+        let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
+        println!("Will deploy with digest {}", hash);
+        self.update_all_services();
         true
     }
 
@@ -119,11 +115,11 @@ impl DeploymentManager {
         }
     }
 
-    pub fn tag_tested_image(&self, hash: String) -> failure::Result<()> {
+    pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<()> {
         let mut get_request = BatchGetImageRequest::default();
         get_request.repository_name = REPOSITORY_NAME.to_string();
         get_request.image_ids = vec![ImageIdentifier {
-            image_digest: Some(hash),
+            image_digest: Some(hash.clone()),
             image_tag: None,
         }];
         let response = self
@@ -151,6 +147,8 @@ impl DeploymentManager {
             .put_image(put_request)
             .sync()
             .map_err(|e| format_err!("Failed to tag image: {:?}", e))?;
+        fs::write(LAST_DEPLOYED_FILE, &hash).expect("Failed to write .last_deployed_digest");
+        self.last_deployed_digest = Some(hash);
         Ok(())
     }
 }
