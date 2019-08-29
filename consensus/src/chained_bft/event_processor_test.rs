@@ -262,10 +262,10 @@ fn basic_new_rank_event_test() {
                 a1.id(),
                 node.block_store.get_state_for_block(a1.id()).unwrap(),
                 a1.round(),
-                a1.quorum_cert().certified_parent_block_id(),
-                a1.quorum_cert().certified_parent_block_round(),
-                a1.quorum_cert().certified_grandparent_block_id(),
-                a1.quorum_cert().certified_grandparent_block_round(),
+                a1.quorum_cert().parent_block_id(),
+                a1.quorum_cert().parent_block_round(),
+                a1.quorum_cert().grandparent_block_id(),
+                a1.quorum_cert().grandparent_block_round(),
             ),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
@@ -480,8 +480,8 @@ fn process_new_round_msg_test() {
         1,
         block_0.quorum_cert().certified_block_id(),
         block_0.quorum_cert().certified_block_round(),
-        block_0.quorum_cert().certified_parent_block_id(),
-        block_0.quorum_cert().certified_parent_block_round(),
+        block_0.quorum_cert().parent_block_id(),
+        block_0.quorum_cert().parent_block_round(),
     );
     non_proposer
         .block_store
@@ -650,10 +650,10 @@ fn process_votes_basic_test() {
         a1.id(),
         node.block_store.get_state_for_block(a1.id()).unwrap(),
         a1.round(),
-        a1.quorum_cert().certified_parent_block_id(),
-        a1.quorum_cert().certified_parent_block_round(),
-        a1.quorum_cert().certified_grandparent_block_id(),
-        a1.quorum_cert().certified_parent_block_round(),
+        a1.quorum_cert().parent_block_id(),
+        a1.quorum_cert().parent_block_round(),
+        a1.quorum_cert().grandparent_block_id(),
+        a1.quorum_cert().parent_block_round(),
     );
     let vote_msg = VoteMsg::new(
         vote_data,

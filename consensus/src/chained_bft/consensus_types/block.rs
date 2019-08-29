@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         common::{Author, Height, Round},
-        consensus_types::quorum_cert::QuorumCert,
+        consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
         safety::vote_msg::VoteMsgVerificationError,
     },
     state_replication::ExecutedState,
@@ -132,9 +132,7 @@ where
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
         let genesis_quorum_cert = QuorumCert::new(
-            ancestor_id,
-            state,
-            0,
+            VoteData::new(ancestor_id, state, 0, ancestor_id, 0, ancestor_id, 0),
             LedgerInfoWithSignatures::new(
                 LedgerInfo::new(
                     0,
@@ -146,10 +144,6 @@ where
                 ),
                 HashMap::new(),
             ),
-            ancestor_id,
-            0,
-            ancestor_id,
-            0,
         );
         let genesis_id = *GENESIS_BLOCK_ID;
         let signature = genesis_validator_signer

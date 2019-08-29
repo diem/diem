@@ -194,9 +194,9 @@ impl SafetyRules {
     /// The update function is invoked whenever a system learns about a potentially high QC.
     pub fn update(&mut self, qc: &QuorumCert) {
         // Preferred block rule: choose the highest 2-chain head.
-        if qc.certified_parent_block_round() > self.state.preferred_block_round() {
+        if qc.parent_block_round() > self.state.preferred_block_round() {
             self.state
-                .set_preferred_block_round(qc.certified_parent_block_round());
+                .set_preferred_block_round(qc.parent_block_round());
         }
     }
 
@@ -204,8 +204,8 @@ impl SafetyRules {
     /// block id at round r if possible
     fn commit_rule_for_certified_block(
         &self,
-        certified_block_qc: &QuorumCert,
-        certified_block_round: u64,
+        block_parent_qc: &QuorumCert,
+        block_round: u64,
     ) -> Option<HashValue> {
         // We're using a so-called 3-chain commit rule: B0 (as well as its prefix)
         // can be committed if there exist certified blocks B1 and B2 that satisfy:
@@ -213,11 +213,10 @@ impl SafetyRules {
         // 2) round(B0) + 1 = round(B1), and
         // 3) round(B1) + 1 = round(B2).
 
-        if certified_block_qc.certified_parent_block_round() + 1
-            == certified_block_qc.certified_block_round()
-            && certified_block_qc.certified_block_round() + 1 == certified_block_round
+        if block_parent_qc.parent_block_round() + 1 == block_parent_qc.certified_block_round()
+            && block_parent_qc.certified_block_round() + 1 == block_round
         {
-            return Some(certified_block_qc.certified_parent_block_id());
+            return Some(block_parent_qc.parent_block_id());
         }
         None
     }
@@ -271,10 +270,8 @@ impl SafetyRules {
                 potential_commit_id,
                 parent_block_id: proposed_block.quorum_cert().certified_block_id(),
                 parent_block_round: proposed_block.quorum_cert().certified_block_round(),
-                grandparent_block_id: proposed_block.quorum_cert().certified_parent_block_id(),
-                grandparent_block_round: proposed_block
-                    .quorum_cert()
-                    .certified_parent_block_round(),
+                grandparent_block_id: proposed_block.quorum_cert().parent_block_id(),
+                grandparent_block_round: proposed_block.quorum_cert().parent_block_round(),
             })
         } else {
             Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
