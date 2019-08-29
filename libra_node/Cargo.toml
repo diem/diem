@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 grpcio = "0.4.3"
 grpcio-sys = "0.4.4"
+jemallocator = { version = "0.1.8", features = ["alloc_trait", "profiling", "unprefixed_malloc_on_supported_platforms"] }
 parity-multiaddr = "0.5.0"
 signal-hook = "0.1.10"
 tokio = "0.1.22"
