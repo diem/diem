@@ -321,6 +321,12 @@ pub enum VMStaticViolation {
         display = "Duplicate acquires resource annotaiton. The struct is not a nominal resource."
     )]
     InvalidAcquiresResourceAnnotationError,
+
+    #[fail(display = "The kind of the type actual does not satisfy the constraint.")]
+    ConstraintKindMismatch,
+
+    #[fail(display = "Expected {} type actuals got {}", _0, _1)]
+    NumberOfTypeActualsMismatch(usize, usize),
 }
 
 #[derive(Clone, Debug, Eq, Fail, Ord, PartialEq, PartialOrd)]
@@ -749,6 +755,12 @@ impl From<&VerificationError> for VMVerificationError {
             }
             VMStaticViolation::DuplicateAcquiresResourceAnnotationError => {
                 VMVerificationError::DuplicateAcquiresResourceAnnotationError(message)
+            }
+            VMStaticViolation::ConstraintKindMismatch => {
+                VMVerificationError::ConstraintKindMismatch(message)
+            }
+            VMStaticViolation::NumberOfTypeActualsMismatch(_, _) => {
+                VMVerificationError::NumberOfTypeActualsMismatch(message)
             }
         }
     }

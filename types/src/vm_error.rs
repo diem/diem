@@ -114,6 +114,8 @@ pub enum VMVerificationError {
     ExtraneousAcquiresResourceAnnotationError(String),
     DuplicateAcquiresResourceAnnotationError(String),
     InvalidAcquiresResourceAnnotationError(String),
+    ConstraintKindMismatch(String),
+    NumberOfTypeActualsMismatch(String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -591,6 +593,12 @@ impl IntoProto for VMVerificationError {
             VMVerificationError::DuplicateAcquiresResourceAnnotationError(message) => {
                 (ProtoKind::DuplicateAcquiresResourceAnnotationError, message)
             }
+            VMVerificationError::ConstraintKindMismatch(message) => {
+                (ProtoKind::ConstraintKindMismatch, message)
+            }
+            VMVerificationError::NumberOfTypeActualsMismatch(message) => {
+                (ProtoKind::NumberOfTypeActualsMismatch, message)
+            }
         }
     }
 }
@@ -789,6 +797,12 @@ impl FromProto for VMVerificationError {
             ProtoKind::InvalidAcquiresResourceAnnotationError => Ok(
                 VMVerificationError::InvalidAcquiresResourceAnnotationError(message),
             ),
+            ProtoKind::ConstraintKindMismatch => {
+                Ok(VMVerificationError::ConstraintKindMismatch(message))
+            }
+            ProtoKind::NumberOfTypeActualsMismatch => {
+                Ok(VMVerificationError::NumberOfTypeActualsMismatch(message))
+            }
             ProtoKind::UnknownVerificationError => {
                 bail_err!(DecodingError::UnknownVerificationErrorEncountered)
             }

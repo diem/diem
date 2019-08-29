@@ -28,9 +28,11 @@ impl<'a> ResourceTransitiveChecker<'a> {
                 match struct_def.fields() {
                     None => (),
                     Some(mut fields) => {
-                        // TODO must be rethought with generics
-                        let any_resource_field =
-                            fields.any(|field| field.type_signature().contains_nominal_resource());
+                        let any_resource_field = fields.any(|field| {
+                            field
+                                .type_signature()
+                                .contains_nominal_resource(struct_def.type_formals())
+                        });
                         if any_resource_field {
                             errors.push(VerificationError {
                                 kind: IndexKind::StructDefinition,

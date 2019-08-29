@@ -448,6 +448,19 @@ pub enum Kind {
     Unrestricted,
 }
 
+impl Kind {
+    /// Checks if the given kind is a sub-kind of another.
+    #[inline]
+    pub fn is_sub_kind_of(self, k: Kind) -> bool {
+        use Kind::*;
+
+        match (self, k) {
+            (_, All) | (Resource, Resource) | (Unrestricted, Unrestricted) => true,
+            _ => false,
+        }
+    }
+}
+
 /// A `SignatureToken` is a type declaration for a location.
 ///
 /// Any location in the system has a TypeSignature.
@@ -549,6 +562,19 @@ impl SignatureToken {
         }
     }
 
+    /// Returns the type actuals if the signature token is a reference to a struct instance.
+    pub fn get_type_actuals_from_reference(&self) -> Option<&[SignatureToken]> {
+        use SignatureToken::*;
+
+        match self {
+            Reference(box_) | MutableReference(box_) => match &**box_ {
+                Struct(_, tys) => Some(&tys),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     /// Returns the "value kind" for the `SignatureToken`
     #[inline]
     pub fn signature_token_kind(&self) -> SignatureTokenKind {
@@ -560,7 +586,9 @@ impl SignatureToken {
             Reference(_) => SignatureTokenKind::Reference,
             MutableReference(_) => SignatureTokenKind::MutableReference,
             Bool | U64 | ByteArray | String | Address | Struct(_, _) => SignatureTokenKind::Value,
-            TypeParameter(_) => unimplemented!(),
+            // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
+            // be completely removed. `SignatureTokenView::kind()` should be used instead.
+            TypeParameter(_) => SignatureTokenKind::Value,
         }
     }
 
@@ -636,6 +664,29 @@ impl SignatureToken {
                 "debug_set_sh_idx (to {}) called for non-struct token {:?}",
                 sh_idx, other
             ),
+        }
+    }
+
+    /// Creating a new type by Substituting the type variables with type actuals.
+    pub fn substitute(&self, tys: &[SignatureToken]) -> SignatureToken {
+        use SignatureToken::*;
+
+        match self {
+            Bool => Bool,
+            U64 => U64,
+            String => String,
+            ByteArray => ByteArray,
+            Address => Address,
+            Struct(idx, actuals) => Struct(
+                *idx,
+                actuals
+                    .iter()
+                    .map(|ty| ty.substitute(tys))
+                    .collect::<Vec<_>>(),
+            ),
+            Reference(ty) => Reference(Box::new(ty.substitute(tys))),
+            MutableReference(ty) => MutableReference(Box::new(ty.substitute(tys))),
+            TypeParameter(idx) => tys[*idx as usize].clone(),
         }
     }
 }
@@ -1462,9 +1513,9 @@ impl CompiledModuleMut {
             IndexKind::ByteArrayPool => self.byte_array_pool.len(),
             IndexKind::AddressPool => self.address_pool.len(),
             // XXX these two don't seem to belong here
-            other @ IndexKind::LocalPool | other @ IndexKind::CodeDefinition => {
-                panic!("invalid kind for count: {:?}", other)
-            }
+            other @ IndexKind::LocalPool
+            | other @ IndexKind::CodeDefinition
+            | other @ IndexKind::TypeParameter => panic!("invalid kind for count: {:?}", other),
         }
     }
 

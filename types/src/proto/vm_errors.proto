@@ -177,6 +177,8 @@ enum VMVerificationErrorKind {
     ExtraneousAcquiresResourceAnnotationError = 72;
     DuplicateAcquiresResourceAnnotationError = 73;
     InvalidAcquiresResourceAnnotationError = 74;
+    ConstraintKindMismatch = 75;
+    NumberOfTypeActualsMismatch = 76;
 }
 
 // These are errors that the VM might raise if a violation of internal

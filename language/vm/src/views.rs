@@ -420,13 +420,13 @@ impl<'a, T: ModuleAccess> TypeSignatureView<'a, T> {
     }
 
     #[inline]
-    pub fn kind(&self) -> Kind {
-        self.token().kind()
+    pub fn kind(&self, type_formals: &[Kind]) -> Kind {
+        self.token().kind(type_formals)
     }
 
     #[inline]
-    pub fn contains_nominal_resource(&self) -> bool {
-        self.token().contains_nominal_resource()
+    pub fn contains_nominal_resource(&self, type_formals: &[Kind]) -> bool {
+        self.token().contains_nominal_resource(type_formals)
     }
 }
 
@@ -531,54 +531,74 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
         self.token.signature_token_kind()
     }
 
-    #[inline]
-    pub fn kind(&self) -> Kind {
+    /// Returns the kind of the signature token in the given context (module, function/struct).
+    /// The context is needed to determine the kinds of structs & type variables.
+    // TODO: refactor views so that we get the type formals from self.
+    pub fn kind(&self, type_formals: &[Kind]) -> Kind {
+        use SignatureToken::*;
+
         match self.token {
-            // TODO: Type actuals are ignored, fix it (generics).
-            SignatureToken::Struct(sh_idx, type_arguments) => {
-                let is_nominal_resource = StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
-                    .is_nominal_resource();
-                // Nominal resources are always of kind `Kind::Resource`
-                if is_nominal_resource {
-                    return Kind::Resource
+            // These primitive types have kind unrestricted.
+            Bool | U64 | String | ByteArray | Address | Reference(_) | MutableReference(_) => {
+                Kind::Unrestricted
+            }
+
+            // To get the kind of a type parameter, we lookup its definition in the formals.
+            TypeParameter(idx) => type_formals[*idx as usize],
+
+            Struct(idx, tys) => {
+                // Get the struct handle at idx. Note the index could be out of bounds.
+                let sh = self.module().struct_handle_at(*idx);
+
+                if sh.is_nominal_resource {
+                    return Kind::Resource;
                 }
 
-                // For other structs, their kind is dependent on their type arguments
-                // - If any type argument is `Kind::All`, returns `Kind:All`
-                // - Otherwise if any type argument is `Kind::Resource`, returns `Kind::Resource`
-                // - Otherwise returns `Kind::Unrestricted`
-                type_arguments.iter().map(
-                    |token| Self::new(self.module, token).kind()
-                ).fold(Kind::Unrestricted, |acc_kind, next_kind| {
-                    match (acc_kind, next_kind) {
-                        (Kind::All, _) | (_, Kind::All) => Kind::All,
-                        (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
-                        (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted
-                    }
-                })
+                // Gather the kinds of the type actuals.
+                let kinds = tys
+                    .iter()
+                    .map(|ty| Self::new(self.module(), ty).kind(type_formals))
+                    .collect::<Vec<_>>();
+
+                // Derive the kind of the struct.
+                //   - If any of the type actuals has kind `all`, then the struct has kind `all`.
+                //     - `all` means some part of the type can be either `resource` or
+                //       `unrestricted`.
+                //     - Therefore it is also impossible to determine the kind of the type as a
+                //       whole, and thus `all`.
+                //   - If none of the type actuals has kind `all`, then the struct is a resource if
+                //     and only if one of the type actuals has kind `resource`.
+                kinds
+                    .iter()
+                    .fold(Kind::Unrestricted, |acc_kind, next_kind| {
+                        match (acc_kind, next_kind) {
+                            (Kind::All, _) | (_, Kind::All) => Kind::All,
+                            (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
+                            (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
+                        }
+                    })
             }
-            SignatureToken::Reference(_)
-            | SignatureToken::MutableReference(_)
-            | SignatureToken::Bool
-            | SignatureToken::U64
-            | SignatureToken::String
-            | SignatureToken::ByteArray
-            | SignatureToken::Address => Kind::Unrestricted,
-            // TODO: To get the kind of a type parameter we need to look at the struct/function
-            // that contains it. Change the API or remodel accesses/views with a tiered system.
-            SignatureToken::TypeParameter(_) => panic!("cannot tell if a type parameter is a resource or not (feature not yet implemented)"),
         }
     }
 
-    pub fn contains_nominal_resource(&self) -> bool {
+    /// Determines if the given signature token contains a nominal resource.
+    /// More specifically, a signature token contains a nominal resource if
+    ///   1) it is a type variable explicitly marked as resource kind.
+    ///   2) it is a struct that
+    ///       a) is marked as resource.
+    ///       b) has a type actual which is a nominal resource.
+    ///
+    /// Similar to `SignatureTokenView::kind`, the context is used for looking up struct
+    /// definitions & type formals.
+    // TODO: refactor views so that we get the type formals from self.
+    pub fn contains_nominal_resource(&self, type_formals: &[Kind]) -> bool {
         match self.token {
-            // TODO: Type actuals are ignored, fix it (generics).
             SignatureToken::Struct(sh_idx, type_arguments) => {
                 StructHandleView::new(self.module, self.module.struct_handle_at(*sh_idx))
                     .is_nominal_resource()
-                    || type_arguments
-                        .iter()
-                        .any(|token| Self::new(self.module, token).contains_nominal_resource())
+                    || type_arguments.iter().any(|token| {
+                        Self::new(self.module, token).contains_nominal_resource(type_formals)
+                    })
             }
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
@@ -586,8 +606,12 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::U64
             | SignatureToken::String
             | SignatureToken::ByteArray
-            | SignatureToken::Address
-            | SignatureToken::TypeParameter(_) => false,
+            | SignatureToken::Address => false,
+
+            SignatureToken::TypeParameter(idx) => match type_formals[*idx as usize] {
+                Kind::Resource => true,
+                Kind::All | Kind::Unrestricted => false,
+            },
         }
     }
 

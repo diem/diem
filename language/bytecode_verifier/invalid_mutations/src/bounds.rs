@@ -64,6 +64,7 @@ impl PointerKind {
             // XXX maybe don't treat LocalPool and CodeDefinition the same way as the others?
             LocalPool => &[],
             CodeDefinition => &[],
+            TypeParameter => &[],
         }
     }
 

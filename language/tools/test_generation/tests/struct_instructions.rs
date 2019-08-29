@@ -77,7 +77,7 @@ fn create_struct_value(module: &CompiledModule) -> AbstractValue {
         true => Kind::Resource,
         false => tokens
             .iter()
-            .map(|token| SignatureTokenView::new(module, token).kind())
+            .map(|token| SignatureTokenView::new(module, token).kind(&[]))
             .fold(Kind::Unrestricted, |acc_kind, next_kind| {
                 match (acc_kind, next_kind) {
                     (Kind::All, _) | (_, Kind::All) => Kind::All,
@@ -112,7 +112,7 @@ fn bytecode_pack() {
         for token in tokens {
             let abstract_value = AbstractValue {
                 token: token.clone(),
-                kind: SignatureTokenView::new(&state1.module, &token).kind(),
+                kind: SignatureTokenView::new(&state1.module, &token).kind(&[]),
             };
             state1.stack_push(abstract_value);
         }
