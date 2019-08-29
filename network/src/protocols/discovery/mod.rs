@@ -169,9 +169,8 @@ where
                     peer_info
                         .get_addrs()
                         .iter()
-                        .map(|addr| {
-                            Multiaddr::try_from(addr.clone()).expect("Multiaddr parsing failed")
-                        })
+                        .cloned()
+                        .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing failed"))
                         .collect(),
                 ))
                 .await
@@ -357,18 +356,26 @@ where
                     assert_ne!(peer_id, self_peer_id);
                     // Update internal state of the peer with new Note.
                     self.known_peers.insert(peer_id, (peer_info.clone(), note));
+
+                    // The multiaddrs in the peer's discovery Note.
+                    let mut peer_addrs: Vec<Multiaddr> = peer_info
+                        .get_addrs()
+                        .iter()
+                        .cloned()
+                        .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing fails"))
+                        .collect();
+
+                    // Append the addrs in the seed PeerInfo if this peer is
+                    // configured as one of our seed peers.
+                    if let Some(seed_info) = self.seed_peers.get(&peer_id) {
+                        let seed_addrs_iter = seed_info.get_addrs().iter().cloned().map(|addr| {
+                            Multiaddr::try_from(addr).expect("Multiaddr parsing fails")
+                        });
+                        peer_addrs.extend(seed_addrs_iter);
+                    }
+
                     self.conn_mgr_reqs_tx
-                        .send(ConnectivityRequest::UpdateAddresses(
-                            peer_id,
-                            peer_info
-                                .get_addrs()
-                                .iter()
-                                .map(|addr| {
-                                    Multiaddr::try_from(addr.clone())
-                                        .expect("Multiaddr parsing fails")
-                                })
-                                .collect(),
-                        ))
+                        .send(ConnectivityRequest::UpdateAddresses(peer_id, peer_addrs))
                         .await
                         .expect("ConnectivityRequest::UpdateAddresses send");
                 }

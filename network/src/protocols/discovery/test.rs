@@ -29,10 +29,28 @@ fn gen_full_node_payload() -> FullNodePayload {
     payload
 }
 
+fn get_addrs_from_note(note: &Note) -> Vec<Multiaddr> {
+    let signed_peer_info = note.get_signed_peer_info();
+    let peer_info: PeerInfo = protobuf::parse_from_bytes(signed_peer_info.get_peer_info()).unwrap();
+    let mut addrs = vec![];
+    for addr in peer_info.get_addrs() {
+        addrs.push(Multiaddr::try_from(addr.clone()).unwrap());
+    }
+    addrs
+}
+
+fn get_addrs_from_info(peer_info: &PeerInfo) -> Vec<Multiaddr> {
+    peer_info
+        .get_addrs()
+        .iter()
+        .map(|addr| Multiaddr::try_from(addr.clone()).unwrap())
+        .collect()
+}
+
 fn setup_discovery(
     rt: &mut Runtime,
     peer_id: PeerId,
-    address: Multiaddr,
+    addrs: Vec<Multiaddr>,
     seed_peer_id: PeerId,
     seed_peer_info: PeerInfo,
     signer: Signer<Ed25519PrivateKey>,
@@ -50,7 +68,7 @@ fn setup_discovery(
     let discovery = {
         Discovery::new(
             peer_id,
-            vec![address],
+            addrs,
             signer,
             vec![(seed_peer_id, seed_peer_info)].into_iter().collect(),
             trusted_peers,
@@ -70,29 +88,18 @@ fn setup_discovery(
     )
 }
 
-fn get_addrs(note: &Note) -> Vec<Multiaddr> {
-    let signed_peer_info = note.get_signed_peer_info();
-    let peer_info: PeerInfo = protobuf::parse_from_bytes(signed_peer_info.get_peer_info()).unwrap();
-    let mut addrs = vec![];
-    for addr in peer_info.get_addrs() {
-        addrs.push(Multiaddr::try_from(addr.clone()).unwrap());
-    }
-    addrs
-}
-
 async fn expect_address_update(
     conn_mgr_reqs_rx: &mut channel::Receiver<ConnectivityRequest>,
-    peer_id: PeerId,
-    addr: Multiaddr,
+    expected_peer_id: PeerId,
+    expected_addrs: &[Multiaddr],
 ) {
     match conn_mgr_reqs_rx.next().await.unwrap() {
-        ConnectivityRequest::UpdateAddresses(p, addrs) => {
-            assert_eq!(peer_id, p);
-            assert_eq!(1, addrs.len());
-            assert_eq!(addr, addrs[0]);
+        ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
+            assert_eq!(expected_peer_id, peer_id);
+            assert_eq!(expected_addrs, &addrs[..]);
         }
-        _ => {
-            panic!("unexpected request to connectivity manager");
+        req => {
+            panic!("Unexpected request to connectivity manager: {:?}", req);
         }
     }
 }
@@ -117,12 +124,15 @@ fn generate_network_pub_keys_and_signer(
 fn inbound() {
     ::logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
+
     // Setup self.
     let peer_id = PeerId::random();
-    let address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(peer_id);
+
     // Setup seed.
-    let mut seed_peer_info = gen_peer_info();
+    let seed_peer_info = gen_peer_info();
+    let seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
     let seed_peer_payload = gen_full_node_payload();
     let seed_peer_id = PeerId::random();
     let (seed_pub_keys, seed_signer) = generate_network_pub_keys_and_signer(seed_peer_id);
@@ -131,11 +141,12 @@ fn inbound() {
             .into_iter()
             .collect(),
     ));
+
     // Setup discovery.
     let (_, mut conn_mgr_reqs_rx, mut peer_mgr_notifs_tx, _) = setup_discovery(
         &mut rt,
         peer_id,
-        address.clone(),
+        addrs,
         seed_peer_id,
         seed_peer_info.clone(),
         self_signer,
@@ -144,14 +155,8 @@ fn inbound() {
 
     // Fake connectivity manager and dialer.
     let f_peer_mgr = async move {
-        let seed_peer_address = Multiaddr::try_from(seed_peer_info.get_addrs()[0].clone()).unwrap();
         // Connectivity manager receives addresses of the seed peer during bootstrap.
-        expect_address_update(
-            &mut conn_mgr_reqs_rx,
-            seed_peer_id,
-            seed_peer_address.clone(),
-        )
-        .await;
+        expect_address_update(&mut conn_mgr_reqs_rx, seed_peer_id, &seed_peer_addrs[..]).await;
 
         let (dialer_substream, listener_substream) = MemorySocket::new_pair();
         // Notify discovery actor of inbound substream.
@@ -174,7 +179,7 @@ fn inbound() {
         // seed peer and one for another peer. The discovery actor should send addresses of the new
         // peer to the connectivity manager.
         let peer_id_other = PeerId::random();
-        let address_other = Multiaddr::from_str("/ip4/172.29.52.192/tcp/8080").unwrap();
+        let addrs_other = vec![Multiaddr::from_str("/ip4/172.29.52.192/tcp/8080").unwrap()];
         let seed_note = create_note(
             &seed_signer,
             seed_peer_id,
@@ -188,9 +193,12 @@ fn inbound() {
             .insert(peer_id_other, pub_keys_other);
         let note_other = {
             let mut peer_info = PeerInfo::new();
-            let addrs = peer_info.mut_addrs();
-            addrs.clear();
-            addrs.push(address_other.as_ref().into());
+            peer_info.set_addrs(
+                addrs_other
+                    .iter()
+                    .map(|addr| addr.as_ref().into())
+                    .collect(),
+            );
             let full_node_payload = gen_full_node_payload();
             create_note(&signer_other, peer_id_other, peer_info, full_node_payload)
         };
@@ -203,10 +211,20 @@ fn inbound() {
             .unwrap();
 
         // Connectivity manager receives address of new peer.
-        expect_address_update(&mut conn_mgr_reqs_rx, peer_id_other, address_other).await;
+        expect_address_update(&mut conn_mgr_reqs_rx, peer_id_other, &addrs_other[..]).await;
+
+        // The addrs sent to connectivity manager should also include the
+        // configured seed peer addrs for seed-peer-received notes.
+        let mut expected_seed_addrs = seed_peer_addrs.clone();
+        expected_seed_addrs.extend_from_slice(&seed_peer_addrs[..]);
 
         // Connectivity manager receives a connect to the seed peer at the same address.
-        expect_address_update(&mut conn_mgr_reqs_rx, seed_peer_id, seed_peer_address).await;
+        expect_address_update(
+            &mut conn_mgr_reqs_rx,
+            seed_peer_id,
+            &expected_seed_addrs[..],
+        )
+        .await;
 
         let (dialer_substream, listener_substream) = MemorySocket::new_pair();
         // Notify discovery actor of inbound substream.
@@ -227,13 +245,9 @@ fn inbound() {
         // Compose new msg.
         let mut msg = DiscoveryMsg::new();
         msg.mut_notes().push(note_other);
-        let new_seed_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/8098").unwrap();
+        let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8098").unwrap()];
         {
-            seed_peer_info.set_epoch(3000);
-            seed_peer_info.mut_addrs().clear();
-            seed_peer_info
-                .mut_addrs()
-                .push(new_seed_addr.as_ref().into());
+            let seed_peer_info = create_peer_info(new_seed_addrs.clone());
             let seed_note = create_note(
                 &seed_signer,
                 seed_peer_id,
@@ -247,8 +261,18 @@ fn inbound() {
                 .unwrap();
         }
 
+        // The addrs sent to connectivity manager should also include the
+        // configured seed peer addrs for seed-peer-received notes.
+        let mut expected_seed_addrs = new_seed_addrs.clone();
+        expected_seed_addrs.extend_from_slice(&seed_peer_addrs[..]);
+
         // Connectivity manager receives new address of seed peer.
-        expect_address_update(&mut conn_mgr_reqs_rx, seed_peer_id, new_seed_addr).await;
+        expect_address_update(
+            &mut conn_mgr_reqs_rx,
+            seed_peer_id,
+            &expected_seed_addrs[..],
+        )
+        .await;
     };
     rt.block_on(f_peer_mgr.boxed().unit_error().compat())
         .unwrap();
@@ -259,25 +283,29 @@ fn inbound() {
 fn outbound() {
     ::logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
+
     // Setup self.
     let peer_id = PeerId::random();
-    let address = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(peer_id);
+
     // Setup seed.
     let seed_peer_id = PeerId::random();
     let seed_peer_info = gen_peer_info();
+    let seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
     let (seed_pub_keys, _) = generate_network_pub_keys_and_signer(seed_peer_id);
     let trusted_peers = Arc::new(RwLock::new(
         vec![(seed_peer_id, seed_pub_keys), (peer_id, self_pub_keys)]
             .into_iter()
             .collect(),
     ));
+
     // Setup discovery.
     let (mut peer_mgr_reqs_rx, _conn_mgr_req_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_discovery(
             &mut rt,
             peer_id,
-            address.clone(),
+            addrs.clone(),
             seed_peer_id,
             seed_peer_info.clone(),
             self_signer,
@@ -287,12 +315,11 @@ fn outbound() {
     // Fake connectivity manager and dialer.
     let f_peer_mgr = async move {
         let (dialer_substream, listener_substream) = MemorySocket::new_pair();
-        let seed_peer_address = Multiaddr::try_from(seed_peer_info.get_addrs()[0].clone()).unwrap();
         // Notify discovery actor of connection to seed peer.
         peer_mgr_notifs_tx
             .send(PeerManagerNotification::NewPeer(
                 seed_peer_id,
-                seed_peer_address,
+                seed_peer_addrs[0].clone(),
             ))
             .await
             .unwrap();
@@ -307,8 +334,8 @@ fn outbound() {
                 assert_eq!(protocol, DISCOVERY_PROTOCOL_NAME);
                 ch.send(Ok(dialer_substream)).unwrap();
             }
-            _ => {
-                panic!("unexpected request to peer manager");
+            req => {
+                panic!("Unexpected request to peer manager: {:?}", req);
             }
         }
 
@@ -317,9 +344,94 @@ fn outbound() {
         let msg = recv_msg(listener_substream).await.unwrap();
         assert_eq!(1, msg.get_notes().len());
         assert_eq!(Vec::from(peer_id), msg.get_notes()[0].get_peer_id());
-        assert_eq!(address, get_addrs(&msg.get_notes()[0])[0]);
+        assert_eq!(addrs, get_addrs_from_note(&msg.get_notes()[0]));
     };
 
+    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
+        .unwrap();
+}
+
+#[test]
+fn addr_update_includes_seed_addrs() {
+    ::logger::try_init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+
+    // Setup self.
+    let peer_id = PeerId::random();
+    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
+    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(peer_id);
+
+    // Setup seed.
+    let seed_peer_info = gen_peer_info();
+    let mut seed_peer_addrs = get_addrs_from_info(&seed_peer_info);
+    let seed_peer_payload = gen_full_node_payload();
+    let seed_peer_id = PeerId::random();
+    let (seed_pub_keys, seed_signer) = generate_network_pub_keys_and_signer(seed_peer_id);
+    let trusted_peers = Arc::new(RwLock::new(
+        vec![(seed_peer_id, seed_pub_keys), (peer_id, self_pub_keys)]
+            .into_iter()
+            .collect(),
+    ));
+
+    // Setup discovery.
+    let (_, mut conn_mgr_reqs_rx, mut peer_mgr_notifs_tx, _) = setup_discovery(
+        &mut rt,
+        peer_id,
+        addrs,
+        seed_peer_id,
+        seed_peer_info,
+        self_signer,
+        trusted_peers,
+    );
+
+    // Fake connectivity manager and dialer.
+    let f_peer_mgr = async move {
+        // Connectivity manager receives addresses of the seed peer during bootstrap.
+        expect_address_update(&mut conn_mgr_reqs_rx, seed_peer_id, &seed_peer_addrs[..]).await;
+
+        // Notify discovery actor of inbound substream.
+        let (dialer_substream, listener_substream) = MemorySocket::new_pair();
+        peer_mgr_notifs_tx
+            .send(PeerManagerNotification::NewInboundSubstream(
+                seed_peer_id,
+                NegotiatedSubstream {
+                    protocol: ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME),
+                    substream: listener_substream,
+                },
+            ))
+            .await
+            .unwrap();
+        // Wrap dialer substream in a framed substream.
+        let mut dialer_substream =
+            Framed::new(dialer_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+
+        // Send DiscoveryMsg consisting of the new seed peer's discovery note.
+        // The discovery actor should send the addrs in the new seed peer note
+        // _and_ the configured seed addrs to the connectivity manager.
+        let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
+        let new_seed_info = create_peer_info(new_seed_addrs.clone());
+        let seed_note = create_note(&seed_signer, seed_peer_id, new_seed_info, seed_peer_payload);
+        let mut msg = DiscoveryMsg::new();
+        msg.mut_notes().push(seed_note.clone());
+        dialer_substream
+            .send(msg.write_to_bytes().unwrap().into())
+            .await
+            .unwrap();
+
+        // The addrs sent to connectivity manager should also include the
+        // configured seed peer addrs for seed-peer-received notes.
+        let mut expected_seed_addrs = new_seed_addrs.clone();
+        expected_seed_addrs.append(&mut seed_peer_addrs);
+
+        // Connectivity manager receives an update including the seed peer's new
+        // note addrs and the original configured seed addrs.
+        expect_address_update(
+            &mut conn_mgr_reqs_rx,
+            seed_peer_id,
+            &expected_seed_addrs[..],
+        )
+        .await;
+    };
     rt.block_on(f_peer_mgr.boxed().unit_error().compat())
         .unwrap();
 }
