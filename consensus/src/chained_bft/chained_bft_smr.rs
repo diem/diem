@@ -14,7 +14,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::ConsensusNetworkImpl,
+        network::{ConsensusNetworkImpl, NetworkReceivers},
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
         safety::safety_rules::SafetyRules,
     },
@@ -156,8 +156,8 @@ impl<T: Payload> ChainedBftSMR<T> {
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        mut network_receivers: NetworkReceivers<T>,
     ) {
-        let mut network_receivers = self.network.start(&executor);
         let fut = async move {
             event_processor.start().await;
             loop {
@@ -203,8 +203,10 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .as_mut()
             .expect("Consensus start: No valid runtime found!")
             .executor();
+        // Start network receivers before blocking on state synchronizer to unblock delivery of
+        // network events.
+        let network_receivers = self.network.start(&executor);
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
-
         let initial_data = self
             .initial_data
             .take()
@@ -286,7 +288,12 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             Arc::clone(&self.epoch_mgr),
         );
 
-        self.start_event_processing(executor, event_processor, timeout_receiver);
+        self.start_event_processing(
+            executor,
+            event_processor,
+            timeout_receiver,
+            network_receivers,
+        );
 
         debug!("Chained BFT SMR started.");
         Ok(())
