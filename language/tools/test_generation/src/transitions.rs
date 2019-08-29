@@ -142,7 +142,7 @@ pub fn stack_satisfies_struct_signature(
     for (i, token_view) in field_token_views.enumerate() {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().clone(),
-            kind: token_view.kind(),
+            kind: token_view.kind(&[]),
         };
         if !stack_has(state, i, Some(abstract_value)) {
             satisfied = false;
@@ -190,7 +190,7 @@ pub fn stack_create_struct(
         true => Kind::Resource,
         false => tokens
             .iter()
-            .map(|token| SignatureTokenView::new(&state.module, token).kind())
+            .map(|token| SignatureTokenView::new(&state.module, token).kind(&[]))
             .fold(Kind::Unrestricted, |acc_kind, next_kind| {
                 match (acc_kind, next_kind) {
                     (Kind::All, _) | (_, Kind::All) => Kind::All,
@@ -246,7 +246,7 @@ pub fn stack_unpack_struct(
     for token_view in token_views {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().clone(),
-            kind: token_view.kind(),
+            kind: token_view.kind(&[]),
         };
         state = stack_push(&state, abstract_value)?;
     }

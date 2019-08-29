@@ -48,6 +48,7 @@ pub enum IndexKind {
     AddressPool,
     LocalPool,
     CodeDefinition,
+    TypeParameter,
 }
 
 impl IndexKind {
@@ -69,6 +70,7 @@ impl IndexKind {
             AddressPool,
             LocalPool,
             CodeDefinition,
+            TypeParameter,
         ]
     }
 }
@@ -92,12 +94,14 @@ impl fmt::Display for IndexKind {
             AddressPool => "address pool",
             LocalPool => "local pool",
             CodeDefinition => "code definition pool",
+            TypeParameter => "type parameter",
         };
 
         f.write_str(desc)
     }
 }
 
+// TODO: is this outdated?
 /// Represents the kind of a signature token.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum SignatureTokenKind {

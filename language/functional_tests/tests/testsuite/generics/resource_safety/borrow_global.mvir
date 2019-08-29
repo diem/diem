@@ -1,0 +1,16 @@
+module M {
+    resource Foo<T> { x: T }
+
+    drop_ref(ref: &mut Self.Foo<u64>) {
+        _ = move(ref);
+        return;
+    }
+
+    bar() acquires Foo {
+        let x: &mut Self.Foo<u64>;
+        let y: Self.Foo<u64>;
+        x = borrow_global<Foo<u64>>(0x100);
+        Self.drop_ref(move(x));
+        return;
+    }
+}
