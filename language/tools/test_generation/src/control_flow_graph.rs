@@ -80,6 +80,9 @@ impl CFG {
         let mut edges: Vec<(BlockIDSize, BlockIDSize)> = Vec::new();
         for i in 0..target_blocks {
             let child_1 = rng.gen_range(i, target_blocks);
+            // The length of edges cannot be larger than target_blocks
+            // which will not be set to `usize::max_value()`
+            assume!(edges.len() < usize::max_value());
             edges.push((i, child_1));
             // At most two children per block
             if rng.gen_range(0, 1) == 1 {
@@ -95,8 +98,14 @@ impl CFG {
             edges,
         };
         // Assign locals to basic blocks
+        assume!(target_blocks == 0 || !cfg.basic_blocks.is_empty());
         CFG::add_locals(&mut cfg, &mut rng, locals);
         cfg
+    }
+
+    /// Get a reference to all of the basic blocks of the CFG
+    pub fn get_basic_blocks(&self) -> &HashMap<BlockIDSize, BasicBlock> {
+        &self.basic_blocks
     }
 
     /// Get a mutable reference to all of the basic blocks of the CFG
@@ -109,6 +118,8 @@ impl CFG {
         let mut children_ids: Vec<BlockIDSize> = Vec::new();
         for (parent, child) in self.edges.iter() {
             if *parent == block_id {
+                // Length is bound by iteration on `self.edges`
+                verify!(children_ids.len() < usize::max_value());
                 children_ids.push(*child);
             }
         }
@@ -126,6 +137,8 @@ impl CFG {
         let mut parent_ids: Vec<BlockIDSize> = Vec::new();
         for (parent, child) in self.edges.iter() {
             if *child == block_id {
+                // Iteration is bound by the self.edges vector length
+                verify!(parent_ids.len() < usize::max_value());
                 parent_ids.push(*parent);
             }
         }
@@ -144,25 +157,21 @@ impl CFG {
             !block_ids.is_empty(),
             "Cannot merge locals of empty block list"
         );
+        let first_basic_block = self.basic_blocks.get(&block_ids[0]);
+        // Implication of preconditon
+        assume!(first_basic_block.is_some());
+        let first_basic_block_locals_out = &first_basic_block.unwrap().locals_out;
+        let locals_len = first_basic_block_locals_out.len();
         let mut locals_out = BlockLocals::new();
-        let locals_len = self
-            .basic_blocks
-            .get(&block_ids[0])
-            .unwrap()
-            .locals_out
-            .len();
         for local_index in 0..locals_len {
-            let abstract_value = self.basic_blocks.get(&block_ids[0]).unwrap().locals_out
-                [&local_index]
-                .0
-                .clone();
+            let abstract_value = first_basic_block_locals_out[&local_index].0.clone();
             let mut availability = BorrowState::Available;
             for block_id in block_ids.iter() {
                 // A local is available for a block if it is available in every
                 // parent's outgoing locals
-                if self.basic_blocks.get(block_id).unwrap().locals_out[&local_index].1
-                    == BorrowState::Unavailable
-                {
+                let basic_block = self.basic_blocks.get(block_id);
+                assume!(basic_block.is_some());
+                if basic_block.unwrap().locals_out[&local_index].1 == BorrowState::Unavailable {
                     availability = BorrowState::Unavailable;
                 }
             }
@@ -189,6 +198,10 @@ impl CFG {
     /// Add the incoming and outgoing locals for each basic block in the control flow graph.
     /// Currently the incoming and outgoing locals are the same for each block.
     fn add_locals(cfg: &mut CFG, mut rng: &mut StdRng, locals: &[SignatureToken]) {
+        precondition!(
+            !cfg.basic_blocks.is_empty(),
+            "Cannot add locals to empty cfg"
+        );
         let cfg_copy = cfg.clone();
         for (block_id, basic_block) in cfg.basic_blocks.iter_mut() {
             if cfg_copy.num_parents(*block_id) == 0 {
@@ -206,6 +219,8 @@ impl CFG {
                     })
                     .collect();
             } else {
+                // Implication of precondition
+                assume!(!cfg_copy.basic_blocks.is_empty());
                 basic_block.locals_in = cfg_copy.merge_locals(cfg_copy.get_parent_ids(*block_id));
             }
             basic_block.locals_out = CFG::vary_locals(&mut rng, basic_block.locals_in.clone());
@@ -239,7 +254,14 @@ impl CFG {
         let mut bytecode: Vec<Bytecode> = Vec::new();
         for i in 0..self.basic_blocks.len() {
             let block_id = i as BlockIDSize;
-            let block = self.basic_blocks.get_mut(&block_id).unwrap();
+            let block = self.basic_blocks.get_mut(&block_id);
+            // Basic blocks are indexed in increasing order
+            assume!(block.is_some());
+            let block = block.unwrap();
+            if block.instructions.is_empty() {
+                unreachable!("Error: block created with no instructions");
+            }
+            verify!(!block.instructions.is_empty());
             let last_instruction_index = block.instructions.len() - 1;
             if cfg_copy.num_children(block_id) == 2 {
                 let child_id: BlockIDSize = cfg_copy.get_children_ids(block_id)[1];

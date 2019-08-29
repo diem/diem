@@ -3,20 +3,16 @@ use test_generation::{abstract_state::AbstractState, summaries::instruction_summ
 use vm::file_format::Bytecode;
 
 pub fn run_instruction(instruction: Bytecode, initial_state: AbstractState) -> AbstractState {
-    let instruction_summary = instruction_summary(instruction);
-    let mut preconditions_satisfied = true;
-    for precondition in instruction_summary.preconditions.into_iter() {
-        if !precondition(&initial_state) {
-            preconditions_satisfied = false;
-        }
-    }
+    let summary = instruction_summary(instruction);
+    let unsatisfied_preconditions = summary
+        .preconditions
+        .iter()
+        .any(|precondition| !precondition(&initial_state));
     assert_eq!(
-        preconditions_satisfied, true,
+        unsatisfied_preconditions, false,
         "preconditions of instruction not satisfied"
     );
-    let mut state2 = initial_state.clone();
-    for effect in instruction_summary.effects.into_iter() {
-        state2 = effect(&state2);
-    }
-    state2
+    summary.effects.iter().fold(initial_state, |acc, effect| {
+        effect(&acc).unwrap_or_else(|err| panic!("Error applying instruction effect: {}", err))
+    })
 }

@@ -3,6 +3,7 @@
 
 use crate::{
     abstract_state::{AbstractState, AbstractValue, BorrowState},
+    common::VMError,
     state_local_availability_is, state_local_exists, state_local_kind_is, state_local_place,
     state_local_set, state_local_take, state_local_take_borrow, state_never, state_stack_has,
     state_stack_has_polymorphic_eq, state_stack_has_struct, state_stack_local_polymorphic_eq,
@@ -16,7 +17,7 @@ use vm::file_format::{Bytecode, Kind, SignatureToken};
 type Precondition = dyn Fn(&AbstractState) -> bool;
 
 /// A `Effect` is a function that transforms on `AbstractState` to another
-type Effect = dyn Fn(&AbstractState) -> AbstractState;
+type Effect = dyn Fn(&AbstractState) -> Result<AbstractState, VMError>;
 
 /// The `Summary` of a bytecode instruction contains a list of `Precondition`s
 /// and a list of `Effect`s.

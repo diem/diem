@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::abstract_state::{AbstractState, AbstractValue, BorrowState};
+use crate::{
+    abstract_state::{AbstractState, AbstractValue, BorrowState},
+    common::VMError,
+};
 use vm::{
     access::*,
-    file_format::{CompiledModule, Kind, SignatureToken, StructDefinitionIndex},
+    file_format::{Kind, SignatureToken, StructDefinitionIndex},
     views::{SignatureTokenView, StructDefinitionView, ViewInternals},
 };
 
@@ -26,30 +29,34 @@ pub fn stack_has(
 /// Determine whether two tokens on the stack have the same type
 pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
     if stack_has(state, index2, None) {
-        return state.stack_peek(index1) == state.stack_peek(index2);
+        state.stack_peek(index1) == state.stack_peek(index2)
+    } else {
+        false
     }
-    false
 }
 
 /// Pop from the top of the stack.
-pub fn stack_pop(state: &AbstractState) -> AbstractState {
+pub fn stack_pop(state: &AbstractState) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.stack_pop();
-    state
+    state.stack_pop()?;
+    Ok(state)
 }
 
 /// Push given abstract_value to the top of the stack.
-pub fn stack_push(state: &AbstractState, abstract_value: AbstractValue) -> AbstractState {
+pub fn stack_push(
+    state: &AbstractState,
+    abstract_value: AbstractValue,
+) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
     state.stack_push(abstract_value);
-    state
+    Ok(state)
 }
 
 /// Push to the top of the stack from the register.
-pub fn stack_push_register(state: &AbstractState) -> AbstractState {
+pub fn stack_push_register(state: &AbstractState) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.stack_push_register();
-    state
+    state.stack_push_register()?;
+    Ok(state)
 }
 
 /// Check whether the local at `index` exists
@@ -59,40 +66,52 @@ pub fn local_exists(state: &AbstractState, index: u8) -> bool {
 
 /// Check whether the local at `index` is of the given availability
 pub fn local_availability_is(state: &AbstractState, index: u8, availability: BorrowState) -> bool {
-    state.local_availability_is(index as usize, availability)
+    state
+        .local_availability_is(index as usize, availability)
+        .unwrap_or_else(|_| false)
 }
 
 /// Check whether the local at `index` is of the given kind
 pub fn local_kind_is(state: &AbstractState, index: u8, kind: Kind) -> bool {
-    state.local_kind_is(index as usize, kind)
+    state
+        .local_kind_is(index as usize, kind)
+        .unwrap_or_else(|_| false)
 }
 
 /// Set the availability of local at `index`
-pub fn local_set(state: &AbstractState, index: u8, availability: BorrowState) -> AbstractState {
+pub fn local_set(
+    state: &AbstractState,
+    index: u8,
+    availability: BorrowState,
+) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.local_set(index as usize, availability);
-    state
+    state.local_set(index as usize, availability)?;
+    Ok(state)
 }
 
 /// Put copy of the local at `index` in register
-pub fn local_take(state: &AbstractState, index: u8) -> AbstractState {
+pub fn local_take(state: &AbstractState, index: u8) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.local_take(index as usize);
-    state
+    state.local_take(index as usize)?;
+    Ok(state)
 }
 
 /// Put reference to local at `index` in register
-pub fn local_take_borrow(state: &AbstractState, index: u8, mutable: bool) -> AbstractState {
+pub fn local_take_borrow(
+    state: &AbstractState,
+    index: u8,
+    mutable: bool,
+) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.local_take_borrow(index as usize, mutable);
-    state
+    state.local_take_borrow(index as usize, mutable)?;
+    Ok(state)
 }
 
 /// Insert the register value into the locals at `index`
-pub fn local_place(state: &AbstractState, index: u8) -> AbstractState {
+pub fn local_place(state: &AbstractState, index: u8) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.local_place(index as usize);
-    state
+    state.local_place(index as usize)?;
+    Ok(state)
 }
 
 /// Determine whether a abstract_value on the stack and a abstract_value in the locals have the same
@@ -114,14 +133,13 @@ pub fn stack_satisfies_struct_signature(
 ) -> bool {
     let struct_def = state.module.struct_def_at(struct_index);
     let struct_def = StructDefinitionView::new(&state.module, struct_def);
-    let field_token_views: Vec<SignatureTokenView<'_, CompiledModule>> = struct_def
+    let field_token_views = struct_def
         .fields()
         .into_iter()
         .flatten()
-        .map(|field| field.type_signature().token())
-        .collect();
+        .map(|field| field.type_signature().token());
     let mut satisfied = true;
-    for (i, token_view) in field_token_views.iter().enumerate() {
+    for (i, token_view) in field_token_views.enumerate() {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().clone(),
             kind: token_view.kind(),
@@ -138,7 +156,7 @@ pub fn stack_satisfies_struct_signature(
 pub fn stack_pack_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
-) -> AbstractState {
+) -> Result<AbstractState, VMError> {
     let state_copy = state.clone();
     let mut state = state.clone();
     let struct_def = state_copy.module.struct_def_at(struct_index);
@@ -151,7 +169,7 @@ pub fn stack_pack_struct(
         .collect();
     let number_of_pops = tokens.len();
     for _ in 0..number_of_pops {
-        state = stack_pop(&state);
+        state = stack_pop(&state)?;
     }
     // The logic for determine the struct kind was sourced from `SignatureTokenView`
     // TODO: This will need to be updated when struct type actuals are handled
@@ -173,46 +191,47 @@ pub fn stack_pack_struct(
         struct_kind,
     );
     state.set_register(struct_value);
-    state
+    Ok(state)
 }
 
 /// Determine if a struct of the given signature is at the top of the stack
 pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
     if state.stack_len() > 0 {
         let struct_def = state.module.struct_def_at(struct_index);
-        let struct_value = state.stack_peek(0).unwrap();
-        match struct_value.token {
-            SignatureToken::Struct(struct_handle, _) => struct_handle == struct_def.struct_handle,
-            _ => false,
+        if let Some(struct_value) = state.stack_peek(0) {
+            match struct_value.token {
+                SignatureToken::Struct(struct_handle, _) => {
+                    return struct_handle == struct_def.struct_handle;
+                }
+                _ => return false,
+            }
         }
-    } else {
-        false
     }
+    false
 }
 
 /// Push the fields of a struct as `AbstractValue`s to the stack
 pub fn stack_unpack_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
-) -> AbstractState {
+) -> Result<AbstractState, VMError> {
     let state_copy = state.clone();
     let mut state = state.clone();
     let struct_def = state_copy.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
-    let token_views: Vec<SignatureTokenView<'_, CompiledModule>> = struct_def_view
+    let token_views = struct_def_view
         .fields()
         .into_iter()
         .flatten()
-        .map(|field| field.type_signature().token())
-        .collect();
+        .map(|field| field.type_signature().token());
     for token_view in token_views {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().clone(),
             kind: token_view.kind(),
         };
-        state = stack_push(&state, abstract_value);
+        state = stack_push(&state, abstract_value)?;
     }
-    state
+    Ok(state)
 }
 
 /// Wrapper for enclosing the arguments of `stack_has` so that only the `state` needs
