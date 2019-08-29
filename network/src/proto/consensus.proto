@@ -88,24 +88,11 @@ message Block {
 }
 
 message QuorumCert {
-  // Ancestor of this block (could be a parent)
-  bytes block_id = 1;
-  /// The execution state id of the corresponding block
-  bytes state_id = 2;
-  uint64 version = 3;
-  /// The round of a certified block.
-  uint64 round = 4;
+  // The vote information certified by the quorum.
+  VoteData vote_data = 1;
   // LedgerInfo with at least 2f+1 signatures. The LedgerInfo's consensus data
-  // hash is a digest that covers ancestor_id, state_id and round.
-  types.LedgerInfoWithSignatures signed_ledger_info = 5;
-  // The id of the parent block of the certified block
-  bytes parent_block_id = 6;
-  // The round of the parent block of the certified block
-  uint64 parent_block_round = 7;
-  // The id of the grandparent block of the certified block
-  bytes grandparent_block_id = 8;
-  // The round of the grandparent block of the certified block
-  uint64 grandparent_block_round = 9;
+  // hash is a digest that covers vote data hash.
+  types.LedgerInfoWithSignatures signed_ledger_info = 2;
 }
 
 message VoteData {

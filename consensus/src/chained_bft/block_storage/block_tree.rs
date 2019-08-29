@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockTreeError, VoteReceptionResult},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
+        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
         safety::vote_msg::VoteMsg,
     },
     counters,
@@ -279,14 +279,16 @@ where
         let num_votes = li_with_sig.signatures().len();
         if num_votes >= min_votes_for_qc {
             let quorum_cert = QuorumCert::new(
-                block_id,
-                vote_msg.executed_state(),
-                vote_msg.block_round(),
+                VoteData::new(
+                    block_id,
+                    vote_msg.executed_state(),
+                    vote_msg.block_round(),
+                    vote_msg.parent_block_id(),
+                    vote_msg.parent_block_round(),
+                    vote_msg.grandparent_block_id(),
+                    vote_msg.grandparent_block_round(),
+                ),
                 li_with_sig.clone(),
-                vote_msg.parent_block_id(),
-                vote_msg.parent_block_round(),
-                vote_msg.grandparent_block_id(),
-                vote_msg.grandparent_block_round(),
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc

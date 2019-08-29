@@ -226,8 +226,8 @@ fn test_nil_block() {
         nil_block.round(),
         nil_block.quorum_cert().certified_block_id(),
         nil_block.quorum_cert().certified_block_round(),
-        nil_block.quorum_cert().certified_parent_block_id(),
-        nil_block.quorum_cert().certified_parent_block_round(),
+        nil_block.quorum_cert().parent_block_id(),
+        nil_block.quorum_cert().parent_block_round(),
     );
     let nil_block_child = Block::make_block(
         &nil_block,
@@ -293,8 +293,8 @@ fn test_block_qc() {
         a1.round(),
         a1.quorum_cert().certified_block_id(),
         a1.quorum_cert().certified_block_round(),
-        a1.quorum_cert().certified_parent_block_id(),
-        a1.quorum_cert().certified_parent_block_round(),
+        a1.quorum_cert().parent_block_id(),
+        a1.quorum_cert().parent_block_round(),
     );
 
     let result = panic::catch_unwind(|| {

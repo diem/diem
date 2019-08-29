@@ -78,8 +78,8 @@ impl TreeInserter {
             parent.round(),
             parent.quorum_cert().certified_block_id(),
             parent.quorum_cert().certified_block_round(),
-            parent.quorum_cert().certified_parent_block_id(),
-            parent.quorum_cert().certified_parent_block_round(),
+            parent.quorum_cert().parent_block_id(),
+            parent.quorum_cert().parent_block_round(),
         );
 
         self.insert_block_with_qc(parent_qc, parent, round)
@@ -120,10 +120,10 @@ impl TreeInserter {
             qc_signers,
             block.parent_id(),
             new_round,
-            block.quorum_cert().certified_parent_block_id(),
-            block.quorum_cert().certified_parent_block_round(),
-            block.quorum_cert().certified_grandparent_block_id(),
-            block.quorum_cert().certified_grandparent_block_round(),
+            block.quorum_cert().parent_block_id(),
+            block.quorum_cert().parent_block_round(),
+            block.quorum_cert().grandparent_block_id(),
+            block.quorum_cert().grandparent_block_round(),
         );
 
         let new_block = Block::new_internal(
@@ -185,14 +185,16 @@ pub fn placeholder_certificate_for_block(
     }
 
     QuorumCert::new(
-        certified_block_id,
-        certified_block_state,
-        certified_block_round,
+        VoteData::new(
+            certified_block_id,
+            certified_block_state,
+            certified_block_round,
+            certified_parent_block_id,
+            certified_parent_block_round,
+            certified_grandparent_block_id,
+            certified_grandparent_block_round,
+        ),
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
-        certified_parent_block_id,
-        certified_parent_block_round,
-        certified_grandparent_block_id,
-        certified_grandparent_block_round,
     )
 }
 
