@@ -4,8 +4,11 @@ use crate::chained_bft::consensus_types::{
 use network;
 
 use crate::chained_bft::{
-    common::Round, consensus_types::timeout_msg::PacemakerTimeoutCertificateVerificationError,
-    safety::vote_msg::VoteMsgVerificationError,
+    common::Round,
+    consensus_types::{
+        timeout_msg::PacemakerTimeoutCertificateVerificationError,
+        vote_msg::VoteMsgVerificationError,
+    },
 };
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};

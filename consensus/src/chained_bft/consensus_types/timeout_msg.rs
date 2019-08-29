@@ -4,9 +4,10 @@
 use crate::chained_bft::{
     common::{Author, Round},
     consensus_types::{
-        sync_info::SyncInfo, timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
+        sync_info::SyncInfo,
+        timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
+        vote_msg::{VoteMsg, VoteMsgVerificationError},
     },
-    safety::vote_msg::{VoteMsg, VoteMsgVerificationError},
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{

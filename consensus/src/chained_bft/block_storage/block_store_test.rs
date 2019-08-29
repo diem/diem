@@ -8,8 +8,8 @@ use crate::chained_bft::{
         block::{block_test, Block},
         quorum_cert::QuorumCert,
         vote_data::VoteData,
+        vote_msg::VoteMsg,
     },
-    safety::vote_msg::VoteMsg,
     test_utils::{
         build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
         placeholder_ledger_info, TreeInserter,

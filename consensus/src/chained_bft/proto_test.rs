@@ -5,9 +5,8 @@ use crate::{
     chained_bft::{
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-            vote_data::VoteData,
+            vote_data::VoteData, vote_msg::VoteMsg,
         },
-        safety::vote_msg::VoteMsg,
         test_utils::placeholder_ledger_info,
     },
     state_replication::ExecutedState,

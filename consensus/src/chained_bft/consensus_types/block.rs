@@ -4,8 +4,9 @@
 use crate::{
     chained_bft::{
         common::{Author, Height, Round},
-        consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
-        safety::vote_msg::VoteMsgVerificationError,
+        consensus_types::{
+            quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsgVerificationError,
+        },
     },
     state_replication::ExecutedState,
 };

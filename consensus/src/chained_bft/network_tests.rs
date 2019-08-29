@@ -6,11 +6,10 @@ use crate::{
         common::Author,
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-            vote_data::VoteData,
+            vote_data::VoteData, vote_msg::VoteMsg,
         },
         epoch_manager::EpochManager,
         network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
-        safety::vote_msg::VoteMsg,
         test_utils::{consensus_runtime, placeholder_ledger_info},
     },
     state_replication::ExecutedState,

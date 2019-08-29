@@ -7,9 +7,9 @@ use crate::{
         common::{Author, Payload},
         consensus_types::{
             block::Block, proposal_msg::ProposalMsg, sync_info::SyncInfo, timeout_msg::TimeoutMsg,
+            vote_msg::VoteMsg,
         },
         epoch_manager::EpochManager,
-        safety::vote_msg::VoteMsg,
     },
     counters,
 };

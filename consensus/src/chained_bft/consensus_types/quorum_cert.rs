@@ -3,8 +3,8 @@
 
 use crate::{
     chained_bft::{
-        common::Round, consensus_types::vote_data::VoteData,
-        safety::vote_msg::VoteMsgVerificationError,
+        common::Round,
+        consensus_types::{vote_data::VoteData, vote_msg::VoteMsgVerificationError},
     },
     state_replication::ExecutedState,
 };

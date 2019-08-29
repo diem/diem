@@ -12,7 +12,7 @@ mod block_store;
 mod block_tree;
 
 use crate::{
-    chained_bft::safety::vote_msg::VoteMsgVerificationError,
+    chained_bft::consensus_types::vote_msg::VoteMsgVerificationError,
     state_replication::{ExecutedState, StateComputeResult},
 };
 pub use block_store::{BlockStore, NeedFetchResult};

@@ -4,8 +4,9 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockTreeError, VoteReceptionResult},
-        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
-        safety::vote_msg::VoteMsg,
+        consensus_types::{
+            block::Block, quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg,
+        },
     },
     counters,
     state_replication::{ExecutedState, StateComputeResult},

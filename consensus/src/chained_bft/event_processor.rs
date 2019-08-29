@@ -16,6 +16,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
             vote_data::VoteData,
+            vote_msg::VoteMsg,
         },
         epoch_manager::EpochManager,
         liveness::{
@@ -25,7 +26,7 @@ use crate::{
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         persistent_storage::PersistentStorage,
-        safety::{safety_rules::SafetyRules, vote_msg::VoteMsg},
+        safety::safety_rules::SafetyRules,
         sync_manager::{SyncManager, SyncMgrContext},
     },
     counters,
