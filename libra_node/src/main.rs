@@ -10,6 +10,9 @@ use std::sync::{
     Arc,
 };
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 fn register_signals(term: Arc<AtomicBool>) {
     for signal in &[
         signal_hook::SIGTERM,
