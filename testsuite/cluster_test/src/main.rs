@@ -143,7 +143,7 @@ impl ClusterTestRunner {
     }
 
     fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
-        if !self.deployment_manager.redeploy(hash) {
+        if !self.deployment_manager.redeploy(hash)? {
             return Ok(false);
         }
         println!("Waiting for 60 seconds to allow ECS to restart tasks...");
