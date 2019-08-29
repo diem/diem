@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::common::VMError;
 use std::collections::HashMap;
 use vm::file_format::{empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken};
 
@@ -25,7 +26,7 @@ pub struct AbstractValue {
 impl AbstractValue {
     /// Create a new primitive `AbstractValue` given its type; the kind will be `Unrestricted`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
-        assert!(
+        checked_precondition!(
             match token {
                 SignatureToken::Struct(_, _) => false,
                 SignatureToken::Reference(_) => false,
@@ -42,7 +43,7 @@ impl AbstractValue {
 
     /// Create a new reference `AbstractValue` given its type and kind
     pub fn new_reference(token: SignatureToken, kind: Kind) -> AbstractValue {
-        assert!(
+        checked_precondition!(
             match token {
                 SignatureToken::Reference(_) => true,
                 SignatureToken::MutableReference(_) => true,
@@ -55,7 +56,7 @@ impl AbstractValue {
 
     /// Create a new struct `AbstractValue` given its type and kind
     pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
-        assert!(
+        checked_precondition!(
             match token {
                 SignatureToken::Struct(_, _) => true,
                 _ => false,
@@ -129,21 +130,35 @@ impl AbstractState {
 
     /// Add a `AbstractValue` to the stack
     pub fn stack_push(&mut self, item: AbstractValue) {
+        // Programs that are large enough to exceed this bound
+        // will not be generated
+        assume!(self.stack.len() < usize::max_value());
         self.stack.push(item);
     }
 
     /// Add a `AbstractValue` to the stack from the register
-    pub fn stack_push_register(&mut self) {
+    /// If the register is `None` return a `VMError`
+    pub fn stack_push_register(&mut self) -> Result<(), VMError> {
         if let Some(abstract_value) = self.take_register() {
+            // Programs that are large enough to exceed this bound
+            // will not be generated
+            assume!(self.stack.len() < usize::max_value());
             self.stack.push(abstract_value);
+            Ok(())
         } else {
-            panic!("Error: No value in register");
+            Err(VMError::new("Error: No value in register".to_string()))
         }
     }
 
-    /// Remove a `AbstractValue` from the stack if it exists to the register
-    pub fn stack_pop(&mut self) {
-        self.register = self.stack.pop();
+    /// Remove an `AbstractValue` from the stack if it exists to the register
+    /// If it does not exist return a `VMError`.
+    pub fn stack_pop(&mut self) -> Result<(), VMError> {
+        if self.stack.is_empty() {
+            Err(VMError::new("Pop attempted on empty stack".to_string()))
+        } else {
+            self.register = self.stack.pop();
+            Ok(())
+        }
     }
 
     /// Get the `AbstractValue` at index `index` on the stack if it exists.
@@ -172,43 +187,66 @@ impl AbstractState {
     }
 
     /// Place the local at index `i` if it exists into the register
-    pub fn local_take(&mut self, i: usize) {
-        checked_precondition!(self.local_exists(i), "Failed to get local");
-        let (abstract_value, _) = self.locals.get(&i).unwrap();
-        self.register = Some(abstract_value.clone());
+    /// If it does not exist return a `VMError`.
+    pub fn local_take(&mut self, i: usize) -> Result<(), VMError> {
+        if let Some((abstract_value, _)) = self.locals.get(&i) {
+            self.register = Some(abstract_value.clone());
+            Ok(())
+        } else {
+            Err(VMError::new(format!("Local does not exist at index {}", i)))
+        }
     }
 
     /// Place a reference to the local at index `i` if it exists into the register
-    pub fn local_take_borrow(&mut self, i: usize, mutable: bool) {
-        checked_precondition!(self.local_exists(i), "Failed to get reference to local");
-        let (abstract_value, _) = self.locals.get(&i).unwrap();
-        let ref_token = if mutable {
-            SignatureToken::MutableReference(Box::new(abstract_value.token.clone()))
+    /// If it does not exist return a `VMError`.
+    pub fn local_take_borrow(&mut self, i: usize, mutable: bool) -> Result<(), VMError> {
+        if let Some((abstract_value, _)) = self.locals.get(&i) {
+            let ref_token = if mutable {
+                SignatureToken::MutableReference(Box::new(abstract_value.token.clone()))
+            } else {
+                SignatureToken::Reference(Box::new(abstract_value.token.clone()))
+            };
+            self.register = Some(AbstractValue::new_reference(ref_token, abstract_value.kind));
+            Ok(())
         } else {
-            SignatureToken::Reference(Box::new(abstract_value.token.clone()))
-        };
-        self.register = Some(AbstractValue::new_reference(ref_token, abstract_value.kind));
+            Err(VMError::new(format!("Local does not exist at index {}", i)))
+        }
     }
 
     /// Set the availability of the local at index `i`
-    pub fn local_set(&mut self, i: usize, availability: BorrowState) {
-        checked_precondition!(self.local_exists(i), "Failed to change local availability");
-        let (abstract_value, _) = self.locals.get(&i).unwrap().clone();
-        self.locals.insert(i, (abstract_value, availability));
+    /// If it does not exist return a `VMError`.
+    pub fn local_set(&mut self, i: usize, availability: BorrowState) -> Result<(), VMError> {
+        if let Some((abstract_value, _)) = self.locals.clone().get(&i) {
+            self.locals
+                .insert(i, (abstract_value.clone(), availability));
+            Ok(())
+        } else {
+            Err(VMError::new(format!("Local does not exist at index {}", i)))
+        }
     }
 
     /// Check whether a local is in a particular `BorrowState`
-    pub fn local_availability_is(&self, i: usize, availability: BorrowState) -> bool {
-        checked_precondition!(self.local_exists(i), "Failed to check local availability");
-        let (_, availability1) = self.locals.get(&i).unwrap();
-        availability == *availability1
+    /// If the local does not exist return a `VMError`.
+    pub fn local_availability_is(
+        &self,
+        i: usize,
+        availability: BorrowState,
+    ) -> Result<bool, VMError> {
+        if let Some((_, availability1)) = self.locals.get(&i) {
+            Ok(availability == *availability1)
+        } else {
+            Err(VMError::new(format!("Local does not exist at index {}", i)))
+        }
     }
 
     /// Check whether a local is in a particular `Kind`
-    pub fn local_kind_is(&self, i: usize, kind: Kind) -> bool {
-        checked_precondition!(self.local_exists(i), "Failed to check local kind");
-        let (abstract_value, _) = self.locals.get(&i).unwrap();
-        abstract_value.kind == kind
+    /// If the local does not exist return a `VMError`.
+    pub fn local_kind_is(&self, i: usize, kind: Kind) -> Result<bool, VMError> {
+        if let Some((abstract_value, _)) = self.locals.get(&i) {
+            Ok(abstract_value.kind == kind)
+        } else {
+            Err(VMError::new(format!("Local does not exist at index {}", i)))
+        }
     }
 
     /// Insert a local at index `i` as `Available`
@@ -222,12 +260,17 @@ impl AbstractState {
     }
 
     /// Insert a local at index `i` as `Available` from the register
-    pub fn local_place(&mut self, i: usize) {
-        let value = self.take_register();
-        assert!(value.is_some(), "Failed to insert local from stack");
-        let abstract_value = value.unwrap();
-        self.locals
-            .insert(i, (abstract_value.clone(), BorrowState::Available));
+    /// If the register value is `None` return a `VMError`.
+    pub fn local_place(&mut self, i: usize) -> Result<(), VMError> {
+        if let Some(abstract_value) = self.take_register() {
+            self.locals
+                .insert(i, (abstract_value.clone(), BorrowState::Available));
+            Ok(())
+        } else {
+            Err(VMError::new(
+                "Could not insert local, register is empty".to_string(),
+            ))
+        }
     }
 
     /// Get all of the locals

@@ -229,6 +229,8 @@ impl BytecodeGenerator {
                 .iter()
                 .any(|precondition| !precondition(&state));
             if !unsatisfied_preconditions {
+                // The size of matches cannot be greater than the number of bytecode instructions
+                verify!(matches.len() < usize::max_value());
                 matches.push((*stack_effect, instruction));
             }
         }
@@ -290,7 +292,10 @@ impl BytecodeGenerator {
         summaries::instruction_summary(instruction)
             .effects
             .iter()
-            .fold(state, |acc, effect| effect(&acc))
+            .fold(state, |acc, effect| {
+                effect(&acc)
+                    .unwrap_or_else(|err| panic!("Error applying instruction effect: {}", err))
+            })
     }
 
     pub fn apply_instruction(
@@ -299,6 +304,8 @@ impl BytecodeGenerator {
         bytecode: &mut Vec<Bytecode>,
         instruction: Bytecode,
     ) -> AbstractState {
+        // Bytecode will never be generated this large
+        assume!(bytecode.len() < usize::max_value());
         debug!("**********************");
         debug!("State1: [{:?}]", state);
         debug!("Next instr: {:?}", instruction);
@@ -377,7 +384,8 @@ impl BytecodeGenerator {
         signature: &FunctionSignature,
         module: CompiledModuleMut,
     ) -> Vec<Bytecode> {
-        let mut cfg = CFG::new(&mut self.rng, locals, signature, 3);
+        let number_of_blocks = 3;
+        let mut cfg = CFG::new(&mut self.rng, locals, signature, number_of_blocks);
         let cfg_copy = cfg.clone();
         for (block_id, block) in cfg.get_basic_blocks_mut().iter_mut() {
             debug!("+++++++++++++++++ Starting new block +++++++++++++++++");
@@ -417,7 +425,9 @@ impl BytecodeGenerator {
             debug!("Instructions generated: {}", bytecode.len());
             block.set_instructions(bytecode);
         }
-
+        // The CFG will be non-empty if we set the number of basic blocks to generate
+        // to be non-zero
+        verify!(number_of_blocks > 0 || cfg.get_basic_blocks().is_empty());
         cfg.serialize()
     }
 }
