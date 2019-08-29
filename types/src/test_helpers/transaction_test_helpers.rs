@@ -38,11 +38,7 @@ pub fn get_test_signed_transaction(
 
     let signature = private_key.sign_message(&raw_txn.hash());
 
-    let mut signed_txn = ProtoSignedTransaction::new();
-    signed_txn.set_raw_txn(raw_txn.into_proto());
-    signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
-    signed_txn.set_sender_signature(signature.to_bytes().to_vec());
-    signed_txn
+    SignedTransaction::new(raw_txn, public_key, signature).into_proto()
 }
 
 // Test helper for creating transactions for which the signature hasn't been checked.

@@ -17,11 +17,6 @@ proptest! {
     }
 
     #[test]
-    fn test_raw_txn(raw_txn in any::<RawTransaction>()) {
-        assert_protobuf_encode_decode(&raw_txn);
-    }
-
-    #[test]
     fn test_program(program in any::<Program>()) {
         assert_protobuf_encode_decode(&program);
     }

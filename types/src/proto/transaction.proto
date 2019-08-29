@@ -11,36 +11,6 @@ import "proof.proto";
 import "transaction_info.proto";
 import "google/protobuf/wrappers.proto";
 
-// A generic structure that describes a transaction that a client submits
-message RawTransaction {
-    // Sender's account address
-    bytes sender_account = 1;
-    // Sequence number of this transaction corresponding to sender's account.
-    uint64 sequence_number = 2;
-    oneof payload {
-        // The transaction script to execute.
-        Program program = 3;
-        // A write set, used for genesis blocks and other magic transactions.
-        // This bypasses the rules for regular transactions so will typically be
-        // rejected. Only under special circumstances will it be accepted.
-        WriteSet write_set = 4;
-        // The transaction script to execute.
-        Script script = 8;
-        // The MOVE Module to publish.
-        Module module = 9;
-    }
-    // Maximal total gas specified by wallet to spend for this transaction.
-    uint64 max_gas_amount = 5;
-    // The price to be paid for each unit of gas.
-    uint64 gas_unit_price = 6;
-    // Expiration time for this transaction.  If storage is queried and
-    // the time returned is greater than or equal to this time and this
-    // transaction has not been included, you can be certain that it will
-    // never be included.
-    // If set to 0, there will be no expiration time
-    uint64 expiration_time = 7;
-}
-
 // The code for the transaction to execute
 message Program {
     bytes code = 1;
@@ -73,12 +43,8 @@ message Module {
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // public key that corresponds to RawTransaction::sender_account
-    bytes sender_public_key = 2;
-    // signature for the hash
-    bytes sender_signature = 3;
-    // Underlying transaction
-    RawTransaction raw_txn = 4;
+    // LCS byte code representation of a SignedTransaction
+    bytes signed_txn = 5;
 }
 
 message SignedTransactionWithProof {
