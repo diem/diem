@@ -4,9 +4,8 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        consensus_types::vote_data::VoteData,
+        consensus_types::{vote_data::VoteData, vote_msg::VoteMsg},
         liveness::proposal_generator::{ProposalGenerationError, ProposalGenerator},
-        safety::vote_msg::VoteMsg,
         test_utils::{
             build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },

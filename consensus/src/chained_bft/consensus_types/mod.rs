@@ -7,3 +7,4 @@ pub(crate) mod quorum_cert;
 pub(crate) mod sync_info;
 pub(crate) mod timeout_msg;
 pub(crate) mod vote_data;
+pub(crate) mod vote_msg;

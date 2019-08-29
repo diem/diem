@@ -12,6 +12,7 @@ use crate::{
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
             vote_data::VoteData,
+            vote_msg::VoteMsg,
         },
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
@@ -25,10 +26,7 @@ use crate::{
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
-        safety::{
-            safety_rules::{ConsensusState, SafetyRules},
-            vote_msg::VoteMsg,
-        },
+        safety::safety_rules::{ConsensusState, SafetyRules},
         test_utils::{
             consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,

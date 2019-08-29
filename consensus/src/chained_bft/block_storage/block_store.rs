@@ -5,9 +5,8 @@ use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader, InsertError, VoteReceptionResult},
         common::{Payload, Round},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
+        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
         persistent_storage::PersistentStorage,
-        safety::vote_msg::VoteMsg,
     },
     state_replication::{ExecutedState, StateComputer},
 };
