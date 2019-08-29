@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::PeerId;
+use logger::prelude::*;
 use network::validator_network::StateSynchronizerSender;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PeerInfo {
     is_alive: bool,
     is_upstream: bool,
@@ -44,6 +45,7 @@ impl PeerManager {
             .map(|peer_id| (peer_id, PeerInfo::new(true, true)))
             .collect();
         self.peers = new_peers;
+        debug!("[state sync] (set_peers) state: {:?}", self.peers);
     }
 
     pub fn enable_peer(&mut self, peer_id: PeerId, sender: StateSynchronizerSender) {
@@ -68,17 +70,24 @@ impl PeerManager {
 
     pub fn pick_peer(&mut self) -> Option<(PeerId, StateSynchronizerSender)> {
         let active_peers = self.get_active_upstream_peer_ids();
+        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
         if !active_peers.is_empty() {
             let idx = thread_rng().gen_range(0, active_peers.len());
             let peer_id = *active_peers[idx];
             if let Some(sender) = self.get_network_sender(&peer_id) {
                 return Some((peer_id, sender));
+            } else {
+                debug!("[state sync] (pick_peer) no sender for {}", peer_id);
             }
         }
         None
     }
 
     fn get_active_upstream_peer_ids(&self) -> Vec<&PeerId> {
+        debug!(
+            "[state sync] (get_active_upstream_peer_ids) state: {:?}",
+            self.peers
+        );
         self.peers
             .iter()
             .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)

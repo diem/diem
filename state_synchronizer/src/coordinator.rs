@@ -126,10 +126,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         Ok(event) => {
                             match event {
                                 Event::NewPeer(peer_id) => {
+                                    debug!("[state sync] new peer {}", peer_id);
                                     self.peer_manager.enable_peer(peer_id, network_senders[idx].clone());
                                     self.check_progress().await;
                                 }
                                 Event::LostPeer(peer_id) => {
+                                    debug!("[state sync] lost peer {}", peer_id);
                                     self.peer_manager.disable_peer(&peer_id);
                                 }
                                 Event::Message((peer_id, mut message)) => {
