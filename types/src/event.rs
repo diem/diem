@@ -104,6 +104,11 @@ impl EventHandle {
     }
 
     #[cfg(any(test, feature = "testing"))]
+    pub fn count_mut(&mut self) -> &mut u64 {
+        &mut self.count
+    }
+
+    #[cfg(any(test, feature = "testing"))]
     /// Create a random event handle for testing
     pub fn random_handle(count: u64) -> Self {
         Self {
