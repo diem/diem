@@ -67,7 +67,7 @@ pub fn get_test_unchecked_transaction(
 
     let signature = private_key.sign_message(&raw_txn.hash());
 
-    SignedTransaction::craft_signed_transaction_for_client(raw_txn, public_key, signature)
+    SignedTransaction::new(raw_txn, public_key, signature)
 }
 
 // Test helper for transaction creation. Short version for get_test_signed_transaction
