@@ -42,11 +42,11 @@ pub struct VMRuntime<'alloc> {
 impl<'alloc> VMRuntime<'alloc> {
     /// Create a new VM instance with an Arena allocator to store the modules and a `config` that
     /// contains the whitelist that this VM is allowed to execute.
-    pub fn new(allocator: &'alloc Arena<LoadedModule>, config: &VMConfig) -> Self {
+    pub fn new(allocator: &'alloc Arena<LoadedModule>, _config: &VMConfig) -> Self {
         VMRuntime {
             code_cache: VMModuleCache::new(allocator),
             script_cache: ScriptCache::new(allocator),
-            publishing_option: config.publishing_options.clone(),
+            publishing_option: VMPublishingOption::Open,
         }
     }
 
