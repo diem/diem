@@ -58,7 +58,6 @@ macro_rules! proto_fuzz_target {
 
 // List fuzz target modules here.
 mod compiled_module;
-mod raw_transaction;
 mod signed_transaction;
 mod vm_value;
 
@@ -67,7 +66,6 @@ lazy_static! {
         let targets: Vec<Box<dyn FuzzTargetImpl>> = vec![
             // List fuzz targets here in this format.
             Box::new(compiled_module::CompiledModuleTarget::default()),
-            Box::new(raw_transaction::RawTransactionTarget::default()),
             Box::new(signed_transaction::SignedTransactionTarget::default()),
             Box::new(vm_value::ValueTarget::default()),
         ];

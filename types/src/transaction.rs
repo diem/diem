@@ -18,7 +18,7 @@ use crate::{
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleSerializer,
+    SimpleDeserializer, SimpleSerializer,
 };
 use crypto::{
     ed25519::*,
@@ -235,53 +235,6 @@ impl CryptoHash for RawTransaction {
                 .as_slice(),
         );
         state.finish()
-    }
-}
-
-impl FromProto for RawTransaction {
-    type ProtoType = crate::proto::transaction::RawTransaction;
-
-    fn from_proto(mut txn: Self::ProtoType) -> Result<Self> {
-        Ok(RawTransaction {
-            sender: AccountAddress::try_from(txn.get_sender_account())?,
-            sequence_number: txn.sequence_number,
-            payload: if txn.has_program() {
-                TransactionPayload::Program(Program::from_proto(txn.take_program())?)
-            } else if txn.has_write_set() {
-                TransactionPayload::WriteSet(WriteSet::from_proto(txn.take_write_set())?)
-            } else if txn.has_module() {
-                TransactionPayload::Module(Module::from_proto(txn.take_module())?)
-            } else if txn.has_script() {
-                TransactionPayload::Script(Script::from_proto(txn.take_script())?)
-            } else {
-                bail!("RawTransaction payload missing");
-            },
-            max_gas_amount: txn.max_gas_amount,
-            gas_unit_price: txn.gas_unit_price,
-            expiration_time: Duration::from_secs(txn.expiration_time),
-        })
-    }
-}
-
-impl IntoProto for RawTransaction {
-    type ProtoType = crate::proto::transaction::RawTransaction;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut transaction = Self::ProtoType::new();
-        transaction.set_sender_account(self.sender.as_ref().to_vec());
-        transaction.set_sequence_number(self.sequence_number);
-        match self.payload {
-            TransactionPayload::Program(program) => transaction.set_program(program.into_proto()),
-            TransactionPayload::WriteSet(write_set) => {
-                transaction.set_write_set(write_set.into_proto())
-            }
-            TransactionPayload::Script(script) => transaction.set_script(script.into_proto()),
-            TransactionPayload::Module(module) => transaction.set_module(module.into_proto()),
-        }
-        transaction.set_gas_unit_price(self.gas_unit_price);
-        transaction.set_max_gas_amount(self.max_gas_amount);
-        transaction.set_expiration_time(self.expiration_time.as_secs());
-        transaction
     }
 }
 
@@ -557,12 +510,8 @@ impl FromProto for SignedTransaction {
     type ProtoType = crate::proto::transaction::SignedTransaction;
 
     fn from_proto(mut txn: Self::ProtoType) -> Result<Self> {
-        // Signature checking is encoded in `SignatureCheckedTransaction`.
-        Ok(SignedTransaction::new(
-            RawTransaction::from_proto(txn.take_raw_txn())?,
-            Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
-            Ed25519Signature::try_from(txn.get_sender_signature())?,
-        ))
+        let signed_txn = SimpleDeserializer::deserialize(&txn.take_signed_txn())?;
+        Ok(signed_txn)
     }
 }
 
@@ -570,10 +519,10 @@ impl IntoProto for SignedTransaction {
     type ProtoType = crate::proto::transaction::SignedTransaction;
 
     fn into_proto(self) -> Self::ProtoType {
+        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&self)
+            .expect("Unable to serialize SignedTransaction");
         let mut transaction = Self::ProtoType::new();
-        transaction.set_raw_txn(self.raw_txn.into_proto());
-        transaction.set_sender_public_key(self.public_key.to_bytes().to_vec());
-        transaction.set_sender_signature(self.signature.to_bytes().to_vec());
+        transaction.set_signed_txn(signed_txn);
         transaction
     }
 }
