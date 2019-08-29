@@ -32,7 +32,7 @@ use crypto::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto, IntoProtoBytes};
+use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
@@ -171,13 +171,9 @@ impl RawTransaction {
         public_key: Ed25519PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
         let signature = private_key.sign_message(&self.hash());
-        Ok(SignatureCheckedTransaction(SignedTransaction {
-            // Will be cleaned up after eliminating raw_txn_bytes below
-            raw_txn: self.clone(),
-            public_key,
-            signature,
-            raw_txn_bytes: self.into_proto_bytes()?,
-        }))
+        Ok(SignatureCheckedTransaction(SignedTransaction::new(
+            self, public_key, signature,
+        )))
     }
 
     pub fn into_payload(self) -> TransactionPayload {
@@ -423,12 +419,8 @@ pub struct SignedTransaction {
     /// Signature of the transaction that correspond to the public key
     signature: Ed25519Signature,
 
-    // The original raw bytes from the protobuf are also stored here so that we use
-    // these bytes when generating the canonical serialization of the SignedTransaction struct
-    // rather than re-serializing them again to avoid risk of non-determinism in the process
-
-    // the raw transaction bytes generated from the wallet
-    raw_txn_bytes: Vec<u8>,
+    /// The transaction length is used by the VM to limit the size of transactions
+    transaction_length: usize,
 }
 
 /// A transaction for which the signature has been verified. Created by
@@ -472,18 +464,20 @@ impl fmt::Debug for SignedTransaction {
 }
 
 impl SignedTransaction {
-    pub fn craft_signed_transaction_for_client(
+    pub fn new(
         raw_txn: RawTransaction,
         public_key: Ed25519PublicKey,
         signature: Ed25519Signature,
     ) -> SignedTransaction {
+        let transaction_length = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn)
+            .expect("Unable to serialize RawTransaction")
+            .len();
+
         SignedTransaction {
             raw_txn: raw_txn.clone(),
             public_key,
             signature,
-            raw_txn_bytes: raw_txn
-                .into_proto_bytes()
-                .expect("Unable to serialize transaction"),
+            transaction_length,
         }
     }
 
@@ -524,7 +518,7 @@ impl SignedTransaction {
     }
 
     pub fn raw_txn_bytes_len(&self) -> usize {
-        self.raw_txn_bytes.len()
+        self.transaction_length
     }
 
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
@@ -563,17 +557,12 @@ impl FromProto for SignedTransaction {
     type ProtoType = crate::proto::transaction::SignedTransaction;
 
     fn from_proto(mut txn: Self::ProtoType) -> Result<Self> {
-        let raw_txn = RawTransaction::from_proto(txn.take_raw_txn())?;
-        // Will be removing raw_bytes shortly thus removing this clone
-        let raw_txn_bytes = raw_txn.clone().into_proto_bytes()?;
-
         // Signature checking is encoded in `SignatureCheckedTransaction`.
-        Ok(SignedTransaction {
-            raw_txn,
-            public_key: Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
-            signature: Ed25519Signature::try_from(txn.get_sender_signature())?,
-            raw_txn_bytes,
-        })
+        Ok(SignedTransaction::new(
+            RawTransaction::from_proto(txn.take_raw_txn())?,
+            Ed25519PublicKey::try_from(txn.get_sender_public_key())?,
+            Ed25519Signature::try_from(txn.get_sender_signature())?,
+        ))
     }
 }
 
@@ -720,14 +709,12 @@ impl CanonicalDeserialize for SignedTransaction {
         let raw_txn: RawTransaction = deserializer.decode_struct()?;
         let public_key_bytes = deserializer.decode_bytes()?;
         let signature_bytes = deserializer.decode_bytes()?;
-        let raw_txn_bytes = raw_txn.clone().into_proto_bytes()?;
 
-        Ok(SignedTransaction {
+        Ok(SignedTransaction::new(
             raw_txn,
-            public_key: Ed25519PublicKey::try_from(&public_key_bytes[..]).unwrap(),
-            signature: Ed25519Signature::try_from(&signature_bytes[..]).unwrap(),
-            raw_txn_bytes,
-        })
+            Ed25519PublicKey::try_from(&public_key_bytes[..]).unwrap(),
+            Ed25519Signature::try_from(&signature_bytes[..]).unwrap(),
+        ))
     }
 }
 

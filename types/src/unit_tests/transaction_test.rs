@@ -17,7 +17,7 @@ use std::convert::TryFrom;
 fn test_invalid_signature() {
     let keypair = compat::generate_keypair(None);
     let txn = SignedTransaction::from_proto(
-        SignedTransaction::craft_signed_transaction_for_client(
+        SignedTransaction::new(
             RawTransaction::new(
                 AccountAddress::random(),
                 0,

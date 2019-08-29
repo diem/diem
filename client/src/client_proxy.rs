@@ -551,11 +551,7 @@ impl ClientProxy {
         public_key: Ed25519PublicKey,
         signature: Ed25519Signature,
     ) -> Result<()> {
-        let signed_txn = SignedTransaction::craft_signed_transaction_for_client(
-            raw_txn,
-            public_key.clone(),
-            signature,
-        );
+        let signed_txn = SignedTransaction::new(raw_txn, public_key.clone(), signature);
 
         let mut req = SubmitTransactionRequest::new();
         let sender_address = signed_txn.sender();

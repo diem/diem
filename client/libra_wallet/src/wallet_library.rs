@@ -17,13 +17,14 @@ use crate::{
     key_factory::{ChildNumber, KeyFactory, Seed},
     mnemonic::Mnemonic,
 };
-pub use libra_crypto::hash::CryptoHash;
-use proto_conv::{FromProto, IntoProto};
+pub use libra_crypto::{
+    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    hash::CryptoHash,
+};
 use rand::{rngs::EntropyRng, Rng};
 use std::{collections::HashMap, path::Path};
 use types::{
     account_address::AccountAddress,
-    proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction},
     transaction_helpers::TransactionSigner,
 };
@@ -154,14 +155,11 @@ impl WalletLibrary {
         if let Some(child) = self.addr_map.get(&txn.sender()) {
             let child_key = self.key_factory.private_child(child.clone())?;
             let signature = child_key.sign(txn.hash());
-            let public_key = child_key.get_public();
-
-            let mut signed_txn = ProtoSignedTransaction::new();
-            signed_txn.set_raw_txn(txn.into_proto());
-            signed_txn.set_sender_public_key(public_key.to_bytes().to_vec());
-            signed_txn.set_sender_signature(signature.to_bytes().to_vec());
-
-            Ok(SignedTransaction::from_proto(signed_txn)?)
+            Ok(SignedTransaction::new(
+                txn,
+                child_key.get_public(),
+                signature,
+            ))
         } else {
             Err(WalletError::LibraWalletGeneric(
                 "Well, that address is nowhere to be found... This is awkward".to_string(),

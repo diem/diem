@@ -72,7 +72,7 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
 impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
         let signature = self.private_key.sign_message(&raw_txn.hash());
-        Ok(SignedTransaction::craft_signed_transaction_for_client(
+        Ok(SignedTransaction::new(
             raw_txn,
             self.public_key.clone(),
             signature,
