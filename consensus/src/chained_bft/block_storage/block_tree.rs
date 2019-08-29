@@ -12,7 +12,7 @@ use crate::{
     util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
-use crypto::HashValue;
+use crypto::{hash::CryptoHash, HashValue};
 use logger::prelude::*;
 use mirai_annotations::checked_verify_eq;
 use serde::Serialize;
@@ -57,10 +57,11 @@ pub struct BlockTree<T> {
 
     /// `id_to_votes` might keep multiple LedgerInfos per proposed block in order
     /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
-    /// to be collected only for all the votes that have identical state id.
-    /// The vote digest is a hash that covers both the proposal id and the state id.
+    /// to be collected only for all the votes that carry identical LedgerInfo.
+    /// LedgerInfo digest covers the potential commit ids, as well as the vote information
+    /// (including the 3-chain of a voted proposal).
     /// Thus, the structure of `id_to_votes` is as follows:
-    /// HashMap<proposed_block_id, HashMap<vote_digest, LedgerInfoWithSignatures>>
+    /// HashMap<proposed_block_id, HashMap<ledger_info_digest, LedgerInfoWithSignatures>>
     id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures>>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
@@ -263,10 +264,9 @@ where
             .entry(block_id)
             .or_insert_with(HashMap::new);
 
-        // Note that the digest covers not just the proposal id, but also the resulting
-        // state id as well as the round number. In other words, if two different voters have the
-        // same digest then they reached the same state following the same proposals.
-        let digest = vote_msg.vote_data_hash();
+        // Note that the digest covers the ledger info information, which is also indirectly
+        // covering vote data hash (in its `consensus_data_hash` field).
+        let digest = vote_msg.ledger_info().hash();
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });

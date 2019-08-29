@@ -19,7 +19,9 @@ use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
-use types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
+use types::{
+    account_address::AccountAddress, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
+};
 
 fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize>>>) {
     let block_store = build_empty_tree();
@@ -318,28 +320,17 @@ fn test_insert_vote() {
     // Set up enough different authors to support different votes for the same block.
     let qc_size = 10;
     let mut signers = vec![];
-    let mut author_public_keys = vec![];
 
     for i in 0..qc_size {
-        let signer = ValidatorSigner::random([i as u8; 32]);
-        author_public_keys.push((
-            AccountAddress::from_public_key(&signer.public_key()),
-            signer.public_key(),
-        ));
-        signers.push(signer);
+        signers.push(ValidatorSigner::random([i as u8; 32]));
     }
     let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
-    author_public_keys.push((
-        AccountAddress::from_public_key(&my_signer.public_key()),
-        my_signer.public_key(),
-    ));
     let block_store = build_empty_tree_with_custom_signing(my_signer);
     let genesis = block_store.root();
     let mut inserter = TreeInserter::new(block_store.clone());
     let block = inserter.insert_block(genesis.as_ref(), 1);
 
     assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());
-    let qc_size = 10;
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
         let vote_msg = VoteMsg::new(
             VoteData::new(
@@ -395,6 +386,82 @@ fn test_insert_vote() {
 
     let block_qc = block_store.get_quorum_cert_for_block(block.id()).unwrap();
     assert_eq!(block_qc.certified_block_id(), block.id());
+}
+
+#[test]
+/// Verify that votes are properly aggregated based on their LedgerInfo digest
+fn test_vote_aggregation() {
+    let qc_size = 2;
+    let mut signers = vec![];
+
+    for i in 0..=qc_size {
+        signers.push(ValidatorSigner::random([i as u8; 32]));
+    }
+    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
+    let block_store = build_empty_tree_with_custom_signing(my_signer);
+    let genesis = block_store.root();
+    let mut inserter = TreeInserter::new(block_store.clone());
+    let block = inserter.insert_block(genesis.as_ref(), 1);
+
+    // The first two signers give the same vote data but different vote msgs
+    let li1 = placeholder_ledger_info();
+    let vote_data = VoteData::new(
+        block.id(),
+        block_store.get_state_for_block(block.id()).unwrap(),
+        block.round(),
+        block.quorum_cert().parent_block_id(),
+        block.quorum_cert().parent_block_round(),
+        block.quorum_cert().grandparent_block_id(),
+        block.quorum_cert().grandparent_block_round(),
+    );
+    assert_eq!(
+        block_store.insert_vote_and_qc(
+            VoteMsg::new(
+                vote_data.clone(),
+                signers[0].author(),
+                li1.clone(),
+                &signers[0]
+            ),
+            qc_size
+        ),
+        VoteReceptionResult::VoteAdded(1)
+    );
+    let li2 = LedgerInfo::new(
+        1,
+        HashValue::zero(),
+        HashValue::zero(),
+        HashValue::zero(),
+        0,
+        0,
+    );
+    // No QC yet because LedgerInfo is different
+    assert_eq!(
+        block_store.insert_vote_and_qc(
+            VoteMsg::new(
+                vote_data.clone(),
+                signers[1].author(),
+                li2.clone(),
+                &signers[1]
+            ),
+            qc_size
+        ),
+        VoteReceptionResult::VoteAdded(1)
+    );
+    // Once the second vote with the same LedgerInfo is added, QC should be formed
+    match block_store.insert_vote_and_qc(
+        VoteMsg::new(
+            vote_data.clone(),
+            signers[2].author(),
+            li1.clone(),
+            &signers[2],
+        ),
+        qc_size,
+    ) {
+        VoteReceptionResult::NewQuorumCertificate(_) => (),
+        _ => {
+            panic!("QC not formed!");
+        }
+    }
 }
 
 #[test]

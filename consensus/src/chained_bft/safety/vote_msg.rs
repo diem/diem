@@ -134,10 +134,6 @@ impl VoteMsg {
             .verify(validator, self.author(), self.ledger_info.hash())
             .map_err(VoteMsgVerificationError::SigVerifyError)
     }
-
-    pub fn vote_data_hash(&self) -> HashValue {
-        self.vote_data.hash()
-    }
 }
 
 impl IntoProto for VoteMsg {
