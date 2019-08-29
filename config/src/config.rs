@@ -131,13 +131,6 @@ impl ConsensusPrivateKey {
             _ => None,
         }
     }
-
-    pub fn get(&self) -> Option<&Ed25519PrivateKey> {
-        match self {
-            ConsensusPrivateKey::Present(key) => Some(key),
-            _ => None,
-        }
-    }
 }
 
 impl Serialize for ConsensusPrivateKey {
@@ -260,29 +253,16 @@ impl KeyPairs {
     pub fn take_network_signing_private(&mut self) -> Option<Ed25519PrivateKey> {
         std::mem::replace(&mut self.network_signing_private_key, None)
     }
-    pub fn get_network_signing_private(&self) -> &Option<Ed25519PrivateKey> {
-        &self.network_signing_private_key
-    }
     pub fn get_network_identity_private(&self) -> X25519StaticPrivateKey {
         self.network_identity_private_key.clone()
     }
-    pub fn get_consensus_private(&self) -> Option<&Ed25519PrivateKey> {
-        self.consensus_private_key.get()
-    }
-
     /// Beware, this destroys the private key from this NodeConfig
     pub fn take_consensus_private(&mut self) -> Option<Ed25519PrivateKey> {
         self.consensus_private_key.take()
     }
     // getters for public keys
-    pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
-        &self.network_signing_public_key
-    }
     pub fn get_network_identity_public(&self) -> &X25519StaticPublicKey {
         &self.network_identity_public_key
-    }
-    pub fn get_consensus_public(&self) -> &Option<Ed25519PublicKey> {
-        &self.consensus_public_key
     }
     // getters for keypairs
     pub fn get_network_identity_keypair(&self) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
@@ -779,13 +759,6 @@ impl NodeConfig {
         assert!(!config_string.is_empty());
         Ok(toml::from_str(config_string)?)
     }
-
-    /// Returns the peer info for this node
-    pub fn own_addrs(&self) -> (String, Vec<Multiaddr>) {
-        let own_peer_id = self.network.peer_id.clone();
-        let own_addrs = vec![self.network.advertised_address.clone()];
-        (own_peer_id, own_addrs)
-    }
 }
 
 // Given a multiaddr, randomizes its Tcp port if present.
@@ -942,10 +915,6 @@ pub enum VMPublishingOption {
 }
 
 impl VMPublishingOption {
-    pub fn custom_scripts_only(&self) -> bool {
-        !self.is_open() && !self.is_locked()
-    }
-
     pub fn is_open(&self) -> bool {
         match self {
             VMPublishingOption::Open => true,
@@ -972,6 +941,7 @@ impl VMConfig {
     /// Creates a new `VMConfig` where the whitelist is empty. This should only be used for testing.
     #[allow(non_snake_case)]
     #[doc(hidden)]
+    #[cfg(any(test, feature = "testing"))]
     pub fn empty_whitelist_FOR_TESTING() -> Self {
         VMConfig {
             publishing_options: VMPublishingOption::Locked(HashSet::new()),

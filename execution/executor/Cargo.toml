@@ -32,6 +32,7 @@ grpcio = "0.4.4"
 proptest = "0.9.2"
 rusty-fork = "0.2.1"
 
+config = { path = "../../config", features = ["testing"]}
 types = { path = "../../types", features = ["testing"]}
 
 storage_proto = { path = "../../storage/storage_proto" }

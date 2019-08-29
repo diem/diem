@@ -43,9 +43,6 @@ pub const COIN_STRUCT_NAME: &str = "T";
 pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 pub const ACCOUNT_STRUCT_NAME: &str = "T";
 
-// Hash
-pub const HASH_MODULE_NAME: &str = "Hash";
-
 pub fn core_code_address() -> AccountAddress {
     AccountAddress::default()
 }
@@ -53,15 +50,6 @@ pub fn core_code_address() -> AccountAddress {
 pub fn association_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xA550C18")
         .expect("Parsing valid hex literal should always succeed")
-}
-
-pub fn coin_struct_tag() -> StructTag {
-    StructTag {
-        module: COIN_MODULE_NAME.to_string(),
-        name: COIN_STRUCT_NAME.to_string(),
-        address: core_code_address(),
-        type_params: vec![],
-    }
 }
 
 pub fn account_struct_tag() -> StructTag {
