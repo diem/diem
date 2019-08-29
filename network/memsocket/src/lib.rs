@@ -107,7 +107,20 @@ impl MemoryListener {
                     Some(p) => p,
                     None => unreachable!(),
                 };
-                switchboard.1 += 1;
+
+                // The switchboard is full and all ports are in use
+                if switchboard.0.len() == (std::u16::MAX - 1) as usize {
+                    return Err(ErrorKind::AddrInUse.into());
+                }
+
+                // Instead of overflowing to 0, resume searching at port 1 since port 0 isn't a
+                // valid port to bind to.
+                if switchboard.1 == std::u16::MAX {
+                    switchboard.1 = 1;
+                } else {
+                    switchboard.1 += 1;
+                }
+
                 if !switchboard.0.contains_key(&port) {
                     break port;
                 }
