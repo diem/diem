@@ -97,10 +97,11 @@ pub struct JellyfishMerkleIterator<'a, R: 'a + TreeReader> {
     version: Version,
 
     /// The stack used for depth first traversal.
-    visited: Vec<NodeVisitInfo>,
+    parent_stack: Vec<NodeVisitInfo>,
 
     /// Whether the iteration has finished. Usually this can be determined by checking whether
-    /// `visited` is empty. But in case of a tree with a single leaf, we need this additional bit.
+    /// `self.parent_stack` is empty. But in case of a tree with a single leaf, we need this
+    /// additional bit.
     done: bool,
 }
 
@@ -112,7 +113,7 @@ where
     /// following `next` call will yield the smallest key that is greater or equal to
     /// `starting_key`.
     pub fn new(reader: &'a R, version: Version, starting_key: HashValue) -> Result<Self> {
-        let mut visited = vec![];
+        let mut parent_stack = vec![];
         let mut done = false;
 
         let mut current_node_key = NodeKey::new_empty_path(version);
@@ -124,7 +125,7 @@ where
             match internal_node.child(child_index) {
                 Some(child) => {
                     // If this child exists, we just push the node onto stack and repeat.
-                    visited.push(NodeVisitInfo::new_next_child_to_visit(
+                    parent_stack.push(NodeVisitInfo::new_next_child_to_visit(
                         current_node_key.clone(),
                         internal_node.clone(),
                         child_index,
@@ -137,7 +138,7 @@ where
                     if u32::from(u8::from(child_index)) < 15 - bitmap.leading_zeros() {
                         // If this child does not exist and there's another child on the right, we
                         // set the child on the right to be the next one to visit.
-                        visited.push(NodeVisitInfo::new_next_child_to_visit(
+                        parent_stack.push(NodeVisitInfo::new_next_child_to_visit(
                             current_node_key,
                             internal_node,
                             child_index,
@@ -145,12 +146,12 @@ where
                     } else {
                         // Otherwise we have done visiting this node. Go backward and clean up the
                         // stack.
-                        Self::cleanup_stack(&mut visited);
+                        Self::cleanup_stack(&mut parent_stack);
                     }
                     return Ok(Self {
                         reader,
                         version,
-                        visited,
+                        parent_stack,
                         done,
                     });
                 }
@@ -161,8 +162,8 @@ where
             Node::Internal(_) => unreachable!("Should have reached the bottom of the tree."),
             Node::Leaf(leaf_node) => {
                 if leaf_node.account_key() < starting_key {
-                    Self::cleanup_stack(&mut visited);
-                    if visited.is_empty() {
+                    Self::cleanup_stack(&mut parent_stack);
+                    if parent_stack.is_empty() {
                         done = true;
                     }
                 }
@@ -173,15 +174,15 @@ where
         Ok(Self {
             reader,
             version,
-            visited,
+            parent_stack,
             done,
         })
     }
 
-    fn cleanup_stack(visited: &mut Vec<NodeVisitInfo>) {
-        while let Some(info) = visited.last_mut() {
+    fn cleanup_stack(parent_stack: &mut Vec<NodeVisitInfo>) {
+        while let Some(info) = parent_stack.last_mut() {
             if info.is_rightmost() {
-                visited.pop();
+                parent_stack.pop();
             } else {
                 info.advance();
                 break;
@@ -201,7 +202,7 @@ where
             return None;
         }
 
-        if self.visited.is_empty() {
+        if self.parent_stack.is_empty() {
             let root_node_key = NodeKey::new_empty_path(self.version);
             match self.reader.get_node(&root_node_key) {
                 Ok(Node::Leaf(leaf_node)) => {
@@ -224,9 +225,9 @@ where
 
         loop {
             let last_visited_node_info = self
-                .visited
+                .parent_stack
                 .last()
-                .expect("We have checked that self.visited is not empty.");
+                .expect("We have checked that self.parent_stack is not empty.");
             let child_index =
                 Nibble::from(last_visited_node_info.next_child_to_visit.trailing_zeros() as u8);
             let node_key = last_visited_node_info.node_key.gen_child_node_key(
@@ -240,14 +241,14 @@ where
             match self.reader.get_node(&node_key) {
                 Ok(Node::Internal(internal_node)) => {
                     let visit_info = NodeVisitInfo::new(node_key, internal_node);
-                    self.visited.push(visit_info);
+                    self.parent_stack.push(visit_info);
                 }
                 Ok(Node::Leaf(leaf_node)) => {
                     let ret = (leaf_node.account_key(), leaf_node.blob().clone());
-                    Self::cleanup_stack(&mut self.visited);
+                    Self::cleanup_stack(&mut self.parent_stack);
                     return Some(Ok(ret));
                 }
-                Ok(Node::Null) => unreachable!("Should not reach a null node."),
+                Ok(Node::Null) => return Some(Err(format_err!("Should not reach a null node."))),
                 Err(err) => return Some(Err(err)),
             }
         }
