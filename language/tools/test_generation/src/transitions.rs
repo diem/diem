@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    abstract_state::{AbstractState, AbstractValue, BorrowState},
+    abstract_state::{AbstractState, AbstractValue, BorrowState, Mutability},
     common::VMError,
 };
 use vm::{
     access::*,
-    file_format::{Kind, SignatureToken, StructDefinitionIndex},
+    file_format::{
+        FieldDefinitionIndex, FunctionHandleIndex, Kind, SignatureToken, StructDefinitionIndex,
+    },
     views::{SignatureTokenView, StructDefinitionView, ViewInternals},
 };
 
@@ -100,10 +102,10 @@ pub fn local_take(state: &AbstractState, index: u8) -> Result<AbstractState, VME
 pub fn local_take_borrow(
     state: &AbstractState,
     index: u8,
-    mutable: bool,
+    mutability: Mutability,
 ) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
-    state.local_take_borrow(index as usize, mutable)?;
+    state.local_take_borrow(index as usize, mutability)?;
     Ok(state)
 }
 
@@ -114,12 +116,32 @@ pub fn local_place(state: &AbstractState, index: u8) -> Result<AbstractState, VM
     Ok(state)
 }
 
-/// Determine whether a abstract_value on the stack and a abstract_value in the locals have the same
-/// type
+/// Determine whether an abstract value on the stack and a abstract value in the locals have the
+/// same type
 pub fn stack_local_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
     if stack_has(state, index1, None) {
         if let Some((abstract_value, _)) = state.local_get(index2) {
             return state.stack_peek(index1) == Some(abstract_value.clone());
+        }
+    }
+    false
+}
+
+/// Determine whether an abstract value on the stack that is a reference points to something of the
+/// same type as another abstract value on the stack
+pub fn stack_ref_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
+    if stack_has(state, index2, None) {
+        if let Some(abstract_value) = state.stack_peek(index1) {
+            match abstract_value.token {
+                SignatureToken::MutableReference(token) | SignatureToken::Reference(token) => {
+                    let abstract_value_inner = AbstractValue {
+                        token: (*token).clone(),
+                        kind: SignatureTokenView::new(&state.module, &*token).kind(&[]),
+                    };
+                    return Some(abstract_value_inner) == state.stack_peek(index2);
+                }
+                _ => return false,
+            }
         }
     }
     false
@@ -161,16 +183,16 @@ pub fn stack_struct_popn(
     let mut state = state.clone();
     let struct_def = state_copy.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
-    let number_of_pops = struct_def_view.fields().into_iter().len();
+    let number_of_pops = struct_def_view.fields().iter().len();
     for _ in 0..number_of_pops {
         state = stack_pop(&state)?;
     }
     Ok(state)
 }
 
-/// Construct a stack from abstract values on the stack
-/// The stack is stored in the register after creation
-pub fn stack_create_struct(
+/// Construct a struct from abstract values on the stack
+/// The struct is stored in the register after creation
+pub fn create_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
 ) -> Result<AbstractState, VMError> {
@@ -203,19 +225,29 @@ pub fn stack_create_struct(
         SignatureToken::Struct(struct_def.struct_handle, tokens),
         struct_kind,
     );
-    state.set_register(struct_value);
+    state.register_set(struct_value);
     Ok(state)
 }
 
-/// Determine if a struct of the given signature is at the top of the stack
-pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
+/// Determine if a struct (of the given signature) is at the top of the stack
+/// The `struct_index` can be `Some(index)` to check for a particular struct,
+/// or `None` to just check that there is a a struct.
+pub fn stack_has_struct(
+    state: &AbstractState,
+    struct_index: Option<StructDefinitionIndex>,
+) -> bool {
     if state.stack_len() > 0 {
-        let struct_def = state.module.struct_def_at(struct_index);
         if let Some(struct_value) = state.stack_peek(0) {
             match struct_value.token {
-                SignatureToken::Struct(struct_handle, _) => {
-                    return struct_handle == struct_def.struct_handle;
-                }
+                SignatureToken::Struct(struct_handle, _) => match struct_index {
+                    Some(struct_index) => {
+                        let struct_def = state.module.struct_def_at(struct_index);
+                        return struct_handle == struct_def.struct_handle;
+                    }
+                    None => {
+                        return true;
+                    }
+                },
                 _ => return false,
             }
         }
@@ -249,6 +281,180 @@ pub fn stack_unpack_struct(
             kind: token_view.kind(&[]),
         };
         state = stack_push(&state, abstract_value)?;
+    }
+    Ok(state)
+}
+
+pub fn stack_struct_has_field(state: &AbstractState, field_index: FieldDefinitionIndex) -> bool {
+    if let Some(abstract_value) = state.stack_peek(0).clone() {
+        if let Some(struct_handle_index) =
+            SignatureToken::get_struct_handle_from_reference(&abstract_value.token)
+        {
+            return state
+                .module
+                .is_field_in_struct(field_index, struct_handle_index);
+        }
+    }
+    false
+}
+
+/// Push the field at `field_index` of a struct as an `AbstractValue` to the stack
+pub fn stack_struct_borrow_field(
+    state: &AbstractState,
+    field_index: FieldDefinitionIndex,
+) -> Result<AbstractState, VMError> {
+    let mut state = state.clone();
+    state.register_move();
+    let field_signature = state.module.get_field_signature(field_index).0.clone();
+    let abstract_value = AbstractValue {
+        token: SignatureToken::MutableReference(Box::new(field_signature.clone())),
+        kind: SignatureTokenView::new(&state.module, &field_signature).kind(&[]),
+    };
+    state = stack_push(&state, abstract_value)?;
+    Ok(state)
+}
+
+/// Determine whether the stack has a reference at `index` with the given mutability.
+/// If `mutable` is `Either` then the reference can be either mutable or immutable
+pub fn stack_has_reference(state: &AbstractState, index: usize, mutability: Mutability) -> bool {
+    if state.stack_len() > index {
+        if let Some(abstract_value) = state.stack_peek(index) {
+            match abstract_value.token {
+                SignatureToken::MutableReference(_) => {
+                    if mutability == Mutability::Mutable || mutability == Mutability::Either {
+                        return true;
+                    }
+                }
+                SignatureToken::Reference(_) => {
+                    if mutability == Mutability::Immutable || mutability == Mutability::Either {
+                        return true;
+                    }
+                }
+                _ => return false,
+            }
+        }
+    }
+    false
+}
+
+/// Dereference the value stored in the register. If the value is not a reference, or
+/// the register is empty, return an error.
+pub fn register_dereference(state: &AbstractState) -> Result<AbstractState, VMError> {
+    let mut state = state.clone();
+    if let Some(abstract_value) = state.register_move() {
+        match abstract_value.token {
+            SignatureToken::MutableReference(token) => {
+                state.register_set(AbstractValue {
+                    token: *token,
+                    kind: abstract_value.kind,
+                });
+                Ok(state)
+            }
+            SignatureToken::Reference(token) => {
+                state.register_set(AbstractValue {
+                    token: *token,
+                    kind: abstract_value.kind,
+                });
+                Ok(state)
+            }
+            _ => Err(VMError::new(
+                "Register does not contain a reference".to_string(),
+            )),
+        }
+    } else {
+        Err(VMError::new("Register is empty".to_string()))
+    }
+}
+
+/// Push a reference to a register value with the given mutability.
+pub fn stack_push_register_borrow(
+    state: &AbstractState,
+    mutability: Mutability,
+) -> Result<AbstractState, VMError> {
+    let mut state = state.clone();
+    if let Some(abstract_value) = state.register_move() {
+        match mutability {
+            Mutability::Mutable => {
+                state.stack_push(AbstractValue {
+                    token: SignatureToken::MutableReference(Box::new(abstract_value.token)),
+                    kind: abstract_value.kind,
+                });
+                Ok(state)
+            }
+            Mutability::Immutable => {
+                state.stack_push(AbstractValue {
+                    token: SignatureToken::Reference(Box::new(abstract_value.token)),
+                    kind: abstract_value.kind,
+                });
+                Ok(state)
+            }
+            Mutability::Either => Err(VMError::new("Mutability must be specified".to_string())),
+        }
+    } else {
+        Err(VMError::new("Register is empty".to_string()))
+    }
+}
+
+/// Determine whether the function at the given index can be constructed from the values on
+/// the stack.
+pub fn stack_satisfies_function_signature(
+    state: &AbstractState,
+    function_index: FunctionHandleIndex,
+) -> bool {
+    let state_copy = state.clone();
+    let function_handle = state_copy.module.function_handle_at(function_index);
+    let function_signature = state_copy
+        .module
+        .function_signature_at(function_handle.signature);
+    let mut satisfied = true;
+    for (i, arg_type) in function_signature.arg_types.iter().rev().enumerate() {
+        let abstract_value = AbstractValue {
+            token: arg_type.clone(),
+            kind: SignatureTokenView::new(&state.module, arg_type).kind(&[]),
+        };
+        if !stack_has(&state, i, Some(abstract_value)) {
+            satisfied = false;
+        }
+    }
+    satisfied
+}
+
+/// Simulate calling the function at `function_index`
+pub fn stack_function_call(
+    state: &AbstractState,
+    function_index: FunctionHandleIndex,
+) -> Result<AbstractState, VMError> {
+    let state_copy = state.clone();
+    let mut state = state.clone();
+    let function_handle = state_copy.module.function_handle_at(function_index);
+    let function_signature = state_copy
+        .module
+        .function_signature_at(function_handle.signature);
+    for return_type in function_signature.return_types.iter() {
+        let abstract_value = AbstractValue {
+            token: return_type.clone(),
+            kind: SignatureTokenView::new(&state.module, return_type).kind(&[]),
+        };
+        state = stack_push(&state, abstract_value)?;
+    }
+    Ok(state)
+}
+
+/// Pop the number of stack values required to call the function
+/// at `function_index`
+pub fn stack_function_popn(
+    state: &AbstractState,
+    function_index: FunctionHandleIndex,
+) -> Result<AbstractState, VMError> {
+    let state_copy = state.clone();
+    let mut state = state.clone();
+    let function_handle = state_copy.module.function_handle_at(function_index);
+    let function_signature = state_copy
+        .module
+        .function_signature_at(function_handle.signature);
+    let number_of_pops = function_signature.arg_types.iter().len();
+    for _ in 0..number_of_pops {
+        state = stack_pop(&state)?;
     }
     Ok(state)
 }
@@ -370,6 +576,15 @@ macro_rules! state_local_place {
     };
 }
 
+/// Wrapper for enclosing the arguments of `stack_ref_polymorphic_eq` so that only the `state`
+/// needs to be given.
+#[macro_export]
+macro_rules! state_stack_ref_polymorphic_eq {
+    ($e1: expr, $e2: expr) => {
+        Box::new(move |state| stack_ref_polymorphic_eq(state, $e1, $e2))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_satisfies_struct_signature` so that only the
 /// `state` needs to be given.
 #[macro_export]
@@ -391,9 +606,9 @@ macro_rules! state_stack_struct_popn {
 /// Wrapper for enclosing the arguments of `stack_pack_struct` so that only the
 /// `state` needs to be given.
 #[macro_export]
-macro_rules! state_stack_create_struct {
+macro_rules! state_create_struct {
     ($e: expr) => {
-        Box::new(move |state| stack_create_struct(state, $e))
+        Box::new(move |state| create_struct(state, $e))
     };
 }
 
@@ -421,6 +636,78 @@ macro_rules! state_stack_unpack_struct {
 macro_rules! state_struct_is_resource {
     ($e: expr) => {
         Box::new(move |state| struct_is_resource(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `struct_has_field` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_struct_has_field {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_has_field(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_struct_borrow_field` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_struct_borrow_field {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_borrow_field(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_has_reference` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_has_reference {
+    ($e1: expr, $e2: expr) => {
+        Box::new(move |state| stack_has_reference(state, $e1, $e2))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `register_dereference` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_register_dereference {
+    () => {
+        Box::new(move |state| register_dereference(state))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_push_register_borrow` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_push_register_borrow {
+    ($e: expr) => {
+        Box::new(move |state| stack_push_register_borrow(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_satisfies_function_signature` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_satisfies_function_signature {
+    ($e: expr) => {
+        Box::new(move |state| stack_satisfies_function_signature(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_function_popn` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_function_popn {
+    ($e: expr) => {
+        Box::new(move |state| stack_function_popn(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_function_call` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_function_call {
+    ($e: expr) => {
+        Box::new(move |state| stack_function_call(state, $e))
     };
 }
 

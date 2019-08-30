@@ -9,15 +9,16 @@ use crate::{
 };
 use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
 use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CompiledModuleMut, FunctionSignature,
-    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex, UserStringIndex,
+    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
+    FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex, LocalsSignatureIndex,
+    SignatureToken, StructDefinitionIndex, TableIndex, UserStringIndex,
 };
 
-/// This type represents bytecode instructions that take a `u8`
-type U8ToBytecode = fn(u8) -> Bytecode;
+/// This type represents bytecode instructions that take a `LocalIndex`
+type LocalIndexToBytecode = fn(LocalIndex) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `u16`
-type U16ToBytecode = fn(u16) -> Bytecode;
+type CodeOffsetToBytecode = fn(CodeOffset) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `u64`
 type U64ToBytecode = fn(u64) -> Bytecode;
@@ -35,17 +36,24 @@ type ByteArrayPoolIndexToBytecode = fn(ByteArrayPoolIndex) -> Bytecode;
 /// and a `LocalsSignatureIndex`
 type StructAndLocalIndexToBytecode = fn(StructDefinitionIndex, LocalsSignatureIndex) -> Bytecode;
 
+/// This type represents bytecode instructions that take a `FieldDefinitionIndex``
+type FieldDefinitionIndexToBytecode = fn(FieldDefinitionIndex) -> Bytecode;
+
+/// This type represents bytecode instructions that take a `FunctionHandleIndex`
+/// and a `LocalsSignatureIndex`
+type FunctionAndLocalIndexToBytecode = fn(FunctionHandleIndex, LocalsSignatureIndex) -> Bytecode;
+
 /// There are six types of bytecode instructions
 #[derive(Debug, Clone)]
 enum BytecodeType {
     /// Instructions that do not take an argument
     NoArg(Bytecode),
 
-    /// Instructions that take a `u8`
-    U8(U8ToBytecode),
+    /// Instructions that take a `LocalIndex`
+    LocalIndex(LocalIndexToBytecode),
 
-    /// Instructions that take a `u16`
-    U16(U16ToBytecode),
+    /// Instructions that take a `CodeOffset`
+    CodeOffset(CodeOffsetToBytecode),
 
     /// Instructions that take a `u64`
     U64(U64ToBytecode),
@@ -61,6 +69,12 @@ enum BytecodeType {
 
     /// Instructions that take a `StructDefinitionIndex` and a `LocalsSignatureIndex`
     StructAndLocalIndex(StructAndLocalIndexToBytecode),
+
+    /// Instructions that take a `FieldDefinitionIndex`
+    FieldDefinitionIndex(FieldDefinitionIndexToBytecode),
+
+    /// Instructions that take a `FunctionHandleIndex` and a `LocalsSignatureIndex`
+    FunctionAndLocalIndex(FunctionAndLocalIndexToBytecode),
 }
 
 /// Abstraction for change to the stack size
@@ -107,9 +121,26 @@ impl BytecodeGenerator {
                 StackEffect::Add,
                 BytecodeType::ByteArrayPoolIndex(Bytecode::LdByteArray),
             ),
-            (StackEffect::Add, BytecodeType::U8(Bytecode::CopyLoc)),
-            (StackEffect::Add, BytecodeType::U8(Bytecode::MoveLoc)),
-            (StackEffect::Sub, BytecodeType::U8(Bytecode::StLoc)),
+            (
+                StackEffect::Add,
+                BytecodeType::LocalIndex(Bytecode::CopyLoc),
+            ),
+            (
+                StackEffect::Add,
+                BytecodeType::LocalIndex(Bytecode::MoveLoc),
+            ),
+            (StackEffect::Sub, BytecodeType::LocalIndex(Bytecode::StLoc)),
+            (
+                StackEffect::Add,
+                BytecodeType::LocalIndex(Bytecode::MutBorrowLoc),
+            ),
+            (
+                StackEffect::Add,
+                BytecodeType::LocalIndex(Bytecode::ImmBorrowLoc),
+            ),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::ReadRef)),
+            (StackEffect::Sub, BytecodeType::NoArg(Bytecode::WriteRef)),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::FreezeRef)),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Add)),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Sub)),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Mul)),
@@ -176,12 +207,27 @@ impl BytecodeGenerator {
                 BytecodeType::StructAndLocalIndex(Bytecode::MoveToSender),
             ),
             (
-                StackEffect::Sub,
-                BytecodeType::StructAndLocalIndex(Bytecode::Unpack),
+                StackEffect::Nop,
+                BytecodeType::StructAndLocalIndex(Bytecode::BorrowGlobal),
             ),
-            (StackEffect::Nop, BytecodeType::U16(Bytecode::Branch)),
-            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrTrue)),
-            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrFalse)),
+            (
+                StackEffect::Nop,
+                BytecodeType::FieldDefinitionIndex(Bytecode::MutBorrowField),
+            ),
+            (
+                StackEffect::Nop,
+                BytecodeType::FieldDefinitionIndex(Bytecode::ImmBorrowField),
+            ),
+            (
+                StackEffect::Nop,
+                BytecodeType::FunctionAndLocalIndex(Bytecode::Call),
+            ),
+            (StackEffect::Nop, BytecodeType::CodeOffset(Bytecode::Branch)),
+            (StackEffect::Sub, BytecodeType::CodeOffset(Bytecode::BrTrue)),
+            (
+                StackEffect::Sub,
+                BytecodeType::CodeOffset(Bytecode::BrFalse),
+            ),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Abort)),
             (StackEffect::Nop, BytecodeType::NoArg(Bytecode::Ret)),
         ];
@@ -209,23 +255,21 @@ impl BytecodeGenerator {
         for (stack_effect, instruction) in instructions.iter() {
             let instruction: Bytecode = match instruction {
                 BytecodeType::NoArg(instruction) => instruction.clone(),
-                BytecodeType::U8(instruction) => {
+                BytecodeType::LocalIndex(instruction) => {
                     // Generate a random index into the locals
                     if locals_len > 0 {
-                        let local_index: u8 = self.rng.gen_range(0, locals_len as u8);
-                        instruction(local_index)
+                        instruction(self.rng.gen_range(0, locals_len) as LocalIndex)
                     } else {
                         instruction(0)
                     }
                 }
-                BytecodeType::U16(instruction) => {
+                BytecodeType::CodeOffset(instruction) => {
                     // Set 0 as the offset. This will be set correctly during serialization
                     instruction(0)
                 }
                 BytecodeType::U64(instruction) => {
                     // Generate a random u64 constant to load
-                    let value = self.rng.gen_range(0, u64::max_value());
-                    instruction(value)
+                    instruction(self.rng.gen_range(0, u64::max_value()))
                 }
                 BytecodeType::UserStringIndex(instruction) => {
                     // Select a random user string
@@ -250,6 +294,23 @@ impl BytecodeGenerator {
                     instruction(
                         StructDefinitionIndex::new(
                             self.rng.gen_range(0, module.struct_defs.len()) as TableIndex
+                        ),
+                        LocalsSignatureIndex::new(
+                            self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
+                        ),
+                    )
+                }
+                BytecodeType::FieldDefinitionIndex(instruction) => {
+                    // Select a field definition from the module's field definitions
+                    instruction(FieldDefinitionIndex::new(
+                        self.rng.gen_range(0, module.field_defs.len()) as TableIndex,
+                    ))
+                }
+                BytecodeType::FunctionAndLocalIndex(instruction) => {
+                    // Select a random function handle and local signature
+                    instruction(
+                        FunctionHandleIndex::new(
+                            self.rng.gen_range(0, module.function_handles.len()) as TableIndex,
                         ),
                         LocalsSignatureIndex::new(
                             self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
@@ -334,6 +395,8 @@ impl BytecodeGenerator {
             })
     }
 
+    /// Transition an abstract state, `state` to the next state and add the instruction
+    /// to the bytecode sequence
     pub fn apply_instruction(
         &self,
         mut state: AbstractState,

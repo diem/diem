@@ -279,3 +279,136 @@ fn bytecode_movetosender_no_struct_on_stack() {
         state1,
     );
 }
+
+#[test]
+fn bytecode_mutborrowfield() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    let state2 = common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+    let field_signature = state2.module.get_field_signature(field_index).0.clone();
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(field_signature.clone())),
+            kind: SignatureTokenView::new(&state2.module, &field_signature).kind(&[]),
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_mutborrowfield_stack_has_no_reference() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_mutborrowfield_ref_is_immutable() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::Reference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+}
+
+#[test]
+fn bytecode_immborrowfield() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::Reference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    let state2 = common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+    let field_signature = state2.module.get_field_signature(field_index).0.clone();
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(field_signature.clone())),
+            kind: SignatureTokenView::new(&state2.module, &field_signature).kind(&[]),
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_immborrowfield_stack_has_no_reference() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_immborrowfield_ref_is_mutable() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+}
+
+#[test]
+fn bytecode_borrowglobal() {
+    let module: CompiledModuleMut = generate_module_with_struct(true);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
+    let state2 = common::run_instruction(
+        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+            kind: struct_value.kind,
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_borrowglobal_struct_is_not_resource() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
+    common::run_instruction(
+        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_borrowglobal_no_address_on_stack() {
+    let module: CompiledModuleMut = generate_module_with_struct(true);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    common::run_instruction(
+        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+}
