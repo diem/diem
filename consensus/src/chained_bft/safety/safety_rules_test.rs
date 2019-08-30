@@ -4,7 +4,10 @@
 use crate::chained_bft::{
     block_storage::BlockReader,
     common::Round,
-    consensus_types::block::{block_test, Block},
+    consensus_types::{
+        block::{block_test, Block},
+        quorum_cert::QuorumCert,
+    },
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
     test_utils::{build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
 };
@@ -174,8 +177,10 @@ fn test_preferred_block_rule() {
     //
     // PB should change from genesis to b1, and then to a2.
     let genesis = block_tree.root();
-    let a1 = inserter.insert_block(genesis.as_ref(), 1);
-    let b1 = inserter.insert_block(genesis.as_ref(), 2);
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let b1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
     let b2 = inserter.insert_block(a1.as_ref(), 3);
     let a2 = inserter.insert_block(b1.as_ref(), 4);
     let b3 = inserter.insert_block(b2.as_ref(), 5);
@@ -250,8 +255,10 @@ fn test_voting() {
     // a4 (old proposal)
     // b4 (round lower then round of pb. PB: a2, parent(b4)=b2)
     let genesis = block_tree.root();
-    let a1 = inserter.insert_block(genesis.as_ref(), 1);
-    let b1 = inserter.insert_block(genesis.as_ref(), 2);
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let b1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
     let b2 = inserter.insert_block(a1.as_ref(), 3);
     let a2 = inserter.insert_block(b1.as_ref(), 4);
     let a3 = inserter.insert_block(a2.as_ref(), 5);
@@ -326,8 +333,10 @@ fn test_voting_potential_commit_id() {
     // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
 
     let genesis = block_tree.root();
-    let a1 = inserter.insert_block(genesis.as_ref(), 1);
-    let b1 = inserter.insert_block(genesis.as_ref(), 2);
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let b1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
     let a2 = inserter.insert_block(a1.as_ref(), 3);
     let a3 = inserter.insert_block(a2.as_ref(), 4);
     let a4 = inserter.insert_block(a3.as_ref(), 5);
@@ -367,8 +376,10 @@ fn test_commit_rule_consecutive_rounds() {
     // a2 can be committed after a4 gathers QC
 
     let genesis = block_tree.root();
-    let a1 = inserter.insert_block(genesis.as_ref(), 1);
-    let b1 = inserter.insert_block(genesis.as_ref(), 2);
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let b1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
     let b2 = inserter.insert_block(b1.as_ref(), 3);
     let a2 = inserter.insert_block(a1.as_ref(), 4);
     let a3 = inserter.insert_block(a2.as_ref(), 5);

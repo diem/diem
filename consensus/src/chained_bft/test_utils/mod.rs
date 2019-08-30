@@ -116,15 +116,19 @@ impl TreeInserter {
             0
         };
 
-        let parent_qc = placeholder_certificate_for_block(
-            qc_signers,
-            block.parent_id(),
-            new_round,
-            block.quorum_cert().parent_block_id(),
-            block.quorum_cert().parent_block_round(),
-            block.quorum_cert().grandparent_block_id(),
-            block.quorum_cert().grandparent_block_round(),
-        );
+        let parent_qc = if new_round == 0 {
+            QuorumCert::certificate_for_genesis()
+        } else {
+            placeholder_certificate_for_block(
+                qc_signers,
+                block.parent_id(),
+                new_round,
+                block.quorum_cert().parent_block_id(),
+                block.quorum_cert().parent_block_round(),
+                block.quorum_cert().grandparent_block_id(),
+                block.quorum_cert().grandparent_block_round(),
+            )
+        };
 
         let new_block = Block::new_internal(
             block.get_payload().clone(),
