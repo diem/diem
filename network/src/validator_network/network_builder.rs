@@ -173,14 +173,12 @@ impl NetworkBuilder {
         self.seed_peers = seed_peers
             .into_iter()
             .map(|(peer_id, seed_addrs)| {
-                let mut peer_info = PeerInfo::new();
-                peer_info.set_epoch(0);
-                peer_info.set_addrs(
-                    seed_addrs
-                        .into_iter()
-                        .map(|addr| addr.as_ref().into())
-                        .collect(),
-                );
+                let mut peer_info = PeerInfo::default();
+                peer_info.epoch = 0;
+                peer_info.addrs = seed_addrs
+                    .into_iter()
+                    .map(|addr| addr.as_ref().into())
+                    .collect();
                 (peer_id, peer_info)
             })
             .collect();

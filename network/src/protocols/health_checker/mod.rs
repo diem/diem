@@ -21,7 +21,7 @@ use crate::{
     error::NetworkError,
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     proto::{Ping, Pong},
-    utils::{read_proto_prost, MessageExt},
+    utils::{read_proto, MessageExt},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -230,7 +230,7 @@ where
                 .await?;
             // Read Pong.
             debug!("Waiting for Pong from peer: {}", peer_id.short_str());
-            let _: Pong = read_proto_prost(&mut substream).await?;
+            let _: Pong = read_proto(&mut substream).await?;
             // Return success.
             Ok(())
         };
@@ -253,7 +253,7 @@ where
             Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
         // Read ping.
         trace!("Waiting for Ping on new substream");
-        let maybe_ping: Result<Ping, NetworkError> = read_proto_prost(&mut substream).await;
+        let maybe_ping: Result<Ping, NetworkError> = read_proto(&mut substream).await;
         if let Err(err) = maybe_ping {
             warn!(
                 "Failed to read ping from peer: {}. Error: {:?}",
