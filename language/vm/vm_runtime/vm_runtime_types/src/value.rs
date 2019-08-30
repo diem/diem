@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::loaded_data::{struct_def::StructDef, types::Type};
+use crate::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    native_structs::{serializer::deserialize_native, NativeStructValue},
+};
 use canonical_serialization::*;
 use failure::prelude::*;
 use std::{
@@ -60,6 +63,9 @@ enum ValueImpl {
     /// A struct in Move.
     Struct(Struct),
 
+    /// A native struct
+    NativeStruct(NativeStructValue),
+
     /// Reference to a local.
     Reference(Reference),
     /// Global reference into storage.
@@ -79,7 +85,7 @@ pub struct Value(ValueImpl);
 /// Internal representation for a reference or a mutable value.
 /// This is quite a core type for the mechanics of references.
 #[derive(PartialEq, Eq, Debug, Clone)]
-struct MutVal(Rc<RefCell<ValueImpl>>);
+pub(crate) struct MutVal(Rc<RefCell<ValueImpl>>);
 
 /// A struct in Move.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -171,6 +177,7 @@ impl ValueImpl {
             ValueImpl::String(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
             ValueImpl::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ValueImpl::Struct(s) => s.size(),
+            ValueImpl::NativeStruct(s) => s.size(),
             ValueImpl::Reference(reference) => reference.size(),
             ValueImpl::GlobalRef(reference) => reference.size(),
             ValueImpl::PromotedReference(reference) => reference.0.size(),
@@ -194,6 +201,7 @@ impl ValueImpl {
             (ValueImpl::GlobalRef(gr1), ValueImpl::GlobalRef(gr2)) => gr1.equals(gr2),
             (ValueImpl::GlobalRef(gr), ValueImpl::Reference(reference)) => gr.equals_ref(reference),
             (ValueImpl::Reference(reference), ValueImpl::GlobalRef(gr)) => gr.equals_ref(reference),
+            // Should we allow comparing native structs?
             _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
         }
     }
@@ -211,6 +219,7 @@ impl ValueImpl {
             ValueImpl::ByteArray(_) => Type::ByteArray,
             ValueImpl::String(_) => Type::String,
             ValueImpl::Struct(s) => Type::Struct(s.to_struct_def_FOR_TESTING()),
+            ValueImpl::NativeStruct(v) => Type::Struct(v.to_struct_def_FOR_TESTING()),
             ValueImpl::Reference(reference) => {
                 Type::Reference(Box::new(reference.to_type_FOR_TESTING()))
             }
@@ -266,6 +275,10 @@ impl Value {
     /// Return a `Value` representing a `GlobalRef` in the VM.
     pub fn global_ref(reference: GlobalRef) -> Self {
         Value(ValueImpl::GlobalRef(reference))
+    }
+
+    pub fn native_struct(v: NativeStructValue) -> Self {
+        Value(ValueImpl::NativeStruct(v))
     }
 
     /// Convert a Value into a `T` if the value represents a type `T`.
@@ -405,7 +418,7 @@ impl From<Value> for Option<GlobalRef> {
 }
 
 impl MutVal {
-    fn new(v: Value) -> Self {
+    pub(crate) fn new(v: Value) -> Self {
         MutVal(Rc::new(RefCell::new(v.0)))
     }
 
@@ -424,7 +437,7 @@ impl MutVal {
         self.peek().copy_value()
     }
 
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub(crate) fn size(&self) -> AbstractMemorySize<GasCarrier> {
         self.peek().size()
     }
 
@@ -438,12 +451,32 @@ impl MutVal {
 
     #[allow(non_snake_case)]
     #[doc(hidden)]
-    fn to_type_FOR_TESTING(&self) -> Type {
+    pub(crate) fn to_type_FOR_TESTING(&self) -> Type {
         self.peek().to_type_FOR_TESTING()
     }
 
     fn equals(&self, v2: &MutVal) -> VMResult<bool> {
         self.peek().equals(&v2.peek())
+    }
+
+    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+    {
+        match &mut *self.0.borrow_mut() {
+            ValueImpl::NativeStruct(s) => op(s),
+            _ => None,
+        }
+    }
+
+    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&NativeStructValue) -> Option<T>,
+    {
+        match &*self.0.borrow_mut() {
+            ValueImpl::NativeStruct(s) => op(s),
+            _ => None,
+        }
     }
 }
 
@@ -512,6 +545,10 @@ impl Reference {
         Reference(MutVal::new(value))
     }
 
+    pub(crate) fn new_from_cell(val: MutVal) -> Self {
+        Reference(val)
+    }
+
     fn into_value(self) -> VMResult<Value> {
         self.0.into_value()
     }
@@ -542,6 +579,20 @@ impl Reference {
     #[doc(hidden)]
     fn to_type_FOR_TESTING(&self) -> Type {
         self.0.to_type_FOR_TESTING()
+    }
+
+    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+    {
+        self.0.mutate_native_struct(op)
+    }
+
+    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&NativeStructValue) -> Option<T>,
+    {
+        self.0.read_native_struct(op)
     }
 }
 
@@ -584,6 +635,42 @@ impl ReferenceValue {
             ReferenceValue::Reference(reference) => reference.write_value(value),
         }
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+    {
+        match self {
+            ReferenceValue::GlobalRef(reference) => reference.mutate_native_struct(op),
+            ReferenceValue::Reference(reference) => reference.mutate_native_struct(op),
+        }
+    }
+
+    pub(crate) fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&NativeStructValue) -> Option<T>,
+    {
+        match self {
+            ReferenceValue::GlobalRef(reference) => reference.read_native_struct(op),
+            ReferenceValue::Reference(reference) => reference.read_native_struct(op),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn get_native_struct_reference<F>(&self, op: F) -> Option<Value>
+    where
+        F: FnOnce(&NativeStructValue) -> Option<MutVal>,
+    {
+        match self {
+            ReferenceValue::GlobalRef(reference) => reference
+                .read_native_struct(op)
+                .map(|v| Value::global_ref(GlobalRef::new_ref(reference, v))),
+            ReferenceValue::Reference(reference) => reference
+                .read_native_struct(op)
+                .map(|v| Value::reference(Reference::new_from_cell(v))),
+        }
+    }
 }
 
 //
@@ -624,6 +711,10 @@ impl GlobalRef {
             root: Rc::new(RefCell::new(root)),
             reference: MutVal::new(Value::struct_(value)),
         }
+    }
+
+    pub fn get_root(&self) -> Rc<RefCell<RootAccessPath>> {
+        self.root.clone()
     }
 
     fn new_ref(root: &GlobalRef, reference: MutVal) -> Self {
@@ -688,6 +779,21 @@ impl GlobalRef {
     fn write_value(self, value: Value) {
         self.root.borrow_mut().mark_dirty();
         self.reference.write_value(value);
+    }
+
+    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&NativeStructValue) -> Option<T>,
+    {
+        self.reference.read_native_struct(op)
+    }
+
+    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    where
+        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+    {
+        self.root.borrow_mut().mark_dirty();
+        self.reference.mutate_native_struct(op)
     }
 
     fn equals(&self, v2: &GlobalRef) -> VMResult<bool> {
@@ -841,65 +947,52 @@ impl Value {
     }
 }
 
+pub(crate) fn deserialize_value(
+    deserializer: &mut SimpleDeserializer,
+    ty: &Type,
+) -> VMResult<Value> {
+    match ty {
+        Type::Bool => deserializer.decode_bool().map(Value::bool),
+        Type::U64 => deserializer.decode_u64().map(Value::u64),
+        Type::String => {
+            if let Ok(bytes) = deserializer.decode_bytes() {
+                if let Ok(s) = VMString::from_utf8(bytes) {
+                    return Ok(Value::string(s));
+                }
+            }
+            return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
+        }
+        Type::ByteArray => deserializer
+            .decode_bytes()
+            .map(|bytes| Value::byte_array(ByteArray::new(bytes))),
+        Type::Address => deserializer
+            .decode_bytes()
+            .and_then(AccountAddress::try_from)
+            .map(Value::address),
+        Type::Struct(s_fields) => Ok(deserialize_struct(deserializer, s_fields)?),
+        Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
+            // Case TypeVariable is not possible as all type variable has to be materialized before
+            // serialization.
+            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
+        }
+    }
+    .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))
+}
+
 fn deserialize_struct(
     deserializer: &mut SimpleDeserializer,
     struct_def: &StructDef,
 ) -> VMResult<Value> {
-    let mut s_vals: Vec<Value> = Vec::new();
-    for field_type in struct_def.field_definitions() {
-        match field_type {
-            Type::Bool => {
-                if let Ok(b) = deserializer.decode_bool() {
-                    s_vals.push(Value::bool(b));
-                } else {
-                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-                }
+    match struct_def {
+        StructDef::Struct(s) => {
+            let mut s_vals = Vec::new();
+            for field_type in s.field_definitions() {
+                s_vals.push(deserialize_value(deserializer, field_type)?);
             }
-            Type::U64 => {
-                if let Ok(val) = deserializer.decode_u64() {
-                    s_vals.push(Value::u64(val));
-                } else {
-                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-                }
-            }
-            Type::String => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(s) = VMString::from_utf8(bytes) {
-                        s_vals.push(Value::string(s));
-                        continue;
-                    }
-                }
-                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-            }
-            Type::ByteArray => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    s_vals.push(Value::byte_array(ByteArray::new(bytes)));
-                    continue;
-                }
-                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-            }
-            Type::Address => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(addr) = AccountAddress::try_from(bytes) {
-                        s_vals.push(Value::address(addr));
-                        continue;
-                    }
-                }
-                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-            }
-            Type::Struct(s_fields) => {
-                if let Ok(s) = deserialize_struct(deserializer, s_fields) {
-                    s_vals.push(s);
-                } else {
-                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-                }
-            }
-            Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
-                return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
-            }
+            Ok(Value::struct_(Struct::new(s_vals)))
         }
+        StructDef::Native(ty) => Ok(Value::native_struct(deserialize_native(deserializer, ty)?)),
     }
-    Ok(Value::struct_(Struct::new(s_vals)))
 }
 
 impl CanonicalSerialize for ValueImpl {
@@ -929,8 +1022,17 @@ impl CanonicalSerialize for ValueImpl {
             ValueImpl::ByteArray(bytearray) => {
                 serializer.encode_bytes(bytearray.as_bytes())?;
             }
+            ValueImpl::NativeStruct(v) => {
+                serializer.encode_struct(v)?;
+            }
             _ => unreachable!("invalid type to serialize"),
         }
         Ok(())
+    }
+}
+
+impl CanonicalSerialize for MutVal {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        self.peek().serialize(serializer)
     }
 }

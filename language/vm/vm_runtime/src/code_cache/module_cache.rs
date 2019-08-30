@@ -28,6 +28,7 @@ use vm::{
 use vm_cache_map::{Arena, CacheRefMap};
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
+    native_structs::dispatch::dispatch_native_struct,
     type_context::TypeContext,
 };
 
@@ -323,7 +324,15 @@ impl<'alloc> VMModuleCache<'alloc> {
             match &struct_def.field_information {
                 // TODO we might want a more informative error here
                 StructFieldInformation::Native => {
-                    return Err(VMStatus::new(StatusCode::LINKER_ERROR))
+                    let struct_name = module.identifier_at(struct_handle.name);
+                    let struct_def_module_id =
+                        StructHandleView::new(module, struct_handle).module_id();
+                    StructDef::Native(
+                        dispatch_native_struct(&struct_def_module_id, struct_name)
+                            .ok_or(VMStatus::new(StatusCode::LINKER_ERROR))?
+                            .struct_type
+                            .clone(),
+                    )
                 }
                 StructFieldInformation::Declared {
                     field_count,

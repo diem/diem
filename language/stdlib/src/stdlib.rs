@@ -47,6 +47,7 @@ lazy_static! {
             &*VECTOR_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on Coin, Event, AddressUtil, BytearrayUtil, U64Util
+            &*VECTOR_MODULE,
         ]
     };
 }
