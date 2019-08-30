@@ -45,9 +45,9 @@ types = { path = "../types" }
 debug_interface = { path = "../common/debug_interface" }
 
 [dependencies.prometheus]
-version  = "0.4.2"
+version  = "0.7.0"
 default-features = false
-features = ["push"]
+features = ["protobuf"]
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }

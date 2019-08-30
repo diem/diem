@@ -51,16 +51,6 @@ pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
             node_config.metrics.collection_interval_ms,
         );
     }
-
-    // TODO: should we do this differently for different binaries?
-    if !node_config.metrics.push_server_addr.is_empty() {
-        metrics::push_all_metrics_to_pushgateway_periodically(
-            "libra_node",
-            &node_config.metrics.push_server_addr,
-            peer_id,
-            node_config.metrics.collection_interval_ms,
-        );
-    }
 }
 
 /// Performs common setup for the executable.  Takes in args that

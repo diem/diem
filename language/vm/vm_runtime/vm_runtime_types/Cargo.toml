@@ -17,11 +17,6 @@ canonical_serialization = { path = "../../../../common/canonical_serialization" 
 crypto = { path = "../../../../crypto/crypto" }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 
-[dependencies.prometheus]
-version  = "0.4.2"
-default-features = false
-features = ["push"]
-
 [dev-dependencies]
 types = { path = "../../../../types", features = ["testing"] }
 vm = { path = "../../", features = ["testing"]}
