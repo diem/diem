@@ -10,12 +10,16 @@ use proptest::{
     prelude::*,
     strategy::Union,
 };
+use proptest_helpers::Index;
 use rand::Rng;
 use std::collections::HashMap;
 use tempfile::tempdir;
 use types::{
-    account_address::AccountAddress, contract_event::ContractEvent, event::EventKey,
-    proof::verify_event_accumulator_element, proptest_types::renumber_events,
+    account_address::AccountAddress,
+    contract_event::ContractEvent,
+    event::EventKey,
+    proof::verify_event_accumulator_element,
+    proptest_types::{AccountInfoUniverse, ContractEventGen},
 };
 
 fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashValue {
@@ -159,30 +163,23 @@ fn traverse_events_by_key(
         .collect()
 }
 
-fn arb_event_batches() -> impl Strategy<Value = Vec<Vec<ContractEvent>>> {
-    // TODO: Get rid of the unnecessary prop_flat_map here.
-    (vec(any::<EventKey>(), 3), (0..100usize))
-        .prop_flat_map(|(raw_event_keys, num_batches)| {
-            let event_key_strategy = Union::new(raw_event_keys.clone().into_iter().map(Just));
-            vec(
-                vec(ContractEvent::strategy_impl(event_key_strategy), 0..10),
-                num_batches,
-            )
-        })
-        .prop_map(|event_batches| {
-            let mut seq_num_by_event_key = HashMap::new();
-            event_batches
-                .into_iter()
-                .map(|events| renumber_events(&events, &mut seq_num_by_event_key))
-                .collect::<Vec<_>>()
-        })
-}
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_get_events_by_access_path(event_batches in arb_event_batches().no_shrink()) {
+    fn test_get_events_by_access_path(
+        mut universe in any_with::<AccountInfoUniverse>(3),
+        gen_batches in vec(vec((any::<Index>(), any::<ContractEventGen>()), 0..=2), 0..100),
+    ) {
+        let event_batches = gen_batches
+            .into_iter()
+            .map(|gens| {
+                gens.into_iter()
+                    .map(|(index, gen)| gen.materialize(index, &mut universe))
+                    .collect()
+            })
+            .collect();
+
         test_get_events_by_access_path_impl(event_batches);
     }
 }
