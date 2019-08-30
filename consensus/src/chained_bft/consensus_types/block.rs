@@ -8,7 +8,7 @@ use crate::{
             quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsgVerificationError,
         },
     },
-    state_replication::ExecutedState,
+    state_replication::{ExecutedState, StateComputeResult},
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
@@ -24,9 +24,11 @@ use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     fmt::{Display, Formatter},
+    ops::Deref,
+    sync::Arc,
 };
 use types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
@@ -66,9 +68,9 @@ pub enum BlockSource {
     NilBlock,
 }
 
-/// Blocks are managed in a speculative tree, the committed blocks form a chain.
-/// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+/// Block has the core data of a consensus block that should be persistent when necessary.
+/// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct Block<T> {
     /// This block's id as a hash value
     id: HashValue,
@@ -106,6 +108,30 @@ pub struct Block<T> {
     block_source: BlockSource,
 }
 
+/// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
+/// block data, each executed block also has other derived meta data which could be regenerated from
+/// blocks.
+#[derive(Clone, Debug)]
+pub struct ExecutedBlock<T> {
+    /// Block data that cannot be regenerated.
+    block: Arc<Block<T>>,
+    /// The set of children for cascading pruning. Note: a block may have multiple children.
+    children: HashSet<HashValue>,
+    /// The state compute results is calculated for all the pending blocks prior to insertion to
+    /// the tree (the initial root node might not have it, because it's been already
+    /// committed). The execution results are not persisted: they're recalculated again for the
+    /// pending blocks upon restart.
+    compute_result: Arc<StateComputeResult>,
+}
+
+impl<T> Deref for ExecutedBlock<T> {
+    type Target = Block<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.block
+    }
+}
+
 impl<T> Display for Block<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let nil_marker = if self.block_source == BlockSource::NilBlock {
@@ -118,6 +144,12 @@ impl<T> Display for Block<T> {
             "[id: {}{}, round: {:02}, parent_id: {}]",
             self.id, nil_marker, self.round, self.parent_id
         )
+    }
+}
+
+impl<T> Display for ExecutedBlock<T> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        self.block().fmt(f)
     }
 }
 
@@ -368,6 +400,36 @@ where
 
     pub fn is_nil_block(&self) -> bool {
         self.block_source == BlockSource::NilBlock
+    }
+}
+
+impl<T> ExecutedBlock<T> {
+    pub fn new(block: Block<T>, compute_result: StateComputeResult) -> Self {
+        Self {
+            block: Arc::new(block),
+            children: HashSet::new(),
+            compute_result: Arc::new(compute_result),
+        }
+    }
+
+    pub fn block(&self) -> &Arc<Block<T>> {
+        &self.block
+    }
+
+    pub fn children(&self) -> &HashSet<HashValue> {
+        &self.children
+    }
+
+    pub fn add_child(&mut self, child_id: HashValue) {
+        assert!(
+            self.children.insert(child_id),
+            "Block {:x} already existed.",
+            child_id,
+        );
+    }
+
+    pub fn compute_result(&self) -> &Arc<StateComputeResult> {
+        &self.compute_result
     }
 }
 

@@ -5,7 +5,10 @@ use crate::{
     chained_bft::{
         block_storage::{BlockTreeError, VoteReceptionResult},
         consensus_types::{
-            block::Block, quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg,
+            block::{Block, ExecutedBlock},
+            quorum_cert::QuorumCert,
+            vote_data::VoteData,
+            vote_msg::VoteMsg,
         },
     },
     counters,
@@ -18,11 +21,7 @@ use logger::prelude::*;
 use mirai_annotations::checked_verify_eq;
 use serde::Serialize;
 use std::{
-    collections::{
-        hash_map::Entry::{Occupied, Vacant},
-        vec_deque::VecDeque,
-        HashMap,
-    },
+    collections::{vec_deque::VecDeque, HashMap},
     fmt::Debug,
     sync::Arc,
     time::Duration,
@@ -34,26 +33,16 @@ use types::crypto_proxies::LedgerInfoWithSignatures;
 /// should only be used internally in BlockStore.
 pub struct BlockTree<T> {
     /// All the blocks known to this replica (with parent links)
-    id_to_block: HashMap<HashValue, Arc<Block<T>>>,
-    /// All child links (i.e. reverse parent links) for easy cleaning.  Note that a block may
-    /// have multiple child links.  There should be id_to_blocks.len() - 1 total
-    /// id_to_child entries.
-    id_to_child: HashMap<HashValue, Vec<Arc<Block<T>>>>,
-    /// Keeps the state compute results of the executed blocks.
-    /// The state compute results is calculated for all the pending blocks prior to insertion to
-    /// the tree (the initial root node might not have it, because it's been already
-    /// committed). The execution results are not persisted: they're recalculated again for the
-    /// pending blocks upon restart.
-    id_to_compute_result: HashMap<HashValue, Arc<StateComputeResult>>,
+    id_to_block: HashMap<HashValue, ExecutedBlock<T>>,
     /// Root of the tree.
-    root: Arc<Block<T>>,
-    /// A certified block with highest round
-    highest_certified_block: Arc<Block<T>>,
+    root_id: HashValue,
+    /// A certified block id with highest round
+    highest_certified_block_id: HashValue,
+
     /// The quorum certificate of highest_certified_block
     highest_quorum_cert: Arc<QuorumCert>,
     /// The quorum certificate that carries a highest ledger info
     highest_ledger_info: Arc<QuorumCert>,
-
     /// `id_to_votes` might keep multiple LedgerInfos per proposed block in order
     /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
     /// to be collected only for all the votes that carry identical LedgerInfo.
@@ -75,7 +64,7 @@ where
     T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
 {
     pub(super) fn new(
-        root: Block<T>,
+        root: ExecutedBlock<T>,
         root_quorum_cert: QuorumCert,
         root_ledger_info: QuorumCert,
         max_pruned_blocks_in_mem: usize,
@@ -88,9 +77,10 @@ where
                 .consensus_block_id(),
             "inconsistent root and ledger info"
         );
-        let root = Arc::new(root);
+        let root_id = root.id();
+
         let mut id_to_block = HashMap::new();
-        id_to_block.insert(root.id(), root.clone());
+        id_to_block.insert(root_id, root);
         counters::NUM_BLOCKS_IN_TREE.set(1);
 
         let root_quorum_cert = Arc::new(root_quorum_cert);
@@ -104,10 +94,8 @@ where
 
         BlockTree {
             id_to_block,
-            id_to_child: HashMap::new(),
-            id_to_compute_result: HashMap::new(),
-            root: Arc::clone(&root),
-            highest_certified_block: Arc::clone(&root),
+            root_id,
+            highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_ledger_info: Arc::new(root_ledger_info),
             id_to_votes: HashMap::new(),
@@ -118,43 +106,47 @@ where
     }
 
     fn remove_block(&mut self, block_id: HashValue) {
-        // Delete my child links
-        self.id_to_child.remove(&block_id);
         // Remove the block from the store
         self.id_to_block.remove(&block_id);
-        self.id_to_compute_result.remove(&block_id);
         self.id_to_votes.remove(&block_id);
         self.id_to_quorum_cert.remove(&block_id);
     }
 
-    pub(super) fn block_exists(&self, block_id: HashValue) -> bool {
-        self.id_to_block.contains_key(&block_id)
+    pub(super) fn block_exists(&self, block_id: &HashValue) -> bool {
+        self.id_to_block.contains_key(block_id)
     }
 
-    pub(super) fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<T>>> {
-        self.id_to_block.get(&block_id).cloned()
+    fn get_block(&self, block_id: &HashValue) -> &ExecutedBlock<T> {
+        self.try_get_block(block_id)
+            .expect("Block doesn't exist. Use try_get_block if None is a possible return value")
+    }
+
+    pub(super) fn try_get_block(&self, block_id: &HashValue) -> Option<&ExecutedBlock<T>> {
+        self.id_to_block.get(block_id)
+    }
+
+    fn try_get_block_mut(&mut self, block_id: &HashValue) -> Option<&mut ExecutedBlock<T>> {
+        self.id_to_block.get_mut(block_id)
     }
 
     pub(super) fn get_compute_result(
         &self,
-        block_id: HashValue,
+        block_id: &HashValue,
     ) -> Option<Arc<StateComputeResult>> {
-        if self.root.id() == block_id {
+        if self.root_id == *block_id {
             None
         } else {
-            match self.id_to_compute_result.get(&block_id) {
-                Some(executed_state) => Some(executed_state.clone()),
-                None => panic!("Impossible that a block {} that is not the root block does not have a compute result", &block_id),
-            }
+            self.try_get_block(block_id)
+                .map(|b| b.compute_result().clone())
         }
     }
 
-    pub(super) fn root(&self) -> Arc<Block<T>> {
-        self.root.clone()
+    pub(super) fn root(&self) -> &ExecutedBlock<T> {
+        self.get_block(&self.root_id)
     }
 
-    pub(super) fn highest_certified_block(&self) -> Arc<Block<T>> {
-        Arc::clone(&self.highest_certified_block)
+    pub(super) fn highest_certified_block(&self) -> &ExecutedBlock<T> {
+        self.get_block(&self.highest_certified_block_id)
     }
 
     pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
@@ -165,56 +157,46 @@ where
         Arc::clone(&self.highest_ledger_info)
     }
 
-    pub(super) fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>> {
-        self.id_to_quorum_cert.get(&block_id).cloned()
+    pub(super) fn get_quorum_cert_for_block(
+        &self,
+        block_id: &HashValue,
+    ) -> Option<Arc<QuorumCert>> {
+        self.id_to_quorum_cert.get(block_id).cloned()
     }
 
     pub(super) fn insert_block(
         &mut self,
-        block: Block<T>,
-        compute_result: StateComputeResult,
-    ) -> Result<Arc<Block<T>>, BlockTreeError> {
-        if !self.block_exists(block.parent_id()) {
-            return Err(BlockTreeError::BlockNotFound {
-                id: block.parent_id(),
-            });
-        }
-        let block = Arc::new(block);
-
-        match self.id_to_block.get(&block.id()) {
-            Some(previous_block) => {
-                debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
-                       previous_block,
-                       block.id(),
+        block: ExecutedBlock<T>,
+    ) -> Result<&ExecutedBlock<T>, BlockTreeError> {
+        let block_id = block.id();
+        if self.block_exists(&block_id) {
+            let existing_block = self.get_block(&block_id);
+            debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
+                       existing_block,
+                       block_id,
                        block);
-                if let Some(previous_compute_result) = self.get_compute_result(block.id()) {
-                    checked_verify_eq!(previous_compute_result.as_ref(), &compute_result);
-                }
-
-                Ok(previous_block.clone())
-            }
-            _ => {
-                let children = match self.id_to_child.entry(block.parent_id()) {
-                    Vacant(entry) => entry.insert(Vec::new()),
-                    Occupied(entry) => entry.into_mut(),
-                };
-                children.push(block.clone());
-                counters::NUM_BLOCKS_IN_TREE.inc();
-                self.id_to_block.insert(block.id(), block.clone());
-                self.id_to_compute_result
-                    .insert(block.id(), Arc::new(compute_result));
-                Ok(block)
-            }
+            checked_verify_eq!(existing_block.compute_result(), block.compute_result());
+            Ok(existing_block)
+        } else {
+            match self.try_get_block_mut(&block.parent_id()) {
+                Some(parent_block) => parent_block.add_child(block_id),
+                None => bail_err!(BlockTreeError::BlockNotFound {
+                    id: block.parent_id(),
+                }),
+            };
+            assert!(self.id_to_block.insert(block_id, block).is_none());
+            counters::NUM_BLOCKS_IN_TREE.inc();
+            Ok(self.get_block(&block_id))
         }
     }
 
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> Result<(), BlockTreeError> {
         let block_id = qc.certified_block_id();
         let qc = Arc::new(qc);
-        match self.id_to_block.get(&block_id) {
+        match self.try_get_block(&block_id) {
             Some(block) => {
-                if block.round() > self.highest_certified_block.round() {
-                    self.highest_certified_block = block.clone();
+                if block.round() > self.highest_certified_block().round() {
+                    self.highest_certified_block_id = block.id();
                     self.highest_quorum_cert = Arc::clone(&qc);
                 }
             }
@@ -229,15 +211,13 @@ where
         if let Some(block) = self.id_to_block.get(&committed_block_id) {
             if block.round()
                 > self
-                    .id_to_block
-                    .get(
+                    .get_block(
                         &self
                             .highest_ledger_info
                             .ledger_info()
                             .ledger_info()
                             .consensus_block_id(),
                     )
-                    .expect("Highest ledger info's block should exist")
                     .round()
             {
                 self.highest_ledger_info = qc;
@@ -255,7 +235,6 @@ where
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
-
         // All the votes collected for all the execution results of a given proposal.
         let block_votes = self
             .id_to_votes
@@ -268,6 +247,7 @@ where
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });
+
         let author = vote_msg.author();
         if li_with_sig.signatures().contains_key(&author) {
             return VoteReceptionResult::DuplicateVote;
@@ -290,7 +270,7 @@ where
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc
-            if let Some(block) = self.get_block(block_id) {
+            if let Some(block) = self.try_get_block(&block_id) {
                 if let Some(time_to_qc) = duration_since_epoch()
                     .checked_sub(Duration::from_micros(block.timestamp_usecs()))
                 {
@@ -315,24 +295,21 @@ where
     /// Note this function is read-only, use with process_pruned_blocks to do the actual prune.
     pub(super) fn find_blocks_to_prune(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
         // Nothing to do if this is the root
-        if next_root_id == self.root.id() {
+        if next_root_id == self.root_id {
             return VecDeque::new();
         }
 
         let mut blocks_pruned = VecDeque::new();
         let mut blocks_to_be_pruned = Vec::new();
-        blocks_to_be_pruned.push(self.root.clone());
+        blocks_to_be_pruned.push(self.root());
         while let Some(block_to_remove) = blocks_to_be_pruned.pop() {
             // Add the children to the blocks to be pruned (if any), but stop when it reaches the
             // new root
-            if let Some(children) = self.id_to_child.get(&block_to_remove.id()) {
-                for child in children {
-                    if next_root_id == child.id() {
-                        continue;
-                    }
-
-                    blocks_to_be_pruned.push(child.clone());
+            for child_id in block_to_remove.children() {
+                if next_root_id == *child_id {
+                    continue;
                 }
+                blocks_to_be_pruned.push(self.get_block(child_id));
             }
             // Track all the block ids removed
             blocks_pruned.push_back(block_to_remove.id());
@@ -350,13 +327,9 @@ where
         root_id: HashValue,
         mut newly_pruned_blocks: VecDeque<HashValue>,
     ) {
+        assert!(self.block_exists(&root_id));
         // Update the next root
-        self.root = self
-            .id_to_block
-            .get(&root_id)
-            .expect("next_root_id must exist")
-            .clone();
-
+        self.root_id = root_id;
         counters::NUM_BLOCKS_IN_TREE.sub(newly_pruned_blocks.len() as i64);
         // The newly pruned blocks are pushed back to the deque pruned_block_ids.
         // In case the overall number of the elements is greater than the predefined threshold,
@@ -382,19 +355,21 @@ where
     pub(super) fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
         let mut res = vec![];
         let mut cur_block = block;
-        while cur_block.round() > self.root.round() {
-            res.push(Arc::clone(&cur_block));
-            cur_block = match self.get_block(cur_block.parent_id()) {
+        while cur_block.round() > self.root().round() {
+            let parent_id = cur_block.parent_id();
+            res.push(cur_block);
+            cur_block = match self.try_get_block(&parent_id) {
                 None => {
                     return None;
                 }
-                Some(b) => b,
+                Some(b) => Arc::clone(b.block()),
             };
         }
         // At this point cur_block.round() <= self.root.round()
-        if cur_block.id() != self.root.id() {
+        if cur_block.id() != self.root_id {
             return None;
         }
+
         Some(res)
     }
 
@@ -417,13 +392,11 @@ where
         // BFS over the tree to find the number of blocks in the tree.
         let mut res = 0;
         let mut to_visit = Vec::new();
-        to_visit.push(Arc::clone(&self.root));
+        to_visit.push(self.root());
         while let Some(block) = to_visit.pop() {
             res += 1;
-            if let Some(children) = self.id_to_child.get(&block.id()) {
-                for child in children {
-                    to_visit.push(Arc::clone(&child));
-                }
+            for child_id in block.children() {
+                to_visit.push(self.get_block(child_id));
             }
         }
         res

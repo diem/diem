@@ -187,7 +187,7 @@ pub trait BlockReader: Send + Sync {
     ///   of a parent.
     fn create_block(
         &self,
-        parent: Arc<Block<Self::Payload>>,
+        parent: &Block<Self::Payload>,
         payload: Self::Payload,
         round: Round,
         timestamp_usecs: u64,

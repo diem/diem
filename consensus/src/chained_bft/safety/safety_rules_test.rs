@@ -135,7 +135,7 @@ proptest! {
                 // the current block can be voted on and if gathered a
                 // QC, would trigger a different commit
                 let block_arc = block_tree.get_block(inserted_id).expect("we just inserted this");
-                let vote_info = safety_rules.voting_rule(block_arc).and_then(|x| Ok(x.potential_commit_id()));
+                let vote_info = safety_rules.voting_rule(&block_arc).and_then(|x| Ok(x.potential_commit_id()));
                 prop_assert_eq!(vote_info, Ok(Some(highest_contiguous_3_chain_prefix.0)),
                                 "Commit mismatch: expected committing {:?} upon hearing about {:?} with preferred block {:?} because of chain {:#?}\n", highest_contiguous_3_chain_prefix.0, block.id(), highest_two_chain.0, highest_contiguous_3_chain_prefix.2
                 );
@@ -260,20 +260,20 @@ fn test_voting() {
     let b4 = inserter.insert_block(b2.as_ref(), 8);
 
     safety_rules.update(a1.quorum_cert());
-    let mut voting_info = safety_rules.voting_rule(a1.clone()).unwrap();
+    let mut voting_info = safety_rules.voting_rule(&a1).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b1.quorum_cert());
-    voting_info = safety_rules.voting_rule(b1.clone()).unwrap();
+    voting_info = safety_rules.voting_rule(&b1).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a2.quorum_cert());
-    voting_info = safety_rules.voting_rule(a2.clone()).unwrap();
+    voting_info = safety_rules.voting_rule(&a2).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b2.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(b2.clone()),
+        safety_rules.voting_rule(&b2),
         Err(ProposalReject::OldProposal {
             last_vote_round: 4,
             proposal_round: 3,
@@ -281,20 +281,20 @@ fn test_voting() {
     );
 
     safety_rules.update(a3.quorum_cert());
-    voting_info = safety_rules.voting_rule(a3.clone()).unwrap();
+    voting_info = safety_rules.voting_rule(&a3).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b3.quorum_cert());
-    voting_info = safety_rules.voting_rule(b3.clone()).unwrap();
+    voting_info = safety_rules.voting_rule(&b3).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a4.quorum_cert());
-    voting_info = safety_rules.voting_rule(a4.clone()).unwrap();
+    voting_info = safety_rules.voting_rule(&a4).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a4.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(a4.clone()),
+        safety_rules.voting_rule(&a4),
         Err(ProposalReject::OldProposal {
             last_vote_round: 7,
             proposal_round: 7,
@@ -302,7 +302,7 @@ fn test_voting() {
     );
     safety_rules.update(b4.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(b4.clone()),
+        safety_rules.voting_rule(&b4),
         Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
         })
@@ -336,23 +336,17 @@ fn test_voting_potential_commit_id() {
     let vec_with_no_potential_commits = vec![a1.clone(), b1.clone(), a2.clone(), a3.clone()];
     for b in vec_with_no_potential_commits {
         safety_rules.update(b.quorum_cert());
-        let voting_info = safety_rules.voting_rule(b.clone()).unwrap();
+        let voting_info = safety_rules.voting_rule(&b).unwrap();
         assert_eq!(voting_info.potential_commit_id, None);
     }
     safety_rules.update(a4.quorum_cert());
     assert_eq!(
-        safety_rules
-            .voting_rule(a4.clone())
-            .unwrap()
-            .potential_commit_id,
+        safety_rules.voting_rule(&a4).unwrap().potential_commit_id,
         Some(a2.id())
     );
     safety_rules.update(a5.quorum_cert());
     assert_eq!(
-        safety_rules
-            .voting_rule(a5.clone())
-            .unwrap()
-            .potential_commit_id,
+        safety_rules.voting_rule(&a5).unwrap().potential_commit_id,
         Some(a3.id())
     );
 }
