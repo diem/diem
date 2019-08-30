@@ -53,6 +53,7 @@ impl LogPruner {
                         continue;
                     }
                     let log_stream_name = stream.log_stream_name.expect("No log_stream_name");
+                    let mut errors_delete = 0usize;
                     loop {
                         let request = DeleteLogStreamRequest {
                             log_group_name: log_group.clone(),
@@ -60,6 +61,10 @@ impl LogPruner {
                         };
                         let response = self.aws_logs.delete_log_stream(request).sync();
                         if let Err(e) = response {
+                            errors_delete += 1;
+                            if errors_delete > 5 {
+                                panic!("Too many aws errors, aborting");
+                            }
                             println!("Retrying aws error during log stream removal: {:?}", e);
                             thread::sleep(Duration::from_millis(600));
                             continue;
@@ -69,7 +74,8 @@ impl LogPruner {
                     thread::sleep(Duration::from_millis(200));
                     deleted += 1;
                     if deleted % 100 == 0 {
-                        println!("Deleted {} streams", deleted);
+                        let age_days = age.as_secs() / 3600 / 24;
+                        println!("Deleted {} streams, last age: {} days", deleted, age_days);
                     }
                 }
             }
