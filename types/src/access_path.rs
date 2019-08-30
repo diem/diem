@@ -41,8 +41,8 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        account_received_event_path, account_resource_path, account_sent_event_path,
-        association_address,
+        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
     },
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
@@ -288,7 +288,7 @@ impl AccessPath {
     /// That AccessPath can be used as a key into the event storage to retrieve all sent
     /// events for a given account.
     pub fn new_for_sent_event(address: AccountAddress) -> Self {
-        Self::new(address, account_sent_event_path())
+        Self::new(address, ACCOUNT_SENT_EVENT_PATH.to_vec())
     }
 
     /// Create an AccessPath to the event for the target account (the receiver)
@@ -298,7 +298,7 @@ impl AccessPath {
     /// That AccessPath can be used as a key into the event storage to retrieve all received
     /// events for a given account.
     pub fn new_for_received_event(address: AccountAddress) -> Self {
-        Self::new(address, account_received_event_path())
+        Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
     }
 
     pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {

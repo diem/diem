@@ -16,6 +16,7 @@ use canonical_serialization::{
     SimpleDeserializer,
 };
 use failure::prelude::*;
+use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::{
@@ -144,13 +145,13 @@ impl AccountResource {
         self.delegated_withdrawal_capability
     }
 
-    pub fn get_event_handle_by_query_path(&self, query_path: &AccessPath) -> Result<&EventHandle> {
-        if account_received_event_path() == query_path.path {
+    pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<&EventHandle> {
+        if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
             Ok(&self.received_events)
-        } else if account_sent_event_path() == query_path.path {
+        } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
             Ok(&self.sent_events)
         } else {
-            bail!("Unrecognized query path: {}", query_path);
+            bail!("Unrecognized query path: {:?}", query_path);
         }
     }
 }
@@ -208,24 +209,22 @@ pub fn account_resource_path() -> Vec<u8> {
     AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty())
 }
 
-/// Return the path to the sent event counter for an Account resource.
-/// It can be used to query the event DB for the given event.
-pub fn account_sent_event_path() -> Vec<u8> {
-    let mut path = account_resource_path();
-    path.push(b'/');
-    path.extend_from_slice(b"sent_events_count");
-    path.push(b'/');
-    path
-}
+lazy_static! {
+    /// The path to the sent event counter for an Account resource.
+    /// It can be used to query the event DB for the given event.
+    pub static ref ACCOUNT_SENT_EVENT_PATH: Vec<u8> = {
+        let mut path = account_resource_path();
+        path.extend_from_slice(b"/sent_events_count/");
+        path
+    };
 
-/// Return the path to the received event counter for an Account resource.
-/// It can be used to query the event DB for the given event.
-pub fn account_received_event_path() -> Vec<u8> {
-    let mut path = account_resource_path();
-    path.push(b'/');
-    path.extend_from_slice(b"received_events_count");
-    path.push(b'/');
-    path
+    /// Returns the path to the received event counter for an Account resource.
+    /// It can be used to query the event DB for the given event.
+    pub static ref ACCOUNT_RECEIVED_EVENT_PATH: Vec<u8> = {
+        let mut path = account_resource_path();
+        path.extend_from_slice(b"/received_events_count/");
+        path
+    };
 }
 
 /// Generic struct that represents an Account event.

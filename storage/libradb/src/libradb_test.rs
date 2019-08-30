@@ -130,7 +130,7 @@ fn get_events_by_query_path(
 
     let mut ret = Vec::new();
     loop {
-        let (events_with_proof, proof_of_latest_event) = db.get_events_by_event_access_path(
+        let (events_with_proof, proof_of_latest_event) = db.get_events_by_query_path(
             query_path,
             cursor,
             ascending,
@@ -140,7 +140,7 @@ fn get_events_by_query_path(
 
         let account_resource = get_account_resource_or_default(&proof_of_latest_event.blob)?;
         let expected_event_key = account_resource
-            .get_event_handle_by_query_path(query_path)?
+            .get_event_handle_by_query_path(&query_path.path)?
             .key();
 
         let num_events = events_with_proof.len() as u64;
@@ -446,7 +446,7 @@ fn test_too_many_requested() {
         .is_err());
     assert!(db.get_transactions(0, 1001 /* limit */, 0, true).is_err());
     assert!(db
-        .get_events_by_event_access_path(
+        .get_events_by_query_path(
             &AccessPath::new_for_sent_event(AccountAddress::random()),
             0,
             true,
