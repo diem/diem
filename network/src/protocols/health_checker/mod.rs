@@ -21,7 +21,7 @@ use crate::{
     error::NetworkError,
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     proto::{Ping, Pong},
-    utils::read_proto,
+    utils::{read_proto_prost, MessageExt},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -34,7 +34,6 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use logger::prelude::*;
-use protobuf::{self, Message};
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::{codec::Framed, prelude::FutureExt as _};
@@ -223,15 +222,15 @@ where
             // Send Ping.
             debug!("Sending Ping to peer: {}", peer_id.short_str());
             substream
-                .send(Bytes::from(
-                    Ping::new()
-                        .write_to_bytes()
+                .send(
+                    Ping::default()
+                        .to_bytes()
                         .expect("Protobuf serialization fails"),
-                ))
+                )
                 .await?;
             // Read Pong.
             debug!("Waiting for Pong from peer: {}", peer_id.short_str());
-            let _: Pong = read_proto(&mut substream).await?;
+            let _: Pong = read_proto_prost(&mut substream).await?;
             // Return success.
             Ok(())
         };
@@ -254,7 +253,7 @@ where
             Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
         // Read ping.
         trace!("Waiting for Ping on new substream");
-        let maybe_ping: Result<Ping, NetworkError> = read_proto(&mut substream).await;
+        let maybe_ping: Result<Ping, NetworkError> = read_proto_prost(&mut substream).await;
         if let Err(err) = maybe_ping {
             warn!(
                 "Failed to read ping from peer: {}. Error: {:?}",
@@ -266,11 +265,11 @@ where
         // Send Pong.
         trace!("Sending Pong back");
         if let Err(err) = substream
-            .send(Bytes::from(
-                Pong::new()
-                    .write_to_bytes()
+            .send(
+                Pong::default()
+                    .to_bytes()
                     .expect("Protobuf serialization fails"),
-            ))
+            )
             .await
         {
             warn!(

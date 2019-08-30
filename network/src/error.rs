@@ -108,6 +108,18 @@ impl From<ProtobufError> for NetworkError {
     }
 }
 
+impl From<prost::EncodeError> for NetworkError {
+    fn from(err: prost::EncodeError) -> NetworkError {
+        err.context(NetworkErrorKind::ProtobufParseError).into()
+    }
+}
+
+impl From<prost::DecodeError> for NetworkError {
+    fn from(err: prost::DecodeError) -> NetworkError {
+        err.context(NetworkErrorKind::ProtobufParseError).into()
+    }
+}
+
 impl From<parity_multiaddr::Error> for NetworkError {
     fn from(err: parity_multiaddr::Error) -> NetworkError {
         err.context(NetworkErrorKind::MultiaddrError).into()

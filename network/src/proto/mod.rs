@@ -10,6 +10,10 @@ mod network;
 mod state_synchronizer;
 mod admission_control;
 
+mod network_prost {
+    include!(concat!(env!("OUT_DIR"), "/network.rs"));
+}
+
 use types::proto::{ledger_info, transaction};
 
 pub use self::{
@@ -20,9 +24,10 @@ pub use self::{
     },
     mempool::MempoolSyncMsg,
     network::{
-        DiscoveryMsg, FullNodePayload, IdentityMsg, IdentityMsg_Role, Note, PeerInfo, Ping, Pong,
+        DiscoveryMsg, FullNodePayload, IdentityMsg, IdentityMsg_Role, Note, PeerInfo,
         SignedFullNodePayload, SignedPeerInfo,
     },
+    network_prost::{Ping, Pong},
     state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
 pub use transaction::SignedTransaction;
