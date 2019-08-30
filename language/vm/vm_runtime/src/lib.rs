@@ -107,6 +107,9 @@ extern crate rental;
 #[macro_use]
 extern crate mirai_annotations;
 
+#[cfg(feature = "mirai-contracts")]
+pub mod foreign_contracts;
+
 mod block_processor;
 mod counters;
 mod frame;
