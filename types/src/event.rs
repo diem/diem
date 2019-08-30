@@ -1,5 +1,6 @@
 #![allow(clippy::unit_arg)]
 
+#[cfg(any(test, feature = "testing"))]
 use crate::account_address::AccountAddress;
 #[cfg(any(test, feature = "testing"))]
 use canonical_serialization::SimpleSerializer;
@@ -15,6 +16,7 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
+#[cfg(any(test, feature = "testing"))]
 use tiny_keccak::sha3_256;
 
 /// Size of an event key.
