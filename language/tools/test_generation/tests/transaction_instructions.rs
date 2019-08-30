@@ -47,3 +47,25 @@ fn bytecode_getgasremaining() {
         "stack type postcondition not met"
     );
 }
+
+#[test]
+fn bytecode_gettxnsenderaddress() {
+    let state1 = AbstractState::new();
+    let state2 = common::run_instruction(Bytecode::GetTxnSenderAddress, state1);
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue::new_primitive(SignatureToken::Address)),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+fn bytecode_gettxnpublickey() {
+    let state1 = AbstractState::new();
+    let state2 = common::run_instruction(Bytecode::GetTxnPublicKey, state1);
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue::new_primitive(SignatureToken::ByteArray)),
+        "stack type postcondition not met"
+    );
+}
