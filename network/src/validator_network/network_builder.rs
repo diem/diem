@@ -35,6 +35,7 @@ use crypto::{
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
+use rand::{rngs::SmallRng, FromEntropy};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -458,6 +459,7 @@ impl NetworkBuilder {
                 pm_conn_mgr_notifs_rx,
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
+                SmallRng::from_entropy(),
                 self.max_connection_delay_ms,
             );
             self.executor

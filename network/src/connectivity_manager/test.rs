@@ -12,6 +12,8 @@ use std::io;
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
 
+const TEST_SEED_SMALL: [u8; 16] = [0u8; 16];
+
 fn setup_conn_mgr(
     rt: &mut Runtime,
     seed_peer_id: PeerId,
@@ -49,6 +51,7 @@ fn setup_conn_mgr(
             peer_mgr_notifs_rx,
             conn_mgr_reqs_rx,
             FixedInterval::from_millis(100),
+            SmallRng::from_seed(TEST_SEED_SMALL),
             300, /* ms */
         )
     };
@@ -116,29 +119,35 @@ async fn expect_dial_request<'a, TSubstream>(
     peer_mgr_notifs_tx: &'a mut channel::Sender<PeerManagerNotification<TSubstream>>,
     conn_mgr_reqs_tx: &'a mut channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
-    address: Multiaddr,
+    expected_addrs: &[&Multiaddr],
     result: Result<(), PeerManagerError>,
 ) where
     TSubstream: Debug,
 {
     let success = result.is_ok();
-    match peer_mgr_reqs_rx.next().await.unwrap() {
+    let addr = match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DialPeer(p, addr, error_tx) => {
             assert_eq!(peer_id, p);
-            assert_eq!(address, addr);
+            assert!(
+                expected_addrs.contains(&&addr),
+                "expected_addrs: {:?}, addr: {:?}",
+                expected_addrs,
+                addr
+            );
             error_tx.send(result).unwrap();
+            addr
         }
         _ => {
             panic!("unexpected request to peer manager");
         }
-    }
+    };
     if success {
         info!(
             "Sending NewPeer notification for peer: {}",
             peer_id.short_str()
         );
         peer_mgr_notifs_tx
-            .send(PeerManagerNotification::NewPeer(peer_id, address))
+            .send(PeerManagerNotification::NewPeer(peer_id, addr))
             .await
             .unwrap();
     }
@@ -184,12 +193,13 @@ fn addr_change() {
 
         // Peer manager receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -242,12 +252,13 @@ fn addr_change() {
 
         // Peer manager then receives a request to connect to the seed peer at new address.
         info!("Waiting to receive dial request to seed peer at new address");
+        let expected_addrs = [&seed_address_new];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address_new,
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -285,12 +296,13 @@ fn lost_connection() {
 
         // Peer manager receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -312,12 +324,13 @@ fn lost_connection() {
         // Peer manager receives a request to connect to the seed peer after loss of
         // connection.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -354,12 +367,13 @@ fn disconnect() {
 
         // Peer manager receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -418,12 +432,13 @@ fn retry_on_failure() {
 
         // Peer manager receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -436,12 +451,13 @@ fn retry_on_failure() {
 
         // Peer manager again receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -519,12 +535,13 @@ fn no_op_requests() {
 
         // Peer manager receives a request to connect to the seed peer.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_address];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_address.clone(),
+            &expected_addrs[..],
             Err(PeerManagerError::AlreadyConnected(seed_address.clone())),
         )
         .await;
@@ -648,12 +665,13 @@ fn backoff_on_failure() {
             ticker_tx.send(()).await.unwrap();
             // Peer manager receives a request to connect to the seed peer.
             info!("Waiting to receive dial request");
+            let expected_addrs = [&peer_a_address];
             expect_dial_request(
                 &mut peer_mgr_reqs_rx,
                 &mut peer_mgr_notifs_tx,
                 &mut conn_mgr_reqs_tx,
                 peer_a,
-                peer_a_address.clone(),
+                &expected_addrs[..],
                 Err(PeerManagerError::IoError(io::Error::from(
                     io::ErrorKind::ConnectionRefused,
                 ))),
@@ -668,8 +686,7 @@ fn backoff_on_failure() {
     rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
 }
 
-// Test that connectivity manager will still connect to a peer if it advertises
-// multiple listen addresses and some of them don't work.
+// Test that connectivity manager will work with multiple addresses.
 #[test]
 fn multiple_addrs_basic() {
     ::logger::try_init_for_testing();
@@ -681,8 +698,6 @@ fn multiple_addrs_basic() {
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
-        // For this test, the peer advertises multiple listen addresses. Assume
-        // that the first addr fails to connect while the second addr succeeds.
         let seed_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
         let seed_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
@@ -700,80 +715,15 @@ fn multiple_addrs_basic() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Assume that the first listen addr fails to connect.
+        // Assume that the first attempt fails to connect.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_addr_1, &seed_addr_2];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_addr_1.clone(),
-            Err(PeerManagerError::IoError(io::Error::from(
-                io::ErrorKind::ConnectionRefused,
-            ))),
-        )
-        .await;
-
-        // Trigger another connectivity check.
-        info!("Sending tick to trigger connectivity check");
-        ticker_tx.send(()).await.unwrap();
-
-        // Since the last connection attempt failed for seed_addr_1, we should
-        // attempt the next available listener address. In this case, the call
-        // succeeds and we should connect to the peer.
-        info!("Waiting to receive dial request");
-        expect_dial_request(
-            &mut peer_mgr_reqs_rx,
-            &mut peer_mgr_notifs_tx,
-            &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_2.clone(),
-            Ok(()),
-        )
-        .await;
-    };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
-}
-
-// Test that connectivity manager will work with multiple addresses even if we
-// retry more times than there are addresses.
-#[test]
-fn multiple_addrs_wrapping() {
-    ::logger::try_init_for_testing();
-    let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    info!("Seed peer_id is {}", seed_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, seed_peer_id);
-
-    // Fake peer manager and discovery.
-    let f_peer_mgr = async move {
-        let seed_addr_1 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let seed_addr_2 = Multiaddr::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
-
-        // Send addresses of seed peer.
-        info!("Sending address of seed peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                seed_peer_id,
-                vec![seed_addr_1.clone(), seed_addr_2.clone()],
-            ))
-            .await
-            .unwrap();
-
-        // Trigger connectivity check.
-        info!("Sending tick to trigger connectivity check");
-        ticker_tx.send(()).await.unwrap();
-
-        // Assume that the first listen addr fails to connect.
-        info!("Waiting to receive dial request");
-        expect_dial_request(
-            &mut peer_mgr_reqs_rx,
-            &mut peer_mgr_notifs_tx,
-            &mut conn_mgr_reqs_tx,
-            seed_peer_id,
-            seed_addr_1.clone(),
+            &expected_addrs[..],
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -786,12 +736,13 @@ fn multiple_addrs_wrapping() {
 
         // The second attempt also fails.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_addr_1, &seed_addr_2];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_addr_2.clone(),
+            &expected_addrs[..],
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -802,14 +753,15 @@ fn multiple_addrs_wrapping() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Our next attempt should wrap around to the first address.
+        // Our third attempt succeeds.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_addr_1, &seed_addr_2];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_addr_1.clone(),
+            &expected_addrs[..],
             Ok(()),
         )
         .await;
@@ -853,14 +805,15 @@ fn multiple_addrs_shrinking() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // Assume that the first listen addr fails to connect.
+        // Assume that the first attempt fails to connect.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_addr_1, &seed_addr_2, &seed_addr_3];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_addr_1,
+            &expected_addrs[..],
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -884,15 +837,15 @@ fn multiple_addrs_shrinking() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
 
-        // After updating the addresses, we should dial the first new address,
-        // seed_addr_4 in this case.
+        // After updating the addresses the dial attempt succeeds.
         info!("Waiting to receive dial request");
+        let expected_addrs = [&seed_addr_4, &seed_addr_5];
         expect_dial_request(
             &mut peer_mgr_reqs_rx,
             &mut peer_mgr_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
-            seed_addr_4,
+            &expected_addrs[..],
             Ok(()),
         )
         .await;

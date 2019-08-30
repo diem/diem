@@ -10,9 +10,12 @@
 //! eligible nodes, and the Discovery actor infroms it about updates to addresses of eligible
 //! nodes.
 //!
-//! When dialing a peer with a given list of addresses, we attempt each address
-//! in order with a capped exponential backoff delay until we eventually connect
-//! to the peer.
+//! When dialing a peer with a given list of addresses, we sample (with
+//! replacement) the next address, uniformly at random. We wait a capped
+//! exponential backoff delay before each dial attempt. We continue dial attempts
+//! until we eventually connect to the peer. The delay is also weighted so that
+//! it is shorter when we are connected to fewer peers.
+
 use crate::{
     common::NetworkPublicKeys,
     peer_manager::{PeerManagerError, PeerManagerNotification, PeerManagerRequestSender},
@@ -26,6 +29,7 @@ use futures::{
 };
 use logger::prelude::*;
 use parity_multiaddr::Multiaddr;
+use rand::{rngs::SmallRng, seq::SliceRandom};
 use std::{
     cmp::min,
     collections::HashMap,
@@ -63,6 +67,8 @@ pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
     dial_states: HashMap<PeerId, DialState<TBackoff>>,
     /// Backoff strategy.
     backoff_strategy: TBackoff,
+    /// Random number generator for sampling which address to dial next.
+    rng: SmallRng,
     /// Maximum delay b/w 2 consecutive attempts to connect with a disconnected peer.
     max_delay_ms: u64,
     /// A local counter incremented on receiving an incoming message. Printing this in debugging
@@ -94,9 +100,6 @@ enum DialResult {
 struct DialState<TBackoff> {
     /// The current state of this peer's backoff delay.
     backoff: TBackoff,
-    /// The index of the next address to dial. Index of an address in the peer's
-    /// `peer_addresses` entry.
-    addr_idx: usize,
 }
 
 impl<TTicker, TSubstream, TBackoff> ConnectivityManager<TTicker, TSubstream, TBackoff>
@@ -113,6 +116,7 @@ where
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
+        rng: SmallRng,
         max_delay_ms: u64,
     ) -> Self {
         Self {
@@ -126,6 +130,7 @@ where
             dial_queue: HashMap::new(),
             dial_states: HashMap::new(),
             backoff_strategy,
+            rng,
             max_delay_ms,
             event_id: 0,
         }
@@ -252,10 +257,11 @@ where
                 .entry(peer_id)
                 .or_insert_with(|| init_dial_state.clone());
 
-            // Choose the next addr to dial for this peer. Currently, we just
-            // round-robin the selection, i.e., try the sequence:
-            // addr[0], .., addr[len-1], addr[0], ..
-            let addr = dial_state.next_addr(&addrs).clone();
+            // Sample with replacement the next addr to dial for this peer.
+            let addr = addrs
+                .choose(&mut self.rng)
+                .expect("We already filter out empty addrs, so addrs cannot be empty here")
+                .clone();
 
             // Using the DialState's backoff strategy, compute the delay until
             // the next dial attempt for this peer.
@@ -325,10 +331,6 @@ where
         match req {
             ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
                 self.peer_addresses.insert(peer_id, addrs);
-                // Ensure that the next dial attempt starts from the first addr.
-                if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
-                    dial_state.reset_addr();
-                }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {
                 *self.eligible.write().unwrap() = nodes;
@@ -406,21 +408,7 @@ where
     TBackoff: Iterator<Item = Duration> + Clone,
 {
     fn new(backoff: TBackoff) -> Self {
-        Self {
-            backoff,
-            addr_idx: 0,
-        }
-    }
-
-    fn reset_addr(&mut self) {
-        self.addr_idx = 0;
-    }
-
-    fn next_addr<'a>(&mut self, addrs: &'a [Multiaddr]) -> &'a Multiaddr {
-        let addr_idx = self.addr_idx;
-        self.addr_idx = self.addr_idx.wrapping_add(1);
-
-        &addrs[addr_idx % addrs.len()]
+        Self { backoff }
     }
 
     fn next_backoff_delay(&mut self, max_delay: Duration) -> Duration {
