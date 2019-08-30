@@ -7,7 +7,6 @@ use std::{
     collections::HashSet,
     convert::TryInto,
     io::{Cursor, Read},
-    str::from_utf8,
 };
 use types::{account_address::ADDRESS_LENGTH, byte_array::ByteArray};
 
@@ -523,12 +522,12 @@ fn load_string_pool(
             if count != size {
                 return Err(BinaryError::Malformed);
             }
-            let s = match from_utf8(&buffer) {
+            let s = match String::from_utf8(buffer) {
                 Ok(bytes) => bytes,
                 Err(_) => return Err(BinaryError::Malformed),
             };
 
-            strings.push(String::from(s));
+            strings.push(s);
         }
     }
     Ok(())
