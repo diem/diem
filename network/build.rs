@@ -26,4 +26,6 @@ fn main() {
         },
     })
     .expect("protoc");
+
+    prost_build::compile_protos(&["src/proto/network.proto"], &["src/"]).unwrap();
 }
