@@ -5,6 +5,7 @@ pub mod effects;
 pub mod experiments;
 pub mod health;
 pub mod instance;
+pub mod log_prune;
 pub mod slack;
 pub mod suite;
 
