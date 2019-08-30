@@ -89,6 +89,19 @@ impl ModuleBuilder {
         self.module.string_pool.append(&mut strs);
     }
 
+    fn with_user_strings(&mut self) {
+        let mut strs = (0..self.table_size)
+            .map(|_| {
+                let len = self.gen.gen_range(1, MAX_STRING_SIZE);
+                (0..len)
+                    .map(|_| self.gen.gen::<char>())
+                    .collect::<String>()
+                    .into()
+            })
+            .collect();
+        self.module.user_strings.append(&mut strs);
+    }
+
     fn with_bytearrays(&mut self) {
         self.module.byte_array_pool = (0..self.table_size)
             .map(|_| {
@@ -359,6 +372,7 @@ impl ModuleBuilder {
         self.with_callee_modules();
         self.with_account_addresses();
         self.with_strings();
+        self.with_user_strings();
         self.with_bytearrays();
         self.with_structs();
         self.with_random_functions();
