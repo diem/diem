@@ -188,7 +188,7 @@ impl LibraDB {
     /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
     /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
     /// to `limit` events in the reverse order. Both cases are inclusive.
-    fn get_events_by_event_access_path(
+    fn get_events_by_query_path(
         &self,
         query_path: &AccessPath,
         start_seq_num: u64,
@@ -207,7 +207,7 @@ impl LibraDB {
             bail!("Nothing stored under address: {}", query_path.address);
         };
         let event_key = account_resource
-            .get_event_handle_by_query_path(query_path)?
+            .get_event_handle_by_query_path(&query_path.path)?
             .key();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
@@ -506,7 +506,7 @@ impl LibraDB {
                     limit,
                 } => {
                     let (events_with_proof, proof_of_latest_event) = self
-                        .get_events_by_event_access_path(
+                        .get_events_by_query_path(
                             &access_path,
                             start_event_seq_num,
                             ascending,
