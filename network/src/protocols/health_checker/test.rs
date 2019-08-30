@@ -63,14 +63,14 @@ async fn send_ping_expect_pong(substream: MemorySocket) {
         .await
         .unwrap();
     // Expect Pong.
-    let _: Pong = read_proto_prost(&mut substream).await.unwrap();
+    let _: Pong = read_proto(&mut substream).await.unwrap();
 }
 
 async fn expect_ping_send_ok(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
     let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
     // Read ping.
-    let _: Ping = read_proto_prost(&mut substream).await.unwrap();
+    let _: Ping = read_proto(&mut substream).await.unwrap();
     // Send Pong.
     substream
         .send(Pong::default().to_bytes().unwrap())
@@ -82,7 +82,7 @@ async fn expect_ping_send_notok(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
     let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
     // Read ping.
-    let _: Ping = read_proto_prost(&mut substream).await.unwrap();
+    let _: Ping = read_proto(&mut substream).await.unwrap();
     substream.close().await.unwrap();
 }
 
@@ -90,7 +90,7 @@ async fn expect_ping_timeout(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
     let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
     // Read ping.
-    let _: Ping = read_proto_prost(&mut substream).await.unwrap();
+    let _: Ping = read_proto(&mut substream).await.unwrap();
     // Sleep for ping timeout plus a little bit.
     std::thread::sleep(PING_TIMEOUT + Duration::from_millis(100));
 }

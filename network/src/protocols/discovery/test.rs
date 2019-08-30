@@ -11,9 +11,9 @@ use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
 
 fn gen_peer_info() -> PeerInfo {
-    let mut peer_info = PeerInfo::new();
-    peer_info.set_epoch(1);
-    peer_info.mut_addrs().push(
+    let mut peer_info = PeerInfo::default();
+    peer_info.epoch = 1;
+    peer_info.addrs.push(
         Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090")
             .unwrap()
             .as_ref()
@@ -23,17 +23,17 @@ fn gen_peer_info() -> PeerInfo {
 }
 
 fn gen_full_node_payload() -> FullNodePayload {
-    let mut payload = FullNodePayload::new();
-    payload.set_epoch(1);
-    payload.set_dns_seed_addr(b"example.com"[..].into());
+    let mut payload = FullNodePayload::default();
+    payload.epoch = 1;
+    payload.dns_seed_addr = b"example.com"[..].into();
     payload
 }
 
 fn get_addrs_from_note(note: &Note) -> Vec<Multiaddr> {
-    let signed_peer_info = note.get_signed_peer_info();
-    let peer_info: PeerInfo = protobuf::parse_from_bytes(signed_peer_info.get_peer_info()).unwrap();
+    let signed_peer_info = note.signed_peer_info.as_ref().unwrap();
+    let peer_info = PeerInfo::decode(&signed_peer_info.peer_info).unwrap();
     let mut addrs = vec![];
-    for addr in peer_info.get_addrs() {
+    for addr in peer_info.addrs {
         addrs.push(Multiaddr::try_from(addr.clone()).unwrap());
     }
     addrs
@@ -41,7 +41,7 @@ fn get_addrs_from_note(note: &Note) -> Vec<Multiaddr> {
 
 fn get_addrs_from_info(peer_info: &PeerInfo) -> Vec<Multiaddr> {
     peer_info
-        .get_addrs()
+        .addrs
         .iter()
         .map(|addr| Multiaddr::try_from(addr.clone()).unwrap())
         .collect()
@@ -190,21 +190,19 @@ fn inbound() {
             .unwrap()
             .insert(peer_id_other, pub_keys_other);
         let note_other = {
-            let mut peer_info = PeerInfo::new();
-            peer_info.set_addrs(
-                addrs_other
-                    .iter()
-                    .map(|addr| addr.as_ref().into())
-                    .collect(),
-            );
+            let mut peer_info = PeerInfo::default();
+            peer_info.addrs = addrs_other
+                .iter()
+                .map(|addr| addr.as_ref().into())
+                .collect();
             let full_node_payload = gen_full_node_payload();
             create_note(&signer_other, peer_id_other, peer_info, full_node_payload)
         };
-        let mut msg = DiscoveryMsg::new();
-        msg.mut_notes().push(note_other.clone());
-        msg.mut_notes().push(seed_note.clone());
+        let mut msg = DiscoveryMsg::default();
+        msg.notes.push(note_other.clone());
+        msg.notes.push(seed_note.clone());
         dialer_substream
-            .send(msg.write_to_bytes().unwrap().into())
+            .send(msg.to_bytes().unwrap())
             .await
             .unwrap();
 
@@ -241,8 +239,8 @@ fn inbound() {
         let mut dialer_substream =
             Framed::new(dialer_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
         // Compose new msg.
-        let mut msg = DiscoveryMsg::new();
-        msg.mut_notes().push(note_other);
+        let mut msg = DiscoveryMsg::default();
+        msg.notes.push(note_other);
         let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8098").unwrap()];
         {
             let seed_peer_info = create_peer_info(new_seed_addrs.clone());
@@ -252,9 +250,9 @@ fn inbound() {
                 seed_peer_info,
                 seed_peer_payload,
             );
-            msg.mut_notes().push(seed_note);
+            msg.notes.push(seed_note);
             dialer_substream
-                .send(msg.write_to_bytes().unwrap().into())
+                .send(msg.to_bytes().unwrap())
                 .await
                 .unwrap();
         }
@@ -340,9 +338,9 @@ fn outbound() {
         // Receive DiscoveryMsg from actor. The message should contain only a note for the
         // sending peer since it doesn't yet have the note for the seed peer.
         let msg = recv_msg(listener_substream).await.unwrap();
-        assert_eq!(1, msg.get_notes().len());
-        assert_eq!(Vec::from(peer_id), msg.get_notes()[0].get_peer_id());
-        assert_eq!(addrs, get_addrs_from_note(&msg.get_notes()[0]));
+        assert_eq!(1, msg.notes.len());
+        assert_eq!(Vec::from(peer_id), msg.notes[0].peer_id);
+        assert_eq!(addrs, get_addrs_from_note(&msg.notes[0]));
     };
 
     rt.block_on(f_peer_mgr.boxed().unit_error().compat())
@@ -409,10 +407,10 @@ fn addr_update_includes_seed_addrs() {
         let new_seed_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let new_seed_info = create_peer_info(new_seed_addrs.clone());
         let seed_note = create_note(&seed_signer, seed_peer_id, new_seed_info, seed_peer_payload);
-        let mut msg = DiscoveryMsg::new();
-        msg.mut_notes().push(seed_note.clone());
+        let mut msg = DiscoveryMsg::default();
+        msg.notes.push(seed_note.clone());
         dialer_substream
-            .send(msg.write_to_bytes().unwrap().into())
+            .send(msg.to_bytes().unwrap())
             .await
             .unwrap();
 

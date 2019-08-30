@@ -23,10 +23,10 @@ pub use self::{
         Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote, VoteData,
     },
     mempool::MempoolSyncMsg,
-    network::{
-        DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo,
+    network_prost::{
+        identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
+        PeerInfo, Ping, Pong, SignedFullNodePayload, SignedPeerInfo,
     },
-    network_prost::{identity_msg::Role as IdentityMsg_Role, IdentityMsg, Ping, Pong},
     state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
 pub use transaction::SignedTransaction;
