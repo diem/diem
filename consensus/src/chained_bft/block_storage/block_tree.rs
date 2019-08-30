@@ -18,7 +18,7 @@ use crate::{
 use canonical_serialization::CanonicalSerialize;
 use crypto::{hash::CryptoHash, HashValue};
 use logger::prelude::*;
-use mirai_annotations::checked_verify_eq;
+use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
@@ -193,6 +193,20 @@ where
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> Result<(), BlockTreeError> {
         let block_id = qc.certified_block_id();
         let qc = Arc::new(qc);
+
+        // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
+        // qc1 == qc2 || qc1.round != qc2.round
+        // The invariant is quadratic but can be maintained in linear time by the check
+        // below.
+        precondition!({
+            let qc_round = qc.certified_block_round();
+            self.id_to_quorum_cert.values().all(|x| {
+                (*(*x).ledger_info()).ledger_info().consensus_data_hash()
+                    == (*(*qc).ledger_info()).ledger_info().consensus_data_hash()
+                    || x.certified_block_round() != qc_round
+            })
+        });
+
         match self.try_get_block(&block_id) {
             Some(block) => {
                 if block.round() > self.highest_certified_block().round() {
