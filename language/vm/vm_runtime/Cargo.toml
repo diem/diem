@@ -27,9 +27,9 @@ vm_cache_map = { path = "vm_cache_map" }
 vm_runtime_types = { path = "vm_runtime_types" }
 
 [dependencies.prometheus]
-version  = "0.4.2"
+version  = "0.7.0"
 default-features = false
-features = ["push"]
+features = ["protobuf"]
 
 [dev-dependencies]
 compiler = { path = "../../compiler" }

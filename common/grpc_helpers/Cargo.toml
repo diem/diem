@@ -14,8 +14,3 @@ futures_01 = { version = "0.1.28", package = "futures" }
 failure = { package = "failure_ext", path = "../failure_ext" }
 logger = { path = "../logger" }
 metrics = { path = "../metrics" }
-
-[dependencies.prometheus]
-version  = "0.4.2"
-default-features = false
-features = ["push"]
