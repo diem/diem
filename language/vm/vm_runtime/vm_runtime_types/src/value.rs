@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::loaded_data::{struct_def::StructDef, types::Type};
+use crate::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    native_structs::{NativeStructType, NativeStructValue},
+};
+use failure::_core::cell::RefMut;
 use std::{
     cell::{Ref, RefCell},
     ops::Add,
@@ -38,6 +42,7 @@ pub enum Value {
     String(String),
     Struct(Vec<MutVal>),
     ByteArray(ByteArray),
+    Native(NativeStructValue),
 }
 
 impl Value {
@@ -56,6 +61,7 @@ impl Value {
                 .iter()
                 .fold(*STRUCT_SIZE, |acc, vl| acc.map2(vl.size(), Add::add)),
             Value::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
+            Value::Native(NativeStructValue::Vector(vals)) => vals.size(),
         }
     }
 
@@ -63,27 +69,39 @@ impl Value {
     /// tests.
     #[allow(non_snake_case)]
     #[doc(hidden)]
+    pub fn to_type_FOR_TESTING(&self) -> Type {
+        match self {
+            Value::Bool(_) => Type::Bool,
+            Value::Address(_) => Type::Address,
+            Value::U64(_) => Type::U64,
+            Value::String(_) => Type::String,
+            Value::ByteArray(_) => Type::ByteArray,
+            Value::Struct(_) => Type::Struct(self.to_struct_def_FOR_TESTING()),
+            Value::Native(_) => Type::Struct(self.to_struct_def_FOR_TESTING()),
+        }
+    }
+    /// Normal code should always know what type this value has. This is made available only for
+    /// tests.
+    #[allow(non_snake_case)]
+    #[doc(hidden)]
     pub fn to_struct_def_FOR_TESTING(&self) -> StructDef {
-        let values = match self {
-            Value::Struct(values) => values,
+        match self {
+            Value::Struct(values) => {
+                let fields = values
+                    .iter()
+                    .map(|mut_val| (&*mut_val.peek()).to_type_FOR_TESTING())
+                    .collect();
+                StructDef::new(fields)
+            }
+            Value::Native(v) => match v {
+                NativeStructValue::Vector(v) => StructDef::Native(NativeStructType::new_vec(
+                    v.get(0)
+                        .map(|v| (&*v.peek()).to_type_FOR_TESTING())
+                        .unwrap_or(Type::Bool),
+                )),
+            },
             _ => panic!("Value must be a struct {:?}", self),
-        };
-
-        let fields = values
-            .iter()
-            .map(|mut_val| {
-                let val = &*mut_val.peek();
-                match val {
-                    Value::Bool(_) => Type::Bool,
-                    Value::Address(_) => Type::Address,
-                    Value::U64(_) => Type::U64,
-                    Value::String(_) => Type::String,
-                    Value::ByteArray(_) => Type::ByteArray,
-                    Value::Struct(_) => Type::Struct(val.to_struct_def_FOR_TESTING()),
-                }
-            })
-            .collect();
-        StructDef::new(fields)
+        }
     }
 
     // Structural equality for Move values
@@ -217,11 +235,15 @@ impl MutVal {
         self.0.borrow()
     }
 
+    pub fn get_mut(&self) -> RefMut<Value> {
+        self.0.borrow_mut()
+    }
+
     pub fn new(v: Value) -> Self {
         MutVal(Rc::new(RefCell::new(v)))
     }
 
-    fn shallow_clone(&self) -> Self {
+    pub fn shallow_clone(&self) -> Self {
         MutVal(Rc::clone(&self.0))
     }
 
@@ -249,7 +271,7 @@ impl MutVal {
         MutVal::new(Value::ByteArray(v))
     }
 
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
         self.peek().size()
     }
 
@@ -412,16 +434,20 @@ impl RootAccessPath {
         }
     }
 
-    fn mark_dirty(&mut self) {
+    pub fn mark_dirty(&mut self) {
         self.status = GlobalDataStatus::DIRTY;
     }
 
-    fn mark_deleted(&mut self) {
+    pub fn mark_deleted(&mut self) {
         self.status = GlobalDataStatus::DELETED;
     }
 }
 
 impl GlobalRef {
+    pub fn new(root: Rc<RefCell<RootAccessPath>>, reference: MutVal) -> Self {
+        Self {root, reference}
+    }
+
     pub fn make_root(ap: AccessPath, reference: MutVal) -> Self {
         GlobalRef {
             root: Rc::new(RefCell::new(RootAccessPath::new(ap))),
@@ -436,6 +462,12 @@ impl GlobalRef {
             root: Rc::new(RefCell::new(root)),
             reference,
         }
+    }
+
+    pub fn get_root(&self) -> Rc<RefCell<RootAccessPath>> { self.root.clone() }
+
+    pub fn get_reference(&self) -> MutVal {
+        self.reference.shallow_clone()
     }
 
     fn new_ref(root: &GlobalRef, reference: MutVal) -> Self {

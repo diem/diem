@@ -5,12 +5,26 @@ module Vector {
   // Vector containing data of type Item
   native struct T<Element>;
 
+  // Create a new vector
+  native public new<Element>(): Self.T<Element>;
+
   // Return the length of the vector
   native public length<Element>(v: &Self.T<Element>): u64;
+
+  // Get the nth element in the vector, abort if out of bound.
+  native public get<Element>(v: &Self.T<Element>, idx: u64): &Element;
+
+  // Get the mutable reference to the nth element in the vector, abort if out of bound.
+  native public get_mut<Element>(v: &mut Self.T<Element>, idx: u64): &mut Element;
+
+  // Push element to the vector.
+  native public push<Element>(v: &mut Self.T<Element>, elem: Element);
+
+  // Pop an element from the vector. abort if the vector is empty.
+  native public pop<Element>(v: &mut Self.T<Element>): Element;
 
   // Return true if the vector has no elements
   public is_empty<Element>(v: &Self.T<Element>): bool {
     return Self.length<Element>(move(v)) == 0;
   }
-
 }

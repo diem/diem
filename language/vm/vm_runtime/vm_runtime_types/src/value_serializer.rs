@@ -3,6 +3,7 @@
 
 use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
+    native_structs::serializer::deserialize_native,
     value::{MutVal, Value},
 };
 use canonical_serialization::*;
@@ -24,100 +25,61 @@ impl Value {
     }
 }
 
-fn deserialize_struct(
+pub(crate) fn deserialize_value(
+    deserializer: &mut SimpleDeserializer,
+    ty: &Type,
+) -> VMRuntimeResult<Value> {
+    match ty {
+        Type::Bool => deserializer.decode_bool().map(Value::Bool),
+        Type::U64 => deserializer.decode_u64().map(Value::U64),
+        Type::String => {
+            if let Ok(bytes) = deserializer.decode_bytes() {
+                if let Ok(s) = String::from_utf8(bytes) {
+                    return Ok(Value::String(s));
+                }
+            }
+            return Err(VMRuntimeError {
+                loc: Location::new(),
+                err: VMErrorKind::InvalidData,
+            });
+        }
+        Type::ByteArray => deserializer
+            .decode_bytes()
+            .map(|bytes| Value::ByteArray(ByteArray::new(bytes))),
+        Type::Address => deserializer
+            .decode_bytes()
+            .and_then(AccountAddress::try_from)
+            .map(Value::Address),
+        Type::Struct(s_fields) => Ok(deserialize_struct(deserializer, s_fields)?),
+        Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
+            // Case TypeVariable is not possible as all type variable has to be materialized before
+            // serialization.
+            return Err(VMRuntimeError {
+                loc: Location::new(),
+                err: VMErrorKind::InvalidData,
+            });
+        }
+    }
+    .map_err(|_| VMRuntimeError {
+        loc: Location::new(),
+        err: VMErrorKind::InvalidData,
+    })
+}
+
+pub(crate) fn deserialize_struct(
     deserializer: &mut SimpleDeserializer,
     struct_def: &StructDef,
 ) -> VMRuntimeResult<Value> {
-    let mut s_vals: Vec<MutVal> = Vec::new();
-    for field_type in struct_def.field_definitions() {
-        match field_type {
-            Type::Bool => {
-                if let Ok(b) = deserializer.decode_bool() {
-                    s_vals.push(MutVal::new(Value::Bool(b)));
-                } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
-                }
+    match struct_def {
+        StructDef::Struct(s) => {
+            let mut s_vals: Vec<MutVal> = Vec::new();
+            for field_type in s.field_definitions() {
+                s_vals.push(MutVal::new(deserialize_value(deserializer, field_type)?));
             }
-            Type::U64 => {
-                if let Ok(val) = deserializer.decode_u64() {
-                    s_vals.push(MutVal::new(Value::U64(val)));
-                } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
-                }
-            }
-            Type::String => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(s) = String::from_utf8(bytes) {
-                        s_vals.push(MutVal::new(Value::String(s)));
-                        continue;
-                    }
-                }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
-            }
-            Type::ByteArray => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    s_vals.push(MutVal::new(Value::ByteArray(ByteArray::new(bytes))));
-                    continue;
-                }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
-            }
-            Type::Address => {
-                if let Ok(bytes) = deserializer.decode_bytes() {
-                    if let Ok(addr) = AccountAddress::try_from(bytes) {
-                        s_vals.push(MutVal::new(Value::Address(addr)));
-                        continue;
-                    }
-                }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
-            }
-            Type::Struct(s_fields) => {
-                if let Ok(s) = deserialize_struct(deserializer, s_fields) {
-                    s_vals.push(MutVal::new(s));
-                } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
-                }
-            }
-            Type::Reference(_) => {
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                })
-            }
-            Type::MutableReference(_) => {
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                })
-            }
-            Type::TypeVariable(_) => {
-                // This case is not possible as we disallow calls like borrow_global<Foo<Coin>>()
-                // for now.
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                });
-            }
+            Ok(Value::Struct(s_vals))
         }
+        StructDef::Native(ty) => Ok(Value::Native(deserialize_native(deserializer, ty)?)),
     }
-    Ok(Value::Struct(s_vals))
 }
 
 impl CanonicalSerialize for Value {
@@ -146,6 +108,9 @@ impl CanonicalSerialize for Value {
             }
             Value::ByteArray(bytearray) => {
                 serializer.encode_bytes(bytearray.as_bytes())?;
+            }
+            Value::Native(v) => {
+                serializer.encode_struct(v)?;
             }
         }
         Ok(())

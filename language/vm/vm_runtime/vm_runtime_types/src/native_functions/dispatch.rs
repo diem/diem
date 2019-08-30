@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{hash, primitive_helpers, signature, vector};
-use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
+use super::{hash, primitive_helpers, signature};
+use crate::{
+    native_structs::{dispatch::dispatch_native_struct, vector::NativeVector},
+    value::Local,
+};
 use std::collections::{HashMap, VecDeque};
 use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
@@ -148,18 +151,48 @@ lazy_static! {
             vec![ByteArray, ByteArray],
             vec![ByteArray]
         );
-        // Vector
-        add!(m, addr, "Vector", "length",
-            vector::native_length,
-            vec![Kind::All],
-            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
-            vec![U64]
-        );
         // Event
         add!(m, addr, "Event", "write_to_event_store",
             |_| { NativeReturnStatus::InvalidArguments },
             vec![ByteArray, U64, ByteArray],
             vec![]
+        );
+        // Vector
+        add!(m, addr, "Vector", "length",
+            NativeVector::native_length,
+            vec![Kind::All],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
+            vec![U64]
+        );
+        add!(m, addr, "Vector", "new",
+            NativeVector::native_new,
+            vec![Kind::All],
+            vec![],
+            vec![tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])]
+        );
+        add!(m, addr, "Vector", "get",
+            NativeVector::native_get,
+            vec![Kind::All],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)]))), U64],
+            vec![Reference(Box::new(SignatureToken::TypeParameter(0)))]
+        );
+        add!(m, addr, "Vector", "get_mut",
+            NativeVector::native_get,
+            vec![Kind::All],
+            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)]))), U64],
+            vec![MutableReference(Box::new(SignatureToken::TypeParameter(0)))]
+        );
+        add!(m, addr, "Vector", "push",
+            NativeVector::native_push,
+            vec![Kind::All],
+            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)]))), SignatureToken::TypeParameter(0)],
+            vec![]
+        );
+        add!(m, addr, "Vector", "pop",
+            NativeVector::native_pop,
+            vec![Kind::All],
+            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
+            vec![SignatureToken::TypeParameter(0)]
         );
         m
     };
