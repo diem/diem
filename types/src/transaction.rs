@@ -661,8 +661,8 @@ impl CanonicalDeserialize for SignedTransaction {
 
         Ok(SignedTransaction::new(
             raw_txn,
-            Ed25519PublicKey::try_from(&public_key_bytes[..]).unwrap(),
-            Ed25519Signature::try_from(&signature_bytes[..]).unwrap(),
+            Ed25519PublicKey::try_from(&public_key_bytes[..])?,
+            Ed25519Signature::try_from(&signature_bytes[..])?,
         ))
     }
 }
