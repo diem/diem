@@ -170,6 +170,7 @@ impl CFG {
                 // A local is available for a block if it is available in every
                 // parent's outgoing locals
                 let basic_block = self.basic_blocks.get(block_id);
+                // Every block ID in the sequence should be valid
                 assume!(basic_block.is_some());
                 if basic_block.unwrap().locals_out[&local_index].1 == BorrowState::Unavailable {
                     availability = BorrowState::Unavailable;
@@ -258,10 +259,11 @@ impl CFG {
             // Basic blocks are indexed in increasing order
             assume!(block.is_some());
             let block = block.unwrap();
-            if block.instructions.is_empty() {
-                unreachable!("Error: block created with no instructions");
-            }
-            verify!(!block.instructions.is_empty());
+            // All basic blocks should have instructions filled in at this point
+            checked_assume!(
+                !block.instructions.is_empty(),
+                "Error: block created with no instructions",
+            );
             let last_instruction_index = block.instructions.len() - 1;
             if cfg_copy.num_children(block_id) == 2 {
                 let child_id: BlockIDSize = cfg_copy.get_children_ids(block_id)[1];

@@ -5,10 +5,11 @@ use crate::{
     abstract_state::{AbstractState, AbstractValue, BorrowState},
     common::VMError,
     state_local_availability_is, state_local_exists, state_local_kind_is, state_local_place,
-    state_local_set, state_local_take, state_local_take_borrow, state_never, state_stack_has,
-    state_stack_has_polymorphic_eq, state_stack_has_struct, state_stack_local_polymorphic_eq,
-    state_stack_pack_struct, state_stack_pop, state_stack_push, state_stack_push_register,
-    state_stack_satisfies_struct_signature, state_stack_unpack_struct,
+    state_local_set, state_local_take, state_local_take_borrow, state_never,
+    state_stack_create_struct, state_stack_has, state_stack_has_polymorphic_eq,
+    state_stack_has_struct, state_stack_local_polymorphic_eq, state_stack_pop, state_stack_push,
+    state_stack_push_register, state_stack_satisfies_struct_signature, state_stack_struct_popn,
+    state_stack_unpack_struct, state_struct_is_resource,
     transitions::*,
 };
 use vm::file_format::{Bytecode, Kind, SignatureToken};
@@ -335,25 +336,95 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 SignatureToken::U64,
             ))],
         },
+        Bytecode::GetTxnSenderAddress => Summary {
+            preconditions: vec![],
+            effects: vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::Address,
+            ))],
+        },
+        Bytecode::GetTxnPublicKey => Summary {
+            preconditions: vec![],
+            effects: vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::ByteArray,
+            ))],
+        },
+        Bytecode::CreateAccount => Summary {
+            preconditions: vec![state_stack_has!(
+                0,
+                Some(AbstractValue::new_primitive(SignatureToken::Address))
+            )],
+            effects: vec![state_stack_pop!()],
+        },
+        Bytecode::Pack(i, _) => Summary {
+            preconditions: vec![state_stack_satisfies_struct_signature!(i)],
+            effects: vec![
+                state_stack_struct_popn!(i),
+                state_stack_create_struct!(i),
+                state_stack_push_register!(),
+            ],
+        },
+        Bytecode::Unpack(i, _) => Summary {
+            preconditions: vec![state_stack_has_struct!(i)],
+            effects: vec![state_stack_pop!(), state_stack_unpack_struct!(i)],
+        },
+        Bytecode::Exists(i, _) => Summary {
+            // The bool is represented abstractly so concrete execution may differ
+            preconditions: vec![
+                state_struct_is_resource!(i),
+                state_stack_has!(
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::Address))
+                ),
+            ],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
+            ],
+        },
+        Bytecode::MoveFrom(i, _) => Summary {
+            preconditions: vec![
+                state_struct_is_resource!(i),
+                state_stack_has!(
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::Address))
+                ),
+            ],
+            effects: vec![state_stack_create_struct!(i), state_stack_push_register!()],
+        },
+        Bytecode::MoveToSender(i, _) => Summary {
+            preconditions: vec![state_struct_is_resource!(i), state_stack_has_struct!(i)],
+            effects: vec![state_stack_pop!()],
+        },
+        // Control flow instructions are called manually and thus have
+        // `state_never!()` as their precondition
         Bytecode::Branch(_) => Summary {
             preconditions: vec![state_never!()],
             effects: vec![],
         },
         Bytecode::BrTrue(_) => Summary {
-            preconditions: vec![state_never!()],
+            preconditions: vec![
+                state_never!(),
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
+            ],
             effects: vec![state_stack_pop!()],
         },
         Bytecode::BrFalse(_) => Summary {
-            preconditions: vec![state_never!()],
+            preconditions: vec![
+                state_never!(),
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
+            ],
             effects: vec![state_stack_pop!()],
         },
-        Bytecode::Pack(i, _) => Summary {
-            preconditions: vec![state_stack_satisfies_struct_signature!(i)],
-            effects: vec![state_stack_pack_struct!(i), state_stack_push_register!()],
+        Bytecode::Ret => Summary {
+            preconditions: vec![state_never!()],
+            effects: vec![],
         },
-        Bytecode::Unpack(i, _) => Summary {
-            preconditions: vec![state_stack_has_struct!(i)],
-            effects: vec![state_stack_pop!(), state_stack_unpack_struct!(i)],
+        Bytecode::Abort => Summary {
+            preconditions: vec![
+                state_never!(),
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+            ],
+            effects: vec![state_stack_pop!()],
         },
         _ => Summary {
             preconditions: vec![state_never!()],

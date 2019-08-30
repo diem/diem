@@ -143,13 +143,47 @@ impl BytecodeGenerator {
                 StackEffect::Add,
                 BytecodeType::NoArg(Bytecode::GetTxnSequenceNumber),
             ),
-            (StackEffect::Nop, BytecodeType::U16(Bytecode::Branch)),
-            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrTrue)),
-            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrFalse)),
+            (
+                StackEffect::Add,
+                BytecodeType::NoArg(Bytecode::GetTxnSenderAddress),
+            ),
+            (
+                StackEffect::Add,
+                BytecodeType::NoArg(Bytecode::GetTxnPublicKey),
+            ),
+            (
+                StackEffect::Sub,
+                BytecodeType::NoArg(Bytecode::CreateAccount),
+            ),
             (
                 StackEffect::Sub,
                 BytecodeType::StructAndLocalIndex(Bytecode::Pack),
             ),
+            (
+                StackEffect::Add,
+                BytecodeType::StructAndLocalIndex(Bytecode::Unpack),
+            ),
+            (
+                StackEffect::Nop,
+                BytecodeType::StructAndLocalIndex(Bytecode::Exists),
+            ),
+            (
+                StackEffect::Add,
+                BytecodeType::StructAndLocalIndex(Bytecode::MoveFrom),
+            ),
+            (
+                StackEffect::Sub,
+                BytecodeType::StructAndLocalIndex(Bytecode::MoveToSender),
+            ),
+            (
+                StackEffect::Sub,
+                BytecodeType::StructAndLocalIndex(Bytecode::Unpack),
+            ),
+            (StackEffect::Nop, BytecodeType::U16(Bytecode::Branch)),
+            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrTrue)),
+            (StackEffect::Sub, BytecodeType::U16(Bytecode::BrFalse)),
+            (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Abort)),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::Ret)),
         ];
         let generator = match seed {
             Some(seed) => StdRng::from_seed(seed),
@@ -289,12 +323,14 @@ impl BytecodeGenerator {
     /// Transition an abstract state, `state` to the next state by applying all of the effects
     /// of a particular bytecode instruction, `instruction`.
     fn abstract_step(&self, state: AbstractState, instruction: Bytecode) -> AbstractState {
+        // TODO: Handle error case in way that reflects VM behavior
         summaries::instruction_summary(instruction)
             .effects
             .iter()
             .fold(state, |acc, effect| {
-                effect(&acc)
-                    .unwrap_or_else(|err| panic!("Error applying instruction effect: {}", err))
+                effect(&acc).unwrap_or_else(|err| {
+                    unreachable!("Error applying instruction effect: {}", err)
+                })
             })
     }
 

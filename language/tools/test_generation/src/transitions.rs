@@ -151,9 +151,26 @@ pub fn stack_satisfies_struct_signature(
     satisfied
 }
 
+/// Pop the number of stack values required to construct the struct
+/// at `struct_index`
+pub fn stack_struct_popn(
+    state: &AbstractState,
+    struct_index: StructDefinitionIndex,
+) -> Result<AbstractState, VMError> {
+    let state_copy = state.clone();
+    let mut state = state.clone();
+    let struct_def = state_copy.module.struct_def_at(struct_index);
+    let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
+    let number_of_pops = struct_def_view.fields().into_iter().len();
+    for _ in 0..number_of_pops {
+        state = stack_pop(&state)?;
+    }
+    Ok(state)
+}
+
 /// Construct a stack from abstract values on the stack
 /// The stack is stored in the register after creation
-pub fn stack_pack_struct(
+pub fn stack_create_struct(
     state: &AbstractState,
     struct_index: StructDefinitionIndex,
 ) -> Result<AbstractState, VMError> {
@@ -167,10 +184,6 @@ pub fn stack_pack_struct(
         .flatten()
         .map(|field| field.type_signature().token().as_inner().clone())
         .collect();
-    let number_of_pops = tokens.len();
-    for _ in 0..number_of_pops {
-        state = stack_pop(&state)?;
-    }
     // The logic for determine the struct kind was sourced from `SignatureTokenView`
     // TODO: This will need to be updated when struct type actuals are handled
     let struct_kind = match struct_def_view.is_nominal_resource() {
@@ -208,6 +221,12 @@ pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionInd
         }
     }
     false
+}
+
+/// Determine if a struct at the given index is a resource
+pub fn struct_is_resource(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
+    let struct_def = state.module.struct_def_at(struct_index);
+    StructDefinitionView::new(&state.module, struct_def).is_nominal_resource()
 }
 
 /// Push the fields of a struct as `AbstractValue`s to the stack
@@ -360,12 +379,21 @@ macro_rules! state_stack_satisfies_struct_signature {
     };
 }
 
+/// Wrapper for enclosing the arguments of `stack_struct_popn` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_stack_struct_popn {
+    ($e: expr) => {
+        Box::new(move |state| stack_struct_popn(state, $e))
+    };
+}
+
 /// Wrapper for enclosing the arguments of `stack_pack_struct` so that only the
 /// `state` needs to be given.
 #[macro_export]
-macro_rules! state_stack_pack_struct {
+macro_rules! state_stack_create_struct {
     ($e: expr) => {
-        Box::new(move |state| stack_pack_struct(state, $e))
+        Box::new(move |state| stack_create_struct(state, $e))
     };
 }
 
@@ -384,6 +412,15 @@ macro_rules! state_stack_has_struct {
 macro_rules! state_stack_unpack_struct {
     ($e: expr) => {
         Box::new(move |state| stack_unpack_struct(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `struct_is_resource` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_struct_is_resource {
+    ($e: expr) => {
+        Box::new(move |state| struct_is_resource(state, $e))
     };
 }
 
