@@ -5,7 +5,6 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
 use failure::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -35,24 +34,6 @@ impl fmt::Debug for Module {
         f.debug_struct("Module")
             .field("code", &String::from_utf8_lossy(&self.code))
             .finish()
-    }
-}
-
-impl FromProto for Module {
-    type ProtoType = crate::proto::transaction::Module;
-
-    fn from_proto(proto_module: Self::ProtoType) -> Result<Self> {
-        Ok(Module::new(proto_module.get_code().to_vec()))
-    }
-}
-
-impl IntoProto for Module {
-    type ProtoType = crate::proto::transaction::Module;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto_module = Self::ProtoType::new();
-        proto_module.set_code(self.code);
-        proto_module
     }
 }
 

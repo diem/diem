@@ -6,14 +6,8 @@ use canonical_serialization::{
     CanonicalDeserializer, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
 };
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
-    #[test]
-    fn write_set_roundtrip(write_set in any::<WriteSet>()) {
-        assert_protobuf_encode_decode(&write_set);
-    }
-
     #[test]
     fn write_set_roundtrip_canonical_serialization(write_set in any::<WriteSet>()) {
         let mut serializer = SimpleSerializer::<Vec<u8>>::new();

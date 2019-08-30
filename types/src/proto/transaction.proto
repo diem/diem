@@ -11,19 +11,6 @@ import "proof.proto";
 import "transaction_info.proto";
 import "google/protobuf/wrappers.proto";
 
-// The code for the transaction to execute
-message Program {
-    bytes code = 1;
-    repeated TransactionArgument arguments = 2;
-    repeated bytes modules = 3;
-}
-
-// The code for the transaction to execute
-message Script {
-    bytes code = 1;
-    repeated TransactionArgument arguments = 2;
-}
-
 // An argument to the transaction if the transaction takes arguments
 message TransactionArgument {
     enum ArgType {
@@ -32,13 +19,6 @@ message TransactionArgument {
         STRING = 2;
         BYTEARRAY = 3;
     }
-    ArgType type = 1;
-    bytes data = 2;
-}
-
-// A Move Module to publish
-message Module {
-    bytes code = 1;
 }
 
 // A generic structure that represents signed RawTransaction
@@ -70,30 +50,6 @@ message SignedTransactionsBlock {
     bytes validator_public_key = 2;
     // Signature of the validator that created this block
     bytes validator_signature = 3;
-}
-
-// Set of WriteOps to save to storage.
-message WriteSet {
-    // Set of WriteOp for storage update.
-    repeated WriteOp write_set = 1;
-}
-
-// Write Operation on underlying storage.
-message WriteOp {
-    // AccessPath of the write set.
-    AccessPath access_path = 1;
-    // The value of the write op. Empty if `type` is Delete.
-    bytes value = 2;
-    // WriteOp type.
-    WriteOpType type = 3;
-}
-
-// Type of write operation
-enum WriteOpType {
-    // The WriteOp is to create/update the field from storage.
-    Write = 0;
-    // The WriteOp is to delete the field from storage.
-    Delete = 1;
 }
 
 // Account state as a whole.

@@ -9,7 +9,6 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
 use failure::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -147,73 +146,6 @@ impl WriteSetMut {
     pub fn freeze(self) -> Result<WriteSet> {
         // TODO: add structural validation
         Ok(WriteSet(self))
-    }
-}
-
-impl FromProto for WriteSet {
-    type ProtoType = crate::proto::transaction::WriteSet;
-
-    fn from_proto(mut write_set: Self::ProtoType) -> Result<Self> {
-        use crate::proto::transaction::WriteOpType;
-
-        let write_set = write_set
-            .take_write_set()
-            .into_iter()
-            .map(|mut write_op| {
-                // The protobuf WriteOp is equivalent to (AccessPath, WriteOp) in Rust, so
-                // From/IntoProto can't be implemented for WriteOp and instead the conversion must
-                // be done here.
-                let access_path = AccessPath::from_proto(write_op.take_access_path())?;
-                let write_op = match write_op.get_field_type() {
-                    WriteOpType::Write => WriteOp::Value(write_op.take_value()),
-                    WriteOpType::Delete => {
-                        ensure!(
-                            write_op.get_value().is_empty(),
-                            "WriteOp with access path {:?} has WriteOpType::Delete with value",
-                            access_path,
-                        );
-                        WriteOp::Deletion
-                    }
-                };
-                Ok((access_path, write_op))
-            })
-            .collect::<Result<_>>()?;
-        let write_set_mut = WriteSetMut::new(write_set);
-        write_set_mut.freeze()
-    }
-}
-
-impl IntoProto for WriteSet {
-    type ProtoType = crate::proto::transaction::WriteSet;
-
-    fn into_proto(self) -> Self::ProtoType {
-        use crate::proto::transaction::{WriteOp as ProtoWriteOp, WriteOpType};
-
-        let proto_write_ops = self
-            .0
-            .write_set
-            .into_iter()
-            .map(|(access_path, write_op)| {
-                let mut proto_write_op = ProtoWriteOp::new();
-                proto_write_op.set_access_path(access_path.into_proto());
-                match write_op {
-                    WriteOp::Value(value) => {
-                        proto_write_op.set_value(value);
-                        proto_write_op.set_field_type(WriteOpType::Write);
-                    }
-                    WriteOp::Deletion => {
-                        // This should be a no-op but this code conveys the intent better.
-                        proto_write_op.set_value(vec![]);
-                        proto_write_op.set_field_type(WriteOpType::Delete);
-                    }
-                };
-                proto_write_op
-            })
-            .collect();
-
-        let mut proto_write_set = Self::ProtoType::new();
-        proto_write_set.set_write_set(proto_write_ops);
-        proto_write_set
     }
 }
 
