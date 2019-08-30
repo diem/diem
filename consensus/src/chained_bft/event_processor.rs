@@ -611,13 +611,10 @@ impl<T: Payload> EventProcessor<T> {
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
-        let vote_info = self
-            .safety_rules
-            .voting_rule(Arc::clone(&block))
-            .map_err(|e| {
-                debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
-                e
-            })?;
+        let vote_info = self.safety_rules.voting_rule(&block).map_err(|e| {
+            debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
+            e
+        })?;
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone())
             .map_err(|e| {
@@ -804,7 +801,7 @@ impl<T: Payload> EventProcessor<T> {
         while (blocks.len() as u64) < request.num_blocks {
             if let Some(block) = self.block_store.get_block(id) {
                 id = block.parent_id();
-                blocks.push(Block::clone(block.as_ref()));
+                blocks.push(Block::clone(&block));
             } else {
                 status = BlockRetrievalStatus::NOT_ENOUGH_BLOCKS;
                 break;

@@ -20,7 +20,7 @@ use types::{
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct StateComputeResult {
     pub executed_state: ExecutedState,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
@@ -55,7 +55,7 @@ pub trait TxnManager: Send + Sync {
 
 /// Executed state derived from StateComputeResult that is maintained with every proposed block.
 /// state_id encodes both the information of the version and the validators.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutedState {
     /// Tracks the execution state of a proposed block
     pub state_id: HashValue,

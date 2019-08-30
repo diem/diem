@@ -55,7 +55,7 @@ fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize
 fn test_block_store_create_block() {
     let block_store = build_empty_tree();
     let genesis = block_store.root();
-    let a1 = block_store.create_block(Arc::clone(&genesis), vec![1], 1, 1);
+    let a1 = block_store.create_block(&genesis, vec![1], 1, 1);
     assert_eq!(a1.parent_id(), genesis.id());
     assert_eq!(a1.round(), 1);
     assert_eq!(a1.height(), 1);
@@ -84,7 +84,7 @@ fn test_block_store_create_block() {
     );
     block_store.insert_vote_and_qc(vote_msg, 1);
 
-    let b1 = block_store.create_block(Arc::clone(&a1_ref), vec![2], 2, 2);
+    let b1 = block_store.create_block(&a1_ref, vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
     assert_eq!(b1.round(), 2);
     assert_eq!(b1.height(), 2);

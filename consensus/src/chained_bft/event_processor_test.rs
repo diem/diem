@@ -460,7 +460,7 @@ fn process_new_round_msg_test() {
     let genesis = non_proposer.block_store.root();
     let block_0 = non_proposer
         .block_store
-        .create_block(genesis, vec![1], 1, 1);
+        .create_block(&genesis, vec![1], 1, 1);
     let block_0_id = block_0.id();
     block_on(
         non_proposer

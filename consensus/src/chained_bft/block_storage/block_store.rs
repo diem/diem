@@ -5,7 +5,11 @@ use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader, InsertError, VoteReceptionResult},
         common::{Payload, Round},
-        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
+        consensus_types::{
+            block::{Block, ExecutedBlock},
+            quorum_cert::QuorumCert,
+            vote_msg::VoteMsg,
+        },
         persistent_storage::PersistentStorage,
     },
     state_replication::StateComputer,
@@ -97,7 +101,17 @@ impl<T: Payload> BlockStore<T> {
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
-        let mut tree = BlockTree::new(root.0, root.1, root.2, max_pruned_blocks_in_mem);
+        let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
+
+        // root_compute_res will not used anywhere so use default value to simplify code.
+        let root_compute_res = StateComputeResult::default();
+        let executed_root_block = ExecutedBlock::new(root_block, root_compute_res);
+        let mut tree = BlockTree::new(
+            executed_root_block,
+            root_qc,
+            root_li,
+            max_pruned_blocks_in_mem,
+        );
         let quorum_certs = quorum_certs
             .into_iter()
             .map(|qc| (qc.certified_block_id(), qc))
@@ -116,7 +130,7 @@ impl<T: Payload> BlockStore<T> {
                     block.id()
                 );
             }
-            tree.insert_block(block, compute_res)
+            tree.insert_block(ExecutedBlock::new(block, compute_res))
                 .expect("Block insertion failed while build the tree");
         }
         quorum_certs.into_iter().for_each(|(_, qc)| {
@@ -164,7 +178,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         block: Block<T>,
     ) -> Result<Arc<Block<T>>, InsertError> {
-        if let Some(existing_block) = self.inner.read().unwrap().get_block(block.id()) {
+        if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
         let parent_id = match self.verify_and_get_parent_id(&block) {
@@ -192,7 +206,8 @@ impl<T: Payload> BlockStore<T> {
         self.inner
             .write()
             .unwrap()
-            .insert_block(block, compute_res)
+            .insert_block(ExecutedBlock::new(block, compute_res))
+            .map(|eb| Arc::clone(eb.block()))
             .map_err(|e| e.into())
     }
 
@@ -372,7 +387,7 @@ impl<T: Payload> BlockStore<T> {
             return Err(InsertError::ParentNotCertified);
         }
 
-        let parent = match self.inner.read().unwrap().get_block(block.parent_id()) {
+        let parent = match self.get_block(block.parent_id()) {
             None => {
                 return Err(InsertError::MissingParentBlock(block.parent_id()));
             }
@@ -397,26 +412,30 @@ impl<T: Payload> BlockReader for BlockStore<T> {
     type Payload = T;
 
     fn block_exists(&self, block_id: HashValue) -> bool {
-        self.inner.read().unwrap().block_exists(block_id)
+        self.inner.read().unwrap().block_exists(&block_id)
     }
 
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>> {
-        self.inner.read().unwrap().get_block(block_id)
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<T>>> {
+        self.inner
+            .read()
+            .unwrap()
+            .try_get_block(&block_id)
+            .map(|eb| Arc::clone(eb.block()))
     }
 
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {
-        self.inner.read().unwrap().get_compute_result(block_id)
+        self.inner.read().unwrap().get_compute_result(&block_id)
     }
 
-    fn root(&self) -> Arc<Block<Self::Payload>> {
-        self.inner.read().unwrap().root()
+    fn root(&self) -> Arc<Block<T>> {
+        Arc::clone(self.inner.read().unwrap().root().block())
     }
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>> {
         self.inner
             .read()
             .unwrap()
-            .get_quorum_cert_for_block(block_id)
+            .get_quorum_cert_for_block(&block_id)
     }
 
     fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
@@ -425,7 +444,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn create_block(
         &self,
-        parent: Arc<Block<Self::Payload>>,
+        parent: &Block<Self::Payload>,
         payload: Self::Payload,
         round: Round,
         timestamp_usecs: u64,
@@ -439,7 +458,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
             .as_ref()
             .clone();
         Block::make_block(
-            parent.as_ref(),
+            parent,
             payload,
             round,
             timestamp_usecs,
@@ -449,7 +468,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
     }
 
     fn highest_certified_block(&self) -> Arc<Block<Self::Payload>> {
-        self.inner.read().unwrap().highest_certified_block()
+        Arc::clone(self.inner.read().unwrap().highest_certified_block().block())
     }
 
     fn highest_quorum_cert(&self) -> Arc<QuorumCert> {

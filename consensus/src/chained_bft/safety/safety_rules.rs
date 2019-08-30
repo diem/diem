@@ -11,10 +11,7 @@ use crate::{
 
 use crypto::HashValue;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{Display, Formatter},
-    sync::Arc,
-};
+use std::fmt::{Display, Formatter};
 
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
@@ -241,7 +238,7 @@ impl SafetyRules {
     /// committed block, might panic otherwise.
     pub fn voting_rule<T: Payload>(
         &mut self,
-        proposed_block: Arc<Block<T>>,
+        proposed_block: &Block<T>,
     ) -> Result<VoteInfo, ProposalReject> {
         if proposed_block.round() <= self.state.last_vote_round() {
             return Err(ProposalReject::OldProposal {

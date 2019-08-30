@@ -226,7 +226,7 @@ impl<T: Payload> ProposalGenerator<T> {
             .await
         {
             Ok(txns) => Ok(block_store.create_block(
-                hqc_block,
+                &hqc_block,
                 txns,
                 round,
                 block_timestamp.as_micros() as u64,
