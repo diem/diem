@@ -35,7 +35,7 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use proptest_helpers::Index;
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
 
 prop_compose! {
     #[inline]
@@ -543,25 +543,8 @@ impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
     type Strategy = BoxedStrategy<Self>;
 }
 
-#[allow(clippy::implicit_hasher)]
-pub fn renumber_events(
-    events: &[ContractEvent],
-    next_seq_num_by_access_path: &mut HashMap<EventKey, u64>,
-) -> Vec<ContractEvent> {
-    events
-        .iter()
-        .map(|e| {
-            let next_seq_num = next_seq_num_by_access_path
-                .entry(e.key().clone())
-                .or_insert(0);
-            *next_seq_num += 1;
-            ContractEvent::new(*e.key(), *next_seq_num - 1, e.event_data().to_vec())
-        })
-        .collect::<Vec<_>>()
-}
-
 #[derive(Arbitrary, Debug)]
-struct ContractEventGen {
+pub struct ContractEventGen {
     payload: Vec<u8>,
     use_sent_key: bool,
 }
