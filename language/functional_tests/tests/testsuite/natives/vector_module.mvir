@@ -1,0 +1,28 @@
+module M {
+    import 0x0.LibraCoin;
+    import 0x0.Vector;
+    resource Coins { f: Vector.T<LibraCoin.T> }
+
+    public new() {
+        let coin_vec: Vector.T<LibraCoin.T>;
+        let coins: Self.Coins;
+        coin_vec = Vector.empty<LibraCoin.T>();
+        coins = Coins { f: move(coin_vec)};
+
+        move_to_sender<Coins>(move(coins));
+        return;
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+  let coin: LibraCoin.T;
+
+  M.new();
+
+  return;
+}
