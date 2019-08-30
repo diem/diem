@@ -6,6 +6,7 @@ use cluster_test::{
     effects::{Effect, Reboot},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
+    log_prune::LogPruner,
     slack::SlackClient,
     suite::ExperimentSuite,
 };
@@ -26,6 +27,13 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 pub fn main() {
     let matches = arg_matches();
+
+    if matches.is_present(ARG_PRUNE) {
+        let util = ClusterUtil::setup(&matches);
+        util.prune_logs();
+        return;
+    }
+
     let mut runner = ClusterTestRunner::setup(&matches);
 
     if matches.is_present(ARG_RUN) {
@@ -44,6 +52,11 @@ pub fn main() {
     }
 }
 
+struct ClusterUtil {
+    cluster: Cluster,
+    aws: Aws,
+}
+
 struct ClusterTestRunner {
     logs: LogTail,
     cluster: Cluster,
@@ -53,8 +66,7 @@ struct ClusterTestRunner {
     slack: Option<SlackClient>,
 }
 
-impl ClusterTestRunner {
-    /// Discovers cluster, setup log, etc
+impl ClusterUtil {
     pub fn setup(matches: &ArgMatches) -> Self {
         let workplace = matches
             .value_of(ARG_WORKPLACE)
@@ -67,6 +79,21 @@ impl ClusterTestRunner {
             Some(peers) => cluster.sub_cluster(peers),
         };
         println!("Discovered {} peers", cluster.instances().len());
+        Self { cluster, aws }
+    }
+
+    pub fn prune_logs(&self) {
+        let log_prune = LogPruner::new(self.aws.clone());
+        log_prune.prune_logs();
+    }
+}
+
+impl ClusterTestRunner {
+    /// Discovers cluster, setup log, etc
+    pub fn setup(matches: &ArgMatches) -> Self {
+        let util = ClusterUtil::setup(matches);
+        let cluster = util.cluster;
+        let aws = util.aws;
         let log_tail_started = Instant::now();
         let logs = DebugPortLogThread::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
@@ -353,6 +380,7 @@ impl ClusterTestRunner {
 }
 
 const ARG_WORKPLACE: &str = "workplace";
+const ARG_PEERS: &str = "peers";
 // Actions:
 const ARG_TAIL_LOGS: &str = "tail-logs";
 const ARG_HEALTH_CHECK: &str = "health-check";
@@ -360,7 +388,7 @@ const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
 const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
 const ARG_REBOOT: &str = "reboot";
-const ARG_PEERS: &str = "peers";
+const ARG_PRUNE: &str = "prune_logs";
 
 fn arg_matches() -> ArgMatches<'static> {
     // Parameters
@@ -373,13 +401,15 @@ fn arg_matches() -> ArgMatches<'static> {
         .long("--peers")
         .short("-p")
         .takes_value(true)
-        .use_delimiter(true);
+        .use_delimiter(true)
+        .conflicts_with(ARG_PRUNE);
     // Actions
     let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
     let run = Arg::with_name(ARG_RUN).long("--run");
     let run_once = Arg::with_name(ARG_RUN_ONCE).long("--run-once");
     let tail_logs = Arg::with_name(ARG_TAIL_LOGS).long("--tail-logs");
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
+    let prune_logs = Arg::with_name(ARG_PRUNE).long("--prune-logs");
     let reboot = Arg::with_name(ARG_REBOOT)
         .long("--reboot")
         .takes_value(true)
@@ -393,6 +423,7 @@ fn arg_matches() -> ArgMatches<'static> {
             ARG_HEALTH_CHECK,
             ARG_WIPE_ALL_DB,
             ARG_REBOOT,
+            ARG_PRUNE,
         ])
         .required(true);
     App::new("cluster_test")
@@ -409,6 +440,7 @@ fn arg_matches() -> ArgMatches<'static> {
             health_check,
             wipe_all_db,
             reboot,
+            prune_logs,
         ])
         .get_matches()
 }
