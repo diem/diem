@@ -40,17 +40,17 @@ pub enum NeedFetchResult {
 /// and is thread-safe.
 ///
 /// Example tree block structure based on parent links.
-///                         | -> A3
-/// Genesis -> B0 -> B1 -> B2 -> B3
-///             | -> C1 -> C2
-///                         | -> D3
+///                         ╭--> A3
+/// Genesis--> B0--> B1--> B2--> B3
+///             ╰--> C1--> C2
+///                         ╰--> D3
 ///
 /// Example corresponding tree block structure for the QC links (must follow QC constraints).
-///                         | -> A3
-/// Genesis -> B0 -> B1 -> B2 -> B3
-///             | -> C1
-///             | -------> C2
-///             | -------------> D3
+///                         ╭--> A3
+/// Genesis--> B0--> B1--> B2--> B3
+///             ├--> C1
+///             ├--------> C2
+///             ╰--------------> D3
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
     validator_signer: ValidatorSigner,
@@ -282,12 +282,12 @@ impl<T: Payload> BlockStore<T> {
     /// Prune the tree up to next_root_id (keep next_root_id's block).  Any branches not part of
     /// the next_root_id's tree should be removed as well.
     ///
-    /// For example, root = B_0
-    /// B_0 -> B_1 -> B_2
-    ///         |  -> B_3 -> B4
+    /// For example, root = B0
+    /// B0--> B1--> B2
+    ///        ╰--> B3--> B4
     ///
-    /// prune_tree(B_3) should be left with
-    /// B_3 -> B_4, root = B_3
+    /// prune_tree(B3) should be left with
+    /// B3--> B4, root = B3
     ///
     /// Returns the block ids of the blocks removed.
     pub fn prune_tree(&self, next_root_id: HashValue) -> VecDeque<HashValue> {

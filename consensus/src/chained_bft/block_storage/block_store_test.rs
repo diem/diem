@@ -34,9 +34,9 @@ fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize
     assert_eq!(block_store.child_links(), block_store.len() - 1);
     assert_eq!(block_store.block_exists(genesis_block.id()), true);
 
-    //       | -> A1 -> A2 -> A3
-    // Genesis -> B1 -> B2
-    //             | -> C1
+    //       ╭--> A1--> A2--> A3
+    // Genesis--> B1--> B2
+    //             ╰--> C1
     let mut inserter = TreeInserter::new(block_store.clone());
     let a1 = inserter.insert_block(genesis_block.as_ref(), 1);
     let a2 = inserter.insert_block(a1.as_ref(), 2);
