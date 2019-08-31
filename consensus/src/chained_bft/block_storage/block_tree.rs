@@ -305,12 +305,12 @@ where
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
     /// part of the next_root_id's tree should be removed as well.
     ///
-    /// For example, root = B_0
-    /// B_0 -> B_1 -> B_2
-    ///         |  -> B_3 -> B4
+    /// For example, root = B0
+    /// B0--> B1--> B2
+    ///        ╰--> B3--> B4
     ///
     /// prune_tree(B_3) should be left with
-    /// B_3 -> B_4, root = B_3
+    /// B3--> B4, root = B3
     ///
     /// Note this function is read-only, use with process_pruned_blocks to do the actual prune.
     pub(super) fn find_blocks_to_prune(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
