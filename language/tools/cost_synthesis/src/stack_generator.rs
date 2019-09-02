@@ -57,7 +57,7 @@ pub struct StackState<'txn> {
 
     /// A sparse mapping of local index to local value for the current function frame. This will
     /// be applied to the execution stack later on in the `stack_transition_function`.
-    pub local_mapping: HashMap<LocalIndex, Local>,
+    pub local_mapping: HashMap<LocalIndex, Value>,
 }
 
 impl<'txn> StackState<'txn> {
@@ -67,7 +67,7 @@ impl<'txn> StackState<'txn> {
         stack: Stack,
         instr: Bytecode,
         size: AbstractMemorySize<GasCarrier>,
-        local_mapping: HashMap<LocalIndex, Local>,
+        local_mapping: HashMap<LocalIndex, Value>,
     ) -> Self {
         Self {
             module_info,
@@ -197,14 +197,12 @@ where
         }
     }
 
-    fn next_int(&mut self, stk: &[Local]) -> u64 {
+    fn next_int(&mut self, stk: &[Value]) -> u64 {
         if self.op == Bytecode::Sub && !stk.is_empty() {
             let peek: Option<u64> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
                 .clone()
-                .value()
-                .expect("[Next Integer] Invalid integer stack value encountered when peeking at the generated stack.")
                 .into();
             self.gen.gen_range(
                 0,
@@ -316,13 +314,13 @@ where
         StructDefinitionIndex::new(struct_def_idx as TableIndex)
     }
 
-    fn next_stack_value(&mut self, stk: &[Local], is_padding: bool) -> Local {
+    fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
         match self.gen.gen_range(0, 5) {
-            0 => Local::u64(self.next_int(stk)),
-            1 => Local::bool(self.next_bool()),
-            2 => Local::string(self.next_vm_string(is_padding)),
-            3 => Local::bytearray(self.next_bytearray()),
-            _ => Local::address(self.next_addr(is_padding)),
+            0 => Value::u64(self.next_int(stk)),
+            1 => Value::bool(self.next_bool()),
+            2 => Value::string(self.next_vm_string(is_padding)),
+            3 => Value::byte_array(self.next_bytearray()),
+            _ => Value::address(self.next_addr(is_padding)),
         }
     }
 
@@ -334,7 +332,7 @@ where
         &'txn LoadedModule,
         LocalIndex,
         FunctionDefinitionIndex,
-        Local,
+        Value,
     ) {
         // We pick a random function from the module in which to store the local
         let function_handle_idx = self.next_function_handle_idx();
@@ -508,19 +506,17 @@ where
     // Build an inhabitant of the type given by `sig_token`. We pass the current stack state in
     // since for certain instructions (...Sub) we need to generate number pairs that when
     // subtracted from each other do not cause overflow.
-    fn resolve_to_value(&mut self, sig_token: &SignatureToken, stk: &[Local]) -> Local {
+    fn resolve_to_value(&mut self, sig_token: &SignatureToken, stk: &[Value]) -> Value {
         match sig_token {
-            SignatureToken::Bool => Local::bool(self.next_bool()),
-            SignatureToken::U64 => Local::u64(self.next_int(stk)),
-            SignatureToken::String => Local::string(self.next_vm_string(false)),
-            SignatureToken::Address => Local::address(self.next_addr(false)),
+            SignatureToken::Bool => Value::bool(self.next_bool()),
+            SignatureToken::U64 => Value::u64(self.next_int(stk)),
+            SignatureToken::String => Value::string(self.next_vm_string(false)),
+            SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);
-                underlying_value
-                    .borrow_local()
-                    .expect("Unable to generate valid reference value")
+                Value::reference(Reference::new(underlying_value))
             }
-            SignatureToken::ByteArray => Local::bytearray(self.next_bytearray()),
+            SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
@@ -538,28 +534,23 @@ where
                 let fields = self
                     .root_module
                     .field_def_range(num_fields as MemberCount, index);
-                let mutvals = fields
+                let values = fields
                     .iter()
                     .map(|field| {
                         self.resolve_to_value(
-                            &self.root_module
-
-                                .type_signature_at(field.signature)
-                                .0,
+                            &self.root_module.type_signature_at(field.signature).0,
                             stk,
                         )
-                        .value()
-                        .expect("[Struct Generation] Unable to get underlying value for generated struct field.")
                     })
                     .collect();
-                Local::struct_(mutvals)
+                Value::struct_(Struct::new(values))
             }
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }
 
     // Generate starting state of the stack based upon the type transition in the call info table.
-    fn generate_from_type(&mut self, typ: SignatureTy, stk: &[Local]) -> Local {
+    fn generate_from_type(&mut self, typ: SignatureTy, stk: &[Value]) -> Value {
         let is_variable = typ.is_variable();
         let underlying = typ.underlying();
         // If the underlying type is a variable type, then we can choose any type that we want.
@@ -587,7 +578,7 @@ where
                 // We can just pick a random address -- this is incorrect by the bytecode semantics
                 // (since we're moving to an account that doesn't exist), but since we don't need
                 // correctness beyond this instruction it's OK.
-                let addr = Local::address(self.next_addr(true));
+                let addr = Value::address(self.next_addr(true));
                 let size = addr.size();
                 let stack = vec![addr];
                 StackState::new(
@@ -600,7 +591,7 @@ where
             }
             MoveFrom(_, _) => {
                 let struct_handle_idx = self.next_resource();
-                let addr = Local::address(*self.account_address);
+                let addr = Value::address(*self.account_address);
                 let size = addr.size();
                 let stack = vec![addr];
                 StackState::new(
@@ -613,7 +604,7 @@ where
             }
             MutBorrowGlobal(_, _) => {
                 let struct_handle_idx = self.next_resource();
-                let addr = Local::address(*self.account_address);
+                let addr = Value::address(*self.account_address);
                 let size = addr.size();
                 let stack = vec![addr];
                 StackState::new(
@@ -626,7 +617,7 @@ where
             }
             ImmBorrowGlobal(_, _) => {
                 let struct_handle_idx = self.next_resource();
-                let addr = Local::address(*self.account_address);
+                let addr = Value::address(*self.account_address);
                 let size = addr.size();
                 let stack = vec![addr];
                 StackState::new(
@@ -641,9 +632,9 @@ where
                 let next_struct_handle_idx = self.next_resource();
                 // Flip a coin to determine if the resource should exist or not.
                 let addr = if self.next_bool() {
-                    Local::address(*self.account_address)
+                    Value::address(*self.account_address)
                 } else {
-                    Local::address(self.next_addr(true))
+                    Value::address(self.next_addr(true))
                 };
                 let size = addr.size();
                 let stack = vec![addr];
@@ -755,7 +746,9 @@ where
                     &[],
                 );
                 let field_size = struct_stack
-                    .borrow_field(u32::from(field_index))
+                    .as_struct_ref()
+                    .expect("[BorrowField] Must be a Struct")
+                    .get_field_reference(usize::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")
                     .size();
                 let fdi = FieldDefinitionIndex::new(field_index);
@@ -876,7 +869,7 @@ where
         for (local_index, local) in stack_state.local_mapping.into_iter() {
             stk.top_frame_mut()
                 .expect("[Stack Transition] Unable to get top frame on execution stack.")
-                .store_local(local_index, local)
+                .store_loc(local_index, local)
                 .unwrap();
         }
         (stack_state.instr, stack_state.size)
