@@ -41,11 +41,14 @@ impl BoogieTranslator {
             let module_name = module
                 .string_at(module.module_handle_at(ModuleHandleIndex::new(0)).name)
                 .to_string();
-            module_name_to_idx.insert(module_name.clone(), module_idx);
+            let address = module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
+            let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
+            let module_full_name = format!("_{}_{}", addr_name, module_name);
+            module_name_to_idx.insert(module_full_name.clone(), module_idx);
             for (idx, struct_def) in module.struct_defs().iter().enumerate() {
                 let struct_name = format!(
                     "{}_{}",
-                    module_name,
+                    module_full_name,
                     module
                         .string_at(module.struct_handle_at(struct_def.struct_handle).name)
                         .to_string()
@@ -140,9 +143,12 @@ impl BoogieTranslator {
             let struct_handle = module.struct_handle_at(*idx);
             let struct_handle_view = StructHandleView::new(module, struct_handle);
             let module_name = module.string_at(struct_handle_view.module_handle().name);
+            let address = module.address_at(struct_handle_view.module_handle().address);
+            let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
+            let module_full_name = format!("_{}_{}", addr_name, module_name);
             let def_module_idx = self
                 .module_name_to_idx
-                .get(module_name)
+                .get(&module_full_name)
                 .unwrap_or_else(|| panic!("no module named {}", module_name));
             let def_module = &self.modules[*def_module_idx];
             let struct_name = struct_name_from_handle_index(module, *idx);
@@ -341,10 +347,19 @@ impl<'a> ModuleTranslator<'a> {
                         &self.get_local_type(*dest, func_idx),
                     ));
                 }
-                let mut res_vec = vec![format!(
-                    "call {} := Unpack_{}(t{});",
-                    dests_str, struct_str, src
-                )];
+                let mut res_vec = vec![];
+                res_vec.push(
+                if dests_str.is_empty() {
+                    format!(
+                        "call Unpack_{}(t{});",
+                        struct_str, src
+                    )
+                } else {
+                    format!(
+                        "call {} := Unpack_{}(t{});",
+                        dests_str, struct_str, src
+                    )
+                });
                 res_vec.extend(dest_type_assumptions);
                 res_vec
             }
@@ -424,23 +439,42 @@ impl<'a> ModuleTranslator<'a> {
             And(dest, op1, op2) => vec![format!("call t{} := And(t{}, t{});", dest, op1, op2)],
             Eq(dest, op1, op2) => {
                 let operand_type = self.get_local_type(*op1, func_idx);
-                vec![format!(
-                    "call t{} := Eq_{}(t{}, t{});",
-                    dest,
-                    format_type(self.module, &operand_type),
-                    op1,
-                    op2
-                )]
+                if self.is_local_ref(*op1, func_idx) {
+                    vec![format!(
+                        "t{} := Boolean(t{} == t{});",
+                        dest,
+                        op1,
+                        op2
+                    )]
+                } else {
+                    vec![format!(
+                        "call t{} := Eq_{}(t{}, t{});",
+                        dest,
+                        format_type(self.module, &operand_type),
+                        op1,
+                        op2
+                    )]
+                }
+
             }
             Neq(dest, op1, op2) => {
                 let operand_type = self.get_local_type(*op1, func_idx);
-                vec![format!(
-                    "call t{} := Neq_{}(t{}, t{});",
-                    dest,
-                    format_type(self.module, &operand_type),
-                    op1,
-                    op2
-                )]
+                if self.is_local_ref(*op1, func_idx) {
+                    vec![format!(
+                        "t{} := Boolean(t{} != t{});",
+                        dest,
+                        op1,
+                        op2
+                    )]
+                } else {
+                    vec![format!(
+                        "call t{} := Neq_{}(t{}, t{});",
+                        dest,
+                        format_type(self.module, &operand_type),
+                        op1,
+                        op2
+                    )]
+                }
             }
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
                 vec!["// bit operation not supported".into()]
@@ -729,9 +763,12 @@ impl<'a> ModuleTranslator<'a> {
         if module_name == "<SELF>" {
             module_name = "self";
         } // boogie doesn't allow '<' or '>'
+        let address = self.module.address_at(self.module.module_handle_at(module_handle_index).address);
+        let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
+        let module_full_name = format!("_{}_{}", addr_name, module_name);
         let function_handle_view = FunctionHandleView::new(self.module, function_handle);
         let function_name = function_handle_view.name();
-        format!("{}_{}", module_name, function_name)
+        format!("{}_{}", module_full_name, function_name)
     }
 
     pub fn get_local_type(&self, local_idx: usize, func_idx: usize) -> SignatureToken {
@@ -778,8 +815,11 @@ pub fn struct_name_from_handle_index(module: &VerifiedModule, idx: StructHandleI
     let struct_handle = module.struct_handle_at(idx);
     let struct_handle_view = StructHandleView::new(module, struct_handle);
     let module_name = module.string_at(struct_handle_view.module_handle().name);
+    let address = module.address_at(struct_handle_view.module_handle().address);
+    let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
+    let module_full_name = format!("_{}_{}", addr_name, module_name);
     let struct_name = struct_handle_view.name();
-    format!("{}_{}", module_name, struct_name)
+    format!("{}_{}", module_full_name, struct_name)
 }
 
 pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
