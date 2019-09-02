@@ -3,7 +3,7 @@
 
 use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
-    value::{MutVal, Value},
+    value::{Struct, Value},
 };
 use proptest::{collection::vec, prelude::*};
 use types::{account_address::AccountAddress, byte_array::ByteArray};
@@ -14,11 +14,11 @@ impl Value {
     /// Returns a [`Strategy`] that generates random primitive (non-struct) `Value` instances.
     pub fn single_value_strategy() -> impl Strategy<Value = Self> {
         prop_oneof![
-            any::<AccountAddress>().prop_map(Value::Address),
-            any::<u64>().prop_map(Value::U64),
-            any::<bool>().prop_map(Value::Bool),
-            any::<VMString>().prop_map(Value::String),
-            any::<ByteArray>().prop_map(Value::ByteArray),
+            any::<AccountAddress>().prop_map(Value::address),
+            any::<u64>().prop_map(Value::u64),
+            any::<bool>().prop_map(Value::bool),
+            any::<VMString>().prop_map(Value::string),
+            any::<ByteArray>().prop_map(Value::byte_array),
         ]
     }
 
@@ -45,13 +45,7 @@ impl Value {
     }
 
     fn struct_strategy_impl(base: impl Strategy<Value = Self>) -> impl Strategy<Value = Self> {
-        vec(base, 0..10).prop_map(|values| {
-            let mut mut_vals: Vec<MutVal> = Vec::new();
-            for value in values {
-                mut_vals.push(MutVal::new(value));
-            }
-            Value::Struct(mut_vals)
-        })
+        vec(base, 0..10).prop_map(|values| Value::struct_(Struct::new(values)))
     }
 }
 

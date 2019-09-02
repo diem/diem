@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::value::{MutVal, Value};
+use crate::value::{Struct, Value};
 use canonical_serialization::SimpleDeserializer;
 use types::{
     account_address::AccountAddress, account_config::AccountResource, byte_array::ByteArray,
@@ -18,23 +18,23 @@ fn account_type() {
     let sent_events_key = ByteArray::new(AccountAddress::random().to_vec());
     let recv_events_key = ByteArray::new(AccountAddress::random().to_vec());
 
-    let mut account_fields: Vec<MutVal> = Vec::new();
-    account_fields.push(MutVal::bytearray(authentication_key.clone()));
-    let mut coin_fields: Vec<MutVal> = Vec::new();
-    coin_fields.push(MutVal::u64(balance));
-    account_fields.push(MutVal::struct_(coin_fields.clone()));
-    account_fields.push(MutVal::bool(false));
-    account_fields.push(MutVal::struct_(vec![
-        MutVal::u64(received_events_count),
-        MutVal::bytearray(recv_events_key.clone()),
-    ]));
-    account_fields.push(MutVal::struct_(vec![
-        MutVal::u64(sent_events_count),
-        MutVal::bytearray(sent_events_key.clone()),
-    ]));
-    account_fields.push(MutVal::u64(sequence_number));
+    let mut account_fields: Vec<Value> = Vec::new();
+    account_fields.push(Value::byte_array(authentication_key.clone()));
+    let mut coin_fields: Vec<Value> = Vec::new();
+    coin_fields.push(Value::u64(balance));
+    account_fields.push(Value::struct_(Struct::new(coin_fields)));
+    account_fields.push(Value::bool(false));
+    account_fields.push(Value::struct_(Struct::new(vec![
+        Value::u64(received_events_count),
+        Value::byte_array(recv_events_key.clone()),
+    ])));
+    account_fields.push(Value::struct_(Struct::new(vec![
+        Value::u64(sent_events_count),
+        Value::byte_array(sent_events_key.clone()),
+    ])));
+    account_fields.push(Value::u64(sequence_number));
 
-    let account = Value::Struct(account_fields);
+    let account = Value::struct_(Struct::new(account_fields));
     let blob = &account.simple_serialize().expect("blob must serialize");
 
     let account_resource: AccountResource =

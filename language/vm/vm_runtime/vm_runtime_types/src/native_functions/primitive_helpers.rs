@@ -1,9 +1,9 @@
 use super::dispatch::NativeReturnStatus;
-use crate::value::Local;
+use crate::value::Value;
 use std::collections::VecDeque;
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 
-pub fn native_bytearray_concat(mut arguments: VecDeque<Local>) -> NativeReturnStatus {
+pub fn native_bytearray_concat(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 2 {
         return NativeReturnStatus::InvalidArguments;
     }
@@ -14,14 +14,14 @@ pub fn native_bytearray_concat(mut arguments: VecDeque<Local>) -> NativeReturnSt
 
     // TODO: Figure out the gas cost for concatenation.
     let cost = return_val.len() as u64;
-    let return_values = vec![Local::bytearray(ByteArray::new(return_val))];
+    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
     NativeReturnStatus::Success {
         cost,
         return_values,
     }
 }
 
-pub fn native_address_to_bytes(mut arguments: VecDeque<Local>) -> NativeReturnStatus {
+pub fn native_address_to_bytes(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 1 {
         return NativeReturnStatus::InvalidArguments;
     }
@@ -30,14 +30,14 @@ pub fn native_address_to_bytes(mut arguments: VecDeque<Local>) -> NativeReturnSt
 
     // TODO: Figure out the gas cost for conversion.
     let cost = return_val.len() as u64;
-    let return_values = vec![Local::bytearray(ByteArray::new(return_val))];
+    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
     NativeReturnStatus::Success {
         cost,
         return_values,
     }
 }
 
-pub fn native_u64_to_bytes(mut arguments: VecDeque<Local>) -> NativeReturnStatus {
+pub fn native_u64_to_bytes(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 1 {
         return NativeReturnStatus::InvalidArguments;
     }
@@ -46,7 +46,7 @@ pub fn native_u64_to_bytes(mut arguments: VecDeque<Local>) -> NativeReturnStatus
 
     // TODO: Figure out the gas cost for conversion.
     let cost = return_val.len() as u64;
-    let return_values = vec![Local::bytearray(ByteArray::new(return_val))];
+    let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
     NativeReturnStatus::Success {
         cost,
         return_values,

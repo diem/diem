@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{hash, primitive_helpers, signature, vector};
-use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
+use crate::{native_structs::dispatch::dispatch_native_struct, value::Value};
 use std::collections::{HashMap, VecDeque};
 use types::{
     account_address::AccountAddress,
@@ -18,8 +18,8 @@ pub enum NativeReturnStatus {
     Success {
         /// The cost for running that function
         cost: u64,
-        /// The `Vec<Local>` values will be pushed on the stack
-        return_values: Vec<Local>,
+        /// The `Vec<Value>` values will be pushed on the stack
+        return_values: Vec<Value>,
     },
     /// Represents the execution of an abort instruction with the given error code
     Aborted {
@@ -35,7 +35,7 @@ pub enum NativeReturnStatus {
 /// Struct representing the expected definition for a native function
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function
-    pub dispatch: fn(VecDeque<Local>) -> NativeReturnStatus,
+    pub dispatch: fn(VecDeque<Value>) -> NativeReturnStatus,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context
