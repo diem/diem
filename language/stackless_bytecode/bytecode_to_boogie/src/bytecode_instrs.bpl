@@ -94,7 +94,9 @@ procedure {:inline 1} MoveFrom(address: Value, rs: ResourceStore) returns (dst: 
     var a: Address;
     assert is#Address(address);
     a := a#Address(address);
-    assert domain#ResourceStore(rs)[a];
+    if (!domain#ResourceStore(rs)[a]) {
+        abort_flag := true;
+    }
     dst := contents#ResourceStore(rs)[a];
     rs' := ResourceStore(domain#ResourceStore(rs)[a := false], contents#ResourceStore(rs));
 }
@@ -361,9 +363,9 @@ returns (addr_exists': [Address]bool)
 {
   var a: Address;
   a := a#Address(addr_val);
-  if (domain#ResourceStore(rs_LibraAccount_T)[a]) {
+  if (domain#ResourceStore(rs__0_LibraAccount_T)[a]) {
       abort_flag := true;
   }
-  rs_LibraAccount_T := ResourceStore(domain#ResourceStore(rs_LibraAccount_T)[a := true], contents#ResourceStore(rs_LibraAccount_T)[a := Map(DefaultMap[Field(LibraAccount_T_balance) := Map(DefaultMap[Field(LibraCoin_T_value) := Integer(0)])])]);
-  assert domain#ResourceStore(rs_LibraAccount_T)[a];
+  rs__0_LibraAccount_T := ResourceStore(domain#ResourceStore(rs__0_LibraAccount_T)[a := true], contents#ResourceStore(rs__0_LibraAccount_T)[a := Map(DefaultMap[Field(_0_LibraAccount_T_balance) := Map(DefaultMap[Field(_0_LibraCoin_T_value) := Integer(0)])])]);
+  assert domain#ResourceStore(rs__0_LibraAccount_T)[a];
  }
