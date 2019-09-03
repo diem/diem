@@ -164,7 +164,7 @@ where
 
     fn to_module_id(&self, module_handle: &ModuleHandle) -> ModuleId {
         let address = *self.root_module.address_at(module_handle.address);
-        let name = self.root_module.string_at(module_handle.name);
+        let name = self.root_module.identifier_at(module_handle.name);
         ModuleId::new(address, name.to_string())
     }
 
@@ -412,7 +412,7 @@ where
         StructDefinitionIndex,
     ) {
         let struct_handle = self.root_module.struct_handle_at(struct_handle_index);
-        let struct_name = self.root_module.string_at(struct_handle.name);
+        let struct_name = self.root_module.identifier_at(struct_handle.name);
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
@@ -437,7 +437,7 @@ where
                         .enumerate()
                         .map(|(struct_def_index, struct_def)| {
                             let handle = module.struct_handle_at(struct_def.struct_handle);
-                            let name = module.string_at(handle.name).to_string();
+                            let name = module.identifier_at(handle.name).to_string();
                             (
                                 name,
                                 StructDefinitionIndex::new(struct_def_index as TableIndex),
@@ -462,7 +462,7 @@ where
         FunctionDefinitionIndex,
     ) {
         let function_handle = self.root_module.function_handle_at(function_handle_index);
-        let function_name = self.root_module.string_at(function_handle.name);
+        let function_name = self.root_module.identifier_at(function_handle.name);
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
@@ -491,7 +491,7 @@ where
                         .enumerate()
                         .map(|(function_def_index, function_def)| {
                             let handle = module.function_handle_at(function_def.function);
-                            let name = module.string_at(handle.name).to_string();
+                            let name = module.identifier_at(handle.name).to_string();
                             (
                                 name,
                                 FunctionDefinitionIndex::new(function_def_index as TableIndex),

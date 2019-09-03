@@ -31,9 +31,9 @@ impl<'a> DuplicationChecker<'a> {
     pub fn verify(self) -> Vec<VerificationError> {
         let mut errors = vec![];
 
-        if let Some(idx) = Self::first_duplicate_element(self.module.string_pool()) {
+        if let Some(idx) = Self::first_duplicate_element(self.module.identifiers()) {
             errors.push(VerificationError {
-                kind: IndexKind::StringPool,
+                kind: IndexKind::Identifier,
                 idx,
                 err: VMStaticViolation::DuplicateElement,
             })

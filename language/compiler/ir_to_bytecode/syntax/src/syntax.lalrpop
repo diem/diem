@@ -9,7 +9,7 @@ use crate::ast::{
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
-    LValue, LValue_
+    LValue, LValue_, parse_field,
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
@@ -49,11 +49,11 @@ Sp<Rule>: Spanned<Rule> =
     Spanned{span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)), value: rule};
 
 Var: Var = {
-    <n:Name> => Var::new(n.as_str()),
+    <n:Name> =>? Var::parse(n),
 };
 
 Field: Field = {
-    <n:Name> => Field::new(n.as_str()),
+    <n:Name> =>? parse_field(n),
 };
 
 CopyableVal: CopyableVal = {
@@ -133,14 +133,14 @@ FactorOp: BinOp = {
 
 QualifiedFunctionName : FunctionCall = {
     <f: Builtin> => FunctionCall::Builtin(f),
-    <module_dot_name: DotName> <type_actuals: TypeActuals> =>  {
+    <module_dot_name: DotName> <type_actuals: TypeActuals> =>? {
         let v: Vec<&str> = module_dot_name.split(".").collect();
         assert!(v.len() == 2, 42);
-        FunctionCall::ModuleFunctionCall{
-            module: ModuleName::new(v[0].to_string()),
-            name: FunctionName::new(v[1].to_string()),
+        Ok(FunctionCall::ModuleFunctionCall{
+            module: ModuleName::parse(v[0])?,
+            name: FunctionName::parse(v[1])?,
             type_actuals: type_actuals,
-        }
+        })
     }
 }
 
@@ -175,58 +175,58 @@ Term: Exp = {
     "&mut " <v: Sp<Var>> => Exp::BorrowLocal(true, v),
     "&" <v: Sp<Var>> => Exp::BorrowLocal(false, v),
     Sp<CopyableVal> => Exp::Value(<>),
-    <name_and_type_actuals: NameAndTypeActuals> "{" <fs:Comma<FieldExp>> "}" => {
+    <name_and_type_actuals: NameAndTypeActuals> "{" <fs:Comma<FieldExp>> "}" =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Exp::Pack(
-            StructName::new(name),
+        Ok(Exp::Pack(
+            StructName::parse(name)?,
             type_actuals,
             fs.into_iter().collect::<BTreeMap<Field, Exp_>>()
-        )
+        ))
     },
     "(" <exps: Comma<Sp<Exp>>> ")" => Exp::ExprList(exps),
 }
 
 StructName: StructName = {
-    <n: Name> =>  StructName::new(n),
+    <n: Name> =>? StructName::parse(n),
 }
 
 QualifiedStructIdent : QualifiedStructIdent = {
-    <module_dot_struct: DotName> => {
+    <module_dot_struct: DotName> =>? {
         let v: Vec<&str> = module_dot_struct.split(".").collect();
         assert!(v.len() == 2, 42);
-        let m: ModuleName = ModuleName::new(v[0].to_string());
-        let n: StructName = StructName::new(v[1].to_string());
-        QualifiedStructIdent::new(m,n)
+        let m: ModuleName = ModuleName::parse(v[0])?;
+        let n: StructName = StructName::parse(v[1])?;
+        Ok(QualifiedStructIdent::new(m,n))
     }
 }
 
 
 ModuleName: ModuleName = {
-    <n: Name> => ModuleName::new(n),
+    <n: Name> =>? ModuleName::parse(n),
 }
 
 Builtin: Builtin = {
     "create_account" => Builtin::CreateAccount,
-    "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Builtin::Exists(StructName::new(name), type_actuals)
+        Ok(Builtin::Exists(StructName::parse(name)?, type_actuals))
     },
-    "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Builtin::BorrowGlobal(StructName::new(name), type_actuals)
+        Ok(Builtin::BorrowGlobal(StructName::parse(name)?, type_actuals))
     },
     "get_txn_gas_unit_price" => Builtin::GetTxnGasUnitPrice,
     "get_txn_max_gas_units" => Builtin::GetTxnMaxGasUnits,
     "get_txn_public_key" => Builtin::GetTxnPublicKey,
     "get_txn_sender" => Builtin::GetTxnSender,
     "get_txn_sequence_number" => Builtin::GetTxnSequenceNumber,
-    "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Builtin::MoveFrom(StructName::new(name), type_actuals)
+        Ok(Builtin::MoveFrom(StructName::parse(name)?, type_actuals))
     },
-    "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Builtin::MoveToSender(StructName::new(name), type_actuals)
+        Ok(Builtin::MoveToSender(StructName::parse(name)?, type_actuals))
     },
     "get_gas_remaining" => Builtin::GetGasRemaining,
     "freeze" => Builtin::Freeze,
@@ -248,19 +248,19 @@ LValues: Vec<LValue_> = {
 
 FieldBindings: (Field, Var_) = {
     <f: Field> ":" <v: Sp<Var>> => (f, v),
-    <f: Sp<Field>> => (f.value.clone(), Spanned { span: f.span, value: Var::new(f.value.name()) }),
+    <f: Sp<Field>> => (f.value.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }),
 }
 
 pub Cmd : Cmd = {
     <lvalues: LValues> "=" <e: Sp<Exp>> => Cmd::Assign(lvalues, e),
-    <name_and_type_actuals: NameAndTypeActuals> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> => {
+    <name_and_type_actuals: NameAndTypeActuals> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> =>? {
         let (name, type_actuals) = name_and_type_actuals;
-        Cmd::Unpack(
-            StructName::new(name),
+        Ok(Cmd::Unpack(
+            StructName::parse(name)?,
             type_actuals,
             bindings.into_iter().collect(),
             Box::new(e),
-        )
+        ))
     },
     "abort" <err: Sp<Exp>?> => {
         match err {
@@ -351,10 +351,11 @@ Kind: Kind = {
 }
 
 TypeFormal: (TypeVar, Kind) = {
-    <n: Name> <k: (":" <Kind>)?> => {
+    <n: Name> <k: (":" <Kind>)?> =>? {
+        let type_var = TypeVar::parse(n)?;
         match k {
-            Some(k) => (TypeVar(n), k),
-            None => (TypeVar(n), Kind::All),
+            Some(k) => Ok((type_var, k)),
+            None => Ok((type_var, Kind::All)),
         }
     }
 }
@@ -386,7 +387,7 @@ Type: Type = {
     <s: QualifiedStructIdent> <tys: TypeActuals> => Type::Struct(s, tys),
     "&" <t: Type> => Type::Reference(false, Box::new(t)),
     "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
-    <n: Name> => Type::TypeParameter(TypeVar(n)),
+    <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
 }
 
 ArgDecl : (Var, Type) = {
@@ -425,33 +426,33 @@ FunctionDecl : (FunctionName, Function) = {
 MoveFunctionDecl : (FunctionName, Function) = {
     <p: Public?> <name_and_type_formals: NameAndTypeFormals> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
     <acquires: AcquireList?>
-    <locals_body: FunctionBlock> => {
+    <locals_body: FunctionBlock> =>? {
         let (name, type_formals) = name_and_type_formals;
         let (locals, body) = locals_body;
-        (FunctionName::new(name), Function::new(
+        Ok((FunctionName::parse(name)?, Function::new(
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
             type_formals,
             acquires.unwrap_or_else(Vec::new),
             FunctionBody::Move{locals: locals, code: body},
-        ))
+        )))
     }
 }
 
 NativeFunctionDecl: (FunctionName, Function) = {
     <nat: NativeTag> <p: Public?> <name_and_type_formals: NameAndTypeFormals> "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
         <acquires: AcquireList?>
-        ";" => {
+        ";" =>? {
         let (name, type_formals) = name_and_type_formals;
-        (FunctionName::new(name), Function::new(
+        Ok((FunctionName::parse(name)?, Function::new(
             if p.is_some() { FunctionVisibility::Public } else { FunctionVisibility::Internal },
             args,
             ret.unwrap_or(vec![]),
             type_formals,
             acquires.unwrap_or_else(Vec::new),
             FunctionBody::Native,
-        ))
+        )))
     }
 }
 
@@ -517,7 +518,7 @@ pub Script : Script = {
 }
 
 StructDecl: StructDefinition = {
-    <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" => {
+    <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" =>? {
         let (name, type_formals) = name_and_type_formals;
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
@@ -525,7 +526,7 @@ StructDecl: StructDefinition = {
         }
         StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)
     },
-    <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" => {
+    <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" =>? {
         let (name, type_formals) = name_and_type_formals;
         StructDefinition::native(is_nominal_resource, name, type_formals)
     }
@@ -537,22 +538,22 @@ QualifiedModuleIdent: QualifiedModuleIdent = {
 
 ModuleIdent: ModuleIdent = {
     <q: QualifiedModuleIdent> => ModuleIdent::Qualified(q),
-    <transaction_dot_module: DotName> => {
+    <transaction_dot_module: DotName> =>? {
         let v: Vec<&str> = transaction_dot_module.split(".").collect();
         assert!(v.len() == 2, 42);
         let ident: String = v[0].to_string();
         if ident != "Transaction" {
             panic!("Ident = {} which is not Transaction", ident);
         }
-        let m: ModuleName = ModuleName::new(v[1].to_string());
-        ModuleIdent::Transaction(m)
+        let m: ModuleName = ModuleName::parse(v[1])?;
+        Ok(ModuleIdent::Transaction(m))
     },
 }
 
 ImportAlias: ModuleName = {
     "as" <alias: ModuleName> => {
-        if alias.as_inner() == ModuleName::SELF {
-            panic!("Invalid use of reserved module alias '{}'", ModuleName::SELF);
+        if alias.as_inner() == ModuleName::self_name() {
+            panic!("Invalid use of reserved module alias '{}'", ModuleName::self_name());
         }
         alias
     }
@@ -568,10 +569,14 @@ pub Module : ModuleDefinition = {
         <imports: (ImportDecl)*>
         <structs: (StructDecl)*>
         <functions: (FunctionDecl)*>
-    "}" => ModuleDefinition::new(n.to_string(), imports, structs, functions),
+    "}" =>? ModuleDefinition::new(n, imports, structs, functions),
 }
 
 pub ScriptOrModule: ScriptOrModule = {
     <s: Script> => ScriptOrModule::Script(s),
     <m: Module> => ScriptOrModule::Module(m),
+}
+
+extern {
+    type Error = failure::Error;
 }

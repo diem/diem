@@ -9,9 +9,9 @@ use crate::{
         AddressPoolIndex, ByteArrayPoolIndex, CompiledModule, CompiledModuleMut, CompiledScript,
         FieldDefinition, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex,
         FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
-        LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex,
-        StringPoolIndex, StructDefinition, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TypeSignature, TypeSignatureIndex, UserStringIndex,
+        IdentifierIndex, LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle,
+        ModuleHandleIndex, StructDefinition, StructDefinitionIndex, StructHandle,
+        StructHandleIndex, TypeSignature, TypeSignatureIndex, UserStringIndex,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -19,6 +19,7 @@ use crate::{
 use types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
+    identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     user_string::{UserStr, UserString},
 };
@@ -38,8 +39,8 @@ pub trait ModuleAccess: Sync {
     }
 
     /// Returns the name of the module.
-    fn name(&self) -> &str {
-        self.string_at(self.self_handle().name)
+    fn name(&self) -> &IdentStr {
+        self.identifier_at(self.self_handle().name)
     }
 
     /// Returns the address of the module.
@@ -71,8 +72,8 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().locals_signatures[idx.into_index()]
     }
 
-    fn string_at(&self, idx: StringPoolIndex) -> &str {
-        self.as_module().as_inner().string_pool[idx.into_index()].as_str()
+    fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
+        &self.as_module().as_inner().identifiers[idx.into_index()]
     }
 
     fn user_string_at(&self, idx: UserStringIndex) -> &UserStr {
@@ -137,8 +138,8 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().address_pool
     }
 
-    fn string_pool(&self) -> &[String] {
-        &self.as_module().as_inner().string_pool
+    fn identifiers(&self) -> &[Identifier] {
+        &self.as_module().as_inner().identifiers
     }
 
     fn user_strings(&self) -> &[UserString] {
@@ -219,8 +220,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().locals_signatures[idx.into_index()]
     }
 
-    fn string_at(&self, idx: StringPoolIndex) -> &str {
-        self.as_script().as_inner().string_pool[idx.into_index()].as_str()
+    fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
+        &self.as_script().as_inner().identifiers[idx.into_index()]
     }
 
     fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
@@ -263,8 +264,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().address_pool
     }
 
-    fn string_pool(&self) -> &[String] {
-        &self.as_script().as_inner().string_pool
+    fn identifiers(&self) -> &[Identifier] {
+        &self.as_script().as_inner().identifiers
     }
 
     fn main(&self) -> &FunctionDefinition {

@@ -5,8 +5,8 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         empty_module, Bytecode, CompiledModule, CompiledModuleMut, FieldDefinition,
-        FieldDefinitionIndex, Kind, LocalsSignatureIndex, MemberCount, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
+        FieldDefinitionIndex, IdentifierIndex, Kind, LocalsSignatureIndex, MemberCount,
+        ModuleHandleIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
     },
@@ -47,7 +47,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
         module.string_pool.push(format!("string{}", i));
         let struct_handle_idx = StructHandleIndex::new(struct_index);
         let typ_idx = TypeSignatureIndex::new(0);
-        let str_pool_idx = StringPoolIndex::new(i + 1 as TableIndex);
+        let str_pool_idx = IdentifierIndex::new(i + 1 as TableIndex);
         let field_def = FieldDefinition {
             struct_: struct_handle_idx,
             name: str_pool_idx,
@@ -57,7 +57,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     }
     module.struct_handles = vec![StructHandle {
         module: ModuleHandleIndex::new(0),
-        name: StringPoolIndex::new((struct_index + offset) as TableIndex),
+        name: IdentifierIndex::new((struct_index + offset) as TableIndex),
         is_nominal_resource: resource,
         type_formals: vec![],
     }];

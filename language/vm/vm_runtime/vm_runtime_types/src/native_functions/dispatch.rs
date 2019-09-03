@@ -4,7 +4,12 @@
 use super::{hash, primitive_helpers, signature, vector};
 use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
 use std::collections::{HashMap, VecDeque};
-use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress,
+    account_config,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
 
 /// Enum representing the result of running a native function
@@ -48,7 +53,7 @@ impl NativeFunction {
 /// function name where it was expected to be declared
 pub fn dispatch_native_function(
     module: &ModuleId,
-    function_name: &str,
+    function_name: &IdentStr,
 ) -> Option<&'static NativeFunction> {
     NATIVE_FUNCTION_MAP.get(module)?.get(function_name)
 }
@@ -67,11 +72,11 @@ macro_rules! add {
             dispatch: $dis,
             expected_signature,
         };
-        let id = ModuleId::new($addr, $module.into());
+        let id = ModuleId::new($addr, Identifier::new($module).unwrap());
         let old = $m
             .entry(id)
             .or_insert_with(HashMap::new)
-            .insert($name.into(), f);
+            .insert(Identifier::new($name).unwrap(), f);
         assert!(old.is_none());
     }};
 }
@@ -83,15 +88,16 @@ fn tstruct(
     function_name: &str,
     args: Vec<SignatureToken>,
 ) -> SignatureToken {
-    let id = ModuleId::new(addr, module_name.into());
-    let native_struct = dispatch_native_struct(&id, function_name).unwrap();
+    let id = ModuleId::new(addr, Identifier::new(module_name).unwrap());
+    let native_struct =
+        dispatch_native_struct(&id, &Identifier::new(function_name).unwrap()).unwrap();
     let idx = native_struct.expected_index;
     // TODO assert kinds match
     assert_eq!(args.len(), native_struct.expected_type_formals.len());
     SignatureToken::Struct(idx, args)
 }
 
-type NativeFunctionMap = HashMap<ModuleId, HashMap<String, NativeFunction>>;
+type NativeFunctionMap = HashMap<ModuleId, HashMap<Identifier, NativeFunction>>;
 
 lazy_static! {
     static ref NATIVE_FUNCTION_MAP: NativeFunctionMap = {

@@ -11,8 +11,9 @@ use vm::{
     errors::{VMStaticViolation, VerificationError},
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
-        FunctionHandleIndex, FunctionSignatureIndex, LocalsSignatureIndex, ModuleHandleIndex,
-        StringPoolIndex, StructFieldInformation, StructHandleIndex, TableIndex, TypeSignatureIndex,
+        FunctionHandleIndex, FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex,
+        ModuleHandleIndex, StructFieldInformation, StructHandleIndex, TableIndex,
+        TypeSignatureIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -47,16 +48,16 @@ impl PointerKind {
         use PointerKind::*;
 
         match src_kind {
-            ModuleHandle => &[One(AddressPool), One(StringPool)],
-            StructHandle => &[One(ModuleHandle), One(StringPool)],
-            FunctionHandle => &[One(ModuleHandle), One(StringPool), One(FunctionSignature)],
+            ModuleHandle => &[One(AddressPool), One(Identifier)],
+            StructHandle => &[One(ModuleHandle), One(Identifier)],
+            FunctionHandle => &[One(ModuleHandle), One(Identifier), One(FunctionSignature)],
             StructDefinition => &[One(StructHandle), One(FieldDefinition)],
-            FieldDefinition => &[One(StructHandle), One(StringPool), One(TypeSignature)],
+            FieldDefinition => &[One(StructHandle), One(Identifier), One(TypeSignature)],
             FunctionDefinition => &[One(FunctionHandle), One(LocalsSignature)],
             TypeSignature => &[Optional(StructHandle)],
             FunctionSignature => &[Star(StructHandle)],
             LocalsSignature => &[Star(StructHandle)],
-            StringPool => &[],
+            Identifier => &[],
             UserString => &[],
             ByteArrayPool => &[],
             AddressPool => &[],
@@ -279,20 +280,20 @@ impl ApplyOutOfBoundsContext {
             (ModuleHandle, AddressPool) => {
                 self.module.module_handles[src_idx].address = AddressPoolIndex::new(new_idx);
             }
-            (ModuleHandle, StringPool) => {
-                self.module.module_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (ModuleHandle, Identifier) => {
+                self.module.module_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (StructHandle, ModuleHandle) => {
                 self.module.struct_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
             }
-            (StructHandle, StringPool) => {
-                self.module.struct_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (StructHandle, Identifier) => {
+                self.module.struct_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FunctionHandle, ModuleHandle) => {
                 self.module.function_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
             }
-            (FunctionHandle, StringPool) => {
-                self.module.function_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (FunctionHandle, Identifier) => {
+                self.module.function_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FunctionHandle, FunctionSignature) => {
                 self.module.function_handles[src_idx].signature =
@@ -337,8 +338,8 @@ impl ApplyOutOfBoundsContext {
             (FieldDefinition, StructHandle) => {
                 self.module.field_defs[src_idx].struct_ = StructHandleIndex::new(new_idx)
             }
-            (FieldDefinition, StringPool) => {
-                self.module.field_defs[src_idx].name = StringPoolIndex::new(new_idx)
+            (FieldDefinition, Identifier) => {
+                self.module.field_defs[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FieldDefinition, TypeSignature) => {
                 self.module.field_defs[src_idx].signature = TypeSignatureIndex::new(new_idx)

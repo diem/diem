@@ -18,13 +18,13 @@ pub fn resource_storage_key(module: &impl ModuleAccess, idx: StructDefinitionInd
     let resource = module.struct_def_at(idx);
     let res_handle = module.struct_handle_at(resource.struct_handle);
     let res_module = module.module_handle_at(res_handle.module);
-    let res_name = module.string_at(res_handle.name);
+    let res_name = module.identifier_at(res_handle.name);
     let res_mod_addr = module.address_at(res_module.address);
-    let res_mod_name = module.string_at(res_module.name);
+    let res_mod_name = module.identifier_at(res_module.name);
     StructTag {
-        module: res_mod_name.to_string(),
+        module: res_mod_name.into(),
         address: *res_mod_addr,
-        name: res_name.to_string(),
+        name: res_name.into(),
         type_params: vec![],
     }
 }

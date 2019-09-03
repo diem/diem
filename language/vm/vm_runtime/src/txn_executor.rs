@@ -22,6 +22,7 @@ use types::{
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::EventKey,
+    identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     transaction::{
         TransactionArgument, TransactionOutput, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES,
@@ -50,24 +51,27 @@ mod runtime_tests;
 lazy_static! {
     /// The ModuleId for the Account module
     pub static ref ACCOUNT_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), "LibraAccount".to_string()) };
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraAccount").unwrap()) };
     /// The ModuleId for the Account module
     pub static ref BLOCK_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), "Block".to_string()) };
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("Block").unwrap()) };
     /// The ModuleId for the LibraCoin module
     pub static ref COIN_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), "LibraCoin".to_string()) };
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraCoin").unwrap()) };
     /// The ModuleId for the Event
     pub static ref EVENT_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), "Event".to_string()) };
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
 
 }
 
-const PROLOGUE_NAME: &str = "prologue";
-const EPILOGUE_NAME: &str = "epilogue";
-const CREATE_ACCOUNT_NAME: &str = "make";
-const ACCOUNT_STRUCT_NAME: &str = "T";
-const EMIT_EVENT_NAME: &str = "write_to_event_store";
+// Names for special functions.
+lazy_static! {
+    static ref PROLOGUE_NAME: Identifier = Identifier::new("prologue").unwrap();
+    static ref EPILOGUE_NAME: Identifier = Identifier::new("epilogue").unwrap();
+    static ref CREATE_ACCOUNT_NAME: Identifier = Identifier::new("make").unwrap();
+    static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+    static ref EMIT_EVENT_NAME: Identifier = Identifier::new("write_to_event_store").unwrap();
+}
 
 fn make_access_path(
     module: &impl ModuleAccess,
@@ -273,7 +277,9 @@ where
                                 None => return Err(VMInvariantViolation::LinkerError),
                                 Some(native_function) => native_function,
                             };
-                        if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME {
+                        if module_id == *EVENT_MODULE
+                            && function_name == EMIT_EVENT_NAME.as_ident_str()
+                        {
                             let msg = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
                             let count = try_runtime!(self.execution_stack.pop_as::<u64>());
                             let key = try_runtime!(self.execution_stack.pop_as::<ByteArray>());
@@ -667,7 +673,7 @@ where
         // Address will be used as the initial authentication key.
         try_runtime!(self.execute_function(
             &ACCOUNT_MODULE,
-            CREATE_ACCOUNT_NAME,
+            &CREATE_ACCOUNT_NAME,
             vec![Local::bytearray(ByteArray::new(addr.to_vec()))],
         ));
         self.gas_meter.enable_metering();
@@ -679,7 +685,7 @@ where
             .ok_or(VMInvariantViolation::LinkerError)?;
         let account_struct_id = account_module
             .struct_defs_table
-            .get(ACCOUNT_STRUCT_NAME)
+            .get(&*ACCOUNT_STRUCT_NAME)
             .ok_or(VMInvariantViolation::LinkerError)?;
         let account_struct_def = try_runtime!(self
             .execution_stack
@@ -697,7 +703,7 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, PROLOGUE_NAME, vec![]);
+        let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
         self.gas_meter.enable_metering();
         result
     }
@@ -706,7 +712,7 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, EPILOGUE_NAME, vec![]);
+        let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
         self.gas_meter.enable_metering();
         result
     }
@@ -798,7 +804,7 @@ where
     pub fn execute_function(
         &mut self,
         module: &ModuleId,
-        function_name: &str,
+        function_name: &IdentStr,
         args: Vec<Local>,
     ) -> VMResult<()> {
         let loaded_module =

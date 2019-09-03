@@ -22,7 +22,7 @@ use std::{
         HashMap, VecDeque,
     },
 };
-use types::account_address::AccountAddress;
+use types::{account_address::AccountAddress, identifier::Identifier};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -272,13 +272,13 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 ) -> Result<CompiledScript> {
     let current_module = QualifiedModuleIdent {
         address,
-        name: ModuleName::new(file_format::SELF_MODULE_NAME.to_string()),
+        name: ModuleName::new(file_format::self_module_name().to_owned()),
     };
     let mut context = Context::new(dependencies, current_module)?;
-    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+    let self_name = ModuleName::new(ModuleName::self_name().into());
 
     compile_imports(&mut context, address, script.imports)?;
-    let main_name = FunctionName::new("main".to_string());
+    let main_name = FunctionName::new(Identifier::new("main").unwrap());
     let function = script.main;
 
     let sig = function_signature(&mut context, &function.signature)?;
@@ -292,7 +292,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -304,7 +304,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -326,7 +326,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         name: module.name,
     };
     let mut context = Context::new(dependencies, current_module)?;
-    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+    let self_name = ModuleName::new(ModuleName::self_name().into());
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, address, module.imports)?;
 
@@ -358,7 +358,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -370,7 +370,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -514,7 +514,7 @@ fn compile_fields(
             };
 
             for (f, ty) in fields {
-                let name = context.string_index(f.name())?;
+                let name = context.identifier_index(f.name())?;
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
                 context.declare_field(sh_idx, f, sig_token)?;
@@ -939,7 +939,7 @@ fn compile_expression(
             }
             function_frame.push()?;
 
-            let self_name = ModuleName::new(ModuleName::SELF.to_string());
+            let self_name = ModuleName::new(ModuleName::self_name().into());
             let ident = QualifiedStructIdent {
                 module: self_name,
                 name,
@@ -1125,7 +1125,7 @@ fn compile_call(
                     function_frame.pop()?;
                     function_frame.push()?;
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
@@ -1149,7 +1149,7 @@ fn compile_call(
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,

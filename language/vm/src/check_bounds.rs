@@ -167,7 +167,7 @@ impl BoundsCheck for &ModuleHandle {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.address_pool, self.address),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
         ]
         .into_iter()
         .flatten()
@@ -180,7 +180,7 @@ impl BoundsCheck for &StructHandle {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
         ]
         .into_iter()
         .flatten()
@@ -193,7 +193,7 @@ impl BoundsCheck for &FunctionHandle {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
             check_bounds_impl(&module.function_signatures, self.signature),
         ]
         .into_iter()
@@ -226,7 +226,7 @@ impl BoundsCheck for &FieldDefinition {
     fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
             check_bounds_impl(&module.type_signatures, self.signature),
         ]
         .into_iter()

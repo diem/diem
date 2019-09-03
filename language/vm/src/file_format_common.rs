@@ -44,7 +44,7 @@ pub enum TableType {
     STRUCT_HANDLES          = 0x2,
     FUNCTION_HANDLES        = 0x3,
     ADDRESS_POOL            = 0x4,
-    STRING_POOL             = 0x5,
+    IDENTIFIERS             = 0x5,
     USER_STRINGS            = 0x6,
     BYTE_ARRAY_POOL         = 0x7,
     MAIN                    = 0x8,

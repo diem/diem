@@ -33,12 +33,16 @@ use crate::{
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
+use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use types::{
-    account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId,
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
     user_string::UserString,
 };
 
@@ -103,9 +107,9 @@ define_index! {
     doc: "Index into the `FunctionHandle` table.",
 }
 define_index! {
-    name: StringPoolIndex,
-    kind: StringPool,
-    doc: "Index into the `StringPool` table.",
+    name: IdentifierIndex,
+    kind: Identifier,
+    doc: "Index into the `Identifier` table.",
 }
 define_index! {
     name: UserStringIndex,
@@ -163,9 +167,8 @@ pub type MemberCount = u16;
 /// the instruction stream.
 pub type CodeOffset = u16;
 
-// TODO: Rename this pool to IdentifierPool.
 /// The pool of identifiers.
-pub type StringPool = Vec<String>;
+pub type IdentifierPool = Vec<Identifier>;
 /// The pool of string literals.
 pub type UserStringPool = Vec<UserString>;
 /// The pool of `ByteArray` literals.
@@ -184,9 +187,15 @@ pub type FunctionSignaturePool = Vec<FunctionSignature>;
 /// locals used and their types.
 pub type LocalsSignaturePool = Vec<LocalsSignature>;
 
-/// Name of the placeholder module. Every compiled script has an entry that
-/// refers to itself in its module handle list. This is the name of that script.
-pub const SELF_MODULE_NAME: &str = "<SELF>";
+// TODO: "<SELF>" wouldn't pass a checker for identifiers unless special cased -- what do we want to
+// do?
+lazy_static! {
+    static ref SELF_MODULE_NAME: Identifier = Identifier::new("<SELF>").unwrap();
+}
+
+pub fn self_module_name() -> &'static IdentStr {
+    &*SELF_MODULE_NAME
+}
 
 /// Index 0 into the LocalsSignaturePool, which is guaranteed to be an empty list.
 /// Used to represent function/struct instantiation with no type actuals -- effectively
@@ -219,7 +228,7 @@ pub struct ModuleHandle {
     /// Index into the `AddressPool`. Identifies the account that holds the module.
     pub address: AddressPoolIndex,
     /// The name of the module published in the code section for the account in `address`.
-    pub name: StringPoolIndex,
+    pub name: IdentifierIndex,
 }
 
 /// A `StructHandle` is a reference to a user defined type. It is composed by a `ModuleHandle`
@@ -242,7 +251,7 @@ pub struct StructHandle {
     /// The module that defines the type.
     pub module: ModuleHandleIndex,
     /// The name of the type.
-    pub name: StringPoolIndex,
+    pub name: IdentifierIndex,
     /// There are two ways for a type to have the Kind resource
     /// 1) If it has a type argument of resource
     /// 2) If it was declared as a resource
@@ -268,7 +277,7 @@ pub struct FunctionHandle {
     /// The module that defines the function.
     pub module: ModuleHandleIndex,
     /// The name of the function.
-    pub name: StringPoolIndex,
+    pub name: IdentifierIndex,
     /// The signature of the function.
     pub signature: FunctionSignatureIndex,
 }
@@ -324,7 +333,7 @@ pub struct FieldDefinition {
     /// The type (resource or unrestricted) the field is defined on.
     pub struct_: StructHandleIndex,
     /// The name of the field.
-    pub name: StringPoolIndex,
+    pub name: IdentifierIndex,
     /// The type of the field.
     pub signature: TypeSignatureIndex,
 }
@@ -1243,8 +1252,8 @@ pub struct CompiledScriptMut {
     /// Locals signature pool. The signature of the locals in `main`.
     pub locals_signatures: LocalsSignaturePool,
 
-    /// String pool. All identifiers used in this transaction.
-    pub string_pool: StringPool,
+    /// All identifiers used in this transaction.
+    pub identifiers: IdentifierPool,
     /// User strings. All literals used in this transaction.
     pub user_strings: UserStringPool,
     /// ByteArray pool. The byte array literals used in the transaction.
@@ -1302,7 +1311,7 @@ impl CompiledScriptMut {
             function_signatures: self.function_signatures,
             locals_signatures: self.locals_signatures,
 
-            string_pool: self.string_pool,
+            identifiers: self.identifiers,
             user_strings: self.user_strings,
             byte_array_pool: self.byte_array_pool,
             address_pool: self.address_pool,
@@ -1343,8 +1352,8 @@ pub struct CompiledModuleMut {
     /// the module.
     pub locals_signatures: LocalsSignaturePool,
 
-    /// String pool. All identifiers used in this module.
-    pub string_pool: StringPool,
+    /// All identifiers used in this module.
+    pub identifiers: IdentifierPool,
     /// User strings. All literals used in this module.
     pub user_strings: UserStringPool,
     /// ByteArray pool. The byte array literals used in the module.
@@ -1382,7 +1391,7 @@ impl Arbitrary for CompiledScriptMut {
                 vec(any_with::<LocalsSignature>(size), 0..=size),
             ),
             (
-                vec(any::<String>(), 0..=size),
+                vec(any::<Identifier>(), 0..=size),
                 vec(any::<UserString>(), 0..=size),
                 vec(any::<ByteArray>(), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
@@ -1393,7 +1402,7 @@ impl Arbitrary for CompiledScriptMut {
                 |(
                     (module_handles, struct_handles, function_handles),
                     (type_signatures, function_signatures, locals_signatures),
-                    (string_pool, user_strings, byte_array_pool, address_pool),
+                    (identifiers, user_strings, byte_array_pool, address_pool),
                     main,
                 )| {
                     CompiledScriptMut {
@@ -1403,7 +1412,7 @@ impl Arbitrary for CompiledScriptMut {
                         type_signatures,
                         function_signatures,
                         locals_signatures,
-                        string_pool,
+                        identifiers,
                         user_strings,
                         byte_array_pool,
                         address_pool,
@@ -1434,7 +1443,7 @@ impl Arbitrary for CompiledModuleMut {
                 vec(any_with::<LocalsSignature>(size), 0..=size),
             ),
             (
-                vec(any::<String>(), 0..=size),
+                vec(any::<Identifier>(), 0..=size),
                 vec(any::<UserString>(), 0..=size),
                 vec(any::<ByteArray>(), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
@@ -1449,7 +1458,7 @@ impl Arbitrary for CompiledModuleMut {
                 |(
                     (module_handles, struct_handles, function_handles),
                     (type_signatures, function_signatures, locals_signatures),
-                    (string_pool, user_strings, byte_array_pool, address_pool),
+                    (identifiers, user_strings, byte_array_pool, address_pool),
                     (struct_defs, field_defs, function_defs),
                 )| {
                     CompiledModuleMut {
@@ -1459,7 +1468,7 @@ impl Arbitrary for CompiledModuleMut {
                         type_signatures,
                         function_signatures,
                         locals_signatures,
-                        string_pool,
+                        identifiers,
                         user_strings,
                         byte_array_pool,
                         address_pool,
@@ -1486,7 +1495,7 @@ impl CompiledModuleMut {
             IndexKind::TypeSignature => self.type_signatures.len(),
             IndexKind::FunctionSignature => self.function_signatures.len(),
             IndexKind::LocalsSignature => self.locals_signatures.len(),
-            IndexKind::StringPool => self.string_pool.len(),
+            IndexKind::Identifier => self.identifiers.len(),
             IndexKind::UserString => self.user_strings.len(),
             IndexKind::ByteArrayPool => self.byte_array_pool.len(),
             IndexKind::AddressPool => self.address_pool.len(),
@@ -1533,7 +1542,7 @@ impl CompiledModule {
     pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
         ModuleId::new(
             *self.address_at(module_handle.address),
-            self.string_at(module_handle.name).to_string(),
+            self.identifier_at(module_handle.name).to_owned(),
         )
     }
 
@@ -1557,7 +1566,7 @@ impl CompiledModule {
             function_signatures: inner.function_signatures,
             locals_signatures: inner.locals_signatures,
 
-            string_pool: inner.string_pool,
+            identifiers: inner.identifiers,
             user_strings: inner.user_strings,
             byte_array_pool: inner.byte_array_pool,
             address_pool: inner.address_pool,
@@ -1572,10 +1581,10 @@ pub fn empty_module() -> CompiledModuleMut {
     CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             address: AddressPoolIndex::new(0),
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
         }],
         address_pool: vec![AccountAddress::default()],
-        string_pool: vec![SELF_MODULE_NAME.to_string()],
+        identifiers: vec![self_module_name().to_owned()],
         user_strings: vec![],
         function_defs: vec![],
         struct_defs: vec![],
@@ -1604,7 +1613,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
     });
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex(0),
-        name: StringPoolIndex(0),
+        name: IdentifierIndex(0),
         signature: FunctionSignatureIndex(0),
     };
 

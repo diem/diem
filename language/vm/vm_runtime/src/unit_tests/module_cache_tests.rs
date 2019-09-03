@@ -20,19 +20,19 @@ use vm_cache_map::Arena;
 fn test_module(name: String) -> VerifiedModule {
     let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
             address: AddressPoolIndex::new(0),
         }],
         struct_handles: vec![],
         function_handles: vec![
             FunctionHandle {
                 module: ModuleHandleIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
                 signature: FunctionSignatureIndex::new(0),
             },
             FunctionHandle {
                 module: ModuleHandleIndex::new(0),
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
                 signature: FunctionSignatureIndex::new(1),
             },
         ],
@@ -75,7 +75,7 @@ fn test_module(name: String) -> VerifiedModule {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![name, "func1".to_string(), "func2".to_string()],
+        identifiers: vec![name, "func1".to_string(), "func2".to_string()],
         user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
@@ -100,27 +100,27 @@ fn test_script() -> VerifiedScript {
         module_handles: vec![
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(0),
+                name: IdentifierIndex::new(0),
             },
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
             },
         ],
         struct_handles: vec![],
         function_handles: vec![
             FunctionHandle {
-                name: StringPoolIndex::new(4),
+                name: IdentifierIndex::new(4),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(0),
             },
             FunctionHandle {
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(1),
             },
             FunctionHandle {
-                name: StringPoolIndex::new(3),
+                name: IdentifierIndex::new(3),
                 signature: FunctionSignatureIndex::new(1),
                 module: ModuleHandleIndex::new(1),
             },
@@ -139,7 +139,7 @@ fn test_script() -> VerifiedScript {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![
+        identifiers: vec![
             "hello".to_string(),
             "module".to_string(),
             "func1".to_string(),
@@ -380,36 +380,36 @@ fn test_multi_level_cache_write_back() {
             // Self
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(0),
+                name: IdentifierIndex::new(0),
             },
             // To-be-published Module
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
             },
             // Existing module on chain
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
             },
         ],
         struct_handles: vec![],
         function_handles: vec![
             // main
             FunctionHandle {
-                name: StringPoolIndex::new(5),
+                name: IdentifierIndex::new(5),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(0),
             },
             // Func2 defined in the new module
             FunctionHandle {
-                name: StringPoolIndex::new(4),
+                name: IdentifierIndex::new(4),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(1),
             },
             // Func1 defined in the old module
             FunctionHandle {
-                name: StringPoolIndex::new(3),
+                name: IdentifierIndex::new(3),
                 signature: FunctionSignatureIndex::new(1),
                 module: ModuleHandleIndex::new(2),
             },
@@ -428,7 +428,7 @@ fn test_multi_level_cache_write_back() {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![
+        identifiers: vec![
             "hello".to_string(),
             "module".to_string(),
             "existing_module".to_string(),

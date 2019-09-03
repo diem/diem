@@ -7,17 +7,17 @@ use crate::{
     access::ModuleAccess,
     errors::VMStaticViolation,
     file_format::{
-        AddressPoolIndex, FunctionSignature, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StringPoolIndex, StructHandle, StructHandleIndex,
+        AddressPoolIndex, FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex,
+        SignatureToken, StructHandle, StructHandleIndex,
     },
 };
 use std::collections::BTreeMap;
-use types::account_address::AccountAddress;
+use types::{account_address::AccountAddress, identifier::Identifier};
 
 /// Resolution context for importing types
 pub struct Resolver {
     address_map: BTreeMap<AccountAddress, AddressPoolIndex>,
-    string_map: BTreeMap<String, StringPoolIndex>,
+    identifier_map: BTreeMap<Identifier, IdentifierIndex>,
     module_handle_map: BTreeMap<ModuleHandle, ModuleHandleIndex>,
     struct_handle_map: BTreeMap<StructHandle, StructHandleIndex>,
 }
@@ -29,9 +29,9 @@ impl Resolver {
         for (idx, address) in module.address_pool().iter().enumerate() {
             address_map.insert(address.clone(), AddressPoolIndex(idx as u16));
         }
-        let mut string_map = BTreeMap::new();
-        for (idx, name) in module.string_pool().iter().enumerate() {
-            string_map.insert(name.clone(), StringPoolIndex(idx as u16));
+        let mut identifier_map = BTreeMap::new();
+        for (idx, name) in module.identifiers().iter().enumerate() {
+            identifier_map.insert(name.clone(), IdentifierIndex(idx as u16));
         }
         let mut module_handle_map = BTreeMap::new();
         for (idx, module_hadndle) in module.module_handles().iter().enumerate() {
@@ -43,7 +43,7 @@ impl Resolver {
         }
         Self {
             address_map,
-            string_map,
+            identifier_map,
             module_handle_map,
             struct_handle_map,
         }
@@ -67,25 +67,25 @@ impl Resolver {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);
                 let defining_module_address = dependency.address_at(defining_module_handle.address);
-                let defining_module_name = dependency.string_at(defining_module_handle.name);
+                let defining_module_name = dependency.identifier_at(defining_module_handle.name);
                 let local_module_handle = ModuleHandle {
                     address: *self
                         .address_map
                         .get(defining_module_address)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
                     name: *self
-                        .string_map
+                        .identifier_map
                         .get(defining_module_name)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
                 };
-                let struct_name = dependency.string_at(struct_handle.name);
+                let struct_name = dependency.identifier_at(struct_handle.name);
                 let local_struct_handle = StructHandle {
                     module: *self
                         .module_handle_map
                         .get(&local_module_handle)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
                     name: *self
-                        .string_map
+                        .identifier_map
                         .get(struct_name)
                         .ok_or(VMStaticViolation::TypeResolutionFailure)?,
                     is_nominal_resource: struct_handle.is_nominal_resource,
