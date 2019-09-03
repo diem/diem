@@ -175,7 +175,8 @@ where
         match self.op {
             MoveToSender(_, _)
             | MoveFrom(_, _)
-            | BorrowGlobal(_, _)
+            | ImmBorrowGlobal(_, _)
+            | MutBorrowGlobal(_, _)
             | Exists(_, _)
             | Unpack(_, _)
             | Pack(_, _)
@@ -612,7 +613,7 @@ where
                     HashMap::new(),
                 )
             }
-            BorrowGlobal(_, _) => {
+            MutBorrowGlobal(_, _) => {
                 let struct_handle_idx = self.next_resource();
                 let addr = Local::address(*self.account_address);
                 let size = addr.size();
@@ -620,7 +621,20 @@ where
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
-                    BorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
+                    MutBorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
+                    size,
+                    HashMap::new(),
+                )
+            }
+            ImmBorrowGlobal(_, _) => {
+                let struct_handle_idx = self.next_resource();
+                let addr = Local::address(*self.account_address);
+                let size = addr.size();
+                let stack = vec![addr];
+                StackState::new(
+                    (self.root_module, None),
+                    self.random_pad(stack),
+                    ImmBorrowGlobal(struct_handle_idx, NO_TYPE_ACTUALS),
                     size,
                     HashMap::new(),
                 )

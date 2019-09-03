@@ -289,9 +289,9 @@ pub enum Builtin {
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the given address
     Exists(StructName, Vec<Type>),
-    /// Get the struct object (`StructName` resolved by current module) associated with the given
-    /// address
-    BorrowGlobal(StructName, Vec<Type>),
+    /// Get a reference to the resource(`StructName` resolved by current module) associated
+    /// with the given address
+    BorrowGlobal(bool, StructName, Vec<Type>),
     /// Returns the price per gas unit the current transaction is willing to pay
     GetTxnGasUnitPrice,
     /// Returns the maximum units of gas the current transaction is willing to use
@@ -1237,8 +1237,15 @@ impl fmt::Display for Builtin {
         match self {
             Builtin::CreateAccount => write!(f, "create_account"),
             Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
-            Builtin::BorrowGlobal(t, tys) => {
-                write!(f, "borrow_global<{}{}>", t, format_type_actuals(tys))
+            Builtin::BorrowGlobal(mut_, t, tys) => {
+                let mut_flag = if *mut_ { "_mut" } else { "" };
+                write!(
+                    f,
+                    "borrow_global{}<{}{}>",
+                    mut_flag,
+                    t,
+                    format_type_actuals(tys)
+                )
             }
             Builtin::GetTxnMaxGasUnits => write!(f, "get_txn_max_gas_units"),
             Builtin::GetTxnGasUnitPrice => write!(f, "get_txn_gas_unit_price"),

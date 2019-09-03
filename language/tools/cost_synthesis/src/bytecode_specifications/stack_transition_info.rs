@@ -276,7 +276,9 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         | Bytecode::GetGasRemaining => type_transition! { empty() => u64s(1) },
         Bytecode::GetTxnSenderAddress => type_transition! { empty() => simple_addrs(1) },
         Bytecode::Exists(_, _) => type_transition! { simple_addrs(1) => bools(1) },
-        Bytecode::BorrowGlobal(_, _) => type_transition! { simple_addrs(1) => ref_values(1) },
+        Bytecode::MutBorrowGlobal(_, _) | Bytecode::ImmBorrowGlobal(_, _) => {
+            type_transition! { simple_addrs(1) => ref_values(1) }
+        }
         Bytecode::MoveFrom(_, _) => type_transition! { simple_addrs(1) => values(1) },
         Bytecode::MoveToSender(_, _) => type_transition! { values(1) => empty() },
         Bytecode::CreateAccount => type_transition! { simple_addrs(1) => empty() },

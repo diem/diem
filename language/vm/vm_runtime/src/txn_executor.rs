@@ -507,7 +507,7 @@ where
                         self.txn_data.public_key().to_bytes().to_vec(),
                     ))));
                 }
-                Bytecode::BorrowGlobal(idx, _) => {
+                Bytecode::MutBorrowGlobal(idx, _) | Bytecode::ImmBorrowGlobal(idx, _) => {
                     let address = try_runtime!(self.execution_stack.pop_as::<AccountAddress>());
                     let curr_module = self.execution_stack.top_frame()?.module();
                     let ap = make_access_path(curr_module, idx, address);

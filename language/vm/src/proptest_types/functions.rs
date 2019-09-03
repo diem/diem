@@ -207,7 +207,8 @@ enum BytecodeGen {
     Pack(PropIndex, PropIndex),
     Unpack(PropIndex, PropIndex),
     Exists(PropIndex, PropIndex),
-    BorrowGlobal(PropIndex, PropIndex),
+    MutBorrowGlobal(PropIndex, PropIndex),
+    ImmBorrowGlobal(PropIndex, PropIndex),
     MoveFrom(PropIndex, PropIndex),
     MoveToSender(PropIndex, PropIndex),
     BrTrue(PropIndex),
@@ -238,7 +239,9 @@ impl BytecodeGen {
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Exists(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),)
-                .prop_map(|(idx, types)| BorrowGlobal(idx, types)),
+                .prop_map(|(idx, types)| ImmBorrowGlobal(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
+                .prop_map(|(idx, types)| MutBorrowGlobal(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| MoveFrom(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),)
                 .prop_map(|(idx, types)| MoveToSender(idx, types)),
@@ -334,7 +337,12 @@ impl BytecodeGen {
                 // TODO: generate random index to type actuals once generics is fully implemented
                 NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::BorrowGlobal(idx, _types_idx) => Bytecode::BorrowGlobal(
+            BytecodeGen::ImmBorrowGlobal(idx, _types_idx) => Bytecode::ImmBorrowGlobal(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::MutBorrowGlobal(idx, _types_idx) => Bytecode::MutBorrowGlobal(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
                 // TODO: generate random index to type actuals once generics is fully implemented
                 NO_TYPE_ACTUALS,

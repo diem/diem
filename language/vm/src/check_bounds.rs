@@ -339,7 +339,8 @@ impl FunctionDefinition {
                     Pack(idx, _)
                     | Unpack(idx, _)
                     | Exists(idx, _)
-                    | BorrowGlobal(idx, _)
+                    | MutBorrowGlobal(idx, _)
+                    | ImmBorrowGlobal(idx, _)
                     | MoveFrom(idx, _)
                     | MoveToSender(idx, _) => {
                         check_code_unit_bounds_impl(&module.struct_defs, bytecode_offset, *idx)

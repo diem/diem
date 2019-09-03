@@ -7,7 +7,7 @@ module Tester {
     set_and_pick(p: &mut Self.Point): &mut u64  {
         let init: &mut Self.Initializer;
 
-        init = borrow_global<Initializer>(get_txn_sender());
+        init = borrow_global_mut<Initializer>(get_txn_sender());
         *&mut copy(p).x = *&copy(init).x;
         *&mut copy(p).y = *&move(init).y;
         if (*&copy(p).x >= *&copy(p).y) {

@@ -593,7 +593,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     *struct_index,
                 ));
             }
-            Bytecode::BorrowGlobal(idx, _) => {
+            Bytecode::MutBorrowGlobal(idx, _) | Bytecode::ImmBorrowGlobal(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
 
                 let operand_index = self.temp_stack.pop().unwrap();

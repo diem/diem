@@ -73,7 +73,8 @@ fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<Gas
     match instr {
         Bytecode::MoveToSender(_, _)
         | Bytecode::Exists(_, _)
-        | Bytecode::BorrowGlobal(_, _)
+        | Bytecode::MutBorrowGlobal(_, _)
+        | Bytecode::ImmBorrowGlobal(_, _)
         | Bytecode::Eq
         | Bytecode::Neq
         | Bytecode::LdStr(_)
@@ -99,7 +100,8 @@ fn stack_instructions(options: &Opt) {
         FreezeRef,
         MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        BorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         MutBorrowField(FieldDefinitionIndex::new(0)),
         ImmBorrowField(FieldDefinitionIndex::new(0)),
