@@ -33,6 +33,7 @@ proto_conv = { path = "../common/proto_conv", features = ["derive"] }
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
+serde_json = "1.0.40"
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
