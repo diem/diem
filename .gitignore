@@ -3,12 +3,6 @@
 # .gitignore file locally for IDE/Emacs/Vim generated files.
 **/target
 **/*.rs.bk
-# Cargo.lock is needed for deterministic testing and repeatable builds.
-#
-# Having it in the repo slows down development cycle.
-#
-# More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
-Cargo.lock
 
 # Ignore generated files in proto folders
 **/proto/*.rs
