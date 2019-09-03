@@ -1,0 +1,10 @@
+import 0x0.LibraAccount;
+
+main() {
+  // check that the sequence number of the Association account (which sent the genesis txn) has been
+  // incremented...
+  assert(LibraAccount.sequence_number(0xA550C18) == 1, 66);
+  // ...but not the sequence number of the core code account
+  assert(LibraAccount.sequence_number(0x0) == 0, 67);
+  return;
+}

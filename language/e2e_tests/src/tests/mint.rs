@@ -23,7 +23,7 @@ fn mint_to_existing() {
     executor.add_account_data(&receiver);
 
     let mint_amount = 1_000;
-    let txn = mint_txn(&genesis_account, receiver.account(), 0, mint_amount);
+    let txn = mint_txn(&genesis_account, receiver.account(), 1, mint_amount);
 
     // execute transaction
     let txns: Vec<SignedTransaction> = vec![txn];
@@ -49,7 +49,7 @@ fn mint_to_existing() {
         .expect("receiver must exist");
     assert_eq!(sender_balance, updated_sender.balance());
     assert_eq!(receiver_balance, updated_receiver.balance());
-    assert_eq!(1, updated_sender.sequence_number());
+    assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(10, updated_receiver.sequence_number());
 }
 
@@ -63,7 +63,7 @@ fn mint_to_new_account() {
     let new_account = Account::new();
 
     let mint_amount = TXN_RESERVED;
-    let txn = mint_txn(&genesis_account, &new_account, 0, mint_amount);
+    let txn = mint_txn(&genesis_account, &new_account, 1, mint_amount);
 
     // execute transaction
     let txns: Vec<SignedTransaction> = vec![txn];
@@ -88,7 +88,7 @@ fn mint_to_new_account() {
         .expect("receiver must exist");
     assert_eq!(sender_balance, updated_sender.balance());
     assert_eq!(receiver_balance, updated_receiver.balance());
-    assert_eq!(1, updated_sender.sequence_number());
+    assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(0, updated_receiver.sequence_number());
 
     // Mint can only be called from genesis address;

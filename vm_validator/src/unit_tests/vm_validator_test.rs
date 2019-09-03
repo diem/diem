@@ -103,7 +103,7 @@ fn test_validate_transaction() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         Some(program),
@@ -128,7 +128,7 @@ fn test_validate_invalid_signature() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         address,
-        0,
+        1,
         other_private_key,
         keypair.public_key,
         Some(program),
@@ -151,7 +151,7 @@ fn test_validate_known_script_too_large_args() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         Some(Program::new(
@@ -179,7 +179,7 @@ fn test_validate_max_gas_units_above_max() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         None,
@@ -205,7 +205,7 @@ fn test_validate_max_gas_units_below_min() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         None,
@@ -231,7 +231,7 @@ fn test_validate_max_gas_price_above_bounds() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         None,
@@ -261,7 +261,7 @@ fn test_validate_max_gas_price_below_bounds() {
     let program = encode_transfer_program(&address, 100);
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         Some(program),
@@ -345,7 +345,7 @@ fn test_validate_invalid_auth_key() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
+        1,
         other_private_key,
         other_public_key,
         Some(program),
@@ -369,7 +369,7 @@ fn test_validate_balance_below_gas_fee() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
+        1,
         keypair.private_key.clone(),
         keypair.public_key,
         Some(program),
@@ -401,7 +401,7 @@ fn test_validate_account_doesnt_exist() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         Some(program),
@@ -450,7 +450,7 @@ fn test_validate_invalid_arguments() {
     let program = Program::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         Some(program),
@@ -475,7 +475,7 @@ fn test_validate_non_genesis_write_set() {
     let address = account_config::association_address();
     let signed_txn = transaction_test_helpers::get_write_set_txn(
         address,
-        0,
+        1,
         keypair.private_key,
         keypair.public_key,
         None,
