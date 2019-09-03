@@ -6,12 +6,8 @@ use crypto::{
     hash::{CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };
-use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
-use types::proof::{
-    position::{FrozenSubtreeSiblingIterator, Position},
-    TestAccumulatorInternalNode,
-};
+use types::proof::{position::Position, TestAccumulatorInternalNode};
 
 fn compute_parent_hash(left_hash: HashValue, right_hash: HashValue) -> HashValue {
     if left_hash == *ACCUMULATOR_PLACEHOLDER_HASH && right_hash == *ACCUMULATOR_PLACEHOLDER_HASH {
@@ -107,6 +103,7 @@ fn test_accumulator_append() {
     }
 }
 
+/* TODO(wqfish): re-implement append_siblings and restore the test.
 proptest! {
     #[test]
     fn test_accumulator_append_siblings(
@@ -131,3 +128,4 @@ proptest! {
         );
     }
 }
+*/
