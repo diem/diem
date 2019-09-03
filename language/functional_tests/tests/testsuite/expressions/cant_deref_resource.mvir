@@ -36,7 +36,7 @@ module Token {
         addr = get_txn_sender();
         t = Self.new(0);
         Self.publish(move(t));
-        tref = borrow_global<T>(move(addr));
+        tref = borrow_global_mut<T>(move(addr));
         y = *move(tref);
         return;
     }

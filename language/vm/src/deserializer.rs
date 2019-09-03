@@ -1001,10 +1001,21 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let types_idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::Exists(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             }
-            Opcodes::BORROW_GLOBAL => {
+            Opcodes::MUT_BORROW_GLOBAL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::BorrowGlobal(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+                Bytecode::MutBorrowGlobal(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
+            Opcodes::IMM_BORROW_GLOBAL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::ImmBorrowGlobal(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
             }
             Opcodes::MOVE_FROM => {
                 let idx = read_uleb_u16_internal(cursor)?;
@@ -1187,13 +1198,14 @@ impl Opcodes {
             0x2C => Ok(Opcodes::GET_GAS_REMAINING),
             0x2D => Ok(Opcodes::GET_TXN_SENDER),
             0x2E => Ok(Opcodes::EXISTS),
-            0x2F => Ok(Opcodes::BORROW_GLOBAL),
-            0x30 => Ok(Opcodes::MOVE_FROM),
-            0x31 => Ok(Opcodes::MOVE_TO),
-            0x32 => Ok(Opcodes::CREATE_ACCOUNT),
-            0x33 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
-            0x34 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
-            0x35 => Ok(Opcodes::FREEZE_REF),
+            0x2F => Ok(Opcodes::MUT_BORROW_GLOBAL),
+            0x30 => Ok(Opcodes::IMM_BORROW_GLOBAL),
+            0x31 => Ok(Opcodes::MOVE_FROM),
+            0x32 => Ok(Opcodes::MOVE_TO),
+            0x33 => Ok(Opcodes::CREATE_ACCOUNT),
+            0x34 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
+            0x35 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
+            0x36 => Ok(Opcodes::FREEZE_REF),
             _ => Err(BinaryError::UnknownOpcode),
         }
     }

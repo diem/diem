@@ -670,8 +670,13 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
-        Bytecode::BorrowGlobal(class_idx, types_idx) => {
-            binary.push(Opcodes::BORROW_GLOBAL as u8)?;
+        Bytecode::MutBorrowGlobal(class_idx, types_idx) => {
+            binary.push(Opcodes::MUT_BORROW_GLOBAL as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::ImmBorrowGlobal(class_idx, types_idx) => {
+            binary.push(Opcodes::IMM_BORROW_GLOBAL as u8)?;
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }

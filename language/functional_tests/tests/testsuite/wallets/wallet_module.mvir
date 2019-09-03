@@ -115,7 +115,7 @@ module ColdWallet {
 
         let payee_wallet_ref: &mut Self.T;
         // Load the payee's account
-        payee_wallet_ref = borrow_global<T>(move(payee));
+        payee_wallet_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut move(payee_wallet_ref).balance, move(to_deposit));
         return;
@@ -143,7 +143,7 @@ module ColdWallet {
         let has_authority: bool;
         let account_balance: u64;
 
-        payer_ref = borrow_global<T>(copy(payer));
+        payer_ref = borrow_global_mut<T>(copy(payer));
         account_balance = LibraCoin.value(&copy(payer_ref).balance);
         assert(copy(amount) <= move(account_balance), 1001);
 

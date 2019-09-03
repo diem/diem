@@ -212,7 +212,11 @@ Builtin: Builtin = {
     },
     "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
         let (name, type_actuals) = name_and_type_actuals;
-        Builtin::BorrowGlobal(StructName::new(name), type_actuals)
+        Builtin::BorrowGlobal(false, StructName::new(name), type_actuals)
+    },
+    "borrow_global_mut<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+        let (name, type_actuals) = name_and_type_actuals;
+        Builtin::BorrowGlobal(true, StructName::new(name), type_actuals)
     },
     "get_txn_gas_unit_price" => Builtin::GetTxnGasUnitPrice,
     "get_txn_max_gas_units" => Builtin::GetTxnMaxGasUnits,

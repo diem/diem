@@ -84,7 +84,9 @@ impl<'a> AcquiresVerifier<'a> {
                 self.actual_acquires
                     .append(&mut function_acquired_resources)
             }
-            Bytecode::MoveFrom(idx, _) | Bytecode::BorrowGlobal(idx, _) => {
+            Bytecode::MoveFrom(idx, _)
+            | Bytecode::MutBorrowGlobal(idx, _)
+            | Bytecode::ImmBorrowGlobal(idx, _) => {
                 if !self.annotated_acquires.contains(idx) {
                     self.errors
                         .push(VMStaticViolation::MissingAcquiresResourceAnnotationError(

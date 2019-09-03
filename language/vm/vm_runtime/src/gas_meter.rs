@@ -269,7 +269,9 @@ impl GasMeter {
             //
             // Borrowing a global causes a read of the underlying data. Therefore the cost is
             // dependent on the size of the data being borrowed.
-            Bytecode::BorrowGlobal(_, _)
+            Bytecode::MutBorrowGlobal(_, _)
+            |
+            Bytecode::ImmBorrowGlobal(_, _)
             // In the process of determining if a resource exists, we need to load/read that
             // memory. We therefore need to charge for this query based on the size of the data
             // being accessed.

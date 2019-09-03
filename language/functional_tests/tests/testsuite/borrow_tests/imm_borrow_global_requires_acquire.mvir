@@ -1,0 +1,12 @@
+module A {
+    resource T1{}
+
+    public test(addr: address) {
+        _ = borrow_global<T1>(move(addr));
+        return;
+    }
+
+}
+
+// check: VerificationError
+// check: MissingAcquiresResourceAnnotationError

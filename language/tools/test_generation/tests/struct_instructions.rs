@@ -377,7 +377,7 @@ fn bytecode_borrowglobal() {
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     let state2 = common::run_instruction(
-        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
     assert_eq!(
@@ -397,7 +397,7 @@ fn bytecode_borrowglobal_struct_is_not_resource() {
     let mut state1 = AbstractState::from_locals(module, HashMap::new());
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     common::run_instruction(
-        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
 }
@@ -408,7 +408,7 @@ fn bytecode_borrowglobal_no_address_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
     let state1 = AbstractState::from_locals(module, HashMap::new());
     common::run_instruction(
-        Bytecode::BorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
 }

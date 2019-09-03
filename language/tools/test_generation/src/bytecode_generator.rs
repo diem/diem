@@ -208,7 +208,11 @@ impl BytecodeGenerator {
             ),
             (
                 StackEffect::Nop,
-                BytecodeType::StructAndLocalIndex(Bytecode::BorrowGlobal),
+                BytecodeType::StructAndLocalIndex(Bytecode::MutBorrowGlobal),
+            ),
+            (
+                StackEffect::Nop,
+                BytecodeType::StructAndLocalIndex(Bytecode::ImmBorrowGlobal),
             ),
             (
                 StackEffect::Nop,

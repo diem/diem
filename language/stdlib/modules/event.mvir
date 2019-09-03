@@ -42,7 +42,7 @@ module Event {
         if (!move(exists_counter)) {
             move_to_sender<HandleIdGenerator>(HandleIdGenerator { counter: 0 });
         }
-        counter = borrow_global<HandleIdGenerator>(copy(sender));
+        counter = borrow_global_mut<HandleIdGenerator>(copy(sender));
 
         count = &mut move(counter).counter;
 

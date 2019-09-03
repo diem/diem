@@ -34,7 +34,7 @@ module Token {
         Self.publish(move(z));
 
         addr1 = get_txn_sender();
-        struct1 = borrow_global<T>(move(addr1));
+        struct1 = borrow_global_mut<T>(move(addr1));
         imms1 = freeze(move(struct1));
 
         struct1_original_balance = Self.value(move(imms1));

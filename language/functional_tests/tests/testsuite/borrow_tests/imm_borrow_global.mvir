@@ -1,0 +1,64 @@
+//! account: alice, 90000
+//! account: bob, 90000
+
+//! sender: alice
+
+module A {
+    resource Coin { u: u64 }
+
+    public new(): Self.Coin {
+        return Coin { u: 1 };
+    }
+
+    public join(c1: Self.Coin, c2: Self.Coin): Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        Coin { u2 } = move(c2);
+        return Coin { u: move(u1) + move(u2) };
+    }
+
+    public split(c1: Self.Coin, amt: u64): Self.Coin * Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        assert(copy(u1) >= copy(amt), 42)
+        u1 = move(u1) - copy(amt);
+        u2 = copy(amt);
+        return Coin { u: move(u1) }, Coin { u: move(u2) };
+    }
+}
+
+//! new-transaction
+//! sender: bob
+
+module Tester {
+    import {{alice}}.A;
+
+    resource Pair { x: A.Coin, y: A.Coin }
+
+    public test_eq(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &Self.Pair;
+        let p2: &Self.Pair;
+
+        p1 = borrow_global<Pair>(move(addr1));
+        p2 = borrow_global<Pair>(move(addr2));
+        return move(p1) == move(p2);
+    }
+
+    public test() acquires Pair {
+        move_to_sender<Pair>(Pair { x: A.new(), y: A.new() });
+        assert(Self.test_eq(get_txn_sender(), get_txn_sender()), 42);
+        return;
+    }
+
+}
+
+//! new-transaction
+//! sender: bob
+import {{bob}}.Tester;
+
+main() {
+    Tester.test();
+    return;
+}

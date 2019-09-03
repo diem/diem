@@ -16,7 +16,7 @@ main() {
     let yes: &mut Token.T;
 
     sender = get_txn_sender();
-    yes = borrow_global<T>(copy(sender));
+    yes = borrow_global_mut<T>(copy(sender));
     _ = move(yes);
     return;
 }

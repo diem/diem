@@ -115,6 +115,11 @@ impl AbstractState {
         self.globals.entry(idx).or_insert_with(BTreeSet::new)
     }
 
+    /// returns global@idx, None if not present
+    pub fn global_opt(&self, idx: StructDefinitionIndex) -> Option<&BTreeSet<Nonce>> {
+        self.globals.get(&idx)
+    }
+
     /// removes local@idx
     pub fn remove_local(&mut self, idx: LocalIndex) -> AbstractValue {
         self.locals.remove(&idx).unwrap()

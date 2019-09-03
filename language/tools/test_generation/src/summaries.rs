@@ -423,7 +423,7 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             ],
             effects: vec![state_stack_pop!(), state_stack_struct_borrow_field!(i)],
         },
-        Bytecode::BorrowGlobal(i, _) => Summary {
+        Bytecode::MutBorrowGlobal(i, _) => Summary {
             preconditions: vec![
                 state_stack_has!(
                     0,
@@ -435,6 +435,20 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 state_stack_pop!(),
                 state_create_struct!(i),
                 state_stack_push_register_borrow!(Mutability::Mutable),
+            ],
+        },
+        Bytecode::ImmBorrowGlobal(i, _) => Summary {
+            preconditions: vec![
+                state_stack_has!(
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::Address))
+                ),
+                state_struct_is_resource!(i),
+            ],
+            effects: vec![
+                state_stack_pop!(),
+                state_create_struct!(i),
+                state_stack_push_register_borrow!(Mutability::Immutable),
             ],
         },
         Bytecode::MoveFrom(i, _) => Summary {
