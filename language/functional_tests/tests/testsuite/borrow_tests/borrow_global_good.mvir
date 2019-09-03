@@ -60,4 +60,10 @@ module A {
         move_to_sender<T>(move(x));
         return;
     }
+
+    public A5() acquires T {
+        let t_ref: &mut Self.T;
+        t_ref = borrow_global<T>(get_txn_sender());
+        return;
+    }
 }

@@ -246,9 +246,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::Ret => {
-                if !state.is_safe_to_destroy() {
-                    return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
-                }
                 for return_type_view in self
                     .function_definition_view
                     .signature()
@@ -260,6 +257,17 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         return Err(VMStaticViolation::RetTypeMismatchError(offset));
                     }
                 }
+                for idx in 0..self.locals_signature_view.len() {
+                    let is_reference = state.is_available(idx as LocalIndex)
+                        && state.local(idx as LocalIndex).is_reference();
+                    if is_reference {
+                        state.destroy_local(idx as LocalIndex)
+                    }
+                }
+                if !state.is_safe_to_destroy() {
+                    return Err(VMStaticViolation::RetUnsafeToDestroyError(offset));
+                }
+
                 *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
                 Ok(())
             }
