@@ -358,6 +358,15 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap()
                 .unwrap();
 
+            // Bump the sequence number for the Association account. If we don't do this and a
+            // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
+            // arises: both the genesis transaction and the subsequent transaction have sequence
+            // number 0
+            txn_executor
+                .execute_function(&ACCOUNT_MODULE, "epilogue", vec![])
+                .unwrap()
+                .unwrap();
+
             let stdlib_modules = modules
                 .iter()
                 .map(|m| {

@@ -57,7 +57,7 @@ fn test_execution_service_basic() {
     let version = 100;
 
     let txns = (0..version)
-        .map(|i| encode_mint_transaction(i, &faucet_keypair))
+        .map(|i| encode_mint_transaction(i + 1, &faucet_keypair))
         .collect();
     let execute_block_request = ExecuteBlockRequest::new(txns, parent_block_id, block_id);
     let execute_block_response = execution_client

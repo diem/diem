@@ -72,7 +72,7 @@ fn test_execution_with_storage() {
     // Create account1 with 2M coins.
     let txn1 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 0,
+        /* sequence_number = */ 1,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account1, 2_000_000)),
@@ -81,7 +81,7 @@ fn test_execution_with_storage() {
     // Create account2 with 200k coins.
     let txn2 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 1,
+        /* sequence_number = */ 2,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account2, 200_000)),
@@ -90,7 +90,7 @@ fn test_execution_with_storage() {
     // Create account3 with 100k coins.
     let txn3 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 2,
+        /* sequence_number = */ 3,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
         Some(encode_create_account_program(&account3, 100_000)),
@@ -157,11 +157,6 @@ fn test_execution_with_storage() {
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
             account: genesis_account,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
             sequence_number: 1,
             fetch_events: false,
         },
@@ -173,6 +168,11 @@ fn test_execution_with_storage() {
         RequestItem::GetAccountTransactionBySequenceNumber {
             account: genesis_account,
             sequence_number: 3,
+            fetch_events: false,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: genesis_account,
+            sequence_number: 4,
             fetch_events: false,
         },
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -278,7 +278,7 @@ fn test_execution_with_storage() {
     verify_uncommitted_txn_status(
         tn.as_ref(),
         pn.as_ref(),
-        /* next_seq_num_of_this_account = */ 3,
+        /* next_seq_num_of_this_account = */ 4,
     )
     .unwrap();
 
