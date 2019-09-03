@@ -1,12 +1,13 @@
 extern crate test_generation;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
+use types::identifier::Identifier;
 use vm::{
     access::ModuleAccess,
     file_format::{
         empty_module, Bytecode, CompiledModule, CompiledModuleMut, FieldDefinition,
-        FieldDefinitionIndex, Kind, LocalsSignatureIndex, MemberCount, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
+        FieldDefinitionIndex, IdentifierIndex, Kind, LocalsSignatureIndex, MemberCount,
+        ModuleHandleIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
     },
@@ -30,8 +31,8 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
 
     let struct_index = 0;
     let num_fields = 5;
-    let offset = module.string_pool.len() as TableIndex;
-    module.string_pool.push("struct0".to_string());
+    let offset = module.identifiers.len() as TableIndex;
+    module.identifiers.push(Identifier::new("struct0").unwrap());
 
     let field_information = StructFieldInformation::Declared {
         field_count: num_fields as MemberCount,
@@ -44,10 +45,12 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     module.struct_defs.push(struct_def);
 
     for i in 0..num_fields {
-        module.string_pool.push(format!("string{}", i));
+        module
+            .identifiers
+            .push(Identifier::new(format!("string{}", i)).unwrap());
         let struct_handle_idx = StructHandleIndex::new(struct_index);
         let typ_idx = TypeSignatureIndex::new(0);
-        let str_pool_idx = StringPoolIndex::new(i + 1 as TableIndex);
+        let str_pool_idx = IdentifierIndex::new(i + 1 as TableIndex);
         let field_def = FieldDefinition {
             struct_: struct_handle_idx,
             name: str_pool_idx,
@@ -57,7 +60,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     }
     module.struct_handles = vec![StructHandle {
         module: ModuleHandleIndex::new(0),
-        name: StringPoolIndex::new((struct_index + offset) as TableIndex),
+        name: IdentifierIndex::new((struct_index + offset) as TableIndex),
         is_nominal_resource: resource,
         type_formals: vec![],
     }];

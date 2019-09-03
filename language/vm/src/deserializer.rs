@@ -8,7 +8,7 @@ use std::{
     convert::TryInto,
     io::{Cursor, Read},
 };
-use types::{account_address::ADDRESS_LENGTH, byte_array::ByteArray};
+use types::{account_address::ADDRESS_LENGTH, byte_array::ByteArray, identifier::Identifier};
 
 impl CompiledScript {
     /// Deserializes a &[u8] slice into a `CompiledScript` instance.
@@ -194,7 +194,7 @@ trait CommonTables {
     fn get_function_signatures(&mut self) -> &mut FunctionSignaturePool;
     fn get_locals_signatures(&mut self) -> &mut LocalsSignaturePool;
 
-    fn get_string_pool(&mut self) -> &mut StringPool;
+    fn get_identifiers(&mut self) -> &mut IdentifierPool;
     fn get_user_strings(&mut self) -> &mut UserStringPool;
     fn get_byte_array_pool(&mut self) -> &mut ByteArrayPool;
     fn get_address_pool(&mut self) -> &mut AddressPool;
@@ -225,8 +225,8 @@ impl CommonTables for CompiledScriptMut {
         &mut self.locals_signatures
     }
 
-    fn get_string_pool(&mut self) -> &mut StringPool {
-        &mut self.string_pool
+    fn get_identifiers(&mut self) -> &mut IdentifierPool {
+        &mut self.identifiers
     }
 
     fn get_user_strings(&mut self) -> &mut UserStringPool {
@@ -267,8 +267,8 @@ impl CommonTables for CompiledModuleMut {
         &mut self.locals_signatures
     }
 
-    fn get_string_pool(&mut self) -> &mut StringPool {
-        &mut self.string_pool
+    fn get_identifiers(&mut self) -> &mut IdentifierPool {
+        &mut self.identifiers
     }
 
     fn get_user_strings(&mut self) -> &mut UserStringPool {
@@ -320,8 +320,8 @@ fn build_common_tables(
             TableType::ADDRESS_POOL => {
                 load_address_pool(binary, table, common.get_address_pool())?;
             }
-            TableType::STRING_POOL => {
-                load_string_pool(binary, table, common.get_string_pool())?;
+            TableType::IDENTIFIERS => {
+                load_identifiers(binary, table, common.get_identifiers())?;
             }
             TableType::USER_STRINGS => {
                 load_user_strings(binary, table, common.get_user_strings())?;
@@ -368,7 +368,7 @@ fn build_module_tables(
             | TableType::STRUCT_HANDLES
             | TableType::FUNCTION_HANDLES
             | TableType::ADDRESS_POOL
-            | TableType::STRING_POOL
+            | TableType::IDENTIFIERS
             | TableType::USER_STRINGS
             | TableType::BYTE_ARRAY_POOL
             | TableType::TYPE_SIGNATURES
@@ -403,7 +403,7 @@ fn build_script_tables(
             | TableType::STRUCT_HANDLES
             | TableType::FUNCTION_HANDLES
             | TableType::ADDRESS_POOL
-            | TableType::STRING_POOL
+            | TableType::IDENTIFIERS
             | TableType::USER_STRINGS
             | TableType::BYTE_ARRAY_POOL
             | TableType::TYPE_SIGNATURES
@@ -436,7 +436,7 @@ fn load_module_handles(
         let name = read_uleb_u16_internal(&mut cursor)?;
         module_handles.push(ModuleHandle {
             address: AddressPoolIndex(address),
-            name: StringPoolIndex(name),
+            name: IdentifierIndex(name),
         });
     }
     Ok(())
@@ -461,7 +461,7 @@ fn load_struct_handles(
         let type_formals = load_kinds(&mut cursor)?;
         struct_handles.push(StructHandle {
             module: ModuleHandleIndex(module_handle),
-            name: StringPoolIndex(name),
+            name: IdentifierIndex(name),
             is_nominal_resource,
             type_formals,
         });
@@ -487,7 +487,7 @@ fn load_function_handles(
         let signature = read_uleb_u16_internal(&mut cursor)?;
         function_handles.push(FunctionHandle {
             module: ModuleHandleIndex(module_handle),
-            name: StringPoolIndex(name),
+            name: IdentifierIndex(name),
             signature: FunctionSignatureIndex(signature),
         });
     }
@@ -517,11 +517,11 @@ fn load_address_pool(
     Ok(())
 }
 
-/// Builds the `StringPool`.
-fn load_string_pool(
+/// Builds the `IdentifierPool`.
+fn load_identifiers(
     binary: &[u8],
     table: &Table,
-    strings: &mut StringPool,
+    identifiers: &mut IdentifierPool,
 ) -> BinaryLoaderResult<()> {
     let start = table.offset as usize;
     let end = start + table.count as usize;
@@ -536,12 +536,12 @@ fn load_string_pool(
             if count != size {
                 return Err(BinaryError::Malformed);
             }
-            let s = match String::from_utf8(buffer) {
+            let s = match Identifier::from_utf8(buffer) {
                 Ok(bytes) => bytes,
                 Err(_) => return Err(BinaryError::Malformed),
             };
 
-            strings.push(s);
+            identifiers.push(s);
         }
     }
     Ok(())
@@ -826,7 +826,7 @@ fn load_field_defs(
         let signature = read_uleb_u16_internal(&mut cursor)?;
         field_defs.push(FieldDefinition {
             struct_: StructHandleIndex(struct_),
-            name: StringPoolIndex(name),
+            name: IdentifierIndex(name),
             signature: TypeSignatureIndex(signature),
         });
     }
@@ -1074,7 +1074,7 @@ impl TableType {
             0x2 => Ok(TableType::STRUCT_HANDLES),
             0x3 => Ok(TableType::FUNCTION_HANDLES),
             0x4 => Ok(TableType::ADDRESS_POOL),
-            0x5 => Ok(TableType::STRING_POOL),
+            0x5 => Ok(TableType::IDENTIFIERS),
             0x6 => Ok(TableType::USER_STRINGS),
             0x7 => Ok(TableType::BYTE_ARRAY_POOL),
             0x8 => Ok(TableType::MAIN),

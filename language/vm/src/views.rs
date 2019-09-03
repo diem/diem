@@ -28,14 +28,15 @@ use std::collections::BTreeSet;
 use types::language_storage::ModuleId;
 
 use std::collections::BTreeMap;
+use types::identifier::IdentStr;
 
 /// Represents a lazily evaluated abstraction over a module.
 ///
 /// `T` here is any sort of `ModuleAccess`. See the documentation in access.rs for more.
 pub struct ModuleView<'a, T> {
     module: &'a T,
-    name_to_function_definition_view: BTreeMap<&'a str, FunctionDefinitionView<'a, T>>,
-    name_to_struct_definition_view: BTreeMap<&'a str, StructDefinitionView<'a, T>>,
+    name_to_function_definition_view: BTreeMap<&'a IdentStr, FunctionDefinitionView<'a, T>>,
+    name_to_struct_definition_view: BTreeMap<&'a IdentStr, StructDefinitionView<'a, T>>,
 }
 
 impl<'a, T: ModuleAccess> ModuleView<'a, T> {
@@ -143,11 +144,14 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |locals_signature| LocalsSignatureView::new(module, locals_signature))
     }
 
-    pub fn function_definition(&self, name: &'a str) -> Option<&FunctionDefinitionView<'a, T>> {
+    pub fn function_definition(
+        &self,
+        name: &'a IdentStr,
+    ) -> Option<&FunctionDefinitionView<'a, T>> {
         self.name_to_function_definition_view.get(name)
     }
 
-    pub fn struct_definition(&self, name: &'a str) -> Option<&StructDefinitionView<'a, T>> {
+    pub fn struct_definition(&self, name: &'a IdentStr) -> Option<&StructDefinitionView<'a, T>> {
         self.name_to_struct_definition_view.get(name)
     }
 
@@ -160,11 +164,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         }
 
         // TODO these unwraps should be VMInvariantViolations
-        let function_name = self
-            .as_inner()
-            .string_pool()
-            .get(function_handle.name.0 as usize)
-            .unwrap();
+        let function_name = self.as_inner().identifier_at(function_handle.name);
         let function_def = self.function_definition(function_name).unwrap();
         function_def
             .as_inner()
@@ -226,8 +226,8 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         self.module.module_handle_at(self.struct_handle.module)
     }
 
-    pub fn name(&self) -> &'a str {
-        self.module.string_at(self.struct_handle.name)
+    pub fn name(&self) -> &'a IdentStr {
+        self.module.identifier_at(self.struct_handle.name)
     }
 
     pub fn module_id(&self) -> ModuleId {
@@ -252,8 +252,8 @@ impl<'a, T: ModuleAccess> FunctionHandleView<'a, T> {
         self.module.module_handle_at(self.function_handle.module)
     }
 
-    pub fn name(&self) -> &'a str {
-        self.module.string_at(self.function_handle.name)
+    pub fn name(&self) -> &'a IdentStr {
+        self.module.identifier_at(self.function_handle.name)
     }
 
     pub fn signature(&self) -> FunctionSignatureView<'a, T> {
@@ -318,7 +318,7 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         }
     }
 
-    pub fn name(&self) -> &'a str {
+    pub fn name(&self) -> &'a IdentStr {
         self.struct_handle_view.name()
     }
 }
@@ -333,8 +333,8 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
         Self { module, field_def }
     }
 
-    pub fn name(&self) -> &'a str {
-        self.module.string_at(self.field_def.name)
+    pub fn name(&self) -> &'a IdentStr {
+        self.module.identifier_at(self.field_def.name)
     }
 
     pub fn type_signature(&self) -> TypeSignatureView<'a, T> {
@@ -387,7 +387,7 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
         LocalsSignatureView::new(self.module, locals_signature)
     }
 
-    pub fn name(&self) -> &'a str {
+    pub fn name(&self) -> &'a IdentStr {
         self.function_handle_view.name()
     }
 

@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::{ByteIndex, Span};
+use lalrpop_util::ParseError;
+use lazy_static::lazy_static;
 use std::{
     collections::{HashSet, VecDeque},
     fmt,
     ops::Deref,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
 
 /// Generic wrapper that keeps file locations for any ast-node
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
@@ -66,7 +73,7 @@ pub struct Script {
 
 /// Newtype for a name of a module
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct ModuleName(String);
+pub struct ModuleName(Identifier);
 
 /// Newtype of the address + the module name
 /// `addr.m`
@@ -120,14 +127,14 @@ pub struct ImportDefinition {
 
 /// Newtype for a variable/local
 #[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Var(String);
+pub struct Var(Identifier);
 
 /// The type of a variable with a location
 pub type Var_ = Spanned<Var>;
 
 /// New type that represents a type variable. Used to declare type formals & reference them.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct TypeVar(pub String);
+pub struct TypeVar(Identifier);
 
 //**************************************************************************************************
 // Kinds
@@ -193,7 +200,7 @@ pub type Fields<T> = Vec<(Field, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct StructName(String);
+pub struct StructName(Identifier);
 
 /// A Move struct
 #[derive(Clone, Debug, PartialEq)]
@@ -224,7 +231,7 @@ pub enum StructDefinitionFields {
 
 /// Newtype for the name of a function
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
-pub struct FunctionName(String);
+pub struct FunctionName(Identifier);
 
 /// The signature of a function
 #[derive(PartialEq, Debug, Clone)]
@@ -571,28 +578,39 @@ impl Script {
     }
 }
 
+lazy_static! {
+    static ref SELF_MODULE_NAME: Identifier = Identifier::new("Self").unwrap();
+}
+
 impl ModuleName {
-    /// Create a new `ModuleName` identifier from a string
-    pub fn new(name: String) -> Self {
-        assert!(name != "");
+    /// Create a new `ModuleName` from an identifier
+    pub fn new(name: Identifier) -> Self {
+        assert!(!name.is_empty());
         ModuleName(name)
     }
 
-    /// String value for the current module handle
-    pub const SELF: &'static str = "Self";
-
-    /// Create a new `ModuleName` for the `SELF` constant
-    pub fn module_self() -> Self {
-        ModuleName::new(ModuleName::SELF.to_string())
+    /// Creates a new `ModuleName` from a raw string. Intended for use by syntax.lalrpop.
+    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(ModuleName::new(parse_identifier(s.into())?))
     }
 
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
+    /// Name for the current module handle
+    pub fn self_name() -> &'static IdentStr {
+        &*SELF_MODULE_NAME
+    }
+
+    /// Create a new `ModuleName` from `self_name`.
+    pub fn module_self() -> Self {
+        ModuleName::new(ModuleName::self_name().into())
+    }
+
+    /// Converts self into an identifier.
+    pub fn into_inner(self) -> Identifier {
         self.0
     }
 
-    /// Accessor for the module name's string value
-    pub fn as_inner(&self) -> &str {
+    /// Accessor for the name of the module
+    pub fn as_inner(&self) -> &IdentStr {
         &self.0
     }
 }
@@ -628,18 +646,18 @@ impl ModuleDefinition {
     /// Creates a new `ModuleDefinition` from its string name, dependencies, structs+resources,
     /// and procedures
     /// Does not verify the correctness of any internal properties of its elements
-    pub fn new(
-        name: String,
+    pub fn new<L, T>(
+        name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
         structs: Vec<StructDefinition>,
         functions: Vec<(FunctionName, Function)>,
-    ) -> Self {
-        ModuleDefinition {
-            name: ModuleName::new(name),
+    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(ModuleDefinition {
+            name: ModuleName::parse(name.into())?,
             imports,
             structs,
             functions,
-        }
+        })
     }
 
     /// Return a vector of `ModuleId` for the external dependencies.
@@ -710,18 +728,23 @@ impl ImportDefinition {
 }
 
 impl StructName {
-    /// Create a new `StructName` identifier from a string
-    pub fn new(name: String) -> Self {
+    /// Create a new `StructName` from an identifier
+    pub fn new(name: Identifier) -> Self {
         StructName(name)
     }
 
-    /// Converts self to a string.
-    pub fn into_inner(self) -> String {
+    /// Creates a new `StructName` from a raw string. Intended for use by syntax.lalrpop.
+    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(StructName::new(parse_identifier(s.into())?))
+    }
+
+    /// Converts self into an identifier.
+    pub fn into_inner(self) -> Identifier {
         self.0
     }
 
     /// Accessor for the name of the struct
-    pub fn as_inner(&self) -> &str {
+    pub fn as_inner(&self) -> &IdentStr {
         &self.0
     }
 }
@@ -732,50 +755,55 @@ impl StructDefinition {
     /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn move_declared(
+    pub fn move_declared<L, T>(
         is_nominal_resource: bool,
-        name: String,
+        name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar, Kind)>,
         fields: Fields<Type>,
-    ) -> Self {
-        StructDefinition {
+    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(StructDefinition {
             is_nominal_resource,
-            name: StructName::new(name),
+            name: StructName::parse(name)?,
             type_formals,
             fields: StructDefinitionFields::Move { fields },
-        }
+        })
     }
 
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
-    pub fn native(
+    pub fn native<L, T>(
         is_nominal_resource: bool,
-        name: String,
+        name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar, Kind)>,
-    ) -> Self {
-        StructDefinition {
+    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(StructDefinition {
             is_nominal_resource,
-            name: StructName::new(name),
+            name: StructName::parse(name)?,
             type_formals,
             fields: StructDefinitionFields::Native,
-        }
+        })
     }
 }
 
 impl FunctionName {
-    /// Create a new `FunctionName` identifier from a string
-    pub fn new(name: String) -> Self {
+    /// Create a new `FunctionName` from an identifier
+    pub fn new(name: Identifier) -> Self {
         FunctionName(name)
     }
 
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
+    /// Creates a new `FunctionName` from a raw string. Intended for use by syntax.lalrpop.
+    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(FunctionName::new(parse_identifier(s.into())?))
+    }
+
+    /// Converts self into an identifier.
+    pub fn into_inner(self) -> Identifier {
         self.0
     }
 
     /// Accessor for the name of the function
-    pub fn as_inner(&self) -> &str {
+    pub fn as_inner(&self) -> &IdentStr {
         &self.0
     }
 }
@@ -817,18 +845,40 @@ impl Function {
 }
 
 impl Var {
-    /// Create a new `Var` identifier from a string
-    pub fn new(s: &str) -> Self {
-        Var(s.to_string())
+    /// Creates a new `Var` from an identifier.
+    pub fn new(s: Identifier) -> Self {
+        Var(s)
     }
 
-    /// Create a new `Var_` identifier from a string with an empty location
-    pub fn new_(s: &str) -> Var_ {
+    /// Creates a new `Var_` identifier from an identifier with an empty location.
+    pub fn new_(s: Identifier) -> Var_ {
         Spanned::no_loc(Var::new(s))
     }
 
+    /// Creates a new `Var` from a raw string. Intended for use by syntax.lalrpop.
+    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(Var::new(parse_identifier(s.into())?))
+    }
+
     /// Accessor for the name of the var
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &IdentStr {
+        &self.0
+    }
+}
+
+impl TypeVar {
+    /// Creates a new `TypeVar` from an identifier.
+    pub fn new(s: Identifier) -> Self {
+        TypeVar(s)
+    }
+
+    /// Creates a new `TypeVar` from a raw string. Intended for use by syntax.lalrpop.
+    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+        Ok(TypeVar::new(parse_identifier(s.into())?))
+    }
+
+    /// Accessor for the name of the var.
+    pub fn name(&self) -> &IdentStr {
         &self.0
     }
 }
@@ -992,6 +1042,17 @@ impl Exp {
     pub fn expr_list(exps: Vec<Exp_>) -> Exp_ {
         Spanned::no_loc(Exp::ExprList(exps))
     }
+}
+
+/// Parses a field.
+pub fn parse_field<L, T>(
+    s: impl Into<Box<str>>,
+) -> Result<Field, ParseError<L, T, failure::Error>> {
+    Ok(Field::new(parse_identifier(s.into())?))
+}
+
+fn parse_identifier<L, T>(s: Box<str>) -> Result<Identifier, ParseError<L, T, failure::Error>> {
+    Identifier::new(s).map_err(|error| ParseError::User { error })
 }
 
 //**************************************************************************************************

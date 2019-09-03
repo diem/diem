@@ -582,6 +582,7 @@ fn test_dependency_fails_verification() {
     assert_matches!(
         &errors[0],
         VMVerificationStatus::Dependency(module_id, _)
-            if module_id.address() == &AccountAddress::default() && module_id.name() == "Test"
+            if module_id.address() == &AccountAddress::default()
+            && module_id.name().as_str() == "Test"
     );
 }

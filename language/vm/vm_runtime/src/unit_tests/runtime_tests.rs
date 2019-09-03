@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::*;
 use crate::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     data_cache::RemoteCache,
@@ -20,8 +21,8 @@ use vm::{
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StringPoolIndex, UserStringIndex, NO_TYPE_ACTUALS,
+        FunctionSignatureIndex, IdentifierIndex, LocalsSignature, LocalsSignatureIndex,
+        ModuleHandle, ModuleHandleIndex, SignatureToken, UserStringIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
@@ -63,11 +64,11 @@ fn fake_script() -> VerifiedScript {
         },
         module_handles: vec![ModuleHandle {
             address: AddressPoolIndex::new(0),
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
         }],
         struct_handles: vec![],
         function_handles: vec![FunctionHandle {
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
             signature: FunctionSignatureIndex::new(0),
             module: ModuleHandleIndex::new(0),
         }],
@@ -78,7 +79,7 @@ fn fake_script() -> VerifiedScript {
             type_formals: vec![],
         }],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec!["hello".to_string()],
+        identifiers: idents(vec!["hello"]),
         user_strings: vec!["hello world".into()],
         byte_array_pool: vec![ByteArray::new(vec![0u8; 32])],
         address_pool: vec![AccountAddress::default()],
@@ -559,12 +560,12 @@ fn test_arith_instructions() {
 }
 
 fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -> VerifiedModule {
-    let mut names: Vec<String> = sigs
+    let mut names: Vec<Identifier> = sigs
         .iter()
         .enumerate()
-        .map(|(i, _)| format!("func{}", i))
+        .map(|(i, _)| ident(format!("func{}", i)))
         .collect();
-    names.insert(0, "module".to_string());
+    names.insert(0, ident("module"));
     let function_defs = sigs
         .iter()
         .enumerate()
@@ -583,7 +584,7 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
         .iter()
         .enumerate()
         .map(|(i, _)| FunctionHandle {
-            name: StringPoolIndex::new((i + 1) as u16),
+            name: IdentifierIndex::new((i + 1) as u16),
             signature: FunctionSignatureIndex::new(i as u16),
             module: ModuleHandleIndex::new(0),
         })
@@ -596,14 +597,14 @@ fn fake_module_with_calls(sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) -
 
         module_handles: vec![ModuleHandle {
             address: AddressPoolIndex::new(0),
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
         }],
         struct_handles: vec![],
         function_handles,
         type_signatures: vec![],
         function_signatures: function_sigs,
         locals_signatures: local_sigs.into_iter().map(LocalsSignature).collect(),
-        string_pool: names,
+        identifiers: names,
         user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],

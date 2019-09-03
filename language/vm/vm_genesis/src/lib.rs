@@ -21,6 +21,7 @@ use types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
+    identifier::Identifier,
     transaction::{
         Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
@@ -52,6 +53,15 @@ lazy_static! {
 pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureCheckedTransaction> {
     let (private_key, public_key) = &*GENESIS_KEYPAIR;
     raw_txn.sign(private_key, public_key.clone())
+}
+
+// Identifiers for well-known functions.
+lazy_static! {
+    static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
+    static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref ROTATE_AUTHENTICATION_KEY: Identifier =
+        { Identifier::new("rotate_authentication_key").unwrap() };
+    static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
 }
 
 #[derive(Debug)]
@@ -324,18 +334,18 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap()
                 .unwrap();
             txn_executor
-                .execute_function(&BLOCK_MODULE, "initialize", vec![])
+                .execute_function(&BLOCK_MODULE, &INITIALIZE, vec![])
                 .unwrap()
                 .unwrap();
             txn_executor
-                .execute_function(&COIN_MODULE, "initialize", vec![])
+                .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
                 .unwrap()
                 .unwrap();
 
             txn_executor
                 .execute_function(
                     &ACCOUNT_MODULE,
-                    "mint_to_address",
+                    &MINT_TO_ADDRESS,
                     vec![Local::address(genesis_addr), Local::u64(INIT_BALANCE)],
                 )
                 .unwrap()
@@ -344,7 +354,7 @@ pub fn encode_genesis_transaction_with_validator(
             txn_executor
                 .execute_function(
                     &ACCOUNT_MODULE,
-                    "rotate_authentication_key",
+                    &ROTATE_AUTHENTICATION_KEY,
                     vec![Local::bytearray(genesis_auth_key)],
                 )
                 .unwrap()
@@ -355,7 +365,7 @@ pub fn encode_genesis_transaction_with_validator(
             // arises: both the genesis transaction and the subsequent transaction have sequence
             // number 0
             txn_executor
-                .execute_function(&ACCOUNT_MODULE, "epilogue", vec![])
+                .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
                 .unwrap()
                 .unwrap();
 

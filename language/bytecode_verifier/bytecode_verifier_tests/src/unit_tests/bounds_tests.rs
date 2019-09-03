@@ -6,7 +6,7 @@ use invalid_mutations::bounds::{
     OutOfBoundsMutation,
 };
 use proptest::{collection::vec, prelude::*};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use vm::{
     check_bounds::BoundsChecker,
     errors::{VMStaticViolation, VerificationError},
@@ -73,14 +73,14 @@ proptest! {
 
     #[test]
     fn no_module_handles(
-        string_pool in vec(".*", 0..20),
+        identifiers in vec(any::<Identifier>(), 0..20),
         address_pool in vec(any::<AccountAddress>(), 0..20),
         byte_array_pool in vec(any::<ByteArray>(), 0..20),
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
         let mut module = CompiledModuleMut::default();
-        module.string_pool = string_pool;
+        module.identifiers = identifiers;
         module.address_pool = address_pool;
         module.byte_array_pool = byte_array_pool;
 

@@ -5,7 +5,7 @@ use crate::{file_format::*, vm_string::VMStr};
 use failure::*;
 use hex;
 use std::{collections::VecDeque, fmt};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
 
 //
 // Display printing
@@ -75,7 +75,7 @@ pub trait TableAccess {
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle>;
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle>;
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str>;
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr>;
     fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr>;
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress>;
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature>;
@@ -109,8 +109,8 @@ impl TableAccess for CompiledScriptMut {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
-        match self.string_pool.get(idx.0 as usize) {
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
+        match self.identifiers.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
             Some(s) => Ok(s),
         }
@@ -181,8 +181,8 @@ impl TableAccess for CompiledModuleMut {
         }
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&str> {
-        match self.string_pool.get(idx.0 as usize) {
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
+        match self.identifiers.get(idx.0 as usize) {
             None => bail!("bad string index {}", idx),
             Some(s) => Ok(s),
         }
@@ -283,7 +283,7 @@ impl fmt::Display for CompiledScript {
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &inner.string_pool {
+        for string in &inner.identifiers {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
@@ -394,7 +394,7 @@ impl fmt::Display for CompiledModule {
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &inner.string_pool {
+        for string in &inner.identifiers {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
@@ -430,7 +430,7 @@ fn display_struct_handle<T: TableAccess>(
             "struct"
         }
     )?;
-    write!(f, "{}@", tables.get_string_at(struct_.name).unwrap())?;
+    write!(f, "{}@", tables.get_identifier_at(struct_.name).unwrap())?;
     display_module_handle(tables.get_module_at(struct_.module).unwrap(), tables, f)
 }
 
@@ -440,7 +440,7 @@ fn display_module_handle<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_address(tables.get_address_at(module.address).unwrap(), f)?;
-    write!(f, ".{}", tables.get_string_at(module.name).unwrap())
+    write!(f, ".{}", tables.get_identifier_at(module.name).unwrap())
 }
 
 fn display_function_handle<T: TableAccess>(
@@ -449,7 +449,7 @@ fn display_function_handle<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_module_handle(tables.get_module_at(function.module).unwrap(), tables, f)?;
-    write!(f, ".{}", tables.get_string_at(function.name).unwrap())?;
+    write!(f, ".{}", tables.get_identifier_at(function.name).unwrap())?;
     display_function_signature(
         tables
             .get_function_signature_at(function.signature)
@@ -477,7 +477,7 @@ fn display_field_definition<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_struct_handle(tables.get_struct_at(field.struct_).unwrap(), tables, f)?;
-    write!(f, ".{}: ", tables.get_string_at(field.name).unwrap())?;
+    write!(f, ".{}: ", tables.get_identifier_at(field.name).unwrap())?;
     display_type_signature(
         tables.get_type_signature_at(field.signature).unwrap(),
         tables,

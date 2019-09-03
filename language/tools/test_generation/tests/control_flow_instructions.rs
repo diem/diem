@@ -1,19 +1,20 @@
 extern crate test_generation;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
+use types::identifier::Identifier;
 use vm::file_format::{
     empty_module, Bytecode, CompiledModuleMut, FunctionHandle, FunctionHandleIndex,
-    FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
-    ModuleHandleIndex, SignatureToken, StringPoolIndex,
+    FunctionSignature, FunctionSignatureIndex, IdentifierIndex, LocalsSignature,
+    LocalsSignatureIndex, ModuleHandleIndex, SignatureToken,
 };
 
 mod common;
 
 fn generate_module_with_function() -> CompiledModuleMut {
     let mut module: CompiledModuleMut = empty_module();
-    let offset = module.string_pool.len();
+    let offset = module.identifiers.len();
     let function_sig_offset = module.function_signatures.len();
-    module.string_pool.push("func0".to_string());
+    module.identifiers.push(Identifier::new("func0").unwrap());
 
     let sigs = vec![(
         vec![],
@@ -28,7 +29,7 @@ fn generate_module_with_function() -> CompiledModuleMut {
         .iter()
         .enumerate()
         .map(|(i, _)| FunctionHandle {
-            name: StringPoolIndex::new((i + offset) as u16),
+            name: IdentifierIndex::new((i + offset) as u16),
             signature: FunctionSignatureIndex::new((i + function_sig_offset) as u16),
             module: ModuleHandleIndex::new(0),
         })
