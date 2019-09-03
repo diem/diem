@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::Accumulator;
+use crate::proof::{position::Position, TestAccumulatorInternalNode};
 use crypto::{
     hash::{CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };
 use std::collections::HashMap;
-use types::proof::{position::Position, TestAccumulatorInternalNode};
 
 fn compute_parent_hash(left_hash: HashValue, right_hash: HashValue) -> HashValue {
     if left_hash == *ACCUMULATOR_PLACEHOLDER_HASH && right_hash == *ACCUMULATOR_PLACEHOLDER_HASH {

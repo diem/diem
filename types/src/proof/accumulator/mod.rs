@@ -13,13 +13,13 @@
 #[cfg(test)]
 mod accumulator_test;
 
+use super::MerkleTreeInternalNode;
 use crypto::{
     hash::{CryptoHash, CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };
 use failure::prelude::*;
 use std::marker::PhantomData;
-use types::proof::MerkleTreeInternalNode;
 
 /// The Accumulator implementation.
 pub struct Accumulator<H> {
