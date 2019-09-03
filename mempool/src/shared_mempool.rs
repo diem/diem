@@ -359,7 +359,7 @@ async fn inbound_network_task<V>(
                         .error("UnexpectedNetworkEvent")
                         .data(&network_event)
                         .log();
-                    unreachable!("Unexpected network event")
+                    debug_assert!(false, "Unexpected network event");
                 }
             },
             Err(e) => {
