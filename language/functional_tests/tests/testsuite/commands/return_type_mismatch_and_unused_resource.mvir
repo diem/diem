@@ -1,0 +1,25 @@
+module M {
+    import 0x0.LibraCoin;
+
+    t1(): bool {
+        let c: LibraCoin.T;
+        // Return type check takes precedence over unused resource
+        c = LibraCoin.zero();
+        return 0;
+    }
+
+    t2(): bool {
+        let u: u64;
+        let r: &u64;
+        // Return type check takes precedence returning returning local ref
+        u = 0;
+        r = &u;
+        return move(r);
+    }
+}
+
+// check: VerificationError
+// check: RetTypeMismatchError
+
+// check: VerificationError
+// check: RetTypeMismatchError
