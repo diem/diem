@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod accumulator;
 pub mod position;
 #[cfg(any(test, feature = "testing"))]
 pub mod proptest_proof;
