@@ -198,7 +198,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         F: ModuleFetcher,
     {
         let function_handle = caller_module.function_handle_at(idx);
-        let callee_name = caller_module.string_at(function_handle.name);
+        let callee_name = caller_module.identifier_at(function_handle.name);
         let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
 
         match self.get_loaded_module_with_fetcher(&callee_module_id, fetcher) {
@@ -223,7 +223,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
         let struct_handle = module.struct_handle_at(idx);
-        let struct_name = module.string_at(struct_handle.name);
+        let struct_name = module.identifier_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
             Ok(Some(module)) => {

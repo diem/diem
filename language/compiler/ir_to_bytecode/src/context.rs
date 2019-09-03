@@ -8,13 +8,17 @@ use crate::parser::ast::{
 
 use failure::*;
 use std::{clone::Clone, collections::HashMap, hash::Hash};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    identifier::{IdentStr, Identifier},
+};
 use vm::{
     access::ModuleAccess,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature,
-        LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex, Kind,
+        LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
         StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
     },
@@ -53,13 +57,13 @@ fn get_or_add_item<K: Eq + Hash>(m: &mut HashMap<K, TableIndex>, k: K) -> Result
 }
 
 struct CompiledDependency<'a> {
-    structs: HashMap<(&'a str, &'a str), TableIndex>,
-    functions: HashMap<&'a str, TableIndex>,
+    structs: HashMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
+    functions: HashMap<&'a IdentStr, TableIndex>,
 
     module_pool: &'a [ModuleHandle],
     struct_pool: &'a [StructHandle],
     function_signatuire_pool: &'a [FunctionSignature],
-    string_pool: &'a [String],
+    identifiers: &'a [Identifier],
     address_pool: &'a [AccountAddress],
 }
 
@@ -70,8 +74,8 @@ impl<'a> CompiledDependency<'a> {
 
         for shandle in dep.struct_handles() {
             let mhandle = dep.module_handle_at(shandle.module);
-            let mname = dep.string_at(mhandle.name);
-            let sname = dep.string_at(shandle.name);
+            let mname = dep.identifier_at(mhandle.name);
+            let sname = dep.identifier_at(shandle.name);
             // get_or_add_item gets the proper struct handle index, as `dep.struct_handles()` is
             // properly ordered
             get_or_add_item(&mut structs, (mname, sname))?;
@@ -84,7 +88,7 @@ impl<'a> CompiledDependency<'a> {
             .iter()
             .filter(|fhandle| fhandle.module.0 == 0);
         for fhandle in defined_function_handles {
-            let fname = dep.string_at(fhandle.name);
+            let fname = dep.identifier_at(fhandle.name);
             functions.insert(fname, fhandle.signature.0);
         }
 
@@ -94,7 +98,7 @@ impl<'a> CompiledDependency<'a> {
             module_pool: dep.module_handles(),
             struct_pool: dep.struct_handles(),
             function_signatuire_pool: dep.function_signatures(),
-            string_pool: dep.string_pool(),
+            identifiers: dep.identifiers(),
             address_pool: dep.address_pool(),
         })
     }
@@ -106,13 +110,13 @@ impl<'a> CompiledDependency<'a> {
         let handle = self.struct_pool.get(idx.0 as usize)?;
         let module_handle = self.module_pool.get(handle.module.0 as usize)?;
         let address = *self.address_pool.get(module_handle.address.0 as usize)?;
-        let module = ModuleName::new(self.string_pool.get(module_handle.name.0 as usize)?.clone());
-        assert!(module.as_inner() != ModuleName::SELF);
+        let module = ModuleName::new(self.identifiers.get(module_handle.name.0 as usize)?.clone());
+        assert!(module.as_inner() != ModuleName::self_name());
         let ident = QualifiedModuleIdent {
             address,
             name: module,
         };
-        let name = StructName::new(self.string_pool.get(handle.name.0 as usize)?.clone());
+        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.clone());
         Some((ident, name))
     }
 
@@ -144,8 +148,8 @@ pub struct MaterializedPools {
     pub function_signatures: Vec<FunctionSignature>,
     /// Locals signatures pool
     pub locals_signatures: Vec<LocalsSignature>,
-    /// String pool
-    pub string_pool: Vec<String>,
+    /// Identifier pool
+    pub identifiers: Vec<Identifier>,
     /// User string pool
     pub user_strings: Vec<VMString>,
     /// Byte array pool
@@ -179,7 +183,7 @@ pub struct Context<'a> {
     struct_handles: HashMap<StructHandle, TableIndex>,
     type_signatures: HashMap<TypeSignature, TableIndex>,
     locals_signatures: HashMap<LocalsSignature, TableIndex>,
-    string_pool: HashMap<String, TableIndex>,
+    identifiers: HashMap<Identifier, TableIndex>,
     byte_array_pool: HashMap<ByteArray, TableIndex>,
     address_pool: HashMap<AccountAddress, TableIndex>,
 
@@ -200,7 +204,7 @@ impl<'a> Context<'a> {
             .map(|dep| {
                 let ident = QualifiedModuleIdent {
                     address: *dep.address(),
-                    name: ModuleName::new(dep.name().to_string()),
+                    name: ModuleName::new(dep.name().into()),
                 };
                 Ok((ident, CompiledDependency::new(dep)?))
             })
@@ -219,12 +223,12 @@ impl<'a> Context<'a> {
             struct_handles: HashMap::new(),
             type_signatures: HashMap::new(),
             locals_signatures: HashMap::new(),
-            string_pool: HashMap::new(),
+            identifiers: HashMap::new(),
             byte_array_pool: HashMap::new(),
             address_pool: HashMap::new(),
             type_formals: HashMap::new(),
         };
-        let self_name = ModuleName::new(ModuleName::SELF.to_string());
+        let self_name = ModuleName::new(ModuleName::self_name().into());
         context.declare_import(current_module, self_name)?;
 
         Ok(context)
@@ -263,7 +267,7 @@ impl<'a> Context<'a> {
             struct_handles: Self::materialize_map(self.struct_handles),
             type_signatures: Self::materialize_map(self.type_signatures),
             locals_signatures: Self::materialize_map(self.locals_signatures),
-            string_pool: Self::materialize_map(self.string_pool),
+            identifiers: Self::materialize_map(self.identifiers),
             // TODO: implement support for user strings (string literals)
             user_strings: vec![],
             byte_array_pool: Self::materialize_map(self.byte_array_pool),
@@ -339,11 +343,11 @@ impl<'a> Context<'a> {
         )?))
     }
 
-    /// Get the string pool index, adds it if missing.
-    pub fn string_index(&mut self, string: &str) -> Result<StringPoolIndex> {
-        let m = &mut self.string_pool;
-        let idx: Result<TableIndex> = get_or_add_item_macro!(m, string, string.to_string());
-        Ok(StringPoolIndex(idx?))
+    /// Get the identifier pool index, adds it if missing.
+    pub fn identifier_index(&mut self, ident: &IdentStr) -> Result<IdentifierIndex> {
+        let m = &mut self.identifiers;
+        let idx: Result<TableIndex> = get_or_add_item_macro!(m, ident, ident.to_owned());
+        Ok(IdentifierIndex(idx?))
     }
 
     /// Get the byte array pool index, adds it if missing.
@@ -408,7 +412,7 @@ impl<'a> Context<'a> {
         // We don't care about duplicate aliases, if they exist
         self.aliases.insert(id.clone(), alias.clone());
         let address = self.address_index(id.address)?;
-        let name = self.string_index(id.name.as_inner())?;
+        let name = self.identifier_index(id.name.as_inner())?;
         self.modules
             .insert(alias.clone(), (id, ModuleHandle { address, name }));
         Ok(ModuleHandleIndex(get_or_add_item_ref(
@@ -426,7 +430,7 @@ impl<'a> Context<'a> {
         type_formals: Vec<Kind>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
-        let name = self.string_index(sname.name.as_inner())?;
+        let name = self.identifier_index(sname.name.as_inner())?;
         self.structs.insert(
             sname.clone(),
             StructHandle {
@@ -468,7 +472,7 @@ impl<'a> Context<'a> {
     ) -> Result<()> {
         let m_f = (mname.clone(), fname.clone());
         let module = self.module_handle_index(&mname)?;
-        let name = self.string_index(fname.as_inner())?;
+        let name = self.identifier_index(fname.as_inner())?;
 
         let sidx = get_or_add_item_ref(&mut self.function_signature_pool, &signature)?;
         let signature_index = FunctionSignatureIndex(sidx as TableIndex);
@@ -528,7 +532,7 @@ impl<'a> Context<'a> {
     }
 
     fn dep_struct_handle(&mut self, s: &QualifiedStructIdent) -> Result<(bool, Vec<Kind>)> {
-        if s.module.as_inner() == ModuleName::SELF {
+        if s.module.as_inner() == ModuleName::self_name() {
             bail!("Unbound struct {}", s)
         }
         let mident = self.module_ident(&s.module)?.clone();
@@ -621,7 +625,7 @@ impl<'a> Context<'a> {
         m: &ModuleName,
         f: &FunctionName,
     ) -> Result<FunctionSignature> {
-        if m.as_inner() == ModuleName::SELF {
+        if m.as_inner() == ModuleName::self_name() {
             bail!("Unbound function {}.{}", m, f)
         }
         let mident = self.module_ident(m)?.clone();

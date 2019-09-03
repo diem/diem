@@ -11,14 +11,17 @@ use crate::common::*;
 use bytecode_verifier::VerifiedModule;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cmp::min, collections::HashMap};
-use types::{account_address::AccountAddress, byte_array::ByteArray, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
+    language_storage::ModuleId,
+};
 use vm::{
     access::*,
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, FieldDefinition,
         FieldDefinitionIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
-        FunctionSignature, FunctionSignatureIndex, LocalsSignature, LocalsSignatureIndex,
-        MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken, StringPoolIndex,
+        FunctionSignature, FunctionSignatureIndex, IdentifierIndex, LocalsSignature,
+        LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
         StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
         TypeSignature, TypeSignatureIndex,
     },
@@ -79,14 +82,16 @@ impl ModuleBuilder {
         self.module.address_pool.append(&mut addrs);
     }
 
-    fn with_strings(&mut self) {
-        let mut strs = (0..self.table_size)
+    fn with_identifiers(&mut self) {
+        let mut identifiers = (0..self.table_size)
             .map(|_| {
                 let len = self.gen.gen_range(1, MAX_STRING_SIZE);
-                (0..len).map(|_| self.gen.gen::<char>()).collect()
+                // TODO: restrict identifiers to a subset of ASCII
+                let s: String = (0..len).map(|_| self.gen.gen::<char>()).collect();
+                Identifier::new(s).unwrap()
             })
             .collect();
-        self.module.string_pool.append(&mut strs);
+        self.module.identifiers.append(&mut identifiers);
     }
 
     fn with_user_strings(&mut self) {
@@ -115,23 +120,23 @@ impl ModuleBuilder {
     // Add the functions with locals given by the first part of the tuple, and with function
     // signature `FunctionSignature`.
     fn with_functions(&mut self, sigs: Vec<(Vec<SignatureToken>, FunctionSignature)>) {
-        let mut names: Vec<String> = sigs
+        let mut names: Vec<Identifier> = sigs
             .iter()
             .enumerate()
-            .map(|(i, _)| format!("func{}", i))
+            .map(|(i, _)| Identifier::new(format!("func{}", i)).unwrap())
             .collect();
         // Grab the offset before adding the generated names to the string pool; we'll need this
         // later on when we generate the function handles in order to know where we should have the
         // functions point to for their name.
-        let offset = self.module.string_pool.len();
+        let offset = self.module.identifiers.len();
         let function_sig_offset = self.module.function_signatures.len();
-        self.module.string_pool.append(&mut names);
+        self.module.identifiers.append(&mut names);
 
         self.module.function_handles = sigs
             .iter()
             .enumerate()
             .map(|(i, _)| FunctionHandle {
-                name: StringPoolIndex::new((i + offset) as u16),
+                name: IdentifierIndex::new((i + offset) as u16),
                 signature: FunctionSignatureIndex::new((i + function_sig_offset) as u16),
                 module: ModuleHandleIndex::new(0),
             })
@@ -172,11 +177,11 @@ impl ModuleBuilder {
     // The overall logic of this function follows very similarly to that for function generation.
     fn with_structs(&mut self) {
         // Generate struct names.
-        let mut names: Vec<String> = (0..self.table_size)
-            .map(|i| format!("struct{}", i))
+        let mut names: Vec<Identifier> = (0..self.table_size)
+            .map(|i| Identifier::new(format!("struct{}", i)).unwrap())
             .collect();
-        let offset = self.module.string_pool.len() as TableIndex;
-        self.module.string_pool.append(&mut names);
+        let offset = self.module.identifiers.len() as TableIndex;
+        self.module.identifiers.append(&mut names);
 
         // Generate the field definitions and struct definitions at the same time
         for struct_idx in 0..self.table_size {
@@ -184,7 +189,7 @@ impl ModuleBuilder {
             // one field.
             let num_fields = self
                 .gen
-                .gen_range(1, min(self.module.string_pool.len(), MAX_FIELDS));
+                .gen_range(1, min(self.module.identifiers.len(), MAX_FIELDS));
 
             // Generate the struct def. This generates pointers into the module's `field_defs` that
             // are not generated just yet -- we do this beforehand so that we can grab the starting
@@ -208,7 +213,7 @@ impl ModuleBuilder {
                         .gen_range(0, self.module.type_signatures.len() as TableIndex),
                 );
                 // Pick a name from the string pool.
-                let str_pool_idx = StringPoolIndex::new(i as TableIndex);
+                let str_pool_idx = IdentifierIndex::new(i as TableIndex);
                 let field_def = FieldDefinition {
                     struct_: struct_handle_idx,
                     name: str_pool_idx,
@@ -223,7 +228,7 @@ impl ModuleBuilder {
         self.module.struct_handles = (0..self.table_size)
             .map(|struct_idx| StructHandle {
                 module: ModuleHandleIndex::new(0),
-                name: StringPoolIndex::new((struct_idx + offset) as TableIndex),
+                name: IdentifierIndex::new((struct_idx + offset) as TableIndex),
                 is_nominal_resource: self.gen.gen_bool(1.0 / 2.0),
                 type_formals: vec![],
             })
@@ -294,8 +299,8 @@ impl ModuleBuilder {
             let non_self_module_handle_idx = self.gen.gen_range(1, module_table_size);
             let callee_module_handle = &self.module.module_handles[non_self_module_handle_idx];
             let address = self.module.address_pool[callee_module_handle.address.into_index()];
-            let name = &self.module.string_pool[callee_module_handle.name.into_index()];
-            let module_id = ModuleId::new(address, name.to_string());
+            let name = &self.module.identifiers[callee_module_handle.name.into_index()];
+            let module_id = ModuleId::new(address, name.to_owned());
             let callee_module = self
                 .known_modules
                 .get(&module_id)
@@ -311,17 +316,17 @@ impl ModuleBuilder {
                 .function_signature_at(callee_function_handle.signature)
                 .clone();
             let callee_name = callee_module
-                .string_at(callee_function_handle.name)
-                .to_string();
-            let callee_name_idx = self.module.string_pool.len() as TableIndex;
+                .identifier_at(callee_function_handle.name)
+                .to_owned();
+            let callee_name_idx = self.module.identifiers.len() as TableIndex;
             let callee_type_sig_idx = self.module.function_signatures.len() as TableIndex;
             let func_handle = FunctionHandle {
                 module: ModuleHandleIndex::new(non_self_module_handle_idx as TableIndex),
-                name: StringPoolIndex::new(callee_name_idx),
+                name: IdentifierIndex::new(callee_name_idx),
                 signature: FunctionSignatureIndex::new(callee_type_sig_idx),
             };
 
-            self.module.string_pool.push(callee_name);
+            self.module.identifiers.push(callee_name);
             self.module.function_signatures.push(callee_type_sig);
             self.module.function_handles.push(func_handle);
         }
@@ -332,25 +337,26 @@ impl ModuleBuilder {
     fn with_callee_modules(&mut self) {
         // Add the SELF module
         let module_name: String = (0..10).map(|_| self.gen.gen::<char>()).collect();
-        self.module.string_pool.insert(0, module_name);
+        let module_name = Identifier::new(module_name).unwrap();
+        self.module.identifiers.insert(0, module_name);
         self.module.address_pool.insert(0, AccountAddress::random());
         // Recall that we inserted the module name at index 0 in the string pool.
         let self_module_handle = ModuleHandle {
             address: AddressPoolIndex::new(0),
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
         };
         self.module.module_handles.insert(0, self_module_handle);
 
         let (mut names, mut addresses) = self
             .known_modules
             .keys()
-            .map(|key| (key.name().to_string(), key.address()))
+            .map(|key| (key.name().into(), key.address()))
             .unzip();
 
         let address_pool_offset = self.module.address_pool.len() as TableIndex;
-        let string_pool_offset = self.module.string_pool.len() as TableIndex;
+        let identifier_offset = self.module.identifiers.len() as TableIndex;
         // Add the strings and addresses to the pool
-        self.module.string_pool.append(&mut names);
+        self.module.identifiers.append(&mut names);
         self.module.address_pool.append(&mut addresses);
 
         let mut module_handles = (0..self.known_modules.len())
@@ -358,7 +364,7 @@ impl ModuleBuilder {
                 let i = i as TableIndex;
                 ModuleHandle {
                     address: AddressPoolIndex::new(address_pool_offset + i),
-                    name: StringPoolIndex::new(string_pool_offset + i),
+                    name: IdentifierIndex::new(identifier_offset + i),
                 }
             })
             .collect();
@@ -371,7 +377,7 @@ impl ModuleBuilder {
     pub fn materialize_unverified(&mut self) -> CompiledModule {
         self.with_callee_modules();
         self.with_account_addresses();
-        self.with_strings();
+        self.with_identifiers();
         self.with_user_strings();
         self.with_bytearrays();
         self.with_structs();

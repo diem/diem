@@ -4,6 +4,7 @@
 
 use crate::loaded_data::loaded_module::LoadedModule;
 use bytecode_verifier::VerifiedModule;
+use types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, FunctionSignature},
@@ -34,7 +35,7 @@ pub trait FunctionReference<'txn>: Sized + Clone {
     fn is_native(&self) -> bool;
 
     /// Return the name of the function
-    fn name(&self) -> &'txn str;
+    fn name(&self) -> &'txn IdentStr;
 
     /// Returns the signature of the function.
     fn signature(&self) -> &'txn FunctionSignature;
@@ -84,8 +85,8 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
         (self.def.flags & CodeUnit::NATIVE) == CodeUnit::NATIVE
     }
 
-    fn name(&self) -> &'txn str {
-        self.module.string_at(self.handle.name)
+    fn name(&self) -> &'txn IdentStr {
+        self.module.identifier_at(self.handle.name)
     }
 
     fn signature(&self) -> &'txn FunctionSignature {
