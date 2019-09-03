@@ -69,6 +69,9 @@ jobs:
       - run:
           name: Run All End to End Tests
           command: RUST_BACKTRACE=1 cargo test --package testsuite
+      - run:
+          name: Check for changed and untracked files
+          command: ./scripts/changed-files.sh
       - save_sccache_cache
   validate-config:
     description: Validate that committed docker configs are up to date
