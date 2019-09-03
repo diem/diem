@@ -1124,11 +1124,15 @@ fn compile_call(
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
                 }
-                Builtin::BorrowGlobal(name, tys) => {
+                Builtin::BorrowGlobal(mut_, name, tys) => {
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    code.push(Bytecode::BorrowGlobal(def_idx, type_actuals_id));
+                    code.push(if mut_ {
+                        Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+                    } else {
+                        Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+                    });
                     function_frame.pop()?;
                     function_frame.push()?;
 
@@ -1138,9 +1142,12 @@ fn compile_call(
                         name,
                     };
                     let sh_idx = context.struct_handle_index(ident)?;
-                    vec_deque![InferredType::MutableReference(Box::new(
-                        InferredType::Struct(sh_idx)
-                    ),)]
+                    let inner = Box::new(InferredType::Struct(sh_idx));
+                    vec_deque![if mut_ {
+                        InferredType::MutableReference(inner)
+                    } else {
+                        InferredType::Reference(inner)
+                    }]
                 }
                 Builtin::CreateAccount => {
                     code.push(Bytecode::CreateAccount);

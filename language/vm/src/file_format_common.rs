@@ -164,13 +164,14 @@ pub enum Opcodes {
     GET_GAS_REMAINING       = 0x2C,
     GET_TXN_SENDER          = 0x2D,
     EXISTS                  = 0x2E,
-    BORROW_GLOBAL           = 0x2F,
-    MOVE_FROM               = 0x30,
-    MOVE_TO                 = 0x31,
-    CREATE_ACCOUNT          = 0x32,
-    GET_TXN_SEQUENCE_NUMBER = 0x33,
-    GET_TXN_PUBLIC_KEY      = 0x34,
-    FREEZE_REF              = 0x35,
+    MUT_BORROW_GLOBAL       = 0x2F,
+    IMM_BORROW_GLOBAL       = 0x30,
+    MOVE_FROM               = 0x31,
+    MOVE_TO                 = 0x32,
+    CREATE_ACCOUNT          = 0x33,
+    GET_TXN_SEQUENCE_NUMBER = 0x34,
+    GET_TXN_PUBLIC_KEY      = 0x35,
+    FREEZE_REF              = 0x36,
 }
 
 /// Upper limit on the binary size

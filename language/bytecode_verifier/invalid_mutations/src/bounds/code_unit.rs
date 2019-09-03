@@ -245,12 +245,19 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         StructDefinitionIndex,
                         Exists
                     ),
-                    BorrowGlobal(_, _) => struct_bytecode!(
+                    MutBorrowGlobal(_, _) => struct_bytecode!(
                         struct_defs_len,
                         bytecode_idx,
                         offset,
                         StructDefinitionIndex,
-                        BorrowGlobal
+                        MutBorrowGlobal
+                    ),
+                    ImmBorrowGlobal(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ImmBorrowGlobal
                     ),
                     MoveFrom(_, _) => struct_bytecode!(
                         struct_defs_len,
@@ -315,7 +322,8 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | Pack(_, _)
         | Unpack(_, _)
         | Exists(_, _)
-        | BorrowGlobal(_, _)
+        | MutBorrowGlobal(_, _)
+        | ImmBorrowGlobal(_, _)
         | MoveFrom(_, _)
         | MoveToSender(_, _)
         | BrTrue(_)

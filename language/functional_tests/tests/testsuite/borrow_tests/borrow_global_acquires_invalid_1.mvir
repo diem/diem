@@ -3,7 +3,7 @@ module A {
 
     public test(addr: address) acquires T1 {
         let x: &mut Self.T1;
-        x = borrow_global<T1>(get_txn_sender());
+        x = borrow_global_mut<T1>(get_txn_sender());
         Self.acquires_t1();
         _ = move(x);
 

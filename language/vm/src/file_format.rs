@@ -918,14 +918,22 @@ pub enum Bytecode {
     ///
     /// ```..., reference -> ..., field_reference```
     ImmBorrowField(FieldDefinitionIndex),
-    /// Return reference to an instance of type `StructDefinitionIndex` published at the address
-    /// passed as argument. Abort execution if such an object does not exist or if a reference
-    /// has already been handed out.
+    /// Return a mutable reference to an instance of type `StructDefinitionIndex` published at the
+    /// address passed as argument. Abort execution if such an object does not exist or if a
+    /// reference has already been handed out.
     ///
     /// Stack transition:
     ///
     /// ```..., address_value -> ..., reference_value```
-    BorrowGlobal(StructDefinitionIndex, LocalsSignatureIndex),
+    MutBorrowGlobal(StructDefinitionIndex, LocalsSignatureIndex),
+    /// Return an immutable reference to an instance of type `StructDefinitionIndex` published at
+    /// the address passed as argument. Abort execution if such an object does not exist or if a
+    /// reference has already been handed out.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., address_value -> ..., reference_value```
+    ImmBorrowGlobal(StructDefinitionIndex, LocalsSignatureIndex),
     /// Add the 2 u64 at the top of the stack and pushes the result on the stack.
     /// The operation aborts the transaction in case of overflow.
     ///
@@ -1117,7 +1125,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1146,7 +1154,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::ImmBorrowLoc(a) => write!(f, "ImmBorrowLoc({})", a),
             Bytecode::MutBorrowField(a) => write!(f, "MutBorrowField({})", a),
             Bytecode::ImmBorrowField(a) => write!(f, "ImmBorrowField({})", a),
-            Bytecode::BorrowGlobal(a, b) => write!(f, "BorrowGlobal({}, {:?})", a, b),
+            Bytecode::MutBorrowGlobal(a, b) => write!(f, "MutBorrowGlobal({}, {:?})", a, b),
+            Bytecode::ImmBorrowGlobal(a, b) => write!(f, "ImmBorrowGlobal({}, {:?})", a, b),
             Bytecode::Add => write!(f, "Add"),
             Bytecode::Sub => write!(f, "Sub"),
             Bytecode::Mul => write!(f, "Mul"),

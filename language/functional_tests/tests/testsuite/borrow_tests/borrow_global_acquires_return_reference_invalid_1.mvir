@@ -7,7 +7,7 @@ module A {
     }
 
     borrow_acquires_t1(): &mut Self.T1 acquires T1 {
-        return borrow_global<T1>(get_txn_sender());
+        return borrow_global_mut<T1>(get_txn_sender());
     }
 }
 

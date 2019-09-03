@@ -16,6 +16,6 @@ main() {
     let struct1: &mut Token.T;
 
     sender = get_txn_sender();
-    struct1 = borrow_global<Token.T>(copy(sender));
+    struct1 = borrow_global_mut<Token.T>(copy(sender));
     return;
 }

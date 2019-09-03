@@ -142,10 +142,11 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::Not => 0,
 
-            Bytecode::FreezeRef => 0,
-            Bytecode::Exists(_, _) => 0,
-            Bytecode::BorrowGlobal(_, _) => 0,
-            Bytecode::MoveFrom(_, _) => 0,
+            Bytecode::FreezeRef
+            | Bytecode::Exists(_, _)
+            | Bytecode::MutBorrowGlobal(_, _)
+            | Bytecode::ImmBorrowGlobal(_, _)
+            | Bytecode::MoveFrom(_, _) => 0,
             Bytecode::MoveToSender(_, _) => -1,
 
             Bytecode::GetTxnGasUnitPrice

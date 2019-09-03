@@ -7,7 +7,7 @@ module M {
         let x: &Self.Foo<u64>;
         let y: Self.Foo<u64>;
 
-        x = borrow_global<Foo<u64>>();
+        x = borrow_global_mut<Foo<u64>>();
         _ = move(x);
 
         exists<Foo<u64>>();
@@ -18,7 +18,7 @@ module M {
 }
 
 // check: [LocalsSignature([Reference(Struct(StructHandleIndex(0), [U64])), Struct(StructHandleIndex(0), [U64])]), LocalsSignature([U64])]
-// check: BorrowGlobal(0, LocalsSignatureIndex(1))
+// check: MutBorrowGlobal(0, LocalsSignatureIndex(1))
 // check: Exists(0, LocalsSignatureIndex(1))
 // check: MoveFrom(0, LocalsSignatureIndex(1))
 // check: MoveToSender(0, LocalsSignatureIndex(1))
