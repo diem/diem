@@ -125,7 +125,7 @@ impl ConsensusPrivateKey {
                 let key = std::mem::replace(self, ConsensusPrivateKey::Removed);
                 match key {
                     ConsensusPrivateKey::Present(priv_key) => Some(priv_key),
-                    _ => unreachable!(),
+                    _ => None,
                 }
             }
             _ => None,
