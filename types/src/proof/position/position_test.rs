@@ -279,38 +279,44 @@ fn test_frozen_subtree_iterator() {
     }
 }
 
-fn collect_first_n_positions(num_leaves: u64, n: usize) -> Vec<u64> {
-    FrozenSubtreeSiblingIterator::new(num_leaves)
-        .take(n)
-        .map(Position::to_inorder_index)
-        .collect()
-}
-
-fn collect_all_positions(num_leaves: u64) -> Vec<u64> {
-    FrozenSubtreeSiblingIterator::new(num_leaves)
+fn collect_all_positions(num_leaves: u64, num_new_leaves: u64) -> Vec<u64> {
+    FrozenSubtreeSiblingIterator::new(num_leaves, num_new_leaves)
         .map(Position::to_inorder_index)
         .collect()
 }
 
 #[test]
 fn test_frozen_subtree_sibling_iterator() {
-    assert_eq!(collect_first_n_positions(1, 5), vec![2, 5, 11, 23, 47]);
-    assert_eq!(collect_first_n_positions(2, 5), vec![5, 11, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(3, 5), vec![6, 11, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(4, 4), vec![11, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(5, 5), vec![10, 13, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(6, 4), vec![13, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(7, 4), vec![14, 23, 47, 95]);
-    assert_eq!(collect_first_n_positions(8, 3), vec![23, 47, 95]);
+    assert!(collect_all_positions(0, 0).is_empty());
+    assert_eq!(collect_all_positions(0, 1), vec![0]);
+    assert_eq!(collect_all_positions(0, 2), vec![1]);
+    assert_eq!(collect_all_positions(0, 7), vec![3, 9, 12]);
+    assert_eq!(collect_all_positions(0, 1 << 63), vec![(1 << 63) - 1]);
 
-    assert_eq!(collect_all_positions(1).len(), 63);
-    assert_eq!(
-        collect_all_positions(1 << 62),
-        vec![(1 << 63) + (1 << 62) - 1]
-    );
-    assert_eq!(
-        collect_all_positions((1 << 63) - 1),
-        vec![std::u64::MAX - 1]
-    );
-    assert_eq!(collect_all_positions(1 << 63).len(), 0);
+    assert!(collect_all_positions(1, 1).is_empty());
+    assert_eq!(collect_all_positions(1, 2), vec![2]);
+    assert_eq!(collect_all_positions(1, 3), vec![2, 4]);
+    assert_eq!(collect_all_positions(1, 4), vec![2, 5]);
+    assert_eq!(collect_all_positions(1, 5), vec![2, 5, 8]);
+    assert_eq!(collect_all_positions(1, 1 << 63).len(), 63);
+
+    assert!(collect_all_positions(2, 2).is_empty());
+    assert_eq!(collect_all_positions(2, 3), vec![4]);
+    assert_eq!(collect_all_positions(2, 4), vec![5]);
+    assert_eq!(collect_all_positions(2, 5), vec![5, 8]);
+    assert_eq!(collect_all_positions(2, 6), vec![5, 9]);
+    assert_eq!(collect_all_positions(2, 7), vec![5, 9, 12]);
+    assert_eq!(collect_all_positions(2, 1 << 63).len(), 62);
+
+    assert!(collect_all_positions(3, 3).is_empty());
+    assert_eq!(collect_all_positions(3, 4), vec![6]);
+    assert_eq!(collect_all_positions(3, 5), vec![6, 8]);
+    assert_eq!(collect_all_positions(3, 8), vec![6, 11]);
+    assert_eq!(collect_all_positions(3, 1 << 63).len(), 62);
+
+    assert!(collect_all_positions(6, 6).is_empty());
+    assert_eq!(collect_all_positions(6, 7), vec![12]);
+    assert_eq!(collect_all_positions(6, 8), vec![13]);
+    assert_eq!(collect_all_positions(6, 16), vec![13, 23]);
+    assert_eq!(collect_all_positions(6, 1 << 63).len(), 61);
 }
