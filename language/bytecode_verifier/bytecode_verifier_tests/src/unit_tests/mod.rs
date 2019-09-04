@@ -8,3 +8,4 @@ pub mod negative_stack_size_tests;
 pub mod resources_tests;
 pub mod signature_tests;
 pub mod struct_defs_tests;
+pub mod unused_entry_tests;
