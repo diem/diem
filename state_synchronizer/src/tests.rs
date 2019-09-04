@@ -84,7 +84,7 @@ impl MockExecutorProxy {
         let receiver = AccountAddress::new([0xff; 32]);
         let program = encode_transfer_program(&receiver, 1);
         let transaction = get_test_signed_txn(
-            sender.into(),
+            sender,
             version + 1,
             GENESIS_KEYPAIR.0.clone(),
             GENESIS_KEYPAIR.1.clone(),

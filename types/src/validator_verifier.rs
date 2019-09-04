@@ -287,7 +287,7 @@ mod tests {
         for validator in validator_signers.iter() {
             author_to_signature_map.insert(
                 validator.author(),
-                validator.sign_message(random_hash).unwrap().into(),
+                validator.sign_message(random_hash).unwrap(),
             );
         }
 

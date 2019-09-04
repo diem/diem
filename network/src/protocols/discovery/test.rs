@@ -112,10 +112,10 @@ fn generate_network_pub_keys_and_signer(
     let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
     (
         NetworkPublicKeys {
-            signing_public_key: signing_priv_key.public_key().clone().into(),
+            signing_public_key: signing_priv_key.public_key().clone(),
             identity_public_key: identity_pub_key,
         },
-        Signer::new(peer_id, signing_priv_key.into()),
+        Signer::new(peer_id, signing_priv_key),
     )
 }
 

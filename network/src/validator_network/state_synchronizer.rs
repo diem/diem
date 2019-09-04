@@ -119,7 +119,7 @@ mod tests {
         send_msg.set_chunk_request(chunk_request);
 
         // Send msg to network layer.
-        block_on(sender.send_to(peer_id.into(), send_msg.clone())).unwrap();
+        block_on(sender.send_to(peer_id, send_msg.clone())).unwrap();
 
         // Wait for msg at network layer.
         let event = block_on(network_reqs_rx.next()).unwrap();
@@ -159,7 +159,7 @@ mod tests {
         block_on(state_sync_tx.send(event)).unwrap();
 
         // request should be properly deserialized
-        let expected_event = Event::Message((peer_id.into(), state_sync_msg.clone()));
+        let expected_event = Event::Message((peer_id, state_sync_msg.clone()));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }

@@ -179,10 +179,7 @@ impl AccountPicker {
         match pick_style {
             AccountPickStyle::Unlimited => AccountPicker::Unlimited(num_accounts),
             AccountPickStyle::Limited(limit) => {
-                let remaining = (0..num_accounts)
-                    .into_iter()
-                    .map(|idx| (idx, limit))
-                    .collect();
+                let remaining = (0..num_accounts).map(|idx| (idx, limit)).collect();
                 AccountPicker::Limited(remaining)
             }
         }

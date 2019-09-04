@@ -181,7 +181,7 @@ pub fn placeholder_certificate_for_block(
         let li_sig = signer
             .sign_message(ledger_info_placeholder.hash())
             .expect("Failed to sign LedgerInfo");
-        signatures.insert(signer.author(), li_sig.into());
+        signatures.insert(signer.author(), li_sig);
     }
 
     QuorumCert::new(

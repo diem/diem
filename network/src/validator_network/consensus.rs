@@ -221,14 +221,14 @@ mod tests {
 
         // Consensus should receive deserialized message event
         let event = block_on(stream.next()).unwrap().unwrap();
-        assert_eq!(event, Event::Message((peer_id.into(), consensus_msg)));
+        assert_eq!(event, Event::Message((peer_id, consensus_msg)));
 
         // Network notifies consensus about new peer
         block_on(consensus_tx.send(NetworkNotification::NewPeer(peer_id))).unwrap();
 
         // Consensus should receive notification
         let event = block_on(stream.next()).unwrap().unwrap();
-        assert_eq!(event, Event::NewPeer(peer_id.into()));
+        assert_eq!(event, Event::NewPeer(peer_id));
     }
 
     // `ConsensusNetworkSender` should serialize outbound messages
@@ -245,7 +245,7 @@ mod tests {
         };
 
         // Send the message to network layer
-        block_on(sender.send_to(peer_id.into(), consensus_msg)).unwrap();
+        block_on(sender.send_to(peer_id, consensus_msg)).unwrap();
 
         // Network layer should receive serialized message to send out
         let event = block_on(network_reqs_rx.next()).unwrap();
@@ -284,7 +284,7 @@ mod tests {
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
-        let expected_event = Event::RpcRequest((peer_id.into(), req_msg_enum.clone(), res_tx));
+        let expected_event = Event::RpcRequest((peer_id, req_msg_enum.clone(), res_tx));
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }
@@ -299,8 +299,7 @@ mod tests {
         // send get_block rpc request
         let peer_id = PeerId::random();
         let req_msg = RequestBlock::new();
-        let f_res_msg =
-            sender.request_block(peer_id.into(), req_msg.clone(), Duration::from_secs(5));
+        let f_res_msg = sender.request_block(peer_id, req_msg.clone(), Duration::from_secs(5));
 
         // build rpc response
         let res_msg = RespondBlock::new();
