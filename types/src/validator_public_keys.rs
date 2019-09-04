@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 use crate::{
     account_address::AccountAddress,
     proto::validator_public_keys::ValidatorPublicKeys as ProtoValidatorPublicKeys,

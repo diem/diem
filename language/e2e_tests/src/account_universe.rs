@@ -11,9 +11,6 @@
 //! For examples of property-based tests written against this model, see the
 //! `tests/account_universe` directory.
 
-// clippy warns on the Arbitrary impl for `AccountPairGen` -- it's how Arbitrary works so ignore it.
-#![allow(clippy::unit_arg)]
-
 mod create_account;
 mod peer_to_peer;
 mod rotate_key;

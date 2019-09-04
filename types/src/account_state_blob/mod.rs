@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 #[cfg(any(test, feature = "testing"))]
 use crate::account_config::{account_resource_path, AccountResource};
 use crate::{

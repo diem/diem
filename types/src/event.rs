@@ -1,5 +1,3 @@
-#![allow(clippy::unit_arg)]
-
 #[cfg(any(test, feature = "testing"))]
 use crate::account_address::AccountAddress;
 #[cfg(any(test, feature = "testing"))]
