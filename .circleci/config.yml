@@ -100,7 +100,6 @@ jobs:
           name: Cargo Audit
           command: |
             cargo install --force cargo-audit
-            cargo generate-lockfile
             cargo audit
   terraform:
     docker:
