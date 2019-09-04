@@ -87,21 +87,18 @@ fn test_insert_at_leaf_with_internal_created() {
         Child::new(leaf2.hash(), 1 /* version */, true /* is_leaf */),
     );
     let internal = Node::new_internal(children);
-    assert_eq!(
-        db.get_node(&NodeKey::new_empty_path(0)).unwrap(),
-        leaf1.clone().into()
-    );
+    assert_eq!(db.get_node(&NodeKey::new_empty_path(0)).unwrap(), leaf1);
     assert_eq!(
         db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(0)))
             .unwrap(),
-        leaf1.into()
+        leaf1
     );
     assert_eq!(
         db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(15)))
             .unwrap(),
-        leaf2.into()
+        leaf2
     );
-    assert_eq!(db.get_node(&internal_node_key).unwrap(), internal.into());
+    assert_eq!(db.get_node(&internal_node_key).unwrap(), internal);
 }
 
 #[test]
@@ -164,27 +161,21 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
         Node::new_internal(children)
     };
 
-    assert_eq!(
-        db.get_node(&NodeKey::new_empty_path(0)).unwrap(),
-        leaf1.clone().into()
-    );
+    assert_eq!(db.get_node(&NodeKey::new_empty_path(0)).unwrap(), leaf1);
     assert_eq!(
         db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(0)))
             .unwrap(),
-        leaf1.clone().into()
+        leaf1,
     );
     assert_eq!(
         db.get_node(&internal_node_key.gen_child_node_key(1 /* version */, Nibble::from(1)))
             .unwrap(),
-        leaf2.clone().into()
+        leaf2,
     );
-    assert_eq!(
-        db.get_node(&internal_node_key).unwrap(),
-        internal.clone().into()
-    );
+    assert_eq!(db.get_node(&internal_node_key).unwrap(), internal);
     assert_eq!(
         db.get_node(&NodeKey::new_empty_path(1)).unwrap(),
-        root_internal.clone().into()
+        root_internal,
     );
 
     // 3. Update leaf2 with new value

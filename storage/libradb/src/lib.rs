@@ -602,7 +602,6 @@ impl LibraDB {
 
         let limit = std::cmp::min(limit, ledger_version - start_version + 1);
         let txn_and_txn_info_list = (start_version..start_version + limit)
-            .into_iter()
             .map(|version| {
                 Ok((
                     self.transaction_store.get_transaction(version)?,
@@ -625,7 +624,6 @@ impl LibraDB {
         let events = if fetch_events {
             Some(
                 (start_version..start_version + limit)
-                    .into_iter()
                     .map(|version| Ok(self.event_store.get_events_by_version(version)?))
                     .collect::<Result<Vec<_>>>()?,
             )

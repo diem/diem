@@ -149,17 +149,13 @@ mod tests {
             mdata: mempool_msg.write_to_bytes().unwrap().into(),
         };
 
-        block_on(mempool_tx.send(NetworkNotification::RecvMessage(
-            PeerId::from(peer_id),
-            network_msg,
-        )))
-        .unwrap();
+        block_on(mempool_tx.send(NetworkNotification::RecvMessage(peer_id, network_msg))).unwrap();
         let event = block_on(stream.next()).unwrap().unwrap();
-        assert_eq!(event, Event::Message((peer_id.into(), mempool_msg)));
+        assert_eq!(event, Event::Message((peer_id, mempool_msg)));
 
-        block_on(mempool_tx.send(NetworkNotification::NewPeer(PeerId::from(peer_id)))).unwrap();
+        block_on(mempool_tx.send(NetworkNotification::NewPeer(peer_id))).unwrap();
         let event = block_on(stream.next()).unwrap().unwrap();
-        assert_eq!(event, Event::NewPeer(peer_id.into()));
+        assert_eq!(event, Event::NewPeer(peer_id));
     }
 
     // `MempoolNetworkSender` should serialize outbound messages
@@ -182,7 +178,7 @@ mod tests {
         let event = block_on(network_reqs_rx.next()).unwrap();
         match event {
             NetworkRequest::SendMessage(recv_peer_id, network_msg) => {
-                assert_eq!(recv_peer_id, PeerId::from(peer_id));
+                assert_eq!(recv_peer_id, peer_id);
                 assert_eq!(network_msg, expected_network_msg);
             }
             event => panic!("Unexpected event: {:?}", event),

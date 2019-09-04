@@ -189,11 +189,9 @@ fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSi
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
             Ok(()),
-            node.epoch_mgr.validators().verify_signature(
-                *author,
-                ledger_info_hash,
-                &(signature.clone().into())
-            )
+            node.epoch_mgr
+                .validators()
+                .verify_signature(*author, ledger_info_hash, &signature)
         );
     }
 }

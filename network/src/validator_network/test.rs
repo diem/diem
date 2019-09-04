@@ -165,21 +165,21 @@ fn test_mempool_sync() {
     mempool_msg.set_peer_id(dialer_peer_id.into());
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0.into(), keypair.1.into(), None);
+    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
     mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
         match dialer_mp_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, listener_peer_id.into());
+                assert_eq!(peer_id, listener_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
 
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
-            .send_to(listener_peer_id.into(), mempool_msg)
+            .send_to(listener_peer_id, mempool_msg)
             .await
             .unwrap();
     };
@@ -189,7 +189,7 @@ fn test_mempool_sync() {
         // The listener receives a NewPeer event first
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
@@ -197,7 +197,7 @@ fn test_mempool_sync() {
         // The listener then receives the mempool sync message
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
                 let transactions: Vec<SignedTransaction> = msg.transactions.into();
@@ -308,21 +308,21 @@ fn test_permissionless_mempool_sync() {
     mempool_msg.set_peer_id(dialer_peer_id.into());
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0.into(), keypair.1.into(), None);
+    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
     mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
         match dialer_mp_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, listener_peer_id.into());
+                assert_eq!(peer_id, listener_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
 
         // Dialer sends a mempool sync message
         dialer_mp_net_sender
-            .send_to(listener_peer_id.into(), mempool_msg)
+            .send_to(listener_peer_id, mempool_msg)
             .await
             .unwrap();
     };
@@ -332,7 +332,7 @@ fn test_permissionless_mempool_sync() {
         // The listener receives a NewPeer event first
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
@@ -340,7 +340,7 @@ fn test_permissionless_mempool_sync() {
         // The listener then receives the mempool sync message
         match listener_mp_net_events.next().await.unwrap().unwrap() {
             Event::Message((peer_id, msg)) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
                 let transactions: Vec<SignedTransaction> = msg.transactions.into();
@@ -452,7 +452,7 @@ fn test_consensus_rpc() {
         // Wait until dialing finished and NewPeer event received
         match dialer_con_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, listener_peer_id.into());
+                assert_eq!(peer_id, listener_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
@@ -460,7 +460,7 @@ fn test_consensus_rpc() {
         // Dialer sends a RequestBlock rpc request.
         let res_block_msg = dialer_con_net_sender
             .request_block(
-                listener_peer_id.into(),
+                listener_peer_id,
                 req_block_msg_clone,
                 Duration::from_secs(10),
             )
@@ -477,7 +477,7 @@ fn test_consensus_rpc() {
         // The listener receives a NewPeer event first
         match listener_con_net_events.next().await.unwrap().unwrap() {
             Event::NewPeer(peer_id) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
             }
             event => panic!("Unexpected event {:?}", event),
         }
@@ -485,7 +485,7 @@ fn test_consensus_rpc() {
         // The listener then handles the RequestBlock rpc request.
         match listener_con_net_events.next().await.unwrap().unwrap() {
             Event::RpcRequest((peer_id, mut req_msg, res_tx)) => {
-                assert_eq!(peer_id, dialer_peer_id.into());
+                assert_eq!(peer_id, dialer_peer_id);
 
                 // Check the request
                 assert!(req_msg.has_request_block());

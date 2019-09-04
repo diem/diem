@@ -76,14 +76,14 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone().into(),
+                signing_public_key: dialer_signing_public_key.clone(),
                 identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone().into(),
+                signing_public_key: listener_signing_public_key.clone(),
                 identity_public_key: listener_identity_public_key.clone(),
             },
         ),
@@ -223,14 +223,14 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone().into(),
+                signing_public_key: dialer_signing_public_key.clone(),
                 identity_public_key: dialer_identity_public_key.clone(),
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone().into(),
+                signing_public_key: listener_signing_public_key.clone(),
                 identity_public_key: listener_identity_public_key.clone(),
             },
         ),

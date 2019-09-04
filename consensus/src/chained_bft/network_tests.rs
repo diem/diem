@@ -106,7 +106,7 @@ impl NetworkPlayground {
                     let mut node_consensus_tx = node_consensus_txs
                         .lock()
                         .unwrap()
-                        .get(&dst.into())
+                        .get(&dst)
                         .unwrap()
                         .clone();
 
@@ -117,7 +117,7 @@ impl NetworkPlayground {
                     };
 
                     node_consensus_tx
-                        .send(NetworkNotification::RecvRpc(src.into(), inbound_req))
+                        .send(NetworkNotification::RecvRpc(src, inbound_req))
                         .await
                         .unwrap();
                 }
@@ -176,15 +176,13 @@ impl NetworkPlayground {
             .node_consensus_txs
             .lock()
             .unwrap()
-            .get(&dst.into())
+            .get(&dst)
             .unwrap()
             .clone();
 
         // convert NetworkRequest to corresponding NetworkNotification
         let msg_notif = match msg {
-            NetworkRequest::SendMessage(_dst, msg) => {
-                NetworkNotification::RecvMessage(src.into(), msg)
-            }
+            NetworkRequest::SendMessage(_dst, msg) => NetworkNotification::RecvMessage(src, msg),
             msg => panic!("[network playground] Unexpected NetworkRequest: {:?}", msg),
         };
 
@@ -192,7 +190,7 @@ impl NetworkPlayground {
         let msg_copy = match &msg_notif {
             NetworkNotification::RecvMessage(src, msg) => {
                 let msg: ConsensusMsg = ::protobuf::parse_from_bytes(msg.mdata.as_ref()).unwrap();
-                ((*src).into(), msg)
+                (*src, msg)
             }
             msg_notif => panic!(
                 "[network playground] Unexpected NetworkNotification: {:?}",
@@ -288,16 +286,8 @@ struct DropConfig(HashMap<Author, HashSet<Author>>);
 impl DropConfig {
     pub fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
         match net_req {
-            NetworkRequest::SendMessage(dst, _) => self
-                .0
-                .get(src.into())
-                .unwrap()
-                .contains(&Author::from(*dst)),
-            NetworkRequest::SendRpc(dst, _) => self
-                .0
-                .get(src.into())
-                .unwrap()
-                .contains(&Author::from(*dst)),
+            NetworkRequest::SendMessage(dst, _) => self.0.get(src).unwrap().contains(&dst),
+            NetworkRequest::SendRpc(dst, _) => self.0.get(src).unwrap().contains(&dst),
             _ => true,
         }
     }

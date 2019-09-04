@@ -215,7 +215,6 @@ proptest! {
     fn test_nibble_iter_to_bit_iter((current, nibble_path) in arb_nibble_path_and_current()) {
         let mut nibble_iter = nibble_path.nibbles();
         (0..current)
-            .into_iter()
             .for_each(|_| {
                 nibble_iter.next().unwrap();
             }

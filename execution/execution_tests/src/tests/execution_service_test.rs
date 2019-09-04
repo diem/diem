@@ -64,11 +64,8 @@ fn test_execution_service_basic() {
         .execute_block(execute_block_request)
         .unwrap();
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(
-        u64::from(version),
-        execute_block_response.root_hash(),
-        block_id,
-    );
+    let ledger_info_with_sigs =
+        gen_ledger_info_with_sigs(version, execute_block_response.root_hash(), block_id);
     execution_client
         .commit_block(ledger_info_with_sigs)
         .unwrap();

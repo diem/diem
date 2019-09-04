@@ -458,7 +458,7 @@ where
         );
 
         tree_cache.put_node(node_key.clone(), new_leaf_node.clone())?;
-        Ok((node_key, new_leaf_node.into()))
+        Ok((node_key, new_leaf_node))
     }
 
     /// Returns the account state blob (if applicable) and the corresponding merkle proof.

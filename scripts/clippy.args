@@ -7,8 +7,6 @@ allowed_lints=(
 	"-A" "clippy::get_unwrap"
     "-A" "clippy::new_without_default"
 
-    # Added with compiler bump nightly-2019-04-13
-    "-A" "clippy::identity-conversion"
     # Clippy seems to complain about async functions
     "-A" "clippy::needless_lifetimes"
     # This ends up being platform dependent, e.g. the Instant type

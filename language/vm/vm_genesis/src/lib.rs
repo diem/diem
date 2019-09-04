@@ -143,7 +143,7 @@ impl Accounts {
             gas_unit_price,
             Duration::from_secs(u64::max_value()),
         )
-        .sign(&sender_account.privkey.into(), sender_account.pubkey.into())
+        .sign(&sender_account.privkey, sender_account.pubkey)
         .unwrap()
     }
 

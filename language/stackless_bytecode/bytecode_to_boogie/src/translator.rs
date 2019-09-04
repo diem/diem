@@ -522,7 +522,7 @@ impl<'a> ModuleTranslator<'a> {
         let code = &self.stackless_bytecode[idx];
 
         res.push_str("\n{\n");
-        res.push_str("    // declare local variables\n".into());
+        res.push_str("    // declare local variables\n");
 
         let function_handle = self.module.function_handle_at(function_def.function);
         let function_signature = self.module.function_signature_at(function_handle.signature);
@@ -581,7 +581,7 @@ impl<'a> ModuleTranslator<'a> {
         res.push_str(&arg_assignment_str);
         res.push_str("\n    // assign ResourceStores to locals so they can be modified\n");
         res.push_str("    addr_exists' := addr_exists;\n");
-        res.push_str("\n    // bytecode translation starts here\n".into());
+        res.push_str("\n    // bytecode translation starts here\n");
 
         // identify all the branching targets so we can insert labels in front of them
         let mut branching_targets: BTreeSet<usize> = BTreeSet::new();
@@ -678,7 +678,7 @@ impl<'a> ModuleTranslator<'a> {
                 }
             }
         }
-        res.push_str("}\n".into());
+        res.push_str("}\n");
         res
     }
 
