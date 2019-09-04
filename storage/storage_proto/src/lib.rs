@@ -23,8 +23,6 @@
 //! [`storage_client`](../storage_client/index.html) don't need to depending on the entire
 //! [`storage_service`](../storage_client/index.html).
 
-#![allow(clippy::unit_arg)]
-
 pub mod proto;
 
 use crypto::{ed25519::*, HashValue};

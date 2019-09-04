@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 use super::{AddBlockError, Block, CommitBlockError};
 use crypto::HashValue;
 use std::collections::HashSet;

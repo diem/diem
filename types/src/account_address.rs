@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
 use canonical_serialization::{

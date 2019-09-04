@@ -1,9 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// clippy warns on the Arbitrary impl for `Index` -- it's how Arbitrary works so ignore it.
-#![allow(clippy::unit_arg)]
-
 #[cfg(test)]
 mod unit_tests;
 

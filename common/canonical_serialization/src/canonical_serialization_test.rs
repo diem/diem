@@ -1,9 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Required to allow Arbitrary
-#![allow(clippy::unit_arg)]
-
 //https://rust-lang.github.io/rust-clippy/master/index.html#blacklisted_name
 //disable it in test so that we can use variable names such as 'foo' and 'bar'
 #![allow(clippy::blacklisted_name)]

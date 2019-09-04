@@ -68,8 +68,6 @@
 //! }
 //! ```
 
-#![allow(clippy::unit_arg)]
-
 use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;

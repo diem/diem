@@ -35,9 +35,6 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-// This is caused by deriving Arbitrary for AccessPath.
-#![allow(clippy::unit_arg)]
-
 use crate::{
     account_address::AccountAddress,
     account_config::{

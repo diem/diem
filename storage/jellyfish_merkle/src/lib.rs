@@ -59,8 +59,6 @@
 //! [Internal]: crate::node_type::Internal
 //! [Leaf]: crate::node_type::Leaf
 
-#![allow(clippy::unit_arg)]
-
 pub mod iterator;
 #[cfg(test)]
 mod jellyfish_merkle_test;

@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 use crate::{contract_event::EventWithProof, ledger_info::LedgerInfoWithSignatures};
 use crypto::*;
 use proto_conv::{FromProto, IntoProto};
