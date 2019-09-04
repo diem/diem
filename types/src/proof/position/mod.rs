@@ -236,55 +236,35 @@ impl Iterator for FrozenSubTreeIterator {
     }
 }
 
-/// `FrozenSubtreeSiblingIterator` yields the "siblings" of given frozen subtrees. The frozen
-/// subtrees can be combined with these siblings to compute the hash of a bigger accumulator. For
-/// example, given an accumulator with 10 leaves, this iterator generates the sequence of positions
-/// of `A`, `B`, `C`, ....
+/// Given an accumulator of size `current_num_leaves`, `FrozenSubtreeSiblingIterator` yields the
+/// positions of required subtrees if we want to append these subtrees to the existing accumulator
+/// to generate a bigger one of size `new_num_leaves`.
 ///
-/// ```text
-///                          o
-///                         / \
-///                       /     \
-///                     /         \
-///                   /             \
-///                 o                 C
-///               /   \
-///             /       \
-///           /           \
-///         o               o
-///       /   \            / \
-///      /     \          /   \
-///     o       o        o     B
-///    / \     / \      / \
-///   o   o   o   o   o    A
-///  / \ / \ / \ / \ / \
-///  o o o o o o o o o o
-/// ```
+/// See [`crate::proof::accumulator::Accumulator`] for more details.
 pub struct FrozenSubtreeSiblingIterator {
     current_num_leaves: u64,
-    current_level: u32,
+    remaining_new_leaves: u64,
 }
 
 impl FrozenSubtreeSiblingIterator {
-    /// Constructs a new `FrozenSubtreeSiblingIterator` for an accumulator with given number of
-    /// leaves.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `num_leaves == 0` or `num_leaves > 2^63`.
-    pub fn new(num_leaves: u64) -> Self {
-        assert_ne!(
-            num_leaves, 0,
-            "Subtree sibling is undefined for empty accumulator.",
+    /// Constructs a new `FrozenSubtreeSiblingIterator` given the size of current accumulator and
+    /// the size of the bigger accumulator.
+    pub fn new(current_num_leaves: u64, new_num_leaves: u64) -> Self {
+        assert!(
+            new_num_leaves <= 1 << 63,
+            "An accumulator can have at most 2^63 leaves. Provided num_leaves: {}.",
+            new_num_leaves,
         );
         assert!(
-            num_leaves <= 1 << 63,
-            "An accumulator can have at most 2^63 leaves. Provided num_leaves: {}.",
-            num_leaves,
+            current_num_leaves <= new_num_leaves,
+            "Number of leaves needs to be increasing: current_num_leaves: {}, new_num_leaves: {}",
+            current_num_leaves,
+            new_num_leaves
         );
+
         Self {
-            current_num_leaves: num_leaves,
-            current_level: 0,
+            current_num_leaves,
+            remaining_new_leaves: new_num_leaves - current_num_leaves,
         }
     }
 }
@@ -293,20 +273,34 @@ impl Iterator for FrozenSubtreeSiblingIterator {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // If the current level has even number of leaves, we do not need a sibling at this level.
-        while self.current_num_leaves % 2 == 0 {
-            self.current_num_leaves >>= 1;
-            self.current_level += 1;
-        }
-        if self.current_level >= 63 {
+        if self.remaining_new_leaves == 0 {
             return None;
         }
 
-        // Otherwise, there should be a sibling next to the rightmost leaf.
-        let ret = Some(Position::from_inorder_index(
-            treebits::node_from_level_and_pos(self.current_level, self.current_num_leaves),
-        ));
-        self.current_num_leaves += 1;
-        ret
+        // Now we compute the size of the next subtree. If there is a rightmost frozen subtree, we
+        // may combine it with a subtree of the same size, or append a smaller one on the right. In
+        // case self.current_num_leaves is zero and there is no rightmost frozen subtree, the
+        // largest possible one is appended.
+        let next_subtree_size = if self.current_num_leaves > 0 {
+            let rightmost_frozen_subtree_size = 1 << self.current_num_leaves.trailing_zeros();
+            if self.remaining_new_leaves >= rightmost_frozen_subtree_size {
+                rightmost_frozen_subtree_size
+            } else {
+                1 << (63 - self.remaining_new_leaves.leading_zeros())
+            }
+        } else {
+            1 << (63 - self.remaining_new_leaves.leading_zeros())
+        };
+
+        // Now that the size of the next subtree is known, we compute the leftmost and rightmost
+        // leaves in this subtree. The root of the subtree is then the middle of these two leaves.
+        let first_leaf_index = self.current_num_leaves;
+        let last_leaf_index = first_leaf_index + next_subtree_size - 1;
+        self.current_num_leaves += next_subtree_size;
+        self.remaining_new_leaves -= next_subtree_size;
+
+        Some(Position::from_inorder_index(
+            first_leaf_index + last_leaf_index,
+        ))
     }
 }

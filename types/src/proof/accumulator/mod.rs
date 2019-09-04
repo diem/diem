@@ -124,6 +124,100 @@ where
         }
     }
 
+    /// Appends a list of new subtrees to the existing accumulator. This is similar to
+    /// [`append`](Accumulator::append) except that the new leaves themselves are not known and
+    /// they are represented by `subtrees`. As an example, given the following accumulator that
+    /// currently has 10 leaves, the frozen subtree roots and the new subtrees are annotated below.
+    /// Note that in this case `subtrees[0]` represents two new leaves `A` and `B`, `subtrees[1]`
+    /// represents four new leaves `C`, `D`, `E` and `F`, `subtrees[2]` represents four new leaves
+    /// `G`, `H`, `I` and `J`, and the last `subtrees[3]` represents one new leaf `K`.
+    ///
+    /// ```text
+    ///                                                                           new_root
+    ///                                                                         /          \
+    ///                                                                       /              \
+    ///                                                                     /                  \
+    ///                                                                   /                      \
+    ///                                                                 /                          \
+    ///                                                               /                              \
+    ///                                                             /                                  \
+    ///                                                           /                                      \
+    ///                                                         /                                          \
+    ///                                                       /                                              \
+    ///                                                     /                                                  \
+    ///                                                   /                                                      \
+    ///                                                 /                                                          \
+    ///                                         old_root                                                            o
+    ///                                        /        \                                                          / \
+    ///                                      /            \                                                       /   placeholder
+    ///                                    /                \                                                    /
+    ///                                  /                    \                                                 /
+    ///                                /                        \                                              /
+    ///                              /                            \                                           o
+    ///                            /                                \                                        / \
+    ///                          /                                    \                                     /    \
+    ///                        /                                       o                                  /        \
+    /// frozen_subtree_roots[0]                                      /   \                              /            \
+    ///                    /   \                                    /     \                           /                \
+    ///                   /     \                                  /       \                        /                    \
+    ///                  o       o                                o         subtrees[1]  subtrees[2]                     o
+    ///                 / \     / \                              / \                / \          / \                    / \
+    ///                o   o   o   o      frozen_subtree_roots[1]   subtrees[0]    o   o        o   o                  o   placeholder
+    ///               / \ / \ / \ / \                         / \           / \   / \ / \      / \ / \                / \
+    ///               o o o o o o o o                         o o           A B   C D E F      G H I J  K (subtrees[3]) placeholder
+    /// ```
+    pub fn append_subtrees(&self, subtrees: &[HashValue], num_new_leaves: u64) -> Result<Self> {
+        ensure!(
+            num_new_leaves <= (1 << 63) - self.num_leaves,
+            "Too many new leaves. self.num_leaves: {}. num_new_leaves: {}.",
+            self.num_leaves,
+            num_new_leaves,
+        );
+
+        if self.num_leaves == 0 {
+            return Self::new(subtrees.to_vec(), num_new_leaves);
+        }
+
+        let mut current_subtree_roots = self.frozen_subtree_roots.clone();
+        let mut current_num_leaves = self.num_leaves;
+        let mut remaining_new_leaves = num_new_leaves;
+        let mut subtree_iter = subtrees.iter();
+
+        // Check if we want to combine a new subtree with the rightmost frozen subtree. To do that
+        // this new subtree needs to represent `rightmost_frozen_subtree_size` leaves, so we need
+        // to have at least this many new leaves remaining.
+        let mut rightmost_frozen_subtree_size = 1 << current_num_leaves.trailing_zeros();
+        while remaining_new_leaves >= rightmost_frozen_subtree_size {
+            // Note that after combining the rightmost frozen subtree of size X with a new subtree,
+            // we obtain a subtree of size 2X. If there was already a frozen subtree of size 2X, we
+            // need to carry this process further.
+            let mut mask = rightmost_frozen_subtree_size;
+            let mut current_hash = *subtree_iter
+                .next()
+                .ok_or_else(|| format_err!("Too few subtrees."))?;
+            while current_num_leaves & mask != 0 {
+                let left_hash = current_subtree_roots
+                    .pop()
+                    .expect("This frozen subtree must exist.");
+                current_hash = MerkleTreeInternalNode::<H>::new(left_hash, current_hash).hash();
+                mask <<= 1;
+            }
+            current_subtree_roots.push(current_hash);
+
+            current_num_leaves += rightmost_frozen_subtree_size;
+            remaining_new_leaves -= rightmost_frozen_subtree_size;
+            rightmost_frozen_subtree_size = mask;
+        }
+
+        // Now all the new subtrees are smaller than the rightmost frozen subtree. We just append
+        // all of them. Note that if the number of new subtrees does not actually match the number
+        // of new leaves, `Self::new` below will raise an error.
+        current_num_leaves += remaining_new_leaves;
+        current_subtree_roots.extend(subtree_iter);
+
+        Ok(Self::new(current_subtree_roots, current_num_leaves)?)
+    }
+
     /// Returns the root hash of the accumulator.
     pub fn root_hash(&self) -> HashValue {
         self.root_hash

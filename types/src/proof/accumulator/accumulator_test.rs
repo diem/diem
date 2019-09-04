@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::Accumulator;
-use crate::proof::{position::Position, TestAccumulatorInternalNode};
+use crate::proof::{
+    position::{FrozenSubtreeSiblingIterator, Position},
+    TestAccumulatorInternalNode,
+};
 use crypto::{
     hash::{CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };
+use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
 
 fn compute_parent_hash(left_hash: HashValue, right_hash: HashValue) -> HashValue {
@@ -103,11 +107,10 @@ fn test_accumulator_append() {
     }
 }
 
-/* TODO(wqfish): re-implement append_siblings and restore the test.
 proptest! {
     #[test]
-    fn test_accumulator_append_siblings(
-        hashes1 in vec(any::<HashValue>(), 1..100),
+    fn test_accumulator_append_subtrees(
+        hashes1 in vec(any::<HashValue>(), 0..100),
         hashes2 in vec(any::<HashValue>(), 0..100),
     ) {
         // Construct an accumulator with hashes1.
@@ -119,13 +122,16 @@ proptest! {
         all_hashes.extend_from_slice(&hashes2);
         let position_to_hash = compute_hashes_for_all_positions(&all_hashes);
 
-        let sibling_hashes: Vec<_> = FrozenSubtreeSiblingIterator::new(hashes1.len() as u64)
-            .filter_map(|pos| position_to_hash.get(&pos).cloned())
-            .collect();
+        let subtree_hashes: Vec<_> =
+            FrozenSubtreeSiblingIterator::new(hashes1.len() as u64, all_hashes.len() as u64)
+                .filter_map(|pos| position_to_hash.get(&pos).cloned())
+                .collect();
+        let new_accumulator = accumulator
+            .append_subtrees(&subtree_hashes, hashes2.len() as u64)
+            .unwrap();
         prop_assert_eq!(
-            accumulator.append_siblings(&sibling_hashes).unwrap(),
+            new_accumulator.root_hash(),
             compute_root_hash_naive(&all_hashes)
         );
     }
 }
-*/
