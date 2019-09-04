@@ -94,7 +94,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -107,7 +107,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -362,7 +362,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -447,7 +447,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -532,7 +532,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -630,7 +630,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -728,7 +728,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,
@@ -813,7 +813,7 @@
       },
       "yaxes": [
         {
-          "format": "ms",
+          "format": "s",
           "label": "",
           "logBase": 1,
           "max": null,

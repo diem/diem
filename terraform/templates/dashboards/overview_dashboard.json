@@ -625,7 +625,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "e2e latency",
+      "title": "E2E Latency",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -641,8 +641,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "ms",
+          "format": "s",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -654,7 +654,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
