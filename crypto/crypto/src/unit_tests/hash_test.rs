@@ -32,17 +32,17 @@ fn test_primitive_type() {
     let x = 0xf312_u16;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u16::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 
     let x = 0x_ff001234_u32;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u32::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 
     let x = 0x_89abcdef_01234567_u64;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u64::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 }
 
 #[test]

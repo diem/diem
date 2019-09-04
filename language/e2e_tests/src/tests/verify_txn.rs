@@ -12,15 +12,14 @@ use assert_matches::assert_matches;
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
-use crypto::ed25519::*;
+use crypto::{ed25519::*, HashValue};
 use std::collections::HashSet;
-use tiny_keccak::Keccak;
 use types::{
     account_address::AccountAddress,
     test_helpers::transaction_test_helpers,
     transaction::{
         Module, Script, TransactionArgument, TransactionPayload, TransactionStatus,
-        MAX_TRANSACTION_SIZE_IN_BYTES, SCRIPT_HASH_LENGTH,
+        MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{
         ExecutionStatus, VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus,
@@ -85,14 +84,7 @@ fn verify_whitelist() {
         CREATE_ACCOUNT.clone(),
     ]
     .into_iter()
-    .map(|s| {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(&s);
-        keccak.finalize(&mut hash);
-        hash
-    })
+    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect();
 
     let config = NodeConfigHelpers::get_single_node_test_config(false);

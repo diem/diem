@@ -2111,7 +2111,6 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
  "stdlib 0.1.0",
- "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_genesis 0.1.0",
@@ -2228,7 +2227,6 @@ dependencies = [
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha3 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
 ]
 
@@ -5122,7 +5120,6 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
  "stdlib 0.1.0",
- "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",
@@ -5150,7 +5147,6 @@ dependencies = [
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rental 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
- "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",

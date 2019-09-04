@@ -9,13 +9,10 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use config::config::VMPublishingOption;
+use crypto::HashValue;
 use logger::prelude::*;
-use tiny_keccak::Keccak;
 use types::{
-    transaction::{
-        SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES,
-        SCRIPT_HASH_LENGTH,
-    },
+    transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{VMStatus, VMValidationStatus},
 };
 use vm::{
@@ -29,11 +26,8 @@ pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8])
     match publishing_option {
         VMPublishingOption::Open | VMPublishingOption::CustomScripts => true,
         VMPublishingOption::Locked(whitelist) => {
-            let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-            let mut keccak = Keccak::new_sha3_256();
-            keccak.update(program);
-            keccak.finalize(&mut hash);
-            whitelist.contains(&hash)
+            let hash_value = HashValue::from_sha3_256(program);
+            whitelist.contains(hash_value.as_ref())
         }
     }
 }

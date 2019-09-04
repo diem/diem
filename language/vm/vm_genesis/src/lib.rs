@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{VMConfig, VMPublishingOption};
-use crypto::ed25519::*;
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
@@ -16,7 +16,6 @@ use stdlib::{
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
 };
-use tiny_keccak::Keccak;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -257,14 +256,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         CREATE_ACCOUNT_TXN.clone(),
     ]
     .into_iter()
-    .map(|s| {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(&s);
-        keccak.finalize(&mut hash);
-        hash
-    })
+    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect()
 }
 
