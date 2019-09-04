@@ -18,6 +18,8 @@ pub mod signature;
 pub mod stack_usage_verifier;
 pub mod struct_defs;
 pub mod type_memory_safety;
+pub mod unused_entries;
+
 pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
@@ -26,6 +28,7 @@ pub use resources::ResourceTransitiveChecker;
 pub use signature::SignatureChecker;
 pub use stack_usage_verifier::StackUsageVerifier;
 pub use struct_defs::RecursiveStructDefChecker;
+pub use unused_entries::UnusedEntryChecker;
 pub use verifier::{
     verify_main_signature, verify_module_dependencies, verify_script_dependencies, VerifiedModule,
     VerifiedScript,

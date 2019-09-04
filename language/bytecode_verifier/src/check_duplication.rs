@@ -181,12 +181,6 @@ impl<'a> DuplicationChecker<'a> {
                 idx,
                 StatusCode::INCONSISTENT_FIELDS,
             ));
-        } else if start_field_index != self.module.field_defs().len() {
-            errors.push(verification_error(
-                IndexKind::FieldDefinition,
-                start_field_index,
-                StatusCode::UNUSED_FIELDS,
-            ));
         }
 
         // Check that each struct definition is pointing to module handle with index
