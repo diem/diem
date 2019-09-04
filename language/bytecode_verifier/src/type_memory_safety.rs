@@ -93,7 +93,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
     fn get_nonce(&mut self, state: &mut AbstractState) -> Nonce {
         let nonce = Nonce::new(self.next_nonce);
-        state.add_nonce(nonce.clone());
+        state.add_nonce(nonce);
         self.next_nonce += 1;
         nonce
     }
@@ -277,8 +277,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::FreezeRef => {
                 let operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = operand.signature {
-                    let operand_nonce = operand.value.extract_nonce().unwrap().clone();
-                    let borrowed_nonces = state.borrowed_nonces(operand_nonce.clone());
+                    let operand_nonce = operand.value.extract_nonce().unwrap();
+                    let borrowed_nonces = state.borrowed_nonces(operand_nonce);
                     if self.freeze_ok(&state, &borrowed_nonces) {
                         self.stack.push(StackAbstractValue {
                             signature: SignatureToken::Reference(signature),
@@ -297,14 +297,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 self.verify_field_access(&operand, field_definition_index, offset)?;
 
-                let operand_nonce = operand.value.extract_nonce().unwrap().clone();
+                let operand_nonce = operand.value.extract_nonce().unwrap();
                 let nonce = self.get_nonce(&mut state);
                 if !operand.signature.is_mutable_reference() {
                     return Err(VMStaticViolation::BorrowFieldTypeMismatchError(offset));
                 }
 
                 let borrowed_nonces =
-                    state.borrowed_nonces_for_field(*field_definition_index, operand_nonce.clone());
+                    state.borrowed_nonces_for_field(*field_definition_index, operand_nonce);
                 if !Self::write_borrow_ok(borrowed_nonces) {
                     return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
                         offset,
@@ -322,13 +322,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             operand.signature.get_type_actuals_from_reference().unwrap(),
                         ),
                     )),
-                    value: AbstractValue::Reference(nonce.clone()),
+                    value: AbstractValue::Reference(nonce),
                 });
-                state.borrow_field_from_nonce(
-                    *field_definition_index,
-                    operand_nonce.clone(),
-                    nonce,
-                );
+                state.borrow_field_from_nonce(*field_definition_index, operand_nonce, nonce);
                 state.destroy_nonce(operand_nonce);
                 Ok(())
             }
@@ -337,12 +333,12 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 self.verify_field_access(&operand, field_definition_index, offset)?;
 
-                let operand_nonce = operand.value.extract_nonce().unwrap().clone();
+                let operand_nonce = operand.value.extract_nonce().unwrap();
                 let nonce = self.get_nonce(&mut state);
                 // No checks needed for immutable case
                 if operand.signature.is_mutable_reference() {
-                    let borrowed_nonces = state
-                        .borrowed_nonces_for_field(*field_definition_index, operand_nonce.clone());
+                    let borrowed_nonces =
+                        state.borrowed_nonces_for_field(*field_definition_index, operand_nonce);
                     if !self.freeze_ok(&state, &borrowed_nonces) {
                         return Err(VMStaticViolation::BorrowFieldExistsMutableBorrowError(
                             offset,
@@ -361,13 +357,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             operand.signature.get_type_actuals_from_reference().unwrap(),
                         ),
                     )),
-                    value: AbstractValue::Reference(nonce.clone()),
+                    value: AbstractValue::Reference(nonce),
                 });
-                state.borrow_field_from_nonce(
-                    *field_definition_index,
-                    operand_nonce.clone(),
-                    nonce,
-                );
+                state.borrow_field_from_nonce(*field_definition_index, operand_nonce, nonce);
                 state.destroy_nonce(operand_nonce);
                 Ok(())
             }
@@ -418,7 +410,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     Err(VMStaticViolation::CopyLocUnavailableError(offset))
                 } else if signature_view.is_reference() {
                     let nonce = self.get_nonce(&mut state);
-                    state.borrow_from_local_reference(*idx, nonce.clone());
+                    state.borrow_from_local_reference(*idx, nonce);
                     self.stack.push(StackAbstractValue {
                         signature: signature_view.as_inner().clone(),
                         value: AbstractValue::Reference(nonce),
@@ -466,7 +458,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 let nonce = self.get_nonce(&mut state);
-                state.borrow_from_local_value(*idx, nonce.clone());
+                state.borrow_from_local_value(*idx, nonce);
                 self.stack.push(StackAbstractValue {
                     signature: SignatureToken::MutableReference(Box::new(signature)),
                     value: AbstractValue::Reference(nonce),
@@ -491,7 +483,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 let nonce = self.get_nonce(&mut state);
-                state.borrow_from_local_value(*idx, nonce.clone());
+                state.borrow_from_local_value(*idx, nonce);
                 self.stack.push(StackAbstractValue {
                     signature: SignatureToken::Reference(Box::new(signature)),
                     value: AbstractValue::Reference(nonce),
@@ -529,9 +521,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         return Err(VMStaticViolation::CallBorrowedMutableReferenceError(offset));
                     }
                     if let AbstractValue::Reference(nonce) = arg.value {
-                        all_references_to_borrow_from.insert(nonce.clone());
+                        all_references_to_borrow_from.insert(nonce);
                         if arg_type.is_mutable_reference() {
-                            mutable_references_to_borrow_from.insert(nonce.clone());
+                            mutable_references_to_borrow_from.insert(nonce);
                         }
                     }
                 }
@@ -539,12 +531,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     if return_type_view.is_reference() {
                         let nonce = self.get_nonce(&mut state);
                         if return_type_view.is_mutable_reference() {
-                            state.borrow_from_nonces(
-                                &mutable_references_to_borrow_from,
-                                nonce.clone(),
-                            );
+                            state.borrow_from_nonces(&mutable_references_to_borrow_from, nonce);
                         } else {
-                            state.borrow_from_nonces(&all_references_to_borrow_from, nonce.clone());
+                            state.borrow_from_nonces(&all_references_to_borrow_from, nonce);
                         }
                         self.stack.push(StackAbstractValue {
                             signature: return_type_view.as_inner().substitute(type_actuals),
@@ -661,7 +650,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     return Err(VMStaticViolation::ReadRefTypeMismatchError(offset));
                 }
                 let operand_nonce = operand_value.extract_nonce().unwrap();
-                if !self.is_readable_reference(state, &operand_signature, operand_nonce.clone()) {
+                if !self.is_readable_reference(state, &operand_signature, operand_nonce) {
                     Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset))
                 } else {
                     let inner_signature = *match operand_signature {
@@ -679,7 +668,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             signature: inner_signature,
                             value: AbstractValue::full_value(Kind::Unrestricted),
                         });
-                        state.destroy_nonce(operand_nonce.clone());
+                        state.destroy_nonce(operand_nonce);
                         Ok(())
                     }
                 }
@@ -699,8 +688,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             if val_operand.signature != *signature {
                                 Err(VMStaticViolation::WriteRefTypeMismatchError(offset))
                             } else if state.is_full(&ref_operand.value) {
-                                let ref_operand_nonce =
-                                    ref_operand.value.extract_nonce().unwrap().clone();
+                                let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap();
                                 state.destroy_nonce(ref_operand_nonce);
                                 Ok(())
                             } else {
@@ -773,14 +761,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
                     if let AbstractValue::Reference(nonce) = operand1.value {
-                        if self.is_readable_reference(state, &operand1.signature, nonce.clone()) {
+                        if self.is_readable_reference(state, &operand1.signature, nonce) {
                             state.destroy_nonce(nonce);
                         } else {
                             return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
                         }
                     }
                     if let AbstractValue::Reference(nonce) = operand2.value {
-                        if self.is_readable_reference(state, &operand2.signature, nonce.clone()) {
+                        if self.is_readable_reference(state, &operand2.signature, nonce) {
                             state.destroy_nonce(nonce);
                         } else {
                             return Err(VMStaticViolation::ReadRefExistsMutableBorrowError(offset));
@@ -855,7 +843,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
                     let nonce = self.get_nonce(&mut state);
-                    state.borrow_from_global_value(*idx, nonce.clone());
+                    state.borrow_from_global_value(*idx, nonce);
                     self.stack.push(StackAbstractValue {
                         signature: SignatureToken::MutableReference(Box::new(struct_type)),
                         value: AbstractValue::Reference(nonce),
