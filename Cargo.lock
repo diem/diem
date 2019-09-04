@@ -4171,6 +4171,7 @@ name = "state_synchronizer"
 version = "0.1.0"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "channel 0.1.0",
  "config 0.1.0",
  "config_builder 0.1.0",
  "crypto 0.1.0",

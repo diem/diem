@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    counters, executor_proxy::ExecutorProxyTrait, peer_manager::PeerManager, LedgerInfo, PeerId,
+    counters,
+    executor_proxy::ExecutorProxyTrait,
+    peer_manager::{PeerManager, PeerScoreUpdateType},
+    LedgerInfo, PeerId,
 };
 use config::config::StateSyncConfig;
 use crypto::ed25519::*;
@@ -143,8 +146,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                         }
                                     }
                                     if message.has_chunk_response() {
-                                    if let Err(err) = self.process_chunk_response(message.take_chunk_response()).await {
+                                        if let Err(err) = self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
                                             error!("[state sync] failed to process chunk response: {:?}", err);
+                                        } else {
+                                            self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
                                         }
                                     }
                                 }
@@ -306,7 +311,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// processes batch of transactions downloaded from peer
     /// executes transactions, updates progress state, calls callback if some sync is finished
-    async fn process_chunk_response(&mut self, mut response: GetChunkResponse) -> Result<()> {
+    async fn process_chunk_response(
+        &mut self,
+        peer_id: &PeerId,
+        mut response: GetChunkResponse,
+    ) -> Result<()> {
         let txn_list_with_proof = response.take_txn_list_with_proof();
 
         if let Some(version) = txn_list_with_proof
@@ -323,6 +332,33 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 ));
             }
         }
+
+        let previous_version = self.known_version;
+        let chunk_size = txn_list_with_proof.get_transactions().len();
+
+        let result = self
+            .validate_and_store_chunk(txn_list_with_proof, response)
+            .await;
+        let latest_version = self.executor_proxy.get_latest_version().await?;
+        if latest_version <= previous_version {
+            self.peer_manager
+                .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
+        }
+        self.commit(latest_version).await;
+
+        debug!(
+            "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
+            previous_version, self.known_version, chunk_size
+        );
+
+        result
+    }
+
+    async fn validate_and_store_chunk(
+        &mut self,
+        txn_list_with_proof: TransactionListWithProof,
+        mut response: GetChunkResponse,
+    ) -> Result<()> {
         // optimistically fetch next chunk
         let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
         self.request_next_chunk(chunk_size).await;
@@ -331,21 +367,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             chunk_size
         );
 
-        let previous_version = self.known_version;
-
         let target = LedgerInfo::from_proto(response.take_ledger_info_with_sigs())?;
         self.executor_proxy.validate_ledger_info(&target)?;
 
         self.store_transactions(target, txn_list_with_proof).await?;
 
         counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
-
-        let version = self.executor_proxy.get_latest_version().await?;
-        self.commit(version).await;
-        debug!(
-            "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
-            previous_version, self.known_version, chunk_size
-        );
 
         Ok(())
     }
