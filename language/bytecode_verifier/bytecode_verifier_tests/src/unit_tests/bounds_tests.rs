@@ -10,11 +10,110 @@ use types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     vm_error::StatusCode,
 };
-use vm::{
-    check_bounds::BoundsChecker,
-    file_format::{CompiledModule, CompiledModuleMut},
-    proptest_types::CompiledModuleStrategyGen,
-};
+use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};
+
+#[test]
+fn empty_module_no_errors() {
+    basic_test_module().freeze().unwrap();
+}
+
+#[test]
+fn invalid_type_param_in_fn_return_types() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.function_signatures[0].return_types = vec![TypeParameter(0)];
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_type_param_in_fn_arg_types() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.function_signatures[0].arg_types = vec![TypeParameter(0)];
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_struct_in_fn_return_types() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.function_signatures[0].return_types = vec![Struct(StructHandleIndex::new(1), vec![])];
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_type_param_in_field() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.type_signatures[0].0 = TypeParameter(0);
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_struct_in_field() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.type_signatures[0].0 = Struct(StructHandleIndex::new(3), vec![]);
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_struct_with_actuals_in_field() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.type_signatures[0].0 = Struct(StructHandleIndex::new(0), vec![TypeParameter(0)]);
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_locals_id_in_call() {
+    use Bytecode::*;
+
+    let mut m = basic_test_module();
+    m.function_defs[0].code.code = vec![Call(
+        FunctionHandleIndex::new(0),
+        LocalsSignatureIndex::new(1),
+    )];
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_type_param_in_call() {
+    use Bytecode::*;
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.locals_signatures
+        .push(LocalsSignature(vec![TypeParameter(0)]));
+    m.function_defs[0].code.code = vec![Call(
+        FunctionHandleIndex::new(0),
+        LocalsSignatureIndex::new(1),
+    )];
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_struct_as_type_actual_in_exists() {
+    use Bytecode::*;
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.locals_signatures.push(LocalsSignature(vec![Struct(
+        StructHandleIndex::new(3),
+        vec![],
+    )]));
+    m.function_defs[0].code.code = vec![Call(
+        FunctionHandleIndex::new(0),
+        LocalsSignatureIndex::new(1),
+    )];
+    m.freeze().unwrap_err();
+}
 
 proptest! {
     #[test]
