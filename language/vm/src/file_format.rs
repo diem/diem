@@ -1655,6 +1655,66 @@ pub fn empty_module() -> CompiledModuleMut {
     }
 }
 
+/// Create a module with one empty function & one struct with one field of type u64.
+/// This is convenient to tests.
+pub fn basic_test_module() -> CompiledModuleMut {
+    let mut m = empty_module();
+
+    m.function_signatures.push(FunctionSignature {
+        return_types: vec![],
+        arg_types: vec![],
+        type_formals: vec![],
+    });
+
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        signature: FunctionSignatureIndex::new(0),
+    });
+    m.identifiers
+        .push(Identifier::new("foo".to_string()).unwrap());
+
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex::new(0),
+        flags: 0,
+        acquires_global_resources: vec![],
+        code: CodeUnit {
+            max_stack_size: 0,
+            locals: LocalsSignatureIndex::new(0),
+            code: vec![],
+        },
+    });
+
+    m.struct_handles.push(StructHandle {
+        module: ModuleHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        is_nominal_resource: false,
+        type_formals: vec![],
+    });
+    m.identifiers
+        .push(Identifier::new("Bar".to_string()).unwrap());
+
+    m.struct_defs.push(StructDefinition {
+        struct_handle: StructHandleIndex::new(0),
+        field_information: StructFieldInformation::Declared {
+            field_count: 1,
+            fields: FieldDefinitionIndex::new(0),
+        },
+    });
+
+    m.field_defs.push(FieldDefinition {
+        struct_: StructHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        signature: TypeSignatureIndex::new(0),
+    });
+    m.identifiers
+        .push(Identifier::new("x".to_string()).unwrap());
+
+    m.type_signatures.push(TypeSignature(SignatureToken::U64));
+
+    m
+}
+
 /// Create a dummy module to wrap the bytecode program in local@code
 pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
     let mut module = empty_module();
