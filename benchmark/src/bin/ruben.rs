@@ -117,11 +117,11 @@ mod tests {
                 num_rounds,
                 num_epochs,
             );
-            let requested_txns = OP_COUNTER.counter("requested_txns").get();
-            let created_txns = OP_COUNTER.counter("created_txns").get();
-            let sign_failed_txns = OP_COUNTER.counter("sign_failed_txns").get();
-            assert_eq!(requested_txns, created_txns + sign_failed_txns);
-            let accepted_txns = OP_COUNTER.counter("submit_txns.Accepted").get();
+            let created_txns = OP_COUNTER.counter("create_txn_request.success").get();
+            let failed_to_create = OP_COUNTER.counter("create_txn_request.failure").get();
+            assert!(created_txns + failed_to_create == (4 * 4 * 2 + 4));
+            let accepted_txns = OP_COUNTER.counter("submit_txns.success").get();
+            assert!(accepted_txns <= created_txns);
             let committed_txns = OP_COUNTER.counter("committed_txns").get();
             let timedout_txns = OP_COUNTER.counter("timedout_txns").get();
             // Why `<=`: timedout TXNs in previous epochs can be committed in the next epoch.

@@ -42,10 +42,10 @@ lazy_static! {
 ///    submit_requests_and_wait_txns_committed, measure_txn_throughput.
 /// Metrics reported include:
 /// * Counters related to:
-///   * TXN generation: requested_txns, created_txns, sign_failed_txns;
+///   * TXN generation: create_txn_request.(success|failure)
 ///   * Submission to AC and AC response: submit_requests (used to measure submission rate),
-///     submit_txns.{ac_status_code}, submit_txns.{mempool_status_code}, submit_txns.{vm_status},
-///     submit_txns.{grpc_error}, submit_read_requests.{error};
+///     submit_txns.failure.ac.{ac_status_code}, submit_txns.failure.mempool.{mempool_status_code},
+///     submit_txns.failure.vm..{vm_status}, submit_txns.{grpc_error}, submit_read_requests.{error};
 ///   * Final status within epoch: committed_txns, timedout_txns;
 /// * Gauges: request_duration_ms, running_duration_ms, request_throughput, txns_throughput.
 /// * Histograms: read_requests.response_bytes.
