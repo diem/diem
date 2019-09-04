@@ -32,9 +32,9 @@ use crate::{
 };
 
 /// Timeout duration for grpc call option.
-const GRPC_TIMEOUT_MS: u64 = 8_000;
+const GRPC_TIMEOUT_MS: u64 = 5_000;
 /// Duration to sleep between consecutive queries for accounts' sequence numbers.
-const QUERY_SEQUENCE_NUMBERS_INTERVAL_US: u64 = 100;
+const QUERY_SEQUENCE_NUMBERS_INTERVAL_MS: u64 = 50;
 
 /// Return a parameter that controls how "patient" AC clients are,
 /// who are waiting the response from AC for this amount of time.
@@ -64,26 +64,29 @@ fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
     if resp.has_ac_status() {
         let status = resp.get_ac_status().get_code();
         if status == AdmissionControlStatusCode::Accepted {
-            OP_COUNTER.inc(&format!("submit_txns.{:?}", status));
+            OP_COUNTER.inc("submit_txns.success");
             true
         } else {
-            OP_COUNTER.inc(&format!("submit_txns.{:?}", status));
+            OP_COUNTER.inc(&format!("submit_txns.failure.ac.{:?}", status));
             debug!("Request rejected by AC: {:?}", resp);
             false
         }
     } else if resp.has_vm_status() {
-        OP_COUNTER.inc(&format!("submit_txns.{:?}", resp.get_vm_status()));
+        OP_COUNTER.inc(&format!(
+            "submit_txns.failure.vm.{:?}",
+            resp.get_vm_status()
+        ));
         debug!("Request causes error on VM: {:?}", resp);
         false
     } else if resp.has_mempool_status() {
         OP_COUNTER.inc(&format!(
-            "submit_txns.{:?}",
+            "submit_txns.failure.mempool.{:?}",
             resp.get_mempool_status().get_code()
         ));
         debug!("Request causes error on mempool: {:?}", resp);
         false
     } else {
-        OP_COUNTER.inc("submit_txns.Unknown");
+        OP_COUNTER.inc("submit_txns.failure.Unknown");
         debug!("Request rejected by AC for unknown error: {:?}", resp);
         false
     }
@@ -132,7 +135,7 @@ fn wait_write_requests(
                 }
             }
             Err(e) => {
-                OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
+                OP_COUNTER.inc(&format!("submit_txns.failure.grpc.{:?}", e));
                 debug!("Failed to receive gRPC response: {:?}", e);
                 None
             }
@@ -158,7 +161,7 @@ pub fn submit_and_wait_requests(
                 {
                     Ok(future) => write_futures.push(future),
                     Err(e) => {
-                        OP_COUNTER.inc(&format!("submit_txns.{:?}", e));
+                        OP_COUNTER.inc(&format!("submit_txns.failure.grpc.{:?}", e));
                         debug!("Failed to send gRPC request: {:?}", e);
                     }
                 }
@@ -311,8 +314,8 @@ pub fn sync_account_sequence_number(
         if finished.len() == senders_and_sequence_numbers.len() {
             break;
         }
-        thread::sleep(time::Duration::from_micros(
-            QUERY_SEQUENCE_NUMBERS_INTERVAL_US,
+        thread::sleep(time::Duration::from_millis(
+            QUERY_SEQUENCE_NUMBERS_INTERVAL_MS,
         ));
     }
     // Merging won't have conflict because F and U are disjoint.

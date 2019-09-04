@@ -90,7 +90,6 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
     sender_account: &mut AccountData,
     signer: &T,
 ) -> Result<Request> {
-    OP_COUNTER.inc("requested_txns");
     // If generation fails here, sequence number will not be increased,
     // so it is fine to continue later generation.
     let signed_txn = create_signed_txn(
@@ -103,13 +102,13 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
         TXN_EXPIRATION,
     )
     .or_else(|e| {
-        OP_COUNTER.inc("sign_failed_txns");
+        OP_COUNTER.inc("create_txn_request.failure");
         Err(e)
     })?;
     let mut req = SubmitTransactionRequest::new();
     req.set_signed_txn(signed_txn.into_proto());
     sender_account.sequence_number += 1;
-    OP_COUNTER.inc("created_txns");
+    OP_COUNTER.inc("create_txn_request.success");
     Ok(Request::WriteRequest(req))
 }
 
