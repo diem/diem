@@ -25,7 +25,6 @@ assert_matches = "1.3.0"
 proptest_helpers = { path = "../../common/proptest_helpers" }
 protobuf = "~2.7"
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
-tiny-keccak = "1.5.0"
 vm_genesis = { path = "../vm/vm_genesis" }
 config =  { path = "../../config" }
 logger = { path = "../../common/logger" }

@@ -20,7 +20,6 @@ use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};
-use tiny_keccak::Keccak;
 
 pub const ADDRESS_LENGTH: usize = 32;
 
@@ -55,13 +54,7 @@ impl AccountAddress {
     }
 
     pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
-        // TODO: using keccak directly instead of crypto::hash because we have to make sure we use
-        // the same hash function that the Move transaction prologue is using.
-        // TODO: keccak is just a placeholder, make a principled choice for the hash function
-        let mut keccak = Keccak::new_sha3_256();
-        let mut hash = [0u8; ADDRESS_LENGTH];
-        keccak.update(&public_key.to_bytes());
-        keccak.finalize(&mut hash);
+        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
         AccountAddress::new(hash)
     }
 

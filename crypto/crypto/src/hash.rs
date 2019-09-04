@@ -149,8 +149,9 @@ impl HashValue {
         HashValue { hash }
     }
 
-    // Intentionally not public.
-    fn from_sha3(buffer: &[u8]) -> Self {
+    /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
+    /// creation, data feeding and finalization.
+    pub fn from_sha3_256(buffer: &[u8]) -> Self {
         let mut sha3 = Keccak::new_sha3_256();
         sha3.update(buffer);
         HashValue::from_keccak(sha3)
@@ -387,7 +388,7 @@ impl DefaultHasher {
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
             salt.extend_from_slice(LIBRA_HASH_SUFFIX);
-            state.update(HashValue::from_sha3(&salt[..]).as_ref());
+            state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
         }
         DefaultHasher { state }
     }

@@ -21,7 +21,6 @@ use libra_crypto::{ed25519::*, hash::HashValue, hkdf::Hkdf, traits::SigningKey};
 use serde::{Deserialize, Serialize};
 use sha3::Sha3_256;
 use std::{convert::TryFrom, ops::AddAssign};
-use tiny_keccak::Keccak;
 use types::account_address::AccountAddress;
 
 use crate::{error::Result, mnemonic::Mnemonic};
@@ -94,10 +93,7 @@ impl ExtendedPrivKey {
     /// from the raw bytes of the pubkey hash
     pub fn get_address(&self) -> Result<AccountAddress> {
         let public_key = self.get_public();
-        let mut keccak = Keccak::new_sha3_256();
-        let mut hash = [0u8; 32];
-        keccak.update(&public_key.to_bytes());
-        keccak.finalize(&mut hash);
+        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
         let addr = AccountAddress::try_from(&hash[..])?;
         Ok(addr)
     }
