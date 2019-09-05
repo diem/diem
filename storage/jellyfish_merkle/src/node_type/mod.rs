@@ -272,26 +272,26 @@ impl From<LeafNode> for Node {
 
 impl Arbitrary for InternalNode {
     type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         hash_map(any::<Nibble>(), any::<Child>(), 1..=16)
             .prop_filter(
-                "InternalNode with only one child which is a leaf is illegal",
+                "InternalNode with only one leaf child is illegal",
                 |children| {
-                    !(children.len() == 1 || children.values().next().expect("Must exist.").is_leaf)
+                    !(children.len() == 1 && children.values().next().expect("Must exist.").is_leaf)
                 },
             )
             .prop_map(InternalNode::new)
             .boxed()
     }
-
-    type Strategy = BoxedStrategy<Self>;
 }
 
 impl InternalNode {
     /// Creates a new Internal node.
     pub fn new(children: Children) -> Self {
-        // Assert the internal node must have >= 1 children. If it only has one chlid, it cannot be
-        // a leaf node. Otherwise the leaf node should be a child of this internal node's parent.
+        // Assert the internal node must have >= 1 children. If it only has one child, it cannot be
+        // a leaf node. Otherwise, the leaf node should be a child of this internal node's parent.
         assert!(!children.is_empty());
         if children.len() == 1 {
             assert!(
