@@ -56,11 +56,7 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{self, Formatter},
-    slice::Iter,
-    str::{self, FromStr},
-};
+use std::{fmt, slice::Iter};
 
 #[derive(Default, Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(String);
@@ -96,18 +92,6 @@ pub enum Access {
 impl Access {
     pub fn new(s: &str) -> Self {
         Access::Field(Field::new(s))
-    }
-}
-
-impl FromStr for Access {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        if let Ok(idx) = s.parse::<u64>() {
-            Ok(Access::Index(idx))
-        } else {
-            Ok(Access::Field(Field::new(s)))
-        }
     }
 }
 
@@ -206,20 +190,6 @@ impl<'a> IntoIterator for &'a Accesses {
 impl From<Vec<Access>> for Accesses {
     fn from(accesses: Vec<Access>) -> Accesses {
         Accesses(accesses)
-    }
-}
-
-impl From<Vec<u8>> for Accesses {
-    fn from(mut raw_bytes: Vec<u8>) -> Accesses {
-        let access_str = String::from_utf8(raw_bytes.split_off(HashValue::LENGTH + 1)).unwrap();
-        let fields_str = access_str.split(SEPARATOR).collect::<Vec<&str>>();
-        let mut accesses = vec![];
-        for access_str in fields_str.into_iter() {
-            if access_str != "" {
-                accesses.push(Access::from_str(access_str).unwrap());
-            }
-        }
-        Accesses::from(accesses)
     }
 }
 
@@ -348,7 +318,7 @@ impl fmt::Debug for AccessPath {
 }
 
 impl fmt::Display for AccessPath {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.path.len() < 1 + HashValue::LENGTH {
             write!(f, "{:?}", self)
         } else {
