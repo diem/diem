@@ -14,9 +14,13 @@ mirai-annotations = "1.4.0"
 bytecode_verifier = { path = "../../bytecode_verifier" }
 cost_synthesis = { path = "../cost_synthesis" }
 vm = { path = "../../vm" }
-
-[dev-dependencies]
+vm_runtime = { path = "../../vm/vm_runtime" }
+vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
+vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
+language_e2e_tests = { path = "../../e2e_tests" }
+stdlib = { path = "../../stdlib" }
 types = { path = "../../../types", features = ["testing"] }
 
 [features]
 mirai-contracts = []
+default = ["vm_runtime/instruction_synthesis"]

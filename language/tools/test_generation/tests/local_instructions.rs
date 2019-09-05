@@ -91,7 +91,7 @@ fn bytecode_moveloc_local_unavailable() {
 }
 
 #[test]
-fn bytecode_borrowloc() {
+fn bytecode_mutborrowloc() {
     let mut state1 = AbstractState::new();
     state1.local_insert(
         0,
@@ -118,7 +118,7 @@ fn bytecode_borrowloc() {
 }
 
 #[test]
-fn bytecode_imm_borrowloc() {
+fn bytecode_immborrowloc() {
     let mut state1 = AbstractState::new();
     state1.local_insert(
         0,
@@ -146,21 +146,21 @@ fn bytecode_imm_borrowloc() {
 
 #[test]
 #[should_panic]
-fn bytecode_borrowloc_no_local() {
+fn bytecode_mutborrowloc_no_local() {
     let state1 = AbstractState::new();
     common::run_instruction(Bytecode::MutBorrowLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
-fn bytecode_imm_borrowloc_no_local() {
+fn bytecode_immborrowloc_no_local() {
     let state1 = AbstractState::new();
     common::run_instruction(Bytecode::ImmBorrowLoc(0), state1);
 }
 
 #[test]
 #[should_panic]
-fn bytecode_borrowloc_local_unavailable() {
+fn bytecode_mutborrowloc_local_unavailable() {
     let mut state1 = AbstractState::new();
     state1.local_insert(
         0,
@@ -172,7 +172,7 @@ fn bytecode_borrowloc_local_unavailable() {
 
 #[test]
 #[should_panic]
-fn bytecode_imm_borrowloc_local_unavailable() {
+fn bytecode_immborrowloc_local_unavailable() {
     let mut state1 = AbstractState::new();
     state1.local_insert(
         0,
