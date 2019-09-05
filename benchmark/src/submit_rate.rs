@@ -70,7 +70,7 @@ mod tests {
 
         let now = time::Instant::now();
         // consume all elements
-        flood.into_iter().for_each(drop);
+        flood.for_each(drop);
         let elapsed = now.elapsed().as_micros();
         // Loop should finish instantly
         assert!(elapsed < 1000);
