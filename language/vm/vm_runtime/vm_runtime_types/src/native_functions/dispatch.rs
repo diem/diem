@@ -99,16 +99,6 @@ lazy_static! {
         let mut m: NativeFunctionMap = HashMap::new();
         let addr = account_config::core_code_address();
         // Hash
-        add!(m, addr, "Hash", "keccak256",
-            hash::native_keccak_256,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
-        add!(m, addr, "Hash", "ripemd160",
-            hash::native_ripemd_160,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
         add!(m, addr, "Hash", "sha2_256",
             hash::native_sha2_256,
             vec![ByteArray],

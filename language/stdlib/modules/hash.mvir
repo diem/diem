@@ -1,6 +1,4 @@
 module Hash {
-    native public keccak256(data: bytearray): bytearray;
-    native public ripemd160(data: bytearray): bytearray;
     native public sha2_256(data: bytearray): bytearray;
     native public sha3_256(data: bytearray): bytearray;
 }
