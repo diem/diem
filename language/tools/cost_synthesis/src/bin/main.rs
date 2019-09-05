@@ -227,18 +227,6 @@ macro_rules! bench_native {
 fn natives(options: &Opt) {
     let mut cost_table = HashMap::new();
     bench_native!(
-        "keccak_256".to_string(),
-        hash::native_keccak_256,
-        cost_table,
-        options.num_iters
-    );
-    bench_native!(
-        "ripemd_160".to_string(),
-        hash::native_ripemd_160,
-        cost_table,
-        options.num_iters
-    );
-    bench_native!(
         "native_sha2_256".to_string(),
         hash::native_sha2_256,
         cost_table,
