@@ -142,8 +142,35 @@ lazy_static! {
         add!(m, addr, "Vector", "length",
             vector::native_length,
             vec![Kind::All],
-            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
             vec![U64]
+        );
+        add!(m, addr, "Vector", "empty",
+            vector::native_empty,
+            vec![Kind::All],
+            vec![],
+            vec![
+                tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),
+            ]
+        );
+        add!(m, addr, "Vector", "borrow",
+            vector::native_borrow,
+            vec![Kind::All],
+            vec![
+                Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                U64],
+            vec![
+                Reference(Box::new(TypeParameter(0)))
+            ]
+        );
+        add!(m, addr, "Vector", "push_back",
+            vector::native_push_back,
+            vec![Kind::All],
+            vec![
+                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                TypeParameter(0),
+            ],
+            vec![]
         );
         // Event
         add!(m, addr, "Event", "write_to_event_store",
