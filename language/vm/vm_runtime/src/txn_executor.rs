@@ -42,10 +42,6 @@ use vm_runtime_types::{
     value::{Local, MutVal, Reference, Value},
 };
 
-#[cfg(test)]
-#[path = "unit_tests/runtime_tests.rs"]
-mod runtime_tests;
-
 // Metadata needed for resolving the account module.
 lazy_static! {
     /// The ModuleId for the Account module

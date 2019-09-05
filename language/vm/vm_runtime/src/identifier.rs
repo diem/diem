@@ -9,10 +9,6 @@ use types::{
 };
 use vm::{access::ModuleAccess, file_format::StructDefinitionIndex};
 
-#[cfg(test)]
-#[path = "unit_tests/identifier_prop_tests.rs"]
-mod identifier_prop_tests;
-
 /// Get the StructTag for a StructDefinition defined in a published module.
 pub fn resource_storage_key(module: &impl ModuleAccess, idx: StructDefinitionIndex) -> StructTag {
     let resource = module.struct_def_at(idx);

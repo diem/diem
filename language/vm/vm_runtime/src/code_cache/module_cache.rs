@@ -26,8 +26,7 @@ use vm_cache_map::{Arena, CacheRefMap};
 use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
 
 #[cfg(test)]
-#[path = "../unit_tests/module_cache_tests.rs"]
-mod module_cache_tests;
+use crate::code_cache::module_adapter::FakeFetcher;
 
 /// Trait that describe a cache for modules. The idea is that this trait will in charge of
 /// loading resolving all dependencies of needed module from the storage.
@@ -389,6 +388,13 @@ where
             vm_cache,
             storage: module_fetcher,
         }
+    }
+}
+
+#[cfg(test)]
+impl<'alloc, 'blk> BlockModuleCache<'alloc, 'blk, FakeFetcher> {
+    pub(crate) fn clear(&mut self) {
+        self.storage.clear();
     }
 }
 

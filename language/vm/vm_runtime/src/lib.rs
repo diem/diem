@@ -117,6 +117,8 @@ mod gas_meter;
 mod move_vm;
 mod process_txn;
 mod runtime;
+#[cfg(test)]
+mod unit_tests;
 
 pub mod code_cache;
 pub mod data_cache;

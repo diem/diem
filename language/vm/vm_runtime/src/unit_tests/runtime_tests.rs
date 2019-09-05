@@ -1,13 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::*;
-use crate::{code_cache::module_cache::VMModuleCache, txn_executor::TransactionExecutor};
+use crate::{
+    code_cache::module_cache::{ModuleCache, VMModuleCache},
+    data_cache::RemoteCache,
+    loaded_data::{
+        function::{FunctionRef, FunctionReference},
+        loaded_module::LoadedModule,
+    },
+    txn_executor::TransactionExecutor,
+};
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use crypto::ed25519::compat;
 use std::collections::HashMap;
 use types::{access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
+    access::ModuleAccess,
+    errors::{VMErrorKind, VMInvariantViolation, VMResult},
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModuleMut, CompiledScript, CompiledScriptMut,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
