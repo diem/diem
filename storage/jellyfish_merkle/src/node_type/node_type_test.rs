@@ -695,8 +695,8 @@ impl BinaryTreeNode {
         let hash = SparseMerkleInternalNode::new(left.hash(), right.hash()).hash();
 
         Self::Internal(BinaryTreeInternalNode {
-            first_child_index,
-            num_children,
+            begin: first_child_index,
+            width: num_children,
             left: Rc::new(left),
             right: Rc::new(right),
             hash,
@@ -712,9 +712,23 @@ impl BinaryTreeNode {
     }
 }
 
+/// An internal node in a binary tree corresponding to a `InternalNode` being tested.
+///
+/// To describe its position in the binary tree, we use a range of level 0 (children level)
+/// positions expressed by (`begin`, `width`)
+///
+/// For example, in the below graph, node A has (begin:0, width:4), while node B has
+/// (begin:2, width: 2):
+///            ...
+///         /
+///       [A]    ...
+///     /    \
+///    * [B]   ...
+///   / \    / \
+///  0   1  2   3    ... 15
 struct BinaryTreeInternalNode {
-    first_child_index: u8,
-    num_children: u8,
+    begin: u8,
+    width: u8,
     left: Rc<BinaryTreeNode>,
     right: Rc<BinaryTreeNode>,
     hash: HashValue,
@@ -722,13 +736,18 @@ struct BinaryTreeInternalNode {
 
 impl BinaryTreeInternalNode {
     fn in_left_subtree(&self, n: u8) -> bool {
-        assert!(n >= self.first_child_index);
-        assert!(n < self.first_child_index + self.num_children);
+        assert!(n >= self.begin);
+        assert!(n < self.begin + self.width);
 
-        n < self.first_child_index + self.num_children / 2
+        n < self.begin + self.width / 2
     }
 }
 
+/// A child node, corresponding to one that is in the corresponding `InternalNode` being tested.
+///
+/// `index` is its key in `InternalNode::children`.
+/// N.B. when `is_leaf` is true, in the binary tree represented by a `NaiveInternalNode`, the child
+/// node will be brought up to the root of the highest subtree that has only that leaf.
 #[derive(Clone, Copy)]
 struct BinaryTreeChildNode {
     version: Version,
@@ -814,17 +833,19 @@ impl NaiveInternalNode {
 
 proptest! {
     #[test]
+    #[allow(clippy::unnecessary_operation)]
     fn test_get_child_with_siblings(
         node_key in any::<NodeKey>().prop_filter(
             "Filter out keys for leaves.",
             |k| k.nibble_path().num_nibbles() < 64
-        ),
+        ).no_shrink(),
         node in any::<InternalNode>(),
-        n in any::<Nibble>(),
     ) {
-        prop_assert_eq!(
-            node.get_child_with_siblings(&node_key, n),
-            NaiveInternalNode::from_clever_node(&node).get_child_with_siblings(&node_key, n.into())
-        )
+        for n in 0..16u8 {
+            prop_assert_eq!(
+                node.get_child_with_siblings(&node_key, n.into()),
+                NaiveInternalNode::from_clever_node(&node).get_child_with_siblings(&node_key, n)
+            )
+        }
     }
 }
