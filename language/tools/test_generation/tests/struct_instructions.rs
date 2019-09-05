@@ -202,6 +202,9 @@ fn bytecode_exists_no_address_on_stack() {
     );
 }
 
+// TODO: This will be ignored until the `state_function_acquires_resource` precondition
+// can be satisfied.
+#[ignore]
 #[test]
 fn bytecode_movefrom() {
     let module: CompiledModuleMut = generate_module_with_struct(true);

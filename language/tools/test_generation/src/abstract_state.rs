@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::VMError;
-use std::collections::HashMap;
+use crate::error::VMError;
+use std::{collections::HashMap, fmt};
 use vm::file_format::{empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken};
 
 /// The BorrowState denotes whether a local is `Available` or
@@ -99,6 +99,9 @@ pub struct AbstractState {
 
     /// The module state
     pub module: CompiledModule,
+
+    /// This flag is set when applying an instruction should result in an error
+    aborted: bool,
 }
 
 impl AbstractState {
@@ -111,6 +114,7 @@ impl AbstractState {
             module: empty_module()
                 .freeze()
                 .expect("Empty module should pass the bounds checker"),
+            aborted: false,
         }
     }
 
@@ -127,6 +131,7 @@ impl AbstractState {
             module: module
                 .freeze()
                 .expect("Module should pass the bounds checker"),
+            aborted: false,
         }
     }
 
@@ -303,8 +308,21 @@ impl AbstractState {
         &self.locals
     }
 
-    /// TODO: Determine whether the current state is a final state
+    pub fn abort(&mut self) {
+        self.aborted = true;
+    }
+
+    pub fn has_aborted(&self) -> bool {
+        self.aborted
+    }
+
     pub fn is_final(&self) -> bool {
-        self.stack.is_empty()
+        self.stack.is_empty() || self.has_aborted()
+    }
+}
+
+impl fmt::Display for AbstractState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Stack: {:?} | Locals: {:?}", self.stack, self.locals)
     }
 }
