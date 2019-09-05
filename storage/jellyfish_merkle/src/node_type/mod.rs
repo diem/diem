@@ -277,7 +277,7 @@ impl Arbitrary for InternalNode {
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         hash_map(any::<Nibble>(), any::<Child>(), 1..=16)
             .prop_filter(
-                "InternalNode with only one leaf child is illegal",
+                "InternalNode constructor panics when its only child is a leaf.",
                 |children| {
                     !(children.len() == 1 && children.values().next().expect("Must exist.").is_leaf)
                 },
