@@ -767,22 +767,18 @@ impl NaiveInternalNode {
         }
     }
 
-    fn node_for_subtree(
-        first_child_index: u8,
-        num_children: u8,
-        children: &Children,
-    ) -> BinaryTreeNode {
-        if num_children == 1 {
+    fn node_for_subtree(begin: u8, width: u8, children: &Children) -> BinaryTreeNode {
+        if width == 1 {
             return children
-                .get(&first_child_index.into())
+                .get(&begin.into())
                 .map_or(BinaryTreeNode::Null, |child| {
-                    BinaryTreeNode::new_child(first_child_index, &child)
+                    BinaryTreeNode::new_child(begin, &child)
                 });
         }
 
-        let half_size = num_children / 2;
-        let left = Self::node_for_subtree(first_child_index, half_size, children);
-        let right = Self::node_for_subtree(first_child_index + half_size, half_size, children);
+        let half_width = width / 2;
+        let left = Self::node_for_subtree(begin, half_width, children);
+        let right = Self::node_for_subtree(begin + half_width, half_width, children);
 
         match (&left, &right) {
             (BinaryTreeNode::Null, BinaryTreeNode::Null) => {
@@ -797,7 +793,7 @@ impl NaiveInternalNode {
             _ => (),
         };
 
-        BinaryTreeNode::new_internal(first_child_index, num_children, left, right)
+        BinaryTreeNode::new_internal(begin, width, left, right)
     }
 
     fn get_child_with_siblings(
