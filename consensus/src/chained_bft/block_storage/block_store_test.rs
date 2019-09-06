@@ -449,6 +449,7 @@ fn test_vote_aggregation() {
         HashValue::zero(),
         0,
         0,
+        None,
     );
     // No QC yet because LedgerInfo is different
     assert_eq!(

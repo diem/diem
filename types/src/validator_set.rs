@@ -15,6 +15,7 @@ use failure::prelude::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 pub const VALIDATOR_SET_MODULE_NAME: &str = "ValidatorSet";
 pub const VALIDATOR_SET_STRUCT_NAME: &str = "T";
@@ -35,6 +36,16 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
+
+impl fmt::Display for ValidatorSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[")?;
+        for validator in &self.0 {
+            write!(f, "{} ", validator)?;
+        }
+        write!(f, "]")
+    }
+}
 
 impl ValidatorSet {
     /// Constructs a ValidatorSet resource.

@@ -147,6 +147,7 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
         HashValue::zero(),
         0,
         0,
+        None,
     )
 }
 

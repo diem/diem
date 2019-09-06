@@ -167,7 +167,15 @@ where
         let genesis_quorum_cert = QuorumCert::new(
             VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0, ancestor_id, 0),
             LedgerInfoWithSignatures::new(
-                LedgerInfo::new(0, state_id, HashValue::zero(), HashValue::zero(), 0, 0),
+                LedgerInfo::new(
+                    0,
+                    state_id,
+                    HashValue::zero(),
+                    HashValue::zero(),
+                    0,
+                    0,
+                    None,
+                ),
                 HashMap::new(),
             ),
         );

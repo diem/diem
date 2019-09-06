@@ -154,6 +154,7 @@ where
             *GENESIS_BLOCK_ID,
             /* epoch_num = */ 0,
             /* timestamp_usecs = */ 0,
+            None,
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new());

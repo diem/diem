@@ -76,6 +76,10 @@ fn to_blocks_to_commit(
                 partial_ledger_info_with_sigs
                     .ledger_info()
                     .timestamp_usecs(),
+                partial_ledger_info_with_sigs
+                    .ledger_info()
+                    .next_validator_set()
+                    .cloned(),
             );
             let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
                 ledger_info,
