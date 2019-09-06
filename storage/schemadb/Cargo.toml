@@ -14,7 +14,7 @@ metrics = { path = "../../common/metrics" }
 
 [dependencies.rocksdb]
 git = "https://github.com/pingcap/rust-rocksdb.git"
-rev = "8d6cda70f22da2cd15ed7351fcffa9add3444595"
+rev = "ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff"
 
 [dev-dependencies]
 byteorder = "1.3.2"
