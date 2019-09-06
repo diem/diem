@@ -266,12 +266,12 @@ impl DB {
     /// Writes a group of records wrapped in a [`SchemaBatch`].
     pub fn write_schemas(&self, batch: SchemaBatch) -> Result<()> {
         let db_batch = rocksdb::WriteBatch::new();
-        for (cf_name, rows) in batch.rows {
+        for (cf_name, rows) in &batch.rows {
             let cf_handle = self.get_cf_handle(cf_name)?;
             for (key, write_op) in rows {
                 match write_op {
-                    WriteOp::Value(value) => db_batch.put_cf(cf_handle, &key, &value),
-                    WriteOp::Deletion => db_batch.delete_cf(cf_handle, &key),
+                    WriteOp::Value(value) => db_batch.put_cf(cf_handle, key, value),
+                    WriteOp::Deletion => db_batch.delete_cf(cf_handle, key),
                 }
                 .map_err(convert_rocksdb_err)?;
             }
@@ -282,7 +282,7 @@ impl DB {
             .map_err(convert_rocksdb_err)?;
 
         // Bump counters only after DB write succeeds.
-        for (cf_name, rows) in batch.rows {
+        for (cf_name, rows) in &batch.rows {
             for (key, write_op) in rows {
                 match write_op {
                     WriteOp::Value(value) => OP_COUNTER.observe(
