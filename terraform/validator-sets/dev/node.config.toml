@@ -12,10 +12,10 @@ dir = ""
 
 [vm_config]
   [vm_config.publishing_options]
-  type = "Locked"
-  whitelist = [
-    "0979ee49a9e97ce81f4e9c5642cfe5b90f1cfb3af291dc969d84c93343fe9b86",
-    "87f912647981e1c66b54512aa49e277ecb215b134beaac27b9b2bc48443b3ea7",
-    "adb97561e045f50bc55642fe0e1902c628c932da3bfa6b47abcc682909998c8a",
-    "d2218a399fe48448ab27973e7abb2a3e09b3f597347c0dd4480d6d786f2c7a14",
-  ]
+    type = "Locked"
+    whitelist = [
+        "1cf66b5f5c911e80dad222b8ee8dfe3ad4830f75bb412ba12ea8e429203d9c83",
+        "5ee07d4ac1ecf88f1b41c2c458f15699fe9d811c61563338253b3807b75c04c1",
+        "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
+        "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
+    ]
