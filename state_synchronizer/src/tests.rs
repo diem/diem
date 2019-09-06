@@ -69,6 +69,7 @@ impl MockExecutorProxy {
             HashValue::zero(),
             0,
             0,
+            None,
         );
         let mut signatures = HashMap::new();
         let private_key = Ed25519PrivateKey::genesis();

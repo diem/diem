@@ -36,6 +36,7 @@ pub fn gen_ledger_info_with_sigs(
         commit_block_id,
         0,
         /* timestamp = */ 0,
+        None,
     );
     LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
 }

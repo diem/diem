@@ -35,6 +35,7 @@ prop_compose! {
                         HashValue::zero(),
                         start_epoch + i as u64 /* epoch_num */,
                         ledger_info.timestamp_usecs(),
+                        None,
                     ),
                     p.signatures().clone(),
                 )

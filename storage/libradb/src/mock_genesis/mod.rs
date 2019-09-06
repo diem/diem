@@ -76,6 +76,7 @@ fn gen_mock_genesis() -> (
         *GENESIS_BLOCK_ID,
         0,
         0,
+        None,
     );
     let ledger_info_with_sigs =
         LedgerInfoWithSignatures::new(ledger_info, HashMap::new() /* signatures */);

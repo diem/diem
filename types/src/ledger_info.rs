@@ -4,6 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     transaction::Version,
+    validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
@@ -38,9 +39,8 @@ use std::{
 /// LedgerInfo with the `version` being the latest version that will be committed if B gets 2f+1
 /// votes. It sets `consensus_data_hash` to represent B so that if those 2f+1 votes are gathered a
 /// QC is formed on B.
-#[derive(Clone, Debug, Eq, PartialEq, IntoProto, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::ledger_info::LedgerInfo)]
 pub struct LedgerInfo {
     /// The version of latest transaction in the ledger.
     version: Version,
@@ -65,17 +65,23 @@ pub struct LedgerInfo {
     // they can be certain that their transaction will never be included in a block in the future
     // (assuming that their transaction has not yet been included)
     timestamp_usecs: u64,
+
+    /// An optional field keeping the set of new validators to start the next epoch.
+    /// The very last ledger info of an epoch contains the validator set for the next one,
+    /// other ledger info instances are None.
+    next_validator_set: Option<ValidatorSet>,
 }
 
 impl Display for LedgerInfo {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "LedgerInfo: [committed_block_id: {}, version: {}, epoch_num: {}, timestamp (us): {}]",
+            "LedgerInfo: [committed_block_id: {}, version: {}, epoch_num: {}, timestamp (us): {}, next_validator_set: {}]",
             self.consensus_block_id(),
             self.version(),
             self.epoch_num(),
-            self.timestamp_usecs()
+            self.timestamp_usecs(),
+            self.next_validator_set.as_ref().map_or("None".to_string(), |validator_set| format!("{}", validator_set)),
         )
     }
 }
@@ -90,6 +96,7 @@ impl LedgerInfo {
         consensus_block_id: HashValue,
         epoch_num: u64,
         timestamp_usecs: u64,
+        next_validator_set: Option<ValidatorSet>,
     ) -> Self {
         LedgerInfo {
             version,
@@ -98,6 +105,7 @@ impl LedgerInfo {
             consensus_block_id,
             epoch_num,
             timestamp_usecs,
+            next_validator_set,
         }
     }
 
@@ -136,19 +144,56 @@ impl LedgerInfo {
     pub fn is_zero(&self) -> bool {
         self.version == 0
     }
+
+    pub fn next_validator_set(&self) -> Option<&ValidatorSet> {
+        self.next_validator_set.as_ref()
+    }
+}
+
+impl IntoProto for LedgerInfo {
+    type ProtoType = crate::proto::ledger_info::LedgerInfo;
+
+    fn into_proto(self) -> Self::ProtoType {
+        let mut proto = Self::ProtoType::new();
+        proto.set_version(self.version);
+        proto.set_transaction_accumulator_hash(self.transaction_accumulator_hash.into_proto());
+        proto.set_consensus_data_hash(self.consensus_data_hash.into_proto());
+        proto.set_consensus_block_id(self.consensus_block_id.into_proto());
+        proto.set_epoch_num(self.epoch_num);
+        proto.set_timestamp_usecs(self.timestamp_usecs);
+        if let Some(next_validator_set) = self.next_validator_set {
+            proto.set_next_validator_set(next_validator_set.into_proto());
+        }
+        proto
+    }
 }
 
 impl FromProto for LedgerInfo {
     type ProtoType = crate::proto::ledger_info::LedgerInfo;
 
     fn from_proto(proto: Self::ProtoType) -> Result<Self> {
+        let version = proto.get_version();
+        let transaction_accumulator_hash =
+            HashValue::from_slice(proto.get_transaction_accumulator_hash())?;
+        let consensus_data_hash = HashValue::from_slice(proto.get_consensus_data_hash())?;
+        let consensus_block_id = HashValue::from_slice(proto.get_consensus_block_id())?;
+        let epoch_num = proto.get_epoch_num();
+        let timestamp_usecs = proto.get_timestamp_usecs();
+
+        let next_validator_set =
+            if let Some(validator_set_proto) = proto.next_validator_set.into_option() {
+                Some(ValidatorSet::from_proto(validator_set_proto)?)
+            } else {
+                None
+            };
         Ok(LedgerInfo::new(
-            proto.get_version(),
-            HashValue::from_slice(proto.get_transaction_accumulator_hash())?,
-            HashValue::from_slice(proto.get_consensus_data_hash())?,
-            HashValue::from_slice(proto.get_consensus_block_id())?,
-            proto.get_epoch_num(),
-            proto.get_timestamp_usecs(),
+            version,
+            transaction_accumulator_hash,
+            consensus_data_hash,
+            consensus_block_id,
+            epoch_num,
+            timestamp_usecs,
+            next_validator_set,
         ))
     }
 }
@@ -161,7 +206,8 @@ impl CanonicalSerialize for LedgerInfo {
             .encode_bytes(self.consensus_data_hash.as_ref())?
             .encode_bytes(self.consensus_block_id.as_ref())?
             .encode_u64(self.epoch_num)?
-            .encode_u64(self.timestamp_usecs)?;
+            .encode_u64(self.timestamp_usecs)?
+            .encode_optional(&self.next_validator_set)?;
         Ok(())
     }
 }

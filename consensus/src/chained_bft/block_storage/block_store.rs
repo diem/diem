@@ -356,6 +356,7 @@ impl<T: Payload> BlockStore<T> {
             block_id,
             0, // TODO [Reconfiguration] use the real epoch number.
             block.timestamp_usecs(),
+            None,
         )
     }
 
@@ -370,6 +371,7 @@ impl<T: Payload> BlockStore<T> {
             HashValue::zero(),
             0,
             0,
+            None,
         )
     }
 

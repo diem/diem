@@ -165,6 +165,7 @@ fn gen_ledger_info(
         commit_block_id,
         /* epoch_num = */ 0,
         timestamp_usecs,
+        None,
     );
     LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
 }
