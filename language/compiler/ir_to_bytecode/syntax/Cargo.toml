@@ -11,7 +11,7 @@ build = "build.rs"
 codespan = "0.1.3"
 hex = "0.3.2"
 lalrpop-util = "0.16.3"
-regex = "1.2.1"
+regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
 types = { path = "../../../../types" }
 
 [dev-dependencies]
