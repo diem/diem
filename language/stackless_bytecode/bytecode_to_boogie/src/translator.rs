@@ -41,8 +41,7 @@ impl BoogieTranslator {
             let module_name = module
                 .string_at(module.module_handle_at(ModuleHandleIndex::new(0)).name)
                 .to_string();
-            let address =
-                module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
+            let address = module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
             let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
             let module_full_name = format!("_{}_{}", addr_name, module_name);
             module_name_to_idx.insert(module_full_name.clone(), module_idx);
@@ -349,10 +348,17 @@ impl<'a> ModuleTranslator<'a> {
                     ));
                 }
                 let mut res_vec = vec![];
-                res_vec.push(if dests_str.is_empty() {
-                    format!("call Unpack_{}(t{});", struct_str, src)
+                res_vec.push(
+                if dests_str.is_empty() {
+                    format!(
+                        "call Unpack_{}(t{});",
+                        struct_str, src
+                    )
                 } else {
-                    format!("call {} := Unpack_{}(t{});", dests_str, struct_str, src)
+                    format!(
+                        "call {} := Unpack_{}(t{});",
+                        dests_str, struct_str, src
+                    )
                 });
                 res_vec.extend(dest_type_assumptions);
                 res_vec
@@ -434,7 +440,12 @@ impl<'a> ModuleTranslator<'a> {
             Eq(dest, op1, op2) => {
                 let operand_type = self.get_local_type(*op1, func_idx);
                 if self.is_local_ref(*op1, func_idx) {
-                    vec![format!("t{} := Boolean(t{} == t{});", dest, op1, op2)]
+                    vec![format!(
+                        "t{} := Boolean(t{} == t{});",
+                        dest,
+                        op1,
+                        op2
+                    )]
                 } else {
                     vec![format!(
                         "call t{} := Eq_{}(t{}, t{});",
@@ -444,11 +455,17 @@ impl<'a> ModuleTranslator<'a> {
                         op2
                     )]
                 }
+
             }
             Neq(dest, op1, op2) => {
                 let operand_type = self.get_local_type(*op1, func_idx);
                 if self.is_local_ref(*op1, func_idx) {
-                    vec![format!("t{} := Boolean(t{} != t{});", dest, op1, op2)]
+                    vec![format!(
+                        "t{} := Boolean(t{} != t{});",
+                        dest,
+                        op1,
+                        op2
+                    )]
                 } else {
                     vec![format!(
                         "call t{} := Neq_{}(t{}, t{});",
@@ -517,7 +534,7 @@ impl<'a> ModuleTranslator<'a> {
         }
         if inline {
             format!(
-                "procedure {{:inline 1}} {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
+                "procedure {{:inline 1}} {}_inline (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
                 fun_name, args, rets
             )
         } else {
@@ -746,9 +763,7 @@ impl<'a> ModuleTranslator<'a> {
         if module_name == "<SELF>" {
             module_name = "self";
         } // boogie doesn't allow '<' or '>'
-        let address = self
-            .module
-            .address_at(self.module.module_handle_at(module_handle_index).address);
+        let address = self.module.address_at(self.module.module_handle_at(module_handle_index).address);
         let addr_name = BigInt::from_str_radix(&address.to_string(), 16).unwrap();
         let module_full_name = format!("_{}_{}", addr_name, module_name);
         let function_handle_view = FunctionHandleView::new(self.module, function_handle);
