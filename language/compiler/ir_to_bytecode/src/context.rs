@@ -130,7 +130,7 @@ impl<'a> CompiledDependency<'a> {
 }
 
 /// Represents all of the pools to be used in the file format, both by CompiledModule
-// and CompiledScript.
+/// and CompiledScript.
 pub struct MaterializedPools {
     /// Module handle pool
     pub module_handles: Vec<ModuleHandle>,
@@ -156,8 +156,8 @@ pub struct MaterializedPools {
 
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the pools as they are built up.
-/// Specific definitions to CompiledModule or CompiledScript is not stored.
-/// However some fields, like struct_defs and fields are not used in CompiledScript.
+/// Specific definitions to CompiledModule or CompiledScript are not stored.
+/// However, some fields, like struct_defs and fields, are not used in CompiledScript.
 pub struct Context<'a> {
     dependencies: HashMap<QualifiedModuleIdent, CompiledDependency<'a>>,
 
@@ -366,7 +366,7 @@ impl<'a> Context<'a> {
         }
     }
 
-    /// Get the type singature index, adds it if it is not bound.
+    /// Get the type signature index, adds it if it is not bound.
     pub fn type_signature_index(&mut self, token: SignatureToken) -> Result<TypeSignatureIndex> {
         Ok(TypeSignatureIndex(get_or_add_item(
             &mut self.type_signatures,
