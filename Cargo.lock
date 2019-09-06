@@ -2264,13 +2264,13 @@ dependencies = [
 [[package]]
 name = "librocksdb_sys"
 version = "0.1.0"
-source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595#8d6cda70f22da2cd15ed7351fcffa9add3444595"
+source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff#ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff"
 dependencies = [
  "bzip2-sys 0.1.7 (git+https://github.com/alexcrichton/bzip2-rs.git)",
  "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "cmake 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "libtitan_sys 0.0.1 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)",
+ "libtitan_sys 0.0.1 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "lz4-sys 1.8.0 (git+https://github.com/busyjay/lz4-rs.git?branch=adjust-build)",
  "snappy-sys 0.1.0 (git+https://github.com/busyjay/rust-snappy.git?branch=static-link)",
@@ -2280,7 +2280,7 @@ dependencies = [
 [[package]]
 name = "libtitan_sys"
 version = "0.0.1"
-source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595#8d6cda70f22da2cd15ed7351fcffa9add3444595"
+source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff#ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff"
 dependencies = [
  "bzip2-sys 0.1.7 (git+https://github.com/alexcrichton/bzip2-rs.git)",
  "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3588,11 +3588,11 @@ dependencies = [
 [[package]]
 name = "rocksdb"
 version = "0.3.0"
-source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595#8d6cda70f22da2cd15ed7351fcffa9add3444595"
+source = "git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff#ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff"
 dependencies = [
  "crc 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "librocksdb_sys 0.1.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)",
+ "librocksdb_sys 0.1.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)",
 ]
 
 [[package]]
@@ -3822,7 +3822,7 @@ dependencies = [
  "failure_ext 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "metrics 0.1.0",
- "rocksdb 0.3.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)",
+ "rocksdb 0.3.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -5554,8 +5554,8 @@ dependencies = [
 "checksum lazy_static 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "76f033c7ad61445c5b347c7382dd1237847eb1bce590fe50365dcb33d546be73"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 "checksum libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)" = "34fcd2c08d2f832f376f4173a231990fa5aef4e99fb569867318a227ef4c06ba"
-"checksum librocksdb_sys 0.1.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)" = "<none>"
-"checksum libtitan_sys 0.0.1 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)" = "<none>"
+"checksum librocksdb_sys 0.1.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)" = "<none>"
+"checksum libtitan_sys 0.0.1 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)" = "<none>"
 "checksum libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
 "checksum linked-hash-map 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 "checksum lock_api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "62ebf1391f6acad60e5c8b43706dde4582df75c06698ab44511d15016bc2442c"
@@ -5677,7 +5677,7 @@ dependencies = [
 "checksum ripemd160 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ad5112e0dbbb87577bfbc56c42450235e3012ce336e29c5befd7807bd626da4a"
 "checksum rmp 0.8.8 (registry+https://github.com/rust-lang/crates.io-index)" = "0f594cb7ff8f1c5a7907f6be91f15795c8301e0d5718eb007fb5832723dd716e"
 "checksum rmp-serde 0.13.7 (registry+https://github.com/rust-lang/crates.io-index)" = "011e1d58446e9fa3af7cdc1fb91295b10621d3ac4cb3a85cc86385ee9ca50cd3"
-"checksum rocksdb 0.3.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=8d6cda70f22da2cd15ed7351fcffa9add3444595)" = "<none>"
+"checksum rocksdb 0.3.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=ea24c53b8f2e1f8a1d22f739cb5db4681d2d21ff)" = "<none>"
 "checksum rusoto_core 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)" = "dd1a1069ba04874a485528d1602fab4569f2434a5547614428e2cc22b91bfb71"
 "checksum rusoto_credential 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b0d6cc3a602f01b9c5a04c8ed4ee281b789c5b2692d93202367c9b99ebc022ed"
 "checksum rusoto_ec2 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e73040c508e8bada13f974176c7b4032659c8360e4ad1f4f0f210548b458228c"
