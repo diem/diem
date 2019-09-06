@@ -222,18 +222,14 @@ impl<'a> Peekable for BitIterator<'a> {
 impl<'a> Iterator for BitIterator<'a> {
     type Item = bool;
     fn next(&mut self) -> Option<Self::Item> {
-        self.pos
-            .next()
-            .and_then(|i| Some(self.nibble_path.get_bit(i)))
+        self.pos.next().map(|i| self.nibble_path.get_bit(i))
     }
 }
 
 /// Support iterating bits in reversed order.
 impl<'a> DoubleEndedIterator for BitIterator<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.pos
-            .next_back()
-            .and_then(|i| Some(self.nibble_path.get_bit(i)))
+        self.pos.next_back().map(|i| self.nibble_path.get_bit(i))
     }
 }
 
@@ -256,9 +252,7 @@ pub struct NibbleIterator<'a> {
 impl<'a> Iterator for NibbleIterator<'a> {
     type Item = Nibble;
     fn next(&mut self) -> Option<Self::Item> {
-        self.pos
-            .next()
-            .and_then(|i| Some(self.nibble_path.get_nibble(i)))
+        self.pos.next().map(|i| self.nibble_path.get_nibble(i))
     }
 }
 

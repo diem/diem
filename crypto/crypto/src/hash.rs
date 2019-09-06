@@ -303,7 +303,7 @@ impl<'a> std::iter::Iterator for HashValueBitIterator<'a> {
     type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.pos.next().and_then(|x| Some(self.get_bit(x)))
+        self.pos.next().map(|x| self.get_bit(x))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -313,7 +313,7 @@ impl<'a> std::iter::Iterator for HashValueBitIterator<'a> {
 
 impl<'a> std::iter::DoubleEndedIterator for HashValueBitIterator<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.pos.next_back().and_then(|x| Some(self.get_bit(x)))
+        self.pos.next_back().map(|x| self.get_bit(x))
     }
 }
 
