@@ -57,7 +57,7 @@
 //! ```
 
 use crate::{hkdf::Hkdf, traits::*};
-use crypto_derive::{SilentDebug, SilentDisplay};
+use crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use rand::{rngs::EntropyRng, RngCore};
 use serde::{de, export, ser};
 use sha2::Sha256;
@@ -85,7 +85,7 @@ pub struct X25519EphemeralPrivateKey(x25519_dalek::EphemeralSecret);
 pub struct X25519StaticPrivateKey(x25519_dalek::StaticSecret);
 
 /// An x25519 public key
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deref)]
 pub struct X25519PublicKey(x25519_dalek::PublicKey);
 
 /// An x25519 public key to match the X25519Static key type, which
@@ -239,14 +239,6 @@ impl<'a> From<&'a X25519EphemeralPrivateKey> for X25519PublicKey {
 impl<'a> From<&'a X25519StaticPrivateKey> for X25519StaticPublicKey {
     fn from(ephemeral: &'a X25519StaticPrivateKey) -> X25519StaticPublicKey {
         X25519StaticPublicKey(X25519PublicKey(x25519_dalek::PublicKey::from(&ephemeral.0)))
-    }
-}
-
-impl Deref for X25519StaticPublicKey {
-    type Target = X25519PublicKey;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
