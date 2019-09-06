@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-backtrace = "0.3.34"
+backtrace = "0.3.37"
 toml = "0.5.3"
 
 logger = { path = "../logger" }
