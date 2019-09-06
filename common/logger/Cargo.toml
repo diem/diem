@@ -33,4 +33,4 @@ failure = { package = "failure_ext", path = "../failure_ext" }
 
 [dev-dependencies]
 rand = "0.6.5"
-regex = "1.2.1"
+regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
