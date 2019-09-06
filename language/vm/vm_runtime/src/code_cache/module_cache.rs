@@ -329,7 +329,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                         StructHandleView::new(module, struct_handle).module_id();
                     StructDef::Native(
                         dispatch_native_struct(&struct_def_module_id, struct_name)
-                            .ok_or(VMStatus::new(StatusCode::LINKER_ERROR))?
+                            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?
                             .struct_type
                             .clone(),
                     )
