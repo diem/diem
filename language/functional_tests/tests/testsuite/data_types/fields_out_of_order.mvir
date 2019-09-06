@@ -1,4 +1,4 @@
-// check: defined out of order
+// check: Field y defined out of order for struct T
 
 module M {
     struct T {

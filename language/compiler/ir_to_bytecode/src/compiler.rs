@@ -928,7 +928,7 @@ fn compile_expression(
             let self_name = ModuleName::new(ModuleName::SELF.to_string());
             let ident = QualifiedStructIdent {
                 module: self_name,
-                name,
+                name: name.clone(),
             };
             let sh_idx = context.struct_handle_index(ident)?;
 
@@ -937,7 +937,7 @@ fn compile_expression(
                 // Check that the fields are specified in order matching the definition.
                 let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
                 if field_order != decl_order {
-                    bail!("field `{}' defined out of order", field);
+                    bail!("Field {} defined out of order for struct {}", field, name);
                 }
 
                 compile_expression(context, function_frame, code, e)?;
