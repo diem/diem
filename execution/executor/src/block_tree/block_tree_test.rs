@@ -32,14 +32,14 @@ impl Block for TestBlock {
         self.output.is_some()
     }
 
-    fn set_output(&mut self, output: Self::Output) {
+    fn set_output(&mut self, _output: Self::Output) {
         assert!(self.output.is_none());
-        self.output = Some(output);
+        self.output = Some(());
     }
 
-    fn set_signature(&mut self, signature: Self::Signature) {
+    fn set_signature(&mut self, _signature: Self::Signature) {
         assert!(self.signature.is_none());
-        self.signature = Some(signature);
+        self.signature = Some(());
     }
 
     fn id(&self) -> HashValue {
