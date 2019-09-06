@@ -265,26 +265,13 @@ impl DB {
 
     /// Writes a group of records wrapped in a [`SchemaBatch`].
     pub fn write_schemas(&self, batch: SchemaBatch) -> Result<()> {
-        let mut put_sizes: HashMap<ColumnFamilyName, usize> = HashMap::new();
-        let mut delete_counts: HashMap<ColumnFamilyName, usize> = HashMap::new();
-
         let db_batch = rocksdb::WriteBatch::new();
         for (cf_name, rows) in batch.rows {
             let cf_handle = self.get_cf_handle(cf_name)?;
             for (key, write_op) in rows {
                 match write_op {
-                    WriteOp::Value(value) => {
-                        let size = put_sizes.entry(&cf_name).or_insert(0);
-                        (*size) += key.len() + value.len();
-
-                        db_batch.put_cf(cf_handle, &key, &value)
-                    }
-                    WriteOp::Deletion => {
-                        let count = delete_counts.entry(cf_name).or_insert(0);
-                        (*count) += 1;
-
-                        db_batch.delete_cf(cf_handle, &key)
-                    }
+                    WriteOp::Value(value) => db_batch.put_cf(cf_handle, &key, &value),
+                    WriteOp::Deletion => db_batch.delete_cf(cf_handle, &key),
                 }
                 .map_err(convert_rocksdb_err)?;
             }
@@ -295,12 +282,17 @@ impl DB {
             .map_err(convert_rocksdb_err)?;
 
         // Bump counters only after DB write succeeds.
-        put_sizes.into_iter().for_each(|(cf_name, size)| {
-            OP_COUNTER.observe(&format!("db_put_bytes_{}", cf_name), size as f64)
-        });
-        delete_counts.into_iter().for_each(|(cf_name, count)| {
-            OP_COUNTER.inc_by(&format!("db_delete_{}", cf_name), count)
-        });
+        for (cf_name, rows) in batch.rows {
+            for (key, write_op) in rows {
+                match write_op {
+                    WriteOp::Value(value) => OP_COUNTER.observe(
+                        &format!("db_put_bytes_{}", cf_name),
+                        (key.len() + value.len()) as f64,
+                    ),
+                    WriteOp::Deletion => OP_COUNTER.inc(&format!("db_delete_{}", cf_name)),
+                }
+            }
+        }
 
         Ok(())
     }
