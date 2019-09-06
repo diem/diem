@@ -1,0 +1,10 @@
+import 0x0.Vector;
+main() {
+    let v: Vector.T<u64>;
+    let value: u64;
+    v = Vector.empty<u64>();
+    value = Vector.pop_back<u64>(&mut v);
+    return;
+}
+// check: NATIVE_FUNCTION_ERROR
+// check: 2

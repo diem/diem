@@ -426,7 +426,7 @@ impl MutVal {
         self.0.borrow()
     }
 
-    fn into_value(self) -> VMResult<Value> {
+    pub(crate) fn into_value(self) -> VMResult<Value> {
         match Rc::try_unwrap(self.0) {
             Ok(cell) => Ok(Value::new(cell.into_inner())),
             Err(_) => Err(VMStatus::new(StatusCode::LOCAL_REFERENCE_ERROR)),
@@ -686,7 +686,7 @@ impl RootAccessPath {
         }
     }
 
-    fn mark_dirty(&mut self) {
+    pub fn mark_dirty(&mut self) {
         self.status = GlobalDataStatus::DIRTY;
     }
 

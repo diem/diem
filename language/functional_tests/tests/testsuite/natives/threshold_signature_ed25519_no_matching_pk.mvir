@@ -28,5 +28,5 @@ main() {
     return;
 }
 
-// check: ABORTED
+// check: NATIVE_FUNCTION_ERROR
 // check: 248665376

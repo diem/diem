@@ -472,6 +472,7 @@ pub enum StatusCode {
     CODE_DESERIALIZATION_ERROR = 4019,
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
+    NATIVE_FUNCTION_ERROR = 4022,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
@@ -490,4 +491,7 @@ pub mod sub_status {
     pub const DRE_GLOBAL_REF_ALREADY_RELEASED: u64 = 2;
     pub const DRE_MISSING_RELEASEREF: u64 = 3;
     pub const DRE_GLOBAL_ALREADY_BORROWED: u64 = 4;
+
+    // Native Function Error sub-codes
+    pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
 }
