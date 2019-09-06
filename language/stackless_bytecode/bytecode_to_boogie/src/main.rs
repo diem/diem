@@ -9,9 +9,12 @@ use std::{
     fs::{self, File},
     io::prelude::*,
 };
+use stdlib::stdlib_modules;
 use types::account_address::AccountAddress;
 
+// mod translator;
 fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
+    // let mut verified_modules = stdlib_modules().to_vec();
     let mut verified_modules = vec![];
     let files_len = file_names.len();
     let dep_files = &file_names[0..files_len - 1];
