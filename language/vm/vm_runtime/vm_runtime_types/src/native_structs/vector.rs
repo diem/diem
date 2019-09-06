@@ -1,9 +1,11 @@
 use crate::{
     native_functions::dispatch::NativeReturnStatus,
     native_structs::NativeStructValue,
-    value::{MutVal, ReferenceValue, Struct, Value},
+    pop_arg,
+    value::{MutVal, ReferenceValue, Value},
 };
 use std::{collections::VecDeque, ops::Add};
+use types::vm_error::sub_status::NFE_VECTOR_ERROR_BASE;
 use vm::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, STRUCT_SIZE};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -13,6 +15,10 @@ const BORROW_COST: u64 = 30; // TODO: determine experimentally
 const EMPTY_COST: u64 = 30; // TODO: determine experimentally
 const LENGTH_COST: u64 = 30; // TODO: determine experimentally
 const PUSH_BACK_COST: u64 = 30; // TODO: determine experimentally
+const POP_COST: u64 = 30; // TODO: determine experimentally
+
+pub const INDEX_OUT_OF_BOUND: u64 = NFE_VECTOR_ERROR_BASE + 1;
+pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
 
 #[allow(dead_code)]
 fn get_mut_vector(v: &mut NativeStructValue) -> Option<&mut NativeVector> {
@@ -27,14 +33,16 @@ fn get_vector(v: &NativeStructValue) -> Option<&NativeVector> {
     }
 }
 
-fn native_vector_dispatcher(
-    mut args: VecDeque<Value>,
-    op: fn(ReferenceValue) -> NativeReturnStatus,
-) -> NativeReturnStatus {
-    args.pop_front()
-        .and_then(|v| v.value_as::<ReferenceValue>())
-        .map(op)
-        .unwrap_or(NativeReturnStatus::InvalidArguments)
+macro_rules! get_vector_ref {
+    ($args: expr) => {
+        match $args
+            .pop_front()
+            .and_then(|v| v.value_as::<ReferenceValue>())
+        {
+            Some(v) => v,
+            None => return NativeReturnStatus::InvalidArguments,
+        }
+    };
 }
 
 impl NativeVector {
@@ -46,46 +54,84 @@ impl NativeVector {
             cost: EMPTY_COST,
         }
     }
-    pub fn native_length(args: VecDeque<Value>) -> NativeReturnStatus {
-        native_vector_dispatcher(args, |reference| {
-            reference
-                .read_native_struct(|native_val| Some(get_vector(native_val)?.0.len()))
-                .map(|len| NativeReturnStatus::Success {
-                    cost: LENGTH_COST,
-                    return_values: vec![Value::u64(len as u64)],
-                })
-                .unwrap_or(NativeReturnStatus::InvalidArguments)
-        })
+    pub fn native_length(mut args: VecDeque<Value>) -> NativeReturnStatus {
+        let reference = get_vector_ref!(args);
+        reference
+            .read_native_struct(|native_val| Some(get_vector(native_val)?.0.len()))
+            .map(|len| NativeReturnStatus::Success {
+                cost: LENGTH_COST,
+                return_values: vec![Value::u64(len as u64)],
+            })
+            .unwrap_or(NativeReturnStatus::InvalidArguments)
     }
 
-    #[allow(unreachable_code)]
-    pub fn native_borrow(_arguments: VecDeque<Value>) -> NativeReturnStatus {
-        unimplemented!("borrowing an element from a vector");
-        let cost = BORROW_COST;
-        // TODO: bounds check + implement retrieving reference to element of vector here
-        let vector_element = Value::struct_(Struct::new(vec![]));
-        let return_values = vec![vector_element];
-        NativeReturnStatus::Success {
-            cost,
-            return_values,
+    pub fn native_push_back(mut args: VecDeque<Value>) -> NativeReturnStatus {
+        if args.len() != 2 {
+            return NativeReturnStatus::InvalidArguments;
+        }
+        let reference = get_vector_ref!(args);
+        let elem = match args.pop_front() {
+            Some(v) => MutVal::new(v),
+            None => return NativeReturnStatus::InvalidArguments,
+        };
+        reference
+            .mutate_native_struct(|native_val| Some(get_mut_vector(native_val)?.0.push(elem)))
+            .map(|_| NativeReturnStatus::Success {
+                cost: PUSH_BACK_COST,
+                return_values: vec![],
+            })
+            .unwrap_or(NativeReturnStatus::InvalidArguments)
+    }
+
+    pub fn native_borrow(mut args: VecDeque<Value>) -> NativeReturnStatus {
+        if args.len() != 2 {
+            return NativeReturnStatus::InvalidArguments;
+        }
+        let reference = get_vector_ref!(args);
+        let idx = pop_arg!(args, u64);
+        match reference.get_native_struct_reference(|native_val| {
+            get_vector(native_val)?
+                .0
+                .get(idx as usize)
+                .map(MutVal::clone)
+        }) {
+            Some(v) => NativeReturnStatus::Success {
+                cost: BORROW_COST,
+                return_values: vec![v],
+            },
+            None => NativeReturnStatus::Aborted {
+                cost: BORROW_COST,
+                error_code: INDEX_OUT_OF_BOUND,
+            },
         }
     }
 
-    #[allow(unreachable_code)]
-    pub fn native_push_back(_arguments: VecDeque<Value>) -> NativeReturnStatus {
-        unimplemented!("Adding an element to a vector");
-        let cost = PUSH_BACK_COST;
-        let return_values = vec![];
-        NativeReturnStatus::Success {
-            cost,
-            return_values,
+    pub fn native_pop(mut args: VecDeque<Value>) -> NativeReturnStatus {
+        if args.len() != 1 {
+            return NativeReturnStatus::InvalidArguments;
+        }
+
+        let reference = get_vector_ref!(args);
+        match reference.mutate_native_struct(|native_val| {
+            get_mut_vector(native_val)?.0.pop().map(MutVal::into_value)
+        }) {
+            // Vector is already empty.
+            None => NativeReturnStatus::Aborted {
+                cost: POP_COST,
+                error_code: POP_EMPTY_VEC,
+            },
+            Some(Ok(v)) => NativeReturnStatus::Success {
+                cost: POP_COST,
+                return_values: vec![v],
+            },
+            // The popped element has dangling references.
+            Some(_) => NativeReturnStatus::InvalidArguments,
         }
     }
 
     pub(crate) fn get(&self, idx: u64) -> Option<MutVal> {
         self.0.get(idx as usize).map(MutVal::clone)
     }
-
     pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
         self.0
             .iter()

@@ -172,6 +172,16 @@ lazy_static! {
                 Reference(Box::new(TypeParameter(0)))
             ]
         );
+        add!(m, addr, "Vector", "borrow_mut",
+            NativeVector::native_borrow,
+            vec![Kind::All],
+            vec![
+                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                 U64],
+            vec![
+                MutableReference(Box::new(TypeParameter(0)))
+            ]
+        );
         add!(m, addr, "Vector", "push_back",
             NativeVector::native_push_back,
             vec![Kind::All],
@@ -180,6 +190,12 @@ lazy_static! {
                 TypeParameter(0),
             ],
             vec![]
+        );
+        add!(m, addr, "Vector", "pop_back",
+            NativeVector::native_pop,
+            vec![Kind::All],
+            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
+            vec![TypeParameter(0)]
         );
         // Event
         add!(m, addr, "Event", "write_to_event_store",

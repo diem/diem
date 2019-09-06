@@ -313,7 +313,7 @@ where
                                         .consume_gas(GasUnits::new(cost), &self.execution_stack)?;
                                     return Err(vm_error(
                                         self.execution_stack.location()?,
-                                        StatusCode::ABORTED,
+                                        StatusCode::NATIVE_FUNCTION_ERROR,
                                     )
                                     .with_sub_status(error_code));
                                 }

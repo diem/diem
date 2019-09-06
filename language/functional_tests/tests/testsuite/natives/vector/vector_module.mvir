@@ -1,0 +1,91 @@
+module M {
+    import 0x0.LibraCoin;
+    import 0x0.Vector;
+    resource Coins { f: Vector.T<LibraCoin.T> }
+
+    public new() {
+        let coin_vec: Vector.T<LibraCoin.T>;
+        let coins: Self.Coins;
+        coin_vec = Vector.empty<LibraCoin.T>();
+        coins = Coins { f: move(coin_vec)};
+
+        move_to_sender<Coins>(move(coins));
+        return;
+    }
+
+    public put_coin(coin: LibraCoin.T) acquires Coins {
+        let coins_ref: &mut Self.Coins;
+        let v_ref: &mut Vector.T<LibraCoin.T>;
+
+        coins_ref = borrow_global_mut<Coins>(get_txn_sender());
+        v_ref = &mut move(coins_ref).f;
+        Vector.push_back<LibraCoin.T>(move(v_ref), move(coin));
+        return;
+    }
+
+    public get_value(i: u64): u64 acquires Coins {
+        let coins_ref: &Self.Coins;
+        let v_ref: &Vector.T<LibraCoin.T>;
+        let coin_ref: &LibraCoin.T;
+
+        coins_ref = borrow_global<Coins>(get_txn_sender());
+        v_ref = &move(coins_ref).f;
+        coin_ref = Vector.borrow<LibraCoin.T>(move(v_ref), move(i));
+
+        return LibraCoin.value(move(coin_ref));
+    }
+
+    public pop(): LibraCoin.T acquires Coins {
+        let coins_ref: &mut Self.Coins;
+        let v_ref: &mut Vector.T<LibraCoin.T>;
+
+        coins_ref = borrow_global_mut<Coins>(get_txn_sender());
+        v_ref = &mut move(coins_ref).f;
+        return Vector.pop_back<LibraCoin.T>(move(v_ref));
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let coin: LibraCoin.T;
+    coin = LibraAccount.withdraw_from_sender(1000);
+    M.new();
+    M.put_coin(move(coin));
+
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+import 0x0.LibraCoin;
+import 0x0.LibraAccount;
+
+main() {
+    let coin: LibraCoin.T;
+
+    assert(M.get_value(0) == 1000, 4);
+    coin = LibraAccount.withdraw_from_sender(300);
+    M.put_coin(move(coin));
+
+    return;
+}
+
+
+//! new-transaction
+import {{default}}.M;
+import 0x0.LibraCoin;
+import 0x0.LibraAccount;
+
+main() {
+    let coin: LibraCoin.T;
+
+    assert(M.get_value(0) == 1000, 4);
+    assert(M.get_value(1) == 300, 4);
+    coin = M.pop();
+    LibraAccount.deposit(get_txn_sender(), move(coin));
+    return;
+}
