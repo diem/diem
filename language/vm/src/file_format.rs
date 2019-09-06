@@ -1775,10 +1775,12 @@ pub fn basic_test_module() -> CompiledModuleMut {
 }
 
 /// Create a dummy module to wrap the bytecode program in local@code
-pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
+pub fn dummy_procedure_module(locals: Vec<SignatureToken>, code: Vec<Bytecode>) -> CompiledModule {
     let mut module = empty_module();
     let mut code_unit = CodeUnit::default();
     code_unit.code = code;
+    module.locals_signatures[0] = LocalsSignature(locals);
+    code_unit.locals = LocalsSignatureIndex(0);
     let mut fun_def = FunctionDefinition::default();
     fun_def.code = code_unit;
 
