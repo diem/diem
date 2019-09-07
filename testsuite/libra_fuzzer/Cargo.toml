@@ -23,8 +23,6 @@ structopt = { version = "0.2.18", default-features = false }
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
-
-# for fuzzing consensus
 consensus = { path = "../../consensus"}
 
 [dev-dependencies]
