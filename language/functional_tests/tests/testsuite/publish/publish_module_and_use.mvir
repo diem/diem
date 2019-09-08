@@ -1,3 +1,4 @@
+modules:
 module MoneyHolder {
         import 0x0.LibraCoin;
 
@@ -25,8 +26,8 @@ module MoneyHolder {
 }
 
 //! new-transaction
-
-import {{default}}.MoneyHolder;
+script:
+import Transaction.MoneyHolder;
 import 0x0.LibraCoin;
 
 main() {

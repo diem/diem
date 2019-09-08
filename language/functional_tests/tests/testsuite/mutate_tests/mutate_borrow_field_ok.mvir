@@ -1,3 +1,4 @@
+modules:
 module Test {
     struct T{v: u64}
 
@@ -18,8 +19,8 @@ module Test {
 }
 
 //! new-transaction
-
-import {{default}}.Test;
+script:
+import Transaction.Test;
 
 main() {
     let x: Test.T;

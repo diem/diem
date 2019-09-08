@@ -1,5 +1,5 @@
 // Pack operands should be evaluated in declaration order, not alphanumeric.
-
+modules:
 module M {
     struct T {
         b: u64,
@@ -15,7 +15,8 @@ module M {
 }
 
 //! new-transaction
-import {{default}}.M;
+script:
+import Transaction.M;
 main() {
   let m: M.T;
   m = M.new();

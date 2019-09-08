@@ -1,3 +1,4 @@
+modules:
 module A {
     import 0x0.LibraCoin;
     resource A { c: LibraCoin.T }
@@ -13,8 +14,8 @@ module A {
 }
 
 //! new-transaction
-
-import {{default}}.A;
+script:
+import Transaction.A;
 import 0x0.LibraCoin;
 
 main() {

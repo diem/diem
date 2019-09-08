@@ -1,3 +1,4 @@
+modules:
 module A {
     struct T {value: u64, even: bool}
 
@@ -28,7 +29,8 @@ module A {
 }
 
 //! new-transaction
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let x: A.T;

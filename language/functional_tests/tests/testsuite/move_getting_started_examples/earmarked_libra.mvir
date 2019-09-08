@@ -2,6 +2,7 @@
 // Any changes to this code should also be reflected there.
 
 // A module for earmarking a coin for a specific recipient
+modules:
 module EarmarkedLibraCoin {
   import 0x0.LibraCoin;
 
@@ -81,10 +82,10 @@ module EarmarkedLibraCoin {
 // TODO: lines below this are tests
 
 //! new-transaction
-
+script:
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
-import {{default}}.EarmarkedLibraCoin;
+import Transaction.EarmarkedLibraCoin;
 
 main() {
   let recipient_address: address;

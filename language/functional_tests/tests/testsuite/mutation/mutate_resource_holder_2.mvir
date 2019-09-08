@@ -1,3 +1,4 @@
+modules:
 module A {
     resource Coin { balance: u64 }
     resource A { c: Self.Coin }
@@ -31,8 +32,8 @@ module A {
 }
 
 //! new-transaction
-
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let zero_resource: A.Coin;

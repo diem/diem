@@ -1,3 +1,4 @@
+modules:
 module TestMoveFrom {
     resource Counter { i: u64 }
 
@@ -48,8 +49,8 @@ module TestMoveFrom {
 }
 
 //! new-transaction
-
-import {{default}}.TestMoveFrom;
+script:
+import Transaction.TestMoveFrom;
 
 main() {
   let has1: bool;

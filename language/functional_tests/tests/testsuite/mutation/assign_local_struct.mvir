@@ -1,3 +1,4 @@
+modules:
 module Tester {
     struct T{v: u64}
 
@@ -28,8 +29,8 @@ module Tester {
 }
 
 //! new-transaction
-
-import {{default}}.Tester;
+script:
+import Transaction.Tester;
 
 main() {
     let t: Tester.T;

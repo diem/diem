@@ -1,3 +1,4 @@
+modules:
 module Test {
     resource T { i: u64 }
 
@@ -23,8 +24,8 @@ module Test {
 }
 
 //! new-transaction
-
-import {{default}}.Test;
+script:
+import Transaction.Test;
 main() {
     Test.test();
     return;

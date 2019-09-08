@@ -1,3 +1,4 @@
+modules:
 module Test {
     public t(): u64 {
         let x: u64;
@@ -11,8 +12,8 @@ module Test {
 }
 
 //! new-transaction
-
-import {{default}}.Test;
+script:
+import Transaction.Test;
 
 main() {
     let x: u64;

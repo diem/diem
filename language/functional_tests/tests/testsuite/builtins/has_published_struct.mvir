@@ -1,3 +1,4 @@
+modules:
 module Token {
     resource T { }
 
@@ -18,8 +19,8 @@ module Token {
 }
 
 //! new-transaction
-
-import {{default}}.Token;
+script:
+import Transaction.Token;
 
 main() {
     let z: Token.T;

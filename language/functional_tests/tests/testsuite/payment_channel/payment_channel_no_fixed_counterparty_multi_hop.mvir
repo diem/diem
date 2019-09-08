@@ -1,3 +1,4 @@
+modules:
 module PaymentChannel {
     import 0x0.Signature;
     import 0x0.LibraCoin;
@@ -225,7 +226,8 @@ module PaymentChannel {
 }
 
 //! new-transaction
-import {{default}}.PaymentChannel;
+script:
+import Transaction.PaymentChannel;
 
 main() {
     return;

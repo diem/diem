@@ -1,3 +1,4 @@
+modules:
 module A {
     public foo(t: u64): u64 * u64 {
        return (copy(t), 2 * move(t));
@@ -13,7 +14,8 @@ module A {
 }
 
 //! new-transaction
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let x: u64;

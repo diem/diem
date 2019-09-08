@@ -1,3 +1,4 @@
+modules:
 module Token {
     resource T {v: u64}
 
@@ -45,8 +46,8 @@ module Token {
 }
 
 //! new-transaction
-
-import {{default}}.Token;
+script:
+import Transaction.Token;
 
 main() {
     Token.test();

@@ -1,3 +1,4 @@
+modules:
 module A {
 
     struct T{v: u64}
@@ -16,12 +17,12 @@ module A {
         let k: &u64;
         k = &(&move(this).f).v;
         return *move(k);
-    } 
+    }
 }
 
 //! new-transaction
-
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let x: A.T;

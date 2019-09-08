@@ -1,3 +1,4 @@
+modules:
 module ApprovalGroup {
     import 0x0.Signature;
 
@@ -206,6 +207,7 @@ module ColdWallet {
 
 
 //! new-transaction
+script:
 import Transaction.ApprovalGroup;
 import Transaction.ColdWallet;
 main() {

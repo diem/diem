@@ -1,3 +1,4 @@
+modules:
 module A {
     public div_by_two(v: u64): bool {
         if (move(v) % 2 == 0) { return true;}
@@ -15,7 +16,8 @@ module A {
 }
 
 //! new-transaction
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let x: u64;

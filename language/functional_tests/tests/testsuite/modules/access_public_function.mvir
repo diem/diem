@@ -1,3 +1,4 @@
+modules:
 module M {
     public universal_truth(): u64 {
         return 42;
@@ -5,8 +6,8 @@ module M {
 }
 
 //! new-transaction
-
-import {{default}}.M;
+script:
+import Transaction.M;
 
 main() {
     let x: u64;

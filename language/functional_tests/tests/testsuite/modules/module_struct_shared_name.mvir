@@ -1,3 +1,4 @@
+modules:
 module M {
     struct M { }
     public new(): Self.M {
@@ -6,8 +7,8 @@ module M {
 }
 
 //! new-transaction
-
-import {{default}}.M;
+script:
+import Transaction.M;
 
 main() {
     let x: M.M;

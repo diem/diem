@@ -1,3 +1,4 @@
+modules:
 module M {
     resource A{x: u64}
     struct B{y: u64}
@@ -41,7 +42,8 @@ module M {
 
 //! new-transaction
 
-import {{default}}.M;
+script:
+import Transaction.M;
 
 main() {
     let a: M.A;

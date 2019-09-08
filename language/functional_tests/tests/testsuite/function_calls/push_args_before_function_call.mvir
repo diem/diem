@@ -1,3 +1,4 @@
+modules:
 module A {
     public push_u64(): u64  {
         return 42;
@@ -14,7 +15,8 @@ module A {
 }
 
 //! new-transaction
-import {{default}}.A;
+script:
+import Transaction.A;
 
 main() {
     let ans: u64;

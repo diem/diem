@@ -1,3 +1,4 @@
+modules:
 module Math {
 
   public even(n: u64): bool {
@@ -22,8 +23,8 @@ module Math {
 }
 
 //! new-transaction
-
-import {{default}}.Math;
+script:
+import Transaction.Math;
 
 main() {
     let zero_even: bool;
