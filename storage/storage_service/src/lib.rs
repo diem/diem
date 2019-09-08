@@ -24,6 +24,7 @@ use std::{
 use storage_proto::proto::{
     storage::{
         GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+        GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
         GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest,
         GetTransactionsResponse, SaveTransactionsRequest, SaveTransactionsResponse,
     },
@@ -210,6 +211,18 @@ impl StorageService {
         let rust_resp = storage_proto::GetStartupInfoResponse { info };
         Ok(rust_resp.into_proto())
     }
+
+    fn get_latest_ledger_infos_per_epoch_inner(
+        &self,
+        req: GetLatestLedgerInfosPerEpochRequest,
+    ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
+        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::from_proto(req)?;
+        let ledger_infos = self
+            .db
+            .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
+        let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
+        Ok(rust_resp.into_proto())
+    }
 }
 
 impl Storage for StorageService {
@@ -270,6 +283,18 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::get_startup_info");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_startup_info_inner();
+        provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn get_latest_ledger_infos_per_epoch(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLatestLedgerInfosPerEpochRequest,
+        sink: grpcio::UnarySink<GetLatestLedgerInfosPerEpochResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_latest_ledger_infos_per_epoch");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_latest_ledger_infos_per_epoch_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 }

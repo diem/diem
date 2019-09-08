@@ -63,6 +63,6 @@ proptest! {
             .collect::<Result<Vec<_>>>()
             .unwrap();
         store.db.write_schemas(cs.batch).unwrap();
-        prop_assert_eq!(db.ledger_store.get_ledger_infos(start_epoch).unwrap(), ledger_infos_with_sigs);
+        prop_assert_eq!(db.ledger_store.get_latest_ledger_infos_per_epoch(start_epoch).unwrap(), ledger_infos_with_sigs);
     }
 }

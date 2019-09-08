@@ -61,12 +61,11 @@ impl LedgerStore {
         }
     }
 
-    /// Return the ledger infos with their least 2f+1 signatures starting from `start_version` to
+    /// Return the ledger infos with their least 2f+1 signatures starting from `start_epoch` to
     /// the most recent one.
     /// Note: ledger infos and signatures are only available at the last version of each earlier
     /// epoch and at the latest version of current epoch.
-    #[cfg(test)]
-    fn get_ledger_infos(
+    pub fn get_latest_ledger_infos_per_epoch(
         &self,
         start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {

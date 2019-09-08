@@ -45,6 +45,10 @@ service Storage {
     // Returns information needed for libra core to start up.
     rpc GetStartupInfo(GetStartupInfoRequest)
     returns (GetStartupInfoResponse);
+
+    // Returns latest ledger infos per epoch.
+    rpc GetLatestLedgerInfosPerEpoch(GetLatestLedgerInfosPerEpochRequest)
+    returns (GetLatestLedgerInfosPerEpochResponse);
 }
 
 message SaveTransactionsRequest {
@@ -112,4 +116,14 @@ message StartupInfo {
     bytes account_state_root_hash = 3;
     // From left to right, root hashes of all frozen subtrees.
     repeated bytes ledger_frozen_subtree_hashes = 4;
+}
+
+message GetLatestLedgerInfosPerEpochRequest {
+    /// The last epoch number with available information to the client.
+    uint64 start_epoch = 1;
+}
+
+message GetLatestLedgerInfosPerEpochResponse {
+    /// Vector of latest ledger infos per epoch (not sorted)
+    repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
 }
