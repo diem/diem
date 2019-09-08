@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
-
 use config::config::NodeConfig;
 use execution_proto::{CommitBlockRequest, ExecuteBlockRequest, ExecuteChunkRequest};
 use executor::Executor;

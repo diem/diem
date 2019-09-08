@@ -1,9 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// The nightly features that are commonly needed with async / await
-// Lets turn these on so that we can experiment a little bit
-#![feature(async_await)]
 // <Black magic>
 // Increase recursion limit to allow for use of select! macro.
 #![recursion_limit = "1024"]

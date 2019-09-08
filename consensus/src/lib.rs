@@ -8,7 +8,6 @@
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
-#![feature(async_await)]
 #![recursion_limit = "512"]
 extern crate failure;
 

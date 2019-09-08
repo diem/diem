@@ -195,5 +195,4 @@ mod tests {
             r#"{"event":"TestError","error":"Error","data":["SampleData { i: 255, s: [144, 205, 128] }","\"second_payload\""],"backtrace":null}"#,
         );
     }
-
 }

@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
-
 //! Standalone server for socket_muxer_bench
 //! ========================================
 //!
