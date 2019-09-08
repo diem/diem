@@ -140,6 +140,21 @@ impl StorageRead for MockStorageReadClient {
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
         unimplemented!()
     }
+
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        _start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+        unimplemented!()
+    }
+
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>
+    {
+        unimplemented!()
+    }
 }
 
 fn get_mock_update_to_latest_ledger(
