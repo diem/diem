@@ -134,13 +134,14 @@ struct Worker {
     db: Arc<DB>,
     command_receiver: Receiver<Command>,
     target_least_readable_version: Version,
-    /// (For tests) a way for the worker thread to inform the `Pruner` the pruning progress. If we
-    /// set this atomic value to `V`, all versions before `V` can no longer be accessed.
+    /// Keeps a record of the pruning progress. If this equals to version `V`, we know versions
+    /// smaller than `V` are no longer readable.
+    /// This being an atomic value is to communicate the info with the Pruner thread (for tests).
     least_readable_version: Arc<AtomicU64>,
-    /// indicates if there's NOT any pending work to do currently, to hint
+    /// Indicates if there's NOT any pending work to do currently, to hint
     /// `Self::receive_commands()` to `recv()` blocking-ly.
     blocking_recv: bool,
-    index_purged_till: Version,
+    index_min_nonpurged_version: Version,
     index_purged_at: Instant,
 }
 
@@ -158,7 +159,7 @@ impl Worker {
             least_readable_version,
             target_least_readable_version: 0,
             blocking_recv: true,
-            index_purged_till: 0,
+            index_min_nonpurged_version: 0,
             index_purged_at: Instant::now(),
         }
     }
@@ -255,12 +256,13 @@ impl Worker {
         if now - self.index_purged_at > MIN_INTERVAL {
             let least_readable_version = self.least_readable_version.load(Ordering::Relaxed);
 
-            if least_readable_version - self.index_purged_till > MIN_VERSIONS {
+            if least_readable_version - self.index_min_nonpurged_version + 1 > MIN_VERSIONS {
+                let new_min_non_purged_version = least_readable_version + 1;
                 self.db.range_delete::<StaleNodeIndexSchema, Version>(
-                    &self.index_purged_till,
-                    &(least_readable_version + 1), // end is exclusive
+                    &self.index_min_nonpurged_version,
+                    &new_min_non_purged_version, // end is exclusive
                 )?;
-                self.index_purged_till = least_readable_version;
+                self.index_min_nonpurged_version = new_min_non_purged_version;
                 self.index_purged_at = now;
             }
         }
