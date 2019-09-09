@@ -6,7 +6,7 @@ use rusoto_ecr::{
     PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
-use std::{env, fs, io::ErrorKind, thread, time::Duration};
+use std::{fs, io::ErrorKind, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct DeploymentManager {
@@ -60,16 +60,12 @@ impl DeploymentManager {
         Some(hash)
     }
 
-    pub fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
-        if env::var("ALLOW_DEPLOY") != Ok("yes".to_string()) {
-            println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
-            return Ok(false);
-        }
+    pub fn redeploy(&mut self, hash: String) -> failure::Result<()> {
         println!("Will deploy with digest {}", hash);
         self.tag_image(RUNNING_TAG.to_string(), hash)?;
         let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         self.update_all_services()?;
-        Ok(true)
+        Ok(())
     }
 
     fn update_all_services(&self) -> failure::Result<()> {
