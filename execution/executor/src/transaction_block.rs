@@ -1,12 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_tree::Block;
-use crypto::{
-    ed25519::*,
-    hash::{EventAccumulatorHasher, TransactionAccumulatorHasher},
-    HashValue,
-};
+use crate::{block_tree::Block, ExecutedTrees};
+use crypto::{ed25519::*, hash::EventAccumulatorHasher, HashValue};
 use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
@@ -166,23 +162,14 @@ impl TransactionBlock {
         }
     }
 
-    /// Returns a pointer to the Sparse Merkle Tree representing the state at the end of the block.
+    /// Returns a pointer to the executed trees representing the state at the end of the block.
     /// Should only be called when the block has finished execution and `set_output` has been
     /// called.
-    pub fn clone_state_tree(&self) -> Rc<SparseMerkleTree> {
+    pub fn executed_trees(&self) -> &ExecutedTrees {
         self.output
             .as_ref()
             .expect("The block has no output yet.")
-            .clone_state_tree()
-    }
-
-    /// Returns a pointer to the Merkle Accumulator representing the end of the block. Should only
-    /// be called when the block has finished execution and `set_output` has been called.
-    pub fn clone_transaction_accumulator(&self) -> Rc<Accumulator<TransactionAccumulatorHasher>> {
-        self.output
-            .as_ref()
-            .expect("The block has no output yet.")
-            .clone_transaction_accumulator()
+            .executed_trees()
     }
 }
 
@@ -335,26 +322,16 @@ pub struct ProcessedVMOutput {
     /// The entire set of data associated with each transaction.
     transaction_data: Vec<TransactionData>,
 
-    /// The in-memory Merkle Accumulator after appending new `TransactionInfo` objects.
-    transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
-
-    /// This is the same tree as the state tree in the last transaction's output. When we execute a
-    /// child block we will need this tree as it stores the output of all previous transactions. It
-    /// is only for convenience purpose so we do not need to deal with the special case of empty
-    /// block.
-    state_tree: Rc<SparseMerkleTree>,
+    /// The in-memory Merkle Accumulator and state Sparse Merkle Tree after appending all the
+    /// transactions in this set.
+    executed_trees: ExecutedTrees,
 }
 
 impl ProcessedVMOutput {
-    pub fn new(
-        transaction_data: Vec<TransactionData>,
-        transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
-        state_tree: Rc<SparseMerkleTree>,
-    ) -> Self {
+    pub fn new(transaction_data: Vec<TransactionData>, executed_trees: ExecutedTrees) -> Self {
         ProcessedVMOutput {
             transaction_data,
-            transaction_accumulator,
-            state_tree,
+            executed_trees,
         }
     }
 
@@ -362,11 +339,7 @@ impl ProcessedVMOutput {
         &self.transaction_data
     }
 
-    pub fn clone_transaction_accumulator(&self) -> Rc<Accumulator<TransactionAccumulatorHasher>> {
-        Rc::clone(&self.transaction_accumulator)
-    }
-
-    pub fn clone_state_tree(&self) -> Rc<SparseMerkleTree> {
-        Rc::clone(&self.state_tree)
+    pub fn executed_trees(&self) -> &ExecutedTrees {
+        &self.executed_trees
     }
 }
