@@ -100,10 +100,7 @@ impl StateStore {
 }
 
 impl TreeReader for StateStore {
-    fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
-        Ok(self
-            .db
-            .get::<JellyfishMerkleNodeSchema>(node_key)?
-            .ok_or_else(|| format_err!("Failed to find node with node_key {:?}", node_key))?)
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
+        Ok(self.db.get::<JellyfishMerkleNodeSchema>(node_key)?)
     }
 }
