@@ -88,10 +88,10 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    #[cfg(feature = "instruction_synthesis")]
+    #[cfg(any(test, feature = "instruction_synthesis"))]
     pub execution_stack: ExecutionStack<'alloc, 'txn, P>,
 
-    #[cfg(not(feature = "instruction_synthesis"))]
+    #[cfg(not(any(test, feature = "instruction_synthesis")))]
     execution_stack: ExecutionStack<'alloc, 'txn, P>,
     gas_meter: GasMeter,
     txn_data: TransactionMetadata,
