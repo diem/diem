@@ -332,14 +332,16 @@ pub fn prune_state(
     target_least_readable_version: Version,
     max_versions: usize,
 ) -> Result<Version> {
-    let index_by_version = StaleNodeIndicesByVersionIterator::new(
+    let indices = StaleNodeIndicesByVersionIterator::new(
         &db,
         least_readable_version,
         target_least_readable_version,
     )?
-    .take(max_versions)
-    .collect::<Result<Vec<_>>>()?;
-    let indices = index_by_version.into_iter().flatten().collect::<Vec<_>>();
+    .take(max_versions) // Iterator<Item = Result<Vec<StaleNodeIndex>>>
+    .collect::<Result<Vec<_>>>()? // now Vec<Vec<StaleNodeIndex>>
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
 
     if indices.is_empty() {
         Ok(least_readable_version)
