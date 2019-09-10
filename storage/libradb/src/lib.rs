@@ -424,7 +424,9 @@ impl LibraDB {
 
         // Transaction accumulator updates. Get result root hash.
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
-            .map(|(t, s, e)| TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used()))
+            .map(|(t, s, e)| {
+                TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used(), t.major_status())
+            })
             .collect::<Vec<_>>();
         assert_eq!(txn_infos.len(), txns_to_commit.len());
 

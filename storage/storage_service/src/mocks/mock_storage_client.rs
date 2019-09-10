@@ -37,6 +37,7 @@ use types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::Version,
     validator_change::ValidatorChangeEventWithProof,
+    vm_error::StatusCode,
 };
 
 /// This is a mock of the storage read client used in tests.
@@ -207,6 +208,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                         HashValue::zero(),
                         HashValue::zero(),
                         0,
+                        StatusCode::UNKNOWN_STATUS,
                     );
                     let transaction_info_to_account_proof = types::proof::SparseMerkleProof::new(None, vec![]);
                     types::proof::AccountStateProof::new(
@@ -285,5 +287,6 @@ fn get_transaction_info() -> types::transaction::TransactionInfo {
         HashValue::zero(),
         HashValue::zero(),
         0,
+        StatusCode::UNKNOWN_STATUS,
     )
 }
