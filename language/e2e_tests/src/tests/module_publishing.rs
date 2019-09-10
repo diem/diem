@@ -175,7 +175,7 @@ pub fn test_publishing_allow_modules() {
         }",
     );
 
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
+    let random_script = compile_program_with_address(sender.address(), &program, vec![]);
     let txn =
         sender
             .account()
@@ -208,7 +208,7 @@ pub fn test_publishing_with_error() {
         }",
     );
 
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
+    let random_script = compile_program_with_address(sender.address(), &program, vec![]);
     let txn1 =
         sender
             .account()
@@ -224,7 +224,7 @@ pub fn test_publishing_with_error() {
         }",
     );
 
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
+    let random_script = compile_program_with_address(sender.address(), &program, vec![]);
     let txn2 =
         sender
             .account()

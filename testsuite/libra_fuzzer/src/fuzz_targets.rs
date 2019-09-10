@@ -84,10 +84,7 @@ impl FuzzTarget {
     /// Get the current fuzz target from the environment.
     pub fn from_env() -> Result<Self> {
         let name = env::var(Self::ENV_VAR)?;
-        match Self::by_name(&name) {
-            Some(target) => Ok(target),
-            None => bail!("Unknown fuzz target '{}'", name),
-        }
+        Self::by_name(&name).ok_or_else(|| format_err!("Unknown fuzz target '{}'", name))
     }
 
     /// Get a fuzz target by name.

@@ -89,138 +89,123 @@ impl TableAccess for CompiledScriptMut {
     }
 
     fn get_module_at(&self, idx: ModuleHandleIndex) -> Result<&ModuleHandle> {
-        match self.module_handles.get(idx.0 as usize) {
-            None => bail!("bad module handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.module_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad module handle index {}", idx))
     }
 
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
-        match self.struct_handles.get(idx.0 as usize) {
-            None => bail!("bad struct handle index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.struct_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad struct handle index {}", idx))
     }
 
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle> {
-        match self.function_handles.get(idx.0 as usize) {
-            None => bail!("bad function handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.function_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad function handle index {}", idx))
     }
 
     fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
-        match self.identifiers.get(idx.0 as usize) {
-            None => bail!("bad string index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.identifiers
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad string index {}", idx))
     }
 
     fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
-        match self.user_strings.get(idx.0 as usize) {
-            None => bail!("bad user string index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.user_strings
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
-        match self.address_pool.get(idx.0 as usize) {
-            None => bail!("bad address index {}", idx),
-            Some(addr) => Ok(addr),
-        }
+        self.address_pool
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad address index {}", idx))
     }
 
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature> {
-        match self.type_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.type_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature> {
-        match self.function_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.function_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_locals_signature_at(&self, idx: LocalsSignatureIndex) -> Result<&LocalsSignature> {
-        match self.locals_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.locals_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 }
 
 impl TableAccess for CompiledModuleMut {
     fn get_field_def_at(&self, idx: FieldDefinitionIndex) -> Result<&FieldDefinition> {
-        match self.field_defs.get(idx.0 as usize) {
-            None => bail!("bad field definition index {}", idx),
-            Some(f) => Ok(f),
-        }
+        self.field_defs
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad field definition index {}", idx))
     }
 
     fn get_module_at(&self, idx: ModuleHandleIndex) -> Result<&ModuleHandle> {
-        match self.module_handles.get(idx.0 as usize) {
-            None => bail!("bad module handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.module_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad module handle index {}", idx))
     }
 
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
-        match self.struct_handles.get(idx.0 as usize) {
-            None => bail!("bad struct handle index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.struct_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad struct handle index {}", idx))
     }
 
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle> {
-        match self.function_handles.get(idx.0 as usize) {
-            None => bail!("bad function handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.function_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad function handle index {}", idx))
     }
 
     fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
-        match self.identifiers.get(idx.0 as usize) {
-            None => bail!("bad string index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.identifiers
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad string index {}", idx))
     }
 
     fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
-        match self.user_strings.get(idx.0 as usize) {
-            None => bail!("bad user string index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.user_strings
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
-        match self.address_pool.get(idx.0 as usize) {
-            None => bail!("bad address index {}", idx),
-            Some(addr) => Ok(addr),
-        }
+        self.address_pool
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad address index {}", idx))
     }
 
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature> {
-        match self.type_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.type_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature> {
-        match self.function_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.function_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_locals_signature_at(&self, idx: LocalsSignatureIndex) -> Result<&LocalsSignature> {
-        match self.locals_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.locals_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 }
 
@@ -343,10 +328,10 @@ impl fmt::Display for CompiledModule {
                     let f_start_idx = *fields;
                     let f_end_idx = f_start_idx.0 as u16 + *field_count;
                     for idx in f_start_idx.0 as u16..f_end_idx {
-                        let field_def = match inner.field_defs.get(idx as usize) {
-                            None => panic!("bad field definition index {}", idx),
-                            Some(f) => f,
-                        };
+                        let field_def = inner
+                            .field_defs
+                            .get(idx as usize)
+                            .expect(&format!("bad field definition index {}", idx)[..]);
                         write!(f, "\n\t\t")?;
                         display_field_definition(field_def, inner, f)?;
                     }

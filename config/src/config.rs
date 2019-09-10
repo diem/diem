@@ -802,13 +802,6 @@ impl VMPublishingOption {
         }
     }
 
-    pub fn is_locked(&self) -> bool {
-        match self {
-            VMPublishingOption::Locked { .. } => true,
-            _ => false,
-        }
-    }
-
     pub fn get_whitelist_set(&self) -> Option<&HashSet<[u8; SCRIPT_HASH_LENGTH]>> {
         match self {
             VMPublishingOption::Locked(whitelist) => Some(&whitelist),

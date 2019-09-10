@@ -441,7 +441,7 @@ fn test_non_existence() {
 #[test]
 fn test_put_blob_sets() {
     let mut keys = vec![];
-    let mut values = vec![];;
+    let mut values = vec![];
     let total_updates = 20;
     for _i in 0..total_updates {
         keys.push(HashValue::random());
