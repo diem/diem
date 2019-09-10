@@ -292,10 +292,8 @@ impl BoundsCheck for &LocalsSignature {
 impl SignatureToken {
     #[inline]
     fn check_bounds(&self, module: &CompiledModuleMut) -> Option<VMStatus> {
-        match self.struct_index() {
-            Some(sh_idx) => check_bounds_impl(&module.struct_handles, sh_idx),
-            None => None,
-        }
+        self.struct_index()
+            .and_then(|sh_idx| check_bounds_impl(&module.struct_handles, sh_idx))
     }
 }
 

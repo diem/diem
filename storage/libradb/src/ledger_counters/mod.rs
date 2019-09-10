@@ -89,6 +89,7 @@ impl LedgerCounterBumps {
     /// Get the current value of the bump of `counter`.
     ///
     /// Defaults to 0.
+    #[cfg(test)]
     pub fn get(&mut self, counter: LedgerCounter) -> usize {
         self.bumps.get(counter)
     }
