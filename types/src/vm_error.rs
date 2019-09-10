@@ -10,6 +10,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -209,7 +210,7 @@ impl IntoProto for VMStatus {
         proto_status.set_has_message(false);
 
         // Set major status
-        proto_status.set_major_status(self.major_status.into());
+        proto_status.set_major_status(self.major_status.into_proto());
 
         // Set minor status if there is one
         if let Some(sub_status) = self.sub_status {
@@ -231,10 +232,7 @@ impl FromProto for VMStatus {
     type ProtoType = crate::proto::vm_errors::VMStatus;
 
     fn from_proto(mut proto_status: Self::ProtoType) -> Result<Self> {
-        let mut status = match StatusCode::try_from(proto_status.get_major_status()) {
-            Ok(status) => VMStatus::new(status),
-            Err(_) => VMStatus::new(StatusCode::UNKNOWN_STATUS),
-        };
+        let mut status = VMStatus::new(StatusCode::from_proto(proto_status.get_major_status())?);
 
         if proto_status.get_has_sub_status() {
             status.set_sub_status(proto_status.get_sub_status());
@@ -248,9 +246,37 @@ impl FromProto for VMStatus {
     }
 }
 
+impl IntoProto for StatusCode {
+    type ProtoType = u64;
+    fn into_proto(self) -> Self::ProtoType {
+        self.into()
+    }
+}
+
+impl FromProto for StatusCode {
+    type ProtoType = u64;
+    fn from_proto(proto_code: Self::ProtoType) -> Result<Self> {
+        match StatusCode::try_from(proto_code) {
+            Ok(status) => Ok(status),
+            Err(_) => Ok(StatusCode::UNKNOWN_STATUS),
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
 #[derive(
-    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Serialize,
+    Deserialize,
 )]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is

@@ -22,6 +22,7 @@ use types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::SparseMerkleLeafNode,
     transaction::{Program, RawTransaction, TransactionInfo, TransactionToCommit},
+    vm_error::StatusCode,
 };
 
 fn gen_mock_genesis() -> (
@@ -58,6 +59,7 @@ fn gen_mock_genesis() -> (
         account_states.clone(),
         vec![], /* events */
         0,      /* gas_used */
+        StatusCode::EXECUTED,
     );
 
     // The genesis state tree has a single leaf node, so the root hash is the hash of that node.
@@ -67,6 +69,7 @@ fn gen_mock_genesis() -> (
         state_root_hash,
         *ACCUMULATOR_PLACEHOLDER_HASH,
         0,
+        StatusCode::EXECUTED,
     );
 
     let ledger_info = LedgerInfo::new(

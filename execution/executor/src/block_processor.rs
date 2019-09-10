@@ -368,6 +368,7 @@ where
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
+                txn_data.status().vm_status().major_status,
             ));
         }
 
@@ -500,6 +501,7 @@ where
                         txn_data.account_blobs().clone(),
                         txn_data.events().to_vec(),
                         txn_data.gas_used(),
+                        txn_data.status().vm_status().major_status,
                     ));
                     num_accounts_created += txn_data.num_account_created();
                 }
@@ -698,7 +700,7 @@ where
                 .append(vm_output.events().iter().map(CryptoHash::hash).collect());
 
             match vm_output.status() {
-                TransactionStatus::Keep(_) => {
+                TransactionStatus::Keep(status) => {
                     ensure!(
                         !vm_output.write_set().is_empty(),
                         "Transaction with empty write set should be discarded.",
@@ -710,6 +712,7 @@ where
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
+                        status.major_status,
                     );
                     txn_info_hashes.push(txn_info.hash());
                 }

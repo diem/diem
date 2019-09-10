@@ -15,6 +15,7 @@ use crate::{
     transaction::{
         Program, RawTransaction, SignedTransaction, TransactionInfo, TransactionListWithProof,
     },
+    vm_error::StatusCode,
 };
 use crypto::{
     ed25519::*,
@@ -279,6 +280,7 @@ fn test_verify_signed_transaction() {
         state_root1_hash,
         event_root1_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info1_hash = txn_info1.hash();
 
@@ -378,6 +380,7 @@ fn test_verify_account_state_and_event() {
         state_root_hash,
         event_root_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info2_hash = txn_info2.hash();
 
@@ -498,6 +501,7 @@ fn arb_signed_txn_list_and_range(
                         txn_info.state_root_hash(),
                         txn_info.event_root_hash(),
                         txn_info.gas_used(),
+                        txn_info.major_status(),
                     ),
                 )
             })

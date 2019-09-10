@@ -40,6 +40,7 @@ use types::{
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
+    vm_error::StatusCode,
 };
 use vm_genesis::{encode_transfer_program, GENESIS_KEYPAIR};
 
@@ -92,8 +93,13 @@ impl MockExecutorProxy {
             Some(program),
         );
 
-        let txn_info =
-            TransactionInfo::new(HashValue::zero(), HashValue::zero(), HashValue::zero(), 0);
+        let txn_info = TransactionInfo::new(
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            StatusCode::EXECUTED,
+        );
         let accumulator_proof = AccumulatorProof::new(vec![]);
         let txns = TransactionListWithProof::new(
             vec![(
