@@ -336,10 +336,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .map(|x| x.get_value())
             .into_option()
         {
+            let has_requested = self.peer_manager.has_requested(version, *peer_id);
             // node has received a response from peer, so remove peer entry from requests map
             self.peer_manager.process_response(version, *peer_id);
 
             if version != self.known_version + 1 {
+                // version was not requested, or version was requested from a different peer,
+                // so need to penalize peer for maliciously sending chunk
+                if has_requested {
+                    self.peer_manager
+                        .update_score(&peer_id, PeerScoreUpdateType::InvalidChunk)
+                }
                 return Err(format_err!(
                     "[state sync] non sequential chunk. Known version: {}, received: {}",
                     self.known_version,
