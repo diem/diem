@@ -46,9 +46,8 @@ impl AbstractValue {
 
     pub fn is_safe_to_destroy(&self) -> bool {
         match self {
-            AbstractValue::Reference(_)
-            | AbstractValue::Value(Kind::All, _)
-            | AbstractValue::Value(Kind::Resource, _) => false,
+            AbstractValue::Reference(_) => true,
+            AbstractValue::Value(Kind::All, _) | AbstractValue::Value(Kind::Resource, _) => false,
             AbstractValue::Value(Kind::Unrestricted, borrowed_nonces) => borrowed_nonces.is_empty(),
         }
     }

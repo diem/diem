@@ -1,0 +1,30 @@
+module M {
+    resource X {}
+    struct S { z: u64 }
+    t1() {
+        let x: Self.X;
+        let y: &Self.X;
+        x = X {};
+        y = &x;
+        x = X {};
+        _ = move(y);
+        X {} = move(x);
+        return;
+    }
+
+    t2() {
+        let s: Self.S;
+        let y: &Self.S;
+        let z: &u64;
+        s = S { z: 2 };
+        y = &s;
+        z = &move(y).z;
+        s = S { z: 7 };
+        return;
+    }
+
+}
+
+// check: VerificationFailure
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR
