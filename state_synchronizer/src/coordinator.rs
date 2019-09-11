@@ -335,6 +335,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .map(|x| x.get_value())
             .into_option()
         {
+            // node has received a response from peer, so remove peer entry from requests map
+            self.peer_manager.process_response(version, *peer_id);
+
             if version != self.known_version + 1 {
                 return Err(format_err!(
                     "[state sync] non sequential chunk. Known version: {}, received: {}",
@@ -354,8 +357,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if latest_version <= previous_version {
             self.peer_manager
                 .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
+        } else {
+            self.commit(latest_version).await;
         }
-        self.commit(latest_version).await;
 
         debug!(
             "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
@@ -402,6 +406,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // if coordinator didn't make progress by expected time, issue new request
             if let Some(tst) = expected_next_sync {
                 if SystemTime::now().duration_since(tst).is_ok() {
+                    self.peer_manager
+                        .process_timeout(self.known_version + 1, timeout);
                     self.request_next_chunk(0).await;
                 }
             }
@@ -414,6 +420,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 let mut req = GetChunkRequest::new();
                 req.set_known_version(self.known_version + offset);
                 req.set_limit(self.config.chunk_limit);
+                self.peer_manager
+                    .process_request(self.known_version + offset + 1, peer_id);
                 let timeout = match &self.target {
                     Some(target) => {
                         req.set_ledger_info_with_sigs(target.clone().into_proto());

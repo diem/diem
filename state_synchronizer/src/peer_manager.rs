@@ -8,7 +8,10 @@ use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    time::{Duration, SystemTime},
+};
 
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
@@ -34,11 +37,14 @@ impl PeerInfo {
 pub enum PeerScoreUpdateType {
     Success,
     InvalidChunk,
+    TimeOut,
 }
 
 pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
+    // Latest requested block versions from a peer
+    requests: HashMap<u64, (PeerId, SystemTime)>,
 }
 
 impl PeerManager {
@@ -50,6 +56,7 @@ impl PeerManager {
         Self {
             peers,
             network_senders: HashMap::new(),
+            requests: HashMap::new(),
         }
     }
 
@@ -101,6 +108,10 @@ impl PeerManager {
                     let new_score = peer_info.score * 0.8;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
+                PeerScoreUpdateType::TimeOut => {
+                    let new_score = peer_info.score * 0.95;
+                    peer_info.score = new_score.max(MIN_SCORE);
+                }
             }
         }
     }
@@ -119,10 +130,13 @@ impl PeerManager {
                 let mut rng = thread_rng();
                 let peer_id = *active_peers[weighted_index.sample(&mut rng)].0;
 
-                if let Some(sender) = self.get_network_sender(&peer_id) {
-                    return Some((peer_id, sender));
-                } else {
-                    debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                match self.get_network_sender(&peer_id) {
+                    Some(sender) => {
+                        return Some((peer_id, sender));
+                    }
+                    None => {
+                        debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                    }
                 }
             } else {
                 error!("[state sync] (pick_peer) invalid weighted index distribution");
@@ -135,11 +149,36 @@ impl PeerManager {
         self.peers
             .iter()
             .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)
-            .map(|(peer_id, peer_info)| (peer_id, peer_info))
             .collect()
     }
 
     pub fn get_network_sender(&self, peer_id: &PeerId) -> Option<StateSynchronizerSender> {
         self.network_senders.get(peer_id).cloned()
+    }
+
+    pub fn process_request(&mut self, version: u64, peer_id: PeerId) {
+        self.requests.insert(version, (peer_id, SystemTime::now()));
+    }
+
+    pub fn process_response(&mut self, version: u64, peer_id: PeerId) {
+        if let Some((id, _)) = self.requests.get(&version) {
+            if *id == peer_id {
+                self.requests.remove(&version);
+            }
+        }
+    }
+
+    pub fn process_timeout(&mut self, current_requested_version: u64, timeout: u64) {
+        let request = self.requests.get(&current_requested_version).cloned();
+        if let Some((peer_id, request_time)) = request {
+            if let Some(timeout_threshold) =
+                request_time.checked_add(Duration::from_millis(timeout))
+            {
+                if SystemTime::now().duration_since(timeout_threshold).is_ok() {
+                    self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
+                    self.requests.remove(&current_requested_version);
+                }
+            }
+        }
     }
 }
