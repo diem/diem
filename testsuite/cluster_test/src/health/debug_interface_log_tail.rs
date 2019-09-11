@@ -24,25 +24,35 @@ pub struct DebugPortLogThread {
     instance: Instance,
     client: NodeDebugInterfaceClient,
     event_sender: mpsc::Sender<ValidatorEvent>,
+    started_sender: Option<mpsc::Sender<()>>,
 }
 
 impl DebugPortLogThread {
     pub fn spawn_new(cluster: &Cluster) -> LogTail {
         let (event_sender, event_receiver) = mpsc::channel();
         let env = Arc::new(EnvBuilder::new().name_prefix("grpc-log-tail-").build());
+        let mut started_receivers = vec![];
         for instance in cluster.instances() {
             let ch =
                 ChannelBuilder::new(env.clone()).connect(&format!("{}:{}", instance.ip(), 6191));
+            let (started_sender, started_receiver) = mpsc::channel();
+            started_receivers.push(started_receiver);
             let client = NodeDebugInterfaceClient::new(ch);
             let debug_port_log_thread = DebugPortLogThread {
                 instance: instance.clone(),
                 client,
                 event_sender: event_sender.clone(),
+                started_sender: Some(started_sender),
             };
             thread::Builder::new()
                 .name(format!("log-tail-{}", instance.short_hash()))
                 .spawn(move || debug_port_log_thread.run())
                 .expect("Failed to spawn log tail thread");
+        }
+        for r in started_receivers {
+            if let Err(e) = r.recv() {
+                panic!("Failed to start one of debug port log threads: {:?}", e);
+            }
         }
         LogTail {
             event_receiver,
@@ -52,7 +62,7 @@ impl DebugPortLogThread {
 }
 
 impl DebugPortLogThread {
-    pub fn run(self) {
+    pub fn run(mut self) {
         let print_failures = env::var("VERBOSE").is_ok();
         loop {
             let opts = grpcio::CallOption::default().timeout(Duration::from_secs(5));
@@ -70,6 +80,11 @@ impl DebugPortLogThread {
                         }
                     }
                     thread::sleep(Duration::from_millis(200));
+                }
+            }
+            if let Some(started_sender) = self.started_sender.take() {
+                if let Err(e) = started_sender.send(()) {
+                    panic!("Failed to send to started_sender: {:?}", e);
                 }
             }
         }
