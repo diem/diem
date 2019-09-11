@@ -1,5 +1,5 @@
-//! account: alice 1000000
-//! account: bob 1000000
+//! account: alice,1000000
+//! account: bob,1000000
 
 //! new-transaction
 //! sender: alice

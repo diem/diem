@@ -209,7 +209,7 @@ where
                 channel_payload.write_set,
                 vec![],
                 0,
-                VMStatus::Execution(ExecutionStatus::Executed).into(),
+                VMStatus::new(StatusCode::EXECUTED).into(),
             )
         }
         TransactionPayload::ChannelScript(channel_payload) => {
@@ -230,15 +230,17 @@ where
             let (_, args) = channel_payload.script.into_inner();
             txn_executor.setup_main_args(args);
             let script_output = match txn_executor.execute_function_impl(main) {
-                Ok(Ok(_)) => txn_executor.transaction_cleanup(vec![]),
-                Ok(Err(err)) => {
-                    warn!("[VM] User error running script: {:?}", err);
-                    txn_executor.failed_transaction_cleanup(Ok(Err(err)))
-                }
-                Err(err) => {
-                    error!("[VM] VM error running script: {:?}", err);
-                    ExecutedTransaction::discard_error_output(&err)
-                }
+                Ok(_) => txn_executor.transaction_cleanup(vec![]),
+                Err(err) => match err.status_type() {
+                    StatusType::InvariantViolation => {
+                        error!("[VM] VM error running script: {:?}", err);
+                        ExecutedTransaction::discard_error_output(err)
+                    }
+                    _ => {
+                        warn!("[VM] User error running script: {:?}", err);
+                        txn_executor.failed_transaction_cleanup(Err(err))
+                    }
+                },
             };
             let merged_write_set = WriteSet::merge(&channel_payload.write_set, script_output.write_set());
             //TODO(jole) eliminate clone

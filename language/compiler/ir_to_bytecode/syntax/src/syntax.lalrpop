@@ -235,37 +235,37 @@ Builtin: Builtin = {
     "freeze" => Builtin::Freeze,
     "is_offchain" => Builtin::IsOffchain,
     "get_txn_receiver" => Builtin::GetTxnReceiver,
-    "exist_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "exist_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::ExistSenderChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::ExistSenderChannel(StructName::parse(name)?, type_actuals))
     },
-    "exist_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "exist_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::ExistReceiverChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::ExistReceiverChannel(StructName::parse(name)?, type_actuals))
     },
-    "borrow_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "borrow_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::BorrowSenderChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::BorrowSenderChannel(StructName::parse(name)?, type_actuals))
     },
-    "borrow_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "borrow_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::BorrowReceiverChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::BorrowReceiverChannel(StructName::parse(name)?, type_actuals))
     },
-    "move_from_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_from_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::MoveFromSenderChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::MoveFromSenderChannel(StructName::parse(name)?, type_actuals))
     },
-    "move_from_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_from_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::MoveFromReceiverChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::MoveFromReceiverChannel(StructName::parse(name)?, type_actuals))
     },
-    "move_to_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_to_sender_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::MoveToSenderChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::MoveToSenderChannel(StructName::parse(name)?, type_actuals))
     },
-    "move_to_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" => {
+    "move_to_receiver_channel<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? {
             let (name, type_actuals) = name_and_type_actuals;
-            Builtin::MoveToReceiverChannel(StructName::new(name), type_actuals)
+            Ok(Builtin::MoveToReceiverChannel(StructName::parse(name)?, type_actuals))
     },
     "is_channel_txn" => Builtin::IsChannelTxn,
 }

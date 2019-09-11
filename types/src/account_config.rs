@@ -60,8 +60,8 @@ pub fn association_address() -> AccountAddress {
 
 pub fn coin_struct_tag() -> StructTag {
     StructTag {
-        module: COIN_MODULE_NAME.to_string(),
-        name: COIN_STRUCT_NAME.to_string(),
+        module: coin_module_name().to_owned(),
+        name: coin_struct_name().to_owned(),
         address: core_code_address(),
         type_params: vec![],
     }

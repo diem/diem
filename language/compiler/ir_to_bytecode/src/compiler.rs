@@ -1239,7 +1239,7 @@ fn compile_call(
                     function_frame.pop()?;
                     function_frame.push()?;
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
@@ -1257,7 +1257,7 @@ fn compile_call(
                     function_frame.pop()?;
                     function_frame.push()?;
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
@@ -1275,7 +1275,7 @@ fn compile_call(
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
@@ -1291,7 +1291,7 @@ fn compile_call(
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,

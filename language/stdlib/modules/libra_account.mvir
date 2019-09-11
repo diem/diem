@@ -373,7 +373,7 @@ module LibraAccount {
         let receiver_account: &mut Self.T;
 
         assert(is_channel_txn(), 6);
-        receiver_account = borrow_global<T>(get_txn_receiver());
+        receiver_account = borrow_global_mut<T>(get_txn_receiver());
         if (*&copy(receiver_account).delegated_withdrawal_capability) {
             // The sender has delegated the privilege to withdraw from her account elsewhere--abort.
             abort(11);

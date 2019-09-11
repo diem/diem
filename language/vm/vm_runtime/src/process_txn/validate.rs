@@ -167,7 +167,7 @@ where
                 //channel write_set transaction only accept in onchain vm.
                 if vm_mode != VMMode::Onchain {
                     warn!("[VM] Attempt to process channel write set in Offchain VM");
-                    return Err(VMStatus::Validation(VMValidationStatus::RejectedWriteSet));
+                    return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
                 }
                 //TODO(jole) do more validate
                 None
@@ -185,7 +185,7 @@ where
                         // Verify against whitelist if we are locked. Otherwise allow.
                         if !is_allowed_script(&publishing_option, &channel_script.script.code()) {
                             warn!("[VM] Custom scripts not allowed: {:?}", &channel_script.script.code());
-                            return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
+                            return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
                         }
                         Ok(())
                     },

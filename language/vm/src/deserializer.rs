@@ -1291,7 +1291,7 @@ impl Opcodes {
             0x3F => Ok(Opcodes::MOVE_TO_SENDER_CHANNEL),
             0x40 => Ok(Opcodes::MOVE_TO_RECEIVER_CHANNEL),
             0x41 => Ok(Opcodes::IS_CHANNEL_TXN),
-            _ => Err(BinaryError::UnknownOpcode),
+            _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }
 }

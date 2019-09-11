@@ -8,7 +8,7 @@ use crate::{
 use proptest::prelude::*;
 use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
 use crate::account_config::{account_struct_tag, coin_struct_tag};
-use crate::access_path::DataPath;
+use crate::access_path::{DataPath, Accesses, Access};
 
 #[test]
 fn access_path_ord() {
@@ -95,4 +95,12 @@ fn test_access_path_for_a_special_address() {
     let access_path = AccessPath::channel_resource_access_path(account_address, account_address2, coin_struct_tag());
     println!("{:?}", access_path);
     assert_eq!(access_path.data_path().unwrap(), DataPath::channel_resource_path(account_address2, coin_struct_tag()))
+}
+
+#[test]
+fn test_accesses(){
+    let accesses = Accesses::new_with_access(vec![Access::new_with_index(1),Access::new_with_index(3),Access::new_with_index(5),Access::new_with_index(2)]);
+    let bytes = accesses.to_bytes();
+    let accesses2 = Accesses::from_separated_string(String::from_utf8(bytes).unwrap().as_str()).unwrap();
+    assert_eq!(accesses, accesses2);
 }

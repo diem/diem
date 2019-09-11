@@ -45,9 +45,7 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
+use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
 use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
@@ -60,7 +58,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Formatter},
     slice::Iter,
-    str::{self, FromStr},
 };
 use crate::account_config::account_struct_tag;
 use std::convert::TryFrom;
@@ -109,18 +106,6 @@ impl Access {
     }
 }
 
-impl FromStr for Access {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        if let Ok(idx) = s.parse::<u64>() {
-            Ok(Access::Index(idx))
-        } else {
-            Ok(Access::Field(Field::new(s)))
-        }
-    }
-}
-
 impl fmt::Display for Access {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -147,8 +132,20 @@ impl Accesses {
         Accesses(vec![Access::Field(field)])
     }
 
+    pub fn new_with_access(access:Vec<Access>) -> Self{
+        Accesses(access)
+    }
+
     pub fn new_with_index(idx: u64) -> Self{
         Accesses(vec![Access::Index(idx)])
+    }
+
+    pub fn from_separated_string(value: &str) -> Result<Self>{
+        let result:Result<Vec<Access>> = value.split(SEPARATOR).into_iter().filter(|s|!s.is_empty()).map(|access|match access.parse::<u64>(){
+            Ok(idx) => Ok(Access::Index(idx)),
+            Err(_) => Ok(Access::Field(Field::new(Identifier::new(access)?)))
+        }).collect();
+        Ok(Accesses(result?))
     }
 
     /// Add a field to the end of the sequence
@@ -217,7 +214,7 @@ impl Accesses {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.into()
+        self.as_separated_string().into_bytes()
     }
 }
 
@@ -232,26 +229,6 @@ impl<'a> IntoIterator for &'a Accesses {
 impl From<Vec<Access>> for Accesses {
     fn from(accesses: Vec<Access>) -> Accesses {
         Accesses(accesses)
-    }
-}
-
-impl From<Vec<u8>> for Accesses {
-    fn from(raw_bytes: Vec<u8>) -> Accesses {
-        let access_str = String::from_utf8(raw_bytes).unwrap();
-        let fields_str = access_str.split(SEPARATOR).collect::<Vec<&str>>();
-        let mut accesses = vec![];
-        for access_str in fields_str.into_iter() {
-            if access_str != "" {
-                accesses.push(Access::from_str(access_str).unwrap());
-            }
-        }
-        Accesses::from(accesses)
-    }
-}
-
-impl Into<Vec<u8>> for &Accesses {
-    fn into(self) -> Vec<u8> {
-        self.as_separated_string().into_bytes()
     }
 }
 

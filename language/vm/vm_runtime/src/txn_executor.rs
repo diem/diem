@@ -640,44 +640,44 @@ where
                 }
                 Bytecode::IsOffchain => {
                     let is_offchain = self.vm_mode.is_offchain();
-                    try_runtime!(self.execution_stack.push(Local::bool(is_offchain)));
+                    self.execution_stack.push(Local::bool(is_offchain))?;
                 }
                 Bytecode::GetTxnReceiverAddress => {
                     if let Some(receiver) = self.txn_data.receiver() {
-                        try_runtime!(self
+                        self
                         .execution_stack
-                        .push(Local::address(receiver)));
+                        .push(Local::address(receiver))?;
                     }else{
-                        return Err(VMInvariantViolation::LinkerError);
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::ExistSenderChannel(idx, _) => {
-                    try_runtime!(self.exist_in_channel(true, instruction, idx));
+                    self.exist_in_channel(true, instruction, idx)?;
                 }
                 Bytecode::ExistReceiverChannel(idx, _) => {
-                    try_runtime!(self.exist_in_channel(false, instruction, idx));
+                    self.exist_in_channel(false, instruction, idx)?;
                 }
                 Bytecode::BorrowSenderChannel(idx, _) => {
-                    try_runtime!(self.borrow_from_channel(true, instruction, idx));
+                    self.borrow_from_channel(true, instruction, idx)?;
                 }
                 Bytecode::BorrowReceiverChannel(idx, _) => {
-                    try_runtime!(self.borrow_from_channel(false, instruction, idx));
+                    self.borrow_from_channel(false, instruction, idx)?;
                 }
                 Bytecode::MoveFromSenderChannel(idx, _) => {
-                    try_runtime!(self.move_from_channel(true, instruction, idx));
+                    self.move_from_channel(true, instruction, idx)?;
                 }
                 Bytecode::MoveFromReceiverChannel(idx, _) => {
-                    try_runtime!(self.move_from_channel(false, instruction, idx));
+                    self.move_from_channel(false, instruction, idx)?;
                 }
                 Bytecode::MoveToSenderChannel(idx, _) => {
-                    try_runtime!(self.move_to_offchain(true, instruction, idx));
+                    self.move_to_channel(true, instruction, idx)?;
                 }
                 Bytecode::MoveToReceiverChannel(idx, _) => {
-                    try_runtime!(self.move_to_offchain(false, instruction, idx));
+                    self.move_to_channel(false, instruction, idx)?;
                 }
                 Bytecode::IsChannelTxn => {
                     let is_channel_txn = self.txn_data.is_channel_txn();
-                    try_runtime!(self.execution_stack.push(Local::bool(is_channel_txn)));
+                    self.execution_stack.push(Local::bool(is_channel_txn))?;
                 }
             }
             pc += 1;
@@ -699,120 +699,120 @@ where
             address = txn_data.sender;
             participant = match txn_data.receiver {
                 Some(p) => p,
-                None => return Err(VMInvariantViolation::LinkerError)
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
             };
         }else{
             participant = txn_data.sender;
             address = match txn_data.receiver {
                 Some(p) => p,
-                None => return Err(VMInvariantViolation::LinkerError)
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
             };
         }
-        Ok(Ok((address,participant)))
+        Ok((address,participant))
     }
 
     fn exist_in_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = try_runtime!(self
+        if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
         {
             let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
-            try_runtime!(self.gas_meter.calculate_and_consume(
+            self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
                             mem_size
-                        ));
-            try_runtime!(self.execution_stack.push(Local::bool(exists)));
+                        )?;
+            self.execution_stack.push(Local::bool(exists))?;
         } else {
-            return Err(VMInvariantViolation::LinkerError);
+            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
-        Ok(Ok(()))
+        Ok(())
     }
 
     fn borrow_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = try_runtime!(self
+        if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
         {
             let global_ref =
-                try_runtime!(self.data_view.borrow_global(&ap, struct_def));
-            try_runtime!(self.gas_meter.calculate_and_consume(
+                self.data_view.borrow_global(&ap, struct_def)?;
+            self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
                             global_ref.size()
-                        ));
-            try_runtime!(self.execution_stack.push(Local::GlobalRef(global_ref)));
+                        )?;
+            self.execution_stack.push(Local::GlobalRef(global_ref))?;
         } else {
-            return Err(VMInvariantViolation::LinkerError);
+            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
-        Ok(Ok(()))
+        Ok(())
     }
 
     fn move_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = try_runtime!(self
+        if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
         {
             let resource =
-                try_runtime!(self.data_view.move_resource_from(&ap, struct_def));
-            try_runtime!(self.gas_meter.calculate_and_consume(
+                self.data_view.move_resource_from(&ap, struct_def)?;
+            self.gas_meter.calculate_and_consume(
                             &instruction,
                             &self.execution_stack,
                             resource.size()
-                        ));
-            try_runtime!(self.execution_stack.push(resource));
+                        )?;
+            self.execution_stack.push(resource)?;
         } else {
-            return Err(VMInvariantViolation::LinkerError);
+            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
-        Ok(Ok(()))
+        Ok(())
     }
 
-    fn move_to_offchain(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+    fn move_to_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = try_runtime!(self
+        if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
         {
             let local = self.execution_stack.pop()?;
 
             if let Some(resource) = local.value() {
-                try_runtime!(self.gas_meter.calculate_and_consume(
+                self.gas_meter.calculate_and_consume(
                                 &instruction,
                                 &self.execution_stack,
                                 resource.size()
-                            ));
-                try_runtime!(self
+                            )?;
+                self
                                 .data_view
-                                .move_resource_to(&ap, struct_def, resource));
+                                .move_resource_to(&ap, struct_def, resource)?;
             } else {
-                return Ok(Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::TypeError,
-                }));
+                return Err(vm_error(
+                    self.execution_stack.location()?,
+                    StatusCode::TYPE_ERROR,
+                ));
             }
         } else {
-            return Err(VMInvariantViolation::LinkerError);
+            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
-        Ok(Ok(()))
+        Ok(())
     }
 
     /// Convert the transaction arguments into move values and push them to the top of the stack.
