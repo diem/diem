@@ -34,11 +34,13 @@ impl PeerInfo {
 pub enum PeerScoreUpdateType {
     Success,
     InvalidChunk,
+    TimeOut,
 }
 
 pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
+    last_requested_peer_id: Option<PeerId>,
 }
 
 impl PeerManager {
@@ -50,6 +52,7 @@ impl PeerManager {
         Self {
             peers,
             network_senders: HashMap::new(),
+            last_requested_peer_id: None,
         }
     }
 
@@ -101,6 +104,10 @@ impl PeerManager {
                     let new_score = peer_info.score * 0.8;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
+                PeerScoreUpdateType::TimeOut => {
+                    let new_score = peer_info.score * 0.95;
+                    peer_info.score = new_score.max(MIN_SCORE);
+                }
             }
         }
     }
@@ -119,10 +126,13 @@ impl PeerManager {
                 let mut rng = thread_rng();
                 let peer_id = *active_peers[weighted_index.sample(&mut rng)].0;
 
-                if let Some(sender) = self.get_network_sender(&peer_id) {
-                    return Some((peer_id, sender));
-                } else {
-                    debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                match self.get_network_sender(&peer_id) {
+                    Some(sender) => {
+                        return Some((peer_id, sender));
+                    }
+                    None => {
+                        debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                    }
                 }
             } else {
                 error!("[state sync] (pick_peer) invalid weighted index distribution");
@@ -135,11 +145,21 @@ impl PeerManager {
         self.peers
             .iter()
             .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)
-            .map(|(peer_id, peer_info)| (peer_id, peer_info))
             .collect()
     }
 
     pub fn get_network_sender(&self, peer_id: &PeerId) -> Option<StateSynchronizerSender> {
         self.network_senders.get(peer_id).cloned()
+    }
+
+    pub fn process_new_request(&mut self, peer_id: Option<PeerId>) {
+        self.last_requested_peer_id = peer_id;
+    }
+
+    pub fn process_timeout(&mut self) {
+        if let Some(peer_id) = self.last_requested_peer_id {
+            self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
+            self.process_new_request(None);
+        }
     }
 }

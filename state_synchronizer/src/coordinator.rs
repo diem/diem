@@ -147,10 +147,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                         }
                                     }
                                     if message.has_chunk_response() {
-                                        if let Err(err) = self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
-                                            error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
-                                        } else {
-                                            self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
+                                        match self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
+                                            Err(err) => {
+                                                error!("[state sync] failed to process chunk response: {:?}", err);
+                                            },
+                                            _ => {
+                                                self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success)
+                                            }
                                         }
                                     }
                                 }
@@ -317,6 +320,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer_id: &PeerId,
         mut response: GetChunkResponse,
     ) -> Result<()> {
+        // we have received a response from the peer we requested a chunk, so
+        // reset the last_requested_peer_id field to avoid race condition on next peer
+        // to receive request
+        self.peer_manager.process_new_request(None);
+
         let txn_list_with_proof = response.take_txn_list_with_proof();
 
         if let Some(version) = txn_list_with_proof
@@ -344,8 +352,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if latest_version <= previous_version {
             self.peer_manager
                 .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
+        } else {
+            self.commit(latest_version).await;
         }
-        self.commit(latest_version).await;
 
         debug!(
             "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
@@ -392,6 +401,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // if coordinator didn't make progress by expected time, issue new request
             if let Some(tst) = expected_next_sync {
                 if SystemTime::now().duration_since(tst).is_ok() {
+                    self.peer_manager.process_timeout();
                     self.request_next_chunk(0).await;
                 }
             }
@@ -404,6 +414,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 let mut req = GetChunkRequest::new();
                 req.set_known_version(self.known_version + offset);
                 req.set_limit(self.config.chunk_limit);
+                self.peer_manager.process_new_request(Some(peer_id));
                 let timeout = match &self.target {
                     Some(target) => {
                         req.set_ledger_info_with_sigs(target.clone().into_proto());
