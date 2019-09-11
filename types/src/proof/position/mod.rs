@@ -446,13 +446,13 @@ impl Iterator for FrozenSubtreeSiblingIterator {
     }
 }
 
-pub fn children_of_node(node: u64) -> u64 {
+fn children_of_node(node: u64) -> u64 {
     (isolate_rightmost_zero_bit(node) << 1) - 2
 }
 
 /// In a post-order tree traversal, how many nodes are traversed before `node`
 /// not including nodes that are children of `node`.
-pub fn nodes_to_left_of(node: u64) -> u64 {
+fn nodes_to_left_of(node: u64) -> u64 {
     // If node = 0b0100111, ones_up_to_level = 0b111
     let ones_up_to_level = isolate_rightmost_zero_bit(node) - 1;
     // Unset all the 1s due to the level
