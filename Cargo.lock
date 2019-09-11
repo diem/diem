@@ -649,6 +649,7 @@ dependencies = [
  "get_if_addrs 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "logger 0.1.0",
+ "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proto_conv 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
