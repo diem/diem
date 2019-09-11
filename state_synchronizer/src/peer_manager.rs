@@ -168,6 +168,13 @@ impl PeerManager {
         }
     }
 
+    pub fn has_requested(&self, version: u64, peer_id: PeerId) -> bool {
+        if let Some((id, _)) = self.requests.get(&version) {
+            return *id == peer_id;
+        }
+        false
+    }
+
     pub fn process_timeout(&mut self, current_requested_version: u64, timeout: u64) {
         let request = self.requests.get(&current_requested_version).cloned();
         if let Some((peer_id, request_time)) = request {
