@@ -190,6 +190,21 @@ where
         }
     }
 
+    // Returns true if the block corresponding to id1 can reach the block corresponding to id2 by
+    // recursively following its parent pointers.
+    fn reaches(&self, id1: HashValue, id2: HashValue) -> bool {
+        if id1 == id2 {
+            return true;
+        }
+        if id1 == self.root_id {
+            return false;
+        }
+        if let Some(b1) = self.id_to_block.get(&id1) {
+            return self.reaches(b1.parent_id(), id2);
+        }
+        false
+    }
+
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> Result<(), BlockTreeError> {
         let block_id = qc.certified_block_id();
         let qc = Arc::new(qc);
@@ -198,6 +213,8 @@ where
         // qc1 == qc2 || qc1.round != qc2.round
         // The invariant is quadratic but can be maintained in linear time by the check
         // below.
+        // TODO: Changing this to debug_checked_precondition causes the test case
+        // test_basic_state_synchronization to timeout.
         precondition!({
             let qc_round = qc.certified_block_round();
             self.id_to_quorum_cert.values().all(|x| {
@@ -205,6 +222,45 @@ where
                     == (*(*qc).ledger_info()).ledger_info().consensus_data_hash()
                     || x.certified_block_round() != qc_round
             })
+        });
+
+        // Safety invariant: For every qc: qc.round > highest_contiguous_2_chain_head.round + 2 ==>
+        // reaches(qc, highest_contiguous_2_chain_head)
+        // TODO: Changing this to debug_checked_precondition causes the test case
+        // basic_commit_and_restart to fail (reaches() returns false due to the condition
+        // id1 == self.root_id; NOTE: At the point of failure, self.root_id is not genesis due to
+        // block pruning).
+        precondition!({
+            if let Some(mut tmp_qc) = self.id_to_quorum_cert.get(&self.highest_certified_block_id) {
+                let mut tmp_qc_parent_exists = true;
+                while tmp_qc.grandparent_block_round() + 2 != tmp_qc.certified_block_round()
+                    && tmp_qc.certified_block_round() != 0
+                {
+                    if self
+                        .id_to_quorum_cert
+                        .get(&tmp_qc.parent_block_id())
+                        .is_none()
+                    {
+                        tmp_qc_parent_exists = false;
+                        break;
+                    }
+                    tmp_qc = self
+                        .id_to_quorum_cert
+                        .get(&tmp_qc.parent_block_id())
+                        .unwrap();
+                }
+                if !tmp_qc_parent_exists {
+                    false
+                } else if tmp_qc.grandparent_block_round() + 2 == tmp_qc.certified_block_round()
+                    && qc.certified_block_round() > tmp_qc.certified_block_round()
+                {
+                    self.reaches(qc.certified_block_id(), tmp_qc.grandparent_block_id())
+                } else {
+                    true
+                }
+            } else {
+                false
+            }
         });
 
         match self.try_get_block(&block_id) {
