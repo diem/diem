@@ -32,7 +32,6 @@
 use crate::{traits::*, HashValue};
 use core::convert::TryFrom;
 use crypto_derive::{SilentDebug, SilentDisplay};
-use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek;
 use failure::prelude::*;
 use serde::{de, export, ser};
@@ -44,6 +43,12 @@ pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
 pub const ED25519_PUBLIC_KEY_LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
 /// The length of the Ed25519Signature
 pub const ED25519_SIGNATURE_LENGTH: usize = ed25519_dalek::SIGNATURE_LENGTH;
+
+/// The order of ed25519 as defined in [RFC8032](https://tools.ietf.org/html/rfc8032).
+const L: [u8; 32] = [
+    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+];
 
 /// An Ed25519 private key
 #[derive(SilentDisplay, SilentDebug)]
@@ -129,14 +134,7 @@ impl Ed25519Signature {
         if bytes.len() != ED25519_SIGNATURE_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
         }
-
-        let mut s_bits: [u8; 32] = [0u8; 32];
-        s_bits.copy_from_slice(&bytes[32..]);
-
-        // Check if S is of canonical form to capture malleable signatures by invoking
-        // Scalar::from_canonical_bytes which returns None if the input is not in the range [0, L).
-        let s = Scalar::from_canonical_bytes(s_bits);
-        if s == None {
+        if !check_s_lt_l(&bytes[32..]) {
             return Err(CryptoMaterialError::CanonicalRepresentationError);
         }
         Ok(())
@@ -569,4 +567,17 @@ impl<'de> de::Deserialize<'de> for Ed25519Signature {
     {
         deserializer.deserialize_bytes(Ed25519SignatureVisitor {})
     }
+}
+
+/// Check if S < L to capture invalid signatures.
+fn check_s_lt_l(s: &[u8]) -> bool {
+    for i in (0..32).rev() {
+        if s[i] < L[i] {
+            return true;
+        } else if s[i] > L[i] {
+            return false;
+        }
+    }
+    // As this stage S == L which implies a non canonical S.
+    false
 }
