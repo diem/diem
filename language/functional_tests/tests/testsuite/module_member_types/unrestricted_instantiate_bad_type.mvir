@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: PackTypeMismatchError(1) }
+// check: VerificationFailure
+// check: PACK_TYPE_MISMATCH_ERROR
 
 module Test {
     struct T{fint: u64}

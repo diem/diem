@@ -6,8 +6,9 @@ use crate::{
     loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
 };
 use std::{fmt, marker::PhantomData, mem::replace};
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
-    errors::{Location, VMInvariantViolation, VMResult},
+    errors::{Location, VMResult},
     file_format::{Bytecode, CodeOffset, LocalIndex},
     IndexKind,
 };
@@ -46,20 +47,21 @@ where
         self.pc
     }
 
-    pub fn get_local(&self, idx: LocalIndex) -> Result<&Local, VMInvariantViolation> {
+    pub fn get_local(&self, idx: LocalIndex) -> VMResult<&Local> {
         bounded_fetch(&self.locals, idx as usize, IndexKind::LocalPool)
     }
 
-    pub fn invalidate_local(&mut self, idx: LocalIndex) -> Result<Local, VMInvariantViolation> {
+    pub fn invalidate_local(&mut self, idx: LocalIndex) -> VMResult<Local> {
         if let Some(local_ref) = self.locals.get_mut(idx as usize) {
             let old_local = replace(local_ref, Local::Invalid);
             Ok(old_local)
         } else {
-            Err(VMInvariantViolation::IndexOutOfBounds(
-                IndexKind::LocalPool,
-                idx as usize,
-                self.locals.len(),
-            ))
+            let msg = format!(
+                "Invalidated out of bounds position at {} > {} in the Local Pool",
+                idx,
+                self.locals.len()
+            );
+            Err(VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg))
         }
     }
 
@@ -69,13 +71,14 @@ where
         if let Some(local_ref) = self.locals.get_mut(idx as usize) {
             // What should we do if local already has some other values?
             *local_ref = local;
-            Ok(Ok(()))
+            Ok(())
         } else {
-            Err(VMInvariantViolation::IndexOutOfBounds(
-                IndexKind::LocalPool,
-                idx as usize,
-                self.locals.len(),
-            ))
+            let msg = format!(
+                "Invalidated out of bounds position at {} > {} in the Local Pool",
+                idx,
+                self.locals.len()
+            );
+            Err(VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg))
         }
     }
 

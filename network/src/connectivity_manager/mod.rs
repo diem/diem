@@ -324,6 +324,10 @@ where
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
             ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
+                trace!(
+                    "Received updated addresses for peer: {}",
+                    peer_id.short_str()
+                );
                 self.peer_addresses.insert(peer_id, addrs);
                 // Ensure that the next dial attempt starts from the first addr.
                 if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
@@ -331,6 +335,7 @@ where
                 }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {
+                trace!("Received updated list of eligible nodes",);
                 *self.eligible.write().unwrap() = nodes;
             }
             ConnectivityRequest::GetDialQueueSize(sender) => {

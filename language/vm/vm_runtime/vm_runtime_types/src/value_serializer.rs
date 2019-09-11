@@ -8,7 +8,7 @@ use crate::{
 use canonical_serialization::*;
 use failure::prelude::*;
 use std::convert::TryFrom;
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, vm_error::StatusCode};
 use vm::{errors::*, vm_string::VMString};
 
 impl Value {
@@ -18,7 +18,7 @@ impl Value {
     }
 
     /// Deserialize this value using `SimpleDeserializer` and a provided struct definition.
-    pub fn simple_deserialize(blob: &[u8], resource: StructDef) -> VMRuntimeResult<Value> {
+    pub fn simple_deserialize(blob: &[u8], resource: StructDef) -> VMResult<Value> {
         let mut deserializer = SimpleDeserializer::new(blob);
         deserialize_struct(&mut deserializer, &resource)
     }
@@ -27,7 +27,7 @@ impl Value {
 fn deserialize_struct(
     deserializer: &mut SimpleDeserializer,
     struct_def: &StructDef,
-) -> VMRuntimeResult<Value> {
+) -> VMResult<Value> {
     let mut s_vals: Vec<MutVal> = Vec::new();
     for field_type in struct_def.field_definitions() {
         match field_type {
@@ -35,20 +35,14 @@ fn deserialize_struct(
                 if let Ok(b) = deserializer.decode_bool() {
                     s_vals.push(MutVal::new(Value::Bool(b)));
                 } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
+                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
                 }
             }
             Type::U64 => {
                 if let Ok(val) = deserializer.decode_u64() {
                     s_vals.push(MutVal::new(Value::U64(val)));
                 } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
+                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
                 }
             }
             Type::String => {
@@ -58,20 +52,14 @@ fn deserialize_struct(
                         continue;
                     }
                 }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
+                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
             }
             Type::ByteArray => {
                 if let Ok(bytes) = deserializer.decode_bytes() {
                     s_vals.push(MutVal::new(Value::ByteArray(ByteArray::new(bytes))));
                     continue;
                 }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
+                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
             }
             Type::Address => {
                 if let Ok(bytes) = deserializer.decode_bytes() {
@@ -80,40 +68,23 @@ fn deserialize_struct(
                         continue;
                     }
                 }
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::DataFormatError,
-                });
+                return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
             }
             Type::Struct(s_fields) => {
                 if let Ok(s) = deserialize_struct(deserializer, s_fields) {
                     s_vals.push(MutVal::new(s));
                 } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::DataFormatError,
-                    });
+                    return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
                 }
             }
-            Type::Reference(_) => {
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                })
-            }
+            Type::Reference(_) => return Err(vm_error(Location::new(), StatusCode::INVALID_DATA)),
             Type::MutableReference(_) => {
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                })
+                return Err(vm_error(Location::new(), StatusCode::INVALID_DATA))
             }
             Type::TypeVariable(_) => {
                 // This case is not possible as we disallow calls like borrow_global<Foo<Coin>>()
                 // for now.
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::InvalidData,
-                });
+                return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
             }
         }
     }

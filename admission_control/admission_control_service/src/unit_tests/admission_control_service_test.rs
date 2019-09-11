@@ -19,7 +19,7 @@ use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
@@ -41,7 +41,8 @@ fn assert_status(response: ProtoSubmitTransactionResponse, status: VMStatus) {
         );
     } else {
         let decoded_response = rust_resp.vm_error.unwrap();
-        assert_eq!(decoded_response, status)
+        assert_eq!(decoded_response.major_status, status.major_status);
+        assert_eq!(decoded_response.sub_status, status.sub_status);
     }
 }
 
@@ -63,9 +64,7 @@ fn test_submit_txn_inner_vm() {
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(
         response,
-        VMStatus::Validation(VMValidationStatus::SendingAccountDoesNotExist(
-            "TEST".to_string(),
-        )),
+        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
     );
     let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -76,10 +75,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::InvalidSignature),
-    );
+    assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
     let sender = AccountAddress::new([2; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -91,7 +87,7 @@ fn test_submit_txn_inner_vm() {
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(
         response,
-        VMStatus::Validation(VMValidationStatus::InsufficientBalanceForTransactionFee),
+        VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
     );
     let sender = AccountAddress::new([3; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
@@ -102,10 +98,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::SequenceNumberTooNew),
-    );
+    assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_NEW));
     let sender = AccountAddress::new([4; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -115,10 +108,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld),
-    );
+    assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD));
     let sender = AccountAddress::new([5; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -128,10 +118,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::TransactionExpired),
-    );
+    assert_status(response, VMStatus::new(StatusCode::TRANSACTION_EXPIRED));
     let sender = AccountAddress::new([6; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -141,10 +128,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::InvalidAuthKey),
-    );
+    assert_status(response, VMStatus::new(StatusCode::INVALID_AUTH_KEY));
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     req.set_signed_txn(get_test_signed_txn(
         sender,
@@ -154,7 +138,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(response, VMStatus::Execution(ExecutionStatus::Executed));
+    assert_status(response, VMStatus::new(StatusCode::EXECUTED));
 
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = compat::generate_keypair(&mut rng);
@@ -166,10 +150,7 @@ fn test_submit_txn_inner_vm() {
         None,
     ));
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
-    assert_status(
-        response,
-        VMStatus::Validation(VMValidationStatus::InvalidSignature),
-    );
+    assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
 }
 
 #[test]

@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package types;
 
+import "validator_set.proto";
+
 /// Even though we don't always need all hashes, we pass them in and return them
 /// always so that we keep them in sync on the client and don't make the client
 /// worry about which one(s) to pass in which cases
@@ -60,6 +62,10 @@ message LedgerInfo {
   // they can be certain that their transaction will never be included in a block in the future
   // (assuming that their transaction has not yet been included)
   uint64 timestamp_usecs = 6;
+
+  // An optional field with the validator set for the next epoch in case it's the last
+  // ledger info in the current epoch.
+  ValidatorSet next_validator_set = 7;
 }
 
 /// The validator node returns this structure which includes signatures

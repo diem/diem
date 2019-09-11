@@ -22,12 +22,9 @@ use types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
     },
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::StatusCode,
 };
-use vm::{
-    errors::VerificationStatus,
-    file_format::{CompiledModule, CompiledScript},
-};
+use vm::file_format::{CompiledModule, CompiledScript};
 use types::account_address::AccountAddress;
 use types::transaction::ChannelScriptPayload;
 use types::write_set::WriteSet;
@@ -117,24 +114,11 @@ impl EvaluationResult {
 fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<VerifiedScript> {
     let verified_script = match VerifiedScript::new(script) {
         Ok(verified_script) => verified_script,
-        Err((_, errs)) => {
-            return Err(ErrorKind::VerificationFailure(
-                errs.into_iter()
-                    .map(VerificationStatus::Script)
-                    .collect::<Vec<_>>(),
-            )
-            .into())
-        }
+        Err((_, errs)) => return Err(ErrorKind::VerificationFailure(errs).into()),
     };
     let errs = verify_script_dependencies(&verified_script, deps);
     if !errs.is_empty() {
-        return Err(ErrorKind::VerificationFailure(
-            errs.into_iter()
-                // TODO: should this be VerificationStatus::Dependency?
-                .map(VerificationStatus::Script)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+        return Err(ErrorKind::VerificationFailure(errs).into());
     }
     Ok(verified_script)
 }
@@ -143,24 +127,11 @@ fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<V
 fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<VerifiedModule> {
     let verified_module = match VerifiedModule::new(module) {
         Ok(verified_module) => verified_module,
-        Err((_, errs)) => {
-            return Err(ErrorKind::VerificationFailure(
-                errs.into_iter()
-                    .map(VerificationStatus::Script)
-                    .collect::<Vec<_>>(),
-            )
-            .into())
-        }
+        Err((_, errs)) => return Err(ErrorKind::VerificationFailure(errs).into()),
     };
     let errs = verify_module_dependencies(&verified_module, deps);
     if !errs.is_empty() {
-        return Err(ErrorKind::VerificationFailure(
-            errs.into_iter()
-                // TODO: should this be VerificationStatus::Dependency?
-                .map(VerificationStatus::Script)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+        return Err(ErrorKind::VerificationFailure(errs).into());
     }
     Ok(verified_module)
 }
@@ -236,7 +207,9 @@ fn run_transaction(
     if outputs.len() == 1 {
         let output = outputs.pop().unwrap();
         match output.status() {
-            TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)) => Ok(output),
+            TransactionStatus::Keep(status) if status.major_status == StatusCode::EXECUTED => {
+                Ok(output)
+            }
             TransactionStatus::Keep(_) => Err(ErrorKind::VMExecutionFailure(output).into()),
             TransactionStatus::Discard(_) => Err(ErrorKind::DiscardedTransaction(output).into()),
         }

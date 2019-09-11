@@ -7,7 +7,7 @@ use crypto::{
     HashValue,
 };
 use proptest::prelude::*;
-use std::panic;
+use std::{panic, rc::Rc};
 use types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
@@ -666,6 +666,182 @@ fn test_internal_hash_and_proof() {
                 internal_node.get_child_with_siblings(&internal_node_key, i.into()),
                 (None, vec![hash_x5])
             );
+        }
+    }
+}
+
+enum BinaryTreeNode {
+    Internal(BinaryTreeInternalNode),
+    Child(BinaryTreeChildNode),
+    Null,
+}
+
+impl BinaryTreeNode {
+    fn new_child(index: u8, child: &Child) -> Self {
+        Self::Child(BinaryTreeChildNode {
+            index,
+            version: child.version,
+            hash: child.hash,
+            is_leaf: child.is_leaf,
+        })
+    }
+
+    fn new_internal(
+        first_child_index: u8,
+        num_children: u8,
+        left: BinaryTreeNode,
+        right: BinaryTreeNode,
+    ) -> Self {
+        let hash = SparseMerkleInternalNode::new(left.hash(), right.hash()).hash();
+
+        Self::Internal(BinaryTreeInternalNode {
+            begin: first_child_index,
+            width: num_children,
+            left: Rc::new(left),
+            right: Rc::new(right),
+            hash,
+        })
+    }
+
+    fn hash(&self) -> HashValue {
+        match self {
+            BinaryTreeNode::Internal(node) => node.hash,
+            BinaryTreeNode::Child(node) => node.hash,
+            BinaryTreeNode::Null => *SPARSE_MERKLE_PLACEHOLDER_HASH,
+        }
+    }
+}
+
+/// An internal node in a binary tree corresponding to a `InternalNode` being tested.
+///
+/// To describe its position in the binary tree, we use a range of level 0 (children level)
+/// positions expressed by (`begin`, `width`)
+///
+/// For example, in the below graph, node A has (begin:0, width:4), while node B has
+/// (begin:2, width: 2):
+///            ...
+///         /
+///       [A]    ...
+///     /    \
+///    * [B]   ...
+///   / \    / \
+///  0   1  2   3    ... 15
+struct BinaryTreeInternalNode {
+    begin: u8,
+    width: u8,
+    left: Rc<BinaryTreeNode>,
+    right: Rc<BinaryTreeNode>,
+    hash: HashValue,
+}
+
+impl BinaryTreeInternalNode {
+    fn in_left_subtree(&self, n: u8) -> bool {
+        assert!(n >= self.begin);
+        assert!(n < self.begin + self.width);
+
+        n < self.begin + self.width / 2
+    }
+}
+
+/// A child node, corresponding to one that is in the corresponding `InternalNode` being tested.
+///
+/// `index` is its key in `InternalNode::children`.
+/// N.B. when `is_leaf` is true, in the binary tree represented by a `NaiveInternalNode`, the child
+/// node will be brought up to the root of the highest subtree that has only that leaf.
+#[derive(Clone, Copy)]
+struct BinaryTreeChildNode {
+    version: Version,
+    index: u8,
+    hash: HashValue,
+    is_leaf: bool,
+}
+
+struct NaiveInternalNode {
+    root: Rc<BinaryTreeNode>,
+}
+
+impl NaiveInternalNode {
+    fn from_clever_node(node: &InternalNode) -> Self {
+        Self {
+            root: Rc::new(Self::node_for_subtree(0, 16, &node.children)),
+        }
+    }
+
+    fn node_for_subtree(begin: u8, width: u8, children: &Children) -> BinaryTreeNode {
+        if width == 1 {
+            return children
+                .get(&begin.into())
+                .map_or(BinaryTreeNode::Null, |child| {
+                    BinaryTreeNode::new_child(begin, &child)
+                });
+        }
+
+        let half_width = width / 2;
+        let left = Self::node_for_subtree(begin, half_width, children);
+        let right = Self::node_for_subtree(begin + half_width, half_width, children);
+
+        match (&left, &right) {
+            (BinaryTreeNode::Null, BinaryTreeNode::Null) => {
+                return BinaryTreeNode::Null;
+            }
+            (BinaryTreeNode::Null, BinaryTreeNode::Child(node))
+            | (BinaryTreeNode::Child(node), BinaryTreeNode::Null) => {
+                if node.is_leaf {
+                    return BinaryTreeNode::Child(*node);
+                }
+            }
+            _ => (),
+        };
+
+        BinaryTreeNode::new_internal(begin, width, left, right)
+    }
+
+    fn get_child_with_siblings(
+        &self,
+        node_key: &NodeKey,
+        n: u8,
+    ) -> (Option<NodeKey>, Vec<HashValue>) {
+        let mut current_node = Rc::clone(&self.root);
+        let mut siblings = Vec::new();
+
+        loop {
+            match current_node.as_ref() {
+                BinaryTreeNode::Internal(node) => {
+                    if node.in_left_subtree(n) {
+                        siblings.push(node.right.hash());
+                        current_node = Rc::clone(&node.left);
+                    } else {
+                        siblings.push(node.left.hash());
+                        current_node = Rc::clone(&node.right);
+                    }
+                }
+                BinaryTreeNode::Child(node) => {
+                    return (
+                        Some(node_key.gen_child_node_key(node.version, node.index.into())),
+                        siblings,
+                    )
+                }
+                BinaryTreeNode::Null => return (None, siblings),
+            }
+        }
+    }
+}
+
+proptest! {
+    #[test]
+    #[allow(clippy::unnecessary_operation)]
+    fn test_get_child_with_siblings(
+        node_key in any::<NodeKey>().prop_filter(
+            "Filter out keys for leaves.",
+            |k| k.nibble_path().num_nibbles() < 64
+        ).no_shrink(),
+        node in any::<InternalNode>(),
+    ) {
+        for n in 0..16u8 {
+            prop_assert_eq!(
+                node.get_child_with_siblings(&node_key, n.into()),
+                NaiveInternalNode::from_clever_node(&node).get_child_with_siblings(&node_key, n)
+            )
         }
     }
 }

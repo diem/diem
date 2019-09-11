@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefTypeMismatchError(5) }
+// check: VerificationFailure
+// check: WRITEREF_TYPE_MISMATCH_ERROR
 
 module Test {
     struct T{fr: bool}

@@ -23,8 +23,8 @@ use std::{
     u64,
 };
 use structopt::StructOpt;
+use types::vm_error::StatusCode;
 use vm::{
-    errors::VMErrorKind,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
@@ -73,7 +73,8 @@ fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<Gas
     match instr {
         Bytecode::MoveToSender(_, _)
         | Bytecode::Exists(_, _)
-        | Bytecode::BorrowGlobal(_, _)
+        | Bytecode::MutBorrowGlobal(_, _)
+        | Bytecode::ImmBorrowGlobal(_, _)
         | Bytecode::Eq
         | Bytecode::Neq
         | Bytecode::LdStr(_)
@@ -99,7 +100,8 @@ fn stack_instructions(options: &Opt) {
         FreezeRef,
         MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
-        BorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+        ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         MutBorrowField(FieldDefinitionIndex::new(0)),
         ImmBorrowField(FieldDefinitionIndex::new(0)),
@@ -180,15 +182,15 @@ fn stack_instructions(options: &Opt) {
                     // Check to make sure we didn't error. Need to special case the abort bytecode.
                     if instruction != Bytecode::Abort {
                         // We want any errors here to bubble up to us with the actual VM error.
-                        ignore.unwrap().unwrap();
+                        ignore.unwrap();
                     } else {
                         // In the case of the Abort bytecode we want to only make sure that we
                         // don't have a VMInvariantViolation error, and then make sure that the any
                         // error generated was an abort failure.
-                        match ignore.unwrap() {
+                        match ignore {
                             Ok(_) => (),
-                            Err(err) => match err.err {
-                                VMErrorKind::Aborted(_) => (),
+                            Err(err) => match err.major_status {
+                                StatusCode::ABORTED => (),
                                 _ => panic!("Abort bytecode failed"),
                             },
                         }
@@ -226,18 +228,6 @@ macro_rules! bench_native {
 
 fn natives(options: &Opt) {
     let mut cost_table = HashMap::new();
-    bench_native!(
-        "keccak_256".to_string(),
-        hash::native_keccak_256,
-        cost_table,
-        options.num_iters
-    );
-    bench_native!(
-        "ripemd_160".to_string(),
-        hash::native_ripemd_160,
-        cost_table,
-        options.num_iters
-    );
     bench_native!(
         "native_sha2_256".to_string(),
         hash::native_sha2_256,

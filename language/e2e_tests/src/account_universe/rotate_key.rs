@@ -13,7 +13,7 @@ use proptest_helpers::Index;
 use types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Represents a rotate-key transaction performed in the account universe.
@@ -40,10 +40,10 @@ impl AUTransactionGen for RotateKeyGen {
             let (privkey, pubkey) = (self.new_key.0.clone(), self.new_key.1.clone());
             sender.rotate_key(privkey, pubkey);
 
-            TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+            TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         } else {
-            TransactionStatus::Discard(VMStatus::Validation(
-                VMValidationStatus::InsufficientBalanceForTransactionFee,
+            TransactionStatus::Discard(VMStatus::new(
+                StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
             ))
         };
 

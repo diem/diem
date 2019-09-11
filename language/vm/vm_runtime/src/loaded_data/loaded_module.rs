@@ -5,9 +5,13 @@
 use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
 use std::{collections::HashMap, sync::RwLock};
+use types::{
+    identifier::Identifier,
+    vm_error::{StatusCode, VMStatus},
+};
 use vm::{
     access::ModuleAccess,
-    errors::VMInvariantViolation,
+    errors::VMResult,
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionDefinitionIndex, StructDefinitionIndex,
         StructFieldInformation, TableIndex,
@@ -22,11 +26,11 @@ use vm_runtime_types::loaded_data::struct_def::StructDef;
 pub struct LoadedModule {
     module: VerifiedModule,
     #[allow(dead_code)]
-    pub struct_defs_table: HashMap<String, StructDefinitionIndex>,
+    pub struct_defs_table: HashMap<Identifier, StructDefinitionIndex>,
     #[allow(dead_code)]
-    pub field_defs_table: HashMap<String, FieldDefinitionIndex>,
+    pub field_defs_table: HashMap<Identifier, FieldDefinitionIndex>,
 
-    pub function_defs_table: HashMap<String, FunctionDefinitionIndex>,
+    pub function_defs_table: HashMap<Identifier, FunctionDefinitionIndex>,
 
     pub function_defs: Vec<FunctionDef>,
 
@@ -75,8 +79,8 @@ impl LoadedModule {
 
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let name = module
-                .string_at(module.struct_handle_at(struct_def.struct_handle).name)
-                .to_string();
+                .identifier_at(module.struct_handle_at(struct_def.struct_handle).name)
+                .into();
             let sd_idx = StructDefinitionIndex::new(idx as TableIndex);
             struct_defs_table.insert(name, sd_idx);
 
@@ -94,15 +98,15 @@ impl LoadedModule {
             }
         }
         for (idx, field_def) in module.field_defs().iter().enumerate() {
-            let name = module.string_at(field_def.name).to_string();
+            let name = module.identifier_at(field_def.name).into();
             let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
             field_defs_table.insert(name, fd_idx);
         }
 
         for (idx, function_def) in module.function_defs().iter().enumerate() {
             let name = module
-                .string_at(module.function_handle_at(function_def.function).name)
-                .to_string();
+                .identifier_at(module.function_handle_at(function_def.function).name)
+                .into();
             let fd_idx = FunctionDefinitionIndex::new(idx as TableIndex);
             function_defs_table.insert(name, fd_idx);
             // `function_defs` is initally empty, a single element is pushed per loop iteration and
@@ -141,14 +145,11 @@ impl LoadedModule {
         cached.replace(def);
     }
 
-    pub fn get_field_offset(
-        &self,
-        idx: FieldDefinitionIndex,
-    ) -> Result<TableIndex, VMInvariantViolation> {
+    pub fn get_field_offset(&self, idx: FieldDefinitionIndex) -> VMResult<TableIndex> {
         self.field_offsets
             .get(idx.into_index())
             .cloned()
-            .ok_or(VMInvariantViolation::LinkerError)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
     }
 }
 

@@ -26,6 +26,7 @@ use crypto::{
 use failure::{Fail, Result, *};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
+use proptest::{collection::hash_map, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -115,7 +116,7 @@ impl NodeKey {
 }
 
 /// Each child of [`InternalNode`] encapsulates a nibble forking at this node.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Child {
     // The hash value of this child node.
     pub hash: HashValue,
@@ -269,11 +270,28 @@ impl From<LeafNode> for Node {
     }
 }
 
+impl Arbitrary for InternalNode {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        hash_map(any::<Nibble>(), any::<Child>(), 1..=16)
+            .prop_filter(
+                "InternalNode constructor panics when its only child is a leaf.",
+                |children| {
+                    !(children.len() == 1 && children.values().next().expect("Must exist.").is_leaf)
+                },
+            )
+            .prop_map(InternalNode::new)
+            .boxed()
+    }
+}
+
 impl InternalNode {
     /// Creates a new Internal node.
     pub fn new(children: Children) -> Self {
-        // Assert the internal node must have >= 1 children. If it only has one chlid, it cannot be
-        // a leaf node. Otherwise the leaf node should be a child of this internal node's parent.
+        // Assert the internal node must have >= 1 children. If it only has one child, it cannot be
+        // a leaf node. Otherwise, the leaf node should be a child of this internal node's parent.
         assert!(!children.is_empty());
         if children.len() == 1 {
             assert!(

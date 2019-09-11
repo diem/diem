@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This crate contains two types of derive macros:
+//! This crate contains three types of derive macros:
 //! - the `SilentDebug` and SilentDisplay macros are meant to be used on private key types, and
 //!   elide their input for confidentiality.
+//! - the `Deref` macro helps derive the canonical instances on new types.
 //! - the derive macros for `crypto::traits`, namely `ValidKey`, `PublicKey`, `PrivateKey`,
 //!   `VerifyingKey`, `SigningKey` and `Signature` are meant to be derived on simple unions of types
 //!   implementing these traits.
@@ -86,7 +87,7 @@ use syn::{parse_macro_input, Data, DataEnum, DeriveInput, Ident};
 
 #[proc_macro_derive(SilentDisplay)]
 pub fn silent_display(source: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(source).expect("Infallible");
+    let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
     let name = &ast.ident;
     let gen = quote! {
         // In order to ensure that secrets are never leaked, Display is elided
@@ -101,7 +102,7 @@ pub fn silent_display(source: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(SilentDebug)]
 pub fn silent_debug(source: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(source).expect("Infallible");
+    let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
     let name = &ast.ident;
     let gen = quote! {
         // In order to ensure that secrets are never leaked, Debug is elided
@@ -112,6 +113,54 @@ pub fn silent_debug(source: TokenStream) -> TokenStream {
         }
     };
     gen.into()
+}
+
+fn parse_newtype_fields(item: &syn::DeriveInput) -> (syn::Type, proc_macro2::TokenStream) {
+    let fields = match item.data {
+        syn::Data::Struct(ref body) => body.fields.iter().collect::<Vec<&syn::Field>>(),
+        _ => panic!("#[derive(Deref)] can only be used on structs"),
+    };
+
+    let field_ty = match fields.len() {
+        1 => Some(fields[0].ty.clone()),
+        _ => None,
+    };
+    let field_ty = field_ty
+        .unwrap_or_else(|| panic!("#[derive(Deref)] can only be used on structs with one field."));
+
+    let field_name = match fields[0].ident {
+        Some(ref ident) => quote!(#ident),
+        None => quote!(0),
+    };
+
+    match field_ty {
+        syn::Type::Reference(syn::TypeReference { elem, .. }) => {
+            (*elem.clone(), quote!(self.#field_name))
+        }
+        x => (x, quote!(&self.#field_name)),
+    }
+}
+
+#[proc_macro_derive(Deref)]
+pub fn derive_deref(input: TokenStream) -> TokenStream {
+    let item = syn::parse(input).expect("Incorrect macro input");
+    let (field_ty, field_access) = parse_newtype_fields(&item);
+
+    let name = &item.ident;
+    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
+
+    quote!(
+        impl #impl_generics ::std::ops::Deref for #name #ty_generics
+        #where_clause
+        {
+            type Target = #field_ty;
+
+            fn deref(&self) -> &Self::Target {
+                #field_access
+            }
+        }
+    )
+    .into()
 }
 
 #[proc_macro_derive(ValidKey)]

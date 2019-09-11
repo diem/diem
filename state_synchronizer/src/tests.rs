@@ -69,6 +69,7 @@ impl MockExecutorProxy {
             HashValue::zero(),
             0,
             0,
+            None,
         );
         let mut signatures = HashMap::new();
         let private_key = Ed25519PrivateKey::genesis();
@@ -231,19 +232,22 @@ impl SynchronizerEnv {
 
         // create synchronizers
         let mut config = get_test_config().0;
+        // TODO: If node is a full node, set correct config.
         if role == RoleType::FullNode {
-            config.network.role = "full_node".to_string();
+            config.networks.get_mut(0).unwrap().role = "full_node".to_string();
+        } else {
+            config.networks.get_mut(0).unwrap().role = "validator".to_string();
         }
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
-                &config,
+                &config.state_sync,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
                 vec![peers[1]],
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
-                &get_test_config().0,
+                &get_test_config().0.state_sync,
                 MockExecutorProxy::new(peers[1], handler),
                 vec![],
             ),

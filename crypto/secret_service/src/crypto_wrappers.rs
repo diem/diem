@@ -10,22 +10,13 @@ use crypto::{
     hash::HashValue,
 };
 use crypto_derive::{
-    PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
+    Deref, PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
 };
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
 
 /// KeyID value is a handler to the secret key and a simple wrapper around the hash value.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Deref, PartialEq, Eq, Hash)]
 pub struct KeyID(pub HashValue);
-
-impl Deref for KeyID {
-    type Target = HashValue;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 ///////////////////////////////////////////////////////////////////
 // Declarations pulled from crypto/src/unit_tests/cross_test.rs  //

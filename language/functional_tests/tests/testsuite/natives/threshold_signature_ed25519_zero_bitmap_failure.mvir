@@ -24,4 +24,5 @@ main() {
     return;
 }
 
-// check: Aborted(248665373)
+// check: ABORTED
+// check: 248665373

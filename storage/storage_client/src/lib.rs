@@ -22,6 +22,7 @@ use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::{storage::GetStartupInfoRequest, storage_grpc},
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
     GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
     SaveTransactionsRequest, StartupInfo,
 };
@@ -218,6 +219,30 @@ impl StorageRead for StorageReadServiceClient {
             })
             .boxed()
     }
+
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+        block_on(self.get_latest_ledger_infos_per_epoch_async(start_epoch))
+    }
+
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>
+    {
+        let proto_req = GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
+        convert_grpc_response(
+            self.client()
+                .get_latest_ledger_infos_per_epoch_async(&log_and_convert(proto_req)),
+        )
+        .map(|resp| {
+            let resp = GetLatestLedgerInfosPerEpochResponse::from_proto(resp?)?;
+            Ok(resp.into())
+        })
+        .boxed()
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -362,6 +387,24 @@ pub trait StorageRead: Send + Sync {
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>>;
+
+    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    ///
+    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>;
+
+    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    ///
+    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

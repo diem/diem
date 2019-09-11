@@ -4,7 +4,7 @@
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
 use proptest::{collection::vec, prelude::*};
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::ledger_info::LedgerInfo;
 
 prop_compose! {
@@ -35,6 +35,7 @@ prop_compose! {
                         HashValue::zero(),
                         start_epoch + i as u64 /* epoch_num */,
                         ledger_info.timestamp_usecs(),
+                        None,
                     ),
                     p.signatures().clone(),
                 )
@@ -50,7 +51,7 @@ proptest! {
     fn test_ledger_info_put_get_verify(
         ledger_infos_with_sigs in arb_ledger_infos_with_sigs()
     ) {
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.ledger_store;
         let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch_num();
@@ -62,6 +63,6 @@ proptest! {
             .collect::<Result<Vec<_>>>()
             .unwrap();
         store.db.write_schemas(cs.batch).unwrap();
-        prop_assert_eq!(db.ledger_store.get_ledger_infos(start_epoch).unwrap(), ledger_infos_with_sigs);
+        prop_assert_eq!(db.ledger_store.get_latest_ledger_infos_per_epoch(start_epoch).unwrap(), ledger_infos_with_sigs);
     }
 }

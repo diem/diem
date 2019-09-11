@@ -9,7 +9,7 @@ use std::{
     io::Write,
     path::Path,
 };
-use tempdir::TempDir;
+use tools::tempdir::TempPath;
 
 pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     let output_file_path = Path::new(&output_file);
@@ -45,7 +45,7 @@ pub fn load_faucet_key_or_create_default(
 ) -> (
     KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     String,
-    Option<TempDir>,
+    Option<TempPath>,
 ) {
     // If there is already a faucet key file, then open it and parse the keypair.  If there
     // isn't one, then create a temp directory and generate the keypair
@@ -61,8 +61,10 @@ pub fn load_faucet_key_or_create_default(
         }
     } else {
         // Generate keypair in temp directory
-        let tmp_dir =
-            TempDir::new("keypair").expect("Unable to create temp dir for faucet keypair");
+        let tmp_dir = TempPath::new();
+        tmp_dir
+            .create_as_dir()
+            .expect("Unable to create temp dir for faucet keypair");
         let faucet_key_file_path = tmp_dir
             .path()
             .join("temp_faucet_keys")

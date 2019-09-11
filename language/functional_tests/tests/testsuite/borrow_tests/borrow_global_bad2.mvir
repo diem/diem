@@ -6,12 +6,12 @@ module A {
         let t: Self.T;
         let t_ref: &mut Self.T;
         sender = get_txn_sender();
-        t_ref = borrow_global<T>(copy(sender));
+        t_ref = borrow_global_mut<T>(copy(sender));
         t = move_from<T>(move(sender));
         _ = move(t_ref);
         return;
     }
 }
 
-// check: VerificationError
-// check: GlobalReferenceError
+// check: VerificationFailure
+// check: GLOBAL_REFERENCE_ERROR

@@ -53,11 +53,11 @@ Unless specified, all numbers are stored in little endian, two's complement form
 |Boolean                    |True / False           |0x01 / 0x00        |[01] / [00]        |
 |8-bit signed integer       |-1                     |0xFF               |[FF]               |
 |8-bit unsigned integer     |1                      |0x01               |[01]               |
-|16-bit signed integer      |-4660                  |0x8800EDCC         |[CCED0088]         |
-|16-bit unsigned integer    |4660                   |0xEDCC             |[CCED]             |
-|32-bit signed integer      |-305419896             |0x8800EDCC         |[CCED0088]         |
+|16-bit signed integer      |-4660                  |0xEDCC             |[CCED]             |
+|16-bit unsigned integer    |4660                   |0x1234             |[3412]             |
+|32-bit signed integer      |-305419896             |0xEDCBA988         |[88A9CBED]         |
 |32-bit unsigned integer    |305419896              |0x12345678         |[78563412]         |
-|64-bit signed integer      |-1311768467750121216   |0xEDCBA98754321100 |[00113254879ACBED] |
+|64-bit signed integer      |-1311768467750121216   |0xEDCBA98754321100 |[0011325487A9CBED] |
 |64-bit unsigned integer    |1311768467750121216    |0x12345678ABCDEF00 |[00EFCDAB78563412] |
 
 ### Byte Arrays
@@ -67,11 +67,11 @@ the primitive section of this document. Byte arrays must be 2^31 bytes or less.
 
 Example:
 
-Given a byte array of length 3490578122: [0x00 0x01 ... 0xFE 0xFF]
+Given a byte array of length 231800522: [0x00 0x01 ... 0xFE 0xFF]
 
 LCS representation: [CAFE D00D 00 01 ... FE FF]
 
-Where 3490578122 serialized into [CAFE D00D]
+Where 231800522 serialized into [CAFE D00D]
 
 ### Strings
 

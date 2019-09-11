@@ -35,12 +35,20 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-use crate::{account_address::AccountAddress, account_config::{
-    association_address, ACCOUNT_RECEIVED_EVENT_PATH,
-    ACCOUNT_SENT_EVENT_PATH,
-}, language_storage::{ModuleId, ResourceKey, StructTag}, validator_set::validator_set_path};
-use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
-use crypto::hash::{HashValue};
+use crate::{
+    account_address::AccountAddress,
+    account_config::{
+        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
+    },
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, ResourceKey, StructTag},
+    validator_set::validator_set_path,
+};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
+use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
@@ -59,22 +67,16 @@ use std::convert::TryFrom;
 use std::ops::Index;
 use crate::account_address::ADDRESS_LENGTH;
 
-#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Field(String);
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
+pub struct Field(Identifier);
 
 impl Field {
-    pub fn new(s: &str) -> Field {
-        Field(s.to_string())
+    pub fn new(name: Identifier) -> Field {
+        Field(name)
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &IdentStr {
         &self.0
-    }
-}
-
-impl From<String> for Field {
-    fn from(s: String) -> Self {
-        Field(s)
     }
 }
 
@@ -91,8 +93,8 @@ pub enum Access {
 }
 
 impl Access {
-    pub fn new(s: &str) -> Self {
-        Access::Field(Field::new(s))
+    pub fn new(name: Identifier) -> Self {
+        Access::Field(Field::new(name))
     }
 
     pub fn new_with_index(idx: u64) -> Self {
@@ -194,7 +196,7 @@ impl Accesses {
         for access in self.0.iter() {
             match access {
                 Access::Field(s) => {
-                    let access_str = s.name().as_ref();
+                    let access_str = s.name().as_str();
                     assert!(access_str != "");
                     path.push_str(access_str)
                 }

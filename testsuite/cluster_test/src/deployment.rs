@@ -1,10 +1,12 @@
 use crate::{aws::Aws, cluster::Cluster};
 use failure::prelude::{bail, format_err};
+use rusoto_core::RusotoError;
 use rusoto_ecr::{
-    BatchGetImageRequest, DescribeImagesRequest, Ecr, ImageIdentifier, PutImageRequest,
+    BatchGetImageRequest, DescribeImagesRequest, Ecr, ImageIdentifier, PutImageError,
+    PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
-use std::{env, fs, io::ErrorKind, thread, time::Duration};
+use std::{fs, io::ErrorKind, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct DeploymentManager {
@@ -58,16 +60,12 @@ impl DeploymentManager {
         Some(hash)
     }
 
-    pub fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
-        if env::var("ALLOW_DEPLOY") != Ok("yes".to_string()) {
-            println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
-            return Ok(false);
-        }
+    pub fn redeploy(&mut self, hash: String) -> failure::Result<()> {
         println!("Will deploy with digest {}", hash);
         self.tag_image(RUNNING_TAG.to_string(), hash)?;
         let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         self.update_all_services()?;
-        Ok(true)
+        Ok(())
     }
 
     fn update_all_services(&self) -> failure::Result<()> {
@@ -151,12 +149,17 @@ impl DeploymentManager {
         let mut put_request = PutImageRequest::default();
         put_request.image_manifest = manifest;
         put_request.repository_name = REPOSITORY_NAME.to_string();
-        put_request.image_tag = Some(tag);
-        self.aws
-            .ecr()
-            .put_image(put_request)
-            .sync()
-            .map_err(|e| format_err!("Failed to tag image: {:?}", e))?;
-        Ok(())
+        put_request.image_tag = Some(tag.clone());
+        let result = self.aws.ecr().put_image(put_request).sync();
+        if let Err(e) = result {
+            if let RusotoError::Service(PutImageError::ImageAlreadyExists(_)) = e {
+                println!("Tagging {} with {}: Image already exist", hash, tag);
+                Ok(())
+            } else {
+                Err(format_err!("Failed to tag image: {:?}", e))
+            }
+        } else {
+            Ok(())
+        }
     }
 }

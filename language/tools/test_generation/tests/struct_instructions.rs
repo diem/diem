@@ -1,12 +1,13 @@
 extern crate test_generation;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
+use types::identifier::Identifier;
 use vm::{
     access::ModuleAccess,
     file_format::{
         empty_module, Bytecode, CompiledModule, CompiledModuleMut, FieldDefinition,
-        FieldDefinitionIndex, Kind, LocalsSignatureIndex, MemberCount, ModuleHandleIndex,
-        SignatureToken, StringPoolIndex, StructDefinition, StructDefinitionIndex,
+        FieldDefinitionIndex, IdentifierIndex, Kind, LocalsSignatureIndex, MemberCount,
+        ModuleHandleIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
         TypeSignatureIndex,
     },
@@ -30,8 +31,8 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
 
     let struct_index = 0;
     let num_fields = 5;
-    let offset = module.string_pool.len() as TableIndex;
-    module.string_pool.push("struct0".to_string());
+    let offset = module.identifiers.len() as TableIndex;
+    module.identifiers.push(Identifier::new("struct0").unwrap());
 
     let field_information = StructFieldInformation::Declared {
         field_count: num_fields as MemberCount,
@@ -44,10 +45,12 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     module.struct_defs.push(struct_def);
 
     for i in 0..num_fields {
-        module.string_pool.push(format!("string{}", i));
+        module
+            .identifiers
+            .push(Identifier::new(format!("string{}", i)).unwrap());
         let struct_handle_idx = StructHandleIndex::new(struct_index);
         let typ_idx = TypeSignatureIndex::new(0);
-        let str_pool_idx = StringPoolIndex::new(i + 1 as TableIndex);
+        let str_pool_idx = IdentifierIndex::new(i + 1 as TableIndex);
         let field_def = FieldDefinition {
             struct_: struct_handle_idx,
             name: str_pool_idx,
@@ -57,7 +60,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     }
     module.struct_handles = vec![StructHandle {
         module: ModuleHandleIndex::new(0),
-        name: StringPoolIndex::new((struct_index + offset) as TableIndex),
+        name: IdentifierIndex::new((struct_index + offset) as TableIndex),
         is_nominal_resource: resource,
         type_formals: vec![],
     }];
@@ -276,6 +279,139 @@ fn bytecode_movetosender_no_struct_on_stack() {
     let state1 = AbstractState::from_locals(module, HashMap::new());
     common::run_instruction(
         Bytecode::MoveToSender(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+}
+
+#[test]
+fn bytecode_mutborrowfield() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    let state2 = common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+    let field_signature = state2.module.get_field_signature(field_index).0.clone();
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(field_signature.clone())),
+            kind: SignatureTokenView::new(&state2.module, &field_signature).kind(&[]),
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_mutborrowfield_stack_has_no_reference() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_mutborrowfield_ref_is_immutable() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::Reference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
+}
+
+#[test]
+fn bytecode_immborrowfield() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::Reference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    let state2 = common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+    let field_signature = state2.module.get_field_signature(field_index).0.clone();
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(field_signature.clone())),
+            kind: SignatureTokenView::new(&state2.module, &field_signature).kind(&[]),
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_immborrowfield_stack_has_no_reference() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+}
+
+#[test]
+#[should_panic]
+fn bytecode_immborrowfield_ref_is_mutable() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue {
+        token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+        kind: struct_value.kind,
+    });
+    let field_index = FieldDefinitionIndex::new(0);
+    common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
+}
+
+#[test]
+fn bytecode_borrowglobal() {
+    let module: CompiledModuleMut = generate_module_with_struct(true);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let struct_value = create_struct_value(&state1.module);
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
+    let state2 = common::run_instruction(
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue {
+            token: SignatureToken::MutableReference(Box::new(struct_value.token)),
+            kind: struct_value.kind,
+        }),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_borrowglobal_struct_is_not_resource() {
+    let module: CompiledModuleMut = generate_module_with_struct(false);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
+    common::run_instruction(
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
+        state1,
+    );
+}
+
+#[test]
+#[should_panic]
+fn bytecode_borrowglobal_no_address_on_stack() {
+    let module: CompiledModuleMut = generate_module_with_struct(true);
+    let state1 = AbstractState::from_locals(module, HashMap::new());
+    common::run_instruction(
+        Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
 }

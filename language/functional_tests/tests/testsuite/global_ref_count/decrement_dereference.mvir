@@ -11,12 +11,12 @@ module Test {
         move_to_sender<T>(move(t));
 
         sender = get_txn_sender();
-        t_ref = borrow_global<T>(copy(sender));
+        t_ref = borrow_global_mut<T>(copy(sender));
         i_ref = &copy(t_ref).i;
         _ = move(t_ref);
         assert(*move(i_ref) == 0, 42);
 
-        t_ref = borrow_global<T>(copy(sender));
+        t_ref = borrow_global_mut<T>(copy(sender));
         _ = move(t_ref);
         return;
     }

@@ -23,7 +23,7 @@ module SillyColdWallet {
     public withdraw(wallet_address: address, amount: u64): LibraCoin.T acquires T {
         let wallet_ref: &mut Self.T;
 
-        wallet_ref = borrow_global<T>(move(wallet_address));
+        wallet_ref = borrow_global_mut<T>(move(wallet_address));
         if (*&copy(wallet_ref).owner == get_txn_sender()) {
             return LibraAccount.withdraw_with_capability(&move(wallet_ref).cap, move(amount));
         } else {
@@ -85,7 +85,8 @@ main() {
 }
 
 // should fail with insufficient privileges error
-// check: Execution(Aborted(11))
+// check: ABORTED
+// check: 11
 
 
 //! new-transaction

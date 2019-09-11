@@ -1,5 +1,5 @@
-// check: VerificationError
-// check: ReadRefExistsMutableBorrowError
+// check: VerificationFailure
+// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
 main() {
     let v: u64;

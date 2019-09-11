@@ -31,9 +31,9 @@ module TestStruct {
 
 		b = exists<T>(copy(a));
         assert(!copy(b), 42);
-		t_ref1 = borrow_global<T>(copy(a));
+		t_ref1 = borrow_global_mut<T>(copy(a));
 		_ = move(t_ref1);
-		t_ref2 = borrow_global<T>(copy(a));
+		t_ref2 = borrow_global_mut<T>(copy(a));
 		t = move_from<T>(copy(a));
 		move_to_sender<T>(move(t));
 		return move(t_ref2), move(b);

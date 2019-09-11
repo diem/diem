@@ -14,7 +14,7 @@ use failure::Result;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt};
 
 /// After executing a special transaction that sets the validators that should be used for the
 /// next epoch, consensus and networking get the new list of validators.  Consensus will have a
@@ -33,6 +33,12 @@ pub struct ValidatorPublicKeys {
     // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
     // network
     network_identity_public_key: X25519StaticPublicKey,
+}
+
+impl fmt::Display for ValidatorPublicKeys {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "account_address: {}", self.account_address.short_str())
+    }
 }
 
 impl ValidatorPublicKeys {

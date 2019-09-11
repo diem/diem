@@ -4,13 +4,13 @@
 use crate::{
     block_tree::{Block, BlockTree},
     transaction_block::{ProcessedVMOutput, TransactionBlock, TransactionData},
-    Command, OP_COUNTERS,
+    Command, ExecutedTrees, OP_COUNTERS,
 };
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
 use crypto::{
     ed25519::*,
-    hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
+    hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
 use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkResponse};
@@ -52,13 +52,7 @@ pub(crate) struct BlockProcessor<V> {
     /// The timestamp of the last committed ledger info.
     committed_timestamp_usecs: u64,
 
-    /// The in-memory Sparse Merkle Tree representing last committed state. This tree always has a
-    /// single Subtree node (or Empty node) whose hash equals the root hash of the newest Sparse
-    /// Merkle Tree in storage.
-    committed_state_tree: Rc<SparseMerkleTree>,
-
-    /// The in-memory Merkle Accumulator representing all the committed transactions.
-    committed_transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
+    committed_trees: ExecutedTrees,
 
     /// The main block tree data structure that holds all the uncommitted blocks in memory.
     block_tree: BlockTree<TransactionBlock>,
@@ -102,14 +96,16 @@ where
         BlockProcessor {
             command_receiver,
             committed_timestamp_usecs,
-            committed_state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
-            committed_transaction_accumulator: Rc::new(
-                Accumulator::new(
-                    previous_frozen_subtrees_in_accumulator,
-                    previous_num_leaves_in_accumulator,
-                )
-                .expect("The startup info read from storage should be valid."),
-            ),
+            committed_trees: ExecutedTrees {
+                state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
+                transaction_accumulator: Rc::new(
+                    Accumulator::new(
+                        previous_frozen_subtrees_in_accumulator,
+                        previous_num_leaves_in_accumulator,
+                    )
+                    .expect("The startup info read from storage should be valid."),
+                ),
+            },
             block_tree: BlockTree::new(last_committed_block_id),
             blocks_to_store: VecDeque::new(),
             storage_read_client,
@@ -303,7 +299,7 @@ where
         info!(
             "Local version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
-            self.committed_transaction_accumulator.num_leaves() - 1,
+            self.committed_trees.txn_accumulator().num_leaves() - 1,
             txn_list_with_proof.first_transaction_version,
             txn_list_with_proof.transaction_and_infos.len(),
         );
@@ -320,9 +316,8 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_transaction_accumulator.num_leaves(),
-            self.committed_state_tree.root_hash(),
-            &self.committed_state_tree,
+            self.committed_trees.version_and_state_root(),
+            self.committed_trees.state_tree(),
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
@@ -343,8 +338,7 @@ where
             account_to_proof,
             &transactions,
             vm_outputs,
-            Rc::clone(&self.committed_state_tree),
-            Rc::clone(&self.committed_transaction_accumulator),
+            &self.committed_trees,
         )?;
 
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
@@ -379,7 +373,7 @@ where
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
-        let ledger_info_to_commit = if self.committed_transaction_accumulator.num_leaves()
+        let ledger_info_to_commit = if self.committed_trees.txn_accumulator().num_leaves()
             + txns_to_commit.len() as u64
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
@@ -390,7 +384,7 @@ where
                 ledger_info_with_sigs
                     .ledger_info()
                     .transaction_accumulator_hash()
-                    == output.clone_transaction_accumulator().root_hash(),
+                    == output.executed_trees().txn_accumulator().root_hash(),
                 "Root hash in ledger info does not match local computation."
             );
             Some(ledger_info_with_sigs)
@@ -409,8 +403,7 @@ where
             ledger_info_to_commit.clone(),
         )?;
 
-        self.committed_state_tree = output.clone_state_tree();
-        self.committed_transaction_accumulator = output.clone_transaction_accumulator();
+        self.committed_trees = output.executed_trees().clone();
         if let Some(ledger_info_with_sigs) = ledger_info_to_commit {
             self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
             self.block_tree
@@ -438,7 +431,7 @@ where
             txn_list_with_proof.first_transaction_version,
         )?;
 
-        let num_committed_txns = self.committed_transaction_accumulator.num_leaves();
+        let num_committed_txns = self.committed_trees.txn_accumulator().num_leaves();
         if txn_list_with_proof.transaction_and_infos.is_empty() {
             return Ok((0, num_committed_txns /* first_version */));
         }
@@ -525,7 +518,7 @@ where
             .as_ref()
             .expect("This block must have signatures.");
         let version = ledger_info_with_sigs.ledger_info().version();
-        let num_txns_in_accumulator = last_block.clone_transaction_accumulator().num_leaves();
+        let num_txns_in_accumulator = last_block.executed_trees().txn_accumulator().num_leaves();
         assert_eq!(
             version + 1,
             num_txns_in_accumulator,
@@ -554,8 +547,7 @@ where
         // Now that the blocks are persisted successfully, we can reply to consensus and update
         // in-memory state.
         self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
-        self.committed_state_tree = last_block.clone_state_tree();
-        self.committed_transaction_accumulator = last_block.clone_transaction_accumulator();
+        self.committed_trees = last_block.executed_trees().clone();
         last_block.send_commit_block_response(Ok(CommitBlockResponse::Succeeded));
 
         let num_saved = block_batch.len();
@@ -594,8 +586,7 @@ where
     }
 
     fn execute_block(&mut self, id: HashValue) {
-        let (previous_state_tree, previous_transaction_accumulator) =
-            self.get_trees_from_parent(id);
+        let parent_trees = self.get_trees_from_parent(id);
 
         let block_to_execute = self
             .block_tree
@@ -605,9 +596,8 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_transaction_accumulator.num_leaves(),
-            self.committed_state_tree.root_hash(),
-            &previous_state_tree,
+            self.committed_trees.version_and_state_root(),
+            parent_trees.state_tree(),
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
@@ -633,13 +623,11 @@ where
             account_to_proof,
             block_to_execute.transactions(),
             vm_outputs,
-            previous_state_tree,
-            previous_transaction_accumulator,
+            &parent_trees,
         ) {
             Ok(output) => {
-                let accumulator = output.clone_transaction_accumulator();
-                let root_hash = accumulator.root_hash();
-                let version = accumulator.num_leaves() - 1;
+                let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
+                let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to
@@ -647,7 +635,7 @@ where
                 // TODO: The VM will support a special transaction to set the validators for the
                 // next epoch that is part of a block execution.
                 let execute_block_response =
-                    ExecuteBlockResponse::new(root_hash, status, version, None);
+                    ExecuteBlockResponse::new(accu_root_hash, status, version, None);
                 block_to_execute.set_execute_block_response(execute_block_response);
             }
             Err(err) => {
@@ -664,27 +652,15 @@ where
 
     /// Given id of the block that is about to be executed, returns the state tree and the
     /// transaction accumulator at the end of the parent block.
-    fn get_trees_from_parent(
-        &self,
-        id: HashValue,
-    ) -> (
-        Rc<SparseMerkleTree>,
-        Rc<Accumulator<TransactionAccumulatorHasher>>,
-    ) {
+    fn get_trees_from_parent(&self, id: HashValue) -> ExecutedTrees {
         let parent_id = self
             .block_tree
             .get_block(id)
             .expect("Block should exist.")
             .parent_id();
         match self.block_tree.get_block(parent_id) {
-            Some(parent_block) => (
-                parent_block.clone_state_tree(),
-                parent_block.clone_transaction_accumulator(),
-            ),
-            None => (
-                Rc::clone(&self.committed_state_tree),
-                Rc::clone(&self.committed_transaction_accumulator),
-            ),
+            Some(parent_block) => parent_block.executed_trees().clone(),
+            None => self.committed_trees.clone(),
         }
     }
 
@@ -694,14 +670,13 @@ where
         account_to_proof: HashMap<HashValue, SparseMerkleProof>,
         transactions: &[SignedTransaction],
         vm_outputs: Vec<TransactionOutput>,
-        previous_state_tree: Rc<SparseMerkleTree>,
-        previous_transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
+        parent_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
         let mut txn_data = vec![];
-        let mut current_state_tree = previous_state_tree;
+        let mut current_state_tree = Rc::clone(parent_trees.state_tree());
         // The hash of each individual TransactionInfo object. This will not include the
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
@@ -763,11 +738,13 @@ where
         }
 
         let current_transaction_accumulator =
-            previous_transaction_accumulator.append(txn_info_hashes);
+            parent_trees.transaction_accumulator.append(txn_info_hashes);
         Ok(ProcessedVMOutput::new(
             txn_data,
-            Rc::new(current_transaction_accumulator),
-            current_state_tree,
+            ExecutedTrees {
+                state_tree: current_state_tree,
+                transaction_accumulator: Rc::new(current_transaction_accumulator),
+            },
         ))
     }
 

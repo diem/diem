@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 
 #[test]
 fn test_put_get() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = ConsensusDB::new(&tmp_dir);
 
     let block = Block::<i64>::make_genesis_block();
@@ -30,7 +30,7 @@ fn test_put_get() {
 
 #[test]
 fn test_delete_block_and_qc() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = ConsensusDB::new(&tmp_dir);
 
     assert!(db.get_state().unwrap().is_none());

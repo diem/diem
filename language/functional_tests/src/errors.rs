@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::Fail;
-use types::transaction::TransactionOutput;
-use vm::errors::VerificationStatus;
+use types::{transaction::TransactionOutput, vm_error::VMStatus};
 
 pub use failure::Error;
 
@@ -17,7 +16,7 @@ pub enum ErrorKind {
     #[fail(display = "the checker has failed to match the directives against the output")]
     CheckerFailure,
     #[fail(display = "verification error {:?}", _0)]
-    VerificationFailure(Vec<VerificationStatus>),
+    VerificationFailure(Vec<VMStatus>),
     #[fail(display = "other error: {}", _0)]
     #[allow(dead_code)]
     Other(String),

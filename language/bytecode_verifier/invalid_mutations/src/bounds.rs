@@ -7,12 +7,14 @@ use proptest::{
 };
 use proptest_helpers::pick_slice_idxs;
 use std::collections::BTreeMap;
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
-    errors::{VMStaticViolation, VerificationError},
+    errors::{append_err_info, bounds_error},
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
-        FunctionHandleIndex, FunctionSignatureIndex, LocalsSignatureIndex, ModuleHandleIndex,
-        StringPoolIndex, StructFieldInformation, StructHandleIndex, TableIndex, TypeSignatureIndex,
+        FunctionHandleIndex, FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex,
+        ModuleHandleIndex, StructFieldInformation, StructHandleIndex, TableIndex,
+        TypeSignatureIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -47,16 +49,16 @@ impl PointerKind {
         use PointerKind::*;
 
         match src_kind {
-            ModuleHandle => &[One(AddressPool), One(StringPool)],
-            StructHandle => &[One(ModuleHandle), One(StringPool)],
-            FunctionHandle => &[One(ModuleHandle), One(StringPool), One(FunctionSignature)],
+            ModuleHandle => &[One(AddressPool), One(Identifier)],
+            StructHandle => &[One(ModuleHandle), One(Identifier)],
+            FunctionHandle => &[One(ModuleHandle), One(Identifier), One(FunctionSignature)],
             StructDefinition => &[One(StructHandle), One(FieldDefinition)],
-            FieldDefinition => &[One(StructHandle), One(StringPool), One(TypeSignature)],
+            FieldDefinition => &[One(StructHandle), One(Identifier), One(TypeSignature)],
             FunctionDefinition => &[One(FunctionHandle), One(LocalsSignature)],
             TypeSignature => &[Optional(StructHandle)],
             FunctionSignature => &[Star(StructHandle)],
             LocalsSignature => &[Star(StructHandle)],
-            StringPool => &[],
+            Identifier => &[],
             UserString => &[],
             ByteArrayPool => &[],
             AddressPool => &[],
@@ -191,7 +193,7 @@ impl ApplyOutOfBoundsContext {
         }
     }
 
-    pub fn apply(mut self) -> (CompiledModuleMut, Vec<VerificationError>) {
+    pub fn apply(mut self) -> (CompiledModuleMut, Vec<VMStatus>) {
         // This is a map from (source kind, dest kind) to the actual mutations -- this is done to
         // figure out how many mutations to do for a particular pair, which is required for
         // pick_slice_idxs below.
@@ -222,7 +224,7 @@ impl ApplyOutOfBoundsContext {
         src_kind: IndexKind,
         dst_kind: IndexKind,
         mutations: Vec<OutOfBoundsMutation>,
-    ) -> Vec<VerificationError> {
+    ) -> Vec<VMStatus> {
         let src_count = match src_kind {
             // Only the signature indexes that have structs in them (i.e. are in *_sig_structs)
             // are going to be modifiable, so pick among them.
@@ -264,12 +266,17 @@ impl ApplyOutOfBoundsContext {
         dst_kind: IndexKind,
         dst_count: usize,
         new_idx: TableIndex,
-    ) -> Option<VerificationError> {
+    ) -> Option<VMStatus> {
         use IndexKind::*;
 
         // These are default values, but some of the match arms below mutate them.
         let mut src_idx = src_idx;
-        let mut err = VMStaticViolation::IndexOutOfBounds(dst_kind, dst_count, new_idx as usize);
+        let mut err = bounds_error(
+            dst_kind,
+            new_idx as usize,
+            dst_count,
+            StatusCode::INDEX_OUT_OF_BOUNDS,
+        );
 
         // A dynamic type system would be able to express this next block of code far more
         // concisely. A static type system would require some sort of complicated dependent type
@@ -280,20 +287,20 @@ impl ApplyOutOfBoundsContext {
             (ModuleHandle, AddressPool) => {
                 self.module.module_handles[src_idx].address = AddressPoolIndex::new(new_idx);
             }
-            (ModuleHandle, StringPool) => {
-                self.module.module_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (ModuleHandle, Identifier) => {
+                self.module.module_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (StructHandle, ModuleHandle) => {
                 self.module.struct_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
             }
-            (StructHandle, StringPool) => {
-                self.module.struct_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (StructHandle, Identifier) => {
+                self.module.struct_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FunctionHandle, ModuleHandle) => {
                 self.module.function_handles[src_idx].module = ModuleHandleIndex::new(new_idx)
             }
-            (FunctionHandle, StringPool) => {
-                self.module.function_handles[src_idx].name = StringPoolIndex::new(new_idx)
+            (FunctionHandle, Identifier) => {
+                self.module.function_handles[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FunctionHandle, FunctionSignature) => {
                 self.module.function_handles[src_idx].signature =
@@ -328,18 +335,17 @@ impl ApplyOutOfBoundsContext {
                     fields: FieldDefinitionIndex::new(first_new_idx),
                 };
                 self.module.struct_defs[src_idx].field_information = field_information;
-                err = VMStaticViolation::RangeOutOfBounds(
-                    dst_kind,
-                    dst_count,
-                    first_new_idx as usize,
-                    end_idx as usize,
-                );
+                err = VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS);
+                err.set_message(format!(
+                    "Range {}-{} out of bounds for {} while indexing {}",
+                    dst_kind, dst_count, first_new_idx as usize, end_idx as usize,
+                ));
             }
             (FieldDefinition, StructHandle) => {
                 self.module.field_defs[src_idx].struct_ = StructHandleIndex::new(new_idx)
             }
-            (FieldDefinition, StringPool) => {
-                self.module.field_defs[src_idx].name = StringPoolIndex::new(new_idx)
+            (FieldDefinition, Identifier) => {
+                self.module.field_defs[src_idx].name = IdentifierIndex::new(new_idx)
             }
             (FieldDefinition, TypeSignature) => {
                 self.module.field_defs[src_idx].signature = TypeSignatureIndex::new(new_idx)
@@ -379,11 +385,7 @@ impl ApplyOutOfBoundsContext {
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }
 
-        Some(VerificationError {
-            kind: src_kind,
-            idx: src_idx,
-            err,
-        })
+        Some(append_err_info(err, src_kind, src_idx))
     }
 
     /// Returns the indexes of type signatures that contain struct handles inside them.

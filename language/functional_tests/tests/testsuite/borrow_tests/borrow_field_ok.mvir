@@ -16,7 +16,7 @@ module A {
         let k: &u64;
         k = &(&move(this).f).v;
         return *move(k);
-    } 
+    }
 }
 
 //! new-transaction

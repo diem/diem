@@ -66,21 +66,19 @@ mod tests {
         OP_COUNTER,
     };
     use client::AccountData;
-    use config_builder::swarm_config::LibraSwarmTopology;
     use libra_swarm::swarm::LibraSwarm;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;
-    use tempdir::TempDir;
+    use tools::tempdir::TempPath;
 
     /// Start libra_swarm and create a BenchOpt struct for testing.
-    /// Must return the TempDir otherwise it will be freed somehow.
-    fn start_swarm_and_setup_arguments() -> (LibraSwarm, BenchOpt, Option<TempDir>) {
+    /// Must return the TempPath otherwise it will be freed somehow.
+    fn start_swarm_and_setup_arguments() -> (LibraSwarm, BenchOpt, Option<TempPath>) {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
             generate_keypair::load_faucet_key_or_create_default(None);
-        let topology = LibraSwarmTopology::create_validator_network(4);
         let swarm = LibraSwarm::launch_swarm(
-            topology, /* num_nodes */
-            true,     /* disable_logging */
+            4,    /* num_nodes */
+            true, /* disable_logging */
             faucet_account_keypair,
             None, /* config_dir */
             None, /* template_path */

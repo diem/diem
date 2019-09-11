@@ -28,7 +28,7 @@ module M {
     }
 
     public get_coin_value(): u64 acquires CoinWrapper {
-        let coin_wrapper_ref: &mut Self.CoinWrapper;
+        let coin_wrapper_ref: &Self.CoinWrapper;
         let foo_ref: &Self.Foo<LibraCoin.T>;
         let coin_ref: &LibraCoin.T;
 
@@ -40,7 +40,7 @@ module M {
     }
 
     public get_inner(): bytearray acquires InnerWrapper {
-        let inner_wrapper_ref: &mut Self.InnerWrapper;
+        let inner_wrapper_ref: &Self.InnerWrapper;
         let foo_ref: &Self.Foo<Self.Inner>;
         let inner_ref: &Self.Inner;
 

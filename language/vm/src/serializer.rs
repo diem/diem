@@ -10,7 +10,7 @@
 use crate::{file_format::*, file_format_common::*, vm_string::VMString};
 use failure::*;
 use std::ops::Deref;
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
@@ -80,7 +80,7 @@ struct CommonSerializer {
     type_signatures: (u32, u32),
     function_signatures: (u32, u32),
     locals_signatures: (u32, u32),
-    string_pool: (u32, u32),
+    identifiers: (u32, u32),
     user_strings: (u32, u32),
     address_pool: (u32, u32),
     byte_array_pool: (u32, u32),
@@ -162,7 +162,7 @@ trait CommonTables {
     fn get_module_handles(&self) -> &[ModuleHandle];
     fn get_struct_handles(&self) -> &[StructHandle];
     fn get_function_handles(&self) -> &[FunctionHandle];
-    fn get_string_pool(&self) -> &[String];
+    fn get_identifiers(&self) -> &[Identifier];
     fn get_user_strings(&self) -> &[VMString];
     fn get_address_pool(&self) -> &[AccountAddress];
     fn get_byte_array_pool(&self) -> &[ByteArray];
@@ -184,8 +184,8 @@ impl CommonTables for CompiledScriptMut {
         &self.function_handles
     }
 
-    fn get_string_pool(&self) -> &[String] {
-        &self.string_pool
+    fn get_identifiers(&self) -> &[Identifier] {
+        &self.identifiers
     }
 
     fn get_user_strings(&self) -> &[VMString] {
@@ -226,8 +226,8 @@ impl CommonTables for CompiledModuleMut {
         &self.function_handles
     }
 
-    fn get_string_pool(&self) -> &[String] {
-        &self.string_pool
+    fn get_identifiers(&self) -> &[Identifier] {
+        &self.identifiers
     }
 
     fn get_user_strings(&self) -> &[VMString] {
@@ -259,7 +259,7 @@ impl CommonTables for CompiledModuleMut {
 ///
 /// A `ModuleHandle` gets serialized as follows:
 /// - `ModuleHandle.address` as a ULEB128 (index into the `AddressPool`)
-/// - `ModuleHandle.name` as a ULEB128 (index into the `StringPool`)
+/// - `ModuleHandle.name` as a ULEB128 (index into the `IdentifierPool`)
 fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle) -> Result<()> {
     write_u16_as_uleb128(binary, module_handle.address.0)?;
     write_u16_as_uleb128(binary, module_handle.name.0)?;
@@ -270,7 +270,7 @@ fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle
 ///
 /// A `StructHandle` gets serialized as follows:
 /// - `StructHandle.module` as a ULEB128 (index into the `ModuleHandle` table)
-/// - `StructHandle.name` as a ULEB128 (index into the `StringPool`)
+/// - `StructHandle.name` as a ULEB128 (index into the `IdentifierPool`)
 /// - `StructHandle.is_nominal_resource` as a 1 byte boolean (0 for false, 1 for true)
 fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
     write_u16_as_uleb128(binary, struct_handle.module.0)?;
@@ -283,7 +283,7 @@ fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle
 ///
 /// A `FunctionHandle` gets serialized as follows:
 /// - `FunctionHandle.module` as a ULEB128 (index into the `ModuleHandle` table)
-/// - `FunctionHandle.name` as a ULEB128 (index into the `StringPool`)
+/// - `FunctionHandle.name` as a ULEB128 (index into the `IdentifierPool`)
 /// - `FunctionHandle.signature` as a ULEB128 (index into the `FunctionSignaturePool`)
 fn serialize_function_handle(
     binary: &mut BinaryData,
@@ -295,7 +295,7 @@ fn serialize_function_handle(
     Ok(())
 }
 
-/// Serializes a `String`.
+/// Serializes a string (identifier or user string).
 ///
 /// A `String` gets serialized as follows:
 /// - `String` size as a ULEB128
@@ -379,7 +379,7 @@ fn serialize_struct_definition(
 ///
 /// A `FieldDefinition` gets serialized as follows:
 /// - `FieldDefinition.struct_` as a ULEB128 (index into the `StructHandle` table)
-/// - `StructDefinition.name` as a ULEB128 (index into the `StringPool` table)
+/// - `StructDefinition.name` as a ULEB128 (index into the `IdentifierPool` table)
 /// - `StructDefinition.signature` as a ULEB128 (index into the `TypeSignaturePool`)
 fn serialize_field_definition(
     binary: &mut BinaryData,
@@ -670,8 +670,13 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
-        Bytecode::BorrowGlobal(class_idx, types_idx) => {
-            binary.push(Opcodes::BORROW_GLOBAL as u8)?;
+        Bytecode::MutBorrowGlobal(class_idx, types_idx) => {
+            binary.push(Opcodes::MUT_BORROW_GLOBAL as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)?;
+            write_u16_as_uleb128(binary, types_idx.0)
+        }
+        Bytecode::ImmBorrowGlobal(class_idx, types_idx) => {
+            binary.push(Opcodes::IMM_BORROW_GLOBAL as u8)?;
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
@@ -772,7 +777,7 @@ impl CommonSerializer {
             type_signatures: (0, 0),
             function_signatures: (0, 0),
             locals_signatures: (0, 0),
-            string_pool: (0, 0),
+            identifiers: (0, 0),
             user_strings: (0, 0),
             address_pool: (0, 0),
             byte_array_pool: (0, 0),
@@ -851,10 +856,10 @@ impl CommonSerializer {
         )?;
         checked_serialize_table(
             binary,
-            TableType::STRING_POOL,
-            self.string_pool.0,
+            TableType::IDENTIFIERS,
+            self.identifiers.0,
             start_offset,
-            self.string_pool.1,
+            self.identifiers.1,
         )?;
         checked_serialize_table(
             binary,
@@ -891,7 +896,7 @@ impl CommonSerializer {
         self.serialize_type_signatures(binary, tables.get_type_signatures())?;
         self.serialize_function_signatures(binary, tables.get_function_signatures())?;
         self.serialize_locals_signatures(binary, tables.get_locals_signatures())?;
-        self.serialize_strings(binary, tables.get_string_pool())?;
+        self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_user_strings(binary, tables.get_user_strings())?;
         self.serialize_addresses(binary, tables.get_address_pool())?;
         self.serialize_byte_arrays(binary, tables.get_byte_array_pool())?;
@@ -950,15 +955,20 @@ impl CommonSerializer {
         Ok(())
     }
 
-    /// Serializes `StringPool`.
-    fn serialize_strings(&mut self, binary: &mut BinaryData, strings: &[String]) -> Result<()> {
-        if !strings.is_empty() {
+    /// Serializes `Identifiers`.
+    fn serialize_identifiers(
+        &mut self,
+        binary: &mut BinaryData,
+        identifiers: &[Identifier],
+    ) -> Result<()> {
+        if !identifiers.is_empty() {
             self.table_count += 1;
-            self.string_pool.0 = check_index_in_binary(binary.len())?;
-            for string in strings {
-                serialize_string(binary, string)?;
+            self.identifiers.0 = check_index_in_binary(binary.len())?;
+            for identifier in identifiers {
+                // User strings and identifiers use the same serialization.
+                serialize_string(binary, identifier.as_str())?;
             }
-            self.string_pool.1 = checked_calculate_table_size(binary, self.string_pool.0)?;
+            self.identifiers.1 = checked_calculate_table_size(binary, self.identifiers.0)?;
         }
         Ok(())
     }
@@ -973,7 +983,7 @@ impl CommonSerializer {
             self.table_count += 1;
             self.user_strings.0 = check_index_in_binary(binary.len())?;
             for user_string in user_strings {
-                // User strings and strings use the same serialization.
+                // User strings and identifiers use the same serialization.
                 serialize_string(binary, user_string.as_str())?;
             }
             self.user_strings.1 = checked_calculate_table_size(binary, self.user_strings.0)?;

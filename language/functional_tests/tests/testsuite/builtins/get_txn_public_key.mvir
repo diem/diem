@@ -10,4 +10,5 @@ main(input_public_key: bytearray) {
 // we do not support transaction arguments yet
 // TODO: fix the test once support is added
 
-// check: Verification([Script(TypeMismatch("Actual Type Mismatch"))])
+// check: Discard
+// check: TYPE_MISMATCH

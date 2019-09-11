@@ -14,5 +14,5 @@ module M {
     }
 }
 
-// check: VerificationError
-// check: ReadRefExistsMutableBorrowError
+// check: VerificationFailure
+// check: READREF_EXISTS_MUTABLE_BORROW_ERROR

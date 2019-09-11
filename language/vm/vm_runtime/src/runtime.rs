@@ -18,7 +18,7 @@ use logger::prelude::*;
 use state_view::StateView;
 use types::{
     transaction::{SignedTransaction, TransactionOutput},
-    vm_error::{VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 use vm_cache_map::Arena;
 
@@ -77,7 +77,7 @@ impl<'alloc> VMRuntime<'alloc> {
         let arena = Arena::new();
         let signature_verified_txn = match txn.check_signature() {
             Ok(t) => t,
-            Err(_) => return Some(VMStatus::Validation(VMValidationStatus::InvalidSignature)),
+            Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
         };
 
         let process_txn =

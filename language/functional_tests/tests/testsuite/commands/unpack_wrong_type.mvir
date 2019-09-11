@@ -29,5 +29,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: UnpackTypeMismatchError
+// check: VerificationFailure
+// check: UNPACK_TYPE_MISMATCH_ERROR

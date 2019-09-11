@@ -18,4 +18,5 @@ main() {
 }
 
 // should fail with insufficient privileges error
-// check: Execution(Aborted(11))
+// check: ABORTED
+// check: 11

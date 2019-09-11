@@ -2,7 +2,7 @@ module A {
     struct T{v: u64}
 
     public new(u: u64) : Self.T {
-        return T{u: move(u)};
+        return T{v: move(u)};
     }
 
     public value(this: Self.T): u64 {

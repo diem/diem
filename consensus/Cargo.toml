@@ -12,7 +12,7 @@ bytes = "0.4.12"
 futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["io-compat", "compat"] }
 grpcio = { version = "0.4.4", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
-mirai-annotations = { version = "1.3.1", default-features = false }
+mirai-annotations = { version = "1.4.0", default-features = false }
 num-derive = { version = "0.2.5", default-features = false }
 num-traits = { version = "0.2.8", default-features = false }
 parity-multiaddr = { version = "0.5.0", default-features = false }
@@ -40,20 +40,20 @@ proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
+tools = { path = "../common/tools" }
 types = { path = "../types" }
 debug_interface = { path = "../common/debug_interface" }
 
 [dependencies.prometheus]
-version  = "0.4.2"
+version  = "0.7.0"
 default-features = false
-features = ["push"]
+features = ["protobuf"]
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
 cached = "0.9.0"
-tempfile = "3.1.0"
 parity-multiaddr = "0.5.0"
 rusty-fork = "0.2.2"
 

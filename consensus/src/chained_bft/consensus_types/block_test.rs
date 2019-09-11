@@ -36,12 +36,14 @@ prop_compose! {
         round_strategy: impl Strategy<Value = Round>,
         height: Height,
         signer_strategy: impl Strategy<Value = ValidatorSigner>,
+        parent_qc: QuorumCert,
     )(
         parent_id in parent_id_strategy,
         round in round_strategy,
         payload in 0usize..10usize,
         height in Just(height),
         signer in signer_strategy,
+        parent_qc in Just(parent_qc)
     ) -> Block<Vec<usize>> {
         Block::new_internal(
             vec![payload],
@@ -49,7 +51,7 @@ prop_compose! {
             round,
             height,
             get_current_timestamp().as_micros() as u64,
-            QuorumCert::certificate_for_genesis(),
+            parent_qc,
             &signer,
         )
     }
@@ -71,6 +73,7 @@ prop_compose! {
             Round::arbitrary(),
             123,
             proptests::arb_signer(),
+            QuorumCert::certificate_for_genesis(),
         )
     ) -> Block<Vec<usize>> {
         block
@@ -150,6 +153,8 @@ prop_compose! {
         forest_vec[parent_idx].height() + 1,
         // signer
         Just(signer),
+        // parent_qc
+        forest_vec[qc_idx].quorum_cert().clone(),
     ), mut forest in Just(forest_vec),
     ) -> LinearizedBlockForest<Vec<usize>> {
         forest.push(block);
@@ -216,7 +221,10 @@ fn test_nil_block() {
     assert!(nil_block.author().is_none());
 
     let dummy_verifier = Arc::new(ValidatorVerifier::new(HashMap::new()));
-    assert!(nil_block.verify(dummy_verifier.as_ref()).is_ok());
+    assert!(nil_block
+        .validate_signatures(dummy_verifier.as_ref())
+        .is_ok());
+    assert!(nil_block.verify_well_formed().is_ok());
 
     let signer = ValidatorSigner::random(None);
     let payload = 101;

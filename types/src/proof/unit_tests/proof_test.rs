@@ -297,6 +297,7 @@ fn test_verify_signed_transaction() {
         *GENESIS_BLOCK_ID,
         0,
         /* timestamp = */ 10000,
+        None,
     );
 
     let ledger_info_to_transaction_info_proof =
@@ -397,6 +398,7 @@ fn test_verify_account_state_and_event() {
         *GENESIS_BLOCK_ID,
         0,
         /* timestamp = */ 10000,
+        None,
     );
 
     let ledger_info_to_transaction_info_proof =
@@ -591,6 +593,7 @@ proptest! {
             *GENESIS_BLOCK_ID,
             0,
             /* timestamp = */ 10000,
+            None,
         );
         let first_version = if txn_and_infos.is_empty() { None } else { Some(first_version as u64) };
         prop_assert!(txn_list_with_proof.verify(&ledger_info,first_version).is_ok());

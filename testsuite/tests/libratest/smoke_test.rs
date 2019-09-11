@@ -5,7 +5,6 @@ use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
 use config::config::RoleType;
-use config_builder::swarm_config::LibraSwarmTopology;
 use crypto::{ed25519::*, SigningKey};
 use libra_swarm::{swarm::LibraSwarm, utils};
 use num_traits::cast::FromPrimitive;
@@ -13,7 +12,7 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 
 fn setup_env(
-    topology: LibraSwarmTopology,
+    num_nodes: usize,
     client_port_index: usize,
     template_path: Option<String>,
     role: RoleType,
@@ -24,14 +23,17 @@ fn setup_env(
         generate_keypair::load_faucet_key_or_create_default(None);
 
     let swarm = LibraSwarm::launch_swarm(
-        topology,
-        false, /* disable_logging */
+        num_nodes, /* num nodes */
+        false,     /* disable_logging */
         faucet_account_keypair,
         None, /* config_dir */
         template_path,
     );
     let port = swarm.get_ac_port(client_port_index, role);
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let client_proxy = ClientProxy::new(
         "localhost",
         port.to_string().as_str(),
@@ -41,7 +43,8 @@ fn setup_env(
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()
@@ -57,12 +60,7 @@ fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
 ) -> (LibraSwarm, ClientProxy) {
-    setup_env(
-        LibraSwarmTopology::create_validator_network(num_nodes),
-        client_port_index,
-        None,
-        RoleType::Validator,
-    )
+    setup_env(num_nodes, client_port_index, None, RoleType::Validator)
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
@@ -286,10 +284,13 @@ fn test_basic_state_synchronization() {
     assert!(swarm.add_node(node_to_restart.clone(), false).is_ok());
 
     // Wait for all the nodes to catch up
-    swarm.wait_for_all_nodes_to_catchup();
+    assert!(swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
@@ -300,7 +301,8 @@ fn test_basic_state_synchronization() {
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()
@@ -318,31 +320,6 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
     );
-}
-
-#[test]
-fn test_full_node() {
-    let (mut _swarm, mut client_proxy) = setup_env(
-        LibraSwarmTopology::create_uniform_network(1, 2),
-        0,
-        None,
-        RoleType::FullNode,
-    );
-    assert_eq!(
-        Decimal::from_f64(1000.0),
-        Decimal::from_str(
-            &client_proxy
-                .get_balance(&[
-                    "b",
-                    "000000000000000000000000000000000000000000000000000000000A550C18"
-                ])
-                .unwrap()
-        )
-        .ok()
-    );
-    client_proxy.create_next_account(false).unwrap();
-    let response = client_proxy.mint_coins(&["mint", "0", "1"], false);
-    assert!(response.is_err());
 }
 
 #[test]

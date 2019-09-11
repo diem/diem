@@ -141,7 +141,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
                     let sig: PublicKey::SignatureMaterial = signature.clone().into();
                     self.author_to_public_keys
                         .get(&author)
-                        .and_then(|pub_key| Some((pub_key.clone(), sig)))
+                        .map(|pub_key| (pub_key.clone(), sig))
                 })
                 .collect();
         // Fallback is required to identify the source of the problem if batching fails.

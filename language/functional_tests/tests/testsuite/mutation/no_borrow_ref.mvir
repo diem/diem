@@ -1,5 +1,5 @@
-// check: VerificationError
-// kind: BorrowLocReferenceError
+// check: VerificationFailure
+// check: BORROWLOC_REFERENCE_ERROR
 
 main() {
     let v: u64;

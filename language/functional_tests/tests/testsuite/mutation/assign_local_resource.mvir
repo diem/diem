@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: WriteRefResourceError(8) }
+// check: VerificationFailure
+// check: WRITEREF_RESOURCE_ERROR
 
 import 0x0.LibraCoin;
 main() {

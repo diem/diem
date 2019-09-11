@@ -9,10 +9,13 @@ use crate::{
 };
 use failure::Error;
 use std::{collections::BTreeMap, fmt};
-use types::language_storage::ModuleId;
+use types::{
+    language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
+};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{VMStaticViolation, VerificationError, VerificationStatus},
+    errors::{append_err_info, verification_error},
     file_format::{CompiledModule, CompiledProgram, CompiledScript},
     resolver::Resolver,
     views::{ModuleView, ViewInternals},
@@ -41,7 +44,7 @@ impl<'a> VerifiedProgram<'a> {
     pub fn new(
         program: CompiledProgram,
         deps: impl IntoIterator<Item = &'a VerifiedModule>,
-    ) -> Result<Self, Vec<VerificationStatus>> {
+    ) -> Result<Self, Vec<VMStatus>> {
         let deps: Vec<&VerifiedModule> = deps.into_iter().collect();
         // This is done separately to avoid unnecessary codegen due to monomorphization.
         Self::new_impl(program, deps)
@@ -50,20 +53,14 @@ impl<'a> VerifiedProgram<'a> {
     fn new_impl(
         program: CompiledProgram,
         deps: Vec<&'a VerifiedModule>,
-    ) -> Result<Self, Vec<VerificationStatus>> {
+    ) -> Result<Self, Vec<VMStatus>> {
         let mut modules = vec![];
 
-        for (module_idx, module) in program.modules.into_iter().enumerate() {
-            let to_statuses = |errors: Vec<VerificationError>| {
-                errors
-                    .into_iter()
-                    .map(|error| VerificationStatus::Module(module_idx as u16, error))
-                    .collect::<Vec<_>>()
-            };
+        for module in program.modules.into_iter() {
             let module = match VerifiedModule::new(module) {
                 Ok(module) => module,
                 Err((_, errors)) => {
-                    return Err(to_statuses(errors));
+                    return Err(errors);
                 }
             };
 
@@ -72,24 +69,17 @@ impl<'a> VerifiedProgram<'a> {
                 let deps = deps.iter().copied().chain(&modules);
                 let errors = verify_module_dependencies(&module, deps);
                 if !errors.is_empty() {
-                    return Err(to_statuses(errors));
+                    return Err(errors);
                 }
             }
 
             modules.push(module);
         }
 
-        let to_statuses = |errors: Vec<VerificationError>| {
-            errors
-                .into_iter()
-                .map(VerificationStatus::Script)
-                .collect::<Vec<_>>()
-        };
         let script = match VerifiedScript::new(program.script) {
             Ok(script) => script,
             Err((_, errors)) => {
-                let statuses = errors.into_iter().map(VerificationStatus::Script).collect();
-                return Err(statuses);
+                return Err(errors);
             }
         };
 
@@ -97,7 +87,7 @@ impl<'a> VerifiedProgram<'a> {
             let deps = deps.iter().copied().chain(&modules);
             let errors = verify_script_dependencies(&script, deps);
             if !errors.is_empty() {
-                return Err(to_statuses(errors));
+                return Err(errors);
             }
         }
 
@@ -162,7 +152,7 @@ impl VerifiedModule {
     ///
     /// There is a partial order on the checks. For example, the duplication check must precede the
     /// structural recursion check. In general, later checks are more expensive.
-    pub fn new(module: CompiledModule) -> Result<Self, (CompiledModule, Vec<VerificationError>)> {
+    pub fn new(module: CompiledModule) -> Result<Self, (CompiledModule, Vec<VMStatus>)> {
         // All CompiledModule instances are statically guaranteed to be bounds checked, so there's
         // no need for more checking.
         let mut errors = DuplicationChecker::new(&module).verify();
@@ -247,7 +237,7 @@ impl VerifiedScript {
     /// argument. Since the module constructed from a script is guaranteed to have an empty vector
     /// of struct definitions, the bounds checker will catch any occurrences of these illegal
     /// operations.
-    pub fn new(script: CompiledScript) -> Result<Self, (CompiledScript, Vec<VerificationError>)> {
+    pub fn new(script: CompiledScript) -> Result<Self, (CompiledScript, Vec<VMStatus>)> {
         let fake_module = script.into_module();
         let (fake_module, mut errors) = match VerifiedModule::new(fake_module) {
             Ok(module) => (module.into_inner(), vec![]),
@@ -257,11 +247,7 @@ impl VerifiedScript {
         errors.append(
             &mut verify_main_signature(&script)
                 .into_iter()
-                .map(move |err| VerificationError {
-                    kind: IndexKind::FunctionDefinition,
-                    idx: 0,
-                    err,
-                })
+                .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, 0))
                 .collect(),
         );
         if errors.is_empty() {
@@ -314,15 +300,15 @@ impl fmt::Display for VerifiedScript {
 }
 
 /// This function checks the extra requirements on the signature of the main function of a script.
-pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStaticViolation> {
+pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStatus> {
     let function_handle = &script.function_handle_at(script.main().function);
     let function_signature = &script.function_signature_at(function_handle.signature);
     if !function_signature.return_types.is_empty() {
-        return vec![VMStaticViolation::InvalidMainFunctionSignature];
+        return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
     }
     for arg_type in &function_signature.arg_types {
         if !arg_type.is_primitive() {
-            return vec![VMStaticViolation::InvalidMainFunctionSignature];
+            return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
         }
     }
     vec![]
@@ -338,7 +324,7 @@ pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStaticViolation> 
 pub fn verify_module_dependencies<'a>(
     module: &VerifiedModule,
     dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
-) -> Vec<VerificationError> {
+) -> Vec<VMStatus> {
     let module_id = module.self_id();
     let mut dependency_map = BTreeMap::new();
     for dependency in dependencies {
@@ -371,12 +357,12 @@ pub fn verify_module_dependencies<'a>(
 pub fn verify_script_dependencies<'a>(
     script: &VerifiedScript,
     dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
-) -> Vec<VerificationError> {
+) -> Vec<VMStatus> {
     let fake_module = script.clone().into_module();
     verify_module_dependencies(&fake_module, dependencies)
 }
 
-fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VerificationError> {
+fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStatus> {
     let mut errors = vec![];
 
     let module_id = module_view.id();
@@ -387,21 +373,21 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<Veri
     {
         let function_name = native_function_definition_view.name();
         match dispatch_native_function(&module_id, function_name) {
-            None => errors.push(VerificationError {
-                kind: IndexKind::FunctionHandle,
+            None => errors.push(verification_error(
+                IndexKind::FunctionHandle,
                 idx,
-                err: VMStaticViolation::MissingDependency,
-            }),
+                StatusCode::MISSING_DEPENDENCY,
+            )),
             Some(vm_native_function) => {
                 let declared_function_signature =
                     native_function_definition_view.signature().as_inner();
                 let expected_function_signature = &vm_native_function.expected_signature;
                 if declared_function_signature != expected_function_signature {
-                    errors.push(VerificationError {
-                        kind: IndexKind::FunctionHandle,
+                    errors.push(verification_error(
+                        IndexKind::FunctionHandle,
                         idx,
-                        err: VMStaticViolation::TypeMismatch,
-                    })
+                        StatusCode::TYPE_MISMATCH,
+                    ))
                 }
             }
         }
@@ -409,7 +395,7 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<Veri
     errors
 }
 
-fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VerificationError> {
+fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStatus> {
     let mut errors = vec![];
 
     let module_id = module_view.id();
@@ -421,11 +407,11 @@ fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<Verifi
         let struct_name = native_struct_definition_view.name();
 
         match dispatch_native_struct(&module_id, struct_name) {
-            None => errors.push(VerificationError {
-                kind: IndexKind::StructHandle,
+            None => errors.push(verification_error(
+                IndexKind::StructHandle,
                 idx,
-                err: VMStaticViolation::MissingDependency,
-            }),
+                StatusCode::MISSING_DEPENDENCY,
+            )),
             Some(vm_native_struct) => {
                 let declared_index = idx as u16;
                 let declared_is_nominal_resource =
@@ -439,11 +425,11 @@ fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<Verifi
                     || declared_is_nominal_resource != expected_is_nominal_resource
                     || declared_type_formals != expected_type_formals
                 {
-                    errors.push(VerificationError {
-                        kind: IndexKind::StructHandle,
+                    errors.push(verification_error(
+                        IndexKind::StructHandle,
                         idx,
-                        err: VMStaticViolation::TypeMismatch,
-                    })
+                        StatusCode::TYPE_MISMATCH,
+                    ))
                 }
             }
         }
@@ -454,18 +440,18 @@ fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<Verifi
 fn verify_all_dependencies_provided(
     module_view: &ModuleView<VerifiedModule>,
     dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
-) -> Vec<VerificationError> {
+) -> Vec<VMStatus> {
     let mut errors = vec![];
     for (idx, module_handle_view) in module_view.module_handles().enumerate() {
         let module_id = module_handle_view.module_id();
         if idx != CompiledModule::IMPLEMENTED_MODULE_INDEX as usize
             && !dependency_map.contains_key(&module_id)
         {
-            errors.push(VerificationError {
-                kind: IndexKind::ModuleHandle,
+            errors.push(verification_error(
+                IndexKind::ModuleHandle,
                 idx,
-                err: VMStaticViolation::MissingDependency,
-            });
+                StatusCode::MISSING_DEPENDENCY,
+            ));
         }
     }
     errors
@@ -474,7 +460,7 @@ fn verify_all_dependencies_provided(
 fn verify_struct_kind(
     module_view: &ModuleView<VerifiedModule>,
     dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
-) -> Vec<VerificationError> {
+) -> Vec<VMStatus> {
     let mut errors = vec![];
     for (idx, struct_handle_view) in module_view.struct_handles().enumerate() {
         let owner_module_id = struct_handle_view.module_id();
@@ -489,18 +475,18 @@ fn verify_struct_kind(
                 != struct_definition_view.is_nominal_resource()
                 || struct_handle_view.type_formals() != struct_definition_view.type_formals()
             {
-                errors.push(VerificationError {
-                    kind: IndexKind::StructHandle,
+                errors.push(verification_error(
+                    IndexKind::StructHandle,
                     idx,
-                    err: VMStaticViolation::TypeMismatch,
-                });
+                    StatusCode::TYPE_MISMATCH,
+                ));
             }
         } else {
-            errors.push(VerificationError {
-                kind: IndexKind::StructHandle,
+            errors.push(verification_error(
+                IndexKind::StructHandle,
                 idx,
-                err: VMStaticViolation::LookupFailed,
-            });
+                StatusCode::LOOKUP_FAILED,
+            ));
         }
     }
     errors
@@ -509,7 +495,7 @@ fn verify_struct_kind(
 fn verify_function_visibility_and_type(
     module_view: &ModuleView<VerifiedModule>,
     dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
-) -> Vec<VerificationError> {
+) -> Vec<VMStatus> {
     let resolver = Resolver::new(module_view.as_inner());
     let mut errors = vec![];
     for (idx, function_handle_view) in module_view.function_handles().enumerate() {
@@ -530,34 +516,30 @@ fn verify_function_visibility_and_type(
                     Ok(imported_function_signature) => {
                         let function_handle_signature = function_handle_view.signature().as_inner();
                         if imported_function_signature != *function_handle_signature {
-                            errors.push(VerificationError {
-                                kind: IndexKind::FunctionHandle,
+                            errors.push(verification_error(
+                                IndexKind::FunctionHandle,
                                 idx,
-                                err: VMStaticViolation::TypeMismatch,
-                            });
+                                StatusCode::TYPE_MISMATCH,
+                            ));
                         }
                     }
                     Err(err) => {
-                        errors.push(VerificationError {
-                            kind: IndexKind::FunctionHandle,
-                            idx,
-                            err,
-                        });
+                        errors.push(append_err_info(err, IndexKind::FunctionHandle, idx));
                     }
                 }
             } else {
-                errors.push(VerificationError {
-                    kind: IndexKind::FunctionHandle,
+                errors.push(verification_error(
+                    IndexKind::FunctionHandle,
                     idx,
-                    err: VMStaticViolation::VisibilityMismatch,
-                });
+                    StatusCode::VISIBILITY_MISMATCH,
+                ));
             }
         } else {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionHandle,
+            errors.push(verification_error(
+                IndexKind::FunctionHandle,
                 idx,
-                err: VMStaticViolation::LookupFailed,
-            });
+                StatusCode::LOOKUP_FAILED,
+            ));
         }
     }
     errors

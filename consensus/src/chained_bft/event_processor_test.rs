@@ -7,7 +7,7 @@ use crate::{
         common::Author,
         consensus_types::{
             block::Block,
-            proposal_msg::ProposalMsg,
+            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
             quorum_cert::QuorumCert,
             sync_info::SyncInfo,
             timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
@@ -237,16 +237,20 @@ fn basic_new_rank_event_test() {
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let pending_proposals = pending_messages
+        let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
+            .map(|mut m| {
+                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
+                    .unwrap()
+                    .into()
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
-        assert_eq!(pending_proposals[0].proposal.round(), new_round,);
+        assert_eq!(pending_proposals[0].proposal().round(), new_round,);
         assert_eq!(
             pending_proposals[0]
-                .proposal
+                .proposal()
                 .quorum_cert()
                 .certified_block_id(),
             genesis.id()
@@ -284,18 +288,22 @@ fn basic_new_rank_event_test() {
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
-        let pending_proposals = pending_messages
+        let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
             .filter(|m| m.1.has_proposal())
-            .map(|mut m| ProposalMsg::<TestPayload>::from_proto(m.1.take_proposal()).unwrap())
+            .map(|mut m| {
+                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
+                    .unwrap()
+                    .into()
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
-        assert_eq!(pending_proposals[0].proposal.round(), 2);
-        assert_eq!(pending_proposals[0].proposal.parent_id(), a1.id());
-        assert_eq!(pending_proposals[0].proposal.height(), 2);
+        assert_eq!(pending_proposals[0].proposal().round(), 2);
+        assert_eq!(pending_proposals[0].proposal().parent_id(), a1.id());
+        assert_eq!(pending_proposals[0].proposal().height(), 2);
         assert_eq!(
             pending_proposals[0]
-                .proposal
+                .proposal()
                 .quorum_cert()
                 .certified_block_id(),
             a1.id()
@@ -424,25 +432,25 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalMsg::<TestPayload> {
-            proposal: block_skip_round,
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
+        let bad_proposal = ProposalMsg::<TestPayload>::new(
+            block_skip_round,
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        );
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(bad_proposal)
                 .await,
             None
         );
-        let good_proposal = ProposalMsg::<TestPayload> {
-            proposal: correct_block.clone(),
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
+        let good_proposal = ProposalMsg::<TestPayload>::new(
+            correct_block.clone(),
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        );
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(good_proposal.clone())
                 .await,
-            Some(good_proposal.proposal)
+            Some(good_proposal.take_proposal())
         );
     });
 }
@@ -557,26 +565,26 @@ fn process_proposer_mismatch_test() {
         incorrect_proposer.block_store.signer(),
     );
     block_on(async move {
-        let bad_proposal = ProposalMsg::<TestPayload> {
-            proposal: block_incorrect_proposer,
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
+        let bad_proposal = ProposalMsg::<TestPayload>::new(
+            block_incorrect_proposer,
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        );
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(bad_proposal)
                 .await,
             None
         );
-        let good_proposal = ProposalMsg::<TestPayload> {
-            proposal: correct_block.clone(),
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
+        let good_proposal = ProposalMsg::<TestPayload>::new(
+            correct_block.clone(),
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        );
 
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(good_proposal.clone())
                 .await,
-            Some(good_proposal.proposal)
+            Some(good_proposal.take_proposal())
         );
     });
 }
@@ -612,20 +620,20 @@ fn process_timeout_certificate_test() {
     let tc =
         PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
     block_on(async move {
-        let skip_round_proposal = ProposalMsg::<TestPayload> {
-            proposal: block_skip_round,
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
-        };
+        let skip_round_proposal = ProposalMsg::<TestPayload>::new(
+            block_skip_round,
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
+        );
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(skip_round_proposal.clone())
                 .await,
-            Some(skip_round_proposal.proposal)
+            Some(skip_round_proposal.take_proposal())
         );
-        let old_good_proposal = ProposalMsg::<TestPayload> {
-            proposal: correct_block.clone(),
-            sync_info: SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
-        };
+        let old_good_proposal = ProposalMsg::<TestPayload>::new(
+            correct_block.clone(),
+            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+        );
         assert_eq!(
             node.event_processor
                 .pre_process_proposal(old_good_proposal.clone())

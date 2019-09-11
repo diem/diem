@@ -8,10 +8,10 @@ edition = "2018"
 
 [dependencies]
 arc-swap = "0.4.0-pre.1"
-backtrace = { version = "0.3.34", features = ["serialize-serde"] }
+backtrace = { version = "0.3.37", features = ["serialize-serde"] }
 chrono = "0.4.7"
 futures = "0.1.28"
-hyper = "0.12.33"
+hyper = "0.12.34"
 itertools = "0.8.0"
 lazy_static = "1.3.0"
 mime = "0.3.2"
@@ -33,4 +33,4 @@ failure = { package = "failure_ext", path = "../failure_ext" }
 
 [dev-dependencies]
 rand = "0.6.5"
-regex = "1.2.1"
+regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }

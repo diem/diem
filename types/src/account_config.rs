@@ -7,6 +7,7 @@ use crate::{
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
     event::EventHandle,
+    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
 use canonical_serialization::{
@@ -22,24 +23,31 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 
-/// An account object. This is the top-level entry in global storage. We'll never need to create an
-/// `Account` struct, but if we did, it would look something like
-/// pub struct Account {
-/// // Address holding this account
-/// address: Address,
-/// // Struct types defined by this account
-/// code: HashMap<Name, Code>,
-/// // Resurces owned by this account
-/// resoruces: HashMap<ObjectName, StructInstance>,
-/// }
+lazy_static! {
+    // LibraCoin
+    static ref COIN_MODULE_NAME: Identifier = Identifier::new("LibraCoin").unwrap();
+    static ref COIN_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
 
-// LibraCoin
-pub const COIN_MODULE_NAME: &str = "LibraCoin";
-pub const COIN_STRUCT_NAME: &str = "T";
+    // Account
+    static ref ACCOUNT_MODULE_NAME: Identifier = Identifier::new("LibraAccount").unwrap();
+    static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+}
 
-// Account
-pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
-pub const ACCOUNT_STRUCT_NAME: &str = "T";
+pub fn coin_module_name() -> &'static IdentStr {
+    &*COIN_MODULE_NAME
+}
+
+pub fn coin_struct_name() -> &'static IdentStr {
+    &*COIN_STRUCT_NAME
+}
+
+pub fn account_module_name() -> &'static IdentStr {
+    &*ACCOUNT_MODULE_NAME
+}
+
+pub fn account_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_STRUCT_NAME
+}
 
 pub fn core_code_address() -> AccountAddress {
     AccountAddress::default()
@@ -62,8 +70,8 @@ pub fn coin_struct_tag() -> StructTag {
 pub fn account_struct_tag() -> StructTag {
     StructTag {
         address: core_code_address(),
-        module: ACCOUNT_MODULE_NAME.to_string(),
-        name: ACCOUNT_STRUCT_NAME.to_string(),
+        module: account_module_name().to_owned(),
+        name: account_struct_name().to_owned(),
         type_params: vec![],
     }
 }

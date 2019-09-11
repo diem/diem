@@ -12,6 +12,7 @@ use crate::{
         RotateKeyGen,
     },
     executor::FakeExecutor,
+    transaction_status_eq,
 };
 use proptest::{collection::vec, prelude::*};
 
@@ -110,9 +111,8 @@ pub(crate) fn run_and_assert_gas_cost_stability(
     let outputs = executor.execute_block(transactions);
 
     for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
-        prop_assert_eq!(
-            output.status(),
-            expected,
+        prop_assert!(
+            transaction_status_eq(output.status(), expected),
             "unexpected status for transaction {}",
             idx
         );
@@ -143,9 +143,8 @@ pub(crate) fn run_and_assert_universe(
     prop_assert_eq!(outputs.len(), expected_statuses.len());
 
     for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
-        prop_assert_eq!(
-            output.status(),
-            expected,
+        prop_assert!(
+            transaction_status_eq(&output.status(), &expected),
             "unexpected status for transaction {}",
             idx
         );

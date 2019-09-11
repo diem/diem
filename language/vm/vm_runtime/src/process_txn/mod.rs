@@ -5,13 +5,13 @@ use crate::{
 use config::config::{VMPublishingOption, VMMode};
 use std::marker::PhantomData;
 use types::transaction::SignatureCheckedTransaction;
+use vm::errors::VMResult;
 use vm_cache_map::Arena;
 
 pub mod execute;
 pub mod validate;
 pub mod verify;
 
-use types::vm_error::VMStatus;
 use validate::{ValidatedTransaction, ValidationMode};
 
 /// The starting point for processing a transaction. All the different states involved are described
@@ -56,7 +56,7 @@ where
         mode: ValidationMode,
         publishing_option: &VMPublishingOption,
         vm_mode: VMMode,
-    ) -> Result<ValidatedTransaction<'alloc, 'txn, P>, VMStatus> {
+    ) -> VMResult<ValidatedTransaction<'alloc, 'txn, P>> {
         ValidatedTransaction::new(self, mode, publishing_option, vm_mode)
     }
 }

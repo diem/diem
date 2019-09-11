@@ -11,7 +11,7 @@ use crate::{
         AccumulatorProof, SignedTransactionProof,
     },
     proto::events::{EventsForVersions, EventsList},
-    vm_error::VMStatus,
+    vm_error::{StatusType, VMStatus},
     write_set::WriteSet,
 };
 use canonical_serialization::{
@@ -827,24 +827,26 @@ pub enum TransactionStatus {
 
 impl From<VMStatus> for TransactionStatus {
     fn from(vm_status: VMStatus) -> Self {
-        let should_discard = match vm_status {
+        let should_discard = match vm_status.status_type() {
+            // Any unknown error should be discarded
+            StatusType::Unknown => true,
             // Any error that is a validation status (i.e. an error arising from the prologue)
             // causes the transaction to not be included.
-            VMStatus::Validation(_) => true,
+            StatusType::Validation => true,
             // If the VM encountered an invalid internal state, we should discard the transaction.
-            VMStatus::InvariantViolation(_) => true,
+            StatusType::InvariantViolation => true,
             // A transaction that publishes code that cannot be verified is currently not charged.
             // Therefore the transaction can be excluded.
             //
             // The original plan was to charge for verification, but the code didn't implement it
             // properly. The decision of whether to charge or not will be made based on data (if
             // verification checks are too expensive then yes, otherwise no).
-            VMStatus::Verification(_) => true,
+            StatusType::Verification => true,
             // Even if we are unable to decode the transaction, there should be a charge made to
             // that user's account for the gas fees related to decoding, running the prologue etc.
-            VMStatus::Deserialization(_) => false,
+            StatusType::Deserialization => false,
             // Any error encountered during the execution of the transaction will charge gas.
-            VMStatus::Execution(_) => false,
+            StatusType::Execution => false,
         };
 
         if should_discard {

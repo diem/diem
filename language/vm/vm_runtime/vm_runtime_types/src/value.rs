@@ -11,6 +11,7 @@ use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
+    vm_error::{StatusCode, VMStatus},
 };
 use vm::{
     errors::*,
@@ -90,7 +91,7 @@ impl Value {
     // Structural equality for Move values
     // Cannot use Rust's equality due to:
     // - Collections possibly having different representations but still being "equal" semantically
-    pub fn equals(&self, v2: &Value) -> Result<bool, VMInvariantViolation> {
+    pub fn equals(&self, v2: &Value) -> VMResult<bool> {
         Ok(match (self, v2) {
             (Value::Bool(b1), Value::Bool(b2)) => b1 == b2,
             (Value::Address(a1), Value::Address(a2)) => a1 == a2,
@@ -98,7 +99,7 @@ impl Value {
             (Value::String(s1), Value::String(s2)) => s1 == s2,
             (Value::Struct(s1), Value::Struct(s2)) => {
                 if s1.len() != s2.len() {
-                    return Err(VMInvariantViolation::InternalTypeError);
+                    return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR));
                 }
                 for (mv1, mv2) in s1.iter().zip(s2) {
                     if !MutVal::equals(mv1, mv2)? {
@@ -108,13 +109,13 @@ impl Value {
                 true
             }
             (Value::ByteArray(ba1), Value::ByteArray(ba2)) => ba1 == ba2,
-            _ => return Err(VMInvariantViolation::InternalTypeError),
+            _ => return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
         })
     }
 
     // Structural non-equality for Move values
     // Implemented by hand instead of `!equals` to allow for short circuiting
-    pub fn not_equals(&self, v2: &Value) -> Result<bool, VMInvariantViolation> {
+    pub fn not_equals(&self, v2: &Value) -> VMResult<bool> {
         Ok(match (self, v2) {
             (Value::Bool(b1), Value::Bool(b2)) => b1 != b2,
             (Value::Address(a1), Value::Address(a2)) => a1 != a2,
@@ -122,7 +123,7 @@ impl Value {
             (Value::String(s1), Value::String(s2)) => s1 != s2,
             (Value::Struct(s1), Value::Struct(s2)) => {
                 if s1.len() != s2.len() {
-                    return Err(VMInvariantViolation::InternalTypeError);
+                    return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR));
                 }
                 for (mv1, mv2) in s1.iter().zip(s2) {
                     if MutVal::not_equals(mv1, mv2)? {
@@ -132,7 +133,7 @@ impl Value {
                 false
             }
             (Value::ByteArray(ba1), Value::ByteArray(ba2)) => ba1 != ba2,
-            _ => return Err(VMInvariantViolation::InternalTypeError),
+            _ => return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
         })
     }
 }
@@ -207,10 +208,10 @@ impl Clone for Local {
 }
 
 impl MutVal {
-    pub fn try_own(mv: Self) -> Result<Value, VMInvariantViolation> {
+    pub fn try_own(mv: Self) -> VMResult<Value> {
         match Rc::try_unwrap(mv.0) {
             Ok(cell) => Ok(cell.into_inner()),
-            Err(_) => Err(VMInvariantViolation::LocalReferenceError),
+            Err(_) => Err(VMStatus::new(StatusCode::LOCAL_REFERENCE_ERROR)),
         }
     }
 
@@ -257,13 +258,13 @@ impl MutVal {
     // Structural equality for Move values
     // Cannot use Rust's equality due to:
     // - Collections possibly having different representations but still being "equal" semantically
-    pub fn equals(&self, mv2: &MutVal) -> Result<bool, VMInvariantViolation> {
+    pub fn equals(&self, mv2: &MutVal) -> VMResult<bool> {
         self.peek().equals(&mv2.peek())
     }
 
     // Structural non-equality for Move values
     // Implemented by hand instead of `!equals` to allow for short circuiting
-    pub fn not_equals(&self, mv2: &MutVal) -> Result<bool, VMInvariantViolation> {
+    pub fn not_equals(&self, mv2: &MutVal) -> VMResult<bool> {
         self.peek().not_equals(&mv2.peek())
     }
 }
@@ -372,7 +373,7 @@ impl Local {
     // Cannot use Rust's equality due to:
     // - Internal representation of references
     // - Collections possibly having different representations but still being "equal" semantically
-    pub fn equals(self, l2: Local) -> Result<bool, VMInvariantViolation> {
+    pub fn equals(self, l2: Local) -> VMResult<bool> {
         match (self, l2) {
             (Local::Ref(mv1), Local::Ref(mv2)) | (Local::Value(mv1), Local::Value(mv2)) => {
                 mv1.equals(&mv2)
@@ -383,13 +384,13 @@ impl Local {
             (Local::GlobalRef(gr), Local::Ref(mv)) => gr.read_reference().equals(&mv),
             (Local::Ref(mv), Local::GlobalRef(gr)) => mv.equals(&gr.read_reference()),
             (Local::Invalid, Local::Invalid) => Ok(true),
-            _ => Err(VMInvariantViolation::InternalTypeError),
+            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
         }
     }
 
     // Structural non-equality for Move values
     // Implemented by hand instead of `!equals` to allow for short circuiting
-    pub fn not_equals(self, l2: Local) -> Result<bool, VMInvariantViolation> {
+    pub fn not_equals(self, l2: Local) -> VMResult<bool> {
         match (self, l2) {
             (Local::Ref(mv1), Local::Ref(mv2)) | (Local::Value(mv1), Local::Value(mv2)) => {
                 mv1.not_equals(&mv2)
@@ -400,7 +401,7 @@ impl Local {
             (Local::GlobalRef(gr), Local::Ref(mv)) => gr.read_reference().not_equals(&mv),
             (Local::Ref(mv), Local::GlobalRef(gr)) => mv.not_equals(&gr.read_reference()),
             (Local::Invalid, Local::Invalid) => Ok(false),
-            _ => Err(VMInvariantViolation::InternalTypeError),
+            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
         }
     }
 }

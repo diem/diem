@@ -165,6 +165,7 @@ fn gen_ledger_info(
         commit_block_id,
         /* epoch_num = */ 0,
         timestamp_usecs,
+        None,
     );
     LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
 }
@@ -186,7 +187,11 @@ fn test_executor_status() {
             .unwrap();
 
     assert_eq!(
-        vec![KEEP_STATUS, KEEP_STATUS, DISCARD_STATUS],
+        vec![
+            KEEP_STATUS.clone(),
+            KEEP_STATUS.clone(),
+            DISCARD_STATUS.clone()
+        ],
         response.status()
     );
 }

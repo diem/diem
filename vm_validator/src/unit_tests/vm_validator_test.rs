@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use assert_matches::assert_matches;
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::ed25519::*;
@@ -20,7 +19,7 @@ use types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
     transaction::{Program, SignedTransaction, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
-    vm_error::{VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus},
+    vm_error::StatusCode,
 };
 use vm_genesis::encode_transfer_program;
 
@@ -137,10 +136,7 @@ fn test_validate_invalid_signature() {
         .validate_transaction(signed_txn)
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::InvalidSignature))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_SIGNATURE);
 }
 
 #[test]
@@ -165,9 +161,9 @@ fn test_validate_known_script_too_large_args() {
     );
     let txn = SignedTransaction::from_proto(txn).unwrap();
     let ret = vm_validator.validate_transaction(txn).wait().unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::ExceededMaxTransactionSize(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
     );
 }
 
@@ -191,9 +187,9 @@ fn test_validate_max_gas_units_above_max() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::MaxGasUnitsExceedsMaxGasUnitsBound(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
     );
 }
 
@@ -217,9 +213,9 @@ fn test_validate_max_gas_units_below_min() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
     );
 }
 
@@ -243,9 +239,9 @@ fn test_validate_max_gas_price_above_bounds() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::GasUnitPriceAboveMaxBound(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 }
 
@@ -275,8 +271,8 @@ fn test_validate_max_gas_price_below_bounds() {
         .unwrap();
     assert_eq!(ret, None);
     //assert_eq!(
-    //    ret.unwrap(),
-    //    VMStatus::ValidationStatus(VMValidationStatus::GasUnitPriceBelowMinBound)
+    //    ret.unwrap().major_status,
+    //    StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
     //);
 }
 
@@ -298,10 +294,7 @@ fn test_validate_unknown_script() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::UnknownScript))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
 }
 
 // Make sure that we can't publish non-whitelisted modules
@@ -326,10 +319,7 @@ fn test_validate_module_publishing() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::UnknownModule))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
 }
 
 #[test]
@@ -354,10 +344,7 @@ fn test_validate_invalid_auth_key() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::InvalidAuthKey))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
 }
 
 #[test]
@@ -384,10 +371,8 @@ fn test_validate_balance_below_gas_fee() {
         .wait()
         .unwrap();
     assert_eq!(
-        ret,
-        Some(VMStatus::Validation(
-            VMValidationStatus::InsufficientBalanceForTransactionFee
-        ))
+        ret.unwrap().major_status,
+        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
     );
 }
 
@@ -413,9 +398,9 @@ fn test_validate_account_doesnt_exist() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret.unwrap(),
-        VMStatus::Validation(VMValidationStatus::SendingAccountDoesNotExist(_))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
 }
 
@@ -459,12 +444,7 @@ fn test_validate_invalid_arguments() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Verification(vec![VMVerificationStatus::Script(
-            VMVerificationError::TypeMismatch("Actual Type Mismatch".to_string())
-        )]))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);
 }
 
 #[test]
@@ -485,8 +465,5 @@ fn test_validate_non_genesis_write_set() {
         .validate_transaction(signed_txn)
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::RejectedWriteSet))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::REJECTED_WRITE_SET);
 }

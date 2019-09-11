@@ -3,10 +3,6 @@ module M {
     native resource T2;
 }
 
-// check: VerificationError
-// check: StructHandle
-// check: MissingDependency
-
-// check: VerificationError
-// check: StructHandle
-// check: MissingDependency
+// check: VerificationFailure
+// check: MISSING_DEPENDENCY
+// check: MISSING_DEPENDENCY

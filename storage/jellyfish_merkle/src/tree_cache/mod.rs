@@ -131,22 +131,6 @@ pub struct TreeCache<'a, R: 'a + TreeReader> {
     reader: &'a R,
 }
 
-impl<'a, R> TreeReader for TreeCache<'a, R>
-where
-    R: 'a + TreeReader,
-{
-    /// Gets a node with given hash. If it doesn't exist in node cache, read from `reader`.
-    fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
-        Ok(if let Some(node) = self.node_cache.get(node_key) {
-            node.clone()
-        } else if let Some(node) = self.frozen_cache.node_cache.get(node_key) {
-            node.clone()
-        } else {
-            self.reader.get_node(node_key)?
-        })
-    }
-}
-
 impl<'a, R> TreeCache<'a, R>
 where
     R: 'a + TreeReader,
@@ -172,6 +156,17 @@ where
             num_stale_leaves: 0,
             num_new_leaves: 0,
         }
+    }
+
+    /// Gets a node with given node key. If it doesn't exist in node cache, read from `reader`.
+    pub fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
+        Ok(if let Some(node) = self.node_cache.get(node_key) {
+            node.clone()
+        } else if let Some(node) = self.frozen_cache.node_cache.get(node_key) {
+            node.clone()
+        } else {
+            self.reader.get_node(node_key)?
+        })
     }
 
     /// Gets the current root node key.

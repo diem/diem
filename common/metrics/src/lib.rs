@@ -96,32 +96,6 @@ pub fn get_all_metrics() -> HashMap<String, String> {
 }
 
 // Launches a background thread which will periodically collect metrics
-// every interval and push them to Pushgateway hosted at `address`
-pub fn push_all_metrics_to_pushgateway_periodically(
-    job: &str,
-    address: &str,
-    peer_id: &str,
-    interval: u64,
-) {
-    info!("Start pushing metrics to {}", address);
-    let job = job.to_owned();
-    let addr = address.to_owned();
-    let peer_id = peer_id.to_owned();
-    thread::spawn(move || loop {
-        let res = prometheus::push_metrics(
-            &job,
-            labels! {"instance".to_owned() => peer_id.clone(), },
-            &addr,
-            prometheus::gather(),
-        );
-        if let Err(e) = res {
-            error!("Fail to push metrics: {}", e);
-        }
-        thread::sleep(time::Duration::from_millis(interval));
-    });
-}
-
-// Launches a background thread which will periodically collect metrics
 // every interval and write them to the provided file
 pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
     dir_path: &P,

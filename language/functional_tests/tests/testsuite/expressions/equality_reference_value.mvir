@@ -9,7 +9,7 @@ module Token {
         let sender: address;
         move_to_sender<T>(T { count: 0 });
         sender = get_txn_sender();
-        t_ref = borrow_global<T>(move(sender));
+        t_ref = borrow_global_mut<T>(move(sender));
         count_ref = &mut move(t_ref).count;
         local = 0;
         local_ref = &mut local;

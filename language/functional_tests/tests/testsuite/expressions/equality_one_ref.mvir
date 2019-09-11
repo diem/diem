@@ -9,4 +9,4 @@ main() {
 }
 
 // check: VerificationFailure
-// check: EqualityOpTypeMismatchError
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR

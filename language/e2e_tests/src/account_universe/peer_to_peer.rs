@@ -14,7 +14,7 @@ use proptest_derive::Arbitrary;
 use proptest_helpers::Index;
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Represents a peer-to-peer transaction performed in the account universe.
@@ -78,7 +78,7 @@ impl AUTransactionGen for P2PTransferGen {
                 receiver.balance += self.amount;
                 receiver.received_events_count += 1;
 
-                status = TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed));
+                status = TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
             }
             (true, true, false) => {
                 // Enough gas to pass validation and to do the transfer, but not enough to succeed
@@ -89,7 +89,8 @@ impl AUTransactionGen for P2PTransferGen {
                 // 6 means the balance was insufficient while trying to deduct gas costs in the
                 // epilogue.
                 // TODO: define these values in a central location
-                status = TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(6)));
+                status =
+                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(6));
             }
             (true, false, _) => {
                 // Enough to pass validation but not to do the transfer. The transaction will be run
@@ -97,12 +98,13 @@ impl AUTransactionGen for P2PTransferGen {
                 sender.sequence_number += 1;
                 sender.balance -= *gas_costs::PEER_TO_PEER_TOO_LOW;
                 // 10 means the balance was insufficient while trying to transfer.
-                status = TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Aborted(10)));
+                status =
+                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10));
             }
             (false, _, _) => {
                 // Not enough gas to pass validation. Nothing will happen.
-                status = TransactionStatus::Discard(VMStatus::Validation(
-                    VMValidationStatus::InsufficientBalanceForTransactionFee,
+                status = TransactionStatus::Discard(VMStatus::new(
+                    StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
                 ));
             }
         }

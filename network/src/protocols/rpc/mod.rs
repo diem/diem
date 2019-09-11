@@ -411,7 +411,8 @@ async fn handle_inbound_substream<TSubstream>(
                 );
             }
         }
-        notif => unreachable!(
+        notif => debug_assert!(
+            false,
             "Received unexpected event from PeerManager: {:?}, expected NewInboundSubstream",
             notif
         ),

@@ -300,6 +300,20 @@ impl LibraDB {
             .version())
     }
 
+    /// Returns the latest ledger infos per epoch starting with the given epoch num:
+    /// - the latest ledger info of the current epoch is just the last ledger info in the system
+    /// - the latest ledger infos of previous epochs contain reconfiguration validator sets.
+    /// Returns error in case `start_epoch` is higher than the currently known epoch.
+    /// The returned vector is not necessarily sorted: the client should make sure to sort it
+    /// by epoch number.
+    pub fn get_latest_ledger_infos_per_epoch(
+        &self,
+        start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+        self.ledger_store
+            .get_latest_ledger_infos_per_epoch(start_epoch)
+    }
+
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.
     ///

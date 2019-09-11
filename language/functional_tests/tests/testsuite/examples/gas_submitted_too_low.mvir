@@ -14,4 +14,4 @@ main() {
     return;
 }
 
-// check: MaxGasUnitsBelowMinTransactionGasUnits
+// check: MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS

@@ -9,9 +9,10 @@
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
 use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::VMStaticViolation,
+    errors::err_at_offset,
     file_format::{Bytecode, CompiledModule, FunctionDefinition, StructFieldInformation},
     views::FunctionDefinitionView,
 };
@@ -26,7 +27,7 @@ impl<'a> StackUsageVerifier<'a> {
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Vec<VMStaticViolation> {
+    ) -> Vec<VMStatus> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let verifier = Self {
             module,
@@ -40,20 +41,16 @@ impl<'a> StackUsageVerifier<'a> {
         errors
     }
 
-    fn verify_block(
-        &self,
-        block_id: &BlockId,
-        cfg: &dyn ControlFlowGraph,
-    ) -> Vec<VMStaticViolation> {
+    fn verify_block(&self, block_id: &BlockId, cfg: &dyn ControlFlowGraph) -> Vec<VMStatus> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);
         for i in block_start..=cfg.block_end(block_id) {
             stack_size_increment += self.instruction_effect(&code[i as usize]);
             if stack_size_increment < 0 {
-                return vec![VMStaticViolation::NegativeStackSizeInsideBlock(
+                return vec![err_at_offset(
+                    StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
                     block_start as usize,
-                    i as usize,
                 )];
             }
         }
@@ -61,7 +58,8 @@ impl<'a> StackUsageVerifier<'a> {
         if stack_size_increment == 0 {
             vec![]
         } else {
-            vec![VMStaticViolation::PositiveStackSizeAtBlockEnd(
+            vec![err_at_offset(
+                StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END,
                 block_start as usize,
             )]
         }
@@ -142,10 +140,11 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::Not => 0,
 
-            Bytecode::FreezeRef => 0,
-            Bytecode::Exists(_, _) => 0,
-            Bytecode::BorrowGlobal(_, _) => 0,
-            Bytecode::MoveFrom(_, _) => 0,
+            Bytecode::FreezeRef
+            | Bytecode::Exists(_, _)
+            | Bytecode::MutBorrowGlobal(_, _)
+            | Bytecode::ImmBorrowGlobal(_, _)
+            | Bytecode::MoveFrom(_, _) => 0,
             Bytecode::MoveToSender(_, _) => -1,
 
             Bytecode::GetTxnGasUnitPrice

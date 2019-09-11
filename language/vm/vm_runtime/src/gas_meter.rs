@@ -6,8 +6,16 @@ use crate::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
     loaded_data::function::FunctionReference,
 };
-use types::{account_address::ADDRESS_LENGTH, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
-use vm::{access::ModuleAccess, errors::*, file_format::Bytecode, gas_schedule::*};
+use types::{
+    account_address::ADDRESS_LENGTH, transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
+    vm_error::StatusCode,
+};
+use vm::{
+    access::ModuleAccess,
+    errors::{vm_error, VMResult},
+    file_format::Bytecode,
+    gas_schedule::*,
+};
 use vm_runtime_types::value::Local;
 
 /// Holds the state of the gas meter.
@@ -88,10 +96,10 @@ impl GasMeter {
         P: ModuleCache<'alloc>,
     {
         if self.meter_on {
-            let instruction_gas = try_runtime!(self.gas_for_instruction(instr, stk, memory_size));
+            let instruction_gas = self.gas_for_instruction(instr, stk, memory_size)?;
             self.consume_gas(instruction_gas, stk)
         } else {
-            Ok(Ok(()))
+            Ok(())
         }
     }
 
@@ -197,10 +205,10 @@ impl GasMeter {
             }
             Bytecode::Call(call_idx, _) => {
                 let self_module = &stk.top_frame()?.module();
-                let function_ref = try_runtime!(stk
+                let function_ref = stk
                     .module_cache
-                    .resolve_function_ref(self_module, *call_idx))
-                .ok_or(VMInvariantViolation::LinkerError)?;
+                    .resolve_function_ref(self_module, *call_idx)?
+                    .ok_or_else(|| vm_error(stk.location().unwrap_or_default(), StatusCode::LINKER_ERROR))?;
                 if function_ref.is_native() {
                     GasUnits::new(0) // This will be costed at the call site/by the native function
                 } else {
@@ -269,7 +277,9 @@ impl GasMeter {
             //
             // Borrowing a global causes a read of the underlying data. Therefore the cost is
             // dependent on the size of the data being borrowed.
-            Bytecode::BorrowGlobal(_, _)
+            Bytecode::MutBorrowGlobal(_, _)
+            |
+            Bytecode::ImmBorrowGlobal(_, _)
             // In the process of determining if a resource exists, we need to load/read that
             // memory. We therefore need to charge for this query based on the size of the data
             // being accessed.
@@ -309,7 +319,7 @@ impl GasMeter {
                 Self::gas_of(static_cost_instr(instr, mem_size))
             }
         };
-        Ok(Ok(instruction_reqs))
+        Ok(instruction_reqs)
     }
 
     /// Get the amount of gas that remains (that has _not_ been consumed) in the gas meter.
@@ -332,22 +342,19 @@ impl GasMeter {
         P: ModuleCache<'alloc>,
     {
         if !self.meter_on {
-            return Ok(Ok(()));
+            return Ok(());
         }
         if self
             .current_gas_left
             .app(&gas_amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
         {
             self.current_gas_left = self.current_gas_left.sub(gas_amount);
-            Ok(Ok(()))
+            Ok(())
         } else {
             // Zero out the internal gas state
             self.current_gas_left = GasUnits::new(0);
             let location = stk.location().unwrap_or_default();
-            Ok(Err(VMRuntimeError {
-                loc: location,
-                err: VMErrorKind::OutOfGasError,
-            }))
+            Err(vm_error(location, StatusCode::OUT_OF_GAS))
         }
     }
 

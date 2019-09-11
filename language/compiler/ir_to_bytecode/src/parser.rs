@@ -136,7 +136,7 @@ pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::
 }
 
 fn handle_error<'input, T, Token>(
-    e: lalrpop_util::ParseError<usize, Token, &'static str>,
+    e: lalrpop_util::ParseError<usize, Token, failure::Error>,
     code_str: &'input str,
 ) -> Result<T>
 where

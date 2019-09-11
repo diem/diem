@@ -4,7 +4,12 @@
 use super::{hash, primitive_helpers, signature, vector};
 use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
 use std::collections::{HashMap, VecDeque};
-use types::{account_address::AccountAddress, account_config, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress,
+    account_config,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
 
 /// Enum representing the result of running a native function
@@ -48,7 +53,7 @@ impl NativeFunction {
 /// function name where it was expected to be declared
 pub fn dispatch_native_function(
     module: &ModuleId,
-    function_name: &str,
+    function_name: &IdentStr,
 ) -> Option<&'static NativeFunction> {
     NATIVE_FUNCTION_MAP.get(module)?.get(function_name)
 }
@@ -67,11 +72,11 @@ macro_rules! add {
             dispatch: $dis,
             expected_signature,
         };
-        let id = ModuleId::new($addr, $module.into());
+        let id = ModuleId::new($addr, Identifier::new($module).unwrap());
         let old = $m
             .entry(id)
             .or_insert_with(HashMap::new)
-            .insert($name.into(), f);
+            .insert(Identifier::new($name).unwrap(), f);
         assert!(old.is_none());
     }};
 }
@@ -83,15 +88,16 @@ fn tstruct(
     function_name: &str,
     args: Vec<SignatureToken>,
 ) -> SignatureToken {
-    let id = ModuleId::new(addr, module_name.into());
-    let native_struct = dispatch_native_struct(&id, function_name).unwrap();
+    let id = ModuleId::new(addr, Identifier::new(module_name).unwrap());
+    let native_struct =
+        dispatch_native_struct(&id, &Identifier::new(function_name).unwrap()).unwrap();
     let idx = native_struct.expected_index;
     // TODO assert kinds match
     assert_eq!(args.len(), native_struct.expected_type_formals.len());
     SignatureToken::Struct(idx, args)
 }
 
-type NativeFunctionMap = HashMap<ModuleId, HashMap<String, NativeFunction>>;
+type NativeFunctionMap = HashMap<ModuleId, HashMap<Identifier, NativeFunction>>;
 
 lazy_static! {
     static ref NATIVE_FUNCTION_MAP: NativeFunctionMap = {
@@ -99,16 +105,6 @@ lazy_static! {
         let mut m: NativeFunctionMap = HashMap::new();
         let addr = account_config::core_code_address();
         // Hash
-        add!(m, addr, "Hash", "keccak256",
-            hash::native_keccak_256,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
-        add!(m, addr, "Hash", "ripemd160",
-            hash::native_ripemd_160,
-            vec![ByteArray],
-            vec![ByteArray]
-        );
         add!(m, addr, "Hash", "sha2_256",
             hash::native_sha2_256,
             vec![ByteArray],
@@ -152,8 +148,35 @@ lazy_static! {
         add!(m, addr, "Vector", "length",
             vector::native_length,
             vec![Kind::All],
-            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![SignatureToken::TypeParameter(0)])))],
+            vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
             vec![U64]
+        );
+        add!(m, addr, "Vector", "empty",
+            vector::native_empty,
+            vec![Kind::All],
+            vec![],
+            vec![
+                tstruct(addr, "Vector", "T", vec![TypeParameter(0)]),
+            ]
+        );
+        add!(m, addr, "Vector", "borrow",
+            vector::native_borrow,
+            vec![Kind::All],
+            vec![
+                Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                U64],
+            vec![
+                Reference(Box::new(TypeParameter(0)))
+            ]
+        );
+        add!(m, addr, "Vector", "push_back",
+            vector::native_push_back,
+            vec![Kind::All],
+            vec![
+                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                TypeParameter(0),
+            ],
+            vec![]
         );
         // Event
         add!(m, addr, "Event", "write_to_event_store",

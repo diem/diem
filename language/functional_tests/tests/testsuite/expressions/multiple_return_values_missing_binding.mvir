@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: PositiveStackSizeAtBlockEnd(0) }
+// check: VerificationFailure
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
 
 module Test {
     resource T { }

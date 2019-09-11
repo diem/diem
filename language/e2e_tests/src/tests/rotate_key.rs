@@ -10,7 +10,7 @@ use crypto::ed25519::compat;
 use types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 #[test]
@@ -29,7 +29,7 @@ fn rotate_key() {
     let output = &executor.execute_block(vec![txn])[0];
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
     );
     executor.apply_write_set(output.write_set());
 
@@ -52,7 +52,7 @@ fn rotate_key() {
     let old_key_output = &executor.execute_block(vec![old_key_txn])[0];
     assert_eq!(
         old_key_output.status(),
-        &TransactionStatus::Discard(VMStatus::Validation(VMValidationStatus::InvalidAuthKey)),
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY)),
     );
 
     // Check that transactions can be sent with the new key.
@@ -61,6 +61,6 @@ fn rotate_key() {
     let new_key_output = &executor.execute_block(vec![new_key_txn])[0];
     assert_eq!(
         new_key_output.status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
     );
 }

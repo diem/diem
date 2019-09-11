@@ -4,8 +4,9 @@
 use proptest::{prelude::*, sample::Index as PropIndex};
 use proptest_helpers::pick_slice_idxs;
 use std::collections::BTreeMap;
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
-    errors::{VMStaticViolation, VerificationError},
+    errors::{append_err_info, bytecode_offset_err},
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
         FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StructDefinitionIndex, TableIndex,
@@ -54,11 +55,12 @@ macro_rules! new_bytecode {
         let new_idx = (dst_len + $offset) as TableIndex;
         (
             $bytecode_ident($idx_type::new(new_idx)),
-            VMStaticViolation::CodeUnitIndexOutOfBounds(
+            bytecode_offset_err(
                 $idx_type::KIND,
-                $bytecode_idx,
-                dst_len,
                 new_idx as usize,
+                dst_len,
+                $bytecode_idx,
+                StatusCode::INDEX_OUT_OF_BOUNDS,
             ),
         )
     }};
@@ -71,11 +73,12 @@ macro_rules! struct_bytecode {
         (
             // TODO: check this again once generics is implemented
             $bytecode_ident($idx_type::new(new_idx), NO_TYPE_ACTUALS),
-            VMStaticViolation::CodeUnitIndexOutOfBounds(
+            bytecode_offset_err(
                 $idx_type::KIND,
-                $bytecode_idx,
-                dst_len,
                 new_idx as usize,
+                dst_len,
+                $bytecode_idx,
+                StatusCode::INDEX_OUT_OF_BOUNDS,
             ),
         )
     }};
@@ -87,11 +90,12 @@ macro_rules! code_bytecode {
         let new_idx = code_len + $offset;
         (
             $bytecode_ident(new_idx as CodeOffset),
-            VMStaticViolation::CodeUnitIndexOutOfBounds(
+            bytecode_offset_err(
                 IndexKind::CodeDefinition,
-                $bytecode_idx,
-                code_len,
                 new_idx,
+                code_len,
+                $bytecode_idx,
+                StatusCode::INDEX_OUT_OF_BOUNDS,
             ),
         )
     }};
@@ -103,11 +107,12 @@ macro_rules! locals_bytecode {
         let new_idx = locals_len + $offset;
         (
             $bytecode_ident(new_idx as LocalIndex),
-            VMStaticViolation::CodeUnitIndexOutOfBounds(
+            bytecode_offset_err(
                 IndexKind::LocalPool,
-                $bytecode_idx,
-                locals_len,
                 new_idx,
+                locals_len,
+                $bytecode_idx,
+                StatusCode::INDEX_OUT_OF_BOUNDS,
             ),
         )
     }};
@@ -121,7 +126,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         }
     }
 
-    pub fn apply(mut self) -> Vec<VerificationError> {
+    pub fn apply(mut self) -> Vec<VMStatus> {
         let function_def_len = self.module.function_defs.len();
 
         let mut mutation_map = BTreeMap::new();
@@ -145,11 +150,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         results
     }
 
-    fn apply_one(
-        &mut self,
-        idx: usize,
-        mutations: Vec<CodeUnitBoundsMutation>,
-    ) -> Vec<VerificationError> {
+    fn apply_one(&mut self, idx: usize, mutations: Vec<CodeUnitBoundsMutation>) -> Vec<VMStatus> {
         // For this function def, find all the places where a bounds mutation can be applied.
         let (code_len, locals_len) = {
             let code = &mut self.module.function_defs[idx].code;
@@ -245,12 +246,19 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         StructDefinitionIndex,
                         Exists
                     ),
-                    BorrowGlobal(_, _) => struct_bytecode!(
+                    MutBorrowGlobal(_, _) => struct_bytecode!(
                         struct_defs_len,
                         bytecode_idx,
                         offset,
                         StructDefinitionIndex,
-                        BorrowGlobal
+                        MutBorrowGlobal
+                    ),
+                    ImmBorrowGlobal(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ImmBorrowGlobal
                     ),
                     MoveFrom(_, _) => struct_bytecode!(
                         struct_defs_len,
@@ -352,11 +360,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
 
                 code[bytecode_idx] = new_bytecode;
 
-                VerificationError {
-                    kind: IndexKind::FunctionDefinition,
-                    idx,
-                    err,
-                }
+                append_err_info(err, IndexKind::FunctionDefinition, idx)
             })
             .collect()
     }
@@ -375,7 +379,8 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | Pack(_, _)
         | Unpack(_, _)
         | Exists(_, _)
-        | BorrowGlobal(_, _)
+        | MutBorrowGlobal(_, _)
+        | ImmBorrowGlobal(_, _)
         | MoveFrom(_, _)
         | MoveToSender(_, _)
         | BrTrue(_)

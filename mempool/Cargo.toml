@@ -33,7 +33,6 @@ vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 rand = "0.6.5"
-tempfile = "3.1.0"
 channel = { path = "../common/channel" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types", features = ["testing"] }

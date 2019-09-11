@@ -18,8 +18,6 @@ module M {
     }
 }
 
-// check: VerificationError
-// check: RetTypeMismatchError
-
-// check: VerificationError
-// check: RetTypeMismatchError
+// check: VerificationFailure
+// check: RET_TYPE_MISMATCH_ERROR
+// check: RET_TYPE_MISMATCH_ERROR

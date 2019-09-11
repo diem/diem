@@ -16,15 +16,8 @@ use types::transaction::Version;
 pub(crate) struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>);
 
 impl TreeReader for MockTreeStore {
-    fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
-        Ok(self
-            .0
-            .read()
-            .unwrap()
-            .0
-            .get(node_key)
-            .cloned()
-            .ok_or_else(|| format_err!("Failed to find node with hash {:?}", node_key))?)
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
+        Ok(self.0.read().unwrap().0.get(node_key).cloned())
     }
 }
 

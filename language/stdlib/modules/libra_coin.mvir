@@ -18,12 +18,7 @@ module LibraCoin {
     // Since only the Association account has a mint capability, this will only succeed if it is
     // invoked by a transaction sent by that account.
     public mint_with_default_capability(amount: u64): Self.T acquires MintCapability, MarketCap {
-        let capability_ref: &mut Self.MintCapability;
-        let capability_immut_ref: &Self.MintCapability;
-
-        capability_ref = borrow_global<MintCapability>(get_txn_sender());
-        capability_immut_ref = freeze(move(capability_ref));
-        return Self.mint(move(amount), move(capability_immut_ref));
+        return Self.mint(move(amount), borrow_global<MintCapability>(get_txn_sender()));
     }
 
     // Mint a new LibraCoin.T worth `value`. The caller must have a reference to a MintCapability.
@@ -41,7 +36,7 @@ module LibraCoin {
         // be backed with real-world assets, and thus minting will be correspondingly rarer.
         assert(copy(value) <= 1000000000 * 1000000, 11); // * 1000000 because the unit is microlibra
         // update market cap resource to reflect minting
-        market_cap_ref = borrow_global<MarketCap>(0xA550C18);
+        market_cap_ref = borrow_global_mut<MarketCap>(0xA550C18);
         market_cap_total_value = *&copy(market_cap_ref).total_value;
         *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) + copy(value);
 
@@ -59,7 +54,7 @@ module LibraCoin {
         T { value } = move(coin);
 
         // update market cap resource to reflect burning
-        market_cap_ref = borrow_global<MarketCap>(0xA550C18);
+        market_cap_ref = borrow_global_mut<MarketCap>(0xA550C18);
         market_cap_total_value = *&copy(market_cap_ref).total_value;
         *(&mut move(market_cap_ref).total_value) = move(market_cap_total_value) - move(value);
 
@@ -80,10 +75,7 @@ module LibraCoin {
 
     // Return the total value of all Libra in the system
     public market_cap(): u64 acquires MarketCap {
-        let market_cap_ref: &mut Self.MarketCap;
-
-        market_cap_ref = borrow_global<MarketCap>(0xA550C18);
-        return *&move(market_cap_ref).total_value;
+        return *&(borrow_global<MarketCap>(0xA550C18)).total_value;
     }
 
     // Create a new LibraCoin.T with a value of 0

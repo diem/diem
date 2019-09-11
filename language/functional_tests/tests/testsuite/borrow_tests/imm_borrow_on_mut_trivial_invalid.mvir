@@ -27,5 +27,5 @@ module Tester {
     }
 }
 
-// check: VerificationError
-// check: BorrowFieldExistsMutableBorrowError
+// check: VerificationFailure
+// check: BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR

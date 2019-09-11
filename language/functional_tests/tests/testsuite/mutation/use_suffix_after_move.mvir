@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: CallTypeMismatchError(4) }
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR
 
 module B {
     struct T{g: u64}

@@ -28,11 +28,13 @@ crypto = { path = "../crypto/crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../common/proptest_helpers" }
 proto_conv = { path = "../common/proto_conv", features = ["derive"] }
+num_enum = "0.4.1"
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
+serde_json = "1.0.40"
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]

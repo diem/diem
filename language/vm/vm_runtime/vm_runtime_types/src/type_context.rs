@@ -1,5 +1,5 @@
 use crate::loaded_data::{struct_def::StructDef, types::Type};
-use vm::errors::VMInvariantViolation;
+use types::vm_error::{StatusCode, VMStatus};
 
 pub struct TypeContext(Vec<Type>);
 
@@ -12,7 +12,7 @@ impl TypeContext {
         Self((0..num_type_args).map(Type::TypeVariable).collect())
     }
 
-    pub fn subst_type(&self, ty: &Type) -> Result<Type, VMInvariantViolation> {
+    pub fn subst_type(&self, ty: &Type) -> Result<Type, VMStatus> {
         Ok(match ty {
             Type::TypeVariable(idx) => self.get_type(*idx)?,
             Type::Reference(ty) => Type::Reference(Box::new(self.subst_type(ty)?)),
@@ -22,7 +22,7 @@ impl TypeContext {
         })
     }
 
-    pub fn subst_struct_def(&self, def: &StructDef) -> Result<StructDef, VMInvariantViolation> {
+    pub fn subst_struct_def(&self, def: &StructDef) -> Result<StructDef, VMStatus> {
         Ok(StructDef::new(
             def.field_definitions()
                 .iter()
@@ -31,10 +31,10 @@ impl TypeContext {
         ))
     }
 
-    pub fn get_type(&self, idx: u16) -> Result<Type, VMInvariantViolation> {
+    pub fn get_type(&self, idx: u16) -> Result<Type, VMStatus> {
         self.0
             .get(idx as usize)
             .cloned()
-            .ok_or(VMInvariantViolation::InternalTypeError)
+            .ok_or_else(|| VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR))
     }
 }

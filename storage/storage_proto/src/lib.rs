@@ -371,6 +371,52 @@ impl IntoProto for GetStartupInfoResponse {
     }
 }
 
+/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
+///
+/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
+/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochRequest)]
+pub struct GetLatestLedgerInfosPerEpochRequest {
+    pub start_epoch: u64,
+}
+
+impl GetLatestLedgerInfosPerEpochRequest {
+    /// Constructor.
+    pub fn new(start_epoch: u64) -> Self {
+        Self { start_epoch }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
+///
+/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
+/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochResponse)]
+pub struct GetLatestLedgerInfosPerEpochResponse {
+    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>,
+}
+
+impl GetLatestLedgerInfosPerEpochResponse {
+    /// Constructor.
+    pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>) -> Self {
+        Self {
+            latest_ledger_infos,
+        }
+    }
+}
+
+impl Into<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>
+    for GetLatestLedgerInfosPerEpochResponse
+{
+    fn into(self) -> Vec<LedgerInfoWithSignatures<Ed25519Signature>> {
+        self.latest_ledger_infos
+    }
+}
+
 pub mod prelude {
     pub use super::*;
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::arg_enum;
-use config::config::NodeConfig;
+use config::config::{NodeConfig, PersistableConfig};
 use failure::prelude::*;
 use logger::prelude::*;
 use regex::Regex;

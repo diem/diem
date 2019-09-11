@@ -12,7 +12,10 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use std::marker::PhantomData;
-use types::language_storage::ModuleId;
+use types::{
+    language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
+};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -39,10 +42,9 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Ok(Some(FunctionRef)))` if such function exists.
-    /// * `Ok(Ok(None))` if such function doesn't exists.
-    /// * `Ok(Err(...))` or `Err(...)` for a verification issue in a resolved dependency.
-    /// * `Err(...)` for a VM invariant violation.
+    /// * `Ok(Some(FunctionRef))` if such function exists.
+    /// * `Ok(None)` if such function doesn't exists.
+    /// * `Err(...)` for a verification issue in a resolved dependency or VM invariant violation.
     fn resolve_function_ref(
         &self,
         caller_module: &LoadedModule,
@@ -54,10 +56,10 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Ok(Some(StructDef)))` if such struct exists.
-    /// * `Ok(Ok(None))` if such function doesn't exists.
-    /// * `Ok(Err(...))` for a verification or other issue in a resolved dependency, or out of gas.
-    /// * `Err(...)` for a VM invariant violation.
+    /// * `Ok(Some(StructDef))` if such struct exists.
+    /// * `Ok(None)` if such function doesn't exists.
+    /// * `Err(...)` for a verification or other issue in a resolved dependency, out of gas, or for
+    ///   a VM invariant violation.
     fn resolve_struct_def(
         &self,
         module: &LoadedModule,
@@ -69,10 +71,9 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Ok(Some(LoadedModule)))` if such module exists.
-    /// * `Ok(Ok(None))` if such module doesn't exists.
-    /// * `Ok(Err(...))` for a verification issue in the module.
-    /// * `Err(...)` for a VM invariant violation.
+    /// * `Ok(Some(LoadedModule))` if such module exists.
+    /// * `Ok(None)` if such module doesn't exists.
+    /// * `Err(...)` for a verification issue in the module or for a VM invariant violation.
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>>;
 
     fn cache_module(&self, module: VerifiedModule);
@@ -142,10 +143,10 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         id: &ModuleId,
         fetcher: &F,
-    ) -> VMRuntimeResult<Option<&'alloc LoadedModule>> {
+    ) -> VMResult<Option<&'alloc LoadedModule>> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
-        // module id, we should get rid of that ok_or case here.
+        // module id, we should get rid of that ok_or_else case here.
         if let Some(m) = self.map.get(id) {
             return Ok(Some(&*m));
         }
@@ -157,16 +158,16 @@ impl<'alloc> VMModuleCache<'alloc> {
         // Verify the module before using it.
         let module = match VerifiedModule::new(module) {
             Ok(module) => module,
-            Err((_, errors)) => {
-                return Err(VMRuntimeError {
-                    loc: Location::new(),
-                    err: VMErrorKind::Verification(
-                        errors
-                            .into_iter()
-                            .map(|error| VerificationStatus::Dependency(id.clone(), error))
-                            .collect(),
-                    ),
-                })
+            Err((_, mut errors)) => {
+                // If there are errors there should be at least one otherwise there's an internal
+                // error in the verifier. We only give back the first error. If the user wants to
+                // debug things, they can do that offline.
+                let error = if errors.is_empty() {
+                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                } else {
+                    errors.remove(0)
+                };
+                return Err(error);
             }
         };
 
@@ -178,7 +179,7 @@ impl<'alloc> VMModuleCache<'alloc> {
     pub fn new_from_module(
         module: VerifiedModule,
         allocator: &'alloc Arena<LoadedModule>,
-    ) -> Result<Self, VMInvariantViolation> {
+    ) -> VMResult<Self> {
         let module_id = module.self_id();
         let map = CacheRefMap::new(allocator);
         let loaded_module = LoadedModule::new(module);
@@ -198,7 +199,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         F: ModuleFetcher,
     {
         let function_handle = caller_module.function_handle_at(idx);
-        let callee_name = caller_module.string_at(function_handle.name);
+        let callee_name = caller_module.identifier_at(function_handle.name);
         let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
 
         match self.get_loaded_module_with_fetcher(&callee_module_id, fetcher) {
@@ -206,11 +207,11 @@ impl<'alloc> VMModuleCache<'alloc> {
                 let callee_func_id = callee_module
                     .function_defs_table
                     .get(callee_name)
-                    .ok_or(VMInvariantViolation::LinkerError)?;
-                Ok(Ok(Some(FunctionRef::new(callee_module, *callee_func_id))))
+                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+                Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
             }
-            Ok(None) => Ok(Ok(None)),
-            Err(errors) => Ok(Err(errors)),
+            Ok(None) => Ok(None),
+            Err(errors) => Err(errors),
         }
     }
 
@@ -223,18 +224,18 @@ impl<'alloc> VMModuleCache<'alloc> {
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
         let struct_handle = module.struct_handle_at(idx);
-        let struct_name = module.string_at(struct_handle.name);
+        let struct_name = module.identifier_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
             Ok(Some(module)) => {
                 let struct_def_idx = module
                     .struct_defs_table
                     .get(struct_name)
-                    .ok_or(VMInvariantViolation::LinkerError)?;
+                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
                 self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
             }
-            Ok(None) => Ok(Ok(None)),
-            Err(errors) => Ok(Err(errors)),
+            Ok(None) => Ok(None),
+            Err(errors) => Err(errors),
         }
     }
 
@@ -248,58 +249,56 @@ impl<'alloc> VMModuleCache<'alloc> {
         fetcher: &F,
     ) -> VMResult<Option<Type>> {
         match tok {
-            SignatureToken::Bool => Ok(Ok(Some(Type::Bool))),
-            SignatureToken::U64 => Ok(Ok(Some(Type::U64))),
-            SignatureToken::String => Ok(Ok(Some(Type::String))),
-            SignatureToken::ByteArray => Ok(Ok(Some(Type::ByteArray))),
-            SignatureToken::Address => Ok(Ok(Some(Type::Address))),
-            SignatureToken::TypeParameter(idx) => Ok(Ok(Some(type_context.get_type(*idx)?))),
+            SignatureToken::Bool => Ok(Some(Type::Bool)),
+            SignatureToken::U64 => Ok(Some(Type::U64)),
+            SignatureToken::String => Ok(Some(Type::String)),
+            SignatureToken::ByteArray => Ok(Some(Type::ByteArray)),
+            SignatureToken::Address => Ok(Some(Type::Address)),
+            SignatureToken::TypeParameter(idx) => Ok(Some(type_context.get_type(*idx)?)),
             SignatureToken::Struct(sh_idx, tys) => {
                 let ctx = {
                     let mut ctx = vec![];
                     for ty in tys.iter() {
-                        let resolved_type = try_runtime!(self
-                            .resolve_signature_token_with_fetcher(
-                                module,
-                                ty,
-                                type_context,
-                                gas_meter,
-                                fetcher
-                            ));
+                        let resolved_type = self.resolve_signature_token_with_fetcher(
+                            module,
+                            ty,
+                            type_context,
+                            gas_meter,
+                            fetcher,
+                        )?;
                         if let Some(t) = resolved_type {
                             ctx.push(t);
                         } else {
-                            return Ok(Ok(None));
+                            return Ok(None);
                         }
                     }
                     TypeContext::new(ctx)
                 };
-                let struct_def =
-                    try_runtime!(self
-                        .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher))
+                let struct_def = self
+                    .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher)?
                     .map(|def| ctx.subst_struct_def(&def))
                     .transpose()?;
-                Ok(Ok(struct_def.map(Type::Struct)))
+                Ok(struct_def.map(Type::Struct))
             }
             SignatureToken::Reference(sub_tok) => {
-                let inner_ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                let inner_ty = self.resolve_signature_token_with_fetcher(
                     module,
                     sub_tok,
                     type_context,
                     gas_meter,
-                    fetcher
-                ));
-                Ok(Ok(inner_ty.map(|t| Type::Reference(Box::new(t)))))
+                    fetcher,
+                )?;
+                Ok(inner_ty.map(|t| Type::Reference(Box::new(t))))
             }
             SignatureToken::MutableReference(sub_tok) => {
-                let inner_ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                let inner_ty = self.resolve_signature_token_with_fetcher(
                     module,
                     sub_tok,
                     type_context,
                     gas_meter,
-                    fetcher
-                ));
-                Ok(Ok(inner_ty.map(|t| Type::MutableReference(Box::new(t)))))
+                    fetcher,
+                )?;
+                Ok(inner_ty.map(|t| Type::MutableReference(Box::new(t))))
             }
         }
     }
@@ -314,7 +313,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         fetcher: &F,
     ) -> VMResult<Option<StructDef>> {
         if let Some(def) = module.cached_struct_def_at(idx) {
-            return Ok(Ok(Some(def)));
+            return Ok(Some(def));
         }
         let def = {
             let struct_def = module.struct_def_at(idx);
@@ -323,20 +322,22 @@ impl<'alloc> VMModuleCache<'alloc> {
                 TypeContext::identity_mapping(struct_handle.type_formals.len() as u16);
             match &struct_def.field_information {
                 // TODO we might want a more informative error here
-                StructFieldInformation::Native => return Err(VMInvariantViolation::LinkerError),
+                StructFieldInformation::Native => {
+                    return Err(VMStatus::new(StatusCode::LINKER_ERROR))
+                }
                 StructFieldInformation::Declared {
                     field_count,
                     fields,
                 } => {
                     let mut field_types = vec![];
                     for field in module.field_def_range(*field_count, *fields) {
-                        let ty = try_runtime!(self.resolve_signature_token_with_fetcher(
+                        let ty = self.resolve_signature_token_with_fetcher(
                             module,
                             &module.type_signature_at(field.signature).0,
                             &type_context,
                             gas_meter,
-                            fetcher
-                        ));
+                            fetcher,
+                        )?;
                         if let Some(t) = ty {
                             // `field_types` is initally empty, a single element is pushed
                             // per loop iteration and the number of iterations is bound to
@@ -346,7 +347,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                             assume!(field_types.len() < usize::max_value());
                             field_types.push(t);
                         } else {
-                            return Ok(Ok(None));
+                            return Ok(None);
                         }
                     }
                     StructDef::new(field_types)
@@ -357,7 +358,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         // to have multiple copies of a struct def floating around, but that probably isn't going
         // to be a big deal.
         module.cache_struct_def(idx, def.clone());
-        Ok(Ok(Some(def)))
+        Ok(Some(def))
     }
 }
 
@@ -383,7 +384,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
         // module id, we should get rid of that ok_or case here.
-        Ok(Ok(self.map.get(id)))
+        Ok(self.map.get(id))
     }
 
     fn cache_module(&self, module: VerifiedModule) {
@@ -456,9 +457,8 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
-        Ok(self
-            .vm_cache
-            .get_loaded_module_with_fetcher(id, &self.storage))
+        self.vm_cache
+            .get_loaded_module_with_fetcher(id, &self.storage)
     }
 
     fn cache_module(&self, module: VerifiedModule) {
@@ -509,8 +509,8 @@ where
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
     ) -> VMResult<Option<FunctionRef<'txn>>> {
-        if let Some(f) = try_runtime!(self.local_cache.resolve_function_ref(caller_module, idx)) {
-            Ok(Ok(Some(f)))
+        if let Some(f) = self.local_cache.resolve_function_ref(caller_module, idx)? {
+            Ok(Some(f))
         } else {
             self.block_cache.resolve_function_ref(caller_module, idx)
         }
@@ -522,16 +522,19 @@ where
         idx: StructDefinitionIndex,
         gas_meter: &GasMeter,
     ) -> VMResult<Option<StructDef>> {
-        if let Some(f) = try_runtime!(self.local_cache.resolve_struct_def(module, idx, gas_meter)) {
-            Ok(Ok(Some(f)))
+        if let Some(f) = self
+            .local_cache
+            .resolve_struct_def(module, idx, gas_meter)?
+        {
+            Ok(Some(f))
         } else {
             self.block_cache.resolve_struct_def(module, idx, gas_meter)
         }
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'txn LoadedModule>> {
-        if let Some(m) = try_runtime!(self.local_cache.get_loaded_module(id)) {
-            Ok(Ok(Some(m)))
+        if let Some(m) = self.local_cache.get_loaded_module(id)? {
+            Ok(Some(m))
         } else {
             self.block_cache.get_loaded_module(id)
         }

@@ -1,4 +1,4 @@
-// check: VerificationError
+// check: VerificationFailure
 
 // Assigning local after move fails.
 

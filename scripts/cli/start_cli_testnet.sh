@@ -11,7 +11,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/trusted_peers.config.toml"
+RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/consensus_peers.config.toml"
 
 case $1 in
     -h | --help)

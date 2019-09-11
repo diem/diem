@@ -14,7 +14,10 @@ use crate::block_processor::BlockProcessor;
 use config::config::NodeConfig;
 use crypto::{
     ed25519::*,
-    hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{
+        TransactionAccumulatorHasher, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
+        SPARSE_MERKLE_PLACEHOLDER_HASH,
+    },
     HashValue,
 };
 use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkResponse};
@@ -22,15 +25,18 @@ use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
 use logger::prelude::*;
+use scratchpad::SparseMerkleTree;
 use std::{
     collections::HashMap,
     marker::PhantomData,
+    rc::Rc,
     sync::{mpsc, Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageWrite};
 use types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    transaction::{SignedTransaction, TransactionListWithProof},
+    proof::accumulator::Accumulator,
+    transaction::{SignedTransaction, TransactionListWithProof, Version},
 };
 use vm_runtime::VMExecutor;
 
@@ -154,6 +160,7 @@ where
             *GENESIS_BLOCK_ID,
             /* epoch_num = */ 0,
             /* timestamp_usecs = */ 0,
+            None,
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new());
@@ -296,4 +303,37 @@ enum Command {
         ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
         resp_sender: oneshot::Sender<Result<ExecuteChunkResponse>>,
     },
+}
+
+#[derive(Clone, Debug)]
+pub struct ExecutedTrees {
+    /// The in-memory Sparse Merkle Tree representing a specific state after execution. If this
+    /// tree is presenting the latest commited state, it will have a single Subtree node (or
+    /// Empty node) whose hash equals the root hash of the newest Sparse Merkle Tree in
+    /// storage.
+    state_tree: Rc<SparseMerkleTree>,
+
+    /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
+    /// `state_tree`.
+    transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
+}
+
+impl ExecutedTrees {
+    pub fn state_tree(&self) -> &Rc<SparseMerkleTree> {
+        &self.state_tree
+    }
+
+    pub fn txn_accumulator(&self) -> &Rc<Accumulator<TransactionAccumulatorHasher>> {
+        &self.transaction_accumulator
+    }
+
+    pub fn version_and_state_root(&self) -> (Option<Version>, HashValue) {
+        let num_elements = self.txn_accumulator().num_leaves();
+        let version = if num_elements > 0 {
+            Some(num_elements - 1)
+        } else {
+            None
+        };
+        (version, self.state_tree().root_hash())
+    }
 }

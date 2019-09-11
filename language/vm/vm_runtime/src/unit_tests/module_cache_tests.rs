@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::*;
 use crate::{
     code_cache::{
         module_adapter::FakeFetcher,
@@ -12,36 +13,38 @@ use crate::{
         loaded_module::LoadedModule,
     },
 };
-use assert_matches::assert_matches;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use hex;
-use types::{account_address::AccountAddress, language_storage::ModuleId};
+use types::{
+    account_address::AccountAddress,
+    language_storage::ModuleId,
+    vm_error::{StatusCode, StatusType},
+};
 use vm::{
     access::ModuleAccess,
-    errors::{VMErrorKind, VMRuntimeError, VerificationStatus},
     file_format::*,
     gas_schedule::{GasAlgebra, GasUnits},
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
 
-fn test_module(name: String) -> VerifiedModule {
+fn test_module(name: &'static str) -> VerifiedModule {
     let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            name: StringPoolIndex::new(0),
+            name: IdentifierIndex::new(0),
             address: AddressPoolIndex::new(0),
         }],
         struct_handles: vec![],
         function_handles: vec![
             FunctionHandle {
                 module: ModuleHandleIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
                 signature: FunctionSignatureIndex::new(0),
             },
             FunctionHandle {
                 module: ModuleHandleIndex::new(0),
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
                 signature: FunctionSignatureIndex::new(1),
             },
         ],
@@ -84,7 +87,7 @@ fn test_module(name: String) -> VerifiedModule {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![name, "func1".to_string(), "func2".to_string()],
+        identifiers: idents(vec![name, "func1", "func2"]),
         user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
@@ -109,27 +112,27 @@ fn test_script() -> VerifiedScript {
         module_handles: vec![
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(0),
+                name: IdentifierIndex::new(0),
             },
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
             },
         ],
         struct_handles: vec![],
         function_handles: vec![
             FunctionHandle {
-                name: StringPoolIndex::new(4),
+                name: IdentifierIndex::new(4),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(0),
             },
             FunctionHandle {
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(1),
             },
             FunctionHandle {
-                name: StringPoolIndex::new(3),
+                name: IdentifierIndex::new(3),
                 signature: FunctionSignatureIndex::new(1),
                 module: ModuleHandleIndex::new(1),
             },
@@ -148,13 +151,7 @@ fn test_script() -> VerifiedScript {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![
-            "hello".to_string(),
-            "module".to_string(),
-            "func1".to_string(),
-            "func2".to_string(),
-            "main".to_string(),
-        ],
+        identifiers: idents(vec!["hello", "module", "func1", "func2", "main"]),
         user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
@@ -169,27 +166,21 @@ fn test_loader_one_module() {
     // This test tests the linking of function within a single module: We have a module that defines
     // two functions, each with different name and signature. This test will make sure that we
     // link the function handle with the right function definition within the same module.
-    let module = test_module("module".to_string());
+    let module = test_module("module");
     let mod_id = module.self_id();
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module);
-    let module_ref = loaded_program
-        .get_loaded_module(&mod_id)
-        .unwrap()
-        .unwrap()
-        .unwrap();
+    let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap().unwrap();
 
     // Get the function reference of the first two function handles.
     let func1_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(0))
         .unwrap()
-        .unwrap()
         .unwrap();
     let func2_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -214,7 +205,7 @@ fn test_loader_one_module() {
 #[test]
 fn test_loader_cross_modules() {
     let script = test_script();
-    let module = test_module("module".to_string());
+    let module = test_module("module");
 
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
@@ -227,11 +218,9 @@ fn test_loader_cross_modules() {
     let func1 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
-        .unwrap()
         .unwrap();
     let func2 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -268,22 +257,19 @@ fn test_cache_with_storage() {
     assert!(vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
-        .unwrap()
         .is_none());
 
     {
-        let fetcher = FakeFetcher::new(vec![test_module("module".to_string()).into_inner()]);
+        let fetcher = FakeFetcher::new(vec![test_module("module").into_inner()]);
         let mut block_cache = BlockModuleCache::new(&vm_cache, fetcher);
 
         // Make sure the block cache fetches the code from the view.
         let func1 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
             .unwrap()
-            .unwrap()
             .unwrap();
         let func2 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap()
             .unwrap()
             .unwrap();
 
@@ -309,11 +295,9 @@ fn test_cache_with_storage() {
         let func1 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
             .unwrap()
-            .unwrap()
             .unwrap();
         let func2 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap()
             .unwrap()
             .unwrap();
 
@@ -339,11 +323,9 @@ fn test_cache_with_storage() {
     let func1 = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
         .unwrap()
-        .unwrap()
         .unwrap();
     let func2 = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-        .unwrap()
         .unwrap()
         .unwrap();
 
@@ -370,7 +352,7 @@ fn test_multi_level_cache_write_back() {
     let vm_cache = VMModuleCache::new(&allocator);
 
     // Put an existing module in the cache.
-    let module = test_module("existing_module".to_string());
+    let module = test_module("existing_module");
     vm_cache.cache_module(module);
 
     // Create a new script that refers to both published and unpublished modules.
@@ -389,36 +371,36 @@ fn test_multi_level_cache_write_back() {
             // Self
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(0),
+                name: IdentifierIndex::new(0),
             },
             // To-be-published Module
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(1),
+                name: IdentifierIndex::new(1),
             },
             // Existing module on chain
             ModuleHandle {
                 address: AddressPoolIndex::new(0),
-                name: StringPoolIndex::new(2),
+                name: IdentifierIndex::new(2),
             },
         ],
         struct_handles: vec![],
         function_handles: vec![
             // main
             FunctionHandle {
-                name: StringPoolIndex::new(5),
+                name: IdentifierIndex::new(5),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(0),
             },
             // Func2 defined in the new module
             FunctionHandle {
-                name: StringPoolIndex::new(4),
+                name: IdentifierIndex::new(4),
                 signature: FunctionSignatureIndex::new(0),
                 module: ModuleHandleIndex::new(1),
             },
             // Func1 defined in the old module
             FunctionHandle {
-                name: StringPoolIndex::new(3),
+                name: IdentifierIndex::new(3),
                 signature: FunctionSignatureIndex::new(1),
                 module: ModuleHandleIndex::new(2),
             },
@@ -437,14 +419,14 @@ fn test_multi_level_cache_write_back() {
             },
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
-        string_pool: vec![
-            "hello".to_string(),
-            "module".to_string(),
-            "existing_module".to_string(),
-            "func1".to_string(),
-            "func2".to_string(),
-            "main".to_string(),
-        ],
+        identifiers: idents(vec![
+            "hello",
+            "module",
+            "existing_module",
+            "func1",
+            "func2",
+            "main",
+        ]),
         user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
@@ -474,18 +456,16 @@ fn test_multi_level_cache_write_back() {
                 .unwrap();
             assert_eq!(func1_vm_ref, func1_txn_ref);
 
-            txn_cache.cache_module(test_module("module".to_string()));
+            txn_cache.cache_module(test_module("module"));
 
             // We should not read the new module in the vm cache, but we should read it from the txn
             // cache.
             assert!(vm_cache
                 .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
                 .unwrap()
-                .unwrap()
                 .is_none());
             let func2_txn_ref = txn_cache
                 .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-                .unwrap()
                 .unwrap()
                 .unwrap();
             assert_eq!(func2_txn_ref.arg_count(), 1);
@@ -503,7 +483,6 @@ fn test_multi_level_cache_write_back() {
     // After reclaiming we should see it from the
     let func2_ref = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap()
         .unwrap();
     assert_eq!(func2_ref.arg_count(), 1);
@@ -544,21 +523,15 @@ fn test_same_module_struct_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache
-            .get_loaded_module(&module_id)
-            .unwrap()
-            .unwrap()
-            .unwrap();
+        let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
         let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
-            .unwrap()
             .unwrap();
         let struct_t = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &gas)
-            .unwrap()
             .unwrap()
             .unwrap();
         assert_eq!(struct_x, StructDef::new(vec![]));
@@ -596,17 +569,15 @@ fn test_multi_module_struct_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let module_id_2 = ModuleId::new(AccountAddress::default(), "M2".to_string());
+        let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
         let module2_ref = block_cache
             .get_loaded_module(&module_id_2)
-            .unwrap()
             .unwrap()
             .unwrap();
 
         let gas = GasMeter::new(GasUnits::new(100_000_000));
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
-            .unwrap()
             .unwrap()
             .unwrap();
         assert_eq!(
@@ -637,26 +608,22 @@ fn test_field_offset_resolution() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
-        let module_id = ModuleId::new(AccountAddress::default(), "M1".to_string());
-        let module_ref = block_cache
-            .get_loaded_module(&module_id)
-            .unwrap()
-            .unwrap()
-            .unwrap();
+        let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
 
-        let f_idx = module_ref.field_defs_table.get("f").unwrap();
+        let f_idx = module_ref.field_defs_table.get(&ident("f")).unwrap();
         assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
 
-        let g_idx = module_ref.field_defs_table.get("g").unwrap();
+        let g_idx = module_ref.field_defs_table.get(&ident("g")).unwrap();
         assert_eq!(module_ref.get_field_offset(*g_idx).unwrap(), 1);
 
-        let i_idx = module_ref.field_defs_table.get("i").unwrap();
+        let i_idx = module_ref.field_defs_table.get(&ident("i")).unwrap();
         assert_eq!(module_ref.get_field_offset(*i_idx).unwrap(), 0);
 
-        let x_idx = module_ref.field_defs_table.get("x").unwrap();
+        let x_idx = module_ref.field_defs_table.get(&ident("x")).unwrap();
         assert_eq!(module_ref.get_field_offset(*x_idx).unwrap(), 1);
 
-        let y_idx = module_ref.field_defs_table.get("y").unwrap();
+        let y_idx = module_ref.field_defs_table.get(&ident("y")).unwrap();
         assert_eq!(module_ref.get_field_offset(*y_idx).unwrap(), 2);
     }
 }
@@ -693,18 +660,8 @@ fn test_dependency_fails_verification() {
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
 
-    let module_id = ModuleId::new(AccountAddress::default(), "Test".to_string());
-    let VMRuntimeError { err, .. } = block_cache
-        .get_loaded_module(&module_id)
-        .unwrap()
-        .unwrap_err();
-    let errors = match err {
-        VMErrorKind::Verification(errors) => errors,
-        other => panic!("Unexpected error: {:?}", other),
-    };
-    assert_matches!(
-        &errors[0],
-        VerificationStatus::Dependency(module_id, _)
-            if module_id.address() == &AccountAddress::default() && module_id.name() == "Test"
-    );
+    let module_id = ModuleId::new(AccountAddress::default(), ident("Test"));
+    let err = block_cache.get_loaded_module(&module_id).unwrap_err();
+    assert!(err.is(StatusType::Verification));
+    assert!(err.major_status == StatusCode::INVALID_RESOURCE_FIELD);
 }

@@ -5,8 +5,16 @@ module Vector {
   // Vector containing data of type Item
   native struct T<Element>;
 
+  native public empty<Element>(): Self.T<Element>;
+
   // Return the length of the vector
   native public length<Element>(v: &Self.T<Element>): u64;
+
+  // Acquire an immutable reference to the ith element of the vector
+  native public borrow<Element>(v: &Self.T<Element>, i: u64): &Element;
+
+  // Add an element to the end of the vector
+  native public push_back<Element>(v: &mut Self.T<Element>, e: Element);
 
   // Return true if the vector has no elements
   public is_empty<Element>(v: &Self.T<Element>): bool {

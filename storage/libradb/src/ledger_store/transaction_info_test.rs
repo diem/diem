@@ -4,7 +4,7 @@
 use super::*;
 use crate::LibraDB;
 use proptest::{collection::vec, prelude::*};
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::proof::verify_transaction_accumulator_element;
 
 fn verify(
@@ -48,7 +48,7 @@ proptest! {
         batch2 in vec(any::<TransactionInfo>(), 1..100),
     ) {
 
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.ledger_store;
 

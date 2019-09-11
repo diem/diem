@@ -6,7 +6,7 @@ module Tester {
     bump_and_pick(b1: &mut Self.Box, b2: &mut Self.Box): &u64 acquires Data {
         let data: &mut Self.Data;
 
-        data = borrow_global<Data>(get_txn_sender());
+        data = borrow_global_mut<Data>(get_txn_sender());
         *&mut copy(b1).f = *&copy(data).v1;
         *&mut copy(b2).f = *&move(data).v2;
         if (*&copy(b1).f >= *&copy(b2).f) {
@@ -47,5 +47,5 @@ module Tester {
     }
 }
 
-// check: VerificationError
-// check: BorrowLocExistsBorrowError
+// check: VerificationFailure
+// check: BORROWLOC_EXISTS_BORROW_ERROR

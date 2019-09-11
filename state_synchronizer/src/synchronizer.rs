@@ -6,7 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     PeerId,
 };
-use config::config::NodeConfig;
+use config::config::{NodeConfig, StateSyncConfig};
 use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
@@ -29,17 +29,26 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         config: &NodeConfig,
-        peer_ids: Vec<PeerId>,
+        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(config);
-        Self::bootstrap_with_executor_proxy(network, config, executor_proxy, peer_ids)
+        let executor_proxy = ExecutorProxy::new(
+            &config.execution,
+            &config.storage,
+            config.consensus.get_consensus_peers(),
+        );
+        Self::bootstrap_with_executor_proxy(
+            network,
+            &config.state_sync,
+            executor_proxy,
+            upstream_peer_ids,
+        )
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
-        config: &NodeConfig,
+        state_sync_config: &StateSyncConfig,
         executor_proxy: E,
-        peer_ids: Vec<PeerId>,
+        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         let runtime = Builder::new()
             .name_prefix("state-sync-")
@@ -51,9 +60,9 @@ impl StateSynchronizer {
 
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
-            config,
+            state_sync_config.clone(),
             executor_proxy,
-            peer_ids.clone(),
+            upstream_peer_ids.clone(),
         );
         executor.spawn(coordinator.start(network).boxed().unit_error().compat());
 

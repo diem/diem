@@ -19,7 +19,7 @@ use std::{
 };
 
 #[cfg(test)]
-use tempfile::NamedTempFile;
+use tools::tempdir::TempPath;
 
 /// Mnemonic seed for deterministic key derivation based on [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
 /// The mnemonic must encode entropy in a multiple of 32 bits. With more entropy, security is
@@ -447,8 +447,8 @@ fn test_roundtrip_mnemonic() {
     let mut rng = EntropyRng::new();
     let mut buf = [0u8; 32];
     rng.fill_bytes(&mut buf[..]);
-    let file = NamedTempFile::new().unwrap();
-    let path = file.into_temp_path();
+    let file = TempPath::new();
+    let path = file.path();
     let mnemonic = Mnemonic::mnemonic(&buf[..]).unwrap();
     mnemonic.write(&path).unwrap();
     let other_mnemonic = Mnemonic::read(&path).unwrap();

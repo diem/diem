@@ -111,6 +111,7 @@ impl QuorumCert {
             *GENESIS_BLOCK_ID,
             0,
             0,
+            None,
         );
         let signature = signer
             .sign_message(li.hash())

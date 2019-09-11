@@ -4,11 +4,11 @@ module A {
     public A5(b: bool) acquires T {
         let t_ref: &mut Self.T;
         if (move(b)) {
-            t_ref = borrow_global<T>(get_txn_sender());
+            t_ref = borrow_global_mut<T>(get_txn_sender());
         }
         return;
     }
 }
 
-// check: VerificationError
-// check: JoinFailure
+// check: VerificationFailure
+// check: JOIN_FAILURE

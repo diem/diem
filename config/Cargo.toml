@@ -12,13 +12,13 @@ hex = { version = "0.3.2", default-features = false }
 parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
-tempfile = { version = "3.1.0", default-features = false }
 toml = { version = "0.5.3", default-features = false }
 
 crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 logger = { path = "../common/logger" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
+tools = { path = "../common/tools" }
 types = { path = "../types" }
 
 [dev-dependencies]

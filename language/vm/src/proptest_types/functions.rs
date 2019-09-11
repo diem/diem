@@ -5,9 +5,8 @@ use crate::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StringPoolIndex, StructDefinitionIndex, TableIndex, UserStringIndex,
-        NO_TYPE_ACTUALS,
+        FunctionSignatureIndex, IdentifierIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
+        ModuleHandleIndex, StructDefinitionIndex, TableIndex, UserStringIndex, NO_TYPE_ACTUALS,
     },
     proptest_types::{
         signature::{FunctionSignatureGen, SignatureTokenGen},
@@ -25,7 +24,7 @@ use proptest::{
 pub struct FnDefnMaterializeState {
     pub struct_handles_len: usize,
     pub address_pool_len: usize,
-    pub string_pool_len: usize,
+    pub identifiers_len: usize,
     pub user_strings_len: usize,
     pub byte_array_pool_len: usize,
     pub type_signatures_len: usize,
@@ -117,7 +116,7 @@ impl FunctionDefinitionGen {
             // 0 represents the current module
             module: ModuleHandleIndex::new(0),
             // XXX need to guarantee uniqueness of names?
-            name: StringPoolIndex::new(self.name.index(state.string_pool_len) as TableIndex),
+            name: IdentifierIndex::new(self.name.index(state.identifiers_len) as TableIndex),
             signature: state.add_function_signature(signature),
         };
         let function_handle = state.add_function_handle(handle);
@@ -207,7 +206,8 @@ enum BytecodeGen {
     Pack(PropIndex, PropIndex),
     Unpack(PropIndex, PropIndex),
     Exists(PropIndex, PropIndex),
-    BorrowGlobal(PropIndex, PropIndex),
+    MutBorrowGlobal(PropIndex, PropIndex),
+    ImmBorrowGlobal(PropIndex, PropIndex),
     MoveFrom(PropIndex, PropIndex),
     MoveToSender(PropIndex, PropIndex),
     BrTrue(PropIndex),
@@ -238,7 +238,9 @@ impl BytecodeGen {
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Exists(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),)
-                .prop_map(|(idx, types)| BorrowGlobal(idx, types)),
+                .prop_map(|(idx, types)| ImmBorrowGlobal(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>(),)
+                .prop_map(|(idx, types)| MutBorrowGlobal(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| MoveFrom(idx, types)),
             (any::<PropIndex>(), any::<PropIndex>(),)
                 .prop_map(|(idx, types)| MoveToSender(idx, types)),
@@ -334,7 +336,12 @@ impl BytecodeGen {
                 // TODO: generate random index to type actuals once generics is fully implemented
                 NO_TYPE_ACTUALS,
             ),
-            BytecodeGen::BorrowGlobal(idx, _types_idx) => Bytecode::BorrowGlobal(
+            BytecodeGen::ImmBorrowGlobal(idx, _types_idx) => Bytecode::ImmBorrowGlobal(
+                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
+                // TODO: generate random index to type actuals once generics is fully implemented
+                NO_TYPE_ACTUALS,
+            ),
+            BytecodeGen::MutBorrowGlobal(idx, _types_idx) => Bytecode::MutBorrowGlobal(
                 StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
                 // TODO: generate random index to type actuals once generics is fully implemented
                 NO_TYPE_ACTUALS,

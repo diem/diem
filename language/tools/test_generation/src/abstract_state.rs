@@ -23,6 +23,20 @@ pub struct AbstractValue {
     pub kind: Kind,
 }
 
+/// This models the mutability of a reference
+#[derive(Debug, Clone, PartialEq)]
+pub enum Mutability {
+    /// Represents a mutable reference
+    Mutable,
+
+    /// Represents an immutable reference
+    Immutable,
+
+    /// When we don't need to specify whether
+    /// the reference is mutable or immutable
+    Either,
+}
+
 impl AbstractValue {
     /// Create a new primitive `AbstractValue` given its type; the kind will be `Unrestricted`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
@@ -116,15 +130,20 @@ impl AbstractState {
         }
     }
 
+    /// Get the register value
+    pub fn register_copy(&mut self) -> Option<AbstractValue> {
+        self.register.clone()
+    }
+
     /// Get the register value and set it to `None`
-    fn take_register(&mut self) -> Option<AbstractValue> {
+    pub fn register_move(&mut self) -> Option<AbstractValue> {
         let value = self.register.clone();
         self.register = None;
         value
     }
 
     /// Set the register value and set it to `None`
-    pub fn set_register(&mut self, value: AbstractValue) {
+    pub fn register_set(&mut self, value: AbstractValue) {
         self.register = Some(value.clone());
     }
 
@@ -139,7 +158,7 @@ impl AbstractState {
     /// Add a `AbstractValue` to the stack from the register
     /// If the register is `None` return a `VMError`
     pub fn stack_push_register(&mut self) -> Result<(), VMError> {
-        if let Some(abstract_value) = self.take_register() {
+        if let Some(abstract_value) = self.register_move() {
             // Programs that are large enough to exceed this bound
             // will not be generated
             assume!(self.stack.len() < usize::max_value());
@@ -199,12 +218,18 @@ impl AbstractState {
 
     /// Place a reference to the local at index `i` if it exists into the register
     /// If it does not exist return a `VMError`.
-    pub fn local_take_borrow(&mut self, i: usize, mutable: bool) -> Result<(), VMError> {
+    pub fn local_take_borrow(&mut self, i: usize, mutability: Mutability) -> Result<(), VMError> {
         if let Some((abstract_value, _)) = self.locals.get(&i) {
-            let ref_token = if mutable {
-                SignatureToken::MutableReference(Box::new(abstract_value.token.clone()))
-            } else {
-                SignatureToken::Reference(Box::new(abstract_value.token.clone()))
+            let ref_token = match mutability {
+                Mutability::Mutable => {
+                    SignatureToken::MutableReference(Box::new(abstract_value.token.clone()))
+                }
+                Mutability::Immutable => {
+                    SignatureToken::Reference(Box::new(abstract_value.token.clone()))
+                }
+                Mutability::Either => {
+                    return Err(VMError::new("Mutability cannot be Either".to_string()))
+                }
             };
             self.register = Some(AbstractValue::new_reference(ref_token, abstract_value.kind));
             Ok(())
@@ -262,7 +287,7 @@ impl AbstractState {
     /// Insert a local at index `i` as `Available` from the register
     /// If the register value is `None` return a `VMError`.
     pub fn local_place(&mut self, i: usize) -> Result<(), VMError> {
-        if let Some(abstract_value) = self.take_register() {
+        if let Some(abstract_value) = self.register_move() {
             self.locals
                 .insert(i, (abstract_value.clone(), BorrowState::Available));
             Ok(())

@@ -46,7 +46,7 @@ pub fn main() {
     } else if matches.is_present(ARG_HEALTH_CHECK) {
         runner.run_health_check();
     } else if matches.is_present(ARG_WIPE_ALL_DB) {
-        runner.wipe_all_db();
+        runner.wipe_all_db(true);
     } else if matches.is_present(ARG_REBOOT) {
         runner.reboot(matches.values_of_lossy(ARG_REBOOT).unwrap());
     }
@@ -170,9 +170,12 @@ impl ClusterTestRunner {
     }
 
     fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
-        if !self.deployment_manager.redeploy(hash)? {
+        if env::var("ALLOW_DEPLOY") != Ok("yes".to_string()) {
+            println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
             return Ok(false);
         }
+        self.wipe_all_db(false);
+        self.deployment_manager.redeploy(hash)?;
         println!("Waiting for 60 seconds to allow ECS to restart tasks...");
         thread::sleep(Duration::from_secs(60));
         println!("Waiting until all validators healthy after deployment");
@@ -342,11 +345,13 @@ impl ClusterTestRunner {
         }
     }
 
-    fn wipe_all_db(self) {
+    fn wipe_all_db(&self, safety_wait: bool) {
         println!("Going to wipe db on all validators in cluster!");
-        println!("Waiting 10 seconds before proceed");
-        thread::sleep(Duration::from_secs(10));
-        println!("Starting...");
+        if safety_wait {
+            println!("Waiting 10 seconds before proceed");
+            thread::sleep(Duration::from_secs(10));
+            println!("Starting...");
+        }
         for instance in self.cluster.instances() {
             if let Err(e) = instance.run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/"]) {
                 println!("Failed to wipe {}: {:?}", instance, e);

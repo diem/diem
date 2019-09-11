@@ -28,7 +28,7 @@ def create_client():
             ac_host,
             ac_port,
             "/opt/libra/etc/mint.key",
-            "/opt/libra/etc/trusted_peers.config.toml")
+            "/opt/libra/etc/consensus_peers.config.toml")
 
         application.client = pexpect.spawn(cmd)
         application.client.expect("Please, input commands")

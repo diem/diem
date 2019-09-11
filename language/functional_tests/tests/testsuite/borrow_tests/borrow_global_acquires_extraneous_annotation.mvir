@@ -7,5 +7,5 @@ module A {
 
 }
 
-// check: VerificationError
-// check: ExtraneousAcquiresResourceAnnotationError
+// check: VerificationFailure
+// check: EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR

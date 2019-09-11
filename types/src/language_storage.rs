@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::AccessPath, account_address::AccountAddress,
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
     proto::language_storage::ModuleId as ProtoModuleId,
 };
 use canonical_serialization::{
@@ -15,13 +17,12 @@ use failure::Result;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::string::String;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct StructTag {
     pub address: AccountAddress,
-    pub module: String,
-    pub name: String,
+    pub module: Identifier,
+    pub name: Identifier,
     pub type_params: Vec<StructTag>,
 }
 
@@ -59,15 +60,15 @@ impl ResourceKey {
 #[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
 pub struct ModuleId {
     address: AccountAddress,
-    name: String,
+    name: Identifier,
 }
 
 impl ModuleId {
-    pub fn new(address: AccountAddress, name: String) -> Self {
+    pub fn new(address: AccountAddress, name: Identifier) -> Self {
         ModuleId { address, name }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &IdentStr {
         &self.name
     }
 
@@ -86,7 +87,7 @@ impl CanonicalSerialize for ModuleId {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.address)?
-            .encode_bytes(self.name.as_bytes())?;
+            .encode_struct(&self.name)?;
         Ok(())
     }
 }
@@ -94,7 +95,7 @@ impl CanonicalSerialize for ModuleId {
 impl CanonicalDeserialize for ModuleId {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let address = deserializer.decode_struct::<AccountAddress>()?;
-        let name = String::from_utf8(deserializer.decode_bytes()?)?;
+        let name = deserializer.decode_struct::<Identifier>()?;
 
         Ok(Self { address, name })
     }
@@ -114,8 +115,8 @@ impl CanonicalSerialize for StructTag {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.address)?
-            .encode_bytes(self.module.as_bytes())?
-            .encode_bytes(self.name.as_bytes())?
+            .encode_struct(&self.module)?
+            .encode_struct(&self.name)?
             .encode_vec(&self.type_params)?;
         Ok(())
     }
@@ -124,8 +125,8 @@ impl CanonicalSerialize for StructTag {
 impl CanonicalDeserialize for StructTag {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let address = deserializer.decode_struct::<AccountAddress>()?;
-        let module = String::from_utf8(deserializer.decode_bytes()?)?;
-        let name = String::from_utf8(deserializer.decode_bytes()?)?;
+        let module = deserializer.decode_struct::<Identifier>()?;
+        let name = deserializer.decode_struct::<Identifier>()?;
         let type_params = deserializer.decode_vec::<StructTag>()?;
         Ok(Self {
             address,

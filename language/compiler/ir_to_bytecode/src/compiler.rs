@@ -22,7 +22,7 @@ use std::{
         HashMap, VecDeque,
     },
 };
-use types::account_address::AccountAddress;
+use types::{account_address::AccountAddress, identifier::Identifier};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -136,8 +136,8 @@ struct FunctionFrame {
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
     // - excessivley large stack sizes
-    // The max stack depth of the file_format is set as u16
-    // Theoritically, we could use a BigInt here, but that is probably overkill for any testing
+    // The max stack depth of the file_format is set as u16.
+    // Theoretically, we could use a BigInt here, but that is probably overkill for any testing
     max_stack_depth: i64,
     cur_stack_depth: i64,
     loops: Vec<LoopInfo>,
@@ -272,13 +272,13 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 ) -> Result<CompiledScript> {
     let current_module = QualifiedModuleIdent {
         address,
-        name: ModuleName::new(file_format::SELF_MODULE_NAME.to_string()),
+        name: ModuleName::new(file_format::self_module_name().to_owned()),
     };
     let mut context = Context::new(dependencies, current_module)?;
-    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+    let self_name = ModuleName::new(ModuleName::self_name().into());
 
     compile_imports(&mut context, address, script.imports)?;
-    let main_name = FunctionName::new("main".to_string());
+    let main_name = FunctionName::new(Identifier::new("main").unwrap());
     let function = script.main;
 
     let sig = function_signature(&mut context, &function.signature)?;
@@ -292,7 +292,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -304,7 +304,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -326,7 +326,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         name: module.name,
     };
     let mut context = Context::new(dependencies, current_module)?;
-    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+    let self_name = ModuleName::new(ModuleName::self_name().into());
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, address, module.imports)?;
 
@@ -358,7 +358,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -370,7 +370,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         type_signatures,
         function_signatures,
         locals_signatures,
-        string_pool,
+        identifiers,
         user_strings,
         byte_array_pool,
         address_pool,
@@ -513,11 +513,11 @@ fn compile_fields(
                 fields: FieldDefinitionIndex(pool_len as TableIndex),
             };
 
-            for (f, ty) in fields {
-                let name = context.string_index(f.name())?;
+            for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
+                let name = context.identifier_index(f.name())?;
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
-                context.declare_field(sh_idx, f, sig_token)?;
+                context.declare_field(sh_idx, f, sig_token, decl_order)?;
                 field_pool.push(FieldDefinition {
                     struct_: sh_idx,
                     name,
@@ -798,7 +798,7 @@ fn compile_command(
             code.push(Bytecode::Unpack(def_idx, type_actuals_id));
             function_frame.pop()?;
 
-            for lhs_variable in bindings.values().rev() {
+            for (_, lhs_variable) in bindings.iter().rev() {
                 let loc_idx = function_frame.get_local(&lhs_variable.value)?;
                 let st_loc = Bytecode::StLoc(loc_idx);
                 code.push(st_loc);
@@ -929,8 +929,21 @@ fn compile_expression(
             let type_actuals_id = context.locals_signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
 
+            let self_name = ModuleName::new(ModuleName::self_name().into());
+            let ident = QualifiedStructIdent {
+                module: self_name,
+                name: name.clone(),
+            };
+            let sh_idx = context.struct_handle_index(ident)?;
+
             let num_fields = fields.len();
-            for (_, e) in fields {
+            for (field_order, (field, e)) in fields.into_iter().enumerate() {
+                // Check that the fields are specified in order matching the definition.
+                let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
+                if field_order != decl_order {
+                    bail!("Field {} defined out of order for struct {}", field, name);
+                }
+
                 compile_expression(context, function_frame, code, e)?;
             }
             code.push(Bytecode::Pack(def_idx, type_actuals_id));
@@ -939,12 +952,6 @@ fn compile_expression(
             }
             function_frame.push()?;
 
-            let self_name = ModuleName::new(ModuleName::SELF.to_string());
-            let ident = QualifiedStructIdent {
-                module: self_name,
-                name,
-            };
-            let sh_idx = context.struct_handle_index(ident)?;
             vec_deque![InferredType::Struct(sh_idx)]
         }
         Exp::UnaryExp(op, e) => {
@@ -1048,7 +1055,7 @@ fn compile_expression(
                 None => bail!("Impossible no expression to borrow"),
             };
             let sh_idx = loc_type.get_struct_handle()?;
-            let (fd_idx, field_type) = context.field(sh_idx, field)?;
+            let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token(&field_type));
             if is_mutable {
@@ -1117,23 +1124,30 @@ fn compile_call(
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
                 }
-                Builtin::BorrowGlobal(name, tys) => {
+                Builtin::BorrowGlobal(mut_, name, tys) => {
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    code.push(Bytecode::BorrowGlobal(def_idx, type_actuals_id));
+                    code.push(if mut_ {
+                        Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+                    } else {
+                        Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+                    });
                     function_frame.pop()?;
                     function_frame.push()?;
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
                     };
                     let sh_idx = context.struct_handle_index(ident)?;
-                    vec_deque![InferredType::MutableReference(Box::new(
-                        InferredType::Struct(sh_idx)
-                    ),)]
+                    let inner = Box::new(InferredType::Struct(sh_idx));
+                    vec_deque![if mut_ {
+                        InferredType::MutableReference(inner)
+                    } else {
+                        InferredType::Reference(inner)
+                    }]
                 }
                 Builtin::CreateAccount => {
                     code.push(Bytecode::CreateAccount);
@@ -1149,7 +1163,7 @@ fn compile_call(
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
-                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,

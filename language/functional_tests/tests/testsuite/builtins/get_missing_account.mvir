@@ -11,4 +11,4 @@ main() {
     return;
 }
 
-// check: Execution(MissingData)
+// check: MISSING_DATA

@@ -7,6 +7,7 @@ use stackless_bytecode_generator::{
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
 use std::collections::{BTreeMap, BTreeSet};
+use types::identifier::Identifier;
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -24,7 +25,7 @@ pub struct BoogieTranslator {
     pub modules: Vec<VerifiedModule>,
     pub struct_defs: BTreeMap<String, usize>,
     pub max_struct_depth: usize,
-    pub module_name_to_idx: BTreeMap<String, usize>,
+    pub module_name_to_idx: BTreeMap<Identifier, usize>,
 }
 
 pub struct ModuleTranslator<'a> {
@@ -36,18 +37,17 @@ pub struct ModuleTranslator<'a> {
 impl BoogieTranslator {
     pub fn new(modules: &[VerifiedModule]) -> Self {
         let mut struct_defs: BTreeMap<String, usize> = BTreeMap::new();
-        let mut module_name_to_idx: BTreeMap<String, usize> = BTreeMap::new();
+        let mut module_name_to_idx: BTreeMap<Identifier, usize> = BTreeMap::new();
         for (module_idx, module) in modules.iter().enumerate() {
-            let module_name = module
-                .string_at(module.module_handle_at(ModuleHandleIndex::new(0)).name)
-                .to_string();
-            module_name_to_idx.insert(module_name.clone(), module_idx);
+            let module_name =
+                module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
+            module_name_to_idx.insert(module_name.into(), module_idx);
             for (idx, struct_def) in module.struct_defs().iter().enumerate() {
                 let struct_name = format!(
                     "{}_{}",
                     module_name,
                     module
-                        .string_at(module.struct_handle_at(struct_def.struct_handle).name)
+                        .identifier_at(module.struct_handle_at(struct_def.struct_handle).name)
                         .to_string()
                 );
                 struct_defs.insert(struct_name, idx);
@@ -139,7 +139,7 @@ impl BoogieTranslator {
             let mut max_field_depth = 0;
             let struct_handle = module.struct_handle_at(*idx);
             let struct_handle_view = StructHandleView::new(module, struct_handle);
-            let module_name = module.string_at(struct_handle_view.module_handle().name);
+            let module_name = module.identifier_at(struct_handle_view.module_handle().name);
             let def_module_idx = self
                 .module_name_to_idx
                 .get(module_name)
@@ -725,7 +725,8 @@ impl<'a> ModuleTranslator<'a> {
         let module_handle_index = function_handle.module;
         let mut module_name = self
             .module
-            .string_at(self.module.module_handle_at(module_handle_index).name);
+            .identifier_at(self.module.module_handle_at(module_handle_index).name)
+            .as_str();
         if module_name == "<SELF>" {
             module_name = "self";
         } // boogie doesn't allow '<' or '>'
@@ -777,7 +778,7 @@ impl<'a> ModuleTranslator<'a> {
 pub fn struct_name_from_handle_index(module: &VerifiedModule, idx: StructHandleIndex) -> String {
     let struct_handle = module.struct_handle_at(idx);
     let struct_handle_view = StructHandleView::new(module, struct_handle);
-    let module_name = module.string_at(struct_handle_view.module_handle().name);
+    let module_name = module.identifier_at(struct_handle_view.module_handle().name);
     let struct_name = struct_handle_view.name();
     format!("{}_{}", module_name, struct_name)
 }

@@ -108,8 +108,23 @@ impl Ed25519Signature {
         }
     }
 
-    /// Check for correct size and malleability issues.
-    /// This method ensures s is of canonical form and R does not lie on a small group.
+    /// Check for correct size and third-party based signature malleability issues.
+    /// This method is required to ensure that given a valid signature for some message under some
+    /// key, an attacker cannot produce another valid signature for the same message and key.
+    ///
+    /// According to [RFC8032](https://tools.ietf.org/html/rfc8032), signatures comprise elements
+    /// {R, S} and we should enforce that S is of canonical form (smaller than L, where L is the
+    /// order of edwards25519 curve group) to prevent signature malleability. Without this check,
+    /// one could add a multiple of L into S and still pass signature verification, resulting in
+    /// a distinct yet valid signature.
+    ///
+    /// This method does not check the R component of the signature, because R is hashed during
+    /// signing and verification to compute h = H(ENC(R) || ENC(A) || M), which means that a
+    /// third-party cannot modify R without being detected.
+    ///
+    /// Note: It's true that malicious signers can already produce varying signatures by
+    /// choosing a different nonce, so this method protects against malleability attacks performed
+    /// by a non-signer.
     pub fn check_malleability(bytes: &[u8]) -> std::result::Result<(), CryptoMaterialError> {
         if bytes.len() != ED25519_SIGNATURE_LENGTH {
             return Err(CryptoMaterialError::WrongLengthError);
@@ -118,32 +133,13 @@ impl Ed25519Signature {
         let mut s_bits: [u8; 32] = [0u8; 32];
         s_bits.copy_from_slice(&bytes[32..]);
 
-        // Check if s is of canonical form.
-        // We actually test if s < order_of_the_curve to capture malleable signatures.
+        // Check if S is of canonical form to capture malleable signatures by invoking
+        // Scalar::from_canonical_bytes which returns None if the input is not in the range [0, L).
         let s = Scalar::from_canonical_bytes(s_bits);
         if s == None {
             return Err(CryptoMaterialError::CanonicalRepresentationError);
         }
-
-        // Check if the R lies on a small subgroup.
-        // Even though the security implications of a small order R are unclear,
-        // points of order <= 8 are rejected.
-        let mut r_bits: [u8; 32] = [0u8; 32];
-        r_bits.copy_from_slice(&bytes[..32]);
-
-        let compressed = curve25519_dalek::edwards::CompressedEdwardsY(r_bits);
-        let point = compressed.decompress();
-
-        match point {
-            Some(p) => {
-                if p.is_small_order() {
-                    Err(CryptoMaterialError::SmallSubgroupError)
-                } else {
-                    Ok(())
-                }
-            }
-            None => Err(CryptoMaterialError::DeserializationError),
-        }
+        Ok(())
     }
 }
 

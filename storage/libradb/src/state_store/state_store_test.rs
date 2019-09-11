@@ -4,7 +4,7 @@
 use super::*;
 use crate::{pruner, LibraDB};
 use crypto::hash::CryptoHash;
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
@@ -52,12 +52,16 @@ fn put_account_state_set(
 fn prune_stale_indices(
     store: &StateStore,
     least_readable_version: Version,
+    target_least_readable_version: Version,
     limit: usize,
-    expected_num_pruned: usize,
 ) {
-    let (num_pruned, _last_seen_version) =
-        pruner::prune_state(Arc::clone(&store.db), 0, least_readable_version, limit).unwrap();
-    assert_eq!(num_pruned, expected_num_pruned);
+    pruner::prune_state(
+        Arc::clone(&store.db),
+        least_readable_version,
+        target_least_readable_version,
+        limit,
+    )
+    .unwrap();
 }
 
 fn verify_state_in_store(
@@ -76,7 +80,7 @@ fn verify_state_in_store(
 
 #[test]
 fn test_empty_store() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
     let address = AccountAddress::new([1u8; ADDRESS_LENGTH]);
@@ -87,7 +91,7 @@ fn test_empty_store() {
 
 #[test]
 fn test_state_store_reader_writer() {
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
     let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
@@ -141,7 +145,7 @@ fn test_retired_records() {
     let value3 = AccountStateBlob::from(vec![0x03]);
     let value3_update = AccountStateBlob::from(vec![0x13]);
 
-    let tmp_dir = tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
 
@@ -184,18 +188,18 @@ fn test_retired_records() {
     // Prune with limit=0, nothing is gone.
     {
         prune_stale_indices(
-            store, 1, /* least_readable_version */
+            store, 0, /* least_readable_version */
+            1, /* target_least_readable_version */
             0, /* limit */
-            0, /* expected_num_purged */
         );
         verify_state_in_store(store, address1, Some(&value1), 0, root0);
     }
     // Prune till version=1.
     {
         prune_stale_indices(
-            store, 1,   /* least_readable_version */
+            store, 0,   /* least_readable_version */
+            1,   /* target_least_readable_version */
             100, /* limit */
-            2,   /* expected_num_purged */
         );
         // root0 is gone.
         assert!(store
@@ -209,9 +213,9 @@ fn test_retired_records() {
     // Prune till version=2.
     {
         prune_stale_indices(
-            store, 2,   /* least_readable_version */
+            store, 1,   /* least_readable_version */
+            2,   /* target_least_readable_version */
             100, /* limit */
-            2,   /* expected_num_purged */
         );
         // root1 is gone.
         assert!(store

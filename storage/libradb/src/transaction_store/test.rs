@@ -5,7 +5,7 @@ use super::*;
 use crate::LibraDB;
 use proptest::{collection::vec, prelude::*};
 use proptest_helpers::Index;
-use tempfile::tempdir;
+use tools::tempdir::TempPath;
 use types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 
 proptest! {
@@ -24,7 +24,7 @@ proptest! {
             .map(|(index, gen)| gen.materialize(index, &mut universe).into_inner())
             .collect::<Vec<_>>();
 
-        let tmp_dir = tempdir().unwrap();
+        let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.transaction_store;
 
