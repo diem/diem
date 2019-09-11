@@ -1,110 +1,112 @@
 version: 2.1
 
+executors:
+  build-executor:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: 2xlarge
+  audit-executor:
+    docker:
+      - image: circleci/rust:stretch
+    resource_class: xlarge
+  terraform-executor:
+    docker:
+      - image: hashicorp/terraform
+    resource_class: small
+
 commands:
+  print_versions:
+    description: Version Info
+    steps:
+      - run:
+          name: Version Info
+          command: rustc --version; cargo --version; rustup --version
   env_setup:
     description: Environment Setup
     steps:
-      - checkout
-      - run:
-          name: Version Information
-          command: rustc --version; cargo --version; rustup --version
       - run:
           name: Setup Env
           command: |
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
-  sccache_setup:
+  install_deps:
     steps:
       - run:
-          name: Set Up sccache Environment
+          name: Install Dependencies
           command: |
-            echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
-            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
-            echo 'export CC="sccache cc"' >> $BASH_ENV
-            echo 'export CXX="sccache c++"' >> $BASH_ENV
-  restore_sccache_cache:
+            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
+            sudo apt-get update
+            sudo apt-get install -y protobuf-compiler/stretch-backports cmake golang curl
+            sudo apt-get clean
+            sudo rm -r /var/lib/apt/lists/*
+            rustup component add clippy rustfmt
+  build_setup:
     steps:
-      - restore_cache:
-          name: Restore sccache Cache
-          key: sccache-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-  save_sccache_cache:
+      - checkout
+      - print_versions
+      - env_setup
+      - install_deps
+  build_teardown:
     steps:
       - run:
-          name: Show sccache Stats
-          command: sccache -s
-      - save_cache:
-          name: Save sccache Cache
-          key: sccache-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
-          paths:
-            - "~/.cache/sccache"
+          name: Check for changed and untracked files
+          command: ./scripts/changed-files.sh
 
 jobs:
   build:
-    docker:
-      - image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/github_circleci:latest
-        aws_auth:
-          aws_access_key_id: $ECR_RO_ACCESS_KEY_ID
-          aws_secret_access_key: $ECR_RO_SECRET_ACCESS_KEY
-    resource_class: 2xlarge
+    executor: build-executor
+    parallelism: 4
     steps:
-      - env_setup
-      - sccache_setup
-      - restore_sccache_cache
+      - build_setup
       - run:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
       - run:
           name: Linting
           command: |
-            ./scripts/nightly_features.sh
-            ./scripts/clippy.sh
-            cargo fmt -- --check
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || ./scripts/nightly_features.sh
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || ./scripts/clippy.sh
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
       - run:
-          name: Build All Targets
-          command: RUST_BACKTRACE=1 cargo build -j 16 --all --all-targets
+          name: Build Release
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all --release
+      - run:
+          name: Build Dev
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [01] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all
       - run:
           name: Run All Unit Tests
-          command: RUST_BACKTRACE=1 cargo test --all --exclude testsuite
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 --all --exclude testsuite
       - run:
           name: Run All End to End Tests
-          command: RUST_BACKTRACE=1 cargo test --package testsuite
-      - run:
-          name: Check for changed and untracked files
-          command: ./scripts/changed-files.sh
-      - save_sccache_cache
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package testsuite
+      - build_teardown
   validate-config:
     description: Validate that committed docker configs are up to date
-    docker:
-      - image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/github_circleci:latest
-        aws_auth:
-          aws_access_key_id: $ECR_RO_ACCESS_KEY_ID
-          aws_secret_access_key: $ECR_RO_SECRET_ACCESS_KEY
-    resource_class: 2xlarge
+    executor: build-executor
     steps:
-      - env_setup
-      - sccache_setup
-      - restore_sccache_cache
+      - build_setup
       - run:
           # generate config; diff config to existing one
           name: Validate Validator-Sets Configs
           command: ./scripts/circle_validate_configs.sh
-      - save_sccache_cache
+      - build_teardown
   audit:
-    docker:
-      - image: circleci/rust:stretch
-    resource_class: xlarge
+    executor: audit-executor
     steps:
-      - env_setup
+      - build_setup
       - run:
           name: Cargo Audit
           command: |
             cargo install --force cargo-audit
             cargo audit
+      - build_teardown
   terraform:
-    docker:
-      - image: hashicorp/terraform
-    resource_class: small
+    executor: terraform-executor
     steps:
       - checkout
       - run:
