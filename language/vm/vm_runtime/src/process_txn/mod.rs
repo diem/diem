@@ -2,7 +2,7 @@ use crate::{
     code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
 };
-use config::config::VMPublishingOption;
+use config::config::{VMPublishingOption, VMMode};
 use std::marker::PhantomData;
 use types::transaction::SignatureCheckedTransaction;
 use vm_cache_map::Arena;
@@ -55,7 +55,8 @@ where
         self,
         mode: ValidationMode,
         publishing_option: &VMPublishingOption,
+        vm_mode: VMMode,
     ) -> Result<ValidatedTransaction<'alloc, 'txn, P>, VMStatus> {
-        ValidatedTransaction::new(self, mode, publishing_option)
+        ValidatedTransaction::new(self, mode, publishing_option, vm_mode)
     }
 }

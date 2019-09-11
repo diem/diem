@@ -287,6 +287,27 @@ impl GasMeter {
                 };
                 Self::gas_of(static_cost_instr(instr, mem_size))
             }
+            Bytecode::IsOffchain
+            | Bytecode::GetTxnReceiverAddress
+            | Bytecode::IsChannelTxn => {
+                let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
+                Self::gas_of(default_gas)
+            }
+            Bytecode::ExistSenderChannel(_, _)
+            | Bytecode::ExistReceiverChannel(_, _)
+            | Bytecode::BorrowSenderChannel(_, _)
+            | Bytecode::BorrowReceiverChannel(_, _)
+            | Bytecode::MoveFromSenderChannel(_, _)
+            | Bytecode::MoveFromReceiverChannel(_, _)
+            | Bytecode::MoveToSenderChannel(_, _)
+            | Bytecode::MoveToReceiverChannel(_, _) => {
+                let mem_size = if memory_size.get() > 1 {
+                    memory_size.sub(AbstractMemorySize::new(1))
+                } else {
+                    AbstractMemorySize::new(0) // We already charged for size 1
+                };
+                Self::gas_of(static_cost_instr(instr, mem_size))
+            }
         };
         Ok(Ok(instruction_reqs))
     }

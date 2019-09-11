@@ -8,7 +8,7 @@ use crate::{
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
-use config::config::VMPublishingOption;
+use config::config::{VMPublishingOption, VMMode};
 use crypto::HashValue;
 use logger::prelude::*;
 use types::{
@@ -69,6 +69,7 @@ where
         process_txn: ProcessTransaction<'alloc, 'txn, P>,
         mode: ValidationMode,
         publishing_option: &VMPublishingOption,
+        vm_mode: VMMode,
     ) -> Result<Self, VMStatus> {
         let ProcessTransaction {
             txn,
@@ -86,6 +87,7 @@ where
                     data_cache,
                     allocator,
                     mode,
+                    vm_mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
                         if !is_allowed_script(&publishing_option, &program.code()) {
@@ -113,6 +115,7 @@ where
                     data_cache,
                     allocator,
                     mode,
+                    vm_mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
                         if !is_allowed_script(&publishing_option, &script.code()) {
@@ -131,6 +134,7 @@ where
                     data_cache,
                     allocator,
                     mode,
+                    vm_mode,
                     || {
                         if !publishing_option.is_open() {
                             warn!("[VM] Custom modules not allowed");
@@ -160,6 +164,34 @@ where
                 }
 
                 None
+            }
+            TransactionPayload::ChannelWriteSet(_channel_write_set) => {
+                //channel write_set transaction only accept in onchain vm.
+                if vm_mode != VMMode::Onchain {
+                    warn!("[VM] Attempt to process channel write set in Offchain VM");
+                    return Err(VMStatus::Validation(VMValidationStatus::RejectedWriteSet));
+                }
+                //TODO(jole) do more validate
+                None
+            }
+            TransactionPayload::ChannelScript(channel_script) => {
+                //TODO(jole) do more validate
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    vm_mode,
+                    || {
+                        // Verify against whitelist if we are locked. Otherwise allow.
+                        if !is_allowed_script(&publishing_option, &channel_script.script.code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", &channel_script.script.code());
+                            return Err(VMStatus::Validation(VMValidationStatus::UnknownScript));
+                        }
+                        Ok(())
+                    },
+                )?)
             }
         };
 
@@ -196,6 +228,7 @@ where
         data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
         mode: ValidationMode,
+        vm_mode: VMMode,
         payload_check: impl Fn() -> Result<(), VMStatus>,
     ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
@@ -301,7 +334,7 @@ where
 
         let metadata = TransactionMetadata::new(&txn);
         let mut txn_state =
-            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator);
+            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, vm_mode);
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
@@ -358,10 +391,11 @@ where
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
+        vm_mode: VMMode,
     ) -> Self {
         // This temporary cache is used for modules published by a single transaction.
         let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
-        let txn_executor = TransactionExecutor::new(txn_module_cache, data_cache, metadata);
+        let txn_executor = TransactionExecutor::new_with_vm_mode(txn_module_cache, data_cache, metadata, vm_mode);
         Self { txn_executor }
     }
 }

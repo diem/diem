@@ -50,6 +50,15 @@ pub fn association_address() -> AccountAddress {
         .expect("Parsing valid hex literal should always succeed")
 }
 
+pub fn coin_struct_tag() -> StructTag {
+    StructTag {
+        module: COIN_MODULE_NAME.to_string(),
+        name: COIN_STRUCT_NAME.to_string(),
+        address: core_code_address(),
+        type_params: vec![],
+    }
+}
+
 pub fn account_struct_tag() -> StructTag {
     StructTag {
         address: core_code_address(),

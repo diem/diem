@@ -42,6 +42,7 @@ use vm_runtime_types::{
     native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
     value::{Local, MutVal, Reference, Value},
 };
+use config::config::VMMode;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -75,6 +76,16 @@ fn make_access_path(
     create_access_path(&address, struct_tag)
 }
 
+fn make_channel_access_path(
+    module: &impl ModuleAccess,
+    idx: StructDefinitionIndex,
+    address: AccountAddress,
+    participant: AccountAddress,
+) -> AccessPath{
+    let struct_tag = resource_storage_key(module, idx);
+    AccessPath::channel_resource_access_path(address, participant, struct_tag)
+}
+
 /// A struct that executes one single transaction.
 /// 'alloc is the lifetime for the code cache, which is the argument type P here. Hence the P should
 /// live as long as alloc.
@@ -97,6 +108,7 @@ where
     txn_data: TransactionMetadata,
     event_data: Vec<ContractEvent>,
     data_view: TransactionDataCache<'txn>,
+    vm_mode: VMMode,
 }
 
 impl<'alloc, 'txn, P> TransactionExecutor<'alloc, 'txn, P>
@@ -119,6 +131,23 @@ where
             txn_data,
             event_data: Vec::new(),
             data_view: TransactionDataCache::new(data_cache),
+            vm_mode: VMMode::Onchain,
+        }
+    }
+
+    pub fn new_with_vm_mode(
+        module_cache: P,
+        data_cache: &'txn dyn RemoteCache,
+        txn_data: TransactionMetadata,
+        vm_mode: VMMode,
+    ) -> Self {
+        TransactionExecutor {
+            execution_stack: ExecutionStack::new(module_cache),
+            gas_meter: GasMeter::new(txn_data.max_gas_amount()),
+            txn_data,
+            event_data: Vec::new(),
+            data_view: TransactionDataCache::new(data_cache),
+            vm_mode,
         }
     }
 
@@ -615,6 +644,47 @@ where
                         .execution_stack
                         .push(Local::u64(self.gas_meter.remaining_gas().get())));
                 }
+                Bytecode::IsOffchain => {
+                    let is_offchain = self.vm_mode.is_offchain();
+                    try_runtime!(self.execution_stack.push(Local::bool(is_offchain)));
+                }
+                Bytecode::GetTxnReceiverAddress => {
+                    if let Some(receiver) = self.txn_data.receiver() {
+                        try_runtime!(self
+                        .execution_stack
+                        .push(Local::address(receiver)));
+                    }else{
+                        return Err(VMInvariantViolation::LinkerError);
+                    }
+                }
+                Bytecode::ExistSenderChannel(idx, _) => {
+                    try_runtime!(self.exist_in_channel(true, instruction, idx));
+                }
+                Bytecode::ExistReceiverChannel(idx, _) => {
+                    try_runtime!(self.exist_in_channel(false, instruction, idx));
+                }
+                Bytecode::BorrowSenderChannel(idx, _) => {
+                    try_runtime!(self.borrow_from_channel(true, instruction, idx));
+                }
+                Bytecode::BorrowReceiverChannel(idx, _) => {
+                    try_runtime!(self.borrow_from_channel(false, instruction, idx));
+                }
+                Bytecode::MoveFromSenderChannel(idx, _) => {
+                    try_runtime!(self.move_from_channel(true, instruction, idx));
+                }
+                Bytecode::MoveFromReceiverChannel(idx, _) => {
+                    try_runtime!(self.move_from_channel(false, instruction, idx));
+                }
+                Bytecode::MoveToSenderChannel(idx, _) => {
+                    try_runtime!(self.move_to_offchain(true, instruction, idx));
+                }
+                Bytecode::MoveToReceiverChannel(idx, _) => {
+                    try_runtime!(self.move_to_offchain(false, instruction, idx));
+                }
+                Bytecode::IsChannelTxn => {
+                    let is_channel_txn = self.txn_data.is_channel_txn();
+                    try_runtime!(self.execution_stack.push(Local::bool(is_channel_txn)));
+                }
             }
             pc += 1;
         }
@@ -626,6 +696,129 @@ where
         } else {
             Err(VMInvariantViolation::ProgramCounterOverflow)
         }
+    }
+
+    fn get_channel_address_pair(txn_data:&TransactionMetadata, is_sender: bool) -> VMResult<(AccountAddress, AccountAddress)> {
+        let address: AccountAddress;
+        let participant: AccountAddress;
+        if is_sender {
+            address = txn_data.sender;
+            participant = match txn_data.receiver {
+                Some(p) => p,
+                None => return Err(VMInvariantViolation::LinkerError)
+            };
+        }else{
+            participant = txn_data.sender;
+            address = match txn_data.receiver {
+                Some(p) => p,
+                None => return Err(VMInvariantViolation::LinkerError)
+            };
+        }
+        Ok(Ok((address,participant)))
+    }
+
+    fn exist_in_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+
+        let curr_module = self.execution_stack.top_frame()?.module();
+        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        if let Some(struct_def) = try_runtime!(self
+                        .execution_stack
+                        .module_cache
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+        {
+            let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
+            try_runtime!(self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            &self.execution_stack,
+                            mem_size
+                        ));
+            try_runtime!(self.execution_stack.push(Local::bool(exists)));
+        } else {
+            return Err(VMInvariantViolation::LinkerError);
+        }
+        Ok(Ok(()))
+    }
+
+    fn borrow_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+
+        let curr_module = self.execution_stack.top_frame()?.module();
+        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        if let Some(struct_def) = try_runtime!(self
+                        .execution_stack
+                        .module_cache
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+        {
+            let global_ref =
+                try_runtime!(self.data_view.borrow_global(&ap, struct_def));
+            try_runtime!(self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            &self.execution_stack,
+                            global_ref.size()
+                        ));
+            try_runtime!(self.execution_stack.push(Local::GlobalRef(global_ref)));
+        } else {
+            return Err(VMInvariantViolation::LinkerError);
+        }
+        Ok(Ok(()))
+    }
+
+    fn move_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+
+        let curr_module = self.execution_stack.top_frame()?.module();
+        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        if let Some(struct_def) = try_runtime!(self
+                        .execution_stack
+                        .module_cache
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+        {
+            let resource =
+                try_runtime!(self.data_view.move_resource_from(&ap, struct_def));
+            try_runtime!(self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            &self.execution_stack,
+                            resource.size()
+                        ));
+            try_runtime!(self.execution_stack.push(resource));
+        } else {
+            return Err(VMInvariantViolation::LinkerError);
+        }
+        Ok(Ok(()))
+    }
+
+    fn move_to_offchain(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?.unwrap();
+
+        let curr_module = self.execution_stack.top_frame()?.module();
+        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        if let Some(struct_def) = try_runtime!(self
+                        .execution_stack
+                        .module_cache
+                        .resolve_struct_def(curr_module, idx, &self.gas_meter))
+        {
+            let local = self.execution_stack.pop()?;
+
+            if let Some(resource) = local.value() {
+                try_runtime!(self.gas_meter.calculate_and_consume(
+                                &instruction,
+                                &self.execution_stack,
+                                resource.size()
+                            ));
+                try_runtime!(self
+                                .data_view
+                                .move_resource_to(&ap, struct_def, resource));
+            } else {
+                return Ok(Err(VMRuntimeError {
+                    loc: Location::new(),
+                    err: VMErrorKind::TypeError,
+                }));
+            }
+        } else {
+            return Err(VMInvariantViolation::LinkerError);
+        }
+        Ok(Ok(()))
     }
 
     /// Convert the transaction arguments into move values and push them to the top of the stack.
@@ -828,12 +1021,17 @@ where
     ) -> VMRuntimeResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas: u64 = self
-            .txn_data
-            .max_gas_amount
-            .sub(self.gas_meter.remaining_gas())
-            .mul(self.txn_data.gas_unit_price)
-            .get();
+        let gas: u64 = match self.vm_mode {
+            VMMode::Onchain => {
+                self.txn_data
+                    .max_gas_amount
+                    .sub(self.gas_meter.remaining_gas())
+                    .mul(self.txn_data.gas_unit_price)
+                    .get()
+            }
+            VMMode::Offchain => 0
+        };
+
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
         Ok(TransactionOutput::new(
@@ -848,6 +1046,14 @@ where
                 Err(ref err) => TransactionStatus::from(VMStatus::from(err)),
             },
         ))
+    }
+    /// Cache pre write_set then execute script, just for channel transaction.
+    pub fn cache_write_set(&mut self, write_set: &WriteSet){
+        self.data_view.cache_write_set(write_set);
+    }
+
+    pub fn vm_mode(&self) -> VMMode {
+        self.vm_mode
     }
 }
 
@@ -885,6 +1091,7 @@ pub fn execute_function(
         txn_data: txn_metadata,
         event_data: Vec::new(),
         data_view: TransactionDataCache::new(data_cache),
+        vm_mode: VMMode::Onchain,
     };
     vm.execute_function_impl(entry_func)
 }

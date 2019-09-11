@@ -1188,6 +1188,127 @@ fn compile_call(
                     };
                     vec_deque![InferredType::Reference(inner_token)]
                 }
+                Builtin::IsOffchain => {
+                    code.push(Bytecode::IsOffchain);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
+                Builtin::GetTxnReceiver => {
+                    code.push(Bytecode::GetTxnReceiverAddress);
+                    function_frame.push()?;
+                    vec_deque![InferredType::Address]
+                }
+                Builtin::ExistSenderChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::ExistSenderChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
+                Builtin::ExistReceiverChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::ExistReceiverChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
+                Builtin::BorrowSenderChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::BorrowSenderChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?;
+                    function_frame.push()?;
+
+                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    vec_deque![InferredType::MutableReference(Box::new(
+                        InferredType::Struct(sh_idx)
+                    ),)]
+                }
+                Builtin::BorrowReceiverChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::BorrowReceiverChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?;
+                    function_frame.push()?;
+
+                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    vec_deque![InferredType::MutableReference(Box::new(
+                        InferredType::Struct(sh_idx)
+                    ),)]
+                }
+                Builtin::MoveFromSenderChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::MoveFromSenderChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?; // pop the address
+                    function_frame.push()?; // push the return value
+
+                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    vec_deque![InferredType::Struct(sh_idx)]
+                }
+                Builtin::MoveFromReceiverChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::MoveFromReceiverChannel(def_idx, type_actuals_id));
+                    function_frame.pop()?; // pop the address
+                    function_frame.push()?; // push the return value
+
+                    let self_name = ModuleName::new(ModuleName::SELF.to_string());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    vec_deque![InferredType::Struct(sh_idx)]
+                }
+                Builtin::MoveToSenderChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+
+                    code.push(Bytecode::MoveToSenderChannel(def_idx, type_actuals_id));
+                    function_frame.push()?;
+                    vec_deque![]
+                }
+                Builtin::MoveToReceiverChannel(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+
+                    code.push(Bytecode::MoveToReceiverChannel(def_idx, type_actuals_id));
+                    function_frame.push()?;
+                    vec_deque![]
+                }
+                Builtin::IsChannelTxn => {
+                    code.push(Bytecode::IsChannelTxn);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
             }
         }
         FunctionCall::ModuleFunctionCall {

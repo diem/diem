@@ -1020,6 +1020,49 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::GET_TXN_SEQUENCE_NUMBER => Bytecode::GetTxnSequenceNumber,
             Opcodes::GET_TXN_PUBLIC_KEY => Bytecode::GetTxnPublicKey,
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
+            Opcodes::IS_OFFCHAIN => Bytecode::IsOffchain,
+            Opcodes::GET_TXN_RECEIVER => Bytecode::GetTxnReceiverAddress,
+            Opcodes::EXIST_SENDER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::ExistSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::EXIST_RECEIVER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::ExistReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::BORROW_SENDER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::BorrowSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::BORROW_RECEIVER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::BorrowReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::MOVE_FROM_SENDER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveFromSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::MOVE_FROM_RECEIVER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveFromReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::MOVE_TO_SENDER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveToSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::MOVE_TO_RECEIVER_CHANNEL => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                let types_idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveToReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
+            },
+            Opcodes::IS_CHANNEL_TXN => Bytecode::IsChannelTxn,
         };
         code.push(bytecode);
     }
@@ -1194,6 +1237,17 @@ impl Opcodes {
             0x33 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
             0x34 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
             0x35 => Ok(Opcodes::FREEZE_REF),
+            0x36 => Ok(Opcodes::IS_OFFCHAIN),
+            0x37 => Ok(Opcodes::GET_TXN_RECEIVER),
+            0x38 => Ok(Opcodes::EXIST_SENDER_CHANNEL),
+            0x39 => Ok(Opcodes::EXIST_RECEIVER_CHANNEL),
+            0x3A => Ok(Opcodes::BORROW_SENDER_CHANNEL),
+            0x3B => Ok(Opcodes::BORROW_RECEIVER_CHANNEL),
+            0x3C => Ok(Opcodes::MOVE_FROM_SENDER_CHANNEL),
+            0x3D => Ok(Opcodes::MOVE_FROM_RECEIVER_CHANNEL),
+            0x3E => Ok(Opcodes::MOVE_TO_SENDER_CHANNEL),
+            0x3F => Ok(Opcodes::MOVE_TO_RECEIVER_CHANNEL),
+            0x40 => Ok(Opcodes::IS_CHANNEL_TXN),
             _ => Err(BinaryError::UnknownOpcode),
         }
     }

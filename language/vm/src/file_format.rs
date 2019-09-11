@@ -1112,12 +1112,23 @@ pub enum Bytecode {
     ///
     /// ```..., -> ..., bytearray_value```
     GetTxnPublicKey,
+    IsOffchain,
+    GetTxnReceiverAddress,
+    ExistSenderChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    ExistReceiverChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    BorrowSenderChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    BorrowReceiverChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    MoveFromSenderChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    MoveFromReceiverChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    MoveToSenderChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    MoveToReceiverChannel(StructDefinitionIndex, LocalsSignatureIndex),
+    IsChannelTxn,
 }
 
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 64;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1175,6 +1186,17 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::CreateAccount => write!(f, "CreateAccount"),
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
+            Bytecode::IsOffchain => write!(f, "IsOffchain"),
+            Bytecode::GetTxnReceiverAddress => write!(f, "GetTxnReceiverAddress"),
+            Bytecode::ExistSenderChannel(a, b) => write!(f, "ExistSenderChannel({},{:?})", a, b),
+            Bytecode::ExistReceiverChannel(a, b)=> write!(f, "ExistReceiverChannel({},{:?})", a, b),
+            Bytecode::BorrowSenderChannel(a, b)=> write!(f, "BorrowSenderChannel({},{:?})", a, b),
+            Bytecode::BorrowReceiverChannel(a, b)=> write!(f, "BorrowReceiverChannel({},{:?})", a, b),
+            Bytecode::MoveFromSenderChannel(a, b)=> write!(f, "MoveFromSenderChannel({},{:?})", a, b),
+            Bytecode::MoveFromReceiverChannel(a, b)=> write!(f, "MoveFromReceiverChannel({},{:?})", a, b),
+            Bytecode::MoveToSenderChannel(a, b)=> write!(f, "MoveToSenderChannel({},{:?})", a, b),
+            Bytecode::MoveToReceiverChannel(a, b)=> write!(f, "MoveToReceiverChannel({},{:?})", a, b),
+            Bytecode::IsChannelTxn => write!(f, "IsChannelTxn"),
         }
     }
 }

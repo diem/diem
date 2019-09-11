@@ -13,7 +13,7 @@ use crate::{
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMConfig, VMPublishingOption};
+use config::config::{VMConfig, VMPublishingOption, VMMode};
 use logger::prelude::*;
 use state_view::StateView;
 use types::{
@@ -34,6 +34,7 @@ pub struct VMRuntime<'alloc> {
     code_cache: VMModuleCache<'alloc>,
     script_cache: ScriptCache<'alloc>,
     publishing_option: VMPublishingOption,
+    vm_mode: VMMode,
 }
 
 impl<'alloc> VMRuntime<'alloc> {
@@ -44,6 +45,7 @@ impl<'alloc> VMRuntime<'alloc> {
             code_cache: VMModuleCache::new(allocator),
             script_cache: ScriptCache::new(allocator),
             publishing_option: config.publishing_options.clone(),
+            vm_mode: config.mode.clone(),
         }
     }
 
@@ -86,7 +88,7 @@ impl<'alloc> VMRuntime<'alloc> {
             ValidationMode::Validating
         };
 
-        let validated_txn = match process_txn.validate(mode, &self.publishing_option) {
+        let validated_txn = match process_txn.validate(mode, &self.publishing_option, self.vm_mode.clone()) {
             Ok(validated_txn) => validated_txn,
             Err(vm_status) => {
                 let res = Some(vm_status);
@@ -118,6 +120,7 @@ impl<'alloc> VMRuntime<'alloc> {
             &self.script_cache,
             data_view,
             &self.publishing_option,
+            self.vm_mode.clone(),
         )
     }
 }

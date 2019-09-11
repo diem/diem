@@ -315,6 +315,32 @@ pub enum Builtin {
 
     /// Convert a mutable reference into an immutable one
     Freeze,
+
+    /// Check current vm is offchain
+    IsOffchain,
+    /// Returns the address of the current channel transaction's receiver, if current txn is not channel transaction, txn will fail.
+    GetTxnReceiver,
+    /// Check if there is a struct object (`StructName` resolved by current module) associated with
+    /// the sender address at channel
+    ExistSenderChannel(StructName, Vec<Type>),
+    /// Same as ExistSenderChannel, but check by receiver address
+    ExistReceiverChannel(StructName, Vec<Type>),
+    /// Get the struct object (`StructName` resolved by current module) associated with the sender
+    /// address at channel
+    BorrowSenderChannel(StructName, Vec<Type>),
+    /// Get the struct object (`StructName` resolved by current module) associated with the receiver
+    /// address at channel
+    BorrowReceiverChannel(StructName, Vec<Type>),
+    /// Remove a resource of the given type from the channel account with the sender address
+    MoveFromSenderChannel(StructName, Vec<Type>),
+    /// Remove a resource of the given type from the channel account with the receiver address
+    MoveFromReceiverChannel(StructName, Vec<Type>),
+    /// Publish an instantiated struct object into sender's channel account.
+    MoveToSenderChannel(StructName, Vec<Type>),
+    /// Publish an instantiated struct object into receiver's channel account.
+    MoveToReceiverChannel(StructName, Vec<Type>),
+    /// Check current transaction is channel transaction.
+    IsChannelTxn,
 }
 
 /// Enum for different function calls
@@ -1251,6 +1277,17 @@ impl fmt::Display for Builtin {
                 write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
             }
             Builtin::Freeze => write!(f, "freeze"),
+            Builtin::IsOffchain => write!(f, "is_offchain"),
+            Builtin::GetTxnReceiver => write!(f, "get_txn_receiver"),
+            Builtin::ExistSenderChannel(t, tys) => write!(f, "exist_sender_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::ExistReceiverChannel(t, tys) => write!(f, "exist_receiver_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::BorrowSenderChannel(t, tys) => write!(f, "borrow_sender_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::BorrowReceiverChannel(t, tys) => write!(f, "borrow_receiver_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::MoveFromSenderChannel(t, tys) => write!(f, "move_from_sender_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::MoveFromReceiverChannel(t, tys) => write!(f, "move_from_receiver_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::MoveToSenderChannel(t, tys) => write!(f, "move_to_sender_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::MoveToReceiverChannel(t, tys) => write!(f, "move_to_receiver_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::IsChannelTxn => write!(f, "is_channel_txn"),
         }
     }
 }

@@ -35,19 +35,12 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-use crate::{
-    account_address::AccountAddress,
-    account_config::{
-        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
-    },
-    language_storage::{ModuleId, ResourceKey, StructTag},
-    validator_set::validator_set_path,
-};
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use crypto::hash::{CryptoHash, HashValue};
+use crate::{account_address::AccountAddress, account_config::{
+    association_address, ACCOUNT_RECEIVED_EVENT_PATH,
+    ACCOUNT_SENT_EVENT_PATH,
+}, language_storage::{ModuleId, ResourceKey, StructTag}, validator_set::validator_set_path};
+use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
+use crypto::hash::{HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
@@ -56,7 +49,15 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
-use std::{fmt, slice::Iter};
+use std::{
+    fmt::{self, Formatter},
+    slice::Iter,
+    str::{self, FromStr},
+};
+use crate::account_config::account_struct_tag;
+use std::convert::TryFrom;
+use std::ops::Index;
+use crate::account_address::ADDRESS_LENGTH;
 
 #[derive(Default, Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(String);
@@ -93,6 +94,29 @@ impl Access {
     pub fn new(s: &str) -> Self {
         Access::Field(Field::new(s))
     }
+
+    pub fn new_with_index(idx: u64) -> Self {
+        Access::Index(idx)
+    }
+
+    pub fn index(&self) -> Option<u64> {
+        match self{
+            Access::Index(val) => Some(*val),
+            _ => None
+        }
+    }
+}
+
+impl FromStr for Access {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        if let Ok(idx) = s.parse::<u64>() {
+            Ok(Access::Index(idx))
+        } else {
+            Ok(Access::Field(Field::new(s)))
+        }
+    }
 }
 
 impl fmt::Display for Access {
@@ -121,6 +145,10 @@ impl Accesses {
         Accesses(vec![Access::Field(field)])
     }
 
+    pub fn new_with_index(idx: u64) -> Self{
+        Accesses(vec![Access::Index(idx)])
+    }
+
     /// Add a field to the end of the sequence
     pub fn add_field_to_back(&mut self, field: Field) {
         self.0.push(Access::Field(field))
@@ -143,6 +171,10 @@ impl Accesses {
     /// Return the last access in the sequence
     pub fn last(&self) -> &Access {
         self.0.last().unwrap() // guaranteed not to fail because sequence is non-empty
+    }
+
+    pub fn first(&self) -> &Access {
+        self.0.first().unwrap()
     }
 
     pub fn iter(&self) -> Iter<'_, Access> {
@@ -177,6 +209,14 @@ impl Accesses {
         assert!(self.0.len() >= new_len);
         Accesses(self.0.clone().into_iter().take(new_len).collect())
     }
+
+    pub fn range(&self, from:usize, to:usize) -> Accesses {
+        Accesses(self.0[from..to].to_vec())
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.into()
+    }
 }
 
 impl<'a> IntoIterator for &'a Accesses {
@@ -193,9 +233,38 @@ impl From<Vec<Access>> for Accesses {
     }
 }
 
+impl From<Vec<u8>> for Accesses {
+    fn from(raw_bytes: Vec<u8>) -> Accesses {
+        let access_str = String::from_utf8(raw_bytes).unwrap();
+        let fields_str = access_str.split(SEPARATOR).collect::<Vec<&str>>();
+        let mut accesses = vec![];
+        for access_str in fields_str.into_iter() {
+            if access_str != "" {
+                accesses.push(Access::from_str(access_str).unwrap());
+            }
+        }
+        Accesses::from(accesses)
+    }
+}
+
+impl Into<Vec<u8>> for &Accesses {
+    fn into(self) -> Vec<u8> {
+        self.as_separated_string().into_bytes()
+    }
+}
+
 impl TrieKey for Accesses {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_separated_string().into_bytes()
+    }
+}
+
+impl Index<usize> for Accesses {
+
+    type Output = Access;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
 
@@ -205,6 +274,128 @@ lazy_static! {
         AccessPath::new(association_address(), validator_set_path());
 }
 
+
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd, Debug)]
+pub enum DataPath {
+    Code { module_id: ModuleId },
+    Resource { tag: StructTag },
+    ChannelResource { participant: AccountAddress, tag: StructTag },
+}
+
+impl DataPath {
+    //TODO get index by enum
+    pub const CODE_TAG: u8 = 0;
+    pub const RESOURCE_TAG: u8 = 1;
+    pub const CHANNEL_RESOURCE_TAG: u8 =2;
+
+    pub fn from(path: &[u8]) -> Result<Self> {
+        match path[0]{
+            DataPath::CODE_TAG => {
+                Ok(DataPath::Code {module_id: SimpleDeserializer::deserialize(&path[1..])?})
+            },
+            DataPath::RESOURCE_TAG => {
+                Ok(DataPath::Resource {tag: SimpleDeserializer::deserialize(&path[1..])?})
+            },
+            DataPath::CHANNEL_RESOURCE_TAG => {
+                ensure!(
+                    path.len() > ADDRESS_LENGTH +1,
+                    "The path {:?} is of invalid length",
+                    path
+                );
+                let address_bytes = &path[1..(1+ADDRESS_LENGTH)];
+                let tag_bytes = &path[(1+ADDRESS_LENGTH)..];
+                Ok(DataPath::ChannelResource { participant: AccountAddress::try_from(address_bytes)?, tag: SimpleDeserializer::deserialize(tag_bytes)?})
+            }
+            _ => bail!("invalid access path.")
+        }
+    }
+
+    pub fn account_resource_data_path() -> Self {
+        Self::onchain_resource_path(account_struct_tag())
+    }
+
+    pub fn code_data_path(module_id: ModuleId) -> Self {
+        DataPath::Code { module_id }
+    }
+
+    pub fn onchain_resource_path(tag: StructTag) -> Self{
+        DataPath::Resource {
+            tag,
+        }
+    }
+
+    pub fn channel_resource_path(participant: AccountAddress, tag: StructTag) -> Self{
+        DataPath::ChannelResource {
+            participant,
+            tag,
+        }
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.into()
+    }
+
+    pub fn is_code(&self) -> bool {
+        match self {
+            DataPath::Code {..} => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_onchain_resource(&self) -> bool {
+        match self {
+            DataPath::Resource {..} => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_channel_resource(&self) -> bool {
+        match self {
+            DataPath::ChannelResource {..} => true,
+            _ => false,
+        }
+    }
+
+    pub fn resource_tag(&self) -> Option<&StructTag> {
+        match self{
+            DataPath::Resource {tag} => Some(tag),
+            DataPath::ChannelResource {participant:_,tag} => Some(tag),
+            _ => None,
+        }
+    }
+}
+
+impl From<&DataPath> for Vec<u8> {
+    fn from(path: &DataPath) -> Self {
+        match path {
+            DataPath::Code { module_id } => {
+                let mut key = vec![];
+                key.push(DataPath::CODE_TAG);
+                key.append(&mut SimpleSerializer::serialize(module_id).unwrap());
+                key
+            },
+            DataPath::Resource { tag } => {
+                let mut key = vec![];
+                key.push(DataPath::RESOURCE_TAG);
+                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key
+            },
+            DataPath::ChannelResource {participant, tag} => {
+                let mut key = vec![];
+                key.push(DataPath::CHANNEL_RESOURCE_TAG);
+                key.append(&mut participant.to_vec());
+                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key
+            }
+        }
+    }
+}
+
+impl From<DataPath> for Vec<u8> {
+    fn from(path: DataPath) -> Self {
+        Self::from(&path)
+    }
+}
 #[derive(
     Clone,
     Eq,
@@ -226,8 +417,8 @@ pub struct AccessPath {
 }
 
 impl AccessPath {
-    const CODE_TAG: u8 = 0;
-    const RESOURCE_TAG: u8 = 1;
+    //const CODE_TAG: u8 = 0;
+    //const RESOURCE_TAG: u8 = 1;
 
     pub fn new(address: AccountAddress, path: Vec<u8>) -> Self {
         AccessPath { address, path }
@@ -235,7 +426,7 @@ impl AccessPath {
 
     /// Given an address, returns the corresponding access path that stores the Account resource.
     pub fn new_for_account(address: AccountAddress) -> Self {
-        Self::new(address, account_resource_path())
+        Self::new_for_account_resource(address)
     }
 
     /// Create an AccessPath for a ContractEvent.
@@ -269,10 +460,8 @@ impl AccessPath {
     }
 
     pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {
-        let mut key = vec![];
-        key.push(Self::RESOURCE_TAG);
 
-        key.append(&mut tag.hash().to_vec());
+        let mut key:Vec<u8> = DataPath::onchain_resource_path(tag.clone()).into();
 
         // We don't need accesses in production right now. Accesses are appended here just for
         // passing the old tests.
@@ -290,18 +479,52 @@ impl AccessPath {
         }
     }
 
-    fn code_access_path_vec(key: &ModuleId) -> Vec<u8> {
-        let mut root = vec![];
-        root.push(Self::CODE_TAG);
-        root.append(&mut key.hash().to_vec());
-        root
+    pub fn new_for_data_path(address: AccountAddress, path: DataPath) -> Self {
+        AccessPath { address, path: path.to_vec() }
+    }
+
+    pub fn new_for_account_resource(address: AccountAddress) -> Self {
+        Self::new_for_data_path(address, DataPath::account_resource_data_path() )
     }
 
     pub fn code_access_path(key: &ModuleId) -> AccessPath {
-        let path = AccessPath::code_access_path_vec(key);
-        AccessPath {
-            address: *key.address(),
-            path,
+        Self::new_for_data_path(*key.address(), DataPath::code_data_path(key.clone()))
+    }
+
+    pub fn onchain_resource_access_path(key: &ResourceKey) -> AccessPath {
+        Self::new_for_data_path(key.address(), DataPath::onchain_resource_path(key.type_().clone()))
+    }
+
+    pub fn channel_resource_access_path(account: AccountAddress, participant: AccountAddress, tag: StructTag) -> AccessPath {
+        Self::new_for_data_path(account, DataPath::channel_resource_path(participant, tag))
+    }
+
+    pub fn is_code(&self) -> bool {
+        !self.path.is_empty() && self.path[0] == DataPath::CODE_TAG
+    }
+
+    pub fn is_onchain_resource(&self) -> bool {
+        !self.path.is_empty() && self.path[0] == DataPath::RESOURCE_TAG
+    }
+
+    pub fn is_channel_resource(&self) -> bool {
+        !self.path.is_empty() && self.path[0] == DataPath::CHANNEL_RESOURCE_TAG
+    }
+
+    pub fn data_path(&self) -> Option<DataPath> {
+        if self.path.is_empty() {
+            return None;
+        }
+        DataPath::from(self.path.as_slice()).ok()
+    }
+
+    pub fn resource_tag(&self) -> Option<StructTag>{
+        if self.path.is_empty() {
+            return None;
+        }
+        match DataPath::from(self.path.as_slice()).ok(){
+            None => None,
+            Some(data_path) => data_path.resource_tag().cloned()
         }
     }
 }
@@ -310,28 +533,35 @@ impl fmt::Debug for AccessPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "AccessPath {{ address: {:x}, path: {} }}",
+            "AccessPath {{ address: {:x}, path: {} data_path: {:?}}}",
             self.address,
-            hex::encode(&self.path)
+            hex::encode(&self.path),
+            self.data_path()
         )
     }
 }
 
 impl fmt::Display for AccessPath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         if self.path.len() < 1 + HashValue::LENGTH {
             write!(f, "{:?}", self)
         } else {
             write!(f, "AccessPath {{ address: {:x}, ", self.address)?;
             match self.path[0] {
-                Self::RESOURCE_TAG => write!(f, "type: Resource, ")?,
-                Self::CODE_TAG => write!(f, "type: Module, ")?,
+                DataPath::RESOURCE_TAG => write!(f, "type: OnChain Resource, ")?,
+                DataPath::CHANNEL_RESOURCE_TAG => write!(f, "type: Channel Resource, ")?,
+                DataPath::CODE_TAG => write!(f, "type: Module, ")?,
                 tag => write!(f, "type: {:?}, ", tag)?,
             };
             write!(
                 f,
                 "hash: {:?}, ",
                 hex::encode(&self.path[1..=HashValue::LENGTH])
+            )?;
+            write!(
+                f,
+                "data_path: {:?}",
+                self.data_path()
             )?;
             write!(
                 f,

@@ -374,13 +374,24 @@ impl FunctionDefinition {
                         }
                     }
 
+                    ExistSenderChannel(idx, _)
+                    | ExistReceiverChannel(idx, _)
+                    | BorrowSenderChannel(idx, _)
+                    | BorrowReceiverChannel(idx, _)
+                    | MoveFromSenderChannel(idx, _)
+                    | MoveFromReceiverChannel(idx, _)
+                    | MoveToSenderChannel(idx, _)
+                    | MoveToReceiverChannel(idx, _) => {
+                        check_code_unit_bounds_impl(&module.struct_defs, bytecode_offset, *idx)
+                    }
+
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
                     FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
                     | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
                     | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
                     | GetGasRemaining | GetTxnSenderAddress | CreateAccount
-                    | GetTxnSequenceNumber | GetTxnPublicKey => None,
+                    | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn => None,
                 }
             })
             .collect()

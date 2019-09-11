@@ -279,13 +279,73 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         locals_bytecode!(locals_len, bytecode_idx, offset, ImmBorrowLoc)
                     }
 
+                    ExistSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ExistSenderChannel
+                    ),
+
+                    ExistReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ExistReceiverChannel
+                    ),
+                    BorrowSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowSenderChannel
+                    ),
+
+                    BorrowReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowReceiverChannel
+                    ),
+                    MoveFromSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveFromSenderChannel
+                    ),
+
+                    MoveFromReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveFromReceiverChannel
+                    ),
+                    MoveToSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToSenderChannel
+                    ),
+
+                    MoveToReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToReceiverChannel
+                    ),
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
                     FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
                     | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
                     | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
                     | GetGasRemaining | GetTxnSenderAddress | CreateAccount
-                    | GetTxnSequenceNumber | GetTxnPublicKey => {
+                    | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
                     }
                 };
@@ -327,11 +387,20 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | MutBorrowLoc(_)
         | ImmBorrowLoc(_) => true,
 
+        ExistSenderChannel(_, _)
+        | ExistReceiverChannel(_, _)
+        | BorrowSenderChannel(_, _)
+        | BorrowReceiverChannel(_, _)
+        | MoveFromSenderChannel(_, _)
+        | MoveFromReceiverChannel(_, _)
+        | MoveToSenderChannel(_, _)
+        | MoveToReceiverChannel(_, _) => true,
+
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.
         FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub
         | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt | Gt | Le
         | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-        | GetTxnSenderAddress | CreateAccount | GetTxnSequenceNumber | GetTxnPublicKey => false,
+        | GetTxnSenderAddress | CreateAccount | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn => false,
     }
 }

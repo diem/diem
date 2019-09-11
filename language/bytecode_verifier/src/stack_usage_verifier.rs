@@ -157,6 +157,19 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::CreateAccount => -1,
 
             Bytecode::LdByteArray(_) => 1,
+
+            Bytecode::IsOffchain
+            | Bytecode::GetTxnReceiverAddress
+            | Bytecode::IsChannelTxn => 1,
+
+            Bytecode::ExistSenderChannel(_, _)
+            | Bytecode::ExistReceiverChannel(_, _) => 1,
+            Bytecode::BorrowSenderChannel(_, _)
+            | Bytecode::BorrowReceiverChannel(_, _) => 1,
+            Bytecode::MoveFromSenderChannel(_, _)
+            | Bytecode::MoveFromReceiverChannel(_, _) => 1,
+            Bytecode::MoveToSenderChannel(_, _)
+            | Bytecode::MoveToReceiverChannel(_, _) => -1,
         }
     }
 }

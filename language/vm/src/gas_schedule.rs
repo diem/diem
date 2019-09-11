@@ -322,6 +322,18 @@ lazy_static! {
             (LdByteArray(ByteArrayPoolIndex::new(0)), 56, 1),
             (Gt, 46, 1),
             (Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 73, 1),
+            //TODO ensure gas
+            (IsOffchain, 30, 1),
+            (GetTxnReceiverAddress, 30, 1),
+            (ExistSenderChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 856, 1),
+            (ExistReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 856, 1),
+            (BorrowSenderChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 929, 1),
+            (BorrowReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 929, 1),
+            (MoveFromSenderChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 917, 1),
+            (MoveFromReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 917, 1),
+            (MoveToSenderChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
+            (MoveToReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
+            (IsChannelTxn, 30, 1),
         ];
         CostTable::new(instrs)
     };

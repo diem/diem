@@ -11,7 +11,7 @@ use crate::{
     data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use config::config::VMPublishingOption;
+use config::config::{VMPublishingOption, VMMode};
 use logger::prelude::*;
 use rayon::prelude::*;
 use state_view::StateView;
@@ -30,6 +30,7 @@ pub fn execute_block<'alloc>(
     script_cache: &ScriptCache<'alloc>,
     data_view: &dyn StateView,
     publishing_option: &VMPublishingOption,
+    vm_mode: VMMode,
 ) -> Vec<TransactionOutput> {
     trace!("[VM] Execute block, transaction count: {}", txn_block.len());
     report_block_count(txn_block.len());
@@ -79,6 +80,7 @@ pub fn execute_block<'alloc>(
                 &data_cache,
                 mode,
                 publishing_option,
+                vm_mode
             ),
             Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
         };
@@ -114,6 +116,7 @@ fn transaction_flow<'alloc, P>(
     data_cache: &BlockDataCache<'_>,
     mode: ValidationMode,
     publishing_option: &VMPublishingOption,
+    vm_mode: VMMode,
 ) -> TransactionOutput
 where
     P: ModuleCache<'alloc>,
@@ -121,7 +124,7 @@ where
     let arena = Arena::new();
     let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
 
-    let validated_txn = match process_txn.validate(mode, publishing_option) {
+    let validated_txn = match process_txn.validate(mode, publishing_option, vm_mode) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);

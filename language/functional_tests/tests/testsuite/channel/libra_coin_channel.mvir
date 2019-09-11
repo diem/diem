@@ -1,0 +1,103 @@
+//! account: alice 1000000
+//! account: bob 1000000
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+//! args: 100000, 50000
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main(sender_amount:u64, receiver_amount:u64) {
+    let sender:address;
+    let receiver:address;
+    let sender_coin: LibraCoin.T;
+    let receiver_coin: LibraCoin.T;
+
+    sender = get_txn_sender();
+    receiver = get_txn_receiver();
+
+    sender_coin = LibraAccount.withdraw_from_sender(copy(sender_amount));
+    receiver_coin = LibraAccount.withdraw_from_receiver(copy(receiver_amount));
+
+    LibraCoin.deposit_to_channel(move(sender_coin), true);
+    LibraCoin.deposit_to_channel(move(receiver_coin), false);
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+//! args: 10000
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main(amount:u64) {
+    let transfer_coin: LibraCoin.T;
+
+    transfer_coin = LibraCoin.withdraw_from_channel(move(amount),true);
+    LibraCoin.deposit_to_channel(move(transfer_coin), false);
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+
+    assert(LibraCoin.get_channel_balance(true) == 90000, 42);
+    assert(LibraCoin.get_channel_balance(false) == 60000, 42);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let sender: address;
+    let receiver: address;
+    let sender_balance: u64;
+    let receiver_balance: u64;
+    let sender_coin: LibraCoin.T;
+    let receiver_coin: LibraCoin.T;
+
+    sender = get_txn_sender();
+    receiver = get_txn_receiver();
+
+    sender_balance = LibraCoin.get_channel_balance(true);
+    receiver_balance = LibraCoin.get_channel_balance(false);
+
+    sender_coin = LibraCoin.withdraw_from_channel(move(sender_balance),true);
+    receiver_coin = LibraCoin.withdraw_from_channel(move(receiver_balance),false);
+
+    LibraAccount.deposit(move(sender), move(sender_coin));
+    LibraAccount.deposit(move(receiver), move(receiver_coin));
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+
+    assert(LibraCoin.get_channel_balance(true) == 0, 42);
+    assert(LibraCoin.get_channel_balance(false) == 0, 42);
+    return;
+}

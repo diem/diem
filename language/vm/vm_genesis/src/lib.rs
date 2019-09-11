@@ -261,11 +261,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
 }
 
 pub fn default_config() -> VMConfig {
-    VMConfig {
-        publishing_options: VMPublishingOption::Locked(HashSet::from_iter(
-            allowing_script_hashes().into_iter(),
-        )),
-    }
+    VMConfig::default()
 }
 
 struct FakeStateView;

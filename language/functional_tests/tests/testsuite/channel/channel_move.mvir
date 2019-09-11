@@ -1,0 +1,195 @@
+//! account: bob
+//! account: alice
+
+//! new-transaction
+module Token {
+    resource T {
+        value: u64
+    }
+    public new(value:u64): Self.T {
+        return T{ value: move(value) };
+    }
+
+    public value(token_ref: &Self.T):u64 {
+        return *&move(token_ref).value;
+    }
+
+    public destroy(token: Self.T){
+        let value:u64;
+        T{value} = move(token);
+        return;
+    }
+
+    public move_to_sender_channel(value:u64) {
+       let t1: Self.T;
+
+       t1 = Self.new(move(value));
+
+       move_to_sender_channel<T>(move(t1));
+       return;
+    }
+
+    public move_to_receiver_channel(value:u64) {
+       let t1: Self.T;
+
+       t1 = Self.new(move(value));
+
+       move_to_receiver_channel<T>(move(t1));
+       return;
+    }
+
+    public exist_sender_channel(): bool {
+        return exist_sender_channel<T>();
+    }
+
+    public exist_receiver_channel(): bool {
+        return exist_receiver_channel<T>();
+    }
+
+    public sender_channel_value():u64{
+        let ref: &mut Self.T;
+        ref = borrow_sender_channel<T>();
+        return *&move(ref).value;
+    }
+
+    public receiver_channel_value():u64{
+        let ref: &mut Self.T;
+        ref = borrow_receiver_channel<T>();
+        return *&move(ref).value;
+    }
+
+    public move_from_sender_channel(): Self.T {
+        let t: Self.T;
+        let value: u64;
+        t = move_from_sender_channel<T>();
+        return move(t);
+    }
+
+    public move_from_receiver_channel(): Self.T {
+        let t: Self.T;
+        let value: u64;
+        t = move_from_receiver_channel<T>();
+        return move(t);
+    }
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+import {{default}}.Token;
+main() {
+
+    assert(is_channel_txn() == true, 42);
+    assert(Token.exist_sender_channel() == false, 42);
+    assert(Token.exist_receiver_channel() == false, 42);
+
+    Token.move_to_sender_channel(1);
+    assert(Token.exist_sender_channel() == true, 42);
+    assert(Token.exist_receiver_channel() == false, 42);
+
+    Token.move_to_receiver_channel(2);
+    assert(Token.exist_sender_channel() == true, 42);
+    assert(Token.exist_receiver_channel() == true, 42);
+
+    return;
+}
+
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+import {{default}}.Token;
+main() {
+    let alice_value: u64;
+    let bob_value: u64;
+
+    assert(is_channel_txn() == true, 42);
+
+    assert(Token.exist_sender_channel() == true, 42);
+    assert(Token.exist_receiver_channel() == true, 42);
+
+    alice_value = Token.sender_channel_value();
+    bob_value = Token.receiver_channel_value();
+
+    assert(move(alice_value) == 1, 42);
+    assert(move(bob_value) == 2, 42);
+
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! receiver: alice
+import {{default}}.Token;
+main() {
+    let alice_value: u64;
+    let bob_value: u64;
+
+    assert(is_channel_txn() == true, 42);
+
+    assert(Token.exist_sender_channel() == true, 42);
+    assert(Token.exist_receiver_channel() == true, 42);
+
+    bob_value = Token.sender_channel_value();
+    alice_value = Token.receiver_channel_value();
+
+    assert(move(alice_value) == 1, 42);
+    assert(move(bob_value) == 2, 42);
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+import {{default}}.Token;
+main() {
+    let alice_token: Token.T;
+    let alice_value: u64;
+    let bob_token: Token.T;
+    let bob_value: u64;
+
+    assert(is_channel_txn() == true, 42);
+
+    alice_token = Token.move_from_sender_channel();
+    alice_value = Token.value(&alice_token);
+
+    assert(move(alice_value) == 1, 42);
+    Token.destroy(move(alice_token));
+
+    assert(Token.exist_sender_channel() == false, 42);
+    assert(Token.exist_receiver_channel() == true, 42);
+
+    bob_token = Token.move_from_receiver_channel();
+    bob_value = Token.value(&bob_token);
+
+    assert(move(bob_value) == 2, 42);
+    Token.destroy(move(bob_token));
+
+    assert(Token.exist_sender_channel() == false, 42);
+    assert(Token.exist_receiver_channel() == false, 42);
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+import {{default}}.Token;
+main() {
+    assert(Token.exist_sender_channel() == false, 42);
+    assert(Token.exist_receiver_channel() == false, 42);
+
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! receiver: alice
+import {{default}}.Token;
+main() {
+    assert(Token.exist_sender_channel() == false, 42);
+    assert(Token.exist_receiver_channel() == false, 42);
+
+    return;
+}

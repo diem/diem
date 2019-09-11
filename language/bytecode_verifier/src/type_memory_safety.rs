@@ -949,6 +949,176 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     Err(VMStaticViolation::CreateAccountTypeMismatchError(offset))
                 }
             }
+
+            Bytecode::IsOffchain => {
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Bool,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            Bytecode::GetTxnReceiverAddress => {
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Address,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::ExistSenderChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::ExistsNoResourceError(offset));
+                }
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Bool,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::ExistReceiverChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::ExistsNoResourceError(offset));
+                }
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Bool,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::BorrowSenderChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
+                }
+                let nonce = self.get_nonce(&mut state);
+                //TODO ensure
+                state.borrow_from_global_value(*idx, nonce.clone());
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::MutableReference(Box::new(
+                        SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    )),
+                    value: AbstractValue::Reference(nonce),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::BorrowReceiverChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::BorrowGlobalNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
+                }
+                let nonce = self.get_nonce(&mut state);
+                //TODO ensure
+                state.borrow_from_global_value(*idx, nonce.clone());
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::MutableReference(Box::new(
+                        SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    )),
+                    value: AbstractValue::Reference(nonce),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveFromSenderChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::MoveFromNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
+                }
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    value: AbstractValue::full_value(Kind::Resource),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveFromReceiverChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::MoveFromNoResourceError(offset));
+                } else if !state.global(*idx).is_empty() {
+                    return Err(VMStaticViolation::GlobalReferenceError(offset));
+                }
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    value: AbstractValue::full_value(Kind::Resource),
+                });
+                Ok(())
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveToSenderChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::MoveToSenderNoResourceError(offset));
+                }
+
+                let value_operand = self.stack.pop().unwrap();
+                if value_operand.signature
+                    == SignatureToken::Struct(struct_definition.struct_handle, vec![])
+                {
+                    Ok(())
+                } else {
+                    Err(VMStaticViolation::MoveToSenderTypeMismatchError(offset))
+                }
+            }
+
+            // TODO: Handle type actuals for generics
+            Bytecode::MoveToReceiverChannel(idx, _) => {
+                let struct_definition = self.module().struct_def_at(*idx);
+                if !StructDefinitionView::new(self.module(), struct_definition)
+                    .is_nominal_resource()
+                {
+                    return Err(VMStaticViolation::MoveToSenderNoResourceError(offset));
+                }
+
+                let value_operand = self.stack.pop().unwrap();
+                if value_operand.signature
+                    == SignatureToken::Struct(struct_definition.struct_handle, vec![])
+                {
+                    Ok(())
+                } else {
+                    Err(VMStaticViolation::MoveToSenderTypeMismatchError(offset))
+                }
+            }
+
+            Bytecode::IsChannelTxn => {
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::Bool,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
         }
     }
 }

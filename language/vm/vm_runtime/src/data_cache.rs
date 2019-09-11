@@ -76,6 +76,46 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation> {
         BlockDataCache::get(self, access_path)
     }
+
+}
+
+//TODO(jole) refactor this for channel transaction.
+struct WriteSetDataCache<'txn>{
+    data_map: BTreeMap<AccessPath, Vec<u8>>,
+    data_cache: &'txn dyn RemoteCache,
+}
+
+impl<'txn> WriteSetDataCache<'txn>{
+
+    pub fn new(data_cache: &'txn dyn RemoteCache) -> Self{
+        Self{
+            data_map: BTreeMap::new(),
+            data_cache,
+        }
+    }
+
+    pub fn cache_write_set(&mut self, write_set: &WriteSet){
+        for (ref ap, ref write_op) in write_set.iter() {
+            match write_op {
+                WriteOp::Value(blob) => {
+                    self.data_map.insert(ap.clone(), blob.clone());
+                }
+                WriteOp::Deletion => {
+                    self.data_map.remove(ap);
+                }
+            }
+        }
+    }
+}
+
+impl<'txn> RemoteCache for WriteSetDataCache<'txn>{
+
+    fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation> {
+        match self.data_map.get(access_path) {
+            Some(data) => Ok(Some(data.clone())),
+            None => self.data_cache.get(access_path),
+        }
+    }
 }
 
 /// Global cache for a transaction.
@@ -88,13 +128,13 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: &'txn dyn RemoteCache,
+    data_cache: WriteSetDataCache<'txn>,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
     pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
         TransactionDataCache {
-            data_cache,
+            data_cache: WriteSetDataCache::new(data_cache),
             data_map: BTreeMap::new(),
         }
     }
@@ -296,5 +336,9 @@ impl<'txn> TransactionDataCache<'txn> {
     /// Flush out the cache and restart from a clean state
     pub fn clear(&mut self) {
         self.data_map.clear()
+    }
+
+    pub fn cache_write_set(&mut self, write_set: &WriteSet) {
+        self.data_cache.cache_write_set(write_set);
     }
 }

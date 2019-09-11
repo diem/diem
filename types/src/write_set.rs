@@ -10,6 +10,7 @@ use canonical_serialization::{
 };
 use failure::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::mem;
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum WriteOp {
@@ -32,6 +33,10 @@ impl WriteOp {
             WriteOp::Deletion => true,
             WriteOp::Value(_) => false,
         }
+    }
+
+    pub fn merge_with(&mut self, other:WriteOp){
+        mem::replace(self, other);
     }
 }
 
@@ -114,6 +119,19 @@ impl WriteSet {
     pub fn into_mut(self) -> WriteSetMut {
         self.0
     }
+
+    pub fn contains_onchain_resource(&self) -> bool{
+        for (access_path ,_) in self.iter(){
+            if access_path.is_onchain_resource(){
+                return true;
+            }
+        }
+        return false
+    }
+
+    pub fn merge(first:&WriteSet, second:&WriteSet) -> Self{
+        WriteSetMut::merge(&first.0,&second.0).freeze().expect("freeze should success.")
+    }
 }
 
 /// A mutable version of `WriteSet`.
@@ -146,6 +164,30 @@ impl WriteSetMut {
     pub fn freeze(self) -> Result<WriteSet> {
         // TODO: add structural validation
         Ok(WriteSet(self))
+    }
+
+    pub fn merge_with(&mut self, other: &WriteSetMut){
+        let new_set = Self::merge(self, other);
+        mem::replace(self, new_set);
+    }
+
+    pub(crate) fn find_write_op_mut(&mut self, access_path: &AccessPath) -> Option<&mut WriteOp>{
+        self.write_set.iter_mut().find(|(ap, _)|ap == access_path).map(|(_,op)|op)
+    }
+
+    pub fn merge(first: &WriteSetMut, second: &WriteSetMut) -> WriteSetMut{
+        let mut write_set = first.clone();
+        for (ap, second_op) in &second.write_set {
+            match write_set.find_write_op_mut(ap) {
+                Some(first_op) => {
+                    first_op.merge_with(second_op.clone());
+                }
+                None => {
+                    write_set.push((ap.clone(), second_op.clone()))
+                }
+            }
+        }
+        write_set
     }
 }
 

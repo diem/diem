@@ -12,6 +12,7 @@ use vm::{
     access::ModuleAccess,
     errors::{Location, VMErrorKind, VMRuntimeError},
 };
+use config::config::VMMode;
 
 /// Represents a transaction that has been executed.
 pub struct ExecutedTransaction {
@@ -198,6 +199,46 @@ where
                     ExecutedTransaction::discard_error_output(&err)
                 }
             }
+        }
+        TransactionPayload::ChannelWriteSet(channel_payload) => {
+            TransactionOutput::new(
+                channel_payload.write_set,
+                vec![],
+                0,
+                VMStatus::Execution(ExecutionStatus::Executed).into(),
+            )
+        }
+        TransactionPayload::ChannelScript(channel_payload) => {
+            let VerifiedTransactionState {
+                mut txn_executor,
+                verified_txn,
+            } = txn_state.expect("script-based transactions should always have associated state");
+            let main = match verified_txn {
+                VerTxn::Script(func) => func,
+                _ => unreachable!("TransactionPayload::Script expects VerTxn::Program"),
+            };
+            // only onchain vm need cache pre write_set, because onchain state is behind offchain
+            // offchain state is always latest.
+            if txn_executor.vm_mode() == VMMode::Onchain {
+                //Cache pre offchain tx write_set,then execute script.
+                txn_executor.cache_write_set(&channel_payload.write_set);
+            }
+            let (_, args) = channel_payload.script.into_inner();
+            txn_executor.setup_main_args(args);
+            let script_output = match txn_executor.execute_function_impl(main) {
+                Ok(Ok(_)) => txn_executor.transaction_cleanup(vec![]),
+                Ok(Err(err)) => {
+                    warn!("[VM] User error running script: {:?}", err);
+                    txn_executor.failed_transaction_cleanup(Ok(Err(err)))
+                }
+                Err(err) => {
+                    error!("[VM] VM error running script: {:?}", err);
+                    ExecutedTransaction::discard_error_output(&err)
+                }
+            };
+            let merged_write_set = WriteSet::merge(&channel_payload.write_set, script_output.write_set());
+            //TODO(jole) eliminate clone
+            TransactionOutput::new(merged_write_set, script_output.events().to_vec(), script_output.gas_used(), script_output.status().clone())
         }
     }
 }

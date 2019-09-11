@@ -12,6 +12,7 @@ pub struct TransactionMetadata {
     pub max_gas_amount: GasUnits<GasCarrier>,
     pub gas_unit_price: GasPrice<GasCarrier>,
     pub transaction_size: AbstractMemorySize<GasCarrier>,
+    pub receiver: Option<AccountAddress>,
 }
 
 impl TransactionMetadata {
@@ -23,6 +24,7 @@ impl TransactionMetadata {
             max_gas_amount: GasUnits::new(txn.max_gas_amount()),
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),
             transaction_size: AbstractMemorySize::new(txn.raw_txn_bytes_len() as u64),
+            receiver: txn.receiver(),
         }
     }
 
@@ -49,6 +51,17 @@ impl TransactionMetadata {
     pub fn transaction_size(&self) -> AbstractMemorySize<GasCarrier> {
         self.transaction_size
     }
+
+    pub fn receiver(&self) -> Option<AccountAddress> {
+        self.receiver
+    }
+
+    pub fn is_channel_txn(&self) -> bool {
+        match self.receiver{
+            Some(_) => true,
+            None => false,
+        }
+    }
 }
 
 impl Default for TransactionMetadata {
@@ -61,6 +74,7 @@ impl Default for TransactionMetadata {
             max_gas_amount: GasUnits::new(100_000_000),
             gas_unit_price: GasPrice::new(0),
             transaction_size: AbstractMemorySize::new(0),
+            receiver: None,
         }
     }
 }

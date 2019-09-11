@@ -1,0 +1,28 @@
+//! account: bob
+//! account: alice
+
+//! new-transaction
+//! sender: alice
+main() {
+    let x: bool;
+    x = is_channel_txn();
+
+    assert(copy(x) == false, 77);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+main() {
+    let x: bool;
+    let receiver: address;
+
+    x = is_channel_txn();
+    assert(copy(x) == true, 42);
+
+    receiver = get_txn_receiver();
+    assert(copy(receiver) == {{bob}}, 42);
+
+    return;
+}

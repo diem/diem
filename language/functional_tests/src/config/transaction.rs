@@ -32,6 +32,7 @@ pub enum Entry {
     DisableStages(Vec<Stage>),
     Sender(String),
     Arguments(Vec<Argument>),
+    Receiver(String),
 }
 
 impl FromStr for Entry {
@@ -51,6 +52,13 @@ impl FromStr for Entry {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
             return Ok(Entry::Sender(s.to_ascii_lowercase()));
+        }
+        if s.starts_with("receiver:") {
+            let s = s[9..].trim_start().trim_end();
+            if s.is_empty() {
+                return Err(ErrorKind::Other("receiver cannot be empty".to_string()).into());
+            }
+            return Ok(Entry::Receiver(s.to_ascii_lowercase()));
         }
         if s.starts_with("args:") {
             let res: Result<Vec<_>> = s[5..]
@@ -104,6 +112,7 @@ pub struct Config {
     pub disabled_stages: BTreeSet<Stage>,
     pub sender: String,
     pub args: Vec<TransactionArgument>,
+    pub receiver: Option<String>,
 }
 
 impl Config {
@@ -112,6 +121,7 @@ impl Config {
         let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
         let mut args = None;
+        let mut receiver = None;
 
         for entry in entries {
             match entry {
@@ -128,6 +138,20 @@ impl Config {
                         }
                     }
                     _ => return Err(ErrorKind::Other("sender already set".to_string()).into()),
+                },
+                Entry::Receiver(name) => match receiver {
+                    None => {
+                        if config.accounts.contains_key(name) {
+                            receiver = Some(name.to_string())
+                        } else {
+                            return Err(ErrorKind::Other(format!(
+                                "account '{}' does not exist",
+                                name
+                            ))
+                                .into());
+                        }
+                    }
+                    _ => return Err(ErrorKind::Other("receiver already set".to_string()).into()),
                 },
                 Entry::Arguments(raw_args) => match args {
                     None => {
@@ -175,6 +199,7 @@ impl Config {
             disabled_stages,
             sender: sender.unwrap_or_else(|| "default".to_string()),
             args: args.unwrap_or_else(|| vec![]),
+            receiver
         })
     }
 
