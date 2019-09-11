@@ -5,9 +5,8 @@
 //! A `Position` uniquely identifies the location of a node
 //!
 //! In this implementation, `Position` is represented by the in-order-traversal sequence number
-//! of the node.
-//! The process of locating a node and jumping between nodes is done through position calculation,
-//! which comes from treebits.
+//! of the node.  The process of locating a node and jumping between nodes is done through
+//! in-order position calculation, which can be done with bit manipulation.
 //!
 //! For example
 //! ```text
@@ -26,12 +25,40 @@
 
 #[cfg(test)]
 mod position_test;
-mod treebits;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Position(u64);
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum NodeDirection {
+    Left,
+    Right,
+}
+
 impl Position {
+    /// What level is this node in the tree, 0 if the node is a leaf,
+    /// 1 if the level is one above a leaf, etc.
+    pub fn level(self) -> u32 {
+        (!self.0).trailing_zeros()
+    }
+
+    fn is_leaf(self) -> bool {
+        self.0 & 1 == 0
+    }
+
+    /// What position is the node within the level? i.e. how many nodes
+    /// are to the left of this node at the same level
+    pub fn pos_counting_from_left(self) -> u64 {
+        self.0 >> (self.level() + 1)
+    }
+
+    /// pos count start from 0 on each level
+    pub fn from_level_and_pos(level: u32, pos: u64) -> Self {
+        let level_one_bits = (1u64 << level) - 1;
+        let shifted_pos = pos << (level + 1);
+        Position(shifted_pos | level_one_bits)
+    }
+
     pub fn from_inorder_index(index: u64) -> Self {
         Position(index)
     }
@@ -41,58 +68,79 @@ impl Position {
     }
 
     pub fn from_postorder_index(index: u64) -> Self {
-        Self::from_inorder_index(treebits::postorder_to_inorder(index))
+        Position(postorder_to_inorder(index))
     }
 
     pub fn to_postorder_index(self) -> u64 {
-        treebits::inorder_to_postorder(self.to_inorder_index())
+        inorder_to_postorder(self.to_inorder_index())
     }
 
-    pub fn get_parent(self) -> Self {
-        Self::from_inorder_index(treebits::parent(self.0))
+    /// What is the parent of this node?
+    pub fn parent(self) -> Self {
+        Self(
+            (self.0 | isolate_rightmost_zero_bit(self.0))
+                & !(isolate_rightmost_zero_bit(self.0) << 1),
+        )
     }
 
-    // Note: if self is root, the sibling will overflow
-    pub fn get_sibling(self) -> Self {
-        Self::from_inorder_index(treebits::sibling(self.0))
+    /// What is the left node of this node? Will overflow if the node is a leaf
+    pub fn left_child(self) -> Self {
+        Self::child(self, NodeDirection::Left)
     }
 
-    // Requirement: self can not be leaf.
-    pub fn get_left_child(self) -> Position {
-        Self::from_inorder_index(treebits::left_child(self.0))
+    /// What is the right node of this node? Will overflow if the node is a leaf
+    pub fn right_child(self) -> Self {
+        Self::child(self, NodeDirection::Right)
     }
 
-    // Requirement: self can not be leaf.
-    pub fn get_right_child(self) -> Position {
-        Self::from_inorder_index(treebits::right_child(self.0))
+    pub fn child(self, dir: NodeDirection) -> Self {
+        assert!(!self.is_leaf());
+
+        let direction_bit = match dir {
+            NodeDirection::Left => 0,
+            NodeDirection::Right => isolate_rightmost_zero_bit(self.0),
+        };
+        Self((self.0 | direction_bit) & !(isolate_rightmost_zero_bit(self.0) >> 1))
     }
 
     /// Whether this position is a left child of its parent.
     pub fn is_left_child(self) -> bool {
-        match treebits::direction_from_parent(self.0) {
-            treebits::NodeDirection::Left => true,
-            treebits::NodeDirection::Right => false,
+        match self.direction_from_parent() {
+            NodeDirection::Left => true,
+            NodeDirection::Right => false,
         }
     }
 
-    // The level start from 0 counting from the leaf level
-    pub fn get_level(self) -> u32 {
-        treebits::level(self.0)
-    }
-
-    // Compute the position given the level and the pos count on this level.
-    pub fn from_level_and_pos(level: u32, pos: u64) -> Self {
-        Self::from_inorder_index(treebits::node_from_level_and_pos(level, pos))
+    /// This method takes in a node position and return NodeDirection based on if it's left or right
+    /// child Similar to sibling. The observation is that,
+    /// after strip out the right-most common bits,
+    /// if next right-most bits is 0, it is left child. Otherwise, right child
+    pub fn direction_from_parent(self) -> NodeDirection {
+        match self.0 & (isolate_rightmost_zero_bit(self.0) << 1) {
+            0 => NodeDirection::Left,
+            _ => NodeDirection::Right,
+        }
     }
 
     // Given the position, return the leaf index counting from the left
     pub fn to_leaf_index(self) -> u64 {
-        treebits::pos_counting_from_left(self.0)
+        assert!(self.is_leaf());
+        self.pos_counting_from_left()
     }
 
     // Opposite of get_left_node_count_from_position.
-    pub fn from_leaf_index(leaf_index: u64) -> Position {
-        Self::from_inorder_index(treebits::node_from_level_and_pos(0, leaf_index))
+    pub fn from_leaf_index(leaf_index: u64) -> Self {
+        Self::from_level_and_pos(0, leaf_index)
+    }
+
+    /// This method takes in a node position and return its sibling position
+    ///
+    /// The observation is that, after stripping out the right-most common bits,
+    /// two sibling nodes flip the the next right-most bits with each other.
+    /// To find out the right-most common bits, first remove all the right-most ones
+    /// because they are corresponding to level's indicator. Then remove next zero right after.
+    pub fn sibling(self) -> Self {
+        Self(self.0 ^ (isolate_rightmost_zero_bit(self.0) << 1))
     }
 
     /// Given a position, returns the position next to it on the right on the same level. For
@@ -105,30 +153,123 @@ impl Position {
     ///  / \     / \     / \
     /// 0   2   4   6   8   10
     /// ```
-    pub fn get_next_sibling(self) -> Position {
-        let level = self.get_level();
-        let pos = treebits::pos_counting_from_left(self.0);
-        Position(treebits::node_from_level_and_pos(level, pos + 1))
+    pub fn get_next_sibling(self) -> Self {
+        let level = self.level();
+        let pos = self.pos_counting_from_left();
+        Self::from_level_and_pos(level, pos + 1)
     }
 
     // Given a leaf index, calculate the position of a minimum root which contains this leaf
-    pub fn get_root_position(leaf_index: u64) -> Position {
+    /// This method calculates the index of the smallest root which contains this leaf.
+    /// Observe that, the root position is composed by a "height" number of ones
+    ///
+    /// For example
+    /// ```text
+    ///     0010010(node)
+    ///     0011111(smearing)
+    ///     -------
+    ///     0001111(root)
+    /// ```
+    pub fn root_from_leaf_index(leaf_index: u64) -> Self {
         let leaf = Self::from_leaf_index(leaf_index);
-        Self::from_inorder_index(treebits::get_root(leaf.0))
+        Self(smear_ones_for_u64(leaf.0) >> 1)
     }
 
+    pub fn root_from_leaf_count(leaf_count: u64) -> Self {
+        let leaf = Self::from_leaf_index(leaf_count - 1);
+        Self(smear_ones_for_u64(leaf.0) >> 1)
+    }
+
+    /// Given a node, find its right most child in its subtree.
+    /// Right most child is a Position, could be itself, at level 0
+    pub fn right_most_child(self) -> Self {
+        let level = self.level();
+        Self(self.0 + (1_u64 << level) - 1)
+    }
+
+    /// Given a node, find its left most child in its subtree
+    /// Left most child is a node, could be itself, at level 0
+    pub fn left_most_child(self) -> Self {
+        // Turn off its right most x bits. while x=level of node
+        let level = self.level();
+        Self(turn_off_right_most_n_bits(self.0, level))
+    }
+}
+
+// Some helper functions to perform general bit manipulation
+
+/// Smearing all the bits starting from MSB with ones
+fn smear_ones_for_u64(v: u64) -> u64 {
+    let mut n = v;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32;
+    n
+}
+
+/// Turn off n right most bits
+///
+/// For example
+/// ```text
+///     00010010101
+///     -----------
+///     00010010100 n=1
+///     00010010000 n=3
+/// ```
+fn turn_off_right_most_n_bits(v: u64, n: u32) -> u64 {
+    (v >> n) << n
+}
+
+/// Finds the rightmost 0-bit, turns off all bits, and sets this bit to 1 in
+/// the result. For example:
+///
+/// ```text
+///     01110111  (x)
+///     --------
+///     10001000  (~x)
+/// &   01111000  (x+1)
+///     --------
+///     00001000
+/// ```
+/// http://www.catonmat.net/blog/low-level-bit-hacks-you-absolutely-must-know/
+fn isolate_rightmost_zero_bit(v: u64) -> u64 {
+    !v & (v + 1)
+}
+
+// The following part of the position implementation is logically separate and
+// depends on our notion of freezable.  It should probably move to another module.
+impl Position {
     // Given index of right most leaf, calculate if a position is the root
-    // of a perfect subtree that does not contains placeholder nodes.
+    // of a perfect subtree that does not contain any placeholder nodes.
+    //
+    // First find its right most child
+    // the right most child of any node will be at leaf level, which will be a either placeholder
+    // node or leaf node. if right most child is a leaf node, then it is freezable.
+    // if right most child is larger than max_leaf_node, it is a placeholder node, and not
+    // freezable.
     pub fn is_freezable(self, leaf_index: u64) -> bool {
         let leaf = Self::from_leaf_index(leaf_index);
-        treebits::is_freezable(self.0, leaf.0)
+        let right_most_child = self.right_most_child();
+        right_most_child.0 <= leaf.0
     }
 
-    // Given index of right most leaf, calculate if a position should be a placeholder node at this
-    // moment
+    // Given index of right most leaf, calculate if a position should contain
+    // a placeholder node at this moment
+    // A node is a placeholder if both two conditions below are true:
+    // 1, the node's in order traversal seq > max_leaf_node's, and
+    // 2, the node does not have left child or right child.
     pub fn is_placeholder(self, leaf_index: u64) -> bool {
         let leaf = Self::from_leaf_index(leaf_index);
-        treebits::is_placeholder(self.0, leaf.0)
+        if self.0 <= leaf.0 {
+            return false;
+        }
+        if self.left_most_child().0 <= leaf.0 {
+            return false;
+        }
+        true
     }
 
     /// Creates an `AncestorIterator` using this position.
@@ -153,8 +294,8 @@ impl Iterator for AncestorSiblingIterator {
     type Item = Position;
 
     fn next(&mut self) -> Option<Position> {
-        let current_sibling_position = self.position.get_sibling();
-        self.position = self.position.get_parent();
+        let current_sibling_position = self.position.sibling();
+        self.position = self.position.parent();
         Some(current_sibling_position)
     }
 }
@@ -171,7 +312,7 @@ impl Iterator for AncestorIterator {
 
     fn next(&mut self) -> Option<Position> {
         let current_position = self.position;
-        self.position = self.position.get_parent();
+        self.position = self.position.parent();
         Some(current_position)
     }
 }
@@ -223,7 +364,7 @@ impl Iterator for FrozenSubTreeIterator {
         // 0b1000=8). At the same time, we also observe that the in-order numbering of a full
         // subtree root is (num_leaves - 1) greater than that of the leftmost leaf, and also
         // (num_leaves - 1) less than that of the rightmost leaf.
-        let root_offset = treebits::smear_ones_for_u64(self.bitmap) >> 1;
+        let root_offset = smear_ones_for_u64(self.bitmap) >> 1;
         let num_leaves = root_offset + 1;
         let leftmost_leaf = Position::from_leaf_index(self.seen_leaves);
         let root = Position::from_inorder_index(leftmost_leaf.to_inorder_index() + root_offset);
@@ -303,4 +444,76 @@ impl Iterator for FrozenSubtreeSiblingIterator {
             first_leaf_index + last_leaf_index,
         ))
     }
+}
+
+fn children_of_node(node: u64) -> u64 {
+    (isolate_rightmost_zero_bit(node) << 1) - 2
+}
+
+/// In a post-order tree traversal, how many nodes are traversed before `node`
+/// not including nodes that are children of `node`.
+fn nodes_to_left_of(node: u64) -> u64 {
+    // If node = 0b0100111, ones_up_to_level = 0b111
+    let ones_up_to_level = isolate_rightmost_zero_bit(node) - 1;
+    // Unset all the 1s due to the level
+    let unset_level_zeros = node ^ ones_up_to_level;
+
+    // What remains is a 1 bit set every time a node navigated right
+    // For example, consider node=5=0b101. unset_level_zeros=0b100.
+    // the 1 bit in unset_level_zeros at position 2 represents the
+    // fact that 5 is the right child at the level 1. At this level
+    // there are 2^2 - 1 children on the left hand side.
+    //
+    // So what we do is subtract the count of one bits from unset_level_zeros
+    // to account for the fact that if the node is the right child at level
+    // n that there are 2^n - 1 children.
+    unset_level_zeros - u64::from(unset_level_zeros.count_ones())
+}
+
+/// Given `node`, an index in an in-order traversal of a perfect binary tree,
+/// what order would the node be visited in in post-order traversal?
+/// For example, consider this tree of in-order nodes.
+///
+/// ```text
+///      3
+///     /  \
+///    /    \
+///   1      5
+///  / \    / \
+/// 0   2  4   6
+/// ```
+///
+/// The post-order ordering of the nodes is:
+/// ```text
+///      6
+///     /  \
+///    /    \
+///   2      5
+///  / \    / \
+/// 0   1  3   4
+/// ```
+///
+/// post_order_index(1) == 2
+/// post_order_index(4) == 3
+pub fn inorder_to_postorder(node: u64) -> u64 {
+    let children = children_of_node(node);
+    let left_nodes = nodes_to_left_of(node);
+
+    children + left_nodes
+}
+
+pub fn postorder_to_inorder(mut node: u64) -> u64 {
+    // The number of nodes in a full binary tree with height `n` is `2^n - 1`.
+    let mut full_binary_size = !0u64;
+    let mut bitmap = 0u64;
+    for i in (0..64).rev() {
+        if node >= full_binary_size {
+            node -= full_binary_size;
+            bitmap |= 1 << i;
+        }
+        full_binary_size >>= 1;
+    }
+    let level = node as u32;
+    let pos = bitmap >> level;
+    Position::from_level_and_pos(level, pos).to_inorder_index()
 }
