@@ -1,0 +1,17 @@
+module M {
+    resource X {}
+    t1() {
+        let x: Self.X;
+        let y: &Self.X;
+        x = X {};
+        y = &x;
+        x = X {};
+        _ = move(y);
+        X {} = move(x);
+        return;
+    }
+
+}
+
+// check: VerificationFailure
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR
