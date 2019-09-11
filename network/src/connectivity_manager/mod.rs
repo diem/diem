@@ -220,10 +220,10 @@ where
             .peer_addresses
             .iter()
             .filter(|(peer_id, addrs)| {
-                eligible.contains_key(peer_id)
-                    && self.connected.get(peer_id).is_none()
-                    && self.dial_queue.get(peer_id).is_none()
-                    && !addrs.is_empty()
+                eligible.contains_key(peer_id)  // The node is eligible to be dialed.
+                    && self.connected.get(peer_id).is_none() // The node is not already connected.
+                    && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
+                    && !addrs.is_empty() // There is an address to dial.
             })
             .collect();
 
