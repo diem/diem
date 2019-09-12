@@ -99,10 +99,10 @@ fn test_verify_three_element_accumulator() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_leftmost() {
+fn test_accumulator_proof_64_siblings_leftmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..64 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -117,10 +117,10 @@ fn test_accumulator_proof_63_siblings_leftmost() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_rightmost() {
+fn test_accumulator_proof_64_siblings_rightmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..64 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -129,17 +129,17 @@ fn test_accumulator_proof_63_siblings_rightmost() {
         .fold(element_hash, |hash, sibling_hash| {
             TestAccumulatorInternalNode::new(*sibling_hash, hash).hash()
         });
-    let leaf_index = (std::u64::MAX - 1) / 2;
+    let leaf_index = std::u64::MAX;
     let proof = AccumulatorProof::new(siblings);
 
     assert!(verify_test_accumulator_element(root_hash, element_hash, leaf_index, &proof).is_ok());
 }
 
 #[test]
-fn test_accumulator_proof_64_siblings() {
+fn test_accumulator_proof_65_siblings() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..64 {
+    for i in 0..65 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
