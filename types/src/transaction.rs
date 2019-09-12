@@ -43,9 +43,10 @@ mod transaction_argument;
 mod unit_tests;
 
 pub use module::Module;
-pub use program::{Program, SCRIPT_HASH_LENGTH};
+pub use program::Program;
 use protobuf::well_known_types::UInt64Value;
-pub use script::Script;
+pub use script::{Script, SCRIPT_HASH_LENGTH};
+
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 
@@ -77,14 +78,14 @@ pub struct RawTransaction {
 }
 
 impl RawTransaction {
-    /// Create a new `RawTransaction` with a program.
+    /// Create a new `RawTransaction` with a payload.
     ///
-    /// Almost all transactions are program transactions. See `new_write_set` for write-set
-    /// transactions.
+    /// It can be either to publish a module, to execute a script, or to issue a writeset
+    /// transaction.
     pub fn new(
         sender: AccountAddress,
         sequence_number: u64,
-        program: Program,
+        payload: TransactionPayload,
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: Duration,
@@ -92,7 +93,7 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::Program(program),
+            payload,
             max_gas_amount,
             gas_unit_price,
             expiration_time,

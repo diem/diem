@@ -242,7 +242,7 @@ fn new_raw_transaction(
         TransactionPayload::Program(program) => RawTransaction::new(
             sender,
             sequence_number,
-            program,
+            TransactionPayload::Program(program),
             max_gas_amount,
             gas_unit_price,
             Duration::from_secs(expiration_time_secs),

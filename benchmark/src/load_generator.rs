@@ -15,7 +15,7 @@ use types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::get_with_proof::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
-    transaction::Program,
+    transaction::{Script, TransactionPayload},
     transaction_helpers::{create_signed_txn, TransactionSigner},
 };
 
@@ -86,7 +86,7 @@ pub fn gen_accounts_from_wallet(wallet: &mut WalletLibrary, num_accounts: u64) -
 
 /// Craft a generic signed transaction request.
 fn gen_submit_transaction_request<T: TransactionSigner>(
-    program: Program,
+    program: Script,
     sender_account: &mut AccountData,
     signer: &T,
 ) -> Result<Request> {
@@ -94,7 +94,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
     // so it is fine to continue later generation.
     let signed_txn = create_signed_txn(
         signer,
-        program,
+        TransactionPayload::Script(program),
         sender_account.address,
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
@@ -117,7 +117,7 @@ fn gen_mint_txn_request(
     faucet_account: &mut AccountData,
     receiver: &AccountAddress,
 ) -> Result<Request> {
-    let program = vm_genesis::encode_mint_program(receiver, FREE_LUNCH);
+    let program = vm_genesis::encode_mint_script(receiver, FREE_LUNCH);
     let signer = faucet_account
         .key_pair
         .as_ref()
@@ -133,7 +133,7 @@ fn gen_transfer_txn_request(
     wallet: &WalletLibrary,
     num_coins: u64,
 ) -> Result<Request> {
-    let program = vm_genesis::encode_transfer_program(&receiver, num_coins);
+    let program = vm_genesis::encode_transfer_script(&receiver, num_coins);
     gen_submit_transaction_request(program, sender, wallet)
 }
 

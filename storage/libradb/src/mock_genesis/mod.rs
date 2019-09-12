@@ -21,7 +21,7 @@ use types::{
     account_state_blob::AccountStateBlob,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::SparseMerkleLeafNode,
-    transaction::{Program, RawTransaction, TransactionInfo, TransactionToCommit},
+    transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
     vm_error::StatusCode,
 };
 
@@ -35,10 +35,10 @@ fn gen_mock_genesis() -> (
     let mut rng = StdRng::from_seed(seed_buf);
     let (privkey, pubkey) = compat::generate_keypair(&mut rng);
     let some_addr = AccountAddress::from_public_key(&pubkey);
-    let raw_txn = RawTransaction::new(
+    let raw_txn = RawTransaction::new_script(
         some_addr,
         /* sequence_number = */ 0,
-        Program::new(vec![], vec![], vec![]),
+        Script::new(vec![], vec![]),
         /* max_gas_amount = */ 0,
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),

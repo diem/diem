@@ -20,18 +20,18 @@ use types::{
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     test_helpers::transaction_test_helpers::get_test_signed_txn as get_test_signed_txn_proto,
     transaction::{
-        Program, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
+        Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
     validator_verifier::ValidatorVerifier,
 };
-use vm_genesis::{encode_create_account_program, encode_transfer_program};
+use vm_genesis::{encode_create_account_script, encode_transfer_script};
 
 fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Program>,
+    program: Option<Script>,
 ) -> SignedTransaction {
     SignedTransaction::from_proto(get_test_signed_txn_proto(
         sender,
@@ -75,7 +75,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_create_account_program(&account1, 2_000_000)),
+        Some(encode_create_account_script(&account1, 2_000_000)),
     );
 
     // Create account2 with 200k coins.
@@ -84,7 +84,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_create_account_program(&account2, 200_000)),
+        Some(encode_create_account_script(&account2, 200_000)),
     );
 
     // Create account3 with 100k coins.
@@ -93,7 +93,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 3,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_create_account_program(&account3, 100_000)),
+        Some(encode_create_account_script(&account3, 100_000)),
     );
 
     // Transfer 20k coins from account1 to account2.
@@ -103,7 +103,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_program(&account2, 20_000)),
+        Some(encode_transfer_script(&account2, 20_000)),
     );
 
     // Transfer 10k coins from account2 to account3.
@@ -113,7 +113,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey2.clone(),
         pubkey2.clone(),
-        Some(encode_transfer_program(&account3, 10_000)),
+        Some(encode_transfer_script(&account3, 10_000)),
     );
 
     // Transfer 70k coins from account1 to account3.
@@ -123,7 +123,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_program(&account3, 70_000)),
+        Some(encode_transfer_script(&account3, 70_000)),
     );
 
     let block1 = vec![txn1, txn2, txn3, txn4, txn5, txn6];
@@ -139,7 +139,7 @@ fn test_execution_with_storage() {
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1.clone(),
-            Some(encode_transfer_program(&account3, 10_000)),
+            Some(encode_transfer_script(&account3, 10_000)),
         ));
     }
 

@@ -23,7 +23,7 @@ use types::{
     byte_array::ByteArray,
     identifier::Identifier,
     transaction::{
-        Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
+        RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
     },
     validator_public_keys::ValidatorPublicKeys,
@@ -144,10 +144,10 @@ impl Accounts {
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignatureCheckedTransaction {
-        RawTransaction::new(
+        RawTransaction::new_script(
             sender,
             sequence_number,
-            Program::new(program, vec![], args),
+            Script::new(program, args),
             max_gas_amount,
             gas_unit_price,
             Duration::from_secs(u64::max_value()),
@@ -191,10 +191,9 @@ fn compile_script(body: &ast::Program) -> Vec<u8> {
 
 /// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
 /// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_program(recipient: &AccountAddress, amount: u64) -> Program {
-    Program::new(
+pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
+    Script::new(
         PEER_TO_PEER_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
@@ -205,13 +204,12 @@ pub fn encode_transfer_program(recipient: &AccountAddress, amount: u64) -> Progr
 /// Encode a program creating a fresh account at `account_address` with `initial_balance` coins
 /// transferred from the sender's account balance. Fails if there is already an account at
 /// `account_address` or if the sender's balance is lower than `initial_balance`.
-pub fn encode_create_account_program(
+pub fn encode_create_account_script(
     account_address: &AccountAddress,
     initial_balance: u64,
-) -> Program {
-    Program::new(
+) -> Script {
+    Script::new(
         CREATE_ACCOUNT_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*account_address),
             TransactionArgument::U64(initial_balance),
@@ -220,10 +218,9 @@ pub fn encode_create_account_program(
 }
 
 /// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_program(new_key: AccountAddress) -> Program {
-    Program::new(
+pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
+    Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        vec![],
         vec![TransactionArgument::ByteArray(ByteArray::new(
             new_key.as_ref().to_vec(),
         ))],
@@ -232,10 +229,9 @@ pub fn rotate_authentication_key_program(new_key: AccountAddress) -> Program {
 
 // TODO: this should go away once we are no longer using it in tests
 /// Encode a program creating `amount` coins for sender
-pub fn encode_mint_program(sender: &AccountAddress, amount: u64) -> Program {
-    Program::new(
+pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
+    Script::new(
         MINT_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*sender),
             TransactionArgument::U64(amount),

@@ -8,7 +8,7 @@ use std::{
 use structopt::StructOpt;
 use types::{
     account_address::AccountAddress,
-    transaction::{parse_as_transaction_argument, Program, RawTransaction, TransactionArgument},
+    transaction::{parse_as_transaction_argument, RawTransaction, Script, TransactionArgument},
 };
 
 #[derive(Debug, StructOpt)]
@@ -41,9 +41,9 @@ fn main() {
     let program_bytes = fs::read(args.program).expect("Unable to read file");
     let program: Program = serde_json::from_slice(&program_bytes)
         .expect("Unable to deserialize program, is it the output of the compiler?");
-    let (script, _, modules) = program.into_inner();
-    let program_with_args = Program::new(script, modules, args.args);
-    let transaction = RawTransaction::new(
+    let (script, _, _) = program.into_inner();
+    let program_with_args = Script::new(script, args.args);
+    let transaction = RawTransaction::new_script(
         args.sender,
         args.sequence_number,
         program_with_args,

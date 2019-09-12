@@ -42,7 +42,7 @@ use types::{
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
     vm_error::StatusCode,
 };
-use vm_genesis::{encode_transfer_program, GENESIS_KEYPAIR};
+use vm_genesis::{encode_transfer_script, GENESIS_KEYPAIR};
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
@@ -84,7 +84,7 @@ impl MockExecutorProxy {
 
         let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
         let receiver = AccountAddress::new([0xff; 32]);
-        let program = encode_transfer_program(&receiver, 1);
+        let program = encode_transfer_script(&receiver, 1);
         let transaction = get_test_signed_txn(
             sender,
             version + 1,
