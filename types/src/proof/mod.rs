@@ -319,8 +319,8 @@ fn verify_accumulator_element<H: Clone + CryptoHasher>(
 ) -> Result<()> {
     let siblings = accumulator_proof.siblings();
     ensure!(
-        siblings.len() <= 63,
-        "Accumulator proof has more than 63 ({}) siblings.",
+        siblings.len() <= 64,
+        "Accumulator proof has more than 64 ({}) siblings.",
         siblings.len()
     );
 
