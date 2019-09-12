@@ -141,13 +141,14 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 }
                                 Event::Message((peer_id, mut message)) => {
                                     if message.has_chunk_request() {
+                                        let known_version = message.get_chunk_request().get_known_version();
                                         if let Err(err) = self.process_chunk_request(peer_id, message.take_chunk_request()).await {
-                                            error!("[state sync] failed to serve chunk request: {:?}", err);
+                                            error!("[state sync] failed to serve chunk request to {} with known version {}: {:?}", peer_id, known_version, err);
                                         }
                                     }
                                     if message.has_chunk_response() {
                                         if let Err(err) = self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
-                                            error!("[state sync] failed to process chunk response: {:?}", err);
+                                            error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
                                         } else {
                                             self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
                                         }
