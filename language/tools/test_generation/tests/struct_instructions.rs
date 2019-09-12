@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 extern crate test_generation;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
@@ -99,7 +102,7 @@ fn create_struct_value(module: &CompiledModule) -> AbstractValue {
 #[should_panic]
 fn bytecode_pack_signature_not_satisfied() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::Pack(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
@@ -109,7 +112,7 @@ fn bytecode_pack_signature_not_satisfied() {
 #[test]
 fn bytecode_pack() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value1 = create_struct_value(&state1.module);
     if let SignatureToken::Struct(_, tokens) = struct_value1.clone().token {
         for token in tokens {
@@ -135,7 +138,7 @@ fn bytecode_pack() {
 #[should_panic]
 fn bytecode_unpack_signature_not_satisfied() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::Unpack(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
@@ -145,7 +148,7 @@ fn bytecode_unpack_signature_not_satisfied() {
 #[test]
 fn bytecode_unpack() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(struct_value.clone());
     let state2 = common::run_instruction(
@@ -166,7 +169,7 @@ fn bytecode_unpack() {
 #[test]
 fn bytecode_exists() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     let state2 = common::run_instruction(
         Bytecode::Exists(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -183,7 +186,7 @@ fn bytecode_exists() {
 #[should_panic]
 fn bytecode_exists_struct_is_not_resource() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     common::run_instruction(
         Bytecode::Exists(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -195,20 +198,18 @@ fn bytecode_exists_struct_is_not_resource() {
 #[should_panic]
 fn bytecode_exists_no_address_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::Exists(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
 }
 
-// TODO: This will be ignored until the `state_function_acquires_resource` precondition
-// can be satisfied.
-#[ignore]
 #[test]
 fn bytecode_movefrom() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 =
+        AbstractState::from_locals(module, HashMap::new(), vec![StructDefinitionIndex::new(0)]);
     let state1_copy = state1.clone();
     let struct_def = state1_copy
         .module
@@ -232,7 +233,7 @@ fn bytecode_movefrom() {
 #[should_panic]
 fn bytecode_movefrom_struct_is_not_resource() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     common::run_instruction(
         Bytecode::MoveFrom(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -244,7 +245,7 @@ fn bytecode_movefrom_struct_is_not_resource() {
 #[should_panic]
 fn bytecode_movefrom_no_address_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::MoveFrom(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
@@ -254,7 +255,7 @@ fn bytecode_movefrom_no_address_on_stack() {
 #[test]
 fn bytecode_movetosender() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(create_struct_value(&state1.module));
     let state2 = common::run_instruction(
         Bytecode::MoveToSender(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -267,7 +268,7 @@ fn bytecode_movetosender() {
 #[should_panic]
 fn bytecode_movetosender_struct_is_not_resource() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(create_struct_value(&state1.module));
     common::run_instruction(
         Bytecode::MoveToSender(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -279,7 +280,7 @@ fn bytecode_movetosender_struct_is_not_resource() {
 #[should_panic]
 fn bytecode_movetosender_no_struct_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::MoveToSender(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
@@ -289,7 +290,7 @@ fn bytecode_movetosender_no_struct_on_stack() {
 #[test]
 fn bytecode_mutborrowfield() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue {
         token: SignatureToken::MutableReference(Box::new(struct_value.token)),
@@ -312,7 +313,7 @@ fn bytecode_mutborrowfield() {
 #[should_panic]
 fn bytecode_mutborrowfield_stack_has_no_reference() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let field_index = FieldDefinitionIndex::new(0);
     common::run_instruction(Bytecode::MutBorrowField(field_index), state1);
 }
@@ -321,7 +322,7 @@ fn bytecode_mutborrowfield_stack_has_no_reference() {
 #[should_panic]
 fn bytecode_mutborrowfield_ref_is_immutable() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue {
         token: SignatureToken::Reference(Box::new(struct_value.token)),
@@ -334,7 +335,7 @@ fn bytecode_mutborrowfield_ref_is_immutable() {
 #[test]
 fn bytecode_immborrowfield() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue {
         token: SignatureToken::Reference(Box::new(struct_value.token)),
@@ -357,7 +358,7 @@ fn bytecode_immborrowfield() {
 #[should_panic]
 fn bytecode_immborrowfield_stack_has_no_reference() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let field_index = FieldDefinitionIndex::new(0);
     common::run_instruction(Bytecode::ImmBorrowField(field_index), state1);
 }
@@ -366,7 +367,7 @@ fn bytecode_immborrowfield_stack_has_no_reference() {
 #[should_panic]
 fn bytecode_immborrowfield_ref_is_mutable() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue {
         token: SignatureToken::MutableReference(Box::new(struct_value.token)),
@@ -379,7 +380,7 @@ fn bytecode_immborrowfield_ref_is_mutable() {
 #[test]
 fn bytecode_borrowglobal() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     let struct_value = create_struct_value(&state1.module);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     let state2 = common::run_instruction(
@@ -400,7 +401,7 @@ fn bytecode_borrowglobal() {
 #[should_panic]
 fn bytecode_borrowglobal_struct_is_not_resource() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
-    let mut state1 = AbstractState::from_locals(module, HashMap::new());
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Address));
     common::run_instruction(
         Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
@@ -412,7 +413,7 @@ fn bytecode_borrowglobal_struct_is_not_resource() {
 #[should_panic]
 fn bytecode_borrowglobal_no_address_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let state1 = AbstractState::from_locals(module, HashMap::new());
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
     common::run_instruction(
         Bytecode::MutBorrowGlobal(StructDefinitionIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,

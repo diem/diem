@@ -3,7 +3,7 @@
 
 use crate::abstract_state::{AbstractValue, BorrowState};
 use rand::{rngs::StdRng, Rng};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
 
 /// This type holds basic block identifiers
@@ -68,9 +68,10 @@ impl CFG {
     pub fn new(
         mut rng: &mut StdRng,
         locals: &[SignatureToken],
-        _signature: &FunctionSignature,
+        signature: &FunctionSignature,
         target_blocks: BlockIDSize,
     ) -> CFG {
+        checked_precondition!(target_blocks > 0, "The CFG must haave at least one block");
         let mut basic_blocks: HashMap<BlockIDSize, BasicBlock> = HashMap::new();
         // Generate basic blocks
         for i in 0..target_blocks {
@@ -78,20 +79,54 @@ impl CFG {
         }
         // Generate control flow edges
         let mut edges: Vec<(BlockIDSize, BlockIDSize)> = Vec::new();
-        for i in 0..target_blocks {
-            let child_1 = rng.gen_range(i, target_blocks);
-            // The length of edges cannot be larger than target_blocks
-            // which will not be set to `usize::max_value()`
+        let mut block_queue: VecDeque<BlockIDSize> = VecDeque::new();
+        let mut current_block_id = 0;
+
+        block_queue.push_back(current_block_id);
+        current_block_id += 1;
+
+        while current_block_id < target_blocks && !block_queue.is_empty() {
+            let front_block = block_queue.pop_front();
+            // `front_block` will be `Some` because the block queue is not empty
+            assume!(front_block.is_some());
+            let parent_block_id = front_block.unwrap();
+            // The number of edges will be at most `2*target_blocks``
+            // Since target blocks is at most a `u16`, this will not overflow even if
+            // `usize` is a `u32`
             assume!(edges.len() < usize::max_value());
-            edges.push((i, child_1));
-            // At most two children per block
-            if rng.gen_range(0, 1) == 1 {
-                let child_2 = rng.gen_range(i, target_blocks);
-                if child_2 != child_1 {
-                    edges.push((i, child_2));
-                }
+            edges.push((parent_block_id, current_block_id));
+            block_queue.push_back(current_block_id);
+            // `current_block_id` is bound by the max og `target_block_size`
+            verify!(current_block_id < u16::max_value());
+            current_block_id += 1;
+            // Generate a second child edge with prob = 1/2
+            if rng.gen_bool(0.5) && current_block_id < target_blocks {
+                // The number of edges will be at most `2*target_blocks``
+                // Since target blocks is at most a `u16`, this will not overflow even if
+                // `usize` is a `u32`
+                verify!(edges.len() < usize::max_value());
+                edges.push((parent_block_id, current_block_id));
+                block_queue.push_back(current_block_id);
+                // `current_block_id` is bound by the max og `target_block_size`
+                verify!(current_block_id < u16::max_value());
+                current_block_id += 1;
             }
         }
+
+        // Connect remaining blocks to return
+        while !block_queue.is_empty() {
+            let front_block = block_queue.pop_front();
+            // `front_block` will be `Some` because the block queue is not empty
+            assume!(front_block.is_some());
+            let parent_block_id = front_block.unwrap();
+            // By the precondition of the function
+            assume!(target_blocks > 0);
+            if parent_block_id != target_blocks - 1 {
+                edges.push((parent_block_id, target_blocks - 1));
+            }
+        }
+        debug!("Edges: {:?}", edges);
+
         // Build the CFG
         let mut cfg = CFG {
             basic_blocks,
@@ -99,7 +134,7 @@ impl CFG {
         };
         // Assign locals to basic blocks
         assume!(target_blocks == 0 || !cfg.basic_blocks.is_empty());
-        CFG::add_locals(&mut cfg, &mut rng, locals);
+        CFG::add_locals(&mut cfg, &mut rng, locals, signature.arg_types.len());
         cfg
     }
 
@@ -185,7 +220,7 @@ impl CFG {
     fn vary_locals(rng: &mut StdRng, locals: BlockLocals) -> BlockLocals {
         let mut locals = locals.clone();
         for (_, (_, availability)) in locals.iter_mut() {
-            if rng.gen_range(0, 1) == 0 {
+            if rng.gen_bool(0.5) {
                 if *availability == BorrowState::Available {
                     *availability = BorrowState::Unavailable;
                 } else {
@@ -198,32 +233,40 @@ impl CFG {
 
     /// Add the incoming and outgoing locals for each basic block in the control flow graph.
     /// Currently the incoming and outgoing locals are the same for each block.
-    fn add_locals(cfg: &mut CFG, mut rng: &mut StdRng, locals: &[SignatureToken]) {
+    fn add_locals(cfg: &mut CFG, mut rng: &mut StdRng, locals: &[SignatureToken], args_len: usize) {
         precondition!(
             !cfg.basic_blocks.is_empty(),
             "Cannot add locals to empty cfg"
         );
-        let cfg_copy = cfg.clone();
-        for (block_id, basic_block) in cfg.basic_blocks.iter_mut() {
-            if cfg_copy.num_parents(*block_id) == 0 {
+        for block_id in 0..cfg.basic_blocks.len() {
+            let cfg_copy = cfg.clone();
+            let basic_block = cfg
+                .basic_blocks
+                .get_mut(&(block_id as BlockIDSize))
+                .unwrap();
+            if cfg_copy.num_parents(block_id as BlockIDSize) == 0 {
                 basic_block.locals_in = locals
                     .iter()
                     .enumerate()
                     .map(|(i, token)| {
+                        let borrow_state = if i < args_len {
+                            BorrowState::Available
+                        } else {
+                            BorrowState::Unavailable
+                        };
                         (
                             i,
-                            (
-                                AbstractValue::new_primitive(token.clone()),
-                                BorrowState::Available,
-                            ),
+                            (AbstractValue::new_primitive(token.clone()), borrow_state),
                         )
                     })
                     .collect();
             } else {
                 // Implication of precondition
                 assume!(!cfg_copy.basic_blocks.is_empty());
-                basic_block.locals_in = cfg_copy.merge_locals(cfg_copy.get_parent_ids(*block_id));
+                basic_block.locals_in =
+                    cfg_copy.merge_locals(cfg_copy.get_parent_ids(block_id as BlockIDSize));
             }
+            // basic_block.locals_out = basic_block.locals_in.clone();
             basic_block.locals_out = CFG::vary_locals(&mut rng, basic_block.locals_in.clone());
         }
     }
@@ -295,6 +338,11 @@ impl CFG {
                         block.instructions.last()
                     ),
                 }
+            } else if cfg_copy.num_children(block_id) != 0 {
+                unreachable!(
+                    "Invalid number of children for basic block {:?}",
+                    cfg_copy.get_children_ids(block_id).len()
+                );
             }
             bytecode.extend(block.instructions.clone());
         }

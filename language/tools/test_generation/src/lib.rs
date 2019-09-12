@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod abstract_state;
+pub mod borrow_graph;
 pub mod bytecode_generator;
 pub mod config;
 pub mod control_flow_graph;
@@ -15,16 +16,17 @@ extern crate mirai_annotations;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-use crate::config::{EXECUTE_UNVERIFIED_MODULE, GAS_METERING, RUN_ON_VM};
+use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, GAS_METERING, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use cost_synthesis::module_generator::ModuleBuilder;
 use language_e2e_tests::data_store::FakeDataStore;
-use std::panic;
+use std::{fs, io::Write, panic};
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     file_format::{
         Bytecode, CompiledModuleMut, FunctionDefinitionIndex, FunctionSignature, SignatureToken,
+        StructDefinitionIndex,
     },
     transaction_metadata::TransactionMetadata,
     CompiledModule,
@@ -39,14 +41,9 @@ use vm_runtime_types::value::Value;
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
-    let verifier_panic = panic::catch_unwind(|| {
-        match VerifiedModule::new(module.clone()) {
-            Ok(verified_module) => Ok(verified_module),
-            Err((_, errs)) => {
-                // info!("Generated module: {:#?}", module);
-                Err(format!("Module verification failed: {:#?}", errs))
-            }
-        }
+    let verifier_panic = panic::catch_unwind(|| match VerifiedModule::new(module.clone()) {
+        Ok(verified_module) => Ok(verified_module),
+        Err((_, errs)) => Err(format!("Module verification failed: {:#?}", errs)),
     });
     verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
 }
@@ -98,6 +95,27 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
     }
 }
 
+/// Serialize a module to `path` if `output_path` is `Some(path)`. If `output_path` is `None`
+/// print the module out as debug output.
+fn output_error_case(module: CompiledModule, output_path: Option<String>, iteration: u64) {
+    match output_path {
+        Some(path) => {
+            let mut out = vec![];
+            module
+                .serialize(&mut out)
+                .expect("Unable to serialize module");
+            let output_file = format!("{}/case{}.module", path, iteration);
+            let mut f = fs::File::create(&output_file)
+                .unwrap_or_else(|err| panic!("Unable to open output file {}: {}", &path, err));
+            f.write_all(&out)
+                .unwrap_or_else(|err| panic!("Unable to write to output file {}: {}", &path, err));
+        }
+        None => {
+            debug!("{:#?}", module);
+        }
+    }
+}
+
 /// Generate a sequence of bytecode instructions such that
 /// - The arguments 'arguments' are used
 /// - The return type 'signature' is reached
@@ -105,17 +123,18 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
 pub fn generate_bytecode(
     arguments: &[SignatureToken],
     signature: &FunctionSignature,
+    acquires_global_resources: &[StructDefinitionIndex],
     module: CompiledModuleMut,
 ) -> Vec<Bytecode> {
     let mut bytecode_generator = BytecodeGenerator::new(None);
-    bytecode_generator.generate(arguments, signature, module)
+    bytecode_generator.generate(arguments, signature, acquires_global_resources, module)
 }
 
 /// Run generate_bytecode for 'iterations' iterations and test each generated module
 /// on the bytecode verifier.
-pub fn run_generation(iterations: u64) {
+pub fn run_generation(args: Args) {
     env_logger::init();
-
+    let iterations = args.num_iterations;
     let mut verified_programs: u64 = 0;
     let mut executed_programs: u64 = 0;
     for i in 0..iterations {
@@ -131,6 +150,7 @@ pub fn run_generation(iterations: u64) {
             }
             Err(e) => {
                 error!("{}", e);
+                output_error_case(module.clone(), args.output_path.clone(), i);
                 if EXECUTE_UNVERIFIED_MODULE {
                     Some(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
                         module.clone(),
@@ -149,7 +169,11 @@ pub fn run_generation(iterations: u64) {
                         verify!(executed_programs < u64::max_value());
                         executed_programs += 1
                     }
-                    Err(e) => error!("{}", e),
+                    Err(e) => {
+                        // TODO: Uncomment this to allow saving of modules that fail the VM runtime
+                        // output_error_case(module.clone(), args.output_path.clone(), i);
+                        error!("{}", e)
+                    }
                 }
             }
         };

@@ -22,14 +22,18 @@ use vm::{
         FieldDefinitionIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
         FunctionSignature, FunctionSignatureIndex, IdentifierIndex, LocalsSignature,
         LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
-        TypeSignature, TypeSignatureIndex,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandle,
+        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
     },
     internals::ModuleIndex,
 };
 
-type BytecodeGenerator =
-    dyn Fn(&[SignatureToken], &FunctionSignature, CompiledModuleMut) -> Vec<Bytecode>;
+type BytecodeGenerator = dyn Fn(
+    &[SignatureToken],
+    &FunctionSignature,
+    &[StructDefinitionIndex],
+    CompiledModuleMut,
+) -> Vec<Bytecode>;
 
 /// A wrapper around a `CompiledModule` containing information needed for generation.
 ///
@@ -147,20 +151,30 @@ impl ModuleBuilder {
             .locals_signatures
             .append(&mut local_sigs.into_iter().map(LocalsSignature).collect());
 
+        let acquires_global_resources = if self.gen.gen_bool(0.25) {
+            // TODO this needs to be generated in a more principled way
+            vec![StructDefinitionIndex::new(0)]
+        } else {
+            vec![]
+        };
         self.module.function_defs = sigs
             .iter()
             .enumerate()
             .map(|(i, sig)| FunctionDefinition {
                 function: FunctionHandleIndex::new(i as u16),
                 flags: CodeUnit::PUBLIC,
-                // TODO this needs to be generated
-                acquires_global_resources: vec![],
+                acquires_global_resources: acquires_global_resources.clone(),
                 code: CodeUnit {
                     max_stack_size: 20,
                     locals: LocalsSignatureIndex(i as u16),
                     code: {
                         match &self.bytecode_gen {
-                            Some(bytecode_gen) => bytecode_gen(&sig.0, &sig.1, self.module.clone()),
+                            Some(bytecode_gen) => bytecode_gen(
+                                &sig.0,
+                                &sig.1,
+                                &acquires_global_resources,
+                                self.module.clone(),
+                            ),
                             None => {
                                 // Random nonsense to pad this out. We won't look at this at all,
                                 // just non-empty is all that matters.

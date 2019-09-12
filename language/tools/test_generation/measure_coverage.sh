@@ -87,7 +87,7 @@ cargo build
 
 # Run tests
 echo "Running bytecode test generator..."
-RUST_LOG=info cargo run
+RUST_LOG=info cargo run -- --iterations 1000
 
 # Make the coverage directory if it doesn't exist
 if [ ! -d $COVERAGE_DIR ]; then
