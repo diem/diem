@@ -360,11 +360,12 @@ impl BytecodeGenerator {
         debug!("Pr[add] = {:?}", prob_add);
         let next_instruction_index;
         if self.rng.gen_range(0.0, 1.0) <= prob_add {
-            let add_candidates: Vec<(StackEffect, Bytecode)> = candidates
+            let add_candidates: Vec<Bytecode> = candidates
                 .iter()
                 .filter(|(stack_effect, _)| {
                     *stack_effect == StackEffect::Add || *stack_effect == StackEffect::Nop
                 })
+                .map(|(_, candidate)| candidate)
                 .cloned()
                 .collect();
             // Add candidates should not be empty unless the list of bytecode instructions is
@@ -373,13 +374,14 @@ impl BytecodeGenerator {
                 return Err("Could not find valid add candidate".to_string());
             }
             next_instruction_index = self.rng.gen_range(0, add_candidates.len());
-            Ok(add_candidates[next_instruction_index].1.clone())
+            Ok(add_candidates[next_instruction_index].clone())
         } else {
-            let sub_candidates: Vec<(StackEffect, Bytecode)> = candidates
+            let sub_candidates: Vec<Bytecode> = candidates
                 .iter()
                 .filter(|(stack_effect, _)| {
                     *stack_effect == StackEffect::Sub || *stack_effect == StackEffect::Nop
                 })
+                .map(|(_, candidate)| candidate)
                 .cloned()
                 .collect();
             // Sub candidates should not be empty unless the list of bytecode instructions is
@@ -388,32 +390,35 @@ impl BytecodeGenerator {
                 return Err("Could not find sub valid candidate".to_string());
             }
             next_instruction_index = self.rng.gen_range(0, sub_candidates.len());
-            Ok(sub_candidates[next_instruction_index].1.clone())
+            Ok(sub_candidates[next_instruction_index].clone())
         }
     }
 
     /// Transition an abstract state, `state` to the next state by applying all of the effects
     /// of a particular bytecode instruction, `instruction`.
     fn abstract_step(&self, state: AbstractState, instruction: Bytecode) -> AbstractState {
-        // TODO: Handle error case in way that reflects VM behavior
         let should_error = summaries::instruction_summary(instruction.clone())
             .preconditions
             .iter()
             .any(|precondition| !precondition(&state));
         if should_error {
+            debug!("Reached abort state");
             let mut state = state.clone();
             state.abort();
-            state
-        } else {
-            summaries::instruction_summary(instruction)
-                .effects
-                .iter()
-                .fold(state, |acc, effect| {
-                    effect(&acc).unwrap_or_else(|err| {
-                        unreachable!("Error applying instruction effect: {}", err)
-                    })
-                })
         }
+        summaries::instruction_summary(instruction)
+            .effects
+            .iter()
+            .fold(state, |acc, effect| {
+                effect(&acc).unwrap_or_else(|err| {
+                    if NEGATE_PRECONDITIONS {
+                        // Ignore the effect
+                        acc
+                    } else {
+                        unreachable!("Error applying instruction effect: {}", err);
+                    }
+                })
+            })
     }
 
     /// Transition an abstract state, `state` to the next state and add the instruction
@@ -444,6 +449,8 @@ impl BytecodeGenerator {
         abstract_state_out: AbstractState,
         module: CompiledModuleMut,
     ) -> Vec<Bytecode> {
+        debug!("Abstract state in: {}", abstract_state_in.clone());
+        debug!("Abstract state out: {}", abstract_state_out.clone());
         let mut bytecode: Vec<Bytecode> = Vec::new();
         let mut state = abstract_state_in.clone();
         // Generate block body
@@ -462,6 +469,10 @@ impl BytecodeGenerator {
                     state = self.apply_instruction(state, &mut bytecode, next_instruction);
                     if state.is_final() {
                         break;
+                    } else if state.has_aborted() {
+                        state = self.apply_instruction(state, &mut bytecode, Bytecode::LdConst(0));
+                        self.apply_instruction(state, &mut bytecode, Bytecode::Abort);
+                        return bytecode;
                     }
                 }
                 Err(err) => {
@@ -510,6 +521,7 @@ impl BytecodeGenerator {
         &mut self,
         locals: &[SignatureToken],
         signature: &FunctionSignature,
+        acquires_global_resources: &[StructDefinitionIndex],
         module: CompiledModuleMut,
     ) -> Vec<Bytecode> {
         let number_of_blocks = self.rng.gen_range(1, MAX_CFG_BLOCKS + 1);
@@ -519,15 +531,30 @@ impl BytecodeGenerator {
         let mut cfg = CFG::new(&mut self.rng, locals, signature, number_of_blocks);
         let cfg_copy = cfg.clone();
         for (block_id, block) in cfg.get_basic_blocks_mut().iter_mut() {
-            debug!("+++++++++++++++++ Starting new block +++++++++++++++++");
-            let state1 = AbstractState::from_locals(module.clone(), block.get_locals_in().clone());
-            let state2 = AbstractState::from_locals(module.clone(), block.get_locals_out().clone());
+            debug!(
+                "+++++++++++++++++ Starting new block: {} +++++++++++++++++",
+                block_id
+            );
+            let state1 = AbstractState::from_locals(
+                module.clone(),
+                block.get_locals_in().clone(),
+                acquires_global_resources.to_vec(),
+            );
+            let state2 = AbstractState::from_locals(
+                module.clone(),
+                block.get_locals_out().clone(),
+                acquires_global_resources.to_vec(),
+            );
             let mut bytecode = self.generate_block(state1, state2.clone(), module.clone());
             let mut state_f = state2;
+            if state_f.has_aborted() {
+                block.set_instructions(bytecode);
+                continue;
+            }
             if cfg_copy.num_children(*block_id) == 2 {
                 // BrTrue, BrFalse: Add bool and branching instruction randomly
                 state_f = self.apply_instruction(state_f, &mut bytecode, Bytecode::LdFalse);
-                if self.rng.gen_range(0, 1) == 1 {
+                if self.rng.gen_bool(0.5) {
                     self.apply_instruction(state_f, &mut bytecode, Bytecode::BrTrue(0));
                 } else {
                     self.apply_instruction(state_f, &mut bytecode, Bytecode::BrFalse(0));
@@ -536,7 +563,6 @@ impl BytecodeGenerator {
                 // Branch: Add branch instruction
                 self.apply_instruction(state_f, &mut bytecode, Bytecode::Branch(0));
             } else if cfg_copy.num_children(*block_id) == 0 {
-                // TODO: Abort
                 // Return: Add return types to last block
                 for token_type in signature.return_types.iter() {
                     let next_instruction = match token_type {
@@ -553,7 +579,6 @@ impl BytecodeGenerator {
                 }
                 self.apply_instruction(state_f, &mut bytecode, Bytecode::Ret);
             }
-            debug!("Instructions generated: {}", bytecode.len());
             block.set_instructions(bytecode);
         }
         // The CFG will be non-empty if we set the number of basic blocks to generate

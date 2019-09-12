@@ -4496,6 +4496,7 @@ dependencies = [
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
+ "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",

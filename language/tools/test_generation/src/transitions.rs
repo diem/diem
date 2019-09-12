@@ -474,6 +474,11 @@ pub fn stack_function_popn(
     Ok(state)
 }
 
+/// Whether the function acquires any global resources or not
+pub fn function_can_acquire_resource(state: &AbstractState) -> bool {
+    !state.acquires_global_resources.is_empty()
+}
+
 /// TODO: This is a temporary function that represents memory
 /// safety for a reference. This should be removed and replaced
 /// with appropriate memory safety premises when the borrow checking
@@ -759,7 +764,7 @@ macro_rules! state_stack_function_call {
 #[macro_export]
 macro_rules! state_function_can_acquire_resource {
     () => {
-        Box::new(|_| false)
+        Box::new(move |state| function_can_acquire_resource(state))
     };
 }
 
