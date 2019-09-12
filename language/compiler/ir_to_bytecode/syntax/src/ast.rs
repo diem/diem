@@ -1140,6 +1140,41 @@ impl fmt::Display for Kind {
     }
 }
 
+impl fmt::Display for ScriptOrModule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ScriptOrModule::*;
+        match self {
+            Module(module_def) => write!(f, "{}", module_def),
+            Script(script) => write!(f, "{}", script),
+        }
+    }
+}
+
+impl fmt::Display for Script {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Script(")?;
+        write!(f, "Imports(")?;
+        write!(f, "{}", intersperse(&self.imports, ", "))?;
+        writeln!(f, ")")?;
+        write!(f, "Main(")?;
+        write!(f, "{}", self.main)?;
+        write!(f, ")")?;
+        write!(f, ")")
+    }
+}
+
+impl fmt::Display for ImportDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ModuleIdent::*;
+        write!(f, "ImportDefinition(")?;
+        match &self.ident {
+            Transaction(module_name) => write!(f, "{}", module_name)?,
+            Qualified(qual_module_ident) => write!(f, "{}", qual_module_ident)?,
+        };
+        write!(f, " => {})", self.alias)
+    }
+}
+
 impl fmt::Display for ModuleName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
