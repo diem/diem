@@ -64,7 +64,7 @@ pub struct ConsensusPeersConfig {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
-    pub peers: Vec<String>,
+    pub upstream_peers: Vec<String>,
 }
 
 impl NetworkPeersConfig {
@@ -172,13 +172,8 @@ impl ConfigHelpers {
     pub fn get_test_upstream_peers_config(
         network_peers: &NetworkPeersConfig,
     ) -> UpstreamPeersConfig {
-        let mut upstream_peers = Vec::new();
-        for peer in network_peers.peers.keys() {
-            upstream_peers.push(peer.clone());
-        }
-        UpstreamPeersConfig {
-            peers: upstream_peers,
-        }
+        let upstream_peers = network_peers.peers.keys().cloned().collect();
+        UpstreamPeersConfig { upstream_peers }
     }
 }
 

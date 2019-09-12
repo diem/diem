@@ -4,7 +4,6 @@
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
-    PeerId,
 };
 use config::config::{NodeConfig, StateSyncConfig};
 use crypto::ed25519::*;
@@ -29,26 +28,19 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         config: &NodeConfig,
-        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(
             &config.execution,
             &config.storage,
             config.consensus.get_consensus_peers(),
         );
-        Self::bootstrap_with_executor_proxy(
-            network,
-            &config.state_sync,
-            executor_proxy,
-            upstream_peer_ids,
-        )
+        Self::bootstrap_with_executor_proxy(network, &config.state_sync, executor_proxy)
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
-        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         let runtime = Builder::new()
             .name_prefix("state-sync-")
@@ -62,7 +54,6 @@ impl StateSynchronizer {
             coordinator_receiver,
             state_sync_config.clone(),
             executor_proxy,
-            upstream_peer_ids.clone(),
         );
         executor.spawn(coordinator.start(network).boxed().unit_error().compat());
 

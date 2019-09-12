@@ -159,10 +159,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 }
 
 struct SynchronizerEnv {
+    _runtime: Runtime,
+    _synchronizers: Vec<StateSynchronizer>,
     peers: Vec<PeerId>,
     clients: Vec<Arc<StateSyncClient>>,
-    _synchronizers: Vec<StateSynchronizer>,
-    _runtime: Runtime,
 }
 
 impl SynchronizerEnv {
@@ -244,18 +244,21 @@ impl SynchronizerEnv {
         } else {
             config.networks.get_mut(0).unwrap().role = "validator".to_string();
         }
+        config
+            .state_sync
+            .upstream_peers
+            .upstream_peers
+            .push(peers[1].to_string());
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
                 &config.state_sync,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
-                vec![peers[1]],
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 &get_test_config().0.state_sync,
                 MockExecutorProxy::new(peers[1], handler),
-                vec![],
             ),
         ];
         let clients = synchronizers.iter().map(|s| s.create_client()).collect();

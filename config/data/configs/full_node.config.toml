@@ -10,6 +10,9 @@ role = "full_node"
 consensus_keypair_file = "" # For direct validation of this file
 consensus_peers_file = ""  # For direct validation of this file
 
+[state_sync]
+upstream_peers = ["ae1b54220905fca36d046a6e093632ed1f219e0a35a4fd7ba82e6e0d515f0b8e"]
+
 [execution]
 genesis_file_location = "<USE_TEMP_DIR>"
 
