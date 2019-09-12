@@ -274,6 +274,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             debug!("Network started for peer_id: {}", peer_id);
         }
     }
+
+    let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
+
+    let metrics_port = node_config.debug_interface.metrics_server_port;
+    let metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
+
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
         &node_config,
@@ -333,12 +340,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let (ac_server, ac_client) = setup_ac(&node_config);
     let ac = ServerHandle::setup(ac_server);
     debug!("AC started in {} ms", instant.elapsed().as_millis());
-
-    let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
-
-    let metrics_port = node_config.debug_interface.metrics_server_port;
-    let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
     let libra_handle = LibraHandle {
         _network_runtimes: network_runtimes,
