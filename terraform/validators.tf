@@ -21,6 +21,7 @@ locals {
     "t2.small"     = 1024
     "t2.large"     = 2048
     "t2.medium"    = 2048
+    "t2.xlarge"    = 4096
     "t3.medium"    = 2048
     "m5.large"     = 2048
     "m5.xlarge"    = 4096
@@ -46,6 +47,7 @@ locals {
     "t2.small"     = 1800
     "t2.medium"    = 3943
     "t2.large"     = 7975
+    "t2.xlarge"    = 16039
     "t3.medium"    = 3884
     "m5.large"     = 7680
     "m5.xlarge"    = 15576
