@@ -8,7 +8,7 @@ use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
@@ -54,11 +54,16 @@ impl PeerManager {
     }
 
     pub fn set_peers(&mut self, peer_ids: Vec<PeerId>) {
-        let new_peers = peer_ids
-            .into_iter()
-            .map(|peer_id| (peer_id, PeerInfo::new(true, true, MAX_SCORE)))
-            .collect();
-        self.peers = new_peers;
+        let new_peer_ids: HashSet<_> = peer_ids.iter().collect();
+        for (peer_id, info) in self.peers.iter_mut() {
+            info.is_upstream = new_peer_ids.contains(peer_id);
+        }
+        for peer_id in new_peer_ids {
+            if !self.peers.contains_key(peer_id) {
+                self.peers
+                    .insert(*peer_id, PeerInfo::new(false, true, MAX_SCORE));
+            }
+        }
         debug!("[state sync] (set_peers) state: {:?}", self.peers);
     }
 
