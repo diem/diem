@@ -33,6 +33,8 @@ lazy_static! {
     static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/bytearray_util.mvir");
     static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
+    static ref CHANNEL_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/channel_account.mvir");
     static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
         // Note: a module can depend on earlier modules in the list, but not vice versa. Don't try
         // to rearrange without considering this!
@@ -47,6 +49,7 @@ lazy_static! {
             &*VECTOR_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on Coin, Event, AddressUtil, BytearrayUtil, U64Util
+            &*CHANNEL_MODULE,
         ]
     };
 }
@@ -89,4 +92,8 @@ pub fn event_module() -> ModuleDefinition {
 
 pub fn module_defs() -> &'static [&'static ModuleDefinition] {
     &*MODULE_DEFS
+}
+
+pub fn channel_module() -> ModuleDefinition {
+    CHANNEL_MODULE.clone()
 }
