@@ -106,7 +106,11 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
                             break;
                         }
                     }
-                    EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+                    EvaluationOutput::Output(output) => {
+                        outputs.push(output.to_check_string());
+                        i += 1;
+                    }
+                    EvaluationOutput::Error(s) => {
                         outputs.push(s.to_string());
                         i += 1;
                     }
@@ -122,7 +126,10 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
 
     for output in &res.outputs[i..] {
         match output {
-            EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+            EvaluationOutput::Output(output) => {
+                outputs.push(output.to_check_string());
+            }
+            EvaluationOutput::Error(s) => {
                 outputs.push(s.to_string());
             }
             EvaluationOutput::Stage(_) | EvaluationOutput::Transaction => {}
