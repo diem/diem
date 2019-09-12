@@ -373,8 +373,8 @@ fn test_invariant_non_leaf(invariant_fn: fn(Position) -> bool) {
 
 #[test]
 fn test_basic_invariants() {
-    test_invariant_non_leaf(|pos| pos == pos.parent().right_child());
-    test_invariant_non_leaf(|pos| pos == pos.parent().left_child());
+    test_invariant_non_leaf(|pos| pos == pos.right_child().parent());
+    test_invariant_non_leaf(|pos| pos == pos.left_child().parent());
 
     test_invariant(|pos| pos.level() == pos.parent().level() - 1);
     test_invariant(|pos| {
