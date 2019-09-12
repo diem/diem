@@ -23,6 +23,8 @@
 //! Note2: The level of tree counts from leaf level, start from 0
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
+use std::fmt;
+
 #[cfg(test)]
 mod position_test;
 
@@ -280,6 +282,12 @@ impl Position {
     /// Creates an `AncestorSiblingIterator` using this position.
     pub fn iter_ancestor_sibling(self) -> AncestorSiblingIterator {
         AncestorSiblingIterator { position: self }
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Pos({})", self.to_inorder_index())
     }
 }
 
