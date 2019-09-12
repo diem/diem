@@ -16,7 +16,7 @@ use std::mem;
 use stdlib::stdlib_modules;
 use types::{
     account_address::AccountAddress,
-    transaction::{Program, TransactionArgument},
+    transaction::{Script, TransactionArgument},
 };
 use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
 
@@ -89,18 +89,12 @@ impl<'a> Compiler<'a> {
     }
 
     /// Compiles the code and arguments into a `Program` -- the bytecode is serialized.
-    pub fn into_program(mut self, args: Vec<TransactionArgument>) -> Result<Program> {
+    pub fn into_program(mut self, args: Vec<TransactionArgument>) -> Result<Script> {
         let compiled_program = self.compile_impl()?.0;
 
         let mut serialized_script = Vec::<u8>::new();
         compiled_program.script.serialize(&mut serialized_script)?;
-        let mut serialized_modules = vec![];
-        for m in compiled_program.modules {
-            let mut module = vec![];
-            m.serialize(&mut module).expect("module must serialize");
-            serialized_modules.push(module);
-        }
-        Ok(Program::new(serialized_script, serialized_modules, args))
+        Ok(Script::new(serialized_script, args))
     }
 
     fn compile_impl(&mut self) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {

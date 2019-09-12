@@ -21,7 +21,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
     fmt, fs,
-    io::{stdout, Seek, SeekFrom, Write},
+    io::{stdout, Write},
     path::{Display, Path, PathBuf},
     process::{Command, Stdio},
     str::{self, FromStr},
@@ -40,7 +40,8 @@ use types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     transaction::{
-        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
+        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
+        TransactionPayload, Version,
     },
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
     validator_verifier::ValidatorVerifier,
@@ -347,9 +348,9 @@ impl ClientProxy {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
 
-            let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+            let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
             let req = self.create_submit_transaction_req(
-                program,
+                TransactionPayload::Script(program),
                 sender,
                 max_gas_amount, /* max_gas_amount */
                 gas_unit_price, /* gas_unit_price */
@@ -385,10 +386,10 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+        let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
 
         Ok(create_unsigned_txn(
-            program,
+            TransactionPayload::Script(program),
             sender_address,
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
@@ -487,19 +488,12 @@ impl ClientProxy {
         let dependencies_file =
             self.handle_dependencies(tmp_source_path.path().display(), is_module)?;
 
-        // custom handler of old module format
-        // TODO: eventually retire code after vm separation between modules and scripts
-        if is_module {
-            code = format!("modules:\n{}\nscript:\nmain(){{\nreturn;\n}}", code);
-            tmp_source_file.seek(SeekFrom::Start(0))?;
-            writeln!(tmp_source_file, "{}", code)?;
-        }
-
         let mut args = format!(
-            "run -p compiler -- -a {} -o {} {}",
+            "run -p compiler -- {} -a {} -o {}{}",
+            tmp_source_path.path().display(),
             address,
             output_path,
-            tmp_source_path.path().display(),
+            if is_module { " -m" } else { "" },
         );
         if let Some(file) = &dependencies_file {
             args.push_str(&format!(" --deps={}", file.as_ref().display()));
@@ -572,7 +566,11 @@ impl ClientProxy {
         Ok(())
     }
 
-    fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
+    fn submit_program(
+        &mut self,
+        space_delim_strings: &[&str],
+        program: TransactionPayload,
+    ) -> Result<()> {
         let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sender_ref_id = self.get_account_ref_id(&sender_address)?;
         let sender = self.accounts.get(sender_ref_id).unwrap();
@@ -589,21 +587,21 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        self.submit_program(space_delim_strings, program)
+        let module = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        self.submit_program(space_delim_strings, TransactionPayload::Module(module))
     }
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let program: Program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let script: Script = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let (script_bytes, _) = script.into_inner();
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
             .filter_map(|arg| parse_as_transaction_argument(arg).ok())
             .collect();
-        let (script, _, modules) = program.into_inner();
         self.submit_program(
             space_delim_strings,
-            Program::new(script, modules, arguments),
+            TransactionPayload::Script(Script::new(script_bytes, arguments)),
         )
     }
 
@@ -945,9 +943,11 @@ impl ClientProxy {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
         let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
-        let program = vm_genesis::encode_mint_program(&receiver, num_coins);
+        let program = vm_genesis::encode_mint_script(&receiver, num_coins);
         let req = self.create_submit_transaction_req(
-            program, sender, None, /* max_gas_amount */
+            TransactionPayload::Script(program),
+            sender,
+            None, /* max_gas_amount */
             None, /* gas_unit_price */
         )?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
@@ -1023,7 +1023,7 @@ impl ClientProxy {
     /// Craft a transaction request.
     fn create_submit_transaction_req(
         &self,
-        program: Program,
+        program: TransactionPayload,
         sender_account: &AccountData,
         max_gas_amount: Option<u64>,
         gas_unit_price: Option<u64>,

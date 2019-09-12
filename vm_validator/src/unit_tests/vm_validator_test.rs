@@ -18,10 +18,12 @@ use storage_service::start_storage_service;
 use types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
-    transaction::{Program, SignedTransaction, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
+    transaction::{
+        Module, Script, SignedTransaction, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
     vm_error::StatusCode,
 };
-use vm_genesis::encode_transfer_program;
+use vm_genesis::encode_transfer_script;
 
 struct TestValidator {
     _storage: ServerHandle,
@@ -99,7 +101,7 @@ fn test_validate_transaction() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -124,7 +126,7 @@ fn test_validate_invalid_signature() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
@@ -150,11 +152,10 @@ fn test_validate_known_script_too_large_args() {
         1,
         keypair.private_key,
         keypair.public_key,
-        Some(Program::new(
-            vec![42; MAX_TRANSACTION_SIZE_IN_BYTES],
-            vec![],
-            vec![],
-        )), /* generate a program with args longer than the max size */
+        Some(Script::new(vec![42; MAX_TRANSACTION_SIZE_IN_BYTES], vec![])), /* generate a
+                                                                             * program with args
+                                                                             * longer than the
+                                                                             * max size */
         0,
         0, /* max gas price */
         None,
@@ -254,7 +255,7 @@ fn test_validate_max_gas_price_below_bounds() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -306,14 +307,12 @@ fn test_validate_module_publishing() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let (program_script, args, _) = encode_transfer_program(&address, 100).into_inner();
-    let program = Program::new(program_script, vec![vec![]], args);
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let signed_txn = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
         keypair.private_key,
         keypair.public_key,
-        Some(program),
+        Module::new(vec![]),
     );
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
@@ -332,7 +331,7 @@ fn test_validate_invalid_auth_key() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -353,7 +352,7 @@ fn test_validate_balance_below_gas_fee() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -383,7 +382,7 @@ fn test_validate_account_doesnt_exist() {
 
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
@@ -410,7 +409,7 @@ fn test_validate_sequence_number_too_new() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_program(&address, 100);
+    let program = encode_transfer_script(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -431,8 +430,8 @@ fn test_validate_invalid_arguments() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let (program_script, _, _) = encode_transfer_program(&address, 100).into_inner();
-    let program = Program::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
+    let (program_script, _) = encode_transfer_script(&address, 100).into_inner();
+    let program = Script::new(program_script, vec![TransactionArgument::U64(42)]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,

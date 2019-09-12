@@ -9,8 +9,6 @@ use failure::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const SCRIPT_HASH_LENGTH: usize = 32;
-
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Program {
     code: Vec<u8>,

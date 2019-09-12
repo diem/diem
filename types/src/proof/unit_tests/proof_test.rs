@@ -13,7 +13,7 @@ use crate::{
         TestAccumulatorInternalNode, TransactionAccumulatorInternalNode,
     },
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionInfo, TransactionListWithProof,
+        RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
     },
     vm_error::StatusCode,
 };
@@ -359,10 +359,10 @@ fn test_verify_account_state_and_event() {
     let txn_info1_hash = b"worldworld".test_only_hash();
 
     let (privkey, pubkey) = compat::generate_keypair(None);
-    let txn2_hash = RawTransaction::new(
+    let txn2_hash = RawTransaction::new_script(
         AccountAddress::from_public_key(&pubkey),
         /* sequence_number = */ 0,
-        Program::new(vec![], vec![], vec![]),
+        Script::new(vec![], vec![]),
         /* max_gas_amount = */ 0,
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),

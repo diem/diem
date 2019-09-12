@@ -17,13 +17,13 @@ use std::collections::HashSet;
 use types::{
     test_helpers::transaction_test_helpers,
     transaction::{
-        Module, Script, TransactionArgument, TransactionPayload, TransactionStatus,
+        Script, TransactionArgument, TransactionPayload, TransactionStatus,
         MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use vm::gas_schedule::{self, GasAlgebra};
-use vm_genesis::encode_transfer_program;
+use vm_genesis::encode_transfer_script;
 
 #[test]
 fn verify_signature() {
@@ -32,7 +32,7 @@ fn verify_signature() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let (private_key, _public_key) = compat::generate_keypair(None);
-    let program = encode_transfer_program(sender.address(), 100);
+    let program = encode_transfer_script(sender.address(), 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
@@ -390,12 +390,9 @@ pub fn test_no_publishing() {
     );
 
     let random_module = compile_module_with_address(sender.address(), &module);
-    let txn = sender.account().create_signed_txn(
-        TransactionPayload::Module(Module::new(random_module)),
-        10,
-        100_000,
-        1,
-    );
+    let txn = sender
+        .account()
+        .create_signed_txn(random_module, 10, 100_000, 1);
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -436,12 +433,9 @@ pub fn test_open_publishing_invalid_address() {
     );
 
     let random_module = compile_module_with_address(receiver.address(), &module);
-    let txn = sender.account().create_signed_txn(
-        TransactionPayload::Module(Module::new(random_module)),
-        10,
-        100_000,
-        1,
-    );
+    let txn = sender
+        .account()
+        .create_signed_txn(random_module, 10, 100_000, 1);
 
     // verify and fail because the addresses don't match
     let vm_status = executor.verify_transaction(txn.clone()).unwrap();
@@ -489,12 +483,9 @@ pub fn test_open_publishing() {
     );
 
     let random_module = compile_module_with_address(sender.address(), &program);
-    let txn = sender.account().create_signed_txn(
-        TransactionPayload::Module(Module::new(random_module)),
-        10,
-        100_000,
-        1,
-    );
+    let txn = sender
+        .account()
+        .create_signed_txn(random_module, 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),

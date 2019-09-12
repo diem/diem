@@ -6,7 +6,7 @@
 use compiler::Compiler;
 use types::{
     account_address::AccountAddress,
-    transaction::{Program, TransactionArgument},
+    transaction::{Module, TransactionPayload},
 };
 
 /// Compile the provided Move code into a blob which can be used as the code for a [`Program`] or
@@ -31,52 +31,13 @@ pub fn compile_script_with_address(address: &AccountAddress, code: &str) -> Vec<
     compiler.into_script_blob().unwrap()
 }
 
-/// Compile the provided Move code and arguments into a `Program` using `address` as the
-/// self address for any modules in `code`.
-pub fn compile_program_with_address(
-    address: &AccountAddress,
-    code: &str,
-    args: Vec<TransactionArgument>,
-) -> Program {
+/// Compile the provided Move code into a blob which can be used as the code to be published
+/// (a Module).
+pub fn compile_module_with_address(address: &AccountAddress, code: &str) -> TransactionPayload {
     let compiler = Compiler {
         address: *address,
         code,
         ..Compiler::default()
     };
-    compiler.into_program(args).unwrap()
-}
-
-/// Compile the provided Move code and arguments into a `Program`.
-///
-/// This supports both scripts and modules defined in the same Move code. The code is compiled with
-/// the default account address (`0x0`).
-pub fn compile_program(code: &str, args: Vec<TransactionArgument>) -> Program {
-    let compiler = Compiler {
-        code,
-        ..Compiler::default()
-    };
-    compiler.into_program(args).unwrap()
-}
-
-/// Compile the provided Move code into a blob which can be used as the code to be published
-/// (a Module).
-///
-/// The code is compiled with the default account address (`0x0`).
-pub fn compile_module(code: &str) -> Vec<u8> {
-    let compiler = Compiler {
-        code,
-        ..Compiler::default()
-    };
-    compiler.into_module_blob().unwrap()
-}
-
-/// Compile the provided Move code into a blob which can be used as the code to be published
-/// (a Module).
-pub fn compile_module_with_address(address: &AccountAddress, code: &str) -> Vec<u8> {
-    let compiler = Compiler {
-        address: *address,
-        code,
-        ..Compiler::default()
-    };
-    compiler.into_module_blob().unwrap()
+    TransactionPayload::Module(Module::new(compiler.into_module_blob().unwrap()))
 }

@@ -4,7 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
-    transaction::{Program, RawTransaction, SignedTransaction},
+    transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
 use canonical_serialization::SimpleDeserializer;
 use chrono::Utc;
@@ -31,7 +31,7 @@ pub fn get_signed_transactions_digest(signed_txns: &[ProtoSignedTransaction]) ->
 }
 
 pub fn create_unsigned_txn(
-    program: Program,
+    payload: TransactionPayload,
     sender_address: AccountAddress,
     sender_sequence_number: u64,
     max_gas_amount: u64,
@@ -41,7 +41,7 @@ pub fn create_unsigned_txn(
     RawTransaction::new(
         sender_address,
         sender_sequence_number,
-        program,
+        payload,
         max_gas_amount,
         gas_unit_price,
         std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
@@ -55,7 +55,7 @@ pub trait TransactionSigner {
 /// Craft a transaction request.
 pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
     signer: &T,
-    program: Program,
+    payload: TransactionPayload,
     sender_address: AccountAddress,
     sender_sequence_number: u64,
     max_gas_amount: u64,
@@ -63,7 +63,7 @@ pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
     let raw_txn = create_unsigned_txn(
-        program,
+        payload,
         sender_address,
         sender_sequence_number,
         max_gas_amount,

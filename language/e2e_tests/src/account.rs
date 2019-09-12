@@ -14,7 +14,7 @@ use types::{
     byte_array::ByteArray,
     event::EventHandle,
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionPayload,
+        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
 use vm_genesis::GENESIS_KEYPAIR;
@@ -136,7 +136,7 @@ impl Account {
             TransactionPayload::Program(program) => RawTransaction::new(
                 *self.address(),
                 sequence_number,
-                program,
+                TransactionPayload::Program(program),
                 max_gas_amount,
                 gas_unit_price,
                 Duration::from_secs(u64::max_value()),
@@ -180,7 +180,7 @@ impl Account {
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             *self.address(),
-            Program::new(program, vec![], args),
+            TransactionPayload::Script(Script::new(program, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -201,7 +201,7 @@ impl Account {
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             sender,
-            Program::new(program, vec![], args),
+            TransactionPayload::Script(Script::new(program, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -214,7 +214,7 @@ impl Account {
     pub fn create_signed_txn_impl(
         &self,
         sender: AccountAddress,
-        program: Program,
+        program: TransactionPayload,
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,

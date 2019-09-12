@@ -14,7 +14,7 @@ use types::{
     account_config,
     transaction::{RawTransaction, SignedTransaction},
 };
-use vm_genesis::encode_mint_program;
+use vm_genesis::encode_mint_script;
 
 fn encode_mint_transaction(
     seqnum: u64,
@@ -23,8 +23,8 @@ fn encode_mint_transaction(
     let (_privkey, pubkey) = compat::generate_keypair(None);
     let sender = account_config::association_address();
     let receiver = AccountAddress::from_public_key(&pubkey);
-    let program = encode_mint_program(&receiver, 100);
-    let raw_txn = RawTransaction::new(
+    let program = encode_mint_script(&receiver, 100);
+    let raw_txn = RawTransaction::new_script(
         sender,
         seqnum,
         program,
