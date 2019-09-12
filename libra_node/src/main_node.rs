@@ -281,11 +281,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let metric_host = node_config.debug_interface.address.clone();
     thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
-    let state_synchronizer = StateSynchronizer::bootstrap(
-        state_sync_network_handles,
-        &node_config,
-        vec![], // TODO: pass in empty vector for now, will be derived from node config later
-    );
+    let state_synchronizer = StateSynchronizer::bootstrap(state_sync_network_handles, &node_config);
+
     let mut mempool = None;
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {

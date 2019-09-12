@@ -7,6 +7,7 @@ use crate::{
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{
         ConfigHelpers, ConsensusPeersConfig, NetworkPeerPrivateKeys, NetworkPeersConfig,
+        UpstreamPeersConfig,
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
@@ -572,6 +573,9 @@ pub struct StateSyncConfig {
     pub max_chunk_limit: u64,
     // valid maximum timeout limit for sanity check
     pub max_timeout_ms: u64,
+    // List of peers to use as upstream in state sync protocols.
+    #[serde(flatten)]
+    pub upstream_peers: UpstreamPeersConfig,
 }
 
 impl Default for StateSyncConfig {
@@ -582,6 +586,7 @@ impl Default for StateSyncConfig {
             long_poll_timeout_ms: 30000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,
+            upstream_peers: UpstreamPeersConfig::default(),
         }
     }
 }

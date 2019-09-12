@@ -25,6 +25,7 @@ use network::{
 use proto_conv::{FromProto, IntoProto};
 use std::{
     collections::HashMap,
+    str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::timer::Interval;
@@ -71,8 +72,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         config: StateSyncConfig,
         executor_proxy: T,
-        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
+        let upstream_peers: Vec<_> = config
+            .upstream_peers
+            .upstream_peers
+            .iter()
+            .map(|peer_id_str| {
+                PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
+                    panic!("Failed to parse peer_id from string: {}", peer_id_str)
+                })
+            })
+            .collect();
         Self {
             client_events,
             known_version: 0,
@@ -80,8 +90,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             config,
             // Note: We use upstream peer ids being non-empty as a proxy for a node being a full
             // node.
-            autosync: !upstream_peer_ids.is_empty(),
-            peer_manager: PeerManager::new(upstream_peer_ids),
+            autosync: !upstream_peers.is_empty(),
+            peer_manager: PeerManager::new(upstream_peers),
             subscriptions: HashMap::new(),
             callback: None,
             last_commit: None,
