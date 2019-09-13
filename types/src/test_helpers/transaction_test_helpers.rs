@@ -49,7 +49,7 @@ pub fn get_test_signed_transaction(
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Script>,
+    script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
     max_gas_amount: Option<u64>,
@@ -57,7 +57,7 @@ pub fn get_test_signed_transaction(
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
-        program.unwrap_or_else(placeholder_script),
+        script.unwrap_or_else(placeholder_script),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         Duration::from_secs(expiration_time),
@@ -74,7 +74,7 @@ pub fn get_test_unchecked_transaction(
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Script>,
+    script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
     max_gas_amount: Option<u64>,
@@ -82,7 +82,7 @@ pub fn get_test_unchecked_transaction(
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
-        program.unwrap_or_else(placeholder_script),
+        script.unwrap_or_else(placeholder_script),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         Duration::from_secs(expiration_time),
@@ -100,7 +100,7 @@ pub fn get_test_signed_txn(
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Script>,
+    script: Option<Script>,
 ) -> ProtoSignedTransaction {
     let expiration_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -112,7 +112,7 @@ pub fn get_test_signed_txn(
         sequence_number,
         private_key,
         public_key,
-        program,
+        script,
         expiration_time,
         MAX_GAS_PRICE,
         None,
@@ -124,7 +124,7 @@ pub fn get_test_unchecked_txn(
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Script>,
+    script: Option<Script>,
 ) -> SignedTransaction {
     let expiration_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -136,7 +136,7 @@ pub fn get_test_unchecked_txn(
         sequence_number,
         private_key,
         public_key,
-        program,
+        script,
         expiration_time,
         MAX_GAS_PRICE,
         None,

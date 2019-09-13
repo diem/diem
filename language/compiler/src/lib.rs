@@ -88,7 +88,7 @@ impl<'a> Compiler<'a> {
         Ok(serialized_module)
     }
 
-    /// Compiles the code and arguments into a `Program` -- the bytecode is serialized.
+    /// Compiles the code and arguments into a `Script` -- the bytecode is serialized.
     pub fn into_program(mut self, args: Vec<TransactionArgument>) -> Result<Script> {
         let compiled_program = self.compile_impl()?.0;
 

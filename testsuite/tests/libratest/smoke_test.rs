@@ -409,6 +409,6 @@ fn test_external_transaction_signer() {
             },
             _ => panic!("Signed transaction payload arguments must have two arguments."),
         },
-        _ => panic!("Signed transaction payload expected to be of struct Program"),
+        _ => panic!("Signed transaction payload expected to be of struct Script"),
     }
 }
