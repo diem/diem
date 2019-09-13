@@ -147,12 +147,6 @@ lazy_static! {
             vec![ByteArray, ByteArray],
             vec![ByteArray]
         );
-        // Event
-        add!(m, addr, "Event", "write_to_event_store",
-            |_| { NativeReturnStatus::InvalidArguments },
-            vec![ByteArray, U64, ByteArray],
-            vec![]
-        );
         // Vector
         add!(m, addr, "Vector", "length",
             NativeVector::native_length,
@@ -185,6 +179,13 @@ lazy_static! {
                 MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
                 TypeParameter(0),
             ],
+            vec![]
+        );
+        // Event
+        add!(m, addr, "Event", "write_to_event_store",
+            |_| { NativeReturnStatus::InvalidArguments },
+            vec![Kind::Unrestricted],
+            vec![ByteArray, U64, TypeParameter(0)],
             vec![]
         );
         m

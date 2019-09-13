@@ -15,7 +15,7 @@ module Event {
     // A handle for a event such that:
     // 1. Other modules can emit event to this handle.
     // 2. Storage can use this handle to prove the total number of events that happened in the past.
-    resource Handle {
+    resource Handle<T: unrestricted> {
         // Total number of events emitted to this event stream.
         counter: u64
         // A globally unique ID for this event stream.
@@ -58,33 +58,33 @@ module Event {
     }
 
     // Use the sender's HandleIdGenerator to generate a unique event handle that one can emit an event to.
-    public new_event_handle(): Self.Handle acquires HandleIdGenerator {
-        return Handle {counter: 0, guid: Self.fresh_guid()};
+    public new_event_handle<T: unrestricted>(): Self.Handle<T> acquires HandleIdGenerator {
+        return Handle<T> {counter: 0, guid: Self.fresh_guid()};
     }
 
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from bytearray to a
     // generic type parameter once we have generics.
-    public emit_event(handle_ref: &mut Self.Handle, msg: bytearray) {
+    public emit_event<T: unrestricted>(handle_ref: &mut Self.Handle<T>, msg: T) {
         let count: &mut u64;
         let guid: bytearray;
 
         guid = *&copy(handle_ref).guid;
         count = &mut move(handle_ref).counter;
 
-        Self.write_to_event_store(move(guid), *copy(count), move(msg));
+        Self.write_to_event_store<T>(move(guid), *copy(count), move(msg));
         *move(count) = *copy(count) + 1;
         return;
     }
 
     // Native procedure that writes to the actual event stream in Event store
     // This will replace the "native" portion of EmitEvent bytecode
-    native write_to_event_store(guid: bytearray, count: u64, msg: bytearray);
+    native write_to_event_store<T: unrestricted>(guid: bytearray, count: u64, msg: T);
 
     // Destroy a unique handle.
-    public destroy(handle: Self.Handle) {
+    public destroy<T: unrestricted>(handle: Self.Handle<T>) {
         let guid: bytearray;
         let count: u64;
-        Handle { count, guid } = move(handle);
+        Handle<T> { count, guid } = move(handle);
         return;
     }
 

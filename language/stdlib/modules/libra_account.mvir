@@ -16,9 +16,9 @@ module LibraAccount {
         balance: LibraCoin.T,
         delegated_withdrawal_capability: bool,
         // Event handle for received event
-        received_events: Event.Handle,
+        received_events: Event.Handle<Self.ReceivedPaymentEvent>,
         // Event handle for sent event
-        sent_events: Event.Handle,
+        sent_events: Event.Handle<Self.SentPaymentEvent>,
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
@@ -51,11 +51,11 @@ module LibraAccount {
     // Invoked by the `create_account` builtin
     make(auth_key: bytearray): Self.T {
         let zero_balance: LibraCoin.T;
-        let sent_handle: Event.Handle;
-        let received_handle: Event.Handle;
+        let sent_handle: Event.Handle<Self.SentPaymentEvent>;
+        let received_handle: Event.Handle<Self.ReceivedPaymentEvent>;
 
-        sent_handle = Event.new_event_handle();
-        received_handle = Event.new_event_handle();
+        sent_handle = Event.new_event_handle<Self.SentPaymentEvent>();
+        received_handle = Event.new_event_handle<Self.ReceivedPaymentEvent>();
         zero_balance = LibraCoin.zero();
 
         return T {
@@ -89,8 +89,7 @@ module LibraAccount {
         // Log a send event
         sent_event = SentPaymentEvent { amount: copy(deposit_value), payee: copy(payee) };
 
-        sent_event_bytes = Self.sent_event_to_bytes(&sent_event);
-        Event.emit_event(&mut move(sender_account_ref).sent_events, move(sent_event_bytes));
+        Event.emit_event<Self.SentPaymentEvent>(&mut move(sender_account_ref).sent_events, move(sent_event));
 
         // Load the payee's account
         payee_account_ref = borrow_global_mut<T>(move(payee));
@@ -98,33 +97,8 @@ module LibraAccount {
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
         // Log a received event
         received_event = ReceivedPaymentEvent { amount: move(deposit_value), payer: move(sender) };
-        received_event_bytes = Self.received_event_to_bytes(&received_event);
-        Event.emit_event(&mut move(payee_account_ref).received_events, move(received_event_bytes));
+        Event.emit_event<Self.ReceivedPaymentEvent>(&mut move(payee_account_ref).received_events, move(received_event));
         return;
-    }
-
-    // Helper function to convert sent_event to bytes. Will get rid of this once we have generics.
-    sent_event_to_bytes(event: &Self.SentPaymentEvent): bytearray {
-        let amount_byte: bytearray;
-        let address_byte: bytearray;
-        let result: bytearray;
-        amount_byte = U64Util.u64_to_bytes(*(&copy(event).amount));
-        address_byte = AddressUtil.address_to_bytes(*(&copy(event).payee));
-        result = BytearrayUtil.bytearray_concat(move(amount_byte), move(address_byte));
-        _ = move(event);
-        return move(result);
-    }
-
-    // Helper function to convert received_event to bytes. Will get rid of this once we have generics.
-    received_event_to_bytes(event: &Self.ReceivedPaymentEvent): bytearray {
-        let amount_byte: bytearray;
-        let address_byte: bytearray;
-        let result: bytearray;
-        amount_byte = U64Util.u64_to_bytes(*(&copy(event).amount));
-        address_byte = AddressUtil.address_to_bytes(*(&copy(event).payer));
-        result = BytearrayUtil.bytearray_concat(move(amount_byte), move(address_byte));
-        _ = move(event);
-        return move(result);
     }
 
     // mint_to_address can only be called by accounts with MintCapability (see LibraCoin)
