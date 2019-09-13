@@ -39,6 +39,7 @@ pub enum PeerScoreUpdateType {
 pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
+    weighted_index: Option<WeightedIndex<f64>>,
 }
 
 impl PeerManager {
@@ -50,6 +51,7 @@ impl PeerManager {
         Self {
             peers,
             network_senders: HashMap::new(),
+            weighted_index: None,
         }
     }
 
@@ -102,20 +104,38 @@ impl PeerManager {
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
             }
+            self.set_weighted_index();
         }
     }
 
-    pub fn pick_peer(&mut self) -> Option<(PeerId, StateSynchronizerSender)> {
+    fn set_weighted_index(&mut self) {
         let active_peers = self.get_active_upstream_peers();
-        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
-
         if !active_peers.is_empty() {
             let weights: Vec<_> = active_peers
                 .iter()
                 .map(|(_, peer_info)| peer_info.score)
                 .collect();
+            match WeightedIndex::new(&weights) {
+                Ok(weighted_index) => {
+                    self.weighted_index = Some(weighted_index);
+                }
+                Err(e) => {
+                    self.weighted_index = None;
+                    error!(
+                        "[state sync] (pick_peer) invalid weighted index distribution, {:?}",
+                        e
+                    );
+                }
+            }
+        }
+    }
 
-            if let Ok(weighted_index) = WeightedIndex::new(&weights) {
+    pub fn pick_peer(&self) -> Option<(PeerId, StateSynchronizerSender)> {
+        let active_peers = self.get_active_upstream_peers();
+        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
+
+        if !active_peers.is_empty() {
+            if let Some(weighted_index) = self.weighted_index.clone() {
                 let mut rng = thread_rng();
                 let peer_id = *active_peers[weighted_index.sample(&mut rng)].0;
 
@@ -124,8 +144,6 @@ impl PeerManager {
                 } else {
                     debug!("[state sync] (pick_peer) no sender for {}", peer_id);
                 }
-            } else {
-                error!("[state sync] (pick_peer) invalid weighted index distribution");
             }
         }
         None
