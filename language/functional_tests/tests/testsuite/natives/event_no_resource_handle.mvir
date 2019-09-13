@@ -1,0 +1,10 @@
+// FIXME: We haven't implemented the resource checker for generics. Come back and add verification error once that's
+// done.
+import 0x0.Event;
+import 0x0.LibraCoin;
+main() {
+    let handle: Event.Handle<LibraCoin.T>;
+    handle = Event.new_event_handle<LibraCoin.T>();
+    Event.destroy<LibraCoin.T>(move(handle));
+    return;
+}

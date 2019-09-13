@@ -274,7 +274,11 @@ where
                         if module_id == *EVENT_MODULE
                             && function_name == EMIT_EVENT_NAME.as_ident_str()
                         {
-                            let msg = self.execution_stack.pop_as::<ByteArray>()?;
+                            let msg = self
+                                .execution_stack
+                                .pop()?
+                                .simple_serialize()
+                                .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
                             let count = self.execution_stack.pop_as::<u64>()?;
                             let key = self.execution_stack.pop_as::<ByteArray>()?;
                             let guid = EventKey::try_from(key.as_bytes())
@@ -284,8 +288,7 @@ where
                             // 1. Rename the AccessPath here to a new type that represents such
                             //    globally unique id for event streams.
                             // 2. Charge gas for the msg emitted.
-                            self.event_data
-                                .push(ContractEvent::new(guid, count, msg.into_inner()))
+                            self.event_data.push(ContractEvent::new(guid, count, msg))
                         } else {
                             let mut arguments = VecDeque::new();
                             let expected_args = native_function.num_args();

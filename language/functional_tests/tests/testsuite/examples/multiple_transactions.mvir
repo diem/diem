@@ -19,7 +19,7 @@ main(receiver: address) {
 
 
 
-// Alice checks that her balance is less than 54800 Libra Coins. (200 + gas)
+// Alice checks that her balance is less than 89800 Libra Coins. (200 + gas)
 //! new-transaction
 //! sender: alice
 
@@ -31,7 +31,7 @@ main() {
 
     sender = get_txn_sender();
     balance = LibraAccount.balance(move(sender));
-    assert(move(balance) < 54800, 42);
+    assert(move(balance) < 89800, 42);
 
     return;
 }
