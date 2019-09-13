@@ -15,6 +15,14 @@ executors:
     resource_class: small
 
 commands:
+  install_rust:
+    steps:
+      - run:
+          name: Install Rust toolchain
+          command: |
+            brew install rustup-init
+            rustup-init -y --default-toolchain `cat rust-toolchain`
+            echo 'export PATH=$PATH:$HOME/.cargo/bin' >> $BASH_ENV
   print_versions:
     description: Version Info
     steps:
@@ -41,12 +49,26 @@ commands:
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
+  install_deps_macos:
+    steps:
+      - run:
+          name: Install macos Dependencies
+          command: |
+            brew install cmake golang
+            rustup component add clippy rustfmt
   build_setup:
     steps:
       - checkout
       - print_versions
       - env_setup
       - install_deps
+  build_setup_macos:
+    steps:
+      - checkout
+      - install_rust
+      - print_versions
+      - env_setup
+      - install_deps_macos
   build_teardown:
     steps:
       - run:
@@ -85,6 +107,12 @@ jobs:
           command: |
             [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package testsuite
       - build_teardown
+  macos-build:
+    macos:
+      xcode: "10.3.0"
+    steps:
+      - build_setup_macos
+      - build_teardown
   validate-config:
     description: Validate that committed docker configs are up to date
     executor: build-executor
@@ -122,6 +150,7 @@ workflows:
   commit-workflow:
     jobs:
       - build
+      - macos-build
       - validate-config
       - terraform
 
