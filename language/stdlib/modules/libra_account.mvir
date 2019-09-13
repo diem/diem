@@ -347,7 +347,7 @@ module LibraAccount {
         let public_key_hash: bytearray;
         let gas_price: u64;
         let gas_units: u64;
-        let gas_fee: u64;
+        let max_transaction_fee: u64;
         let balance_amount: u64;
         let sequence_number_value: u64;
         let transaction_sequence_number_value: u64;
@@ -370,10 +370,10 @@ module LibraAccount {
         // Check that the account has enough balance for all of the gas
         gas_price = get_txn_gas_unit_price();
         gas_units = get_txn_max_gas_units();
-        gas_fee = move(gas_price) * move(gas_units);
+        max_transaction_fee = move(gas_price) * move(gas_units);
         imm_sender_account = freeze(copy(sender_account));
         balance_amount = Self.balance_for_account(move(imm_sender_account));
-        assert(move(balance_amount) >= move(gas_fee), 6);
+        assert(move(balance_amount) >= move(max_transaction_fee), 6);
 
         // Check that the transaction sequence number matches the sequence number of the account
         sequence_number_value = *(&mut move(sender_account).sequence_number);
@@ -388,13 +388,14 @@ module LibraAccount {
     epilogue() acquires T {
         let transaction_sender: address;
         let sender_account: &mut Self.T;
+        let transaction_fee_account: &mut Self.T;
         let imm_sender_account: &Self.T;
         let gas_price: u64;
         let gas_units_remaining: u64;
         let starting_gas_units: u64;
-        let gas_fee_amount: u64;
+        let transaction_fee_amount: u64;
         let balance_amount: u64;
-        let gas_fee: LibraCoin.T;
+        let transaction_fee: LibraCoin.T;
         let transaction_sequence_number_value: u64;
 
         transaction_sender = get_txn_sender();
@@ -406,17 +407,19 @@ module LibraAccount {
         gas_price = get_txn_gas_unit_price();
         starting_gas_units = get_txn_max_gas_units();
         gas_units_remaining = get_gas_remaining();
-        gas_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
+        transaction_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
         imm_sender_account = freeze(copy(sender_account));
         balance_amount = Self.balance_for_account(move(imm_sender_account));
-        assert(move(balance_amount) >= copy(gas_fee_amount), 6);
+        assert(move(balance_amount) >= copy(transaction_fee_amount), 6);
 
-        gas_fee = Self.withdraw_from_account(copy(sender_account), move(gas_fee_amount));
-        LibraCoin.TODO_REMOVE_burn_gas_fee(move(gas_fee));
+        transaction_fee = Self.withdraw_from_account(copy(sender_account), move(transaction_fee_amount));
 
         // Bump the sequence number
         transaction_sequence_number_value = get_txn_sequence_number();
         *(&mut move(sender_account).sequence_number) = move(transaction_sequence_number_value) + 1;
+        // Pay the transaction fee into the transaction fee pot
+        transaction_fee_account = borrow_global_mut<T>(0xFEE);
+        LibraCoin.deposit(&mut move(transaction_fee_account).balance, move(transaction_fee));
         return;
     }
 

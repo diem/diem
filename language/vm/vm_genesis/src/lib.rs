@@ -26,8 +26,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_CONFIG_MODULE,
-        VALIDATOR_SET_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE,
+        TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE, VALIDATOR_SET_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -215,6 +215,9 @@ pub fn encode_genesis_transaction_with_validator(
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
             txn_executor.create_account(genesis_addr).unwrap();
             txn_executor
+                .create_account(account_config::transaction_fee_address())
+                .unwrap();
+            txn_executor
                 .create_account(account_config::core_code_address())
                 .unwrap();
             txn_executor
@@ -246,6 +249,16 @@ pub fn encode_genesis_transaction_with_validator(
             // number 0
             txn_executor
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
+                .unwrap();
+
+            // Initialize the transaction fee distribution module.
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::transaction_fee_address(),
+                    &TRANSACTION_FEE_DISTRIBUTION_MODULE,
+                    &INITIALIZE,
+                    vec![],
+                )
                 .unwrap();
 
             // Initialize the validator set.

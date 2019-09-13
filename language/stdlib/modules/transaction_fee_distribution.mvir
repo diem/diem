@@ -1,0 +1,131 @@
+// This module implements a basic transaction fee distribution logic.
+//
+// We have made a couple design decisions here that are worth noting:
+//  * We pay out per-epoch. However this functionality is only in spirit at the moment
+//    since we have neither block metadata transactions nor epochs (at the Move level).
+//    TODO: Once we have block metadata transactions and epochs, this code needs to be updated to
+//    distribute fees every epoch and be called from the metadata transaction.
+//  * In the handling of dust, we simply leave it to the next distribution.
+//    This is meant to in part minimize the benefit of being the first validator in
+//    the validator set.
+module TransactionFeeDistribution {
+  import 0x0.LibraCoin;
+  import 0x0.ValidatorSet;
+  import 0x0.LibraAccount;
+  // import 0x0.Epoch;
+
+  resource T {
+      last_epoch_paid: u64,
+      fee_withdrawal_capability: LibraAccount.WithdrawalCapability,
+  }
+
+  // TODO: This is public for now for testing purposes. However, in the future block metadata
+  // transactions will call this and it will be marked as a private function.
+   public distribute_transaction_fees() acquires T {
+     let num_validators: u64;
+     let amount_to_distribute_per_validator: u64;
+     let lib_coin_to_distribute: LibraCoin.T;
+     let amount_collected: u64;
+     let distribution_resource: &mut Self.T;
+     //let current_epoch: u64;
+
+     distribution_resource = borrow_global_mut<T>(0xFEE);
+     //current_epoch = Epoch.get_current_epoch();
+
+     // TODO: This check and update is commented out at the moment since we don't have epochs.
+     //assert(*&copy(distribution_resource).last_epoch_paid < copy(current_epoch), 0);
+     // Note: We don't enforce sequentiality for transaction fee distribution.
+     //*(&mut copy(distribution_resource).last_epoch_paid) = move(current_epoch);
+
+     num_validators = ValidatorSet.size();
+     amount_collected = LibraAccount.balance(0xFEE);
+
+     lib_coin_to_distribute = LibraAccount.withdraw_with_capability(
+         &move(distribution_resource).fee_withdrawal_capability,
+         copy(amount_collected)
+     );
+
+     // Calculate the amount of money to be dispursed, along with the remainder.
+     amount_to_distribute_per_validator = Self.per_validator_distribution_amount(
+         copy(amount_collected),
+         copy(num_validators)
+     );
+
+     // Iterate through the validators distributing fees equally
+     Self.distribute_transaction_fees_internal(
+         move(lib_coin_to_distribute),
+         move(amount_to_distribute_per_validator),
+         move(num_validators),
+     );
+
+     return;
+   }
+
+   // Initialize the transaction fee distribution module. We keep track of the last paid block
+   // height in order to ensure that we don't try to pay more than once per-block. We also
+   // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
+   // the fees from this account from block metadata transactions.
+   public initialize() {
+       assert(get_txn_sender() == 0xFEE, 0);
+       move_to_sender<T>(T {
+           // last_epoch_paid: Epoch.get_current_epoch(),
+           last_epoch_paid: 0,
+           fee_withdrawal_capability: LibraAccount.extract_sender_withdrawal_capability(),
+       });
+       return;
+   }
+
+   // After the book keeping has been performed, this then distributes the
+   // transaction fees equally to all validators with the exception that
+   // any remainder (in the case that the number of validators does not
+   // evenly divide the transaction fee pot) is distributed to the first
+   // validator.
+   distribute_transaction_fees_internal(
+       collected_fees: LibraCoin.T,
+       amount_to_distribute_per_validator: u64,
+       num_validators: u64
+   ) {
+       let index: u64;
+       let addr: address;
+       let payment_coin: LibraCoin.T;
+
+       index = 0;
+
+       while (copy(index) < copy(num_validators)) {
+
+           addr = ValidatorSet.get_ith_validator_address(copy(index));
+           // Increment the index into the validator set.
+           index = copy(index) + 1;
+
+           collected_fees, payment_coin = LibraCoin.split(
+               move(collected_fees),
+               copy(amount_to_distribute_per_validator)
+           );
+
+           LibraAccount.deposit(move(addr), move(payment_coin));
+       }
+
+       // Now pay back any remainder to the transaction fees. Deposits with value zero
+       // are not allowed so if the remainder is zero we have to destroy the coin.
+       if (LibraCoin.value(&collected_fees) == 0) {
+           LibraCoin.destroy_zero(move(collected_fees));
+       } else {
+           LibraAccount.deposit(0xFEE, move(collected_fees));
+       }
+
+       return;
+   }
+
+   // This calculates the amount to be distributed to each validator equally. We do this by calculating
+   // the integer division of the transaction fees collected by the number of validators. In
+   // particular, this means that if the number of validators does not evenly divide the
+   // transaction fees collected, then there will be a remainder that is left in the transaction
+   // fees pot to be distributed later.
+   per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
+       let validator_payout: u64;
+       assert(copy(num_validators) != 0, 0);
+       validator_payout = copy(amount_collected) / copy(num_validators);
+       assert(copy(validator_payout) * move(num_validators) <= move(amount_collected), 1);
+       return move(validator_payout);
+   }
+}
