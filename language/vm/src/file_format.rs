@@ -476,6 +476,16 @@ impl Kind {
             _ => false,
         }
     }
+
+    /// Helper function to determine the kind of a struct instance by taking the kind of a type
+    /// actual and join it with the existing partial result.
+    pub fn join(self, other: &Kind) -> Kind {
+        match (self, other) {
+            (Kind::All, _) | (_, Kind::All) => Kind::All,
+            (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
+            (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
+        }
+    }
 }
 
 /// A `SignatureToken` is a type declaration for a location.
@@ -704,6 +714,50 @@ impl SignatureToken {
             Reference(ty) => Reference(Box::new(ty.substitute(tys))),
             MutableReference(ty) => MutableReference(Box::new(ty.substitute(tys))),
             TypeParameter(idx) => tys[*idx as usize].clone(),
+        }
+    }
+
+    /// Returns the kind of the signature token in the given context (module, function/struct).
+    /// The context is needed to determine the kinds of structs & type variables.
+    pub fn kind(
+        (struct_handles, type_formals): (&[StructHandle], &[Kind]),
+        ty: &SignatureToken,
+    ) -> Kind {
+        use SignatureToken::*;
+
+        match ty {
+            // The primitive types & references have kind unrestricted.
+            Bool | U64 | String | ByteArray | Address | Reference(_) | MutableReference(_) => {
+                Kind::Unrestricted
+            }
+
+            // To get the kind of a type parameter, we lookup its constraint in the formals.
+            TypeParameter(idx) => type_formals[*idx as usize],
+
+            Struct(idx, tys) => {
+                // Get the struct handle at idx. Note the index could be out of bounds.
+                let sh = &struct_handles[idx.0 as usize];
+
+                if sh.is_nominal_resource {
+                    return Kind::Resource;
+                }
+
+                // Gather the kinds of the type actuals.
+                let kinds = tys
+                    .iter()
+                    .map(|ty| Self::kind((struct_handles, type_formals), ty))
+                    .collect::<Vec<_>>();
+
+                // Derive the kind of the struct.
+                //   - If any of the type actuals has kind `all`, then the struct has kind `all`.
+                //     - `all` means some part of the type can be either `resource` or
+                //       `unrestricted`.
+                //     - Therefore it is also impossible to determine the kind of the type as a
+                //       whole, and thus `all`.
+                //   - If none of the type actuals has kind `all`, then the struct is a resource if
+                //     and only if one of the type actuals has kind `resource`.
+                kinds.iter().fold(Kind::Unrestricted, Kind::join)
+            }
         }
     }
 }
@@ -1655,8 +1709,13 @@ pub fn empty_module() -> CompiledModuleMut {
     }
 }
 
-/// Create a module with one empty function & one struct with one field of type u64.
-/// This is convenient to tests.
+/// Create the following module which is convenient in tests:
+/// // module <SELF> {
+/// //     struct Bar { x: u64 }
+/// //
+/// //     foo() {
+/// //     }
+/// // }
 pub fn basic_test_module() -> CompiledModuleMut {
     let mut m = empty_module();
 

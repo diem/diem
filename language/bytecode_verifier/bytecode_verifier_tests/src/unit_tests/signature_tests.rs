@@ -8,7 +8,19 @@ use invalid_mutations::signature::{
 };
 use proptest::{collection::vec, prelude::*};
 use types::vm_error::StatusCode;
-use vm::file_format::CompiledModule;
+use vm::file_format::*;
+
+#[test]
+fn test_reference_of_reference() {
+    use SignatureToken::*;
+
+    let mut m = basic_test_module();
+    m.locals_signatures[0] = LocalsSignature(vec![Reference(Box::new(Reference(Box::new(
+        SignatureToken::Bool,
+    ))))]);
+    let errors = SignatureChecker::new(&m.freeze().unwrap()).verify();
+    assert!(!errors.is_empty());
+}
 
 proptest! {
     #[test]
@@ -38,7 +50,7 @@ proptest! {
         // out.
         let mut actual_violations: Vec<_> = actual_violations
             .into_iter()
-            .filter(|err| err.major_status != StatusCode::INVALID_FIELD_DEF_REFERENCE)
+            .filter(|err| err.major_status != StatusCode::INVALID_FIELD_DEF)
             .collect();
         actual_violations.sort();
         // The error messages are slightly different from the invalid mutations, so clean these out

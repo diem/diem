@@ -17,8 +17,6 @@ pub mod signature;
 pub mod stack_usage_verifier;
 pub mod struct_defs;
 pub mod type_memory_safety;
-#[cfg(test)]
-mod unit_tests;
 pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
