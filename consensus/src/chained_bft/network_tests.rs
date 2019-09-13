@@ -1,21 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::Author,
-        consensus_types::{
-            block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-            vote_data::VoteData, vote_msg::VoteMsg,
-        },
-        epoch_manager::EpochManager,
-        network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
-        test_utils::{consensus_runtime, placeholder_ledger_info},
+use crate::chained_bft::{
+    common::Author,
+    consensus_types::{
+        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
+        vote_data::VoteData, vote_msg::VoteMsg,
     },
-    state_replication::ExecutedState,
+    epoch_manager::EpochManager,
+    network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
+    test_utils::{consensus_runtime, placeholder_ledger_info},
 };
 use channel;
 use crypto::HashValue;
+use executor::ExecutedState;
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},

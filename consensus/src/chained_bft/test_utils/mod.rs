@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        block_storage::BlockStore,
-        common::Round,
-        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
-    },
-    state_replication::ExecutedState,
+use crate::chained_bft::{
+    block_storage::BlockStore,
+    common::Round,
+    consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
 };
 use crypto::{hash::CryptoHash, HashValue};
+use executor::ExecutedState;
 use futures::{channel::mpsc, executor::block_on};
 use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::{collections::HashMap, sync::Arc};

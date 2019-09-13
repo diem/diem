@@ -11,11 +11,9 @@ use std::sync::Arc;
 mod block_store;
 mod block_tree;
 
-use crate::{
-    chained_bft::consensus_types::vote_msg::VoteMsgVerificationError,
-    state_replication::StateComputeResult,
-};
+use crate::chained_bft::consensus_types::vote_msg::VoteMsgVerificationError;
 pub use block_store::{BlockStore, NeedFetchResult};
+use executor::StateComputeResult;
 use network::protocols::rpc::error::RpcError;
 use types::validator_verifier::VerifyError;
 

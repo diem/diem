@@ -1,14 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Author, Height, Round},
-        consensus_types::{
-            quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsgVerificationError,
-        },
+use crate::chained_bft::{
+    common::{Author, Height, Round},
+    consensus_types::{
+        quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsgVerificationError,
     },
-    state_replication::{ExecutedState, StateComputeResult},
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
@@ -17,6 +14,7 @@ use crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
     HashValue,
 };
+use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
 use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
 use network::proto::Block as ProtoBlock;

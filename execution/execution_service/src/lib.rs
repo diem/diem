@@ -4,7 +4,7 @@
 #![feature(async_await)]
 
 use config::config::NodeConfig;
-use execution_proto::{CommitBlockRequest, ExecuteBlockRequest, ExecuteChunkRequest};
+use execution_proto::{CommitBlockRequest, ExecuteBlockRequest};
 use executor::Executor;
 use failure::Result;
 use futures01::future::Future;
@@ -84,31 +84,6 @@ impl execution_proto::proto::execution_grpc::Execution for ExecutionService {
                         .boxed()
                         .unit_error()
                         .compat();
-                ctx.spawn(fut);
-            }
-            Err(err) => {
-                let fut = process_conversion_error(err, sink);
-                ctx.spawn(fut);
-            }
-        }
-    }
-
-    fn execute_chunk(
-        &mut self,
-        ctx: grpcio::RpcContext,
-        request: execution_proto::proto::execution::ExecuteChunkRequest,
-        sink: grpcio::UnarySink<execution_proto::proto::execution::ExecuteChunkResponse>,
-    ) {
-        match ExecuteChunkRequest::from_proto(request) {
-            Ok(req) => {
-                let fut = process_response(
-                    self.executor
-                        .execute_chunk(req.txn_list_with_proof, req.ledger_info_with_sigs),
-                    sink,
-                )
-                .boxed()
-                .unit_error()
-                .compat();
                 ctx.spawn(fut);
             }
             Err(err) => {

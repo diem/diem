@@ -22,19 +22,19 @@ consensus = { path = "../consensus" }
 crash_handler = { path = "../common/crash_handler" }
 debug_interface = { path = "../common/debug_interface" }
 executable_helpers = { path = "../common/executable_helpers" }
-execution_proto = { path = "../execution/execution_proto" }
+executor = { path = "../execution/executor" }
 futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
-execution_service = { path = "../execution/execution_service" }
 network = { path = "../network" }
 state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types" }
+vm_runtime = { path = "../language/vm/vm_runtime" }
 vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]

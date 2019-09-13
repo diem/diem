@@ -3,9 +3,10 @@
 
 use crate::{
     chained_bft::{consensus_types::quorum_cert::QuorumCert, test_utils::TestPayload},
-    state_replication::{ExecutedState, StateComputeResult, StateComputer},
+    state_replication::StateComputer,
 };
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use logger::prelude::*;

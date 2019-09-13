@@ -17,8 +17,9 @@ use crate::{
 use crypto::HashValue;
 use logger::prelude::*;
 
-use crate::{chained_bft::persistent_storage::RecoveryData, state_replication::StateComputeResult};
+use crate::chained_bft::persistent_storage::RecoveryData;
 use crypto::hash::CryptoHash;
+use executor::StateComputeResult;
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},

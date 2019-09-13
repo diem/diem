@@ -7,7 +7,6 @@ use crate::{
 use config::config::RoleType;
 use config_builder::util::get_test_config;
 use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
-use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
 use futures::{
     executor::block_on,
@@ -134,14 +133,12 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 
     fn execute_chunk(
         &self,
-        request: ExecuteChunkRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<ExecuteChunkResponse>> + Send>> {
-        let version = request
-            .get_ledger_info_with_sigs()
-            .get_ledger_info()
-            .version;
+        _txn_list_with_proof: TransactionListWithProof,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let version = ledger_info_with_sigs.ledger_info().version();
         self.version.store(version, Ordering::Relaxed);
-        async move { Ok(ExecuteChunkResponse::new()) }.boxed()
+        async move { Ok(()) }.boxed()
     }
 
     fn get_chunk(

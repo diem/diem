@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    CommitBlockRequest, CommitBlockResponse, ExecuteBlockRequest, ExecuteBlockResponse,
-    ExecuteChunkRequest, ExecuteChunkResponse,
-};
+use crate::{CommitBlockRequest, CommitBlockResponse, ExecuteBlockRequest, ExecuteBlockResponse};
 use proptest::prelude::*;
 use proptest_helpers::with_stack_size;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
@@ -21,22 +18,12 @@ proptest! {
     fn test_commit_block_request_roundtrip(commit_block_request in any::<CommitBlockRequest>()) {
         assert_protobuf_encode_decode(&commit_block_request);
     }
-
-    #[test]
-    fn test_execute_chunk_request_roundtrip(execute_chunk_request in any::<ExecuteChunkRequest>()) {
-        assert_protobuf_encode_decode(&execute_chunk_request);
-    }
 }
 
 proptest! {
     #[test]
     fn test_commit_block_response_roundtrip(commit_block_response in any::<CommitBlockResponse>()) {
         assert_protobuf_encode_decode(&commit_block_response);
-    }
-
-    #[test]
-    fn test_execute_chunk_response_roundtrip(execute_chunk_response in any::<ExecuteChunkResponse>()) {
-        assert_protobuf_encode_decode(&execute_chunk_response);
     }
 }
 

@@ -6,6 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
 use config::config::{NodeConfig, StateSyncConfig};
+use executor::Executor;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -16,6 +17,7 @@ use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSende
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
 use types::crypto_proxies::LedgerInfoWithSignatures;
+use vm_runtime::MoveVM;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -26,13 +28,10 @@ impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        executor: Arc<Executor<MoveVM>>,
         config: &NodeConfig,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(
-            &config.execution,
-            &config.storage,
-            config.consensus.get_consensus_peers(),
-        );
+        let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(network, &config.state_sync, executor_proxy)
     }
 

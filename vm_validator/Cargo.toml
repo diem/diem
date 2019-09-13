@@ -21,11 +21,11 @@ vm_runtime = { path = "../language/vm/vm_runtime" }
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 rand = "0.6.5"
 
-execution_proto = { path = "../execution/execution_proto" }
-execution_service = { path = "../execution/execution_service" }
-grpc_helpers = { path = "../common/grpc_helpers" }
+config_builder = { path = "../config/config_builder" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
+executor = { path = "../execution/executor" }
+grpc_helpers = { path = "../common/grpc_helpers" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types", features = ["testing"] }
+vm_runtime = { path = "../language/vm/vm_runtime" }
 vm_genesis = { path = "../language/vm/vm_genesis" }
-config_builder = { path = "../config/config_builder" }
