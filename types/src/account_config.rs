@@ -55,6 +55,11 @@ pub fn association_address() -> AccountAddress {
         .expect("Parsing valid hex literal should always succeed")
 }
 
+pub fn transaction_fee_address() -> AccountAddress {
+    AccountAddress::from_hex_literal("0xFEE")
+        .expect("Parsing valid hex literal should always succeed")
+}
+
 pub fn validator_set_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0x1D8")
         .expect("Parsing valid hex literal should always succeed")
