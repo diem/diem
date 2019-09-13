@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 futures = { version = "0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
-grpcio = "0.4.4"
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 protobuf = "~2.7"
 
 canonical_serialization = { path = "../../common/canonical_serialization" }
