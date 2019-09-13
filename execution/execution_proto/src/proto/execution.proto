@@ -22,10 +22,6 @@ service Execution {
 
   // Commit a previously executed block that has been agreed by consensus.
   rpc CommitBlock(CommitBlockRequest) returns (CommitBlockResponse) {}
-
-  // Execute and commit a list of signed transactions received from peer
-  // during synchronization. Return the id of the block
-  rpc ExecuteChunk(ExecuteChunkRequest) returns (ExecuteChunkResponse) {}
 }
 
 message ExecuteBlockRequest {
@@ -77,16 +73,3 @@ enum CommitBlockStatus {
   // Something went wrong.
   FAILED = 1;
 }
-
-// Ask Execution service to execute and commit a chunk of contiguous
-// transactions. All the transactions in this chunk should belong to the same
-// epoch E. If the caller has a list of transactions that span two epochs, it
-// should split the transactions.
-message ExecuteChunkRequest {
-  types.TransactionListWithProof txn_list_with_proof = 1;
-  types.LedgerInfoWithSignatures ledger_info_with_sigs = 2;
-}
-
-// Either all transactions are successfully executed and persisted, or nothing
-// happens.
-message ExecuteChunkResponse {}

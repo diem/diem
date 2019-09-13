@@ -1052,6 +1052,14 @@ impl TransactionListWithProof {
         verify_transaction_list(ledger_info, self)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.transaction_and_infos.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.transaction_and_infos.len()
+    }
+
     fn display_option_version(version: Option<Version>) -> String {
         match version {
             Some(v) => format!("{}", v),

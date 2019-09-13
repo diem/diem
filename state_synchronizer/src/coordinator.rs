@@ -8,7 +8,6 @@ use crate::{
     LedgerInfo, PeerId,
 };
 use config::config::StateSyncConfig;
-use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -28,9 +27,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::timer::Interval;
-use types::{
-    crypto_proxies::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof,
-};
+use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
 /// message used by StateSyncClient for communication with Coordinator
 pub enum CoordinatorMessage {
@@ -202,7 +199,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // there might be still empty blocks between committed state and requested
         if requested_version <= self.known_version {
             debug!("[state sync] sync contains only empty blocks");
-            self.store_transactions(target.clone(), TransactionListWithProof::new())
+            self.store_transactions(TransactionListWithProof::new_empty(), target.clone())
                 .await
                 .expect("[state sync] failed to execute empty blocks");
             if callback.send(true).is_err() {
@@ -329,14 +326,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer_id: &PeerId,
         mut response: GetChunkResponse,
     ) -> Result<()> {
-        let txn_list_with_proof = response.take_txn_list_with_proof();
+        let txn_list_with_proof =
+            TransactionListWithProof::from_proto(response.take_txn_list_with_proof())?;
 
-        if let Some(version) = txn_list_with_proof
-            .first_transaction_version
-            .clone()
-            .map(|x| x.get_value())
-            .into_option()
-        {
+        if let Some(version) = txn_list_with_proof.first_transaction_version {
             let has_requested = self.peer_manager.has_requested(version, *peer_id);
             // node has received a response from peer, so remove peer entry from requests map
             self.peer_manager.process_response(version, *peer_id);
@@ -357,7 +350,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         let previous_version = self.known_version;
-        let chunk_size = txn_list_with_proof.get_transactions().len();
+        let chunk_size = txn_list_with_proof.len();
 
         let result = self
             .validate_and_store_chunk(txn_list_with_proof, response)
@@ -384,7 +377,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         mut response: GetChunkResponse,
     ) -> Result<()> {
         // optimistically fetch next chunk
-        let chunk_size = txn_list_with_proof.get_transactions().len() as u64;
+        let chunk_size = txn_list_with_proof.len() as u64;
         self.request_next_chunk(chunk_size).await;
         debug!(
             "[state sync] process chunk response. chunk_size: {}",
@@ -394,7 +387,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let target = LedgerInfo::from_proto(response.take_ledger_info_with_sigs())?;
         self.executor_proxy.validate_ledger_info(&target)?;
 
-        self.store_transactions(target, txn_list_with_proof).await?;
+        self.store_transactions(txn_list_with_proof, target).await?;
 
         counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
 
@@ -460,13 +453,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     async fn store_transactions(
         &self,
-        ledger_info: LedgerInfoWithSignatures,
         txn_list_with_proof: TransactionListWithProof,
-    ) -> Result<ExecuteChunkResponse> {
-        let mut req = ExecuteChunkRequest::new();
-        req.set_txn_list_with_proof(txn_list_with_proof);
-        req.set_ledger_info_with_sigs(ledger_info.into_proto());
-        self.executor_proxy.execute_chunk(req).await
+        ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<()> {
+        self.executor_proxy
+            .execute_chunk(txn_list_with_proof, ledger_info)
+            .await
     }
 
     async fn check_subscriptions(&mut self) -> Result<()> {

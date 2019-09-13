@@ -4,7 +4,7 @@
 use crate::{
     block_tree::{Block, BlockTree},
     transaction_block::{ProcessedVMOutput, TransactionBlock, TransactionData},
-    Command, ExecutedTrees, OP_COUNTERS,
+    Command, ExecutedState, ExecutedTrees, StateComputeResult, OP_COUNTERS,
 };
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
@@ -12,7 +12,6 @@ use crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
-use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkResponse};
 use failure::prelude::*;
 use futures::channel::oneshot;
 use logger::prelude::*;
@@ -258,7 +257,7 @@ where
                         e
                     });
                 resp_sender
-                    .send(res.map(|_| ExecuteChunkResponse {}))
+                    .send(res)
                     .expect("Failed to send execute chunk response.");
             }
         }
@@ -549,7 +548,7 @@ where
         // in-memory state.
         self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
         self.committed_trees = last_block.executed_trees().clone();
-        last_block.send_commit_block_response(Ok(CommitBlockResponse::Succeeded));
+        last_block.send_commit_block_response();
 
         let num_saved = block_batch.len();
         for _i in 0..num_saved {
@@ -635,9 +634,15 @@ where
                 // consensus.
                 // TODO: The VM will support a special transaction to set the validators for the
                 // next epoch that is part of a block execution.
-                let execute_block_response =
-                    ExecuteBlockResponse::new(accu_root_hash, status, version, None);
-                block_to_execute.set_execute_block_response(execute_block_response);
+                let state_compute_result = StateComputeResult {
+                    executed_state: ExecutedState {
+                        state_id: accu_root_hash,
+                        version,
+                        validators: None,
+                    },
+                    compute_status: status,
+                };
+                block_to_execute.set_execute_block_response(state_compute_result);
             }
             Err(err) => {
                 block_to_execute.send_execute_block_response(Err(format_err!(

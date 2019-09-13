@@ -12,11 +12,11 @@ use crate::{
         },
     },
     counters,
-    state_replication::StateComputeResult,
     util::time_service::duration_since_epoch,
 };
 use canonical_serialization::CanonicalSerialize;
 use crypto::{hash::CryptoHash, HashValue};
+use executor::StateComputeResult;
 use logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;

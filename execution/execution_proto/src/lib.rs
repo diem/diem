@@ -13,7 +13,7 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
+    transaction::{SignedTransaction, TransactionStatus, Version},
     validator_set::ValidatorSet,
     vm_error::VMStatus,
 };
@@ -184,16 +184,3 @@ impl IntoProto for CommitBlockResponse {
         out
     }
 }
-
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::execution::ExecuteChunkRequest)]
-pub struct ExecuteChunkRequest {
-    pub txn_list_with_proof: TransactionListWithProof,
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::execution::ExecuteChunkResponse)]
-pub struct ExecuteChunkResponse {}

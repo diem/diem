@@ -30,7 +30,8 @@ canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
-execution_proto = { path = "../execution/execution_proto" }
+debug_interface = { path = "../common/debug_interface" }
+executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
@@ -42,7 +43,7 @@ schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
 tools = { path = "../common/tools" }
 types = { path = "../types" }
-debug_interface = { path = "../common/debug_interface" }
+vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dependencies.prometheus]
 version  = "0.7.0"
@@ -58,7 +59,6 @@ parity-multiaddr = "0.5.0"
 rusty-fork = "0.2.2"
 
 config_builder = { path = "../config/config_builder" }
-execution_service = { path = "../execution/execution_service" }
 storage_service = { path = "../storage/storage_service" }
 crypto = { path = "../crypto/crypto", features = ["testing"]}
 types = { path = "../types", features = ["testing"]}

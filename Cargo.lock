@@ -690,8 +690,7 @@ dependencies = [
  "config_builder 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
- "execution_proto 0.1.0",
- "execution_service 0.1.0",
+ "executor 0.1.0",
  "failure_ext 0.1.0",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -723,6 +722,7 @@ dependencies = [
  "tools 0.1.0",
  "types 0.1.0",
  "vm_genesis 0.1.0",
+ "vm_runtime 0.1.0",
  "vm_validator 0.1.0",
 ]
 
@@ -1277,18 +1277,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "execution_client"
-version = "0.1.0"
-dependencies = [
- "crypto 0.1.0",
- "execution_proto 0.1.0",
- "failure_ext 0.1.0",
- "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proto_conv 0.1.0",
- "types 0.1.0",
-]
-
-[[package]]
 name = "execution_proto"
 version = "0.1.0"
 dependencies = [
@@ -1306,50 +1294,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "execution_service"
-version = "0.1.0"
-dependencies = [
- "config 0.1.0",
- "execution_proto 0.1.0",
- "executor 0.1.0",
- "failure_ext 0.1.0",
- "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures01 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
- "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proto_conv 0.1.0",
- "storage_client 0.1.0",
- "types 0.1.0",
- "vm_runtime 0.1.0",
-]
-
-[[package]]
-name = "execution_tests"
-version = "0.1.0"
-dependencies = [
- "config 0.1.0",
- "config_builder 0.1.0",
- "crypto 0.1.0",
- "execution_client 0.1.0",
- "execution_proto 0.1.0",
- "execution_service 0.1.0",
- "failure_ext 0.1.0",
- "futures01 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
- "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proto_conv 0.1.0",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage_client 0.1.0",
- "storage_service 0.1.0",
- "types 0.1.0",
- "vm_genesis 0.1.0",
-]
-
-[[package]]
 name = "executor"
 version = "0.1.0"
 dependencies = [
  "backoff 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "canonical_serialization 0.1.0",
  "config 0.1.0",
  "crypto 0.1.0",
  "execution_proto 0.1.0",
@@ -1364,6 +1313,7 @@ dependencies = [
  "proto_conv 0.1.0",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
+ "serde 1.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
  "storage_client 0.1.0",
  "storage_proto 0.1.0",
@@ -1588,14 +1538,6 @@ dependencies = [
  "rand 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slab 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "futures01"
-version = "0.1.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2131,8 +2073,7 @@ dependencies = [
  "crypto 0.1.0",
  "debug_interface 0.1.0",
  "executable_helpers 0.1.0",
- "execution_proto 0.1.0",
- "execution_service 0.1.0",
+ "executor 0.1.0",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
  "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2150,6 +2091,7 @@ dependencies = [
  "storage_service 0.1.0",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
+ "vm_runtime 0.1.0",
  "vm_validator 0.1.0",
 ]
 
@@ -4156,7 +4098,7 @@ dependencies = [
  "config 0.1.0",
  "config_builder 0.1.0",
  "crypto 0.1.0",
- "execution_proto 0.1.0",
+ "executor 0.1.0",
  "failure_ext 0.1.0",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
@@ -4173,6 +4115,7 @@ dependencies = [
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm_genesis 0.1.0",
+ "vm_runtime 0.1.0",
 ]
 
 [[package]]
@@ -5112,8 +5055,7 @@ dependencies = [
  "config 0.1.0",
  "config_builder 0.1.0",
  "crypto 0.1.0",
- "execution_proto 0.1.0",
- "execution_service 0.1.0",
+ "executor 0.1.0",
  "failure_ext 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
@@ -5440,7 +5382,6 @@ dependencies = [
 "checksum futures-select-macro-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "469d86239defe297ebcaf385ac5e999a77147f2f20eaf2a3aee7bff9e58e20a9"
 "checksum futures-sink-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "4309a25a1069a1f3c10647b227b9afe6722b67a030d3f00a9cbdc171fc038de4"
 "checksum futures-util-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "af8198c48b222f02326940ce2b3aa9e6e91a32886eeaad7ca3b8e4c70daa3f4e"
-"checksum futures01 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)" = "7ef8cbbf52909170053540c6c05a62433ddb60662dabee714e2a882caa864f22"
 "checksum gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)" = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 "checksum generic-array 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
 "checksum generic-array 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ef25c5683767570c2bbd7deba372926a55eaae9982d7726ee2a1050239d45b9d"

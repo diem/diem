@@ -1,10 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    counters,
-    state_replication::{StateComputeResult, TxnManager},
-};
+use crate::{counters, state_replication::TxnManager};
+use executor::StateComputeResult;
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use logger::prelude::*;
@@ -16,7 +14,7 @@ use mempool::proto::{
 };
 use proto_conv::FromProto;
 use std::{pin::Pin, sync::Arc};
-use types::transaction::SignedTransaction;
+use types::transaction::{SignedTransaction, TransactionStatus};
 
 /// Proxy interface to mempool
 pub struct MempoolProxy {
@@ -38,17 +36,20 @@ impl MempoolProxy {
     ) -> CommitTransactionsRequest {
         let mut all_updates = Vec::new();
         assert_eq!(txns.len(), compute_result.compute_status.len());
-        for (txn, success) in txns.iter().zip(compute_result.compute_status.iter()) {
+        for (txn, status) in txns.iter().zip(compute_result.compute_status.iter()) {
             let mut transaction = CommittedTransaction::new();
             transaction.set_sender(txn.sender().as_ref().to_vec());
             transaction.set_sequence_number(txn.sequence_number());
-            if *success {
-                counters::SUCCESS_TXNS_COUNT.inc();
-                transaction.set_is_rejected(false);
-            } else {
-                counters::FAILED_TXNS_COUNT.inc();
-                transaction.set_is_rejected(true);
-            }
+            match status {
+                TransactionStatus::Keep(_) => {
+                    counters::SUCCESS_TXNS_COUNT.inc();
+                    transaction.set_is_rejected(false);
+                }
+                TransactionStatus::Discard(_) => {
+                    counters::FAILED_TXNS_COUNT.inc();
+                    transaction.set_is_rejected(true);
+                }
+            };
             all_updates.push(transaction);
         }
         let mut req = CommitTransactionsRequest::new();

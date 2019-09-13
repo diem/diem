@@ -3,8 +3,11 @@
 
 use crate::{
     chained_bft::{
-        chained_bft_smr::ChainedBftSMR, network::ConsensusNetworkImpl,
-        persistent_storage::PersistentStorage,
+        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
+        common::Author,
+        epoch_manager::EpochManager,
+        network::ConsensusNetworkImpl,
+        persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
     counters,
@@ -12,17 +15,12 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-
-use crate::chained_bft::{
-    chained_bft_smr::ChainedBftSMRConfig, common::Author, epoch_manager::EpochManager,
-    persistent_storage::StorageWriteProxy,
-};
 use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
-use execution_proto::proto::execution_grpc::ExecutionClient;
+use executor::Executor;
 use failure::prelude::*;
 use logger::prelude::*;
 use mempool::proto::mempool_grpc::MempoolClient;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
@@ -31,6 +29,7 @@ use types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     transaction::SignedTransaction,
 };
+use vm_runtime::MoveVM;
 
 struct InitialSetup {
     author: Author,
@@ -42,7 +41,7 @@ struct InitialSetup {
 pub struct ChainedBftProvider {
     smr: ChainedBftSMR<Vec<SignedTransaction>>,
     mempool_client: Arc<MempoolClient>,
-    execution_client: Arc<ExecutionClient>,
+    executor: Arc<Executor<MoveVM>>,
     synchronizer_client: Arc<StateSyncClient>,
 }
 
@@ -52,7 +51,7 @@ impl ChainedBftProvider {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
-        execution_client: Arc<ExecutionClient>,
+        executor: Arc<Executor<MoveVM>>,
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()
@@ -99,7 +98,7 @@ impl ChainedBftProvider {
         Self {
             smr,
             mempool_client,
-            execution_client,
+            executor,
             synchronizer_client,
         }
     }
@@ -150,7 +149,7 @@ impl ConsensusProvider for ChainedBftProvider {
     fn start(&mut self) -> Result<()> {
         let txn_manager = Arc::new(MempoolProxy::new(self.mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(
-            self.execution_client.clone(),
+            Arc::clone(&self.executor),
             self.synchronizer_client.clone(),
         ));
         debug!("Starting consensus provider.");

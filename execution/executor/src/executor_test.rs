@@ -88,12 +88,17 @@ fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
     };
     let id = gen_block_id(txn_index + 1);
 
-    let response = block_on(executor.execute_block(vec![txn], parent_block_id, id))
+    let state_compute_result = block_on(executor.execute_block(vec![txn], parent_block_id, id))
         .unwrap()
         .unwrap();
-    assert_eq!(response.version(), txn_index + 1);
+    assert_eq!(state_compute_result.version(), txn_index + 1);
 
-    let ledger_info = gen_ledger_info(txn_index + 1, response.root_hash(), id, txn_index + 1);
+    let ledger_info = gen_ledger_info(
+        txn_index + 1,
+        state_compute_result.root_hash(),
+        id,
+        txn_index + 1,
+    );
     block_on(executor.commit_block(ledger_info))
         .unwrap()
         .unwrap();
@@ -193,7 +198,7 @@ fn test_executor_status() {
             KEEP_STATUS.clone(),
             DISCARD_STATUS.clone()
         ],
-        response.status()
+        *response.status()
     );
 }
 
@@ -214,7 +219,7 @@ fn test_executor_one_block() {
 
     let ledger_info = gen_ledger_info(version, execute_block_response.root_hash(), block_id, 1);
     let commit_block_future = executor.commit_block(ledger_info);
-    let _commit_block_response = block_on(commit_block_future).unwrap().unwrap();
+    block_on(commit_block_future).unwrap().unwrap();
 }
 
 #[test]

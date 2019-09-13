@@ -9,8 +9,7 @@ use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
-use execution_proto::proto::execution_grpc;
-use execution_service::ExecutionService;
+use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
@@ -39,6 +38,7 @@ use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceC
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use types::account_address::AccountAddress as PeerId;
+use vm_runtime::MoveVM;
 use vm_validator::vm_validator::VMValidator;
 
 pub struct LibraHandle {
@@ -47,7 +47,6 @@ pub struct LibraHandle {
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
-    _execution: ServerHandle,
     _storage: ServerHandle,
     _debug: ServerHandle,
 }
@@ -109,7 +108,7 @@ fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
     (server, client)
 }
 
-fn setup_executor(config: &NodeConfig) -> ::grpcio::Server {
+fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
     let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-exe-sto-").build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::clone(&client_env),
@@ -123,13 +122,11 @@ fn setup_executor(config: &NodeConfig) -> ::grpcio::Server {
         config.storage.grpc_max_receive_len,
     ));
 
-    let handle = ExecutionService::new(storage_read_client, storage_write_client, config);
-    let service = execution_grpc::create_execution(handle);
-    ::grpcio::ServerBuilder::new(Arc::new(EnvBuilder::new().name_prefix("grpc-exe-").build()))
-        .register_service(service)
-        .bind(config.execution.address.clone(), config.execution.port)
-        .build()
-        .expect("Unable to create grpc server")
+    Arc::new(Executor::new(
+        Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
+        storage_write_client,
+        config,
+    ))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
@@ -243,11 +240,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     );
 
     instant = Instant::now();
-    let execution = ServerHandle::setup(setup_executor(&node_config));
-    debug!(
-        "Execution service started in {} ms",
-        instant.elapsed().as_millis()
-    );
+    let executor = setup_executor(&node_config);
+    debug!("Executor setup in {} ms", instant.elapsed().as_millis());
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
     let mut validator_network_provider = None;
@@ -288,8 +282,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     let metric_host = node_config.debug_interface.address.clone();
     thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
 
-    let state_synchronizer = StateSynchronizer::bootstrap(state_sync_network_handles, &node_config);
-
+    let state_synchronizer = StateSynchronizer::bootstrap(
+        state_sync_network_handles,
+        Arc::clone(&executor),
+        &node_config,
+    );
     let mut mempool = None;
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
@@ -330,6 +327,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             node_config,
             consensus_network_sender,
             consensus_network_events,
+            executor,
             state_synchronizer.create_client(),
         );
         consensus_provider
@@ -351,7 +349,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         consensus,
-        _execution: execution,
         _storage: storage,
         _debug: debug_if,
     };

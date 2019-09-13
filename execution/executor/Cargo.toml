@@ -12,7 +12,9 @@ futures = { version = "=0.3.0-alpha.17", package = "futures-preview" }
 itertools = { version = "0.8.0", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
 rusty-fork = { version = "0.2.2", default-features = false }
+serde = { version = "1.0.99", default-features = false }
 
+canonical_serialization = { path = "../../common/canonical_serialization" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 execution_proto = { path = "../execution_proto" }

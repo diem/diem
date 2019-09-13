@@ -14,7 +14,7 @@ rand = "0.6.5"
 tokio = { version = "0.1.22", default-features = false }
 
 config = { path = "../config" }
-execution_proto = { path = "../execution/execution_proto" }
+executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
@@ -24,6 +24,7 @@ crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
+vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dependencies.prometheus]
 version  = "0.7.0"

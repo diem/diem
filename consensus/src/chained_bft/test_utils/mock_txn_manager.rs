@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::{StateComputeResult, TxnManager};
+use crate::state_replication::TxnManager;
+use executor::StateComputeResult;
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt, SinkExt};
 use std::{

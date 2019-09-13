@@ -5,8 +5,7 @@ use crate::vm_validator::{TransactionValidation, VMValidator};
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::ed25519::*;
-use execution_proto::proto::execution_grpc;
-use execution_service::ExecutionService;
+use executor::Executor;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
@@ -24,10 +23,10 @@ use types::{
     vm_error::StatusCode,
 };
 use vm_genesis::encode_transfer_script;
+use vm_runtime::MoveVM;
 
 struct TestValidator {
     _storage: ServerHandle,
-    _execution: grpcio::Server,
     vm_validator: VMValidator,
 }
 
@@ -49,23 +48,18 @@ impl TestValidator {
             None,
         ));
 
-        let handle = ExecutionService::new(
-            Arc::clone(&storage_read_client),
+        // Create executor to initialize genesis state. Otherwise gprc will report error when
+        // fetching data from storage.
+        let _executor = Executor::<MoveVM>::new(
+            Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
             storage_write_client,
             config,
         );
-        let service = execution_grpc::create_execution(handle);
-        let execution = ::grpcio::ServerBuilder::new(Arc::new(EnvBuilder::new().build()))
-            .register_service(service)
-            .bind(config.execution.address.clone(), config.execution.port)
-            .build()
-            .expect("Unable to create grpc server");
 
         let vm_validator = VMValidator::new(config, storage_read_client);
 
         TestValidator {
             _storage: storage,
-            _execution: execution,
             vm_validator,
         }
     }
