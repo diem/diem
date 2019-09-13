@@ -16,7 +16,7 @@ use std::{
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PeerInfo {
     is_alive: bool,
     is_upstream: bool,
@@ -45,6 +45,7 @@ pub struct PeerManager {
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
     // Latest requested block versions from a peer
     requests: HashMap<u64, (PeerId, SystemTime)>,
+    weighted_index: Option<WeightedIndex<f64>>,
 }
 
 impl PeerManager {
@@ -57,6 +58,7 @@ impl PeerManager {
             peers,
             network_senders: HashMap::new(),
             requests: HashMap::new(),
+            weighted_index: None,
         }
     }
 
@@ -71,6 +73,7 @@ impl PeerManager {
                     .insert(*peer_id, PeerInfo::new(false, true, MAX_SCORE));
             }
         }
+        self.compute_weighted_index();
         debug!("[state sync] (set_peers) state: {:?}", self.peers);
     }
 
@@ -83,6 +86,7 @@ impl PeerManager {
             self.peers
                 .insert(peer_id, PeerInfo::new(true, false, MAX_SCORE));
         }
+        self.compute_weighted_index();
         debug!("[state sync] state after: {:?}", self.peers);
     }
 
@@ -91,6 +95,7 @@ impl PeerManager {
         if let Some(peer_info) = self.peers.get_mut(peer_id) {
             peer_info.is_alive = false;
         };
+        self.compute_weighted_index();
     }
 
     pub fn is_empty(&self) -> bool {
@@ -99,6 +104,7 @@ impl PeerManager {
 
     pub fn update_score(&mut self, peer_id: &PeerId, update_type: PeerScoreUpdateType) {
         if let Some(peer_info) = self.peers.get_mut(peer_id) {
+            let old_score = peer_info.score;
             match update_type {
                 PeerScoreUpdateType::Success => {
                     let new_score = peer_info.score + 1.0;
@@ -113,33 +119,46 @@ impl PeerManager {
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
             }
+            if (old_score - peer_info.score).abs() > std::f64::EPSILON {
+                self.compute_weighted_index();
+            }
         }
     }
 
-    pub fn pick_peer(&mut self) -> Option<(PeerId, StateSynchronizerSender)> {
+    fn compute_weighted_index(&mut self) {
         let active_peers = self.get_active_upstream_peers();
-        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
-
         if !active_peers.is_empty() {
             let weights: Vec<_> = active_peers
                 .iter()
                 .map(|(_, peer_info)| peer_info.score)
                 .collect();
-
-            if let Ok(weighted_index) = WeightedIndex::new(&weights) {
-                let mut rng = thread_rng();
-                let peer_id = *active_peers[weighted_index.sample(&mut rng)].0;
-
-                match self.get_network_sender(&peer_id) {
-                    Some(sender) => {
-                        return Some((peer_id, sender));
-                    }
-                    None => {
-                        debug!("[state sync] (pick_peer) no sender for {}", peer_id);
-                    }
+            match WeightedIndex::new(&weights) {
+                Ok(weighted_index) => {
+                    self.weighted_index = Some(weighted_index);
                 }
-            } else {
-                error!("[state sync] (pick_peer) invalid weighted index distribution");
+                Err(e) => {
+                    error!(
+                        "[state sync] (pick_peer) failed to compute weighted index, {:?}",
+                        e
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn pick_peer(&self) -> Option<(PeerId, StateSynchronizerSender)> {
+        let active_peers = self.get_active_upstream_peers();
+        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
+
+        if let Some(weighted_index) = &self.weighted_index {
+            let mut rng = thread_rng();
+            if let Some(peer) = active_peers.get(weighted_index.sample(&mut rng)) {
+                let peer_id = *peer.0;
+                if let Some(sender) = self.get_network_sender(&peer_id) {
+                    return Some((peer_id, sender));
+                } else {
+                    debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                }
             }
         }
         None
