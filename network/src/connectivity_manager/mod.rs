@@ -396,7 +396,7 @@ fn log_dial_result(peer_id: PeerId, addr: Multiaddr, dial_result: DialResult) {
             }
             e => {
                 info!(
-                    "Failed to connect to peer: {} at address: {}. Error: {:?}",
+                    "Failed to connect to peer: {} at address: {}; error: {}",
                     peer_id.short_str(),
                     addr,
                     e
