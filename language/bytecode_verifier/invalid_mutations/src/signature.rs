@@ -6,7 +6,7 @@ use proptest::{
     sample::{select, Index as PropIndex},
 };
 use proptest_helpers::{pick_slice_idxs, RepeatVec};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, iter};
 use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     errors::append_err_info,
@@ -91,7 +91,30 @@ impl<'a> ApplySignatureDoubleRefContext<'a> {
                 double_ref.kind.outer,
                 double_ref.kind.inner
             );
-            errs.push(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN).with_message(msg));
+            // If a locals signature is used by more than one functions and contains an error, it
+            // should be reported multiple times. The following code emulates this behavior to match
+            // the new implementation of the signature checker.
+            // TODO: Revisit this and see if it's still required once we rework prop tests.
+            match sig_idx {
+                SignatureIndex::Locals(idx) => {
+                    let n_references = self
+                        .module
+                        .function_defs
+                        .iter()
+                        .filter(|def| !def.is_native() && def.code.locals.0 as usize == *idx)
+                        .count();
+                    errs.extend(
+                        iter::repeat_with(|| {
+                            VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN)
+                                .with_message(msg.clone())
+                        })
+                        .take(n_references),
+                    );
+                }
+                _ => {
+                    errs.push(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN).with_message(msg));
+                }
+            }
         }
 
         errs
@@ -178,8 +201,7 @@ impl<'a> ApplySignatureFieldRefContext<'a> {
             *token = new_token;
 
             let msg = format!("with token {:#?} of kind {}", token.clone(), token_kind);
-            let violation =
-                VMStatus::new(StatusCode::INVALID_FIELD_DEF_REFERENCE).with_message(msg);
+            let violation = VMStatus::new(StatusCode::INVALID_FIELD_DEF).with_message(msg);
             errs.extend(field_def_idxs.iter().map(|field_def_idx| {
                 append_err_info(
                     violation.clone(),

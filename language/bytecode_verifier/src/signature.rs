@@ -8,139 +8,308 @@ use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::append_err_info,
-    file_format::{CompiledModule, SignatureToken},
-    views::{
-        FieldDefinitionView, FunctionSignatureView, LocalsSignatureView, ModuleView,
-        TypeSignatureView, ViewInternals,
+    file_format::{
+        Bytecode, CompiledModule, Kind, SignatureToken, StructFieldInformation, StructHandle,
+        TypeSignature,
     },
-    IndexKind, SignatureTokenKind,
+    IndexKind,
 };
 
 pub struct SignatureChecker<'a> {
-    module_view: ModuleView<'a, CompiledModule>,
+    module: &'a CompiledModule,
 }
 
 impl<'a> SignatureChecker<'a> {
     pub fn new(module: &'a CompiledModule) -> Self {
-        Self {
-            module_view: ModuleView::new(module),
-        }
+        Self { module }
     }
 
     pub fn verify(self) -> Vec<VMStatus> {
-        let mut errors: Vec<Vec<_>> = vec![];
-
-        errors.push(Self::verify_impl(
-            IndexKind::TypeSignature,
-            self.module_view.type_signatures(),
-        ));
-        errors.push(Self::verify_impl(
-            IndexKind::FunctionSignature,
-            self.module_view.function_signatures(),
-        ));
-        errors.push(Self::verify_impl(
-            IndexKind::LocalsSignature,
-            self.module_view.locals_signatures(),
-        ));
-
-        let signature_ref_errors = self
-            .module_view
-            .fields()
-            .enumerate()
-            .filter_map(move |(idx, view)| {
-                check_signature_refs(&view)
-                    .map(move |err| append_err_info(err, IndexKind::FieldDefinition, idx))
-            })
-            .collect();
-        errors.push(signature_ref_errors);
-
-        errors.into_iter().flatten().collect()
-    }
-
-    #[inline]
-    fn verify_impl(
-        kind: IndexKind,
-        views: impl Iterator<Item = impl SignatureCheck>,
-    ) -> Vec<VMStatus> {
-        views
-            .enumerate()
-            .flat_map(move |(idx, view)| {
-                view.check_signatures()
-                    .into_iter()
-                    .map(move |err| append_err_info(err, kind, idx))
-            })
+        self.verify_function_signatures()
+            .chain(self.verify_fields())
+            .chain(self.verify_code_units())
+            .chain(self.legacy_verify_type_signatures())
             .collect()
     }
-}
 
-trait SignatureCheck {
-    fn check_signatures(&self) -> Vec<VMStatus>;
-}
+    /// This is a hack to satisfy the existing prop tests.
+    /// TODO: Remove it once we rework prop tests.
+    fn legacy_verify_type_signatures(&self) -> impl Iterator<Item = VMStatus> + '_ {
+        use SignatureToken::*;
 
-impl<'a, T: ModuleAccess> SignatureCheck for FunctionSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStatus> {
-        self.return_tokens()
-            .filter_map(|token| check_structure(token.as_inner()))
-            .chain(
-                self.arg_tokens()
-                    .filter_map(|token| check_structure(token.as_inner())),
+        self.module
+            .type_signatures()
+            .iter()
+            .filter_map(|TypeSignature(ty)| match ty {
+                Reference(inner) | MutableReference(inner) => match **inner {
+                    Reference(_) | MutableReference(_) => {
+                        Some(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN))
+                    }
+                    _ => None,
+                },
+                _ => None,
+            })
+    }
+
+    fn verify_function_signatures(&self) -> impl Iterator<Item = VMStatus> + '_ {
+        self.module
+            .function_signatures()
+            .iter()
+            .enumerate()
+            .map(move |(idx, sig)| {
+                let context = (self.module.struct_handles(), sig.type_formals.as_slice());
+                let errors_return_types = sig
+                    .return_types
+                    .iter()
+                    .map(move |ty| {
+                        check_signature(context, ty)
+                            .into_iter()
+                            .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
+                    })
+                    .flatten();
+                let errors_arg_types = sig
+                    .arg_types
+                    .iter()
+                    .map(move |ty| {
+                        check_signature(context, ty)
+                            .into_iter()
+                            .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
+                    })
+                    .flatten();
+                errors_return_types.chain(errors_arg_types)
+            })
+            .flatten()
+    }
+
+    fn verify_fields(&self) -> impl Iterator<Item = VMStatus> + '_ {
+        self.module
+            .struct_defs()
+            .iter()
+            .enumerate()
+            .filter_map(
+                move |(struct_def_idx, struct_def)| match struct_def.field_information {
+                    StructFieldInformation::Native => None,
+                    StructFieldInformation::Declared {
+                        field_count,
+                        fields,
+                    } => {
+                        let struct_handle = self.module.struct_handle_at(struct_def.struct_handle);
+                        let start = fields.0 as usize;
+                        let end = start + (field_count as usize);
+                        let context = (
+                            self.module.struct_handles(),
+                            struct_handle.type_formals.as_slice(),
+                        );
+
+                        let errors = self.module.field_defs()[start..end]
+                            .iter()
+                            .enumerate()
+                            .map(move |(field_def_idx, field_def)| {
+                                let ty = self.module.type_signature_at(field_def.signature);
+
+                                check_signature_no_refs(context, &ty.0).into_iter().map(
+                                    move |err| {
+                                        append_err_info(
+                                            append_err_info(
+                                                append_err_info(
+                                                    VMStatus::new(StatusCode::INVALID_FIELD_DEF)
+                                                        .append(err),
+                                                    IndexKind::TypeSignature,
+                                                    field_def.signature.0 as usize,
+                                                ),
+                                                IndexKind::FieldDefinition,
+                                                field_def_idx,
+                                            ),
+                                            IndexKind::StructDefinition,
+                                            struct_def_idx,
+                                        )
+                                    },
+                                )
+                            })
+                            .flatten();
+                        Some(errors)
+                    }
+                },
             )
-            .collect()
+            .flatten()
+    }
+
+    fn verify_code_units(&self) -> impl Iterator<Item = VMStatus> + '_ {
+        use Bytecode::*;
+
+        self.module
+            .function_defs()
+            .iter()
+            .enumerate()
+            .filter_map(move |(func_def_idx, func_def)| {
+                // Nothing to check for native functions so skipping.
+                if func_def.is_native() {
+                    return None;
+                }
+
+                // Check if the types of the locals are well defined.
+                let func_handle = self.module.function_handle_at(func_def.function);
+                let func_sig = self.module.function_signature_at(func_handle.signature);
+                let context = (
+                    self.module.struct_handles(),
+                    func_sig.type_formals.as_slice(),
+                );
+                let locals_idx = func_def.code.locals;
+                let locals = &self.module.locals_signature_at(locals_idx).0;
+                let errors_locals = locals
+                    .iter()
+                    .map(move |ty| {
+                        check_signature(context, ty).into_iter().map(move |err| {
+                            append_err_info(
+                                append_err_info(
+                                    err,
+                                    IndexKind::LocalsSignature,
+                                    locals_idx.0 as usize,
+                                ),
+                                IndexKind::FunctionDefinition,
+                                func_def_idx,
+                            )
+                        })
+                    })
+                    .flatten();
+
+                // Check if the type actuals in certain bytecode instructions are well defined.
+                let errors_bytecodes = func_def
+                    .code
+                    .code
+                    .iter()
+                    .enumerate()
+                    .map(move |(offset, instr)| {
+                        let errors = match instr {
+                            Call(idx, type_actuals_idx) => {
+                                let func_handle = self.module.function_handle_at(*idx);
+                                let func_sig =
+                                    self.module.function_signature_at(func_handle.signature);
+                                let type_actuals =
+                                    &self.module.locals_signature_at(*type_actuals_idx).0;
+                                check_generic_instance(
+                                    context,
+                                    &func_sig.type_formals,
+                                    type_actuals,
+                                )
+                            }
+                            Pack(idx, type_actuals_idx)
+                            | Unpack(idx, type_actuals_idx)
+                            | Exists(idx, type_actuals_idx)
+                            | MoveFrom(idx, type_actuals_idx)
+                            | MoveToSender(idx, type_actuals_idx)
+                            | ImmBorrowGlobal(idx, type_actuals_idx)
+                            | MutBorrowGlobal(idx, type_actuals_idx) => {
+                                let struct_def = self.module.struct_def_at(*idx);
+                                let struct_handle =
+                                    self.module.struct_handle_at(struct_def.struct_handle);
+                                let type_actuals =
+                                    &self.module.locals_signature_at(*type_actuals_idx).0;
+                                check_generic_instance(
+                                    context,
+                                    &struct_handle.type_formals,
+                                    type_actuals,
+                                )
+                            }
+                            _ => vec![],
+                        };
+                        errors.into_iter().map(move |err| {
+                            append_err_info(
+                                err.append_message_with_separator(
+                                    ' ',
+                                    format!("at offset {} ", offset),
+                                ),
+                                IndexKind::FunctionDefinition,
+                                func_def_idx,
+                            )
+                        })
+                    })
+                    .flatten();
+
+                Some(errors_locals.chain(errors_bytecodes))
+            })
+            .flatten()
     }
 }
 
-impl<'a, T: ModuleAccess> SignatureCheck for TypeSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStatus> {
-        check_structure(self.token().as_inner())
-            .into_iter()
-            .collect()
+// Checks if the given types are well defined and satisfy the given kind constraints in the given
+// context.
+fn check_generic_instance(
+    context: (&[StructHandle], &[Kind]),
+    constraints: &[Kind],
+    type_actuals: &[SignatureToken],
+) -> Vec<VMStatus> {
+    let mut errors: Vec<_> = type_actuals
+        .iter()
+        .map(|ty| check_signature_no_refs(context, ty))
+        .flatten()
+        .collect();
+
+    if constraints.len() != type_actuals.len() {
+        errors.push(
+            VMStatus::new(StatusCode::NUMBER_OF_TYPE_ACTUALS_MISMATCH).with_message(format!(
+                "expected {} type actuals got {}",
+                constraints.len(),
+                type_actuals.len()
+            )),
+        );
+        return errors;
     }
+
+    let kinds = type_actuals
+        .iter()
+        .map(|ty| SignatureToken::kind(context, ty));
+    errors.extend(
+        constraints
+            .iter()
+            .zip(kinds)
+            .zip(type_actuals.iter())
+            .filter_map(|((c, k), ty)| {
+                if k.is_sub_kind_of(*c) {
+                    return None;
+                }
+                Some(
+                    VMStatus::new(StatusCode::CONTRAINT_KIND_MISMATCH).with_message(format!(
+                        "expected kind {:?} got type actual {:?} with incompatible kind {:?}",
+                        c, ty, k
+                    )),
+                )
+            }),
+    );
+    errors
 }
 
-impl<'a, T: ModuleAccess> SignatureCheck for LocalsSignatureView<'a, T> {
-    fn check_signatures(&self) -> Vec<VMStatus> {
-        self.tokens()
-            .filter_map(|token| check_structure(token.as_inner()))
-            .collect()
-    }
-}
-
-/// Field definitions have additional constraints on signatures -- field signatures cannot be
-/// references or mutable references.
-pub(crate) fn check_signature_refs(
-    view: &FieldDefinitionView<'_, CompiledModule>,
-) -> Option<VMStatus> {
-    let type_signature = view.type_signature();
-    let token = type_signature.token();
-    let kind = token.signature_token_kind();
-    match kind {
-        SignatureTokenKind::Reference | SignatureTokenKind::MutableReference => {
-            Some(VMStatus::new(StatusCode::INVALID_FIELD_DEF_REFERENCE))
-        }
-        SignatureTokenKind::Value => None,
-    }
-}
-
-/// Check that this token is structurally correct.
-/// In particular, check that the token has a reference only at the top level.
-pub(crate) fn check_structure(token: &SignatureToken) -> Option<VMStatus> {
+/// Checks if the given type is well defined in the given context. No references are permitted.
+fn check_signature_no_refs(
+    context: (&[StructHandle], &[Kind]),
+    ty: &SignatureToken,
+) -> Vec<VMStatus> {
     use SignatureToken::*;
 
-    let inner_token_opt = match token {
-        Reference(token) => Some(token),
-        MutableReference(token) => Some(token),
-        Bool | U64 | String | ByteArray | Address | Struct(_, _) | TypeParameter(_) => None,
-    };
-    if let Some(inner_token) = inner_token_opt {
-        if inner_token.is_reference() {
-            let msg = format!(
-                "Invalid token {:#?} of kind {} with inner token {}",
-                token.clone(),
-                token.signature_token_kind(),
-                inner_token.signature_token_kind(),
-            );
-            return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN).with_message(msg));
+    let (struct_handles, _) = context;
+
+    match ty {
+        U64 | Bool | String | ByteArray | Address | TypeParameter(_) => vec![],
+        Reference(_) | MutableReference(_) => {
+            // TODO: Prop tests expect us to NOT check the inner types.
+            // Revisit this once we rework prop tests.
+            vec![VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN)
+                .with_message("reference not allowed".to_string())]
+        }
+        Struct(idx, type_actuals) => {
+            let sh = &struct_handles[idx.0 as usize];
+            check_generic_instance(context, &sh.type_formals, type_actuals)
         }
     }
-    None
+}
+
+/// Checks if the given type is well defined in the given context. References are only permitted
+/// at the top level.
+fn check_signature(context: (&[StructHandle], &[Kind]), ty: &SignatureToken) -> Vec<VMStatus> {
+    use SignatureToken::*;
+
+    match ty {
+        Reference(inner) | MutableReference(inner) => check_signature_no_refs(context, inner),
+        _ => check_signature_no_refs(context, ty),
+    }
 }

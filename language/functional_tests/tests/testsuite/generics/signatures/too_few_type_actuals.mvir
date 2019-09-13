@@ -1,0 +1,10 @@
+module M {
+    struct S<T> {}
+
+    foo() {
+        let x: Self.S<>;
+        return;
+    }
+}
+
+// check: NUMBER_OF_TYPE_ACTUALS_MISMATCH

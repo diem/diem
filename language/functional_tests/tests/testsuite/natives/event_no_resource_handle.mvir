@@ -1,5 +1,3 @@
-// FIXME: We haven't implemented the resource checker for generics. Come back and add verification error once that's
-// done.
 import 0x0.Event;
 import 0x0.LibraCoin;
 main() {
@@ -8,3 +6,7 @@ main() {
     Event.destroy<LibraCoin.T>(move(handle));
     return;
 }
+
+// check: CONTRAINT_KIND_MISMATCH
+// check: CONTRAINT_KIND_MISMATCH
+// check: CONTRAINT_KIND_MISMATCH

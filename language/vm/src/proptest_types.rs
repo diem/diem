@@ -6,9 +6,10 @@
 use crate::{
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FieldDefinitionIndex,
-        FunctionHandle, FunctionSignatureIndex, IdentifierIndex, Kind, MemberCount, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StructDefinition, StructFieldInformation, StructHandle,
-        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
+        FunctionHandle, FunctionSignatureIndex, IdentifierIndex, Kind, LocalsSignature,
+        MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken, StructDefinition,
+        StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
+        TypeSignatureIndex,
     },
     vm_string::VMString,
 };
@@ -243,7 +244,7 @@ impl CompiledModuleStrategyGen {
                     let struct_handles: Vec<_> = struct_handles
                         .into_iter()
                         .map(
-                            |(module_idx, name_idx, is_nominal_resource, type_formals)| {
+                            |(module_idx, name_idx, is_nominal_resource, _type_formals)| {
                                 StructHandle {
                                     module: ModuleHandleIndex::new(
                                         module_idx.index(module_handles_len) as TableIndex,
@@ -252,7 +253,9 @@ impl CompiledModuleStrategyGen {
                                         name_idx.index(identifiers_len) as TableIndex
                                     ),
                                     is_nominal_resource,
-                                    type_formals,
+                                    // TODO: re-enable type formals gen when we rework prop tests
+                                    // for generics
+                                    type_formals: vec![],
                                 }
                             },
                         )
@@ -310,7 +313,7 @@ impl CompiledModuleStrategyGen {
                         function_defs_len: function_defs.len(),
                         function_signatures,
                         // locals will be filled out by FunctionDefinitionGen::materialize
-                        locals_signatures: vec![],
+                        locals_signatures: vec![LocalsSignature(vec![])],
                         function_handles,
                     };
 
@@ -429,10 +432,11 @@ impl StructDefinitionGen {
             option::of(vec(FieldDefinitionGen::strategy(), member_count)),
         )
             .prop_map(
-                |(name_idx, is_nominal_resource, type_formals, is_public, field_defs)| Self {
+                |(name_idx, is_nominal_resource, _type_formals, is_public, field_defs)| Self {
                     name_idx,
                     is_nominal_resource,
-                    type_formals,
+                    // TODO: re-enable type formals gen once we rework prop tests for generics
+                    type_formals: vec![],
                     is_public,
                     field_defs,
                 },

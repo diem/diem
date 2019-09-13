@@ -44,12 +44,13 @@ impl FunctionSignatureGen {
     pub fn strategy(
         return_count: impl Into<SizeRange>,
         arg_count: impl Into<SizeRange>,
-        kind_count: impl Into<SizeRange>,
+        _kind_count: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
         (
             vec(SignatureTokenGen::strategy(), return_count),
             vec(SignatureTokenGen::strategy(), arg_count),
-            vec(KindGen::strategy(), kind_count),
+            // TODO: re-enable type formals once we rework prop tests for generics
+            vec(KindGen::strategy(), 0),
         )
             .prop_map(|(return_types, arg_types, type_formals)| Self {
                 return_types,
