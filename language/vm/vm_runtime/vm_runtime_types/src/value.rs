@@ -713,10 +713,6 @@ impl GlobalRef {
         }
     }
 
-    pub fn get_root(&self) -> Rc<RefCell<RootAccessPath>> {
-        self.root.clone()
-    }
-
     fn new_ref(root: &GlobalRef, reference: MutVal) -> Self {
         GlobalRef {
             root: Rc::clone(&root.root),
