@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-grpcio = "0.4.4"
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 
 execution_proto = { path = "../execution_proto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
