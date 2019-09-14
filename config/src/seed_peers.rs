@@ -37,12 +37,7 @@ impl SeedPeersConfigHelpers {
     ) -> SeedPeersConfig {
         let mut seed_peers = HashMap::new();
         // sort to have same repeatable order
-        let mut peers: Vec<String> = network_peers
-            .peers
-            .clone()
-            .into_iter()
-            .map(|(peer_id, _)| peer_id)
-            .collect();
+        let mut peers: Vec<String> = network_peers.peers.keys().cloned().collect();
         peers.sort_unstable_by_key(std::clone::Clone::clone);
         // If a port is supplied, we should have only 1 peer.
         if port.is_some() {

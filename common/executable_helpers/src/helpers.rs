@@ -7,7 +7,6 @@ use logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 
 // General args
-pub const ARG_PEER_ID: &str = "--peer_id";
 pub const ARG_DISABLE_LOGGING: &str = "--no_logging";
 pub const ARG_CONFIG_PATH: &str = "--config_path";
 
@@ -17,15 +16,11 @@ pub const ARG_PAYLOAD_SIZE: &str = "--payload_size";
 
 pub fn load_configs_from_args(args: &ArgMatches<'_>) -> NodeConfig {
     let node_config = if args.is_present(ARG_CONFIG_PATH) {
-        // Allow peer id over-ride via command line
-        let peer_id = value_t!(args, ARG_PEER_ID, String).ok();
-
         let config_path =
             value_t!(args, ARG_CONFIG_PATH, String).expect("Path to config file must be specified");
         info!("Loading node config from: {}", &config_path);
-        NodeConfig::load(peer_id, &config_path).expect("NodeConfig")
+        NodeConfig::load(&config_path).expect("NodeConfig")
     } else {
-        // Note we will silently ignore --peer_id arg here
         info!("Loading test configs");
         NodeConfigHelpers::get_single_node_test_config(false /* random ports */)
     };
@@ -102,11 +97,6 @@ fn get_arg_matches(app_name: String, arg_names: Vec<&str>) -> ArgMatches<'_> {
         let takes_value;
         let help;
         match arg {
-            ARG_PEER_ID => {
-                short = "-p";
-                takes_value = true;
-                help = "Specify peer id for this node";
-            }
             ARG_CONFIG_PATH => {
                 short = "-f";
                 takes_value = true;
@@ -137,6 +127,5 @@ fn get_arg_matches(app_name: String, arg_names: Vec<&str>) -> ArgMatches<'_> {
                 .help(help),
         );
     }
-
     app.get_matches()
 }

@@ -4,7 +4,7 @@
 use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
-use config::config::RoleType;
+use config::config::{NodeConfig, RoleType};
 use crypto::{ed25519::*, SigningKey};
 use libra_swarm::{swarm::LibraSwarm, utils};
 use num_traits::cast::FromPrimitive;
@@ -18,26 +18,34 @@ fn setup_env(
     role: RoleType,
 ) -> (LibraSwarm, ClientProxy) {
     ::logger::init_for_e2e_testing();
-
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
-
     let swarm = LibraSwarm::launch_swarm(
         num_nodes, /* num nodes */
-        false,     /* disable_logging */
+        role,
+        false, /* disable_logging */
         faucet_account_keypair,
         None, /* config_dir */
         template_path,
+        None, /* upstream_path */
     );
-    let port = swarm.get_ac_port(client_port_index, role);
+    let port = swarm.get_ac_port(client_port_index);
     let tmp_mnemonic_file = tools::tempdir::TempPath::new();
     tmp_mnemonic_file
         .create_as_file()
         .expect("could not create temporary mnemonic_file_path");
+    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();;
+    let validator_set_file = swarm
+        .dir
+        .as_ref()
+        .expect("fail to access output dir")
+        .as_ref()
+        .join("0")
+        .join(&config.consensus.consensus_peers_file);
     let client_proxy = ClientProxy::new(
         "localhost",
         port.to_string().as_str(),
-        &swarm.get_trusted_peers_config_path(),
+        validator_set_file.to_str().unwrap(),
         &faucet_key_file_path,
         false,
         /* faucet server */ None,
@@ -189,10 +197,8 @@ fn test_concurrent_transfers_single_node() {
 fn test_basic_fault_tolerance() {
     // A configuration with 4 validators should tolerate single node failure.
     let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
-    let validators = swarm.get_validators_ids();
     // kill the first validator
-    swarm.kill_node(validators.get(0).unwrap());
-
+    swarm.kill_node(0);
     // run the script for the smoke test by submitting requests to the second validator
     test_smoke_script(client_proxy);
 }
@@ -214,9 +220,9 @@ fn test_basic_restartability() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    let peer_to_restart = swarm.get_validators_ids()[0].clone();
+    let peer_to_restart = 0;
     // restart node
-    swarm.kill_node(&peer_to_restart);
+    swarm.kill_node(peer_to_restart);
     assert!(swarm.add_node(peer_to_restart, false).is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
@@ -262,9 +268,8 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    let node_to_restart = swarm.get_validators_ids().get(0).unwrap().clone();
-
-    swarm.kill_node(&node_to_restart);
+    let node_to_restart = 0;
+    swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
     assert_eq!(
         Decimal::from_f64(90.0),
@@ -281,7 +286,7 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(swarm.add_node(node_to_restart.clone(), false).is_ok());
+    assert!(swarm.add_node(node_to_restart, false).is_ok());
 
     // Wait for all the nodes to catch up
     assert!(swarm.wait_for_all_nodes_to_catchup());
@@ -291,11 +296,19 @@ fn test_basic_state_synchronization() {
     tmp_mnemonic_file
         .create_as_file()
         .expect("could not create temporary mnemonic_file_path");
-    let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
+    let ac_port = swarm.get_validator(node_to_restart).unwrap().ac_port();
+    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();;
+    let validator_set_file = swarm
+        .dir
+        .as_ref()
+        .expect("fail to access output dir")
+        .as_ref()
+        .join("0")
+        .join(&config.consensus.consensus_peers_file);
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
         ac_port.to_string().as_str(),
-        &swarm.get_trusted_peers_config_path(),
+        &validator_set_file.to_str().unwrap(),
         "",
         false,
         /* faucet server */ None,

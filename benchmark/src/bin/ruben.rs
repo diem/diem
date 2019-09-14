@@ -1,6 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use benchmark::{
+    bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
+    cli_opt::{RubenOpt, TransactionPattern},
+    load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
+};
 /// To run benchmarking experiment, RuBen creates two key required components:
 /// * An object that implements LoadGenerator trait, which generates accounts and offline
 ///   requests that to be submitted during both setup stage and testing stage.
@@ -24,11 +29,6 @@
 ///
 /// By conforming to the LoadGenerator APIs,
 /// this flow is basically the same for different LoadGenerators/experiments.
-use benchmark::{
-    bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
-    cli_opt::{RubenOpt, TransactionPattern},
-    load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
-};
 use logger::{self, prelude::*};
 use std::ops::DerefMut;
 
@@ -66,6 +66,7 @@ mod tests {
         OP_COUNTER,
     };
     use client::AccountData;
+    use config::config::RoleType;
     use libra_swarm::swarm::LibraSwarm;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;
@@ -77,11 +78,13 @@ mod tests {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
             generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
-            4,    /* num_nodes */
+            4, /* num_nodes */
+            RoleType::Validator,
             true, /* disable_logging */
             faucet_account_keypair,
             None, /* config_dir */
             None, /* template_path */
+            None, /* upstream_path */
         );
         let mut args = BenchOpt {
             validator_addresses: Vec::new(),

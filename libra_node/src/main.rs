@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{
-    setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING, ARG_PEER_ID,
-};
+use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
 use signal_hook;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -34,7 +32,7 @@ fn register_signals(term: Arc<AtomicBool>) {
 fn main() {
     let (mut config, _logger, _args) = setup_executable(
         "Libra single node".to_string(),
-        vec![ARG_PEER_ID, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
+        vec![ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
     );
     let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&mut config);
 

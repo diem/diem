@@ -1104,7 +1104,7 @@ mod tests {
         let mnemonic_path = file.path().to_str().unwrap().to_string();
         let consensus_peer_file = TempPath::new();
         let consensus_peers_path = consensus_peer_file.path();
-        let (_, consensus_peers_config) = ConfigHelpers::get_test_consensus_config(1, None);
+        let (_, consensus_peers_config, _) = ConfigHelpers::gen_validator_nodes(1, None);
         consensus_peers_config.save_config(&consensus_peers_path);
         let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
 

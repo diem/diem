@@ -18,10 +18,9 @@ fn verify_all_configs() {
     for path in paths {
         let config_path = path.unwrap().path();
         let config_path_str = config_path.to_str().unwrap();
-        let peer_id = PeerId::random();
         if config_path_str.ends_with(".toml") {
             println!("Loading {}", config_path_str);
-            let _ = NodeConfig::load(Some((&peer_id).into()), config_path_str).expect("NodeConfig");
+            let _ = NodeConfig::load(config_path_str).expect("NodeConfig");
         } else {
             println!("Invalid file {} for verifying", config_path_str);
         }
