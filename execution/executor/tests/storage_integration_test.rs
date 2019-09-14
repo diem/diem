@@ -1,17 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{create_and_start_server, gen_block_id, gen_ledger_info_with_sigs};
+use config::config::NodeConfig;
 use config_builder::util::get_test_config;
-use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED};
-use execution_client::ExecutionClient;
-use execution_proto::ExecuteBlockRequest;
+use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use executor::Executor;
 use failure::prelude::*;
+use futures::executor::block_on;
+use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use proto_conv::FromProto;
 use rand::SeedableRng;
 use std::{collections::HashMap, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use storage_service::start_storage_service;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -19,12 +21,60 @@ use types::{
     account_state_blob::AccountStateWithProof,
     crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn as get_test_signed_txn_proto,
     transaction::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
 };
 use vm_genesis::{encode_create_account_script, encode_transfer_script};
+use vm_runtime::MoveVM;
+
+fn gen_block_id(index: u8) -> HashValue {
+    HashValue::new([index; HashValue::LENGTH])
+}
+
+fn gen_ledger_info_with_sigs(
+    version: u64,
+    root_hash: HashValue,
+    commit_block_id: HashValue,
+) -> LedgerInfoWithSignatures<Ed25519Signature> {
+    let ledger_info = LedgerInfo::new(
+        version,
+        root_hash,
+        /* consensus_data_hash = */ HashValue::zero(),
+        commit_block_id,
+        0,
+        /* timestamp = */ 0,
+        None,
+    );
+    LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
+}
+
+fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
+    let storage_server_handle = start_storage_service(config);
+
+    let client_env = Arc::new(EnvBuilder::new().build());
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(
+        Arc::clone(&client_env),
+        &config.storage.address,
+        config.storage.port,
+    ));
+    let storage_write_client = Arc::new(StorageWriteServiceClient::new(
+        Arc::clone(&client_env),
+        &config.storage.address,
+        config.storage.port,
+        None,
+    ));
+
+    let executor = Executor::new(
+        Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
+        storage_write_client,
+        config,
+    );
+
+    (storage_server_handle, executor)
+}
 
 fn get_test_signed_transaction(
     sender: AccountAddress,
@@ -46,19 +96,13 @@ fn get_test_signed_transaction(
 #[test]
 fn test_execution_with_storage() {
     let (config, genesis_keypair) = get_test_config();
-    let (_storage_server_handle, _execution_server) = create_and_start_server(&config);
+    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::new(EnvBuilder::new().build()),
         &config.storage.address,
         config.storage.port,
     ));
-
-    let execution_client = ExecutionClient::new(
-        Arc::new(EnvBuilder::new().build()),
-        &config.execution.address,
-        config.execution.port,
-    );
 
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
@@ -143,15 +187,14 @@ fn test_execution_with_storage() {
         ));
     }
 
-    let execute_block_request =
-        ExecuteBlockRequest::new(block1.clone(), *GENESIS_BLOCK_ID, block1_id);
-    let execute_block_response = execution_client
-        .execute_block(execute_block_request)
-        .unwrap();
+    let state_compute_result =
+        block_on(executor.execute_block(block1.clone(), *GENESIS_BLOCK_ID, block1_id))
+            .unwrap()
+            .unwrap();
     let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(6, execute_block_response.root_hash(), block1_id);
-    execution_client
-        .commit_block(ledger_info_with_sigs)
+        gen_ledger_info_with_sigs(6, state_compute_result.root_hash(), block1_id);
+    block_on(executor.commit_block(ledger_info_with_sigs))
+        .unwrap()
         .unwrap();
 
     let request_items = vec![
@@ -376,14 +419,14 @@ fn test_execution_with_storage() {
     assert_eq!(account3_received_events.len(), 3);
 
     // Execution the 2nd block.
-    let execute_block_request = ExecuteBlockRequest::new(block2.clone(), block1_id, block2_id);
-    let execute_block_response = execution_client
-        .execute_block(execute_block_request)
-        .unwrap();
+    let state_compute_result =
+        block_on(executor.execute_block(block2.clone(), block1_id, block2_id))
+            .unwrap()
+            .unwrap();
     let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(20, execute_block_response.root_hash(), block2_id);
-    execution_client
-        .commit_block(ledger_info_with_sigs)
+        gen_ledger_info_with_sigs(20, state_compute_result.root_hash(), block2_id);
+    block_on(executor.commit_block(ledger_info_with_sigs))
+        .unwrap()
         .unwrap();
 
     let request_items = vec![
