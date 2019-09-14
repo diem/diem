@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{
-    setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING, ARG_PEER_ID,
-};
+use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
 use std::thread;
 
 use config::config::NodeConfig;
@@ -52,7 +50,7 @@ impl StorageNode {
 fn main() {
     let (config, _logger, _args) = setup_executable(
         "Libra Storage node".to_string(),
-        vec![ARG_PEER_ID, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
+        vec![ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
     );
 
     let storage_node = StorageNode::new(config);

@@ -213,6 +213,7 @@ dependencies = [
  "tools 0.1.0",
  "transaction_builder 0.1.0",
  "types 0.1.0",
+ "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -677,6 +678,8 @@ dependencies = [
  "failure_ext 0.1.0",
  "generate_keypair 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "logger 0.1.0",
+ "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proto_conv 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",

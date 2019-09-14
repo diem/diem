@@ -6,26 +6,22 @@ use config::{
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
-use failure::prelude::*;
 use proto_conv::IntoProtoBytes;
 use rand::{Rng, SeedableRng};
-use std::{fs::File, io::prelude::*, path::Path};
+use std::{fs::File, io::prelude::*};
+use types::transaction::SignatureCheckedTransaction;
 use vm_genesis::encode_genesis_transaction_with_validator;
 
-pub fn gen_genesis_transaction<P: AsRef<Path>>(
-    path: P,
+pub fn gen_genesis_transaction(
     faucet_account_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     consensus_peers_config: &ConsensusPeersConfig,
     network_peers_config: &NetworkPeersConfig,
-) -> Result<()> {
-    let transaction = encode_genesis_transaction_with_validator(
+) -> SignatureCheckedTransaction {
+    encode_genesis_transaction_with_validator(
         &faucet_account_keypair.private_key,
         faucet_account_keypair.public_key.clone(),
         consensus_peers_config.get_validator_set(network_peers_config),
-    );
-    let mut file = File::create(path)?;
-    file.write_all(&transaction.into_proto_bytes()?)?;
-    Ok(())
+    )
 }
 
 /// Returns the config as well as the genesis keyapir
@@ -39,16 +35,13 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
     let mut rng = rand::rngs::StdRng::from_seed(seed_buf);
     let (private_key, _) = compat::generate_keypair(&mut rng);
     let keypair = KeyPair::from(private_key);
-
-    let (_, test_consensus_peers) = ConfigHelpers::get_test_consensus_config(1, None);
-    let (_, test_network_peers) =
-        ConfigHelpers::get_test_network_peers_config(&test_consensus_peers, None);
-    gen_genesis_transaction(
-        &config.execution.genesis_file_location,
-        &keypair,
-        &test_consensus_peers,
-        &test_network_peers,
-    )
-    .expect("[config] failed to create genesis transaction");
+    let (_, test_consensus_peers, test_network_peers) = ConfigHelpers::gen_validator_nodes(1, None);
+    let genesis_transaction =
+        gen_genesis_transaction(&keypair, &test_consensus_peers, &test_network_peers);
+    let mut genesis_transaction_file = File::create(&config.execution.genesis_file_location)
+        .expect("[config] Failed to create file for storing genesis transaction");
+    genesis_transaction_file
+        .write_all(&genesis_transaction.into_proto_bytes().unwrap())
+        .expect("[config] Failed to write genesis txn to file");
     (config, keypair)
 }

@@ -12,6 +12,8 @@ const OUTPUT_DIR_ARG: &str = "output-dir";
 const DISCOVERY_ARG: &str = "discovery";
 const KEY_SEED_ARG: &str = "key-seed";
 const FAUCET_ACCOUNT_FILE_ARG: &str = "faucet_account_file";
+const ROLE_ARG: &str = "role";
+const UPSTREAM_CONFIG_DIR_ARG: &str = "upstream_config_dir";
 
 fn main() {
     let args = App::new("Libra Config Tool")
@@ -61,6 +63,21 @@ fn main() {
                 .help("File location from which to load faucet account generated via generate_keypair tool")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name(ROLE_ARG)
+            .short("r")
+            .long(ROLE_ARG)
+            .help("Role for the nodes: one of {\"validator\", \"full_node\"}")
+            .default_value("validator")
+            .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(UPSTREAM_CONFIG_DIR_ARG)
+            .short("u")
+            .long(UPSTREAM_CONFIG_DIR_ARG)
+            .help("Config directory for upstream node. This field is needed if role is \"full_node\"")
+            .takes_value(true),
+        )
         .get_matches();
     let base_path = value_t!(args, BASE_ARG, String).expect("Missing path to base config.");
     let nodes_count = value_t!(args, NODES_ARG, usize).expect("Missing node count.");
@@ -74,14 +91,19 @@ fn main() {
         .expect("Must provide faucet account file path");
     let (faucet_account_keypair, _faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(Some(faucet_account_file_path));
+    let role: RoleType = value_t!(args, ROLE_ARG, String)
+        .expect("Missing role type")
+        .into();
 
     let mut config_builder = SwarmConfigBuilder::new();
     config_builder
         .with_num_nodes(nodes_count)
-        .with_role(RoleType::Validator)
+        .with_role(role)
         .with_base(base_path)
         .with_output_dir(output_dir)
-        .with_faucet_keypair(faucet_account_keypair);
+        .with_faucet_keypair(faucet_account_keypair)
+        .with_upstream_config_dir(value_t!(args, UPSTREAM_CONFIG_DIR_ARG, String).ok());
+
     if args.is_present(DISCOVERY_ARG) {
         config_builder.force_discovery();
     }
@@ -94,33 +116,5 @@ fn main() {
                 .expect("Seed should be 32 bytes long."),
         );
     }
-    let generated_configs = config_builder.build().expect("Unable to generate configs");
-
-    println!(
-        "Network Peers Config: {:?}",
-        &generated_configs.network_peers
-    );
-    println!("Seed Peers Config: {:?}", &generated_configs.seed_peers);
-    println!(
-        "Consensus Peers Config: {:?}",
-        &generated_configs.consensus_peers
-    );
-
-    for (path, node_config) in generated_configs.configs {
-        // For now, We consider the peer id on the first network config as the node's peer id.
-        // TODO: Create a peer id independent node identifier.
-        let network_config = node_config.networks.get(0).unwrap();
-        println!(
-            "Node Config for PeerId({}): {:?}",
-            network_config.peer_id, path
-        );
-        println!(
-            "Network keys for PeerId({}): {:?}",
-            network_config.peer_id, network_config.network_keypairs_file
-        );
-        println!(
-            "Consensus keys for PeerId({}): {:?}",
-            network_config.peer_id, node_config.consensus.consensus_keypair_file
-        );
-    }
+    config_builder.build().expect("Unable to generate configs");
 }

@@ -7,6 +7,7 @@ use benchmark::{
     load_generator::PairwiseTransferTxnGenerator,
     Benchmarker,
 };
+use config::config::RoleType;
 use libra_swarm::swarm::LibraSwarm;
 use num::traits::Float;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
@@ -38,10 +39,12 @@ rusty_fork_test! {
             generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
             num_nodes,
+            RoleType::Validator,
             true,   /* disable_logging */
             faucet_account_keypair,
             None,   /* config_dir */
             None,   /* template_path */
+            None, /* upstream_path */
         );
         let swarm_config_dir = String::from(swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap());
         let validator_addresses = parse_swarm_config_from_dir(&swarm_config_dir).unwrap();

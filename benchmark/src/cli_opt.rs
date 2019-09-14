@@ -5,9 +5,9 @@ use clap::arg_enum;
 use config::config::{NodeConfig, PersistableConfig};
 use failure::prelude::*;
 use logger::prelude::*;
-use regex::Regex;
-use std::{fs, net::IpAddr, path::PathBuf, str::FromStr};
+use std::{ffi::OsStr, fs, net::IpAddr, path::PathBuf, str::FromStr};
 use structopt::StructOpt;
+use walkdir::WalkDir;
 
 arg_enum! {
     #[derive(Debug)]
@@ -137,32 +137,29 @@ fn parse_socket_address(address: &str, port: u16) -> String {
 /// and return libra_swarm's node addresses info as a vector.
 pub fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>> {
     let mut validator_addresses: Vec<String> = Vec::new();
-    let re = Regex::new(r"[[:alnum:]]{64}\.node\.config\.toml").expect("failed to build regex");
     let config_dir = PathBuf::from(config_dir_name);
-    if config_dir.is_dir() {
-        for entry in fs::read_dir(config_dir).expect("invalid config directory") {
-            let path = entry.expect("invalid path under config directory").path();
-            if path.is_file() {
-                let filename = path
-                    .file_name()
-                    .expect("failed to convert filename to string")
-                    .to_str()
-                    .expect("failed to convert filename to string");
-                if re.is_match(filename) {
-                    debug!("Parsing node config file {:?}.", filename);
-                    let config_string = fs::read_to_string(&path)
-                        .unwrap_or_else(|_| panic!("failed to load config file {:?}", filename));
-                    let config = NodeConfig::parse(&config_string).unwrap_or_else(|_| {
-                        panic!("failed to parse NodeConfig from {:?}", filename)
-                    });
-                    let address = parse_socket_address(
-                        &config.admission_control.address,
-                        config.admission_control.admission_control_service_port,
-                    );
-                    validator_addresses.push(address);
-                }
-            }
-        }
+    for entry in WalkDir::new(config_dir)
+        .contents_first(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|dir_entry| {
+            let path = dir_entry.path();
+            warn!("checking entry: {:?}", path);
+            path.is_file() && path.file_name() == Some(OsStr::new("node.config.toml"))
+        })
+    {
+        let path = entry.path();
+        let filename = path.file_name().unwrap();
+        debug!("Parsing node config file {:?}.", filename);
+        let config_string = fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("failed to load config file {:?}", filename));
+        let config = NodeConfig::parse(&config_string)
+            .unwrap_or_else(|_| panic!("failed to parse NodeConfig from {:?}", filename));
+        let address = parse_socket_address(
+            &config.admission_control.address,
+            config.admission_control.admission_control_service_port,
+        );
+        validator_addresses.push(address);
     }
     if validator_addresses.is_empty() {
         bail!(
