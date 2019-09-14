@@ -1277,33 +1277,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "execution_proto"
-version = "0.1.0"
-dependencies = [
- "build_helpers 0.1.0",
- "crypto 0.1.0",
- "failure_ext 0.1.0",
- "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
- "proto_conv 0.1.0",
- "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "types 0.1.0",
-]
-
-[[package]]
 name = "executor"
 version = "0.1.0"
 dependencies = [
  "backoff 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "canonical_serialization 0.1.0",
  "config 0.1.0",
+ "config_builder 0.1.0",
  "crypto 0.1.0",
- "execution_proto 0.1.0",
  "failure_ext 0.1.0",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc_helpers 0.1.0",
  "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1311,6 +1295,7 @@ dependencies = [
  "metrics 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proto_conv 0.1.0",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "serde 1.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
