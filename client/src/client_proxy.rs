@@ -124,10 +124,10 @@ impl ClientProxy {
         // If < 4 validators, all validators have to agree.
         let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
             .into_iter()
-            .map(|peer| {
+            .map(|(peer_id_str, peer_info)| {
                 (
-                    AccountAddress::from_str(&peer.account_address).unwrap(),
-                    peer.consensus_pubkey,
+                    AccountAddress::from_str(&peer_id_str).unwrap(),
+                    peer_info.consensus_pubkey,
                 )
             })
             .collect();
