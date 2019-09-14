@@ -510,15 +510,15 @@ impl ConsensusConfig {
         self.consensus_peers
             .peers
             .iter()
-            .map(|peer| {
+            .map(|(peer_id_str, peer_info)| {
                 (
-                    PeerId::from_str(&peer.account_address).unwrap_or_else(|_| {
+                    PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
                         panic!(
                             "Failed to deserialize PeerId: {} from consensus peers config: ",
-                            peer.account_address,
+                            peer_id_str
                         )
                     }),
-                    peer.consensus_pubkey.clone(),
+                    peer_info.consensus_pubkey.clone(),
                 )
             })
             .collect()
@@ -685,7 +685,7 @@ impl NodeConfigHelpers {
         }
         let (mut consensus_private_keys, test_consensus_peers) =
             ConfigHelpers::get_test_consensus_config(1, None);
-        let peer_id = test_consensus_peers.peers[0].account_address.clone();
+        let peer_id = test_consensus_peers.peers.keys().nth(0).unwrap().clone();
         let consensus_private_key = consensus_private_keys.remove_entry(&peer_id).unwrap().1;
         config.consensus.consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
         // load node's network keypairs
