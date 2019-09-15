@@ -1,0 +1,11 @@
+// check: Field y defined out of order for struct T
+
+module M {
+    struct T {
+        x: u64,
+        y: u64
+    }
+    public new(): Self.T {
+        return T { y: 1, x: 2 };
+    }
+}

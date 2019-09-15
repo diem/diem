@@ -1,16 +1,16 @@
 module B {
     struct T{g: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T{g: move(g)};
     }
 
-    public t(this: &mut V#Self.T) {
+    public t(this: &mut Self.T) {
         let g: &mut u64;
         g = &mut copy(this).g;
         *copy(g) = 2;
         assert(*move(g) == 2, 42);
-        release(move(this));
+        _ = move(this);
         return;
     }
 }
@@ -19,17 +19,17 @@ module B {
 
 module A {
     import {{default}}.B;
-    struct T{f: V#B.T}
+    struct T{f: B.T}
 
-    public new(f: V#B.T): V#Self.T {
+    public new(f: B.T): Self.T {
         return T{f: move(f)};
     }
 
-    public t(this: &mut V#Self.T) {
-        let f: &mut V#B.T;
+    public t(this: &mut Self.T) {
+        let f: &mut B.T;
         f = &mut copy(this).f;
         B.t(move(f));
-        release(move(this));
+        _ = move(this);
         return;
     }
 }
@@ -40,9 +40,9 @@ import {{default}}.A;
 import {{default}}.B;
 
 main() {
-    let b: V#B.T;
-    let x: V#A.T;
-    let x_ref: &mut V#A.T;
+    let b: B.T;
+    let x: A.T;
+    let x_ref: &mut A.T;
     b = B.new(0);
     x = A.new(move(b));
     x_ref = &mut x;

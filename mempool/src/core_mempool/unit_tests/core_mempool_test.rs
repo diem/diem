@@ -3,7 +3,10 @@
 
 use crate::{
     core_mempool::{
-        unit_tests::common::{add_txn, add_txns_to_mempool, setup_mempool, TestTransaction},
+        unit_tests::common::{
+            add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
+            TestTransaction,
+        },
         CoreMempool, TimelineState,
     },
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
@@ -63,6 +66,18 @@ fn test_transaction_ordering() {
 }
 
 #[test]
+fn test_metric_cache_add_local_txns() {
+    let (mut mempool, _) = setup_mempool();
+    let txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![TestTransaction::new(0, 0, 1), TestTransaction::new(1, 0, 2)],
+    );
+    // Check txns' timestamps exist in metrics_cache.
+    assert_eq!(exist_in_metrics_cache(&mempool, &txns[0]), true);
+    assert_eq!(exist_in_metrics_cache(&mempool, &txns[1]), true);
+}
+
+#[test]
 fn test_update_transaction_in_mempool() {
     let (mut mempool, mut consensus) = setup_mempool();
     let txns = add_txns_to_mempool(
@@ -77,6 +92,27 @@ fn test_update_transaction_in_mempool() {
         vec![fixed_txns[0].clone()]
     );
     assert_eq!(consensus.get_block(&mut mempool, 1), vec![txns[1].clone()]);
+}
+
+#[test]
+fn test_update_invalid_transaction_in_mempool() {
+    let (mut mempool, mut consensus) = setup_mempool();
+    let txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![TestTransaction::new(0, 0, 1), TestTransaction::new(1, 0, 2)],
+    );
+    let updated_txn = TestTransaction::make_signed_transaction_with_max_gas_amount(
+        &TestTransaction::new(0, 0, 5),
+        200,
+    );
+    let _added_tnx = add_signed_txn(&mut mempool, updated_txn);
+
+    // since both gas price and mas gas amount were updated, the ordering should not have changed.
+    // the second transaction with gas price 2 should come first
+    assert_eq!(consensus.get_block(&mut mempool, 1), vec![txns[1].clone()]);
+    let next_tnx = consensus.get_block(&mut mempool, 1);
+    assert_eq!(next_tnx, vec![txns[0].clone()]);
+    assert_eq!(next_tnx[0].gas_unit_price(), 1);
 }
 
 #[test]

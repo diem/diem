@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
 use canonical_serialization::{CanonicalDeserialize, CanonicalSerialize};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;

@@ -104,9 +104,7 @@
 use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use failure::prelude::*;
 use std::marker::PhantomData;
-use types::proof::{
-    position::Position, treebits::NodeDirection, AccumulatorProof, MerkleTreeInternalNode,
-};
+use types::proof::{position::Position, AccumulatorProof, MerkleTreeInternalNode};
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -177,14 +175,14 @@ where
             if self.num_leaves == 0 {
                 return Ok((*ACCUMULATOR_PLACEHOLDER_HASH, Vec::new()));
             } else {
-                let root_hash = self.get_hash(Position::get_root_position(self.num_leaves - 1))?;
+                let root_hash = self.get_hash(Position::root_from_leaf_count(self.num_leaves))?;
                 return Ok((root_hash, Vec::new()));
             }
         }
 
         let num_new_leaves = new_leaves.len();
-        let last_new_leaf_idx = self.num_leaves + num_new_leaves as u64 - 1;
-        let root_level = Position::get_root_position(last_new_leaf_idx).get_level() as usize;
+        let last_new_leaf_count = self.num_leaves + num_new_leaves as u64;
+        let root_level = Position::root_from_leaf_count(last_new_leaf_count).level() as usize;
         let mut to_freeze = Vec::with_capacity(Self::max_to_freeze(num_new_leaves, root_level));
 
         // create one new node for each new leaf hash
@@ -243,10 +241,10 @@ where
 
         // first node may be a right child, in that case pair it with its existing sibling
         let (first_pos, first_hash) = iter.peek().expect("Current level is empty");
-        if first_pos.get_direction_for_self() == NodeDirection::Right {
+        if !first_pos.is_left_child() {
             parent_level.push((
-                first_pos.get_parent(),
-                Self::hash_internal_node(self.reader.get(first_pos.get_sibling())?, *first_hash),
+                first_pos.parent(),
+                Self::hash_internal_node(self.reader.get(first_pos.sibling())?, *first_hash),
             ));
             iter.next();
         }
@@ -263,7 +261,7 @@ where
             };
 
             parent_level.push((
-                left_pos.get_parent(),
+                left_pos.parent(),
                 Self::hash_internal_node(*left_hash, *right_hash),
             ));
         }
@@ -289,8 +287,8 @@ where
         } else {
             // non-frozen non-placeholder node
             Ok(Self::hash_internal_node(
-                self.get_hash(position.get_left_child())?,
-                self.get_hash(position.get_right_child())?,
+                self.get_hash(position.left_child())?,
+                self.get_hash(position.right_child())?,
             ))
         }
     }
@@ -305,11 +303,11 @@ where
         );
 
         let leaf_pos = Position::from_leaf_index(leaf_index);
-        let root_pos = Position::get_root_position(self.num_leaves - 1);
+        let root_pos = Position::root_from_leaf_count(self.num_leaves);
 
         let siblings: Vec<HashValue> = leaf_pos
             .iter_ancestor_sibling()
-            .take(root_pos.get_level() as usize)
+            .take(root_pos.level() as usize)
             .map(|p| self.get_hash(p))
             .collect::<Result<Vec<HashValue>>>()?
             .into_iter()

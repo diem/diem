@@ -11,6 +11,9 @@ Install [`cargo-fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html) if not 
 
 ### Fuzzing a target
 
+First, switch to the directory this README is in: `cd
+testsuite/libra_fuzzer`.
+
 To list out known fuzz targets, run `cargo run list`.
 
 To be effective, fuzzing requires a corpus of existing inputs. This

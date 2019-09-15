@@ -618,6 +618,7 @@ fn rpc_protocol() {
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let (rpc_handler_tx, _) = channel::new_test(8);
     let dialer_rpc = Rpc::new(
+        rt.executor(),
         dialer_rpc_rx,
         dialer_peer_mgr_notifs_rx,
         dialer_peer_mgr_reqs_tx,
@@ -668,6 +669,7 @@ fn rpc_protocol() {
     let listener_peer_mgr_reqs_tx = PeerManagerRequestSender::new(listener_peer_mgr_reqs_tx);
     let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
     let listener_rpc = Rpc::new(
+        rt.executor(),
         listener_rpc_reqs_rx,
         listener_peer_mgr_notifs_rx,
         listener_peer_mgr_reqs_tx,

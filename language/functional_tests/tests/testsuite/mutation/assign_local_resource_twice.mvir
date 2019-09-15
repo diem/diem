@@ -1,9 +1,10 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: MoveLocExistsBorrowError(4) }
+// check: VerificationFailure
+// check: MOVELOC_EXISTS_BORROW_ERROR
 
 import 0x0.LibraCoin;
 main() {
-    let resource1: R#LibraCoin.T;
-    let resource_ref: &mut R#LibraCoin.T;
+    let resource1: LibraCoin.T;
+    let resource_ref: &mut LibraCoin.T;
     resource1 = LibraCoin.zero();
     resource_ref = &mut resource1;
     *move(resource_ref) = move(resource1);

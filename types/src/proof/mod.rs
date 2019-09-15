@@ -1,16 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod definition;
+pub mod accumulator;
 pub mod position;
+#[cfg(any(test, feature = "testing"))]
 pub mod proptest_proof;
-pub mod treebits;
 
+mod definition;
 #[cfg(test)]
 #[path = "unit_tests/proof_test.rs"]
 mod proof_test;
-#[cfg(test)]
-mod unit_tests;
 
 use crate::{
     account_state_blob::AccountStateBlob,
@@ -30,7 +29,8 @@ use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
 pub use crate::proof::definition::{
-    AccountStateProof, AccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
+    SignedTransactionProof, SparseMerkleProof,
 };
 
 /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
@@ -319,8 +319,8 @@ fn verify_accumulator_element<H: Clone + CryptoHasher>(
 ) -> Result<()> {
     let siblings = accumulator_proof.siblings();
     ensure!(
-        siblings.len() <= 63,
-        "Accumulator proof has more than 63 ({}) siblings.",
+        siblings.len() <= 64,
+        "Accumulator proof has more than 64 ({}) siblings.",
         siblings.len()
     );
 
@@ -424,6 +424,7 @@ pub fn verify_sparse_merkle_element(
         (Some(blob), Some((proof_key, proof_value_hash))) => {
             // This is an inclusion proof, so the key and value hash provided in the proof should
             // match element_key and element_value_hash.
+            // `siblings` should prove the route from the leaf node to the root.
             ensure!(
                 element_key == proof_key,
                 "Keys do not match. Key in proof: {:x}. Expected key: {:x}.",
@@ -440,8 +441,11 @@ pub fn verify_sparse_merkle_element(
         }
         (Some(_blob), None) => bail!("Expected inclusion proof. Found non-inclusion proof."),
         (None, Some((proof_key, _))) => {
-            // The proof intends to show that proof_key is the only key in a subtree and
-            // element_key would have ended up in the same subtree if it existed in the tree.
+            // This is a non-inclusion proof.
+            // The proof intends to show that if a leaf node representing `element_key` is inserted,
+            // it will break a currently existing leaf node represented by `proof_key` into a
+            // branch.
+            // `siblings` should prove the route from that leaf node to the root.
             ensure!(
                 element_key != proof_key,
                 "Expected non-inclusion proof, but key exists in proof."
@@ -452,10 +456,15 @@ pub fn verify_sparse_merkle_element(
                  the only existing key, if it existed. So this is not a valid non-inclusion proof."
             );
         }
-        (None, None) => (),
+        (None, None) => {
+            // This is a non-inclusion proof.
+            // The proof intends to show that if a leaf node representing `element_key` is inserted,
+            // it will show up at a currently empty position.
+            // `sibling` should prove the route from this empty position to the root.
+        }
     }
 
-    let leaf_hash = match sparse_merkle_proof.leaf() {
+    let current_hash = match sparse_merkle_proof.leaf() {
         Some((key, value_hash)) => SparseMerkleLeafNode::new(key, value_hash).hash(),
         None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
     };
@@ -468,7 +477,7 @@ pub fn verify_sparse_merkle_element(
                 .rev()
                 .skip(HashValue::LENGTH_IN_BITS - siblings.len()),
         )
-        .fold(leaf_hash, |hash, (sibling_hash, bit)| {
+        .fold(current_hash, |hash, (sibling_hash, bit)| {
             if bit {
                 SparseMerkleInternalNode::new(*sibling_hash, hash).hash()
             } else {

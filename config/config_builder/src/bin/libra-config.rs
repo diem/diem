@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{value_t, App, Arg};
+use config::config::RoleType;
 use config_builder::swarm_config::SwarmConfigBuilder;
 use std::convert::TryInto;
 
@@ -61,13 +62,13 @@ fn main() {
                 .takes_value(true),
         )
         .get_matches();
-    let base_path = value_t!(args, BASE_ARG, String).expect("Path to base config");
-    let nodes_count = value_t!(args, NODES_ARG, usize).unwrap();
+    let base_path = value_t!(args, BASE_ARG, String).expect("Missing path to base config.");
+    let nodes_count = value_t!(args, NODES_ARG, usize).expect("Missing node count.");
     let output_dir = if args.is_present(OUTPUT_DIR_ARG) {
-        let dir = value_t!(args, OUTPUT_DIR_ARG, String).unwrap();
+        let dir = value_t!(args, OUTPUT_DIR_ARG, String).expect("Missing output directory.");
         dir.into()
     } else {
-        ::std::env::current_dir().unwrap()
+        ::std::env::current_dir().expect("Failed to access current directory.")
     };
     let faucet_account_file_path = value_t!(args, FAUCET_ACCOUNT_FILE_ARG, String)
         .expect("Must provide faucet account file path");
@@ -76,7 +77,8 @@ fn main() {
 
     let mut config_builder = SwarmConfigBuilder::new();
     config_builder
-        .with_nodes(nodes_count)
+        .with_num_nodes(nodes_count)
+        .with_role(RoleType::Validator)
         .with_base(base_path)
         .with_output_dir(output_dir)
         .with_faucet_keypair(faucet_account_keypair);
@@ -85,29 +87,40 @@ fn main() {
     }
     if args.is_present(KEY_SEED_ARG) {
         let seed_hex = value_t!(args, KEY_SEED_ARG, String).expect("Missing Seed");
-        let seed = hex::decode(seed_hex).unwrap();
-        config_builder.with_key_seed(seed[..32].try_into().unwrap());
+        let seed = hex::decode(seed_hex).expect("Invalid hex in seed.");
+        config_builder.with_key_seed(
+            seed[..32]
+                .try_into()
+                .expect("Seed should be 32 bytes long."),
+        );
     }
     let generated_configs = config_builder.build().expect("Unable to generate configs");
 
     println!(
-        "Trusted Peers Config: {:?}",
-        generated_configs.get_trusted_peers_config().0
+        "Network Peers Config: {:?}",
+        &generated_configs.network_peers
     );
-
+    println!("Seed Peers Config: {:?}", &generated_configs.seed_peers);
     println!(
-        "Seed Peers Config: {:?}",
-        generated_configs.get_seed_peers_config().0
+        "Consensus Peers Config: {:?}",
+        &generated_configs.consensus_peers
     );
 
-    for (path, node_config) in generated_configs.get_configs() {
+    for (path, node_config) in generated_configs.configs {
+        // For now, We consider the peer id on the first network config as the node's peer id.
+        // TODO: Create a peer id independent node identifier.
+        let network_config = node_config.networks.get(0).unwrap();
         println!(
             "Node Config for PeerId({}): {:?}",
-            node_config.base.peer_id, path
+            network_config.peer_id, path
         );
         println!(
-            "Node Keys for PeerId({}): {:?}",
-            node_config.base.peer_id, node_config.base.peer_keypairs_file
+            "Network keys for PeerId({}): {:?}",
+            network_config.peer_id, network_config.network_keypairs_file
+        );
+        println!(
+            "Consensus keys for PeerId({}): {:?}",
+            network_config.peer_id, node_config.consensus.consensus_keypair_file
         );
     }
 }

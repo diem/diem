@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use crypto::HashValue;
+use crypto::{test_utils::TEST_SEED, HashValue, *};
 use failure::Error;
-use nextgen_crypto::{test_utils::TEST_SEED, *};
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
@@ -39,15 +38,6 @@ impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
     /// Constructs a signature for `message` using `private_key`.
     pub fn sign_message(&self, message: HashValue) -> Result<PrivateKey::SignatureMaterial, Error> {
         Ok(self.private_key.sign_message(&message))
-    }
-
-    /// Checks that `signature` is valid for `message` using `public_key`.
-    pub fn verify_message(
-        &self,
-        message: HashValue,
-        signature: &<PrivateKey::VerifyingKeyMaterial as VerifyingKey>::SignatureMaterial,
-    ) -> Result<(), Error> {
-        signature.verify(&message, &self.public_key)
     }
 
     /// Returns the author associated with this signer.
@@ -95,7 +85,7 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
 pub mod proptests {
     use super::*;
     #[cfg(test)]
-    use nextgen_crypto::ed25519::*;
+    use crypto::ed25519::*;
     use proptest::{prelude::*, sample, strategy::LazyJust};
 
     #[allow(clippy::redundant_closure)]
@@ -150,12 +140,5 @@ pub mod proptests {
             prop_assert_eq!(public_key, signer.public_key());
         }
 
-        #[test]
-        fn test_signer(signer in arb_signer::<Ed25519PrivateKey>(), message in HashValue::arbitrary()) {
-            let signature = signer.sign_message(message).unwrap();
-            prop_assert!(signer
-                         .verify_message(message, &signature)
-                         .is_ok());
-        }
     }
 }

@@ -11,39 +11,6 @@ import "proof.proto";
 import "transaction_info.proto";
 import "google/protobuf/wrappers.proto";
 
-// A generic structure that describes a transaction that a client submits
-message RawTransaction {
-    // Sender's account address
-    bytes sender_account = 1;
-    // Sequence number of this transaction corresponding to sender's account.
-    uint64 sequence_number = 2;
-    oneof payload {
-        // The transaction script to execute.
-        Program program = 3;
-        // A write set, used for genesis blocks and other magic transactions.
-        // This bypasses the rules for regular transactions so will typically be
-        // rejected. Only under special circumstances will it be accepted.
-        WriteSet write_set = 4;
-    }
-    // Maximal total gas specified by wallet to spend for this transaction.
-    uint64 max_gas_amount = 5;
-    // The price to be paid for each unit of gas.
-    uint64 gas_unit_price = 6;
-    // Expiration time for this transaction.  If storage is queried and
-    // the time returned is greater than or equal to this time and this
-    // transaction has not been included, you can be certain that it will
-    // never be included.
-    // If set to 0, there will be no expiration time
-    uint64 expiration_time = 7;
-}
-
-// The code for the transaction to execute
-message Program {
-    bytes code = 1;
-    repeated TransactionArgument arguments = 2;
-    repeated bytes modules = 3;
-}
-
 // An argument to the transaction if the transaction takes arguments
 message TransactionArgument {
     enum ArgType {
@@ -52,22 +19,12 @@ message TransactionArgument {
         STRING = 2;
         BYTEARRAY = 3;
     }
-    ArgType type = 1;
-    bytes data = 2;
 }
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // The serialized Protobuf bytes for RawTransaction, for which the signature
-    // was signed. Protobuf doesn't guarantee the serialized bytes is canonical
-    // across different language implementations, but for our use cases for
-    // transaction it is not necessary because the client is the only one to
-    // produce this bytes, which is then persisted in storage.
-    bytes raw_txn_bytes = 1;
-    // public key that corresponds to RawTransaction::sender_account
-    bytes sender_public_key = 2;
-    // signature for the hash
-    bytes sender_signature = 3;
+    // LCS byte code representation of a SignedTransaction
+    bytes signed_txn = 5;
 }
 
 message SignedTransactionWithProof {
@@ -95,30 +52,6 @@ message SignedTransactionsBlock {
     bytes validator_signature = 3;
 }
 
-// Set of WriteOps to save to storage.
-message WriteSet {
-    // Set of WriteOp for storage update.
-    repeated WriteOp write_set = 1;
-}
-
-// Write Operation on underlying storage.
-message WriteOp {
-    // AccessPath of the write set.
-    AccessPath access_path = 1;
-    // The value of the write op. Empty if `type` is Delete.
-    bytes value = 2;
-    // WriteOp type.
-    WriteOpType type = 3;
-}
-
-// Type of write operation
-enum WriteOpType {
-    // The WriteOp is to create/update the field from storage.
-    Write = 0;
-    // The WriteOp is to delete the field from storage.
-    Delete = 1;
-}
-
 // Account state as a whole.
 // After execution, updates to accounts are passed in this form to storage for
 // persistence.
@@ -139,6 +72,8 @@ message TransactionToCommit {
     repeated Event events = 3;
     // The amount of gas used.
     uint64 gas_used = 4;
+    // The major status of executing the transaction.
+    uint64 major_status = 5;
 }
 
 // A list of consecutive transactions with proof. This is mainly used for state

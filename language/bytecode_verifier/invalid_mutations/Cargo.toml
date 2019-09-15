@@ -10,3 +10,7 @@ publish = false
 proptest = "0.9"
 proptest_helpers = { path = "../../../common/proptest_helpers" }
 vm = { path = "../../vm" }
+types = { path = "../../../types" }
+
+[dev-dependencies]
+vm = { path = "../../vm", features = ["testing"] }

@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::file_format::*;
+use crate::{file_format::*, vm_string::VMStr};
 use failure::*;
 use hex;
 use std::{collections::VecDeque, fmt};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
 
 //
 // Display printing
@@ -75,7 +75,8 @@ pub trait TableAccess {
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle>;
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle>;
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String>;
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr>;
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr>;
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress>;
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature>;
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature>;
@@ -88,124 +89,123 @@ impl TableAccess for CompiledScriptMut {
     }
 
     fn get_module_at(&self, idx: ModuleHandleIndex) -> Result<&ModuleHandle> {
-        match self.module_handles.get(idx.0 as usize) {
-            None => bail!("bad module handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.module_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad module handle index {}", idx))
     }
 
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
-        match self.struct_handles.get(idx.0 as usize) {
-            None => bail!("bad struct handle index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.struct_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad struct handle index {}", idx))
     }
 
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle> {
-        match self.function_handles.get(idx.0 as usize) {
-            None => bail!("bad function handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.function_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad function handle index {}", idx))
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
-        match self.string_pool.get(idx.0 as usize) {
-            None => bail!("bad string index {}", idx),
-            Some(s) => Ok(s),
-        }
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
+        self.identifiers
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad string index {}", idx))
+    }
+
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
+        self.user_strings
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
-        match self.address_pool.get(idx.0 as usize) {
-            None => bail!("bad address index {}", idx),
-            Some(addr) => Ok(addr),
-        }
+        self.address_pool
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad address index {}", idx))
     }
 
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature> {
-        match self.type_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.type_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature> {
-        match self.function_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.function_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_locals_signature_at(&self, idx: LocalsSignatureIndex) -> Result<&LocalsSignature> {
-        match self.locals_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.locals_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 }
 
 impl TableAccess for CompiledModuleMut {
     fn get_field_def_at(&self, idx: FieldDefinitionIndex) -> Result<&FieldDefinition> {
-        match self.field_defs.get(idx.0 as usize) {
-            None => bail!("bad field definition index {}", idx),
-            Some(f) => Ok(f),
-        }
+        self.field_defs
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad field definition index {}", idx))
     }
 
     fn get_module_at(&self, idx: ModuleHandleIndex) -> Result<&ModuleHandle> {
-        match self.module_handles.get(idx.0 as usize) {
-            None => bail!("bad module handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.module_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad module handle index {}", idx))
     }
 
     fn get_struct_at(&self, idx: StructHandleIndex) -> Result<&StructHandle> {
-        match self.struct_handles.get(idx.0 as usize) {
-            None => bail!("bad struct handle index {}", idx),
-            Some(s) => Ok(s),
-        }
+        self.struct_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad struct handle index {}", idx))
     }
 
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle> {
-        match self.function_handles.get(idx.0 as usize) {
-            None => bail!("bad function handle index {}", idx),
-            Some(m) => Ok(m),
-        }
+        self.function_handles
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad function handle index {}", idx))
     }
 
-    fn get_string_at(&self, idx: StringPoolIndex) -> Result<&String> {
-        match self.string_pool.get(idx.0 as usize) {
-            None => bail!("bad string index {}", idx),
-            Some(s) => Ok(s),
-        }
+    fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr> {
+        self.identifiers
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad string index {}", idx))
+    }
+
+    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
+        self.user_strings
+            .get(idx.0 as usize)
+            .map(|x| x.as_ref())
+            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
-        match self.address_pool.get(idx.0 as usize) {
-            None => bail!("bad address index {}", idx),
-            Some(addr) => Ok(addr),
-        }
+        self.address_pool
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad address index {}", idx))
     }
 
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature> {
-        match self.type_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.type_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature> {
-        match self.function_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.function_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 
     fn get_locals_signature_at(&self, idx: LocalsSignatureIndex) -> Result<&LocalsSignature> {
-        match self.locals_signatures.get(idx.0 as usize) {
-            None => bail!("bad signature index {}", idx),
-            Some(sig) => Ok(sig),
-        }
+        self.locals_signatures
+            .get(idx.0 as usize)
+            .ok_or_else(|| format_err!("bad signature index {}", idx))
     }
 }
 
@@ -268,7 +268,7 @@ impl fmt::Display for CompiledScript {
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &inner.string_pool {
+        for string in &inner.identifiers {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
@@ -319,15 +319,23 @@ impl fmt::Display for CompiledModule {
         for struct_def in &inner.struct_defs {
             write!(f, "\n\t{{")?;
             display_struct_definition(struct_def, inner, f)?;
-            let f_start_idx = struct_def.fields;
-            let f_end_idx = f_start_idx.0 as u16 + struct_def.field_count;
-            for idx in f_start_idx.0 as u16..f_end_idx {
-                let field_def = match inner.field_defs.get(idx as usize) {
-                    None => panic!("bad field definition index {}", idx),
-                    Some(f) => f,
-                };
-                write!(f, "\n\t\t")?;
-                display_field_definition(field_def, inner, f)?;
+            match &struct_def.field_information {
+                StructFieldInformation::Native => write!(f, "native")?,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => {
+                    let f_start_idx = *fields;
+                    let f_end_idx = f_start_idx.0 as u16 + *field_count;
+                    for idx in f_start_idx.0 as u16..f_end_idx {
+                        let field_def = inner
+                            .field_defs
+                            .get(idx as usize)
+                            .expect(&format!("bad field definition index {}", idx)[..]);
+                        write!(f, "\n\t\t")?;
+                        display_field_definition(field_def, inner, f)?;
+                    }
+                }
             }
             write!(f, "}},")?;
         }
@@ -371,7 +379,7 @@ impl fmt::Display for CompiledModule {
         }
         writeln!(f, "]")?;
         write!(f, "Strings: [")?;
-        for string in &inner.string_pool {
+        for string in &inner.identifiers {
             write!(f, "\n\t{},", string)?;
         }
         writeln!(f, "]")?;
@@ -401,12 +409,13 @@ fn display_struct_handle<T: TableAccess>(
     write!(
         f,
         "{} ",
-        match struct_.kind {
-            Kind::Resource => "resource",
-            Kind::Copyable => "struct",
+        if struct_.is_nominal_resource {
+            "resource"
+        } else {
+            "struct"
         }
     )?;
-    write!(f, "{}@", tables.get_string_at(struct_.name).unwrap())?;
+    write!(f, "{}@", tables.get_identifier_at(struct_.name).unwrap())?;
     display_module_handle(tables.get_module_at(struct_.module).unwrap(), tables, f)
 }
 
@@ -416,7 +425,7 @@ fn display_module_handle<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_address(tables.get_address_at(module.address).unwrap(), f)?;
-    write!(f, ".{}", tables.get_string_at(module.name).unwrap())
+    write!(f, ".{}", tables.get_identifier_at(module.name).unwrap())
 }
 
 fn display_function_handle<T: TableAccess>(
@@ -425,7 +434,7 @@ fn display_function_handle<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_module_handle(tables.get_module_at(function.module).unwrap(), tables, f)?;
-    write!(f, ".{}", tables.get_string_at(function.name).unwrap())?;
+    write!(f, ".{}", tables.get_identifier_at(function.name).unwrap())?;
     display_function_signature(
         tables
             .get_function_signature_at(function.signature)
@@ -453,7 +462,7 @@ fn display_field_definition<T: TableAccess>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     display_struct_handle(tables.get_struct_at(field.struct_).unwrap(), tables, f)?;
-    write!(f, ".{}: ", tables.get_string_at(field.name).unwrap())?;
+    write!(f, ".{}: ", tables.get_identifier_at(field.name).unwrap())?;
     display_type_signature(
         tables.get_type_signature_at(field.signature).unwrap(),
         tables,
@@ -560,7 +569,7 @@ fn display_locals_signature<T: TableAccess>(
     Ok(())
 }
 
-fn display_type_parameters<T: TableAccess>(
+fn display_type_actuals<T: TableAccess>(
     types: &[SignatureToken],
     tables: &T,
     f: &mut fmt::Formatter,
@@ -591,7 +600,7 @@ fn display_signature_token<T: TableAccess>(
         SignatureToken::Address => write!(f, "Address"),
         SignatureToken::Struct(idx, types) => {
             display_struct_handle(tables.get_struct_at(*idx).unwrap(), tables, f)?;
-            display_type_parameters(&types, tables, f)
+            display_type_actuals(&types, tables, f)
         }
         SignatureToken::Reference(token) => {
             write!(f, "&")?;
@@ -626,15 +635,20 @@ fn display_bytecode<T: TableAccess>(
             display_address(tables.get_address_at(*idx).unwrap(), f)?;
             write!(f, ")")
         }
-        Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_string_at(*idx).unwrap()),
-        Bytecode::BorrowField(idx) => {
-            write!(f, "BorrowField(")?;
+        Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_user_string_at(*idx).unwrap()),
+        Bytecode::MutBorrowField(idx) => {
+            write!(f, "MutBorrowField(")?;
+            display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
+            write!(f, ")")
+        }
+        Bytecode::ImmBorrowField(idx) => {
+            write!(f, "ImmBorrowField(")?;
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;
             write!(f, ")")
         }
         Bytecode::Call(idx, types_idx) => {
             write!(f, "Call")?;
-            display_type_parameters(
+            display_type_actuals(
                 &tables.get_locals_signature_at(*types_idx).unwrap().0,
                 tables,
                 f,

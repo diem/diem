@@ -1,14 +1,14 @@
 module Token {
     resource T {v: u64}
 
-    public new(v: u64): R#Self.T {
+    public new(v: u64): Self.T {
         return T{v: move(v)};
     }
 
-    public value(this: &R#Self.T): u64 {
+    public value(this: &Self.T): u64 {
         let vref: &u64;
         vref = &copy(this).v;
-        release(move(this));
+        _ = move(this);
         return *move(vref);
     }
 
@@ -18,23 +18,23 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: R#Self.T) {
+    public publish(t: Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
 
-    public test() {
-        let z: R#Self.T;
+    public test() acquires T {
+        let z: Self.T;
         let addr1: address;
-        let struct1: &mut R#Self.T;
-        let imms1: &R#Self.T;
+        let struct1: &mut Self.T;
+        let imms1: &Self.T;
         let struct1_original_balance: u64;
 
         z = Self.new(0);
         Self.publish(move(z));
 
         addr1 = get_txn_sender();
-        struct1 = borrow_global<T>(move(addr1));
+        struct1 = borrow_global_mut<T>(move(addr1));
         imms1 = freeze(move(struct1));
 
         struct1_original_balance = Self.value(move(imms1));

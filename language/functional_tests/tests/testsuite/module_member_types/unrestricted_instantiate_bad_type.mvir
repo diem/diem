@@ -1,9 +1,10 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: PackTypeMismatchError(1) }
+// check: VerificationFailure
+// check: PACK_TYPE_MISMATCH_ERROR
 
 module Test {
     struct T{fint: u64}
 
-    public t1(): V#Self.T {
+    public t1(): Self.T {
         return T{fint: false};
     }
 }
@@ -13,7 +14,7 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let t1: V#Test.T;
+    let t1: Test.T;
     t1 = Test.t1();
     return;
 }

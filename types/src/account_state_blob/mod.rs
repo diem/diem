@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::unit_arg)]
-
+#[cfg(any(test, feature = "testing"))]
+use crate::account_config::{account_resource_path, AccountResource};
 use crate::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
@@ -10,17 +10,22 @@ use crate::{
     proof::{verify_account_state, AccountStateProof},
     transaction::Version,
 };
+
 use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest::{arbitrary::Arbitrary, prelude::*};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryFrom, fmt};
 
-#[derive(Arbitrary, Clone, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Eq, PartialEq, FromProto, IntoProto, Serialize, Deserialize)]
 #[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
@@ -72,6 +77,18 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl From<AccountResource> for AccountStateBlob {
+    fn from(account_resource: AccountResource) -> Self {
+        let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
+        account_state.insert(
+            account_resource_path(),
+            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
+        );
+        AccountStateBlob::try_from(&account_state).unwrap()
+    }
+}
+
 impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
     type Error = failure::Error;
 
@@ -90,7 +107,25 @@ impl CryptoHash for AccountStateBlob {
     }
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[cfg(any(test, feature = "testing"))]
+prop_compose! {
+    pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
+        AccountStateBlob::from(account_resource)
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Arbitrary for AccountStateBlob {
+    type Parameters = ();
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        account_state_blob_strategy().boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountStateWithProof {
     /// The transaction version at which this account state is seen.
     pub version: Version,

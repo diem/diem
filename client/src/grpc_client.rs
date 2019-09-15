@@ -11,11 +11,11 @@ use admission_control_proto::{
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use std::sync::Arc;
 use types::{
@@ -29,7 +29,7 @@ use types::{
     },
     transaction::{SignedTransaction, Version},
     validator_verifier::ValidatorVerifier,
-    vm_error::{VMStatus, VMValidationStatus},
+    vm_error::StatusCode,
 };
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
@@ -86,7 +86,7 @@ impl GRPCClient {
                 bail!("Transaction failed with AC status: {:?}", ac_status,);
             }
         } else if let Some(vm_error) = completed_resp.vm_error {
-            if vm_error == VMStatus::Validation(VMValidationStatus::SequenceNumberTooOld) {
+            if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
                 if let Some(sender_account) = sender_account_opt {
                     sender_account.sequence_number =
                         self.get_sequence_number(sender_account.address)?;
@@ -138,7 +138,9 @@ impl GRPCClient {
     fn get_with_proof_async(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<impl Future<Item = UpdateToLatestLedgerResponse, Error = failure::Error>> {
+    ) -> Result<
+        impl Future<Item = UpdateToLatestLedgerResponse<Ed25519Signature>, Error = failure::Error>,
+    > {
         let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into_proto();
@@ -176,8 +178,8 @@ impl GRPCClient {
     pub(crate) fn get_with_proof_sync(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<UpdateToLatestLedgerResponse> {
-        let mut resp: Result<UpdateToLatestLedgerResponse> =
+    ) -> Result<UpdateToLatestLedgerResponse<Ed25519Signature>> {
+        let mut resp: Result<UpdateToLatestLedgerResponse<Ed25519Signature>> =
             self.get_with_proof_async(requested_items.clone())?.wait();
         let mut try_cnt = 0_u64;
 
@@ -275,7 +277,7 @@ impl GRPCClient {
         start_event_seq_num: u64,
         ascending: bool,
         limit: u64,
-    ) -> Result<(Vec<EventWithProof>, Option<AccountStateWithProof>)> {
+    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
         let req_item = RequestItem::GetEventsByEventAccessPath {
             access_path,
             start_event_seq_num,

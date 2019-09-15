@@ -114,7 +114,7 @@ fn find_prototype_attribute(rust_struct: &syn::DeriveInput) -> TokenStream {
         1,
         "There should be exactly one ProtoType attribute.",
     );
-    attrs.remove(0).clone().tts.into()
+    attrs.remove(0).clone().tokens.into()
 }
 
 /// For a struct

@@ -1,13 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{fuzz_targets::new_value, FuzzTargetImpl};
+use crate::FuzzTargetImpl;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use canonical_serialization::*;
 use failure::prelude::*;
-use proptest::test_runner::TestRunner;
+use proptest_helpers::ValueGenerator;
 use std::io::Cursor;
-use vm_runtime::{loaded_data::struct_def::StructDef, value::Value};
+use vm_runtime_types::{
+    loaded_data::{struct_def::StructDef, types::Type},
+    value::Value,
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct ValueTarget;
@@ -21,9 +24,12 @@ impl FuzzTargetImpl for ValueTarget {
         "VM values + types (custom deserializer)"
     }
 
-    fn generate(&self, runner: &mut TestRunner) -> Vec<u8> {
-        let value = new_value(runner, Value::struct_strategy());
-        let struct_def = value.to_struct_def_FOR_TESTING();
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        let value = gen.generate(Value::struct_strategy());
+        let struct_def = match value.to_type_FOR_TESTING() {
+            Type::Struct(def) => def,
+            _ => unreachable!("must have returned a StructDef"),
+        };
 
         // Values as currently serialized are not self-describing, so store a serialized form of the
         // type along with the value as well.
@@ -40,7 +46,7 @@ impl FuzzTargetImpl for ValueTarget {
             .expect("writing should work");
         blob.extend_from_slice(&struct_def_blob);
         blob.extend_from_slice(&value_blob);
-        blob
+        Some(blob)
     }
 
     fn fuzz(&self, data: &[u8]) {

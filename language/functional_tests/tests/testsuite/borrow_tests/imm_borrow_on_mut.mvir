@@ -1,0 +1,43 @@
+module Tester {
+    resource Initializer { x: u64, y: u64 }
+    struct Point { x: u64, y: u64 }
+
+    // the resource is here to just give a feeling why the computation might not be reorderable
+    set_and_pick(p: &mut Self.Point): &mut u64 acquires Initializer {
+        let init: &mut Self.Initializer;
+
+        init = borrow_global_mut<Initializer>(get_txn_sender());
+        *&mut copy(p).x = *&copy(init).x;
+        *&mut copy(p).y = *&move(init).y;
+        if (*&copy(p).x >= *&copy(p).y) {
+            return &mut move(p).x;
+        } else {
+            return &mut move(p).y;
+        }
+    }
+
+    bump_and_give(u: &mut u64): &u64 {
+        *copy(u) = *copy(u) + 1;
+        return freeze(move(u));
+    }
+
+    larger_field(point_ref: &mut Self.Point): &u64 acquires Initializer {
+        let field_ref: &mut u64;
+        let returned_ref: &u64;
+
+        assert(*&copy(point_ref).x == 0, 42);
+        assert(*&copy(point_ref).y == 0, 42);
+
+        field_ref = Self.set_and_pick(copy(point_ref));
+        returned_ref = Self.bump_and_give(move(field_ref));
+
+        // imagine some more interesting check than this assert
+        assert(
+            (*copy(returned_ref) == *&copy(point_ref).x) &&
+            (*copy(returned_ref) != *&move(point_ref).y),
+            42
+        );
+
+        return move(returned_ref);
+    }
+}

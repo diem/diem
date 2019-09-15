@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 17,
-  "iteration": 1563486040625,
+  "iteration": 1565807898889,
   "links": [],
   "panels": [
     {
@@ -24,11 +24,193 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "fill": 5,
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
+        "y": 0
+      },
+      "id": 66,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "storage_gauge{op=\"latest_transaction_version\"}",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        },
+        {
+          "expr": "storage_gauge{op=\"pruner.least_readable_state_version\"}",
+          "legendFormat": "{{peer_id}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Latest vs Min Readable (Pruned Till) Versions",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 67,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max(storage_gauge{op=\"new_state_nodes\"}) - max(storage_gauge{op=\"stale_state_nodes\"})",
+          "legendFormat": "accounts",
+          "refId": "A"
+        },
+        {
+          "expr": "max(storage_gauge{op=\"new_state_nodes\"}) - max(storage_gauge{op=\"stale_state_nodes\"}) - max(storage_gauge{op=\"new_state_leaves\"}) + max(storage_gauge{op=\"stale_state_leaves\"})",
+          "legendFormat": "internal_nodes",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Number of Accounts vs Internal Nodes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 5,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
         "y": 0
       },
       "id": 40,
@@ -46,7 +228,9 @@
       "linewidth": 0,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -110,92 +294,6 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "id": 52,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "label_replace(avg by(op)(irate(schemadb_duration_sum{op=~\"db_put_bytes_.*\"}[1m])) / avg by(op)(irate(schemadb_duration_count{op=~\"db_put_bytes_.*\"}[1m])), \"cf\", \"$1\", \"op\", \"db_put_bytes_(.*)\")",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{cf}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Record size (key + value) by Column Family",
-      "tooltip": {
-        "shared": true,
-        "sort": 2,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "decbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
@@ -211,11 +309,12 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 9
+            "y": 17
           },
           "id": 4,
           "legend": {
@@ -232,7 +331,9 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
@@ -307,13 +408,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 9
+            "y": 17
           },
-          "id": 41,
+          "id": 86,
           "legend": {
             "avg": false,
             "current": false,
@@ -328,14 +430,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -405,13 +509,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 9
+            "y": 17
           },
-          "id": 42,
+          "id": 87,
           "legend": {
             "avg": false,
             "current": false,
@@ -426,14 +531,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -503,13 +610,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 17
+            "y": 25
           },
-          "id": 43,
+          "id": 88,
           "legend": {
             "avg": false,
             "current": false,
@@ -524,14 +632,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -601,13 +711,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 17
+            "y": 25
           },
-          "id": 44,
+          "id": 89,
           "legend": {
             "avg": false,
             "current": false,
@@ -622,20 +733,22 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
               "selected": false,
-              "text": "event_by_access_path",
-              "value": "event_by_access_path"
+              "text": "event_by_key",
+              "value": "event_by_key"
             }
           },
           "seriesOverrides": [],
@@ -699,13 +812,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 17
+            "y": 25
           },
-          "id": 45,
+          "id": 90,
           "legend": {
             "avg": false,
             "current": false,
@@ -720,14 +834,218 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
+          "repeatPanelId": 4,
+          "scopedVars": {
+            "cf_name": {
+              "selected": false,
+              "text": "jellyfish_merkle_node",
+              "value": "jellyfish_merkle_node"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "storage_gauge{op='cf_size_bytes_$cf_name'}",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$cf_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "decbytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 33
+          },
+          "id": 91,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1565628223473,
+          "repeatPanelId": 4,
+          "scopedVars": {
+            "cf_name": {
+              "selected": false,
+              "text": "ledger_counters",
+              "value": "ledger_counters"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "storage_gauge{op='cf_size_bytes_$cf_name'}",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$cf_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "decbytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 33
+          },
+          "id": 92,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -797,13 +1115,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 0,
-            "y": 25
+            "x": 16,
+            "y": 33
           },
-          "id": 46,
+          "id": 93,
           "legend": {
             "avg": false,
             "current": false,
@@ -818,14 +1137,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -895,13 +1216,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 8,
-            "y": 25
+            "x": 0,
+            "y": 41
           },
-          "id": 47,
+          "id": 94,
           "legend": {
             "avg": false,
             "current": false,
@@ -916,14 +1238,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -993,13 +1317,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 16,
-            "y": 25
+            "x": 8,
+            "y": 41
           },
-          "id": 48,
+          "id": 95,
           "legend": {
             "avg": false,
             "current": false,
@@ -1014,14 +1339,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -1091,13 +1418,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 0,
-            "y": 33
+            "x": 16,
+            "y": 41
           },
-          "id": 49,
+          "id": 96,
           "legend": {
             "avg": false,
             "current": false,
@@ -1112,14 +1440,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -1189,13 +1519,14 @@
           "dashLength": 10,
           "dashes": false,
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 8,
-            "y": 33
+            "x": 0,
+            "y": 49
           },
-          "id": 50,
+          "id": 97,
           "legend": {
             "avg": false,
             "current": false,
@@ -1210,14 +1541,16 @@
           "links": [],
           "maxPerRow": 3,
           "nullPointMode": "null",
-          "options": {},
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1563485063766,
+          "repeatIteration": 1565628223473,
           "repeatPanelId": 4,
           "scopedVars": {
             "cf_name": {
@@ -1284,9 +1617,371 @@
       ],
       "title": "Column Family Sizes By Validator",
       "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 85,
+      "panels": [],
+      "title": "Misc",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "id": 70,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max(rate(storage_gauge{op=\"new_state_leaves\"}[10m])) / max(rate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+          "legendFormat": "accounts/txn",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Avg Account Updates per Transaction",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "id": 71,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max(rate(storage_gauge{op=\"events_created\"}[10m])) / max(rate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+          "legendFormat": "events/txn",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Avg Events Emits per Transaction",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "id": 98,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max(rate(storage_gauge{op=\"new_state_nodes\"}[10m])) / max(rate(storage_gauge{op=\"new_state_leaves\"}[10m])) - 1",
+          "legendFormat": "internal nodes/accounts",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Avg Internal Node Updates per Account Update",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "id": 52,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "label_replace(\n    avg by(op)(rate(schemadb_duration_sum{op=~\"db_put_bytes_.*\"}[10m])) / avg by(op)(rate(schemadb_duration_count{op=~\"db_put_bytes_.*\"}[10m])),\n    \"cf\", \"$1\", \"op\", \"db_put_bytes_(.*)\"\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{cf}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Record size (key + value) by Column Family",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
-  "schemaVersion": 18,
+  "refresh": false,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1352,5 +2047,5 @@
   "timezone": "",
   "title": "Storage",
   "uid": "2Q0p7AVWk",
-  "version": 1
+  "version": 2
 }

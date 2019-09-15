@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{VMStaticViolation, VerificationError},
+    errors::{bounds_error, bytecode_offset_err, verification_error},
     file_format::{
         Bytecode, CompiledModuleMut, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionSignature, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
-        StructHandle, TypeSignature,
+        StructFieldInformation, StructHandle, TypeSignature,
     },
     internals::ModuleIndex,
     IndexKind,
 };
+use types::vm_error::{StatusCode, VMStatus};
 
 pub struct BoundsChecker<'a> {
     module: &'a CompiledModuleMut,
@@ -21,18 +22,16 @@ impl<'a> BoundsChecker<'a> {
         Self { module }
     }
 
-    pub fn verify(self) -> Vec<VerificationError> {
+    pub fn verify(self) -> Vec<VMStatus> {
         let mut errors: Vec<Vec<_>> = vec![];
 
         // A module (or script) must always have at least one module handle. (For modules the first
         // handle should be the same as the sender -- the bytecode verifier is unaware of
         // transactions so it does not perform this check.
         if self.module.module_handles.is_empty() {
-            errors.push(vec![VerificationError {
-                kind: IndexKind::ModuleHandle,
-                idx: 0,
-                err: VMStaticViolation::NoModuleHandles,
-            }]);
+            let status =
+                verification_error(IndexKind::ModuleHandle, 0, StatusCode::NO_MODULE_HANDLES);
+            errors.push(vec![status]);
         }
 
         errors.push(Self::verify_impl(
@@ -94,10 +93,12 @@ impl<'a> BoundsChecker<'a> {
             .map(|(idx, elem)| {
                 elem.check_code_unit_bounds(self.module)
                     .into_iter()
-                    .map(move |err| VerificationError {
-                        kind: IndexKind::FunctionDefinition,
-                        idx,
-                        err,
+                    .map(move |err| {
+                        err.append_message(format!(
+                            " at index {} while indexing {}",
+                            idx,
+                            IndexKind::FunctionDefinition
+                        ))
                     })
             })
             .flatten()
@@ -109,12 +110,12 @@ impl<'a> BoundsChecker<'a> {
         kind: IndexKind,
         iter: impl Iterator<Item = impl BoundsCheck>,
         module: &CompiledModuleMut,
-    ) -> Vec<VerificationError> {
+    ) -> Vec<VMStatus> {
         iter.enumerate()
             .map(move |(idx, elem)| {
-                elem.check_bounds(module)
-                    .into_iter()
-                    .map(move |err| VerificationError { kind, idx, err })
+                elem.check_bounds(module).into_iter().map(move |err| {
+                    err.append_message(format!(" at index {} while indexing {}", idx, kind))
+                })
             })
             .flatten()
             .collect()
@@ -122,18 +123,40 @@ impl<'a> BoundsChecker<'a> {
 }
 
 pub trait BoundsCheck {
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation>;
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus>;
 }
 
 #[inline]
-fn check_bounds_impl<T, I>(pool: &[T], idx: I) -> Option<VMStaticViolation>
+fn check_bounds_impl<T, I>(pool: &[T], idx: I) -> Option<VMStatus>
 where
     I: ModuleIndex,
 {
     let idx = idx.into_index();
     let len = pool.len();
     if idx >= len {
-        Some(VMStaticViolation::IndexOutOfBounds(I::KIND, len, idx))
+        let status = bounds_error(I::KIND, idx, len, StatusCode::INDEX_OUT_OF_BOUNDS);
+        Some(status)
+    } else {
+        None
+    }
+}
+
+#[inline]
+fn check_code_unit_bounds_impl<T, I>(pool: &[T], bytecode_offset: usize, idx: I) -> Option<VMStatus>
+where
+    I: ModuleIndex,
+{
+    let idx = idx.into_index();
+    let len = pool.len();
+    if idx >= len {
+        let status = bytecode_offset_err(
+            I::KIND,
+            idx,
+            len,
+            bytecode_offset,
+            StatusCode::INDEX_OUT_OF_BOUNDS,
+        );
+        Some(status)
     } else {
         None
     }
@@ -141,10 +164,10 @@ where
 
 impl BoundsCheck for &ModuleHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.address_pool, self.address),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
         ]
         .into_iter()
         .flatten()
@@ -154,10 +177,10 @@ impl BoundsCheck for &ModuleHandle {
 
 impl BoundsCheck for &StructHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
         ]
         .into_iter()
         .flatten()
@@ -167,10 +190,10 @@ impl BoundsCheck for &StructHandle {
 
 impl BoundsCheck for &FunctionHandle {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.module_handles, self.module),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
             check_bounds_impl(&module.function_signatures, self.signature),
         ]
         .into_iter()
@@ -181,10 +204,16 @@ impl BoundsCheck for &FunctionHandle {
 
 impl BoundsCheck for &StructDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_handle),
-            module.check_field_range(self.field_count, self.fields),
+            match &self.field_information {
+                StructFieldInformation::Native => None,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => module.check_field_range(*field_count, *fields),
+            },
         ]
         .into_iter()
         .flatten()
@@ -194,10 +223,10 @@ impl BoundsCheck for &StructDefinition {
 
 impl BoundsCheck for &FieldDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.struct_handles, self.struct_),
-            check_bounds_impl(&module.string_pool, self.name),
+            check_bounds_impl(&module.identifiers, self.name),
             check_bounds_impl(&module.type_signatures, self.signature),
         ]
         .into_iter()
@@ -208,7 +237,7 @@ impl BoundsCheck for &FieldDefinition {
 
 impl BoundsCheck for &FunctionDefinition {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         vec![
             check_bounds_impl(&module.function_handles, self.function),
             if self.is_native() {
@@ -219,20 +248,25 @@ impl BoundsCheck for &FunctionDefinition {
         ]
         .into_iter()
         .flatten()
+        .chain(
+            self.acquires_global_resources
+                .iter()
+                .flat_map(|idx| check_bounds_impl(&module.struct_defs, *idx)),
+        )
         .collect()
     }
 }
 
 impl BoundsCheck for &TypeSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         self.0.check_bounds(module).into_iter().collect()
     }
 }
 
 impl BoundsCheck for &FunctionSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         self.return_types
             .iter()
             .filter_map(|token| token.check_bounds(module))
@@ -247,7 +281,7 @@ impl BoundsCheck for &FunctionSignature {
 
 impl BoundsCheck for &LocalsSignature {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         self.0
             .iter()
             .filter_map(|token| token.check_bounds(module))
@@ -257,18 +291,16 @@ impl BoundsCheck for &LocalsSignature {
 
 impl SignatureToken {
     #[inline]
-    fn check_bounds(&self, module: &CompiledModuleMut) -> Option<VMStaticViolation> {
-        match self.struct_index() {
-            Some(sh_idx) => check_bounds_impl(&module.struct_handles, sh_idx),
-            None => None,
-        }
+    fn check_bounds(&self, module: &CompiledModuleMut) -> Option<VMStatus> {
+        self.struct_index()
+            .and_then(|sh_idx| check_bounds_impl(&module.struct_handles, sh_idx))
     }
 }
 
 impl FunctionDefinition {
     // This is implemented separately because it depends on the locals signature index being
     // checked.
-    fn check_code_unit_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStaticViolation> {
+    fn check_code_unit_bounds(&self, module: &CompiledModuleMut) -> Vec<VMStatus> {
         if self.is_native() {
             return vec![];
         }
@@ -281,42 +313,65 @@ impl FunctionDefinition {
         let code_len = code.len();
 
         code.iter()
-            .filter_map(|bytecode| {
+            .enumerate()
+            .filter_map(|(bytecode_offset, bytecode)| {
                 use self::Bytecode::*;
 
                 match bytecode {
                     // Instructions that refer to other pools.
-                    LdAddr(idx) => check_bounds_impl(&module.address_pool, *idx),
-                    LdByteArray(idx) => check_bounds_impl(&module.byte_array_pool, *idx),
-                    LdStr(idx) => check_bounds_impl(&module.string_pool, *idx),
-                    BorrowField(idx) => check_bounds_impl(&module.field_defs, *idx),
-                    Call(idx, _) => check_bounds_impl(&module.function_handles, *idx), // FIXME: check bounds for type actuals?
-                    Pack(idx, _) | Unpack(idx, _) | Exists(idx, _) | BorrowGlobal(idx, _) | MoveFrom(idx, _)
-                    | MoveToSender(idx, _) => check_bounds_impl(&module.struct_defs, *idx),
+                    LdAddr(idx) => {
+                        check_code_unit_bounds_impl(&module.address_pool, bytecode_offset, *idx)
+                    }
+                    LdByteArray(idx) => {
+                        check_code_unit_bounds_impl(&module.byte_array_pool, bytecode_offset, *idx)
+                    }
+                    LdStr(idx) => {
+                        check_code_unit_bounds_impl(&module.user_strings, bytecode_offset, *idx)
+                    }
+                    MutBorrowField(idx) | ImmBorrowField(idx) => {
+                        check_code_unit_bounds_impl(&module.field_defs, bytecode_offset, *idx)
+                    }
+                    Call(idx, _) => {
+                        check_code_unit_bounds_impl(&module.function_handles, bytecode_offset, *idx)
+                    } // FIXME: check bounds for type actuals?
+                    Pack(idx, _)
+                    | Unpack(idx, _)
+                    | Exists(idx, _)
+                    | MutBorrowGlobal(idx, _)
+                    | ImmBorrowGlobal(idx, _)
+                    | MoveFrom(idx, _)
+                    | MoveToSender(idx, _) => {
+                        check_code_unit_bounds_impl(&module.struct_defs, bytecode_offset, *idx)
+                    }
                     // Instructions that refer to this code block.
                     BrTrue(offset) | BrFalse(offset) | Branch(offset) => {
-                        // XXX IndexOutOfBounds seems correct, but IndexKind::CodeDefinition
-                        // (and LocalPool) feel wrong. Reconsider this at some point.
                         let offset = *offset as usize;
                         if offset >= code_len {
-                            Some(VMStaticViolation::IndexOutOfBounds(
+                            let status = bytecode_offset_err(
                                 IndexKind::CodeDefinition,
-                                code_len,
                                 offset,
-                            ))
+                                code_len,
+                                bytecode_offset,
+                                StatusCode::INDEX_OUT_OF_BOUNDS,
+                            );
+                            Some(status)
                         } else {
                             None
                         }
                     }
                     // Instructions that refer to the locals.
-                    CopyLoc(idx) | MoveLoc(idx) | StLoc(idx) | BorrowLoc(idx) => {
+                    CopyLoc(idx) | MoveLoc(idx) | StLoc(idx) | MutBorrowLoc(idx)
+                    | ImmBorrowLoc(idx) => {
                         let idx = *idx as usize;
                         if idx >= locals_len {
-                            Some(VMStaticViolation::IndexOutOfBounds(
+                            let status = bytecode_offset_err(
                                 IndexKind::LocalPool,
-                                locals_len,
                                 idx,
-                            ))
+                                locals_len,
+                                bytecode_offset,
+                                StatusCode::INDEX_OUT_OF_BOUNDS,
+                            );
+                            Some(status)
                         } else {
                             None
                         }
@@ -324,12 +379,11 @@ impl FunctionDefinition {
 
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
-                    FreezeRef | ReleaseRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse
-                    | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
-                    | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
-                    | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-                    | GetTxnSenderAddress | CreateAccount | EmitEvent | GetTxnSequenceNumber
-                    | GetTxnPublicKey => None,
+                    FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
+                    | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
+                    | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
+                    | GetGasRemaining | GetTxnSenderAddress | CreateAccount
+                    | GetTxnSequenceNumber | GetTxnPublicKey => None,
                 }
             })
             .collect()

@@ -17,7 +17,7 @@ use crate::{
 use crypto::hash::HashValue;
 use logger::prelude::*;
 // use crate::crypto_wrappers::GenericSignature;
-use nextgen_crypto::traits::Signature;
+use crypto::traits::Signature;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // These tests check interoperability of key_generation,                           //

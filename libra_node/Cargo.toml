@@ -7,8 +7,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
-grpcio = "0.4.3"
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 grpcio-sys = "0.4.4"
+jemallocator = { version = "0.3.2", features = ["alloc_trait", "profiling", "unprefixed_malloc_on_supported_platforms"] }
+parity-multiaddr = "0.5.0"
 signal-hook = "0.1.10"
 tokio = "0.1.22"
 
@@ -17,23 +19,23 @@ admission_control_service = { path = "../admission_control/admission_control_ser
 config = { path = "../config" }
 consensus = { path = "../consensus" }
 crash_handler = { path = "../common/crash_handler" }
-crypto = { path = "../crypto/legacy_crypto" }
 debug_interface = { path = "../common/debug_interface" }
-logger = { path = "../common/logger" }
 executable_helpers = { path = "../common/executable_helpers" }
 execution_proto = { path = "../execution/execution_proto" }
+futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
 grpc_helpers = { path = "../common/grpc_helpers" }
+logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
+crypto = { path = "../crypto/crypto" }
 execution_service = { path = "../execution/execution_service" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
 network = { path = "../network" }
-proto_conv = { path = "../common/proto_conv" }
+state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 config_builder = { path = "../config/config_builder" }
+types = { path = "../types", features = ["testing"]}

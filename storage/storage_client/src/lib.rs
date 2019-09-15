@@ -9,18 +9,22 @@
 
 mod state_view;
 
-use crypto::HashValue;
+use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
+use metrics::counters::SVC_COUNTERS;
 use proto_conv::{FromProto, IntoProto};
+use protobuf::Message;
+use rand::Rng;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
-    proto::{storage::GetExecutorStartupInfoRequest, storage_grpc},
-    ExecutorStartupInfo, GetAccountStateWithProofByStateRootRequest,
-    GetAccountStateWithProofByStateRootResponse, GetExecutorStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
+    proto::{storage::GetStartupInfoRequest, storage_grpc},
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, StartupInfo,
 };
 use types::{
     account_address::AccountAddress,
@@ -36,6 +40,33 @@ use types::{
 
 pub use crate::state_view::VerifiedStateView;
 
+fn pick<T>(items: &[T]) -> &T {
+    let mut rng = rand::thread_rng();
+    let index = rng.gen_range(0, items.len());
+    &items[index]
+}
+
+fn make_clients(
+    env: Arc<Environment>,
+    host: &str,
+    port: u16,
+    client_type: &str,
+    max_receive_len: Option<i32>,
+) -> Vec<storage_grpc::StorageClient> {
+    let num_clients = env.completion_queues().len();
+    (0..num_clients)
+        .map(|i| {
+            let mut builder = ChannelBuilder::new(env.clone())
+                .primary_user_agent(format!("grpc/storage-{}-{}", client_type, i).as_str());
+            if let Some(m) = max_receive_len {
+                builder = builder.max_receive_message_len(m);
+            }
+            let channel = builder.connect(&format!("{}:{}", host, port));
+            storage_grpc::StorageClient::new(channel)
+        })
+        .collect::<Vec<storage_grpc::StorageClient>>()
+}
+
 fn convert_grpc_response<T>(
     response: grpcio::Result<impl Future01<Item = T, Error = grpcio::Error>>,
 ) -> impl Future<Output = Result<T>> {
@@ -44,18 +75,27 @@ fn convert_grpc_response<T>(
         .and_then(|x| x.map_err(convert_grpc_err))
 }
 
+fn log_and_convert<M: Message, P: IntoProto<ProtoType = M>>(message: P) -> M {
+    let proto_message = message.into_proto();
+    SVC_COUNTERS.message(&proto_message);
+    proto_message
+}
+
 /// This provides storage read interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageReadServiceClient {
-    client: storage_grpc::StorageClient,
+    clients: Vec<storage_grpc::StorageClient>,
 }
 
 impl StorageReadServiceClient {
     /// Constructs a `StorageReadServiceClient` with given host and port.
     pub fn new(env: Arc<Environment>, host: &str, port: u16) -> Self {
-        let channel = ChannelBuilder::new(env).connect(&format!("{}:{}", host, port));
-        let client = storage_grpc::StorageClient::new(channel);
-        StorageReadServiceClient { client }
+        let clients = make_clients(env, host, port, "read", None);
+        StorageReadServiceClient { clients }
+    }
+
+    fn client(&self) -> &storage_grpc::StorageClient {
+        pick(&self.clients)
     }
 }
 
@@ -66,8 +106,8 @@ impl StorageRead for StorageReadServiceClient {
         requested_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
     }
@@ -81,8 +121,8 @@ impl StorageRead for StorageReadServiceClient {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,
@@ -91,16 +131,19 @@ impl StorageRead for StorageReadServiceClient {
             client_known_version,
             requested_items,
         };
-        convert_grpc_response(self.client.update_to_latest_ledger_async(&req.into_proto()))
-            .map(|resp| {
-                let rust_resp = UpdateToLatestLedgerResponse::from_proto(resp?)?;
-                Ok((
-                    rust_resp.response_items,
-                    rust_resp.ledger_info_with_sigs,
-                    rust_resp.validator_change_events,
-                ))
-            })
-            .boxed()
+        convert_grpc_response(
+            self.client()
+                .update_to_latest_ledger_async(&log_and_convert(req)),
+        )
+        .map(|resp| {
+            let rust_resp = UpdateToLatestLedgerResponse::from_proto(resp?)?;
+            Ok((
+                rust_resp.response_items,
+                rust_resp.ledger_info_with_sigs,
+                rust_resp.validator_change_events,
+            ))
+        })
+        .boxed()
     }
 
     fn get_transactions(
@@ -127,7 +170,7 @@ impl StorageRead for StorageReadServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let req =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
-        convert_grpc_response(self.client.get_transactions_async(&req.into_proto()))
+        convert_grpc_response(self.client().get_transactions_async(&log_and_convert(req)))
             .map(|resp| {
                 let rust_resp = GetTransactionsResponse::from_proto(resp?)?;
                 Ok(rust_resp.txn_list_with_proof)
@@ -135,61 +178,93 @@ impl StorageRead for StorageReadServiceClient {
             .boxed()
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        block_on(self.get_account_state_with_proof_by_state_root_async(address, state_root_hash))
+        block_on(self.get_account_state_with_proof_by_version_async(address, version))
     }
 
-    fn get_account_state_with_proof_by_state_root_async(
+    fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
     {
-        let req = GetAccountStateWithProofByStateRootRequest::new(address, state_root_hash);
+        let req = GetAccountStateWithProofByVersionRequest::new(address, version);
         convert_grpc_response(
-            self.client
-                .get_account_state_with_proof_by_state_root_async(&req.into_proto()),
+            self.client()
+                .get_account_state_with_proof_by_version_async(&log_and_convert(req)),
         )
         .map(|resp| {
-            let resp = GetAccountStateWithProofByStateRootResponse::from_proto(resp?)?;
+            let resp = GetAccountStateWithProofByVersionResponse::from_proto(resp?)?;
             Ok(resp.into())
         })
         .boxed()
     }
 
-    fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>> {
-        block_on(self.get_executor_startup_info_async())
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        block_on(self.get_startup_info_async())
     }
 
-    fn get_executor_startup_info_async(
+    fn get_startup_info_async(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<ExecutorStartupInfo>>> + Send>> {
-        let proto_req = GetExecutorStartupInfoRequest::new();
-        convert_grpc_response(self.client.get_executor_startup_info_async(&proto_req))
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
+        let proto_req = GetStartupInfoRequest::new();
+        convert_grpc_response(self.client().get_startup_info_async(&proto_req))
             .map(|resp| {
-                let resp = GetExecutorStartupInfoResponse::from_proto(resp?)?;
+                let resp = GetStartupInfoResponse::from_proto(resp?)?;
                 Ok(resp.info)
             })
             .boxed()
+    }
+
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+        block_on(self.get_latest_ledger_infos_per_epoch_async(start_epoch))
+    }
+
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>
+    {
+        let proto_req = GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
+        convert_grpc_response(
+            self.client()
+                .get_latest_ledger_infos_per_epoch_async(&log_and_convert(proto_req)),
+        )
+        .map(|resp| {
+            let resp = GetLatestLedgerInfosPerEpochResponse::from_proto(resp?)?;
+            Ok(resp.into())
+        })
+        .boxed()
     }
 }
 
 /// This provides storage write interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageWriteServiceClient {
-    client: storage_grpc::StorageClient,
+    clients: Vec<storage_grpc::StorageClient>,
 }
 
 impl StorageWriteServiceClient {
     /// Constructs a `StorageWriteServiceClient` with given host and port.
-    pub fn new(env: Arc<Environment>, host: &str, port: u16) -> Self {
-        let channel = ChannelBuilder::new(env).connect(&format!("{}:{}", host, port));
-        let client = storage_grpc::StorageClient::new(channel);
-        StorageWriteServiceClient { client }
+    pub fn new(
+        env: Arc<Environment>,
+        host: &str,
+        port: u16,
+        grpc_max_receive_len: Option<i32>,
+    ) -> Self {
+        let clients = make_clients(env, host, port, "write", grpc_max_receive_len);
+        StorageWriteServiceClient { clients }
+    }
+
+    fn client(&self) -> &storage_grpc::StorageClient {
+        pick(&self.clients)
     }
 }
 
@@ -198,7 +273,7 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Result<()> {
         block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
     }
@@ -207,11 +282,11 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
-        convert_grpc_response(self.client.save_transactions_async(&req.into_proto()))
+        convert_grpc_response(self.client().save_transactions_async(&log_and_convert(req)))
             .map_ok(|_| ())
             .boxed()
     }
@@ -233,8 +308,8 @@ pub trait StorageRead: Send + Sync {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )>;
 
     /// See [`LibraDB::update_to_latest_ledger`].
@@ -250,8 +325,8 @@ pub trait StorageRead: Send + Sync {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,
@@ -279,39 +354,57 @@ pub trait StorageRead: Send + Sync {
         fetch_events: bool,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
-    /// See [`LibraDB::get_account_state_with_proof_by_state_root`].
+    /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
-    /// [`LibraDB::get_account_state_with_proof_by_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_state_root
-    fn get_account_state_with_proof_by_state_root(
+    /// [`LibraDB::get_account_state_with_proof_by_version`]:
+    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 
-    /// See [`LibraDB::get_account_state_with_proof_by_state_root`].
+    /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
-    /// [`LibraDB::get_account_state_with_proof_by_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_state_root
-    fn get_account_state_with_proof_by_state_root_async(
+    /// [`LibraDB::get_account_state_with_proof_by_version`]:
+    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
-        state_root_hash: HashValue,
+        version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>;
 
-    /// See [`LibraDB::get_executor_startup_info`].
+    /// See [`LibraDB::get_startup_info`].
     ///
-    /// [`LibraDB::get_executor_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_executor_startup_info
-    fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>>;
+    /// [`LibraDB::get_startup_info`]:
+    /// ../libradb/struct.LibraDB.html#method.get_startup_info
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
-    /// See [`LibraDB::get_executor_startup_info`].
+    /// See [`LibraDB::get_startup_info`].
     ///
-    /// [`LibraDB::get_executor_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_executor_startup_info
-    fn get_executor_startup_info_async(
+    /// [`LibraDB::get_startup_info`]:
+    /// ../libradb/struct.LibraDB.html#method.get_startup_info
+    fn get_startup_info_async(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<ExecutorStartupInfo>>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>>;
+
+    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    ///
+    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>;
+
+    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    ///
+    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
@@ -327,7 +420,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Result<()>;
 
     /// See [`LibraDB::save_transactions`].
@@ -337,7 +430,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 }
 

@@ -5,29 +5,29 @@ module Test {
         return 42;
     }
 
-    public new(): V#Self.T {
+    public new(): Self.T {
         let initial_value: u64;
         initial_value = Self.initial_value();
         return T{value: move(initial_value)};
     }
 
-    public get_value(this: &V#Self.T): u64 {
+    public get_value(this: &Self.T): u64 {
         let x: &u64;
         x = &copy(this).value;
-        release(move(this));
+        _ = move(this);
         return *move(x);
     }
 
-    public set_value(this: &mut V#Self.T, new_value: u64) {
+    public set_value(this: &mut Self.T, new_value: u64) {
         Self.internal_set_value(move(this), move(new_value));
         return;
     }
 
-    internal_set_value(this: &mut V#Self.T, new_value: u64) {
+    internal_set_value(this: &mut Self.T, new_value: u64) {
         let x: &mut u64;
         x = &mut copy(this).value;
         *move(x) = move(new_value);
-        release(move(this));
+        _ = move(this);
         return;
     }
 }
@@ -37,8 +37,8 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let obj: V#Test.T;
-    let ref: &V#Test.T;
+    let obj: Test.T;
+    let ref: &Test.T;
 
     obj = Test.new();
     ref = &obj;
@@ -46,5 +46,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: CallTypeMismatchError(7)
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR

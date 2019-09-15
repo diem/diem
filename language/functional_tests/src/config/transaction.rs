@@ -3,8 +3,7 @@
 
 use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use std::{collections::BTreeSet, str::FromStr};
-use transaction_builder::transaction_argument::parse_as_transaction_argument;
-use types::transaction::TransactionArgument;
+use types::transaction::{parse_as_transaction_argument, TransactionArgument};
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]
@@ -39,7 +38,7 @@ impl FromStr for Entry {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s = s.trim_start().trim_end();
+        let s = s.split_whitespace().collect::<String>();
         if !s.starts_with("//!") {
             return Err(
                 ErrorKind::Other("txn config entry must start with //!".to_string()).into(),

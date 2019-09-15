@@ -4,5 +4,6 @@
 #![allow(bare_trait_objects)]
 #![allow(missing_docs)]
 // use types::proto::*;
+
 pub mod secret_service;
 pub mod secret_service_grpc;

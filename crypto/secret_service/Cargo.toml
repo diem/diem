@@ -8,26 +8,23 @@ edition = "2018"
 
 [dependencies]
 futures = "0.1.28"
-grpcio = "0.4.3"
-protobuf = "2.7"
-
-config = { path = "../../config" }
-grpc_helpers = { path = "../../common/grpc_helpers" }
-debug_interface = { path = "../../common/debug_interface" }
-failure = { package = "failure_ext", path = "../../common/failure_ext" }
-executable_helpers = { path = "../../common/executable_helpers" }
-logger = { path = "../../common/logger" }
-
-nextgen_crypto = { path = "../nextgen_crypto" }
-crypto = { path = "../legacy_crypto" }
-# ed25519-dalek = { version = "1.0.0-pre.1", features = ["serde"] }
-serde = { version = "1.0.96", features = ["derive"] }
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+protobuf = "~2.7"
 rand = "0.6.5"
 rand_chacha = "0.1.1"
+serde = { version = "1.0.96", features = ["derive"] }
 
-derive_deref = "1.1.0"
+config = { path = "../../config" }
+crypto = { path = "../crypto" }
+crypto_derive = { path = "../crypto_derive" }
+debug_interface = { path = "../../common/debug_interface" }
+executable_helpers = { path = "../../common/executable_helpers" }
+failure = { package = "failure_ext", path = "../../common/failure_ext" }
+grpc_helpers = { path = "../../common/grpc_helpers" }
+logger = { path = "../../common/logger" }
 
-crypto-derive = { path = "../legacy_crypto/src/macros" }
+[dev-dependencies]
+config = { path = "../../config", features = ["testing"]}
 
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }

@@ -5,12 +5,14 @@ use crate::{
     chained_bft::{
         block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-        liveness::{
-            proposer_election::{ProposalInfo, ProposerInfo},
+        consensus_types::{
+            block::Block,
+            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+            sync_info::SyncInfo,
             timeout_msg::TimeoutMsg,
+            vote_msg::VoteMsg,
         },
-        safety::vote_msg::VoteMsg,
+        epoch_manager::EpochManager,
     },
     counters,
 };
@@ -24,10 +26,9 @@ use futures::{
 };
 use logger::prelude::*;
 use network::{
-    proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock, RespondChunk},
+    proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
-use nextgen_crypto::ed25519::*;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::Message;
 use std::{
@@ -35,9 +36,9 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::{transaction::TransactionListWithProof, validator_verifier::ValidatorVerifier};
+use types::account_address::AccountAddress;
 
-/// The response sent back from event_processor for the BlockRetrievalRequest.
+/// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
 pub struct BlockRetrievalResponse<T> {
     pub status: BlockRetrievalStatus,
@@ -70,33 +71,21 @@ impl<T: Payload> BlockRetrievalResponse<T> {
 
 /// BlockRetrievalRequest carries a block id for the requested block as well as the
 /// oneshot sender to deliver the response.
+#[derive(Debug)]
 pub struct BlockRetrievalRequest<T> {
     pub block_id: HashValue,
     pub num_blocks: u64,
     pub response_sender: oneshot::Sender<BlockRetrievalResponse<T>>,
 }
 
-/// Represents a request to get up to batch_size transactions starting from start_version
-/// with the oneshot sender to deliver the response.
-pub struct ChunkRetrievalRequest {
-    pub start_version: u64,
-    pub target: QuorumCert,
-    pub batch_size: u64,
-    pub response_sender: oneshot::Sender<Result<TransactionListWithProof, failure::Error>>,
-}
-
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
-/// 1. proposals
-/// 2. votes
-/// 3. block retrieval requests (the request carries a oneshot sender for returning the Block)
-/// 4. pacemaker timeouts
 /// Will be returned by the networking trait upon startup.
-pub struct NetworkReceivers<T, P> {
-    pub proposals: channel::Receiver<ProposalInfo<T, P>>,
+pub struct NetworkReceivers<T> {
+    pub proposals: channel::Receiver<ProposalMsg<T>>,
     pub votes: channel::Receiver<VoteMsg>,
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
     pub timeout_msgs: channel::Receiver<TimeoutMsg>,
-    pub chunk_retrieval: channel::Receiver<ChunkRetrievalRequest>,
+    pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -109,8 +98,7 @@ pub struct ConsensusNetworkImpl {
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
     self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
     self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
-    peers: Arc<Vec<Author>>,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
 impl Clone for ConsensusNetworkImpl {
@@ -121,8 +109,7 @@ impl Clone for ConsensusNetworkImpl {
             network_events: None,
             self_sender: self.self_sender.clone(),
             self_receiver: None,
-            peers: self.peers.clone(),
-            validator: Arc::clone(&self.validator),
+            epoch_mgr: Arc::clone(&self.epoch_mgr),
         }
     }
 }
@@ -132,8 +119,7 @@ impl ConsensusNetworkImpl {
         author: Author,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
-        peers: Arc<Vec<Author>>,
-        validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         ConsensusNetworkImpl {
@@ -142,24 +128,19 @@ impl ConsensusNetworkImpl {
             network_events: Some(network_events),
             self_sender,
             self_receiver: Some(self_receiver),
-            peers,
-            validator,
+            epoch_mgr,
         }
     }
 
     /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start<T: Payload, P: ProposerInfo>(
-        &mut self,
-        executor: &TaskExecutor,
-    ) -> NetworkReceivers<T, P> {
+    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T> {
         let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
         let (block_request_tx, block_request_rx) =
             channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
-        let (chunk_request_tx, chunk_request_rx) =
-            channel::new(1_024, &counters::PENDING_CHUNK_REQUESTS);
-        let (new_round_tx, new_round_rx) =
+        let (timeout_msg_tx, timeout_msg_rx) =
             channel::new(1_024, &counters::PENDING_NEW_ROUND_MESSAGES);
+        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
         let network_events = self
             .network_events
             .take()
@@ -170,16 +151,15 @@ impl ConsensusNetworkImpl {
             .take()
             .expect("[consensus]: self receiver is already taken");
         let all_events = select(network_events, own_msgs);
-        let validator = Arc::clone(&self.validator);
         executor.spawn(
             NetworkTask {
                 proposal_tx,
                 vote_tx,
                 block_request_tx,
-                chunk_request_tx,
-                timeout_msg_tx: new_round_tx,
+                timeout_msg_tx,
+                sync_info_tx,
                 all_events,
-                validator,
+                epoch_mgr: Arc::clone(&self.epoch_mgr),
             }
             .run()
             .boxed()
@@ -190,8 +170,8 @@ impl ConsensusNetworkImpl {
             proposals: proposal_rx,
             votes: vote_rx,
             block_retrieval: block_request_rx,
-            timeout_msgs: new_round_rx,
-            chunk_retrieval: chunk_request_rx,
+            timeout_msgs: timeout_msg_rx,
+            sync_info_msgs: sync_info_rx,
         }
     }
 
@@ -220,24 +200,29 @@ impl ConsensusNetworkImpl {
             .await?;
         let mut blocks = vec![];
         for block in res_block.take_blocks().into_iter() {
-            if let Ok(block) = Block::from_proto(block) {
-                if block.verify(self.validator.as_ref()).is_err() {
-                    return Err(BlockRetrievalFailure::InvalidSignature);
+            match Block::from_proto(block) {
+                Ok(block) => {
+                    block
+                        .validate_signatures(self.epoch_mgr.validators().as_ref())
+                        .map_err(|_| BlockRetrievalFailure::InvalidSignature)?;
+                    block
+                        .verify_well_formed()
+                        .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
+                    blocks.push(block);
                 }
-                blocks.push(block);
-            } else {
-                return Err(BlockRetrievalFailure::InvalidResponse);
-            }
+                _ => {
+                    return Err(BlockRetrievalFailure::InvalidResponse);
+                }
+            };
         }
-        counters::BLOCK_RETRIEVAL_DURATION_MS
-            .observe(pre_retrieval_instant.elapsed().as_millis() as f64);
+        counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse {
             status: res_block.get_status(),
             blocks,
         };
-        if response.verify(block_id, num_blocks).is_err() {
-            return Err(BlockRetrievalFailure::InvalidResponse);
-        }
+        response
+            .verify(block_id, num_blocks)
+            .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
         Ok(response)
     }
 
@@ -249,25 +234,22 @@ impl ConsensusNetworkImpl {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal<T: Payload, P: ProposerInfo>(
-        &mut self,
-        proposal: ProposalInfo<T, P>,
-    ) {
+    pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
         let mut msg = ConsensusMsg::new();
         msg.set_proposal(proposal.into_proto());
         self.broadcast(msg).await
     }
 
     async fn broadcast(&mut self, msg: ConsensusMsg) {
-        for peer in self.peers.iter() {
-            if self.author == *peer {
+        for peer in self.epoch_mgr.validators().get_ordered_account_addresses() {
+            if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
                 if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
                     error!("Error delivering a self proposal: {:?}", err);
                 }
                 continue;
             }
-            if let Err(err) = self.network_sender.send_to(*peer, msg.clone()).await {
+            if let Err(err) = self.network_sender.send_to(peer, msg.clone()).await {
                 error!(
                     "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
                     peer, err, msg
@@ -309,34 +291,60 @@ impl ConsensusNetworkImpl {
         msg.set_timeout_msg(timeout_msg.into_proto());
         self.broadcast(msg).await
     }
+
+    /// Sends the given sync info to the given author.
+    /// The future is fulfilled as soon as the message is added to the internal network channel
+    /// (does not indicate whether the message is delivered or sent out).
+    pub async fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
+        if recipient == self.author {
+            error!("An attempt to deliver sync info msg to itself: ignore.");
+            return;
+        }
+        let mut msg = ConsensusMsg::new();
+        msg.set_sync_info(sync_info.into_proto());
+        let mut network_sender = self.network_sender.clone();
+        if let Err(e) = network_sender.send_to(recipient, msg).await {
+            warn!(
+                "Failed to send a sync info msg to peer {:?}: {:?}",
+                recipient, e
+            );
+        }
+    }
 }
 
-struct NetworkTask<T, P, S> {
-    proposal_tx: channel::Sender<ProposalInfo<T, P>>,
+struct NetworkTask<T, S> {
+    proposal_tx: channel::Sender<ProposalMsg<T>>,
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
-    chunk_request_tx: channel::Sender<ChunkRetrievalRequest>,
     timeout_msg_tx: channel::Sender<TimeoutMsg>,
+    sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
-    validator: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    epoch_mgr: Arc<EpochManager>,
 }
 
-impl<T, P, S> NetworkTask<T, P, S>
+impl<T, S> NetworkTask<T, S>
 where
     S: Stream<Item = Result<Event<ConsensusMsg>, failure::Error>> + Unpin,
     T: Payload,
-    P: ProposerInfo,
 {
     pub async fn run(mut self) {
         while let Some(Ok(message)) = self.all_events.next().await {
             match message {
                 Event::Message((peer_id, mut msg)) => {
                     let r = if msg.has_proposal() {
-                        self.process_proposal(&mut msg).await
+                        self.process_proposal(&mut msg).await.map_err(|e| {
+                            security_log(SecurityEvent::InvalidConsensusProposal)
+                                .error(&e)
+                                .data(&msg)
+                                .log();
+                            e
+                        })
                     } else if msg.has_vote() {
                         self.process_vote(&mut msg).await
                     } else if msg.has_timeout_msg() {
                         self.process_timeout_msg(&mut msg).await
+                    } else if msg.has_sync_info() {
+                        self.process_sync_info(&mut msg, peer_id).await
                     } else {
                         warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                         continue;
@@ -348,8 +356,6 @@ where
                 Event::RpcRequest((peer_id, mut msg, callback)) => {
                     let r = if msg.has_request_block() {
                         self.process_request_block(&mut msg, callback).await
-                    } else if msg.has_request_chunk() {
-                        self.process_request_chunk(&mut msg, callback).await
                     } else {
                         warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
                         continue;
@@ -369,14 +375,10 @@ where
     }
 
     async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalInfo::<T, P>::from_proto(msg.take_proposal())?;
-        proposal.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusProposal)
-                .error(&e)
-                .data(&proposal)
-                .log();
-            e
-        })?;
+        let proposal = ProposalUncheckedSignatures::<T>::from_proto(msg.take_proposal())?;
+        let proposal = proposal
+            .validate_signatures(self.epoch_mgr.validators().as_ref())?
+            .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
         self.proposal_tx.send(proposal).await?;
         Ok(())
@@ -385,13 +387,14 @@ where
     async fn process_vote<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
         let vote = VoteMsg::from_proto(msg.take_vote())?;
         debug!("Received {}", vote);
-        vote.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusVote)
-                .error(&e)
-                .data(&vote)
-                .log();
-            e
-        })?;
+        vote.verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusVote)
+                    .error(&e)
+                    .data(&vote)
+                    .log();
+                e
+            })?;
         self.vote_tx.send(vote).await?;
         Ok(())
     }
@@ -401,56 +404,36 @@ where
         msg: &'a mut ConsensusMsg,
     ) -> failure::Result<()> {
         let timeout_msg = TimeoutMsg::from_proto(msg.take_timeout_msg())?;
-        timeout_msg.verify(self.validator.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusRound)
-                .error(&e)
-                .data(&timeout_msg)
-                .log();
-            e
-        })?;
+        timeout_msg
+            .verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusRound)
+                    .error(&e)
+                    .data(&timeout_msg)
+                    .log();
+                e
+            })?;
         self.timeout_msg_tx.send(timeout_msg).await?;
         Ok(())
     }
 
-    async fn process_request_chunk<'a>(
+    async fn process_sync_info<'a>(
         &'a mut self,
         msg: &'a mut ConsensusMsg,
-        callback: oneshot::Sender<Result<Bytes, RpcError>>,
+        peer: AccountAddress,
     ) -> failure::Result<()> {
-        let mut req = msg.take_request_chunk();
-        debug!(
-            "Received request_chunk RPC for start version: {} target: {:?} batch_size: {}",
-            req.start_version,
-            req.get_target(),
-            req.batch_size
-        );
-        let (tx, rx) = oneshot::channel();
-        let target = QuorumCert::from_proto(req.take_target())?;
-        target.verify(self.validator.as_ref())?;
-        let request = ChunkRetrievalRequest {
-            start_version: req.start_version,
-            target,
-            batch_size: req.batch_size,
-            response_sender: tx,
-        };
-        self.chunk_request_tx.send(request).await?;
-        callback
-            .send(match rx.await? {
-                Ok(txn_list_with_proof) => {
-                    let mut response_msg = ConsensusMsg::new();
-                    let mut response = RespondChunk::new();
-                    response.set_txn_list_with_proof(txn_list_with_proof.into_proto());
-                    response_msg.set_respond_chunk(response);
-                    let response_data = Bytes::from(
-                        response_msg
-                            .write_to_bytes()
-                            .expect("fail to serialize proto"),
-                    );
-                    Ok(response_data)
-                }
-                Err(err) => Err(RpcError::ApplicationError(err)),
-            })
-            .map_err(|_| format_err!("handling inbound rpc call timed out"))
+        let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
+        sync_info
+            .verify(self.epoch_mgr.validators().as_ref())
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidSyncInfoMsg)
+                    .error(&e)
+                    .data(&sync_info)
+                    .log();
+                e
+            })?;
+        self.sync_info_tx.send((sync_info, peer)).await?;
+        Ok(())
     }
 
     async fn process_request_block<'a>(

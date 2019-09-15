@@ -8,18 +8,18 @@
 //! the stack height by the number of values returned by the function as indicated in its
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
-use crate::control_flow_graph::{BasicBlock, VMControlFlowGraph};
+use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::VMStaticViolation,
-    file_format::{Bytecode, CompiledModule, FunctionDefinition},
+    errors::err_at_offset,
+    file_format::{Bytecode, CompiledModule, FunctionDefinition, StructFieldInformation},
     views::FunctionDefinitionView,
 };
 
 pub struct StackUsageVerifier<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
-    cfg: &'a VMControlFlowGraph,
 }
 
 impl<'a> StackUsageVerifier<'a> {
@@ -27,30 +27,30 @@ impl<'a> StackUsageVerifier<'a> {
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Vec<VMStaticViolation> {
+    ) -> Vec<VMStatus> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let verifier = Self {
             module,
             function_definition_view,
-            cfg,
         };
 
         let mut errors = vec![];
-        for (_, block) in verifier.cfg.blocks.iter() {
-            errors.append(&mut verifier.verify_block(&block));
+        for block_id in cfg.blocks() {
+            errors.append(&mut verifier.verify_block(&block_id, cfg));
         }
         errors
     }
 
-    fn verify_block(&self, block: &BasicBlock) -> Vec<VMStaticViolation> {
+    fn verify_block(&self, block_id: &BlockId, cfg: &dyn ControlFlowGraph) -> Vec<VMStatus> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
-        for i in block.entry..=block.exit {
+        let block_start = cfg.block_start(block_id);
+        for i in block_start..=cfg.block_end(block_id) {
             stack_size_increment += self.instruction_effect(&code[i as usize]);
             if stack_size_increment < 0 {
-                return vec![VMStaticViolation::NegativeStackSizeInsideBlock(
-                    block.entry as usize,
-                    i as usize,
+                return vec![err_at_offset(
+                    StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
+                    block_start as usize,
                 )];
             }
         }
@@ -58,8 +58,9 @@ impl<'a> StackUsageVerifier<'a> {
         if stack_size_increment == 0 {
             vec![]
         } else {
-            vec![VMStaticViolation::PositiveStackSizeAtBlockEnd(
-                block.entry as usize,
+            vec![err_at_offset(
+                StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END,
+                block_start as usize,
             )]
         }
     }
@@ -73,7 +74,7 @@ impl<'a> StackUsageVerifier<'a> {
                 -return_count
             }
 
-            Bytecode::Branch(_) | Bytecode::BorrowField(_) => 0,
+            Bytecode::Branch(_) | Bytecode::MutBorrowField(_) | Bytecode::ImmBorrowField(_) => 0,
 
             Bytecode::LdConst(_)
             | Bytecode::LdAddr(_)
@@ -82,7 +83,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::LdFalse
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
-            | Bytecode::BorrowLoc(_) => 1,
+            | Bytecode::MutBorrowLoc(_)
+            | Bytecode::ImmBorrowLoc(_) => 1,
 
             Bytecode::Call(idx, _) => {
                 let function_handle = self.module.function_handle_at(*idx);
@@ -94,13 +96,23 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::Pack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
-                let num_fields = i32::from(struct_definition.field_count);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = i32::from(field_count);
                 1 - num_fields
             }
 
             Bytecode::Unpack(idx, _) => {
                 let struct_definition = self.module.struct_def_at(*idx);
-                let num_fields = i32::from(struct_definition.field_count);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = i32::from(field_count);
                 num_fields - 1
             }
 
@@ -128,11 +140,11 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::Not => 0,
 
-            Bytecode::FreezeRef => 0,
-            Bytecode::Exists(_, _) => 0,
-            Bytecode::BorrowGlobal(_, _) => 0,
-            Bytecode::ReleaseRef => -1,
-            Bytecode::MoveFrom(_, _) => 0,
+            Bytecode::FreezeRef
+            | Bytecode::Exists(_, _)
+            | Bytecode::MutBorrowGlobal(_, _)
+            | Bytecode::ImmBorrowGlobal(_, _)
+            | Bytecode::MoveFrom(_, _) => 0,
             Bytecode::MoveToSender(_, _) => -1,
 
             Bytecode::GetTxnGasUnitPrice
@@ -142,7 +154,6 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::GetTxnSequenceNumber
             | Bytecode::GetTxnSenderAddress => 1,
             Bytecode::CreateAccount => -1,
-            Bytecode::EmitEvent => -3,
 
             Bytecode::LdByteArray(_) => 1,
         }

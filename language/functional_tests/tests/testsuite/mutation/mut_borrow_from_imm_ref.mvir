@@ -1,16 +1,18 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 2, err: MoveLocUnavailableError(9) }
+// check: VerificationFailure
+// check: MOVELOC_UNAVAILABLE_ERROR
+
 module Token {
     resource T{value: u64}
-    public new(m: u64): R#Self.T {
+    public new(m: u64): Self.T {
         return T{value: copy(m)};
     }
-    public destroy(t: R#Self.T) {
+    public destroy(t: Self.T) {
         let value: u64;
         T {value} = move(t);
         return;
     }
 
-    public bump_value(this: &R#Self.T) {
+    public bump_value(this: &Self.T) {
         let val: &u64;
         let x: u64;
         val = &move(this).value;
@@ -25,8 +27,8 @@ module Token {
 import {{default}}.Token;
 
 main() {
-    let t: R#Token.T;
-    let tr: &R#Token.T;
+    let t: Token.T;
+    let tr: &Token.T;
     t = Token.new(42);
     tr = &t;
     Token.bump_value(move(tr));

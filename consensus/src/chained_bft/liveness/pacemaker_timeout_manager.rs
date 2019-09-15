@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::Author,
-    liveness::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     persistent_storage::PersistentLivenessStorage,
 };
 use logger::prelude::*;
@@ -24,7 +24,7 @@ pub struct HighestTimeoutCertificates {
 }
 
 impl HighestTimeoutCertificates {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn new(
         highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate>,
         highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate>,
@@ -64,8 +64,6 @@ impl HighestTimeoutCertificates {
 /// A replica can generate and track TimeoutCertificates of the highest round (locally and received)
 /// to allow a pacemaker to advance to the latest certificate round.
 pub struct PacemakerTimeoutManager {
-    // The minimum quorum to generate a timeout certificate
-    timeout_certificate_quorum_size: usize,
     // Track the PacemakerTimeoutMsg for highest timeout round received from this node
     author_to_received_timeouts: HashMap<Author, PacemakerTimeout>,
     // Highest timeout certificates
@@ -76,7 +74,6 @@ pub struct PacemakerTimeoutManager {
 
 impl PacemakerTimeoutManager {
     pub fn new(
-        timeout_certificate_quorum_size: usize,
         highest_timeout_certificates: HighestTimeoutCertificates,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
     ) -> Self {
@@ -92,7 +89,6 @@ impl PacemakerTimeoutManager {
                 .collect();
         }
         PacemakerTimeoutManager {
-            timeout_certificate_quorum_size,
             author_to_received_timeouts,
             highest_timeout_certificates,
             persistent_liveness_storage,
@@ -110,14 +106,14 @@ impl PacemakerTimeoutManager {
     /// round=2.
     fn generate_timeout_certificate(
         author_to_received_timeouts: &HashMap<Author, PacemakerTimeout>,
-        timeout_certificate_quorum_size: usize,
+        quorum_size: usize,
     ) -> Option<PacemakerTimeoutCertificate> {
-        if author_to_received_timeouts.values().len() < timeout_certificate_quorum_size {
+        if author_to_received_timeouts.values().len() < quorum_size {
             return None;
         }
         let mut values: Vec<&PacemakerTimeout> = author_to_received_timeouts.values().collect();
         values.sort_by(|x, y| y.round().cmp(&x.round()));
-        let slice = &values[..timeout_certificate_quorum_size];
+        let slice = &values[..quorum_size];
         Some(PacemakerTimeoutCertificate::new(
             // expect does not panic here because code above verifies values length
             slice
@@ -130,7 +126,11 @@ impl PacemakerTimeoutManager {
 
     /// Updates internal state according to received message from remote pacemaker and returns true
     /// if round derived from highest PacemakerTimeoutCertificate has increased.
-    pub fn update_received_timeout(&mut self, pacemaker_timeout: PacemakerTimeout) -> bool {
+    pub fn update_received_timeout(
+        &mut self,
+        pacemaker_timeout: PacemakerTimeout,
+        quorum_size: usize,
+    ) -> bool {
         let author = pacemaker_timeout.author();
         let prev_timeout = self.author_to_received_timeouts.get(&author).cloned();
         if let Some(prev_timeout) = &prev_timeout {
@@ -143,10 +143,8 @@ impl PacemakerTimeoutManager {
 
         self.author_to_received_timeouts
             .insert(author, pacemaker_timeout.clone());
-        let highest_timeout_certificate = Self::generate_timeout_certificate(
-            &self.author_to_received_timeouts,
-            self.timeout_certificate_quorum_size,
-        );
+        let highest_timeout_certificate =
+            Self::generate_timeout_certificate(&self.author_to_received_timeouts, quorum_size);
         let highest_round = match &highest_timeout_certificate {
             Some(tc) => tc.round(),
             None => return false,

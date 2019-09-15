@@ -50,15 +50,15 @@ macro_rules! impl_emit(
 );
 
 impl<'a, C: KVCategorizer> Serializer for CollectorSerializer<'a, C> {
-    /// Emit None
-    fn emit_none(&mut self, key: Key) -> Result {
-        impl_emit_body!(self, key, "None");
-        Ok(())
-    }
-
     /// Emit ()
     fn emit_unit(&mut self, key: Key) -> Result {
         impl_emit_body!(self, key, "()");
+        Ok(())
+    }
+
+    /// Emit None
+    fn emit_none(&mut self, key: Key) -> Result {
+        impl_emit_body!(self, key, "None");
         Ok(())
     }
 

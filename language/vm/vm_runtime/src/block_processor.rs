@@ -19,7 +19,7 @@ use types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
 use vm_cache_map::Arena;
@@ -45,9 +45,7 @@ pub fn execute_block<'alloc>(
                         WriteSet::default(),
                         vec![],
                         0,
-                        TransactionStatus::from(VMStatus::Validation(
-                            VMValidationStatus::RejectedWriteSet,
-                        )),
+                        TransactionStatus::from(VMStatus::new(StatusCode::REJECTED_WRITE_SET)),
                     )
                 })
                 .collect();
@@ -66,7 +64,7 @@ pub fn execute_block<'alloc>(
         .into_par_iter()
         .map(|txn| match txn.check_signature() {
             Ok(t) => Ok(t),
-            Err(_) => Err(VMStatus::Validation(VMValidationStatus::InvalidSignature)),
+            Err(_) => Err(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
         })
         .collect();
 
@@ -84,6 +82,10 @@ pub fn execute_block<'alloc>(
         };
         report_execution_status(output.status());
         data_cache.push_write_set(&output.write_set());
+
+        // `result` is initally empty, a single element is pushed per loop iteration and
+        // the number of iterations is bound to the max size of `signature_verified_block`
+        assume!(result.len() < usize::max_value());
         result.push(output);
     }
     trace!("[VM] Execute block finished");
@@ -134,9 +136,11 @@ where
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.
     let output = executed_txn.into_output();
-    if let TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed)) = output.status()
-    {
-        module_cache.reclaim_cached_module(arena.into_vec());
+    match output.status() {
+        TransactionStatus::Keep(status) if status.major_status == StatusCode::EXECUTED => {
+            module_cache.reclaim_cached_module(arena.into_vec());
+        }
+        _ => (),
     };
     output
 }

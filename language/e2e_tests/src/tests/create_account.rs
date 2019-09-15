@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData, AccountResource},
+    account::{Account, AccountData},
     common_transactions::create_account_txn,
     executor::FakeExecutor,
 };
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 #[test]
@@ -29,7 +29,7 @@ fn create_account() {
     let txn_output = output.get(0).expect("must have a transaction output");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
     println!("write set {:?}", txn_output.write_set());
     executor.apply_write_set(txn_output.write_set());
@@ -43,15 +43,9 @@ fn create_account() {
     let updated_receiver = executor
         .read_account_resource(&new_account)
         .expect("receiver must exist");
-    assert_eq!(
-        initial_amount,
-        AccountResource::read_balance(&updated_receiver)
-    );
-    assert_eq!(
-        sender_balance,
-        AccountResource::read_balance(&updated_sender)
-    );
-    assert_eq!(11, AccountResource::read_sequence_number(&updated_sender));
+    assert_eq!(initial_amount, updated_receiver.balance(),);
+    assert_eq!(sender_balance, updated_sender.balance(),);
+    assert_eq!(11, updated_sender.sequence_number());
 }
 
 #[test]
@@ -74,7 +68,7 @@ fn create_account_zero_balance() {
     let txn_output = output.get(0).expect("must have a transaction output");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
     println!("write set {:?}", txn_output.write_set());
     executor.apply_write_set(txn_output.write_set());
@@ -88,13 +82,7 @@ fn create_account_zero_balance() {
     let updated_receiver = executor
         .read_account_resource(&new_account)
         .expect("receiver must exist");
-    assert_eq!(
-        initial_amount,
-        AccountResource::read_balance(&updated_receiver)
-    );
-    assert_eq!(
-        sender_balance,
-        AccountResource::read_balance(&updated_sender)
-    );
-    assert_eq!(11, AccountResource::read_sequence_number(&updated_sender));
+    assert_eq!(initial_amount, updated_receiver.balance());
+    assert_eq!(sender_balance, updated_sender.balance());
+    assert_eq!(11, updated_sender.sequence_number());
 }

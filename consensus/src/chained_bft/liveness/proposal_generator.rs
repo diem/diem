@@ -83,6 +83,24 @@ impl<T: Payload> ProposalGenerator<T> {
         }
     }
 
+    /// Creates a NIL block proposal extending the highest certified block from the block store.
+    pub fn generate_nil_block(&self, round: Round) -> Result<Block<T>, ProposalGenerationError> {
+        let hqc_block = self.block_store.highest_certified_block();
+        if hqc_block.round() >= round {
+            // The given round is too low.
+            return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
+        }
+        let hqc_block_qc = self
+            .block_store
+            .get_quorum_cert_for_block(hqc_block.id())
+            .ok_or_else(|| ProposalGenerationError::GivenRoundTooLow(hqc_block.round()))?;
+        Ok(Block::make_nil_block(
+            hqc_block.as_ref(),
+            round,
+            hqc_block_qc.as_ref().clone(),
+        ))
+    }
+
     /// The function generates a new proposal block: the returned future is fulfilled when the
     /// payload is delivered by the TxnManager implementation.  At most one proposal can be
     /// generated per round (no proposal equivocation allowed).
@@ -153,8 +171,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                 current_duration_since_epoch,
                                 wait_duration,
                             } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_MS
-                                    .observe(wait_duration.as_millis() as f64);
+                                counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
                                 counters::PROPOSAL_WAIT_WAS_REQUIRED_COUNT.inc();
                                 current_duration_since_epoch
                             }
@@ -162,7 +179,8 @@ impl<T: Payload> ProposalGenerator<T> {
                                 current_duration_since_epoch,
                                 ..
                             } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_MS.observe(0.0);
+                                counters::PROPOSAL_SUCCESS_WAIT_S
+                                    .observe_duration(Duration::new(0, 0));
                                 counters::PROPOSAL_NO_WAIT_REQUIRED_COUNT.inc();
                                 current_duration_since_epoch
                             }
@@ -175,7 +193,8 @@ impl<T: Payload> ProposalGenerator<T> {
                                     "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
                                     hqc_block.timestamp_usecs(),
                                     round_deadline);
-                                counters::PROPOSAL_FAILURE_WAIT_MS.observe(0.0);
+                                counters::PROPOSAL_FAILURE_WAIT_S
+                                    .observe_duration(Duration::new(0, 0));
                                 counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
                                 return Err(ProposalGenerationError::ExceedsMaxRoundDuration);
                             }
@@ -188,8 +207,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                     wait_duration,
                                     hqc_block.timestamp_usecs(),
                                     current_duration_since_epoch);
-                                counters::PROPOSAL_FAILURE_WAIT_MS
-                                    .observe(wait_duration.as_millis() as f64);
+                                counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
                                 counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
                                 return Err(ProposalGenerationError::CurrentTimeTooOld);
                             }
@@ -208,7 +226,7 @@ impl<T: Payload> ProposalGenerator<T> {
             .await
         {
             Ok(txns) => Ok(block_store.create_block(
-                hqc_block,
+                &hqc_block,
                 txns,
                 round,
                 block_timestamp.as_micros() as u64,

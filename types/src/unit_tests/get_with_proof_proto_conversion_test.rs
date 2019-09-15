@@ -7,6 +7,7 @@ use crate::{
     },
     proto,
 };
+use crypto::ed25519::*;
 use proptest::prelude::*;
 use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto};
 
@@ -34,7 +35,7 @@ proptest! {
 
     #[test]
     fn test_update_to_latest_ledger_response(
-        response in any::<UpdateToLatestLedgerResponse>()
+        response in any::<UpdateToLatestLedgerResponse<Ed25519Signature>>()
     ) {
         assert_protobuf_encode_decode(&response);
     }

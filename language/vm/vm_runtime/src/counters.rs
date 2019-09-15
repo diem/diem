@@ -7,7 +7,7 @@ use prometheus::{IntCounter, IntGauge};
 use std::convert::TryFrom;
 use types::{
     transaction::TransactionStatus,
-    vm_error::{VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, StatusType, VMStatus},
 };
 
 // constants used to create counters
@@ -57,56 +57,58 @@ pub fn report_verification_status(result: &Option<VMStatus>) {
 
 /// Increments one of the counter for verification or execution.
 fn inc_counter(prefix: &str, status: &VMStatus) {
-    match status {
-        VMStatus::Deserialization(_) => {
+    match status.status_type() {
+        StatusType::Deserialization => {
             // all serialization error are lumped into one bucket
             VM_COUNTERS.inc(&format!("{}.deserialization", prefix));
         }
-        VMStatus::Execution(status) => {
+        StatusType::Execution => {
             // counters for ExecutionStatus are as granular as the enum
-            VM_COUNTERS.inc(&format!("{}.{:?}", prefix, status));
+            VM_COUNTERS.inc(&format!("{}.{}", prefix, status));
         }
-        VMStatus::InvariantViolation(violation) => {
+        StatusType::InvariantViolation => {
             // counters for VMInvariantViolationError are as granular as the enum
-            VM_COUNTERS.inc(&format!("{}.invariant_violation.{:?}", prefix, violation));
+            VM_COUNTERS.inc(&format!("{}.invariant_violation.{}", prefix, status));
         }
-        VMStatus::Validation(validation_status) => {
+        StatusType::Validation => {
             // counters for validation errors are grouped according to get_validation_status()
             VM_COUNTERS.inc(&format!(
-                "{}.validation.{:?}",
+                "{}.validation.{}",
                 prefix,
-                get_validation_status(validation_status)
+                get_validation_status(status.major_status)
             ));
         }
-        VMStatus::Verification(_) => {
+        StatusType::Verification => {
             // all verifier errors are lumped into one bucket
             VM_COUNTERS.inc(&format!("{}.verifier_error", prefix));
+        }
+        StatusType::Unknown => {
+            VM_COUNTERS.inc(&format!("{}.Unknown", prefix));
         }
     }
 }
 
 /// Translate a `VMValidationStatus` enum to a set of strings that are appended to a 'base' counter
 /// name.
-fn get_validation_status(validation_status: &VMValidationStatus) -> &str {
+fn get_validation_status(validation_status: StatusCode) -> &'static str {
     match validation_status {
-        VMValidationStatus::InvalidSignature => "InvalidSignature",
-        VMValidationStatus::InvalidAuthKey => "InvalidAuthKey",
-        VMValidationStatus::SequenceNumberTooOld => "SequenceNumberTooOld",
-        VMValidationStatus::SequenceNumberTooNew => "SequenceNumberTooNew",
-        VMValidationStatus::InsufficientBalanceForTransactionFee => {
+        StatusCode::INVALID_SIGNATURE => "InvalidSignature",
+        StatusCode::INVALID_AUTH_KEY => "InvalidAuthKey",
+        StatusCode::SEQUENCE_NUMBER_TOO_OLD => "SequenceNumberTooOld",
+        StatusCode::SEQUENCE_NUMBER_TOO_NEW => "SequenceNumberTooNew",
+        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE => {
             "InsufficientBalanceForTransactionFee"
         }
-        VMValidationStatus::TransactionExpired => "TransactionExpired",
-        VMValidationStatus::SendingAccountDoesNotExist(_) => "SendingAccountDoesNotExist",
-        VMValidationStatus::ExceededMaxTransactionSize(_) => "ExceededMaxTransactionSize",
-        VMValidationStatus::UnknownScript => "UnknownScript",
-        VMValidationStatus::UnknownModule => "UnknownModule",
-        VMValidationStatus::MaxGasUnitsExceedsMaxGasUnitsBound(_)
-        | VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(_)
-        | VMValidationStatus::GasUnitPriceBelowMinBound(_)
-        | VMValidationStatus::GasUnitPriceAboveMaxBound(_) => "GasError",
-        VMValidationStatus::RejectedWriteSet | VMValidationStatus::InvalidWriteSet => {
-            "WriteSetError"
-        }
+        StatusCode::TRANSACTION_EXPIRED => "TransactionExpired",
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST => "SendingAccountDoesNotExist",
+        StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE => "ExceededMaxTransactionSize",
+        StatusCode::UNKNOWN_SCRIPT => "UnknownScript",
+        StatusCode::UNKNOWN_MODULE => "UnknownModule",
+        StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
+        | StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
+        | StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
+        | StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND => "GasError",
+        StatusCode::REJECTED_WRITE_SET | StatusCode::INVALID_WRITE_SET => "WriteSetError",
+        _ => "UnknownValidationStatus",
     }
 }

@@ -23,8 +23,9 @@ use std::{
 };
 use storage_proto::proto::{
     storage::{
-        GetAccountStateWithProofByStateRootRequest, GetAccountStateWithProofByStateRootResponse,
-        GetExecutorStartupInfoRequest, GetExecutorStartupInfoResponse, GetTransactionsRequest,
+        GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+        GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
+        GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest,
         GetTransactionsResponse, SaveTransactionsRequest, SaveTransactionsResponse,
     },
     storage_grpc::{create_storage, Storage},
@@ -39,6 +40,7 @@ pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
         config.storage.address.clone(),
         config.storage.port,
         "storage",
+        config.storage.grpc_max_receive_len,
         move || {
             shutdown_receiver
                 .recv()
@@ -173,19 +175,17 @@ impl StorageService {
         Ok(rust_resp.into_proto())
     }
 
-    fn get_account_state_with_proof_by_state_root_inner(
+    fn get_account_state_with_proof_by_version_inner(
         &self,
-        req: GetAccountStateWithProofByStateRootRequest,
-    ) -> Result<GetAccountStateWithProofByStateRootResponse> {
-        let rust_req = storage_proto::GetAccountStateWithProofByStateRootRequest::from_proto(req)?;
+        req: GetAccountStateWithProofByVersionRequest,
+    ) -> Result<GetAccountStateWithProofByVersionResponse> {
+        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::from_proto(req)?;
 
-        let (account_state_blob, sparse_merkle_proof) =
-            self.db.get_account_state_with_proof_by_state_root(
-                rust_req.address,
-                rust_req.state_root_hash,
-            )?;
+        let (account_state_blob, sparse_merkle_proof) = self
+            .db
+            .get_account_state_with_proof_by_version(rust_req.address, rust_req.version)?;
 
-        let rust_resp = storage_proto::GetAccountStateWithProofByStateRootResponse {
+        let rust_resp = storage_proto::GetAccountStateWithProofByVersionResponse {
             account_state_blob,
             sparse_merkle_proof,
         };
@@ -206,14 +206,38 @@ impl StorageService {
         Ok(SaveTransactionsResponse::new())
     }
 
-    fn get_executor_startup_info_inner(&self) -> Result<GetExecutorStartupInfoResponse> {
-        let info = self.db.get_executor_startup_info()?;
-        let rust_resp = storage_proto::GetExecutorStartupInfoResponse { info };
+    fn get_startup_info_inner(&self) -> Result<GetStartupInfoResponse> {
+        let info = self.db.get_startup_info()?;
+        let rust_resp = storage_proto::GetStartupInfoResponse { info };
+        Ok(rust_resp.into_proto())
+    }
+
+    fn get_latest_ledger_infos_per_epoch_inner(
+        &self,
+        req: GetLatestLedgerInfosPerEpochRequest,
+    ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
+        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::from_proto(req)?;
+        let ledger_infos = self
+            .db
+            .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
+        let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
         Ok(rust_resp.into_proto())
     }
 }
 
 impl Storage for StorageService {
+    fn save_transactions(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: SaveTransactionsRequest,
+        sink: grpcio::UnarySink<SaveTransactionsResponse>,
+    ) {
+        debug!("[GRPC] Storage::save_transactions");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.save_transactions_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
@@ -238,39 +262,39 @@ impl Storage for StorageService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &mut self,
         ctx: grpcio::RpcContext,
-        req: GetAccountStateWithProofByStateRootRequest,
-        sink: grpcio::UnarySink<GetAccountStateWithProofByStateRootResponse>,
+        req: GetAccountStateWithProofByVersionRequest,
+        sink: grpcio::UnarySink<GetAccountStateWithProofByVersionResponse>,
     ) {
-        debug!("[GRPC] Storage::get_account_state_with_proof_by_state_root");
+        debug!("[GRPC] Storage::get_account_state_with_proof_by_version");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_account_state_with_proof_by_state_root_inner(req);
+        let resp = self.get_account_state_with_proof_by_version_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn save_transactions(
+    fn get_startup_info(
         &mut self,
         ctx: grpcio::RpcContext,
-        req: SaveTransactionsRequest,
-        sink: grpcio::UnarySink<SaveTransactionsResponse>,
+        _req: GetStartupInfoRequest,
+        sink: grpcio::UnarySink<GetStartupInfoResponse>,
     ) {
-        debug!("[GRPC] Storage::save_transactions");
+        debug!("[GRPC] Storage::get_startup_info");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.save_transactions_inner(req);
+        let resp = self.get_startup_info_inner();
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_executor_startup_info(
+    fn get_latest_ledger_infos_per_epoch(
         &mut self,
         ctx: grpcio::RpcContext,
-        _req: GetExecutorStartupInfoRequest,
-        sink: grpcio::UnarySink<GetExecutorStartupInfoResponse>,
+        req: GetLatestLedgerInfosPerEpochRequest,
+        sink: grpcio::UnarySink<GetLatestLedgerInfosPerEpochResponse>,
     ) {
-        debug!("[GRPC] Storage::get_executor_startup_info");
+        debug!("[GRPC] Storage::get_latest_ledger_infos_per_epoch");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_executor_startup_info_inner();
+        let resp = self.get_latest_ledger_infos_per_epoch_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 }

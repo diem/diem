@@ -1584,7 +1584,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "node_filesystem_avail_bytes{role='validator',mountpoint=\"/\"} / node_filesystem_size_bytes{role='validator',mountpoint=\"/\"}",
+          "expr": "node_filesystem_avail_bytes{role='validator',mountpoint=\"/data\"} / node_filesystem_size_bytes{role='validator',mountpoint=\"/data\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

@@ -4,27 +4,39 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_config::core_code_address,
+    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer,
 };
 use failure::prelude::*;
+use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::collections::btree_map::BTreeMap;
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
-pub const VALIDATOR_SET_MODULE_NAME: &str = "ValidatorSet";
-pub const VALIDATOR_SET_STRUCT_NAME: &str = "T";
+lazy_static! {
+    static ref VALIDATOR_SET_MODULE_NAME: Identifier = Identifier::new("ValidatorSet").unwrap();
+    static ref VALIDATOR_SET_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+}
+
+pub fn validator_set_module_name() -> &'static IdentStr {
+    &*VALIDATOR_SET_MODULE_NAME
+}
+
+pub fn validator_set_struct_name() -> &'static IdentStr {
+    &*VALIDATOR_SET_STRUCT_NAME
+}
 
 pub fn validator_set_tag() -> StructTag {
     StructTag {
-        name: VALIDATOR_SET_STRUCT_NAME.to_string(),
+        name: validator_set_struct_name().to_owned(),
         address: core_code_address(),
-        module: VALIDATOR_SET_MODULE_NAME.to_string(),
+        module: validator_set_module_name().to_owned(),
         type_params: vec![],
     }
 }
@@ -33,23 +45,24 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
     AccessPath::resource_access_vec(&validator_set_tag(), &Accesses::empty())
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
+
+impl fmt::Display for ValidatorSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[")?;
+        for validator in &self.0 {
+            write!(f, "{} ", validator)?;
+        }
+        write!(f, "]")
+    }
+}
 
 impl ValidatorSet {
     /// Constructs a ValidatorSet resource.
     pub fn new(payload: Vec<ValidatorPublicKeys>) -> Self {
         ValidatorSet(payload)
-    }
-
-    /// Given an account map (typically from storage) retrieves the validator resource associated.
-    pub fn make_from(account_map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
-        let ap = validator_set_path();
-        match account_map.get(&ap) {
-            Some(bytes) => SimpleDeserializer::deserialize(bytes),
-            None => bail!("No data for {:?}", ap),
-        }
     }
 
     pub fn payload(&self) -> &[ValidatorPublicKeys] {

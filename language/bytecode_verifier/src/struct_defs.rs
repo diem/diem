@@ -6,9 +6,10 @@
 //! each module in isolation guarantees that there is no structural recursion globally.
 use petgraph::{algo::toposort, Directed, Graph};
 use std::collections::BTreeMap;
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{VMStaticViolation, VerificationError},
+    errors::verification_error,
     file_format::{CompiledModule, StructDefinitionIndex, StructHandleIndex, TableIndex},
     internals::ModuleIndex,
     views::StructDefinitionView,
@@ -24,7 +25,7 @@ impl<'a> RecursiveStructDefChecker<'a> {
         Self { module }
     }
 
-    pub fn verify(self) -> Vec<VerificationError> {
+    pub fn verify(self) -> Vec<VMStatus> {
         let graph_builder = StructDefGraphBuilder::new(self.module);
 
         let graph = graph_builder.build();
@@ -38,11 +39,11 @@ impl<'a> RecursiveStructDefChecker<'a> {
             }
             Err(cycle) => {
                 let sd_idx = graph[cycle.node_id()];
-                vec![VerificationError {
-                    kind: IndexKind::StructDefinition,
-                    idx: sd_idx.into_index(),
-                    err: VMStaticViolation::RecursiveStructDef,
-                }]
+                vec![verification_error(
+                    IndexKind::StructDefinition,
+                    sd_idx.into_index(),
+                    StatusCode::RECURSIVE_STRUCT_DEFINITION,
+                )]
             }
         }
     }
@@ -97,7 +98,9 @@ impl<'a> StructDefGraphBuilder<'a> {
     ) -> impl Iterator<Item = StructDefinitionIndex> + 'a {
         let struct_def = self.module.struct_def_at(idx);
         let struct_def = StructDefinitionView::new(self.module, struct_def);
-        let fields = struct_def.fields();
+        // The fields iterator is an option in the case of native structs. Flatten makes an empty
+        // iterator for that case
+        let fields = struct_def.fields().into_iter().flatten();
         let handle_to_def = &self.handle_to_def;
 
         fields.filter_map(move |field| {

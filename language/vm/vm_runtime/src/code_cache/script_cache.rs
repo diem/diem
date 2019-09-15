@@ -7,11 +7,14 @@ use crate::loaded_data::{
     loaded_module::LoadedModule,
 };
 use bytecode_verifier::VerifiedScript;
+use crypto::HashValue;
 use logger::prelude::*;
-use tiny_keccak::Keccak;
-use types::transaction::SCRIPT_HASH_LENGTH;
+use types::{
+    transaction::SCRIPT_HASH_LENGTH,
+    vm_error::{StatusCode, VMStatus},
+};
 use vm::{
-    errors::{Location, VMErrorKind, VMResult, VMRuntimeError, VerificationStatus},
+    errors::{vm_error, Location, VMResult},
     file_format::CompiledScript,
 };
 use vm_cache_map::{Arena, CacheMap};
@@ -33,26 +36,22 @@ impl<'alloc> ScriptCache<'alloc> {
     /// Compiles, verifies, caches and resolves `raw_bytes` into a `FunctionRef` that can be
     /// executed.
     pub fn cache_script(&self, raw_bytes: &[u8]) -> VMResult<FunctionRef<'alloc>> {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(raw_bytes);
-        keccak.finalize(&mut hash);
+        let hash_value = HashValue::from_sha3_256(raw_bytes);
 
         // XXX We may want to put in some negative caching for scripts that fail verification.
-        if let Some(f) = self.map.get(&hash) {
+        if let Some(f) = self.map.get(hash_value.as_ref()) {
             trace!("[VM] Script cache hit");
-            Ok(Ok(f))
+            Ok(f)
         } else {
             trace!("[VM] Script cache miss");
-            let script = try_runtime!(Self::deserialize_and_verify(raw_bytes));
+            let script = Self::deserialize_and_verify(raw_bytes)?;
             let fake_module = script.into_module();
             let loaded_module = LoadedModule::new(fake_module);
-            Ok(Ok(self.map.or_insert_with_transform(
-                hash,
+            Ok(self.map.or_insert_with_transform(
+                *hash_value.as_ref(),
                 move || loaded_module,
                 |module_ref| FunctionRef::new(module_ref, CompiledScript::MAIN_INDEX),
-            )))
+            ))
         }
     }
 
@@ -61,25 +60,29 @@ impl<'alloc> ScriptCache<'alloc> {
             Ok(script) => script,
             Err(err) => {
                 warn!("[VM] deserializer returned error for script: {:?}", err);
-                return Ok(Err(VMRuntimeError {
-                    loc: Location::default(),
-                    err: VMErrorKind::CodeDeserializerError(err),
-                }));
+                let error = vm_error(Location::default(), StatusCode::CODE_DESERIALIZATION_ERROR)
+                    .append(err);
+                return Err(error);
             }
         };
 
         match VerifiedScript::new(script) {
-            Ok(script) => Ok(Ok(script)),
-            Err((_, errs)) => {
+            Ok(script) => Ok(script),
+            Err((_, mut errs)) => {
                 warn!(
                     "[VM] bytecode verifier returned errors for script: {:?}",
                     errs
                 );
-                let statuses = errs.into_iter().map(VerificationStatus::Script).collect();
-                Ok(Err(VMRuntimeError {
-                    loc: Location::default(),
-                    err: VMErrorKind::Verification(statuses),
-                }))
+                // If there are errors there should be at least one otherwise there's an internal
+                // error in the verifier. We only give back the first error. If the user wants to
+                // debug things, they can do that offline.
+                let error = if errs.is_empty() {
+                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                } else {
+                    errs.remove(0)
+                };
+
+                Err(error)
             }
         }
     }

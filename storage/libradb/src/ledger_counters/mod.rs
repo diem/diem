@@ -5,23 +5,26 @@ use canonical_serialization::{
 use failure::prelude::*;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
+#[cfg(any(test, feature = "testing"))]
 use proptest::{collection::hash_map, prelude::*};
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::collections::BTreeMap;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter};
 
 /// Types of ledger counters.
-#[derive(Arbitrary, Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[strum(serialize_all = "snake_case")]
 pub(crate) enum LedgerCounter {
     EventsCreated = 101,
 
-    StateBlobsCreated = 201,
-    StateBlobsRetired = 202,
+    NewStateLeaves = 201,
+    StaleStateLeaves = 202,
 
-    StateNodesCreated = 301,
-    StateNodesRetired = 302,
+    NewStateNodes = 301,
+    StaleStateNodes = 302,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -86,6 +89,7 @@ impl LedgerCounterBumps {
     /// Get the current value of the bump of `counter`.
     ///
     /// Defaults to 0.
+    #[cfg(test)]
     pub fn get(&mut self, counter: LedgerCounter) -> usize {
         self.bumps.get(counter)
     }
@@ -144,6 +148,7 @@ impl CanonicalDeserialize for LedgerCounters {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 prop_compose! {
     pub(crate) fn ledger_counters_strategy()(
         counters_map in hash_map(any::<LedgerCounter>(), any::<usize>(), 0..3)
@@ -157,6 +162,7 @@ prop_compose! {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl Arbitrary for LedgerCounters {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

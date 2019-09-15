@@ -7,15 +7,19 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "0.3.0-alpha.13", package = "futures-preview", features = ["compat"] }
-futures_01 = { version = "0.1.25", package = "futures" }
-grpcio = "0.4.4"
-
-crypto = { path = "../../crypto/legacy_crypto" }
-canonical_serialization = { path = "../../common/canonical_serialization" }
+futures = { version = "0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
+futures_01 = { version = "0.1.28", package = "futures" }
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+protobuf = "~2.7"
+rand = "0.6.5"
+crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
+metrics = { path = "../../common/metrics" }
 proto_conv = { path = "../../common/proto_conv" }
 scratchpad = { path = "../scratchpad" }
-storage_proto = { path = "../storage_proto" }
 state_view = { path = "../state_view" }
+storage_proto = { path = "../storage_proto" }
 types = { path = "../../types" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }

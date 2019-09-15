@@ -3,7 +3,7 @@
 
 use crate::FuzzTarget;
 use failure::prelude::*;
-use proptest::test_runner::{Config, TestRunner};
+use proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
     env,
@@ -14,7 +14,8 @@ use std::{
     process::Command,
 };
 
-/// Generate data for this fuzz target into the output directory.
+/// Generates data for this fuzz target into the output directory. Returns the number of items
+/// generated.
 ///
 /// The corpus directory should be present at the time this method is called.
 pub fn make_corpus(
@@ -22,14 +23,21 @@ pub fn make_corpus(
     num_items: usize,
     corpus_dir: &Path,
     debug: bool,
-) -> Result<()> {
+) -> Result<usize> {
     // TODO: Allow custom proptest configs?
-    let mut runner = TestRunner::new(Config::default());
+    let mut gen = ValueGenerator::new();
 
     let mut sha1 = Sha1::new();
 
-    for _ in 0..num_items {
-        let result = target.generate(&mut runner);
+    let mut idx = 0;
+    while idx < num_items {
+        let result = match target.generate(idx, &mut gen) {
+            Some(bytes) => bytes,
+            None => {
+                // No value could be generated. Assume that corpus generation has been exhausted.
+                break;
+            }
+        };
 
         // Use the SHA-1 of the result as the file name.
         sha1.input(&result);
@@ -44,8 +52,9 @@ pub fn make_corpus(
 
         f.write_all(&result)
             .with_context(|_| format!("Failed to write to file: {:?}", path))?;
+        idx += 1;
     }
-    Ok(())
+    Ok(idx)
 }
 
 /// Fuzz a target by running `cargo fuzz run`.
@@ -98,9 +107,12 @@ pub fn fuzz_target(
 }
 
 /// List all known fuzz targets.
-pub fn list_targets() {
-    println!("Available fuzz targets:\n");
+pub fn list_targets(no_desc: bool) {
     for target in FuzzTarget::all_targets() {
-        println!("  * {0: <24}    {1}", target.name(), target.description())
+        if no_desc {
+            println!("{}", target.name())
+        } else {
+            println!("  * {0: <24}    {1}", target.name(), target.description())
+        }
     }
 }

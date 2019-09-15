@@ -1,0 +1,11 @@
+module M {
+    resource Foo<T> { x: T }
+
+    baz<T>(x: Self.Foo<T>) {
+        let y: T;
+        Foo<T> { x: y } = move(x);
+        return;
+    }
+}
+
+// check: RET_UNSAFE_TO_DESTROY_ERROR

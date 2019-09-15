@@ -15,13 +15,14 @@ use crate::{
     transaction::{
         Program, RawTransaction, SignedTransaction, TransactionInfo, TransactionListWithProof,
     },
+    vm_error::StatusCode,
 };
 use crypto::{
+    ed25519::*,
     hash::{
         CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
         GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
-    signing::generate_keypair,
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
@@ -98,10 +99,10 @@ fn test_verify_three_element_accumulator() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_leftmost() {
+fn test_accumulator_proof_64_siblings_leftmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..64 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -116,10 +117,10 @@ fn test_accumulator_proof_63_siblings_leftmost() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_rightmost() {
+fn test_accumulator_proof_64_siblings_rightmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..64 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -128,17 +129,17 @@ fn test_accumulator_proof_63_siblings_rightmost() {
         .fold(element_hash, |hash, sibling_hash| {
             TestAccumulatorInternalNode::new(*sibling_hash, hash).hash()
         });
-    let leaf_index = (std::u64::MAX - 1) / 2;
+    let leaf_index = std::u64::MAX;
     let proof = AccumulatorProof::new(siblings);
 
     assert!(verify_test_accumulator_element(root_hash, element_hash, leaf_index, &proof).is_ok());
 }
 
 #[test]
-fn test_accumulator_proof_64_siblings() {
+fn test_accumulator_proof_65_siblings() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..64 {
+    for i in 0..65 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -279,6 +280,7 @@ fn test_verify_signed_transaction() {
         state_root1_hash,
         event_root1_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info1_hash = txn_info1.hash();
 
@@ -297,6 +299,7 @@ fn test_verify_signed_transaction() {
         *GENESIS_BLOCK_ID,
         0,
         /* timestamp = */ 10000,
+        None,
     );
 
     let ledger_info_to_transaction_info_proof =
@@ -355,9 +358,9 @@ fn test_verify_account_state_and_event() {
     let txn_info0_hash = b"hellohello".test_only_hash();
     let txn_info1_hash = b"worldworld".test_only_hash();
 
-    let (privkey, pubkey) = generate_keypair();
+    let (privkey, pubkey) = compat::generate_keypair(None);
     let txn2_hash = RawTransaction::new(
-        AccountAddress::from(pubkey),
+        AccountAddress::from_public_key(&pubkey),
         /* sequence_number = */ 0,
         Program::new(vec![], vec![], vec![]),
         /* max_gas_amount = */ 0,
@@ -377,6 +380,7 @@ fn test_verify_account_state_and_event() {
         state_root_hash,
         event_root_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info2_hash = txn_info2.hash();
 
@@ -397,6 +401,7 @@ fn test_verify_account_state_and_event() {
         *GENESIS_BLOCK_ID,
         0,
         /* timestamp = */ 10000,
+        None,
     );
 
     let ledger_info_to_transaction_info_proof =
@@ -496,6 +501,7 @@ fn arb_signed_txn_list_and_range(
                         txn_info.state_root_hash(),
                         txn_info.event_root_hash(),
                         txn_info.gas_used(),
+                        txn_info.major_status(),
                     ),
                 )
             })
@@ -591,6 +597,7 @@ proptest! {
             *GENESIS_BLOCK_ID,
             0,
             /* timestamp = */ 10000,
+            None,
         );
         let first_version = if txn_and_infos.is_empty() { None } else { Some(first_version as u64) };
         prop_assert!(txn_list_with_proof.verify(&ledger_info,first_version).is_ok());

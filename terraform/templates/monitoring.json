@@ -1,0 +1,61 @@
+[
+    {
+        "name": "prometheus",
+        "image": "${prometheus_image}",
+        "cpu": 1280,
+        "memory": 2088,
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 9090, "hostPort": 9090}
+        ],
+        "mountPoints": [
+            {"sourceVolume": "prometheus-data", "containerPath": "/prometheus"},
+            {"sourceVolume": "prometheus-config", "containerPath": "/etc/prometheus"}
+        ],
+        "command": [
+            "--config.file=/etc/prometheus/prometheus.yml",
+            "--storage.tsdb.path=/prometheus",
+            "--web.console.libraries=/etc/prometheus/console_libs",
+            "--web.console.templates=/etc/prometheus/consoles",
+            "--web.enable-lifecycle"
+        ]
+    },
+    {
+        "name": "alertmanager",
+        "image": "${alertmanager_image}",
+        "cpu": 384,
+        "memory": 768,
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 9093, "hostPort": 9093}
+        ],
+        "mountPoints": [
+            {"sourceVolume": "alertmanager-data", "containerPath": "/alertmanager"},
+            {"sourceVolume": "alertmanager-config", "containerPath": "/etc/alertmanager"}
+        ],
+        "command": [
+            "--config.file=/etc/alertmanager/alertmanager.yml",
+            "--storage.path=/alertmanager"
+        ]
+    },
+    {
+        "name": "grafana",
+        "image": "${grafana_image}",
+        "cpu": 384,
+        "memory": 1024,
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 3000, "hostPort": 9091}
+        ],
+        "mountPoints": [
+            {"sourceVolume": "grafana-data", "containerPath": "/var/lib/grafana"},
+            {"sourceVolume": "grafana-provisioning", "containerPath": "/etc/grafana/provisioning"},
+            {"sourceVolume": "grafana-dashboards", "containerPath": "/var/lib/grafana/dashboards"}
+        ],
+        "environment": [
+            {"name": "GF_AUTH_ANONYMOUS_ENABLED", "value": "true"},
+            {"name": "GF_AUTH_ANONYMOUS_ORG_ROLE", "value": "Editor"},
+            {"name": "GF_SECURITY_ALLOW_EMBEDDING", "value": "true"}
+        ]
+    }
+]

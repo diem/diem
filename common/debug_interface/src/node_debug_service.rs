@@ -3,12 +3,15 @@
 
 //! Debug interface to access information in a specific node.
 
-use crate::proto::{
-    node_debug_interface::{
-        DumpJemallocHeapProfileRequest, DumpJemallocHeapProfileResponse, GetNodeDetailsRequest,
-        GetNodeDetailsResponse,
+use crate::{
+    json_log,
+    proto::{
+        node_debug_interface::{
+            Event, GetEventsRequest, GetEventsResponse, GetNodeDetailsRequest,
+            GetNodeDetailsResponse,
+        },
+        node_debug_interface_grpc::NodeDebugInterface,
     },
-    node_debug_interface_grpc::NodeDebugInterface,
 };
 use futures::Future;
 use logger::prelude::*;
@@ -36,21 +39,23 @@ impl NodeDebugInterface for NodeDebugService {
         ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
     }
 
-    fn dump_jemalloc_heap_profile(
+    fn get_events(
         &mut self,
         ctx: ::grpcio::RpcContext<'_>,
-        _request: DumpJemallocHeapProfileRequest,
-        sink: ::grpcio::UnarySink<DumpJemallocHeapProfileResponse>,
+        _req: GetEventsRequest,
+        sink: ::grpcio::UnarySink<GetEventsResponse>,
     ) {
-        trace!("[GRPC] dump_jemalloc_heap_profile");
-        let status_code = match jemalloc::dump_jemalloc_memory_profile() {
-            Ok(_) => 0,
-            Err(err_code) => err_code,
-        };
-        let mut resp = DumpJemallocHeapProfileResponse::new();
-        resp.status_code = status_code;
-        let f = sink.success(resp).map_err(default_reply_error_logger);
-        ctx.spawn(f)
+        let mut response = GetEventsResponse::new();
+        for event in json_log::pop_last_entries() {
+            let mut response_event = Event::new();
+            response_event.set_name(event.name.to_string());
+            response_event.set_timestamp(event.timestamp as i64);
+            let serialized_event =
+                serde_json::to_string(&event.json).expect("Failed to serialize event to json");
+            response_event.set_json(serialized_event);
+            response.events.push(response_event);
+        }
+        ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
     }
 }
 

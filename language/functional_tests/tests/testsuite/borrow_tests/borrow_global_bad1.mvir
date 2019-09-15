@@ -1,0 +1,16 @@
+module A {
+    resource T{v: u64}
+
+    public A0(addr: address) acquires T {
+        let x: &mut Self.T;
+        let y: &mut Self.T;
+        x = borrow_global_mut<T>(get_txn_sender());
+        y = borrow_global_mut<T>(move(addr));
+        _ = move(x);
+        _ = move(y);
+        return;
+    }
+}
+
+// check: VerificationFailure
+// check: GLOBAL_REFERENCE_ERROR

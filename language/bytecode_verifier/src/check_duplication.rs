@@ -9,12 +9,13 @@
 //! - the handles in struct and function definitions point to IMPLEMENTED_MODULE_INDEX
 //! - all struct and function handles pointing to IMPLEMENTED_MODULE_INDEX have a definition
 use std::{collections::HashSet, hash::Hash};
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{VMStaticViolation, VerificationError},
+    errors::verification_error,
     file_format::{
         CompiledModule, FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
-        StructHandleIndex, TableIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -28,57 +29,57 @@ impl<'a> DuplicationChecker<'a> {
         Self { module }
     }
 
-    pub fn verify(self) -> Vec<VerificationError> {
+    pub fn verify(self) -> Vec<VMStatus> {
         let mut errors = vec![];
 
-        if let Some(idx) = Self::first_duplicate_element(self.module.string_pool()) {
-            errors.push(VerificationError {
-                kind: IndexKind::StringPool,
+        if let Some(idx) = Self::first_duplicate_element(self.module.identifiers()) {
+            errors.push(verification_error(
+                IndexKind::Identifier,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.byte_array_pool()) {
-            errors.push(VerificationError {
-                kind: IndexKind::ByteArrayPool,
+            errors.push(verification_error(
+                IndexKind::ByteArrayPool,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.address_pool()) {
-            errors.push(VerificationError {
-                kind: IndexKind::AddressPool,
+            errors.push(verification_error(
+                IndexKind::AddressPool,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.type_signatures()) {
-            errors.push(VerificationError {
-                kind: IndexKind::TypeSignature,
+            errors.push(verification_error(
+                IndexKind::TypeSignature,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.function_signatures()) {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionSignature,
+            errors.push(verification_error(
+                IndexKind::FunctionSignature,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.locals_signatures()) {
-            errors.push(VerificationError {
-                kind: IndexKind::LocalsSignature,
+            errors.push(verification_error(
+                IndexKind::LocalsSignature,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(self.module.module_handles()) {
-            errors.push(VerificationError {
-                kind: IndexKind::ModuleHandle,
+            errors.push(verification_error(
+                IndexKind::ModuleHandle,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(
             self.module
@@ -86,11 +87,11 @@ impl<'a> DuplicationChecker<'a> {
                 .iter()
                 .map(|x| (x.module, x.name)),
         ) {
-            errors.push(VerificationError {
-                kind: IndexKind::StructHandle,
+            errors.push(verification_error(
+                IndexKind::StructHandle,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) = Self::first_duplicate_element(
             self.module
@@ -98,38 +99,48 @@ impl<'a> DuplicationChecker<'a> {
                 .iter()
                 .map(|x| (x.module, x.name)),
         ) {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionHandle,
+            errors.push(verification_error(
+                IndexKind::FunctionHandle,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) =
             Self::first_duplicate_element(self.module.struct_defs().iter().map(|x| x.struct_handle))
         {
-            errors.push(VerificationError {
-                kind: IndexKind::StructDefinition,
+            errors.push(verification_error(
+                IndexKind::StructDefinition,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
         if let Some(idx) =
             Self::first_duplicate_element(self.module.function_defs().iter().map(|x| x.function))
         {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionDefinition,
+            errors.push(verification_error(
+                IndexKind::FunctionDefinition,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
+        }
+        for (idx, function_def) in self.module.function_defs().iter().enumerate() {
+            let acquires = function_def.acquires_global_resources.iter();
+            if Self::first_duplicate_element(acquires).is_some() {
+                errors.push(verification_error(
+                    IndexKind::FunctionDefinition,
+                    idx,
+                    StatusCode::DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                ))
+            }
         }
         if let Some(idx) = Self::first_duplicate_element(
             self.module.field_defs().iter().map(|x| (x.struct_, x.name)),
         ) {
-            errors.push(VerificationError {
-                kind: IndexKind::FieldDefinition,
+            errors.push(verification_error(
+                IndexKind::FieldDefinition,
                 idx,
-                err: VMStaticViolation::DuplicateElement,
-            })
+                StatusCode::DUPLICATE_ELEMENT,
+            ))
         }
 
         // Check that:
@@ -139,11 +150,18 @@ impl<'a> DuplicationChecker<'a> {
         let mut start_field_index: usize = 0;
         let mut idx_opt = None;
         for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
-            if FieldDefinitionIndex::new(start_field_index as u16) != struct_def.fields {
+            let (field_count, fields) = match struct_def.field_information {
+                StructFieldInformation::Native => continue,
+                StructFieldInformation::Declared {
+                    field_count,
+                    fields,
+                } => (field_count, fields),
+            };
+            if FieldDefinitionIndex::new(start_field_index as u16) != fields {
                 idx_opt = Some(idx);
                 break;
             }
-            let next_start_field_index = start_field_index + struct_def.field_count as usize;
+            let next_start_field_index = start_field_index + field_count as usize;
             let all_fields_match = (start_field_index..next_start_field_index).all(|i| {
                 struct_def.struct_handle
                     == self
@@ -158,17 +176,17 @@ impl<'a> DuplicationChecker<'a> {
             start_field_index = next_start_field_index;
         }
         if let Some(idx) = idx_opt {
-            errors.push(VerificationError {
-                kind: IndexKind::StructDefinition,
+            errors.push(verification_error(
+                IndexKind::StructDefinition,
                 idx,
-                err: VMStaticViolation::InconsistentFields,
-            });
+                StatusCode::INCONSISTENT_FIELDS,
+            ));
         } else if start_field_index != self.module.field_defs().len() {
-            errors.push(VerificationError {
-                kind: IndexKind::FieldDefinition,
-                idx: start_field_index,
-                err: VMStaticViolation::UnusedFields,
-            });
+            errors.push(verification_error(
+                IndexKind::FieldDefinition,
+                start_field_index,
+                StatusCode::UNUSED_FIELDS,
+            ));
         }
 
         // Check that each struct definition is pointing to module handle with index
@@ -177,11 +195,11 @@ impl<'a> DuplicationChecker<'a> {
             self.module.struct_handle_at(x.struct_handle).module
                 != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
         }) {
-            errors.push(VerificationError {
-                kind: IndexKind::StructDefinition,
+            errors.push(verification_error(
+                IndexKind::StructDefinition,
                 idx,
-                err: VMStaticViolation::InvalidModuleHandle,
-            })
+                StatusCode::INVALID_MODULE_HANDLE,
+            ))
         }
         // Check that each function definition is pointing to module handle with index
         // IMPLEMENTED_MODULE_INDEX.
@@ -189,11 +207,11 @@ impl<'a> DuplicationChecker<'a> {
             self.module.function_handle_at(x.function).module
                 != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
         }) {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionDefinition,
+            errors.push(verification_error(
+                IndexKind::FunctionDefinition,
                 idx,
-                err: VMStaticViolation::InvalidModuleHandle,
-            })
+                StatusCode::INVALID_MODULE_HANDLE,
+            ))
         }
         // Check that each struct handle with module handle index IMPLEMENTED_MODULE_INDEX is
         // implemented.
@@ -209,11 +227,11 @@ impl<'a> DuplicationChecker<'a> {
                 == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
                 && !implemented_struct_handles.contains(&y)
         }) {
-            errors.push(VerificationError {
-                kind: IndexKind::StructHandle,
+            errors.push(verification_error(
+                IndexKind::StructHandle,
                 idx,
-                err: VMStaticViolation::UnimplementedHandle,
-            })
+                StatusCode::UNIMPLEMENTED_HANDLE,
+            ))
         }
         // Check that each function handle with module handle index IMPLEMENTED_MODULE_INDEX is
         // implemented.
@@ -229,11 +247,11 @@ impl<'a> DuplicationChecker<'a> {
                 == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
                 && !implemented_function_handles.contains(&y)
         }) {
-            errors.push(VerificationError {
-                kind: IndexKind::FunctionHandle,
+            errors.push(verification_error(
+                IndexKind::FunctionHandle,
                 idx,
-                err: VMStaticViolation::UnimplementedHandle,
-            })
+                StatusCode::UNIMPLEMENTED_HANDLE,
+            ))
         }
 
         errors

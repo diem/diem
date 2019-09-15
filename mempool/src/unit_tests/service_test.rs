@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use config::config::NodeConfigHelpers;
-use crypto::signing::generate_keypair;
+use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use proto_conv::FromProto;
@@ -47,7 +47,7 @@ fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
 fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithValidationRequest {
     let mut req = AddTransactionWithValidationRequest::new();
     let sender = AccountAddress::random();
-    let (private_key, public_key) = generate_keypair();
+    let (private_key, public_key) = generate_keypair(None);
 
     let transaction = get_test_signed_transaction(
         sender,
@@ -94,10 +94,7 @@ fn test_get_block() {
     let response = client.get_block(&GetBlockRequest::new()).unwrap();
     let block = response.get_block();
     assert_eq!(block.get_transactions().len(), 1);
-    assert_eq!(
-        block.get_transactions()[0].raw_txn_bytes,
-        req.get_signed_txn().raw_txn_bytes
-    );
+    assert_eq!(block.get_transactions()[0], *req.get_signed_txn(),);
 }
 
 #[test]

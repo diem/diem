@@ -1,8 +1,8 @@
-// check: VerificationError
-// check: RecursiveStructDef
+// check: VerificationFailure
+// check: RECURSIVE_STRUCT_DEFINITION
 
 module M {
-    struct A{b: V#Self.B}
-    struct B{a: V#Self.A}
+    struct A{b: Self.B}
+    struct B{a: Self.A}
 }
 

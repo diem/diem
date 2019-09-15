@@ -1,13 +1,14 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: CallTypeMismatchError(4) }
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR
 
 module B {
     struct T{g: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T{g: move(g)};
     }
 
-    public t(this: &V#Self.T): &u64 {
+    public t(this: &Self.T): &u64 {
         let g: &u64;
         g = &move(this).g;
         return move(g);
@@ -18,16 +19,16 @@ module B {
 
 module A {
     import {{default}}.B;
-    struct T{f: V#B.T}
+    struct T{f: B.T}
 
-    public new(f: V#B.T): V#Self.T {
+    public new(f: B.T): Self.T {
         return T{f: move(f)};
     }
 
-    public t(this: &mut V#Self.T) {
-        let ref1: &mut V#B.T;
+    public t(this: &mut Self.T) {
+        let ref1: &mut B.T;
         let ref2: &u64;
-        let b2: V#B.T;
+        let b2: B.T;
         ref1 = &mut move(this).f;
         ref2 = B.t(copy(ref1));
         b2 = B.new(3);
@@ -42,9 +43,9 @@ import {{default}}.A;
 import {{default}}.B;
 
 main() {
-    let b: V#B.T;
-    let x: V#A.T;
-    let x_ref: &mut V#A.T;
+    let b: B.T;
+    let x: A.T;
+    let x_ref: &mut A.T;
     b = B.new(0);
     x = A.new(move(b));
     x_ref = &mut x;

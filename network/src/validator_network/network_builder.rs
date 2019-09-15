@@ -1,11 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Permission-less vs Permissioned network end-points:
+//! ---------------------------------------------------
+//! A network end-point is permissioned if it only wants to accept connections from a known set
+//! of peers (`trusted_peers`) identified by their network identity keys. This does not mean
+//! that the other end-point of a connection also needs to run in permissioned mode --
+//! a network end-point running in permissioned mode will connect to or accept connections from
+//! an end-point running in permissionless mode as long as the latter is in its trusted peers
+//! set.
 use crate::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityManager,
     counters,
-    interface::NetworkProvider,
+    interface::{LibraNetworkProvider, NetworkProvider},
     peer_manager::{PeerManager, PeerManagerRequestSender},
     proto::PeerInfo,
     protocols::{
@@ -15,20 +23,18 @@ use crate::{
         identity::Identity,
         rpc::Rpc,
     },
-    transport::{
-        build_memory_noise_transport, build_memory_transport, build_tcp_noise_transport,
-        build_tcp_transport,
-    },
-    validator_network::{
-        ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
-    },
+    transport::*,
     ProtocolId,
 };
 use channel;
-use crypto::x25519::{X25519PrivateKey, X25519PublicKey};
+use config::config::RoleType;
+use crypto::{
+    ed25519::*,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
-use nextgen_crypto::ed25519::*;
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
@@ -58,9 +64,11 @@ pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 /// with or without Noise encryption
 pub enum TransportType {
     Memory,
-    MemoryNoise,
+    MemoryNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
+    PermissionlessMemoryNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
     Tcp,
-    TcpNoise,
+    TcpNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
+    PermissionlessTcpNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
 }
 
 /// Build Network module with custom configuration values.
@@ -72,13 +80,12 @@ pub struct NetworkBuilder {
     executor: TaskExecutor,
     peer_id: PeerId,
     addr: Multiaddr,
+    role: RoleType,
     advertised_address: Option<Multiaddr>,
     seed_peers: HashMap<PeerId, PeerInfo>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     transport: TransportType,
     channel_size: usize,
-    mempool_protocols: Vec<ProtocolId>,
-    consensus_protocols: Vec<ProtocolId>,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
     discovery_interval_ms: u64,
@@ -94,22 +101,26 @@ pub struct NetworkBuilder {
     max_concurrent_network_notifs: u32,
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
-    identity_keys: Option<(X25519PrivateKey, X25519PublicKey)>,
+    is_permissioned: bool,
 }
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
-    pub fn new(executor: TaskExecutor, peer_id: PeerId, addr: Multiaddr) -> NetworkBuilder {
+    pub fn new(
+        executor: TaskExecutor,
+        peer_id: PeerId,
+        addr: Multiaddr,
+        role: RoleType,
+    ) -> NetworkBuilder {
         NetworkBuilder {
             executor,
             peer_id,
             addr,
+            role,
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             channel_size: NETWORK_CHANNEL_SIZE,
-            mempool_protocols: vec![],
-            consensus_protocols: vec![],
             direct_send_protocols: vec![],
             rpc_protocols: vec![],
             transport: TransportType::Memory,
@@ -126,7 +137,7 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keys: None,
-            identity_keys: None,
+            is_permissioned: true,
         }
     }
 
@@ -154,12 +165,6 @@ impl NetworkBuilder {
     /// Set signing keys of local node.
     pub fn signing_keys(&mut self, keys: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
         self.signing_keys = Some(keys);
-        self
-    }
-
-    /// Set identity keys of local node.
-    pub fn identity_keys(&mut self, keys: (X25519PrivateKey, X25519PublicKey)) -> &mut Self {
-        self.identity_keys = Some(keys);
         self
     }
 
@@ -268,18 +273,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set the protocol IDs that Mempool subscribes.
-    pub fn mempool_protocols(&mut self, protocols: Vec<ProtocolId>) -> &mut Self {
-        self.mempool_protocols = protocols;
-        self
-    }
-
-    /// Set the protocol IDs that Consensus subscribes.
-    pub fn consensus_protocols(&mut self, protocols: Vec<ProtocolId>) -> &mut Self {
-        self.consensus_protocols = protocols;
-        self
-    }
-
     /// Set the protocol IDs that DirectSend actor subscribes.
     pub fn direct_send_protocols(&mut self, protocols: Vec<ProtocolId>) -> &mut Self {
         self.direct_send_protocols = protocols;
@@ -292,44 +285,59 @@ impl NetworkBuilder {
         self
     }
 
+    /// Set the is_permissioned flag to make the network permissioned or permission-less.
+    pub fn permissioned(&mut self, is_permissioned: bool) -> &mut Self {
+        self.is_permissioned = is_permissioned;
+        self
+    }
+
     fn supported_protocols(&self) -> Vec<ProtocolId> {
-        self.direct_send_protocols
+        let mut supported_protocols: Vec<ProtocolId> = self
+            .direct_send_protocols
             .iter()
             .chain(&self.rpc_protocols)
-            .chain(&vec![
-                ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME),
-                ProtocolId::from_static(PING_PROTOCOL_NAME),
-            ])
+            .chain(&vec![ProtocolId::from_static(PING_PROTOCOL_NAME)])
             .cloned()
-            .collect()
+            .collect();
+        // TODO: This check is performed at 2 places to modify how protocols are setup. Ideally we
+        // should do it at only 1 place.
+        if self.is_permissioned {
+            supported_protocols.push(ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME));
+        }
+        supported_protocols
     }
 
     /// Create the configured `NetworkBuilder`
     /// Return the constructed Mempool and Consensus Sender+Events
-    pub fn build(
-        &mut self,
-    ) -> (
-        (MempoolNetworkSender, MempoolNetworkEvents),
-        (ConsensusNetworkSender, ConsensusNetworkEvents),
-        Multiaddr,
-    ) {
-        let identity = Identity::new(self.peer_id, self.supported_protocols());
+    pub fn build(&mut self) -> (Multiaddr, Box<dyn LibraNetworkProvider>) {
+        let identity = Identity::new(self.peer_id, self.supported_protocols(), self.role);
         // Build network based on the transport type
-        let own_identity_keys = self.identity_keys.take().expect("Identity keys not set");
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
             TransportType::Memory => self.build_with_transport(build_memory_transport(identity)),
-            TransportType::MemoryNoise => self.build_with_transport(build_memory_noise_transport(
-                identity,
-                own_identity_keys,
-                trusted_peers,
-            )),
+            TransportType::MemoryNoise(ref mut keys) => {
+                let keys = keys.take().expect("Identity keys not set");
+                self.build_with_transport(build_memory_noise_transport(
+                    identity,
+                    keys,
+                    trusted_peers,
+                ))
+            }
+            TransportType::PermissionlessMemoryNoise(ref mut keys) => {
+                let keys = keys.take().expect("Identity keys not set");
+                self.build_with_transport(build_permissionless_memory_noise_transport(
+                    identity, keys,
+                ))
+            }
             TransportType::Tcp => self.build_with_transport(build_tcp_transport(identity)),
-            TransportType::TcpNoise => self.build_with_transport(build_tcp_noise_transport(
-                identity,
-                own_identity_keys,
-                trusted_peers,
-            )),
+            TransportType::TcpNoise(ref mut keys) => {
+                let keys = keys.take().expect("Identity keys not set");
+                self.build_with_transport(build_tcp_noise_transport(identity, keys, trusted_peers))
+            }
+            TransportType::PermissionlessTcpNoise(ref mut keys) => {
+                let keys = keys.take().expect("Identity keys not set");
+                self.build_with_transport(build_permissionless_tcp_noise_transport(identity, keys))
+            }
         }
     }
 
@@ -341,135 +349,30 @@ impl NetworkBuilder {
             (Identity, impl StreamMultiplexer + 'static),
             impl ::std::error::Error + Send + Sync + 'static,
         >,
-    ) -> (
-        (MempoolNetworkSender, MempoolNetworkEvents),
-        (ConsensusNetworkSender, ConsensusNetworkEvents),
-        Multiaddr,
-    ) {
-        // Construct Mempool and Consensus network interfaces
-        let (network_reqs_tx, network_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
-        let (mempool_tx, mempool_rx) =
-            channel::new(self.channel_size, &counters::PENDING_MEMPOOL_NETWORK_EVENTS);
-        let (consensus_tx, consensus_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
-        );
-
-        let mempool_network_sender = MempoolNetworkSender::new(network_reqs_tx.clone());
-        let mempool_network_events = MempoolNetworkEvents::new(mempool_rx);
-        let consensus_network_sender = ConsensusNetworkSender::new(network_reqs_tx.clone());
-        let consensus_network_events = ConsensusNetworkEvents::new(consensus_rx);
-        // Initialize and start NetworkProvider.
+    ) -> (Multiaddr, Box<dyn LibraNetworkProvider>) {
+        // Initialize lists of protocol handlers and peer event handlers.
+        let mut peer_event_handlers = vec![];
+        let mut protocol_handlers = HashMap::new();
+        // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_PEER_MANAGER_REQUESTS);
-        let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
+
+        // Initialize and start DirectSend actor.
+        let (pm_ds_notifs_tx, pm_ds_notifs_rx) = channel::new(
             self.channel_size,
-            &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
+            &counters::PENDING_PEER_MANAGER_DIRECT_SEND_NOTIFICATIONS,
         );
+        let direct_send_handlers = self
+            .direct_send_protocols
+            .iter()
+            .map(|p| (p.clone(), pm_ds_notifs_tx.clone()));
+        protocol_handlers.extend(direct_send_handlers);
         let (ds_reqs_tx, ds_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_DIRECT_SEND_REQUESTS);
         let (ds_net_notifs_tx, ds_net_notifs_rx) = channel::new(
             self.channel_size,
             &counters::PENDING_DIRECT_SEND_NOTIFICATIONS,
         );
-        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
-        );
-        let (rpc_reqs_tx, rpc_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_RPC_REQUESTS);
-        let (rpc_net_notifs_tx, rpc_net_notifs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
-
-        let mempool_handlers = self
-            .mempool_protocols
-            .iter()
-            .map(|p| (p.clone(), mempool_tx.clone()));
-        let consensus_handlers = self
-            .consensus_protocols
-            .iter()
-            .map(|p| (p.clone(), consensus_tx.clone()));
-        let upstream_handlers = mempool_handlers.chain(consensus_handlers).collect();
-
-        let validator_network = NetworkProvider::new(
-            pm_net_notifs_rx,
-            rpc_reqs_tx,
-            rpc_net_notifs_rx,
-            ds_reqs_tx,
-            ds_net_notifs_rx,
-            conn_mgr_reqs_tx.clone(),
-            network_reqs_rx,
-            upstream_handlers,
-            self.max_concurrent_network_reqs,
-            self.max_concurrent_network_notifs,
-        );
-        self.executor
-            .spawn(validator_network.start().boxed().unit_error().compat());
-
-        // Initialize and start PeerManager.
-        let (pm_ds_notifs_tx, pm_ds_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_DIRECT_SEND_NOTIFICATIONS,
-        );
-        let (pm_rpc_notifs_tx, pm_rpc_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_RPC_NOTIFICATIONS,
-        );
-        let (pm_discovery_notifs_tx, pm_discovery_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_DISCOVERY_NOTIFICATIONS,
-        );
-        let (pm_ping_notifs_tx, pm_ping_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_PING_NOTIFICATIONS,
-        );
-        let (pm_conn_mgr_notifs_tx, pm_conn_mgr_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS,
-        );
-
-        let direct_send_handlers = self
-            .direct_send_protocols
-            .iter()
-            .map(|p| (p.clone(), pm_ds_notifs_tx.clone()));
-        let rpc_handlers = self
-            .rpc_protocols
-            .iter()
-            .map(|p| (p.clone(), pm_rpc_notifs_tx.clone()));
-        let discovery_handler = vec![(
-            ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME),
-            pm_discovery_notifs_tx.clone(),
-        )];
-        let ping_handler = vec![(
-            ProtocolId::from_static(PING_PROTOCOL_NAME),
-            pm_ping_notifs_tx.clone(),
-        )];
-        let protocol_handlers = direct_send_handlers
-            .chain(rpc_handlers)
-            .chain(discovery_handler)
-            .chain(ping_handler)
-            .collect();
-
-        let peer_mgr = PeerManager::new(
-            transport,
-            self.executor.clone(),
-            self.peer_id,
-            self.addr.clone(),
-            pm_reqs_rx,
-            protocol_handlers,
-            vec![
-                pm_net_notifs_tx,
-                pm_conn_mgr_notifs_tx,
-                pm_ping_notifs_tx,
-                pm_discovery_notifs_tx,
-            ],
-        );
-        let listen_addr = peer_mgr.listen_addr().clone();
-        self.executor
-            .spawn(peer_mgr.start().boxed().unit_error().compat());
-
-        // Initialize and start DirectSend actor.
         let ds = DirectSend::new(
             self.executor.clone(),
             ds_reqs_rx,
@@ -479,9 +382,24 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(ds.start().boxed().unit_error().compat());
+        debug!("Started direct send actor");
 
         // Initialize and start RPC actor.
+        let (pm_rpc_notifs_tx, pm_rpc_notifs_rx) = channel::new(
+            self.channel_size,
+            &counters::PENDING_PEER_MANAGER_RPC_NOTIFICATIONS,
+        );
+        let rpc_handlers = self
+            .rpc_protocols
+            .iter()
+            .map(|p| (p.clone(), pm_rpc_notifs_tx.clone()));
+        protocol_handlers.extend(rpc_handlers);
+        let (rpc_net_notifs_tx, rpc_net_notifs_rx) =
+            channel::new(self.channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
+        let (rpc_reqs_tx, rpc_reqs_rx) =
+            channel::new(self.channel_size, &counters::PENDING_RPC_REQUESTS);
         let rpc = Rpc::new(
+            self.executor.clone(),
             rpc_reqs_rx,
             pm_rpc_notifs_rx,
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
@@ -492,49 +410,18 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(rpc.start().boxed().unit_error().compat());
-
-        let conn_mgr = ConnectivityManager::new(
-            self.trusted_peers.clone(),
-            Compat01As03::new(Interval::new_interval(Duration::from_millis(
-                self.connectivity_check_interval_ms,
-            )))
-            .fuse(),
-            PeerManagerRequestSender::new(pm_reqs_tx.clone()),
-            pm_conn_mgr_notifs_rx,
-            conn_mgr_reqs_rx,
-            ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
-            self.max_connection_delay_ms,
-        );
-        self.executor
-            .spawn(conn_mgr.start().boxed().unit_error().compat());
-
-        // Setup signer from keys.
-        let (signing_private_key, _signing_public_key) =
-            self.signing_keys.take().expect("Signing keys not set");
-        let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
-        // Initialize and start Discovery actor.
-        let discovery = Discovery::new(
-            self.peer_id,
-            vec![self
-                .advertised_address
-                .clone()
-                .unwrap_or_else(|| listen_addr.clone())],
-            signer,
-            self.seed_peers.clone(),
-            self.trusted_peers.clone(),
-            Compat01As03::new(Interval::new_interval(Duration::from_millis(
-                self.discovery_interval_ms,
-            )))
-            .fuse(),
-            PeerManagerRequestSender::new(pm_reqs_tx.clone()),
-            pm_discovery_notifs_rx,
-            conn_mgr_reqs_tx.clone(),
-            Duration::from_millis(self.discovery_msg_timeout_ms),
-        );
-        self.executor
-            .spawn(discovery.start().boxed().unit_error().compat());
+        debug!("Started RPC actor");
 
         // Initialize and start HealthChecker.
+        let (pm_ping_notifs_tx, pm_ping_notifs_rx) = channel::new(
+            self.channel_size,
+            &counters::PENDING_PEER_MANAGER_PING_NOTIFICATIONS,
+        );
+        protocol_handlers.insert(
+            ProtocolId::from_static(PING_PROTOCOL_NAME),
+            pm_ping_notifs_tx.clone(),
+        );
+        peer_event_handlers.push(pm_ping_notifs_tx);
         let health_checker = HealthChecker::new(
             Compat01As03::new(Interval::new_interval(Duration::from_millis(
                 self.ping_interval_ms,
@@ -547,11 +434,112 @@ impl NetworkBuilder {
         );
         self.executor
             .spawn(health_checker.start().boxed().unit_error().compat());
+        debug!("Started health checker");
 
-        (
-            (mempool_network_sender, mempool_network_events),
-            (consensus_network_sender, consensus_network_events),
-            listen_addr,
-        )
+        let mut net_conn_mgr_reqs_tx = None;
+
+        // We start the discovery and connectivity_manager module only if the network is
+        // permissioned.
+        if self.is_permissioned {
+            // Initialize and start connectivity manager.
+            let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
+                self.channel_size,
+                &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
+            );
+            net_conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx.clone());
+            let (pm_conn_mgr_notifs_tx, pm_conn_mgr_notifs_rx) = channel::new(
+                self.channel_size,
+                &counters::PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS,
+            );
+            peer_event_handlers.push(pm_conn_mgr_notifs_tx);
+            let conn_mgr = ConnectivityManager::new(
+                self.trusted_peers.clone(),
+                Compat01As03::new(Interval::new_interval(Duration::from_millis(
+                    self.connectivity_check_interval_ms,
+                )))
+                .fuse(),
+                PeerManagerRequestSender::new(pm_reqs_tx.clone()),
+                pm_conn_mgr_notifs_rx,
+                conn_mgr_reqs_rx,
+                ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
+                self.max_connection_delay_ms,
+            );
+            self.executor
+                .spawn(conn_mgr.start().boxed().unit_error().compat());
+            debug!("Started connection manager");
+
+            // Initialize and start Discovery actor.
+            let (pm_discovery_notifs_tx, pm_discovery_notifs_rx) = channel::new(
+                self.channel_size,
+                &counters::PENDING_PEER_MANAGER_DISCOVERY_NOTIFICATIONS,
+            );
+            protocol_handlers.insert(
+                ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME),
+                pm_discovery_notifs_tx.clone(),
+            );
+            peer_event_handlers.push(pm_discovery_notifs_tx);
+            let (signing_private_key, _signing_public_key) =
+                self.signing_keys.take().expect("Signing keys not set");
+            // Setup signer from keys.
+            let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
+            let discovery = Discovery::new(
+                self.peer_id,
+                vec![self
+                    .advertised_address
+                    .clone()
+                    .unwrap_or_else(|| self.addr.clone())],
+                signer,
+                self.seed_peers.clone(),
+                self.trusted_peers.clone(),
+                Compat01As03::new(Interval::new_interval(Duration::from_millis(
+                    self.discovery_interval_ms,
+                )))
+                .fuse(),
+                PeerManagerRequestSender::new(pm_reqs_tx.clone()),
+                pm_discovery_notifs_rx,
+                conn_mgr_reqs_tx.clone(),
+                Duration::from_millis(self.discovery_msg_timeout_ms),
+            );
+            self.executor
+                .spawn(discovery.start().boxed().unit_error().compat());
+            debug!("Started discovery protocol actor");
+        }
+
+        let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
+            self.channel_size,
+            &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
+        );
+        peer_event_handlers.push(pm_net_notifs_tx);
+        let peer_mgr = PeerManager::new(
+            transport,
+            self.executor.clone(),
+            self.peer_id,
+            self.addr.clone(),
+            pm_reqs_rx,
+            protocol_handlers,
+            peer_event_handlers,
+        );
+        let listen_addr = peer_mgr.listen_addr().clone();
+        self.executor
+            .spawn(peer_mgr.start().boxed().unit_error().compat());
+        debug!("Started peer manager");
+
+        // Setup communication channels.
+        let (network_reqs_tx, network_reqs_rx) =
+            channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
+        let validator_network = NetworkProvider::new(
+            pm_net_notifs_rx,
+            rpc_reqs_tx,
+            rpc_net_notifs_rx,
+            ds_reqs_tx,
+            ds_net_notifs_rx,
+            net_conn_mgr_reqs_tx,
+            network_reqs_rx,
+            network_reqs_tx,
+            self.max_concurrent_network_reqs,
+            self.max_concurrent_network_notifs,
+            self.channel_size,
+        );
+        (listen_addr, Box::new(validator_network))
     }
 }

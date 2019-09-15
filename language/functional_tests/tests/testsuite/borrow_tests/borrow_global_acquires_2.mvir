@@ -1,0 +1,47 @@
+module A {
+    resource T1{v: u64}
+    resource T2{v: u64}
+
+    public test1(addr: address) acquires T1, T2 {
+        let x: &mut Self.T1;
+        x = borrow_global_mut<T1>(get_txn_sender());
+        Self.acquires_t2();
+        _ = move(x);
+        Self.acquires_t1();
+
+        return;
+    }
+
+    public test2(addr: address) acquires T1, T2 {
+        let x: &mut Self.T1;
+        x = borrow_global_mut<T1>(get_txn_sender());
+        _ = move(x);
+        Self.acquires_t1();
+        Self.acquires_t2();
+
+        return;
+    }
+
+    public test3(addr: address) acquires T1, T2 {
+        let x: &mut Self.T1;
+        x = borrow_global_mut<T1>(get_txn_sender());
+        _ = move(x);
+        Self.acquires_t2();
+        Self.acquires_t1();
+
+        return;
+    }
+
+    acquires_t1() acquires T1 {
+        let v: u64;
+        T1 { v } = move_from<T1>(get_txn_sender());
+        return;
+    }
+
+    acquires_t2() acquires T2 {
+        let v: u64;
+        T2 { v } = move_from<T2>(get_txn_sender());
+        return;
+    }
+
+}

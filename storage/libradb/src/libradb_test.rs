@@ -6,16 +6,23 @@ use crate::{
     mock_genesis::{db_with_mock_genesis, GENESIS_INFO},
     test_helper::arb_blocks_to_commit,
 };
-use crypto::hash::CryptoHash;
+use crypto::{ed25519::*, hash::CryptoHash};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
-use types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
+use tools::tempdir::TempPath;
+use types::{
+    account_config::get_account_resource_or_default, contract_event::ContractEvent,
+    ledger_info::LedgerInfo,
+};
 
 fn test_save_blocks_impl(
-    input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+    input: Vec<(
+        Vec<TransactionToCommit>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+    )>,
 ) -> Result<()> {
-    let tmp_dir = tempfile::tempdir()?;
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
 
     let num_batches = input.len();
@@ -66,9 +73,12 @@ fn test_save_blocks_impl(
 }
 
 fn test_sync_transactions_impl(
-    input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+    input: Vec<(
+        Vec<TransactionToCommit>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+    )>,
 ) -> Result<()> {
-    let tmp_dir = tempfile::tempdir()?;
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
 
     let num_batches = input.len();
@@ -102,10 +112,10 @@ fn test_sync_transactions_impl(
     Ok(())
 }
 
-fn get_events_by_access_path(
+fn get_events_by_query_path(
     db: &LibraDB,
     ledger_info: &LedgerInfo,
-    access_path: &AccessPath,
+    query_path: &AccessPath,
     first_seq_num: u64,
     last_seq_num: u64,
     ascending: bool,
@@ -124,26 +134,21 @@ fn get_events_by_access_path(
 
     let mut ret = Vec::new();
     loop {
-        let (events_with_proof, proof_of_latest_event) = db.get_events_by_event_access_path(
-            access_path,
+        let (events_with_proof, proof_of_latest_event) = db.get_events_by_query_path(
+            query_path,
             cursor,
             ascending,
             LIMIT,
             ledger_info.version(),
         )?;
 
+        let account_resource = get_account_resource_or_default(&proof_of_latest_event.blob)?;
+        let expected_event_key = account_resource
+            .get_event_handle_by_query_path(&query_path.path)?
+            .key();
+
         let num_events = events_with_proof.len() as u64;
-        if ascending && num_events < LIMIT || !ascending && cursor == u64::max_value() {
-            let proof_of_latest_event = proof_of_latest_event.unwrap();
-            proof_of_latest_event.verify(
-                ledger_info,
-                ledger_info.version(),
-                access_path.address,
-            )?;
-        // TODO: decode and see event seq_num once things get more real.
-        } else {
-            assert!(proof_of_latest_event.is_none());
-        }
+        proof_of_latest_event.verify(ledger_info, ledger_info.version(), query_path.address)?;
 
         if cursor == u64::max_value() {
             cursor = last_seq_num;
@@ -158,7 +163,7 @@ fn get_events_by_access_path(
             .map(|(e, seq_num)| {
                 e.verify(
                     ledger_info,
-                    access_path,
+                    &expected_event_key,
                     seq_num,
                     e.transaction_version,
                     e.event_index,
@@ -209,21 +214,13 @@ fn get_events_by_access_path(
     Ok(ret)
 }
 
-fn verify_events_by_access_path(
+fn verify_events_by_query_path(
     db: &LibraDB,
-    events: &[ContractEvent],
+    events: Vec<(AccessPath, Vec<ContractEvent>)>,
     ledger_info: &LedgerInfo,
     is_latest: bool,
 ) -> Result<()> {
-    let mut events_by_access_path = HashMap::new();
-    events.iter().for_each(|e| {
-        let list = events_by_access_path
-            .entry(e.access_path().clone())
-            .or_insert_with(Vec::new);
-        list.push(e.clone())
-    });
-
-    events_by_access_path
+    events
         .into_iter()
         .map(|(access_path, events)| {
             let first_seq = events
@@ -232,7 +229,7 @@ fn verify_events_by_access_path(
                 .sequence_number();
             let last_seq = events.last().expect("Shouldn't be empty").sequence_number();
 
-            let traversed = get_events_by_access_path(
+            let traversed = get_events_by_query_path(
                 db,
                 ledger_info,
                 &access_path,
@@ -243,7 +240,7 @@ fn verify_events_by_access_path(
             )?;
             assert_eq!(events, traversed);
 
-            let rev_traversed = get_events_by_access_path(
+            let rev_traversed = get_events_by_query_path(
                 db,
                 ledger_info,
                 &access_path,
@@ -260,11 +257,48 @@ fn verify_events_by_access_path(
     Ok(())
 }
 
+fn group_events_by_query_path(
+    txns_to_commit: &[TransactionToCommit],
+) -> Vec<(AccessPath, Vec<ContractEvent>)> {
+    let mut event_key_to_query_path = HashMap::new();
+    for txn in txns_to_commit {
+        for (address, account_blob) in txn.account_states().iter() {
+            let account_btree = account_blob
+                .try_into()
+                .expect("The stored account blob can't be parsed as BTreeMap");
+            let account =
+                AccountResource::make_from(&account_btree).expect("AccountResource is not found");
+            event_key_to_query_path.insert(
+                account.sent_events().key().clone(),
+                AccessPath::new_for_sent_event(*address),
+            );
+            event_key_to_query_path.insert(
+                account.received_events().key().clone(),
+                AccessPath::new_for_received_event(*address),
+            );
+        }
+    }
+    let mut query_path_to_events: HashMap<AccessPath, Vec<ContractEvent>> = HashMap::new();
+    for txn in txns_to_commit {
+        for event in txn.events() {
+            let query_path = event_key_to_query_path
+                .get(event.key())
+                .expect("Unknown Event Key")
+                .clone();
+            query_path_to_events
+                .entry(query_path)
+                .or_default()
+                .push(event.clone());
+        }
+    }
+    query_path_to_events.into_iter().collect()
+}
+
 fn verify_committed_transactions(
     db: &LibraDB,
     txns_to_commit: &[TransactionToCommit],
     first_version: Version,
-    ledger_info_with_sigs: &LedgerInfoWithSignatures,
+    ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
     is_latest: bool,
 ) -> Result<()> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
@@ -281,6 +315,17 @@ fn verify_committed_transactions(
             txn_info.signed_transaction_hash(),
             txn_to_commit.signed_txn().hash()
         );
+
+        // Fetch and verify transaction itself.
+        let txn = txn_to_commit.signed_txn();
+        let txn_with_proof = db.get_transaction_with_proof(cur_ver, ledger_version, true)?;
+        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+
+        let txn_with_proof = db
+            .get_txn_by_account(txn.sender(), txn.sequence_number(), ledger_version, true)?
+            .expect("Should exist.");
+        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+
         let txn_list_with_proof =
             db.get_transactions(cur_ver, 1, ledger_version, true /* fetch_events */)?;
         txn_list_with_proof.verify(ledger_info, Some(cur_ver))?;
@@ -296,12 +341,9 @@ fn verify_committed_transactions(
 
     // Fetch and verify events.
     // TODO: verify events are saved to correct transaction version.
-    verify_events_by_access_path(
+    verify_events_by_query_path(
         db,
-        &txns_to_commit
-            .iter()
-            .flat_map(|t| t.events().to_vec())
-            .collect::<Vec<_>>(),
+        group_events_by_query_path(txns_to_commit),
         ledger_info,
         is_latest,
     )?;
@@ -325,7 +367,7 @@ proptest! {
 
 #[test]
 fn test_bootstrap() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     let genesis_txn_info = GENESIS_INFO.0.clone();
@@ -353,7 +395,7 @@ fn test_bootstrap() {
 rusty_fork_test! {
 #[test]
 fn test_committed_txns_counter() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     let genesis_ledger_info_with_sigs = GENESIS_INFO.1.clone();
@@ -369,7 +411,7 @@ fn test_committed_txns_counter() {
 
 #[test]
 fn test_bootstrapping_already_bootstrapped_db() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir).unwrap();
     let ledger_info = db.ledger_store.get_latest_ledger_info().unwrap();
 
@@ -401,7 +443,7 @@ fn test_get_first_seq_num_and_limit() {
 
 #[test]
 fn test_too_many_requested() {
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
 
     assert!(db
@@ -419,7 +461,7 @@ fn test_too_many_requested() {
         .is_err());
     assert!(db.get_transactions(0, 1001 /* limit */, 0, true).is_err());
     assert!(db
-        .get_events_by_event_access_path(
+        .get_events_by_query_path(
             &AccessPath::new_for_sent_event(AccountAddress::random()),
             0,
             true,

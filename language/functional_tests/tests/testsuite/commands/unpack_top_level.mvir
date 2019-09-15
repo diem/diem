@@ -1,7 +1,7 @@
 module Test {
     struct T { }
 
-    public new_t(): V#Self.T {
+    public new_t(): Self.T {
         return T { };
     }
 
@@ -12,7 +12,7 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let t: V#Test.T;
+    let t: Test.T;
 
     t = Test.new_t();
     T { } = move(t);
@@ -20,4 +20,4 @@ main() {
     return;
 }
 
-// check: no struct definition referencing in scripts
+// check: Missing struct definition for T

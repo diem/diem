@@ -1,8 +1,9 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: CallTypeMismatchError(3) }
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR
 
 module Test {
     public t(fr: &u64) {
-        release(move(fr));
+        _ = move(fr);
         return;
      }
 }

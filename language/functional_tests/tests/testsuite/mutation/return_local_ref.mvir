@@ -1,4 +1,5 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetUnsafeToDestroyError(6) }
+// check: VerificationFailure
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
 module Tester {
     public no(): &u64 {

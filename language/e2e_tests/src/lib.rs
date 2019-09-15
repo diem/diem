@@ -9,7 +9,10 @@ use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use data_store::FakeDataStore;
 use types::{
-    access_path::AccessPath, account_address::AccountAddress, transaction::TransactionArgument,
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    transaction::{TransactionArgument, TransactionStatus},
+    vm_error::VMStatus,
 };
 use vm::{
     errors::*,
@@ -32,6 +35,7 @@ mod proptest_types;
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
     let address = AccountAddress::default();
+    println!("{}", address);
     let compiler = Compiler {
         code: program,
         address,
@@ -68,18 +72,32 @@ fn verify(
     (verified_script, verified_modules)
 }
 
+pub fn assert_status_eq(s1: &VMStatus, s2: &VMStatus) -> bool {
+    assert_eq!(s1.major_status, s2.major_status);
+    assert_eq!(s1.sub_status, s2.sub_status);
+    true
+}
+
+pub fn transaction_status_eq(t1: &TransactionStatus, t2: &TransactionStatus) -> bool {
+    match (t1, t2) {
+        (TransactionStatus::Discard(s1), TransactionStatus::Discard(s2))
+        | (TransactionStatus::Keep(s1), TransactionStatus::Keep(s2)) => assert_status_eq(s1, s2),
+        _ => false,
+    }
+}
+
 #[macro_export]
 macro_rules! assert_prologue_parity {
-    ($e1:expr, $e2:expr, $e3:pat) => {
-        assert_matches!($e1, Some($e3));
-        assert_matches!($e2, TransactionStatus::Discard($e3));
+    ($e1:expr, $e2:expr, $e3:expr) => {
+        assert_status_eq(&$e1.unwrap(), &$e3);
+        assert!(transaction_status_eq($e2, &TransactionStatus::Discard($e3)));
     };
 }
 
 #[macro_export]
 macro_rules! assert_prologue_disparity {
-    ($e1:expr => $e2:pat, $e3:expr => $e4:pat) => {
-        assert_matches!($e1, $e2);
-        assert_matches!($e3, &$e4);
+    ($e1:expr => $e2:expr, $e3:expr => $e4:expr) => {
+        assert_eq!($e1, $e2);
+        assert!(transaction_status_eq($e3, &$e4));
     };
 }

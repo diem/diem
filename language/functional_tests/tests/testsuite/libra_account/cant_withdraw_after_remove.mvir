@@ -1,0 +1,22 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+  let sender: address;
+  let cap: LibraAccount.WithdrawalCapability;
+  let coin: LibraCoin.T;
+
+  cap = LibraAccount.extract_sender_withdrawal_capability();
+
+  // withdrawing after the capability has been extracted should fail
+  coin = LibraAccount.withdraw_from_sender(100);
+  LibraAccount.deposit(get_txn_sender(), move(coin));
+
+  LibraAccount.restore_withdrawal_capability(move(cap));
+
+  return;
+}
+
+// should fail with insufficient privileges error
+// check: ABORTED
+// check: 11

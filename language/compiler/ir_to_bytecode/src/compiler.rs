@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    context::{Context, MaterializedPools},
     errors::*,
     parser::ast::{
-        self, BinOp, Block, Builtin, Cmd, CopyableVal, Exp, Field, Fields, Function, FunctionBody,
-        FunctionCall, FunctionSignature as AstFunctionSignature, FunctionVisibility, IfElse, Loop,
-        ModuleDefinition, ModuleIdent, ModuleName, Program, Statement,
-        StructDefinition as MoveStruct, Tag, Type, UnaryOp, Var, Var_, While,
+        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, Function, FunctionBody,
+        FunctionCall, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
+        IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName,
+        Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
+        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
+        While,
     },
 };
 
@@ -19,19 +22,15 @@ use std::{
         HashMap, VecDeque,
     },
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use types::{account_address::AccountAddress, identifier::Identifier};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeUnit, CompiledModule,
-        CompiledModuleMut, CompiledProgram, CompiledScriptMut, FieldDefinition,
-        FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, Kind, LocalsSignature,
-        LocalsSignatureIndex, MemberCount, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StringPoolIndex, StructDefinition, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex, TypeSignature, TypeSignatureIndex, NO_TYPE_ACTUALS, SELF_MODULE_NAME,
+        self, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
+        CompiledScript, CompiledScriptMut, FieldDefinition, FieldDefinitionIndex,
+        FunctionDefinition, FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken,
+        StructDefinition, StructFieldInformation, StructHandleIndex, TableIndex,
     },
-    printers::TableAccess,
 };
 
 #[derive(Debug, Default)]
@@ -85,6 +84,7 @@ enum InferredType {
     Struct(StructHandleIndex),
     Reference(Box<InferredType>),
     MutableReference(Box<InferredType>),
+    TypeParameter(String),
 }
 
 impl InferredType {
@@ -106,9 +106,7 @@ impl InferredType {
                 let i_inner = Self::from_signature_token(&*s_inner);
                 I::MutableReference(Box::new(i_inner))
             }
-            S::TypeParameter(_) => {
-                unimplemented!();
-            }
+            S::TypeParameter(s_inner) => I::TypeParameter(s_inner.to_string()),
         }
     }
 
@@ -124,6 +122,7 @@ impl InferredType {
                 inner.get_struct_handle()
             }
             InferredType::Struct(idx) => Ok(*idx),
+            InferredType::TypeParameter(_) => bail!("no struct type for type parameter"),
         }
     }
 }
@@ -137,8 +136,8 @@ struct FunctionFrame {
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
     // - excessivley large stack sizes
-    // The max stack depth of the file_format is set as u16
-    // Theoritically, we could use a BigInt here, but that is probably overkill for any testing
+    // The max stack depth of the file_format is set as u16.
+    // Theoretically, we could use a BigInt here, but that is probably overkill for any testing
     max_stack_depth: i64,
     cur_stack_depth: i64,
     loops: Vec<LoopInfo>,
@@ -175,10 +174,10 @@ impl FunctionFrame {
     }
 
     fn get_local_type(&self, idx: u8) -> Result<&SignatureToken> {
-        match self.local_types.0.get(idx as usize) {
-            None => bail!("variable {} undefined", idx),
-            Some(sig_token) => Ok(sig_token),
-        }
+        self.local_types
+            .0
+            .get(idx as usize)
+            .ok_or_else(|| format_err!("variable {} undefined", idx))
     }
 
     fn define_local(&mut self, var: &Var, type_: SignatureToken) -> Result<u8> {
@@ -240,1597 +239,527 @@ impl FunctionFrame {
     }
 }
 
-type ModuleIndex = u8; // 2^8 max number of modules per compilation
-type FieldMap = HashMap<String, FieldDefinitionIndex>;
-
-/// Global scope where all modules are imported.
-/// This is a read only scope and holds the compilation references.
-/// The handles are in the scope of the compilation unit, the def in the scope of the imported unit.
-/// Those maps also help in resolution of fields and functions, which is name based in the IR
-/// (as opposed to signature based in the VM - field type, function signature)
-#[derive(Debug)]
-struct CompilationScope<'a> {
-    // maps from handles in the compilation unit (reference) to the definitions
-    // in the imported unit (definitions).
-    imported_modules: HashMap<String, (ModuleIndex, ModuleHandleIndex)>,
-    function_definitions:
-        HashMap<ModuleHandleIndex, HashMap<String, (ModuleIndex, FunctionDefinitionIndex)>>,
-    // imported modules (external contracts you compile
-    pub modules: Vec<&'a CompiledModule>,
-}
-
-impl<'a> CompilationScope<'a> {
-    fn new(modules: impl IntoIterator<Item = &'a CompiledModule>) -> Self {
-        CompilationScope {
-            imported_modules: HashMap::new(),
-            function_definitions: HashMap::new(),
-            modules: modules.into_iter().collect(),
-        }
-    }
-
-    // TODO: Change the combination of `address` & `module_name` to something like a ModuleIdent
-    // when we have better data structure for dependency modules input.
-    fn link_module(
-        &mut self,
-        import_name: &str,
-        addr: &AccountAddress,
-        module_name: &str,
-        mh_idx: ModuleHandleIndex,
-    ) -> Result<()> {
-        for idx in 0..self.modules.len() {
-            if self.modules[idx].name() == module_name && self.modules[idx].address() == addr {
-                self.imported_modules
-                    .insert(import_name.to_string(), (idx as u8, mh_idx));
-                return Ok(());
-            }
-        }
-        bail!(
-            "can't find module 0x{}.{} in dependency list",
-            addr,
-            import_name
-        );
-    }
-
-    fn link_function(
-        &mut self,
-        module_name: &str,
-        function_name: &str,
-        fd_idx: FunctionDefinitionIndex,
-    ) -> Result<()> {
-        let (module_index, mh_idx) = self.imported_modules[module_name];
-        let func_map = self
-            .function_definitions
-            .entry(mh_idx)
-            .or_insert_with(HashMap::new);
-        func_map.insert(function_name.to_string(), (module_index, fd_idx));
-        Ok(())
-    }
-
-    fn get_imported_module_impl(&self, name: &str) -> Result<(&CompiledModule, ModuleHandleIndex)> {
-        match self.imported_modules.get(name) {
-            None => bail!("no module named {}", name),
-            Some((module_index, mh_idx)) => Ok((self.modules[*module_index as usize], *mh_idx)),
-        }
-    }
-
-    fn get_imported_module(&self, name: &str) -> Result<&CompiledModule> {
-        let (module, _) = self.get_imported_module_impl(name)?;
-        Ok(module)
-    }
-
-    fn get_imported_module_handle(&self, name: &str) -> Result<ModuleHandleIndex> {
-        let (_, mh_idx) = self.get_imported_module_impl(name)?;
-        Ok(mh_idx)
-    }
-
-    fn get_function_signature(
-        &self,
-        mh_idx: ModuleHandleIndex,
-        name: &str,
-    ) -> Result<&FunctionSignature> {
-        let func_map = match self.function_definitions.get(&mh_idx) {
-            None => bail!(
-                "no module handle index {} in function definition table",
-                mh_idx
-            ),
-            Some(func_map) => func_map,
-        };
-        let (module_index, fd_idx) = match func_map.get(name) {
-            None => bail!("no function {} in module {}", name, mh_idx),
-            Some(res) => res,
-        };
-
-        let module = &self.modules[*module_index as usize];
-
-        let fh_idx = module.function_def_at(*fd_idx).function;
-        let fh = module.function_handle_at(fh_idx);
-        Ok(module.function_signature_at(fh.signature))
-    }
-}
-
-#[derive(Debug)]
-struct ModuleScope<'a> {
-    // parent scope, the global module scope
-    pub compilation_scope: CompilationScope<'a>,
-    // builds a struct map based on handles and signatures
-    struct_definitions: HashMap<String, (Kind, StructDefinitionIndex)>,
-    field_definitions: HashMap<StructHandleIndex, FieldMap>,
-    function_definitions: HashMap<String, FunctionDefinitionIndex>,
-    // the module being compiled
-    pub module: CompiledModuleMut,
-}
-
-impl<'a> ModuleScope<'a> {
-    fn new(
-        module: CompiledModuleMut,
-        modules: impl IntoIterator<Item = &'a CompiledModule>,
-    ) -> Self {
-        ModuleScope {
-            compilation_scope: CompilationScope::new(modules),
-            struct_definitions: HashMap::new(),
-            field_definitions: HashMap::new(),
-            function_definitions: HashMap::new(),
-            module,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct ScriptScope<'a> {
-    // parent scope, the global module scope
-    compilation_scope: CompilationScope<'a>,
-    pub script: CompiledScriptMut,
-}
-
-impl<'a> ScriptScope<'a> {
-    fn new(
-        script: CompiledScriptMut,
-        modules: impl IntoIterator<Item = &'a CompiledModule>,
-    ) -> Self {
-        ScriptScope {
-            compilation_scope: CompilationScope::new(modules),
-            script,
-        }
-    }
-}
-
-fn add_item<U>(item: U, table: &mut Vec<U>) -> Result<TableIndex> {
-    let size = table.len();
-    if size >= TABLE_MAX_SIZE {
-        bail!("Max table size reached!")
-    }
-    table.push(item);
-    Ok(size as TableIndex)
-}
-
-trait Scope {
-    fn make_string(&mut self, s: String) -> Result<StringPoolIndex>;
-    fn make_byte_array(&mut self, buf: ByteArray) -> Result<ByteArrayPoolIndex>;
-    fn make_address(&mut self, s: AccountAddress) -> Result<AddressPoolIndex>;
-    fn make_type_signature(&mut self, s: TypeSignature) -> Result<TypeSignatureIndex>;
-    fn make_function_signature(&mut self, s: FunctionSignature) -> Result<FunctionSignatureIndex>;
-    fn make_locals_signature(&mut self, s: LocalsSignature) -> Result<LocalsSignatureIndex>;
-
-    fn make_module_handle(
-        &mut self,
-        addr_idx: AddressPoolIndex,
-        name_idx: StringPoolIndex,
-    ) -> Result<ModuleHandleIndex>;
-    fn make_struct_handle(
-        &mut self,
-        module_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        kind: Kind,
-    ) -> Result<StructHandleIndex>;
-    fn make_function_handle(
-        &mut self,
-        mh_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        sig_idx: FunctionSignatureIndex,
-    ) -> Result<FunctionHandleIndex>;
-
-    fn publish_struct_def(
-        &mut self,
-        name: &str,
-        kind: Kind,
-        struct_def: StructDefinition,
-    ) -> Result<StructDefinitionIndex>;
-    fn publish_function_def(
-        &mut self,
-        function_def: FunctionDefinition,
-    ) -> Result<FunctionDefinitionIndex>;
-    fn publish_field_def(&mut self, field_def: FieldDefinition) -> Result<FieldDefinitionIndex>;
-    fn publish_code(&mut self, name: &str, code: CodeUnit) -> Result<()>;
-
-    fn link_module(
-        &mut self,
-        import_name: &str,
-        addr: &AccountAddress,
-        module_name: &str,
-        mh_idx: ModuleHandleIndex,
-    ) -> Result<()>;
-    fn link_field(
-        &mut self,
-        sh_idx: StructHandleIndex,
-        name: &str,
-        fd_idx: FieldDefinitionIndex,
-    ) -> Result<()>;
-    fn link_function(
-        &mut self,
-        module_name: &str,
-        function_name: &str,
-        fd_idx: FunctionDefinitionIndex,
-    ) -> Result<()>;
-
-    fn get_imported_module(&self, name: &str) -> Result<&CompiledModule>;
-    fn get_imported_module_handle(&self, name: &str) -> Result<ModuleHandleIndex>;
-    fn get_next_field_definition_index(&mut self) -> Result<FieldDefinitionIndex>;
-    fn get_struct_def(&self, name: &str) -> Result<(Kind, StructDefinitionIndex)>;
-    fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex>;
-    fn get_field_type(&self, sh_idx: StructHandleIndex, name: &str) -> Result<&TypeSignature>;
-    fn get_function_signature(
-        &self,
-        mh_idx: ModuleHandleIndex,
-        name: &str,
-    ) -> Result<&FunctionSignature>;
-
-    fn get_name(&self) -> Result<String>;
-}
-
-impl<'a> Scope for ModuleScope<'a> {
-    fn make_string(&mut self, s: String) -> Result<StringPoolIndex> {
-        add_item(s, &mut self.module.string_pool).map(StringPoolIndex::new)
-    }
-
-    fn make_byte_array(&mut self, buf: ByteArray) -> Result<ByteArrayPoolIndex> {
-        add_item(buf, &mut self.module.byte_array_pool).map(ByteArrayPoolIndex::new)
-    }
-
-    fn make_address(&mut self, addr: AccountAddress) -> Result<AddressPoolIndex> {
-        add_item(addr, &mut self.module.address_pool).map(AddressPoolIndex::new)
-    }
-
-    fn make_type_signature(&mut self, sig: TypeSignature) -> Result<TypeSignatureIndex> {
-        add_item(sig, &mut self.module.type_signatures).map(TypeSignatureIndex::new)
-    }
-
-    fn make_function_signature(
-        &mut self,
-        sig: FunctionSignature,
-    ) -> Result<FunctionSignatureIndex> {
-        add_item(sig, &mut self.module.function_signatures).map(FunctionSignatureIndex::new)
-    }
-
-    fn make_locals_signature(&mut self, sig: LocalsSignature) -> Result<LocalsSignatureIndex> {
-        add_item(sig, &mut self.module.locals_signatures).map(LocalsSignatureIndex::new)
-    }
-
-    fn make_module_handle(
-        &mut self,
-        addr_idx: AddressPoolIndex,
-        name_idx: StringPoolIndex,
-    ) -> Result<ModuleHandleIndex> {
-        let mh = ModuleHandle {
-            address: addr_idx,
-            name: name_idx,
-        };
-        let size = self.module.module_handles.len();
-        if size >= STRUCTS_MAX_SIZE {
-            bail!("Max table size reached!")
-        }
-        self.module.module_handles.push(mh);
-        Ok(ModuleHandleIndex::new(size as u16))
-    }
-
-    fn make_struct_handle(
-        &mut self,
-        module_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        kind: Kind,
-    ) -> Result<StructHandleIndex> {
-        let sh = StructHandle {
-            module: module_idx,
-            name: name_idx,
-            kind,
-            kind_constraints: vec![],
-        };
-        let size = self.module.struct_handles.len();
-        if size >= TABLE_MAX_SIZE {
-            bail!("Max table size reached!")
-        }
-        self.module.struct_handles.push(sh);
-        Ok(StructHandleIndex::new(size as u16))
-    }
-
-    fn make_function_handle(
-        &mut self,
-        mh_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        sig_idx: FunctionSignatureIndex,
-    ) -> Result<FunctionHandleIndex> {
-        let fh = FunctionHandle {
-            module: mh_idx,
-            name: name_idx,
-            signature: sig_idx,
-        };
-        add_item(fh, &mut self.module.function_handles).map(FunctionHandleIndex::new)
-    }
-
-    fn publish_struct_def(
-        &mut self,
-        name: &str,
-        kind: Kind,
-        struct_def: StructDefinition,
-    ) -> Result<StructDefinitionIndex> {
-        let idx = self.module.struct_defs.len();
-        if idx >= STRUCTS_MAX_SIZE {
-            bail!("Max number of structs reached")
-        }
-        let sd_idx = StructDefinitionIndex::new(idx as TableIndex);
-        self.module.struct_defs.push(struct_def);
-        self.struct_definitions
-            .insert(name.to_string(), (kind, sd_idx));
-        Ok(sd_idx)
-    }
-
-    fn publish_function_def(
-        &mut self,
-        function_def: FunctionDefinition,
-    ) -> Result<FunctionDefinitionIndex> {
-        let idx = self.module.function_defs.len();
-        if idx >= FUNCTIONS_MAX_SIZE {
-            bail!("Max number of functions reached")
-        }
-        let fd_idx = FunctionDefinitionIndex::new(idx as TableIndex);
-        self.module.function_defs.push(function_def);
-        Ok(fd_idx)
-    }
-
-    /// Compute the index of the next field definition
-    fn get_next_field_definition_index(&mut self) -> Result<FieldDefinitionIndex> {
-        let idx = self.module.field_defs.len();
-        if idx >= FIELDS_MAX_SIZE {
-            bail!("Max number of fields reached")
-        }
-        let fd_idx = FieldDefinitionIndex::new(idx as TableIndex);
-        Ok(fd_idx)
-    }
-
-    fn publish_field_def(&mut self, field_def: FieldDefinition) -> Result<FieldDefinitionIndex> {
-        let fd_idx = self.get_next_field_definition_index()?;
-        self.module.field_defs.push(field_def);
-        Ok(fd_idx)
-    }
-
-    fn publish_code(&mut self, name: &str, code: CodeUnit) -> Result<()> {
-        let fd_idx = match self.function_definitions.get(name) {
-            None => bail!("Cannot find function {}", name),
-            Some(def_idx) => def_idx,
-        };
-        let func_def = match self.module.function_defs.get_mut(fd_idx.0 as usize) {
-            None => bail!("Cannot find function def for {}", name),
-            Some(func_def) => func_def,
-        };
-        func_def.code = code;
-        Ok(())
-    }
-
-    fn link_module(
-        &mut self,
-        import_name: &str,
-        addr: &AccountAddress,
-        module_name: &str,
-        mh_idx: ModuleHandleIndex,
-    ) -> Result<()> {
-        self.compilation_scope
-            .link_module(import_name, addr, module_name, mh_idx)
-    }
-
-    fn link_field(
-        &mut self,
-        sh_idx: StructHandleIndex,
-        name: &str,
-        fd_idx: FieldDefinitionIndex,
-    ) -> Result<()> {
-        let field_map = self
-            .field_definitions
-            .entry(sh_idx)
-            .or_insert_with(HashMap::new);
-        field_map.insert(name.to_string(), fd_idx);
-        Ok(())
-    }
-
-    fn link_function(
-        &mut self,
-        module_name: &str,
-        function_name: &str,
-        fd_idx: FunctionDefinitionIndex,
-    ) -> Result<()> {
-        if module_name.is_empty() {
-            self.function_definitions
-                .insert(function_name.to_string(), fd_idx);
-            Ok(())
-        } else {
-            self.compilation_scope
-                .link_function(module_name, function_name, fd_idx)
-        }
-    }
-
-    fn get_imported_module(&self, name: &str) -> Result<&CompiledModule> {
-        self.compilation_scope.get_imported_module(name)
-    }
-
-    fn get_imported_module_handle(&self, name: &str) -> Result<ModuleHandleIndex> {
-        self.compilation_scope.get_imported_module_handle(name)
-    }
-
-    fn get_struct_def(&self, name: &str) -> Result<(Kind, StructDefinitionIndex)> {
-        match self.struct_definitions.get(name) {
-            None => bail!("No struct definition for name {}", name),
-            Some((kind, def_idx)) => Ok((*kind, *def_idx)),
-        }
-    }
-
-    fn get_field_def(&self, sh_idx: StructHandleIndex, name: &str) -> Result<FieldDefinitionIndex> {
-        let field_map = match self.field_definitions.get(&sh_idx) {
-            None => bail!("no struct handle index {}", sh_idx),
-            Some(map) => map,
-        };
-        match field_map.get(name) {
-            None => bail!("no field {} in struct handle index {}", name, sh_idx),
-            Some(def_idx) => Ok(*def_idx),
-        }
-    }
-
-    fn get_field_type(&self, sh_idx: StructHandleIndex, name: &str) -> Result<&TypeSignature> {
-        let fd_idx = self.get_field_def(sh_idx, name)?;
-        let sig_idx = match self.module.field_defs.get(fd_idx.0 as usize) {
-            None => bail!(
-                "No field definition index {} in field definition table",
-                fd_idx
-            ),
-            Some(field_def) => field_def.signature,
-        };
-        match self.module.type_signatures.get(sig_idx.0 as usize) {
-            None => bail!("missing type signature index {}", sig_idx),
-            Some(sig) => Ok(sig),
-        }
-    }
-
-    fn get_function_signature(
-        &self,
-        mh_idx: ModuleHandleIndex,
-        name: &str,
-    ) -> Result<&FunctionSignature> {
-        // Call into an external module.
-        if mh_idx.0 != 0 {
-            return self.compilation_scope.get_function_signature(mh_idx, name);
-        }
-
-        let fd_idx = match self.function_definitions.get(name) {
-            None => bail!("no function {} in module {}", name, mh_idx),
-            Some(def_idx) => def_idx,
-        };
-
-        let fh_idx = match self.module.function_defs.get(fd_idx.0 as usize) {
-            None => bail!(
-                "No function definition index {} in function definition table",
-                fd_idx
-            ),
-            Some(function_def) => function_def.function,
-        };
-
-        let fh = self.module.get_function_at(fh_idx)?;
-        self.module.get_function_signature_at(fh.signature)
-    }
-
-    fn get_name(&self) -> Result<String> {
-        let mh = self.module.get_module_at(ModuleHandleIndex::new(0))?;
-        let name_ref = self.module.get_string_at(mh.name)?;
-        Ok(name_ref.clone())
-    }
-}
-
-impl<'a> Scope for ScriptScope<'a> {
-    fn make_string(&mut self, s: String) -> Result<StringPoolIndex> {
-        add_item(s, &mut self.script.string_pool).map(StringPoolIndex::new)
-    }
-
-    fn make_byte_array(&mut self, buf: ByteArray) -> Result<ByteArrayPoolIndex> {
-        add_item(buf, &mut self.script.byte_array_pool).map(ByteArrayPoolIndex::new)
-    }
-
-    fn make_address(&mut self, addr: AccountAddress) -> Result<AddressPoolIndex> {
-        add_item(addr, &mut self.script.address_pool).map(AddressPoolIndex::new)
-    }
-
-    fn make_type_signature(&mut self, sig: TypeSignature) -> Result<TypeSignatureIndex> {
-        add_item(sig, &mut self.script.type_signatures).map(TypeSignatureIndex::new)
-    }
-
-    fn make_function_signature(
-        &mut self,
-        sig: FunctionSignature,
-    ) -> Result<FunctionSignatureIndex> {
-        add_item(sig, &mut self.script.function_signatures).map(FunctionSignatureIndex::new)
-    }
-
-    fn make_locals_signature(&mut self, sig: LocalsSignature) -> Result<LocalsSignatureIndex> {
-        add_item(sig, &mut self.script.locals_signatures).map(LocalsSignatureIndex::new)
-    }
-
-    fn make_module_handle(
-        &mut self,
-        addr_idx: AddressPoolIndex,
-        name_idx: StringPoolIndex,
-    ) -> Result<ModuleHandleIndex> {
-        let mh = ModuleHandle {
-            address: addr_idx,
-            name: name_idx,
-        };
-        let size = self.script.module_handles.len();
-        if size >= STRUCTS_MAX_SIZE {
-            bail!("Max table size reached!")
-        }
-        self.script.module_handles.push(mh);
-        Ok(ModuleHandleIndex::new(size as u16))
-    }
-
-    fn make_struct_handle(
-        &mut self,
-        module_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        kind: Kind,
-    ) -> Result<StructHandleIndex> {
-        let sh = StructHandle {
-            module: module_idx,
-            name: name_idx,
-            kind,
-            kind_constraints: vec![],
-        };
-        let size = self.script.struct_handles.len();
-        if size >= TABLE_MAX_SIZE {
-            bail!("Max table size reached!")
-        }
-        self.script.struct_handles.push(sh);
-        Ok(StructHandleIndex::new(size as u16))
-    }
-
-    fn make_function_handle(
-        &mut self,
-        mh_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        sig_idx: FunctionSignatureIndex,
-    ) -> Result<FunctionHandleIndex> {
-        let fh = FunctionHandle {
-            module: mh_idx,
-            name: name_idx,
-            signature: sig_idx,
-        };
-        add_item(fh, &mut self.script.function_handles).map(FunctionHandleIndex::new)
-    }
-
-    fn publish_struct_def(
-        &mut self,
-        _name: &str,
-        _kind: Kind,
-        _struct_def: StructDefinition,
-    ) -> Result<StructDefinitionIndex> {
-        bail!("Cannot publish structs in scripts")
-    }
-
-    fn publish_function_def(
-        &mut self,
-        _function_def: FunctionDefinition,
-    ) -> Result<FunctionDefinitionIndex> {
-        bail!("Cannot publish functions in scripts")
-    }
-
-    fn publish_field_def(&mut self, _field_def: FieldDefinition) -> Result<FieldDefinitionIndex> {
-        bail!("Cannot publish fields in scripts")
-    }
-
-    fn publish_code(&mut self, _name: &str, _code: CodeUnit) -> Result<()> {
-        bail!("No function definitions in scripts")
-    }
-
-    fn link_module(
-        &mut self,
-        import_name: &str,
-        addr: &AccountAddress,
-        module_name: &str,
-        mh_idx: ModuleHandleIndex,
-    ) -> Result<()> {
-        self.compilation_scope
-            .link_module(import_name, addr, module_name, mh_idx)
-    }
-
-    fn link_field(
-        &mut self,
-        _sh_idx: StructHandleIndex,
-        _name: &str,
-        _fd_idx: FieldDefinitionIndex,
-    ) -> Result<()> {
-        bail!("no field linking in scripts");
-    }
-
-    fn link_function(
-        &mut self,
-        module_name: &str,
-        function_name: &str,
-        fd_idx: FunctionDefinitionIndex,
-    ) -> Result<()> {
-        self.compilation_scope
-            .link_function(module_name, function_name, fd_idx)
-    }
-
-    fn get_imported_module(&self, name: &str) -> Result<&CompiledModule> {
-        self.compilation_scope.get_imported_module(name)
-    }
-
-    fn get_imported_module_handle(&self, name: &str) -> Result<ModuleHandleIndex> {
-        self.compilation_scope.get_imported_module_handle(name)
-    }
-
-    fn get_next_field_definition_index(&mut self) -> Result<FieldDefinitionIndex> {
-        bail!("no field definition referencing in scripts")
-    }
-
-    fn get_struct_def(&self, _name: &str) -> Result<(Kind, StructDefinitionIndex)> {
-        bail!("no struct definition referencing in scripts")
-    }
-
-    fn get_field_def(
-        &self,
-        _sh_idx: StructHandleIndex,
-        _name: &str,
-    ) -> Result<FieldDefinitionIndex> {
-        bail!("no field definition referencing in scripts")
-    }
-
-    fn get_field_type(&self, _sh_idx: StructHandleIndex, _name: &str) -> Result<&TypeSignature> {
-        bail!("no field type referencing in scripts")
-    }
-
-    fn get_function_signature(
-        &self,
-        mh_idx: ModuleHandleIndex,
-        name: &str,
-    ) -> Result<&FunctionSignature> {
-        self.compilation_scope.get_function_signature(mh_idx, name)
-    }
-
-    fn get_name(&self) -> Result<String> {
-        bail!("no name for scripts")
-    }
-}
-
-struct Compiler<S: Scope + Sized> {
-    // identity maps
-    // Map a handle to its position in its table
-    // TODO: those could be expressed as references and it would make for better code.
-    // For now this is easier to do and those are intended to be "primitive" values so we'll get
-    // back to this...
-    modules: HashMap<ModuleHandle, ModuleHandleIndex>,
-    structs: HashMap<StructHandle, StructHandleIndex>,
-    functions: HashMap<FunctionHandle, FunctionHandleIndex>,
-    strings: HashMap<String, StringPoolIndex>,
-    byte_arrays: HashMap<ByteArray, ByteArrayPoolIndex>,
-    addresses: HashMap<AccountAddress, AddressPoolIndex>,
-    type_signatures: HashMap<TypeSignature, TypeSignatureIndex>,
-    function_signatures: HashMap<FunctionSignature, FunctionSignatureIndex>,
-    locals_signatures: HashMap<LocalsSignature, LocalsSignatureIndex>,
-    // resolution scope
-    scope: S,
-}
-
-const STRUCTS_MAX_SIZE: usize = TABLE_MAX_SIZE;
-const FIELDS_MAX_SIZE: usize = TABLE_MAX_SIZE;
-const FUNCTIONS_MAX_SIZE: usize = TABLE_MAX_SIZE;
-const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
-
-//
-// Module/Contract compilation
-//
-
-/// Compile a module
-pub fn compile_module<'a, T: 'a + ModuleAccess>(
-    address: &AccountAddress,
-    module: &ModuleDefinition,
-    modules: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledModule> {
-    // Convert to &CompiledModule as that's what's used throughout internally.
-    let modules = modules.into_iter().map(|module| module.as_module());
-
-    let compiled_module = CompiledModuleMut::default();
-    let scope = ModuleScope::new(compiled_module, modules);
-    // This is separate to avoid unnecessary code gen due to monomorphization.
-    compile_module_impl(address, module, scope)
-}
-
-fn compile_module_impl<'a>(
-    address: &AccountAddress,
-    module: &ModuleDefinition,
-    scope: ModuleScope<'a>,
-) -> Result<CompiledModule> {
-    let mut compiler = Compiler::new(scope);
-
-    // Create an empty locals signature with index 0.
-    // This is required by the current implementation of generics.
-    let locals_empty_idx = compiler.make_locals_signature(&LocalsSignature(vec![]))?;
-    assert!(locals_empty_idx.0 == 0);
-
-    // Create a module handle for the current module.
-    // It is required this be first entry in the table.
-    let addr_idx = compiler.make_address(&address)?;
-    let name_idx = compiler.make_string(module.name.name_ref())?;
-    let mh_idx = compiler.make_module_handle(addr_idx, name_idx)?;
-    assert!(mh_idx.0 == 0);
-
-    for import in &module.imports {
-        compiler.import_module(
-            match &import.ident {
-                ModuleIdent::Transaction(_) => address,
-                ModuleIdent::Qualified(id) => &id.address,
-            },
-            &import.ident.get_name().name_ref(),
-            &import.alias,
-        )?;
-    }
-    for struct_ in &module.structs {
-        compiler.define_struct(mh_idx, &struct_)?;
-    }
-    for (name, function) in &module.functions {
-        compiler.define_function(name.name_ref(), &function)?;
-    }
-    for (name, function) in &module.functions {
-        match &function.body {
-            FunctionBody::Move { locals, code } => {
-                debug!("compile move function: {} {}", name, &function.signature);
-                let compiled_code =
-                    compiler.compile_function(&function.signature.formals, locals, code)?;
-                compiler
-                    .scope
-                    .publish_code(name.name_ref(), compiled_code)?;
-            }
-            FunctionBody::Native => (),
-        }
-    }
-    compiler
-        .scope
-        .module
-        .freeze()
-        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
-}
-
-//
-// Transaction/Script compilation
-//
-
-/// Compile a transaction program
+/// Compile a transaction program.
 pub fn compile_program<'a, T: 'a + ModuleAccess>(
-    address: &AccountAddress,
-    program: &Program,
+    address: AccountAddress,
+    program: Program,
     deps: impl IntoIterator<Item = &'a T>,
 ) -> Result<CompiledProgram> {
-    // Normalize into a Vec<&CompiledModule>.
-    let deps: Vec<&CompiledModule> = deps.into_iter().map(|dep| dep.as_module()).collect();
-
+    let deps = deps
+        .into_iter()
+        .map(|dep| dep.as_module())
+        .collect::<Vec<_>>();
     // This is separate to avoid unnecessary code gen due to monomorphization.
-    compile_program_impl(address, program, deps)
-}
-
-fn compile_program_impl(
-    address: &AccountAddress,
-    program: &Program,
-    deps: Vec<&CompiledModule>,
-) -> Result<CompiledProgram> {
-    // Compile modules in the program
     let mut modules = vec![];
-    for m in &program.modules {
+    for m in program.modules {
         let module = {
             let deps = deps.iter().copied().chain(&modules);
-            compile_module(address, &m, deps)?
+            compile_module(address, m, deps)?
         };
         modules.push(module);
     }
 
-    // Compile transaction script
-    let func_def: FunctionDefinition;
-    let compiled_script = CompiledScriptMut::default();
-
-    let scope = {
-        let deps = deps.iter().copied().chain(&modules);
-        ScriptScope::new(compiled_script, deps)
-    };
-    let mut compiler = Compiler::new(scope);
-
-    // Create an empty locals signature with index 0.
-    // This is required by the current implementation of generics.
-    let locals_empty_idx = compiler.make_locals_signature(&LocalsSignature(vec![]))?;
-    assert!(locals_empty_idx.0 == 0);
-
-    // Create a module handle for the script.
-    // It is required this be first entry in the table.
-    let addr_idx = compiler.make_address(&address)?;
-    let name_idx = compiler.make_string(SELF_MODULE_NAME)?;
-    let mh_idx = compiler.make_module_handle(addr_idx, name_idx)?;
-    assert!(mh_idx.0 == 0);
-
-    for import in &program.script.imports {
-        compiler.import_module(
-            match &import.ident {
-                ModuleIdent::Transaction(_) => address,
-                ModuleIdent::Qualified(id) => &id.address,
-            },
-            &import.ident.get_name().name_ref(),
-            &import.alias,
-        )?;
-    }
-
-    func_def = compiler.compile_main(&program.script.main)?;
-
-    let mut script = compiler.scope.script;
-    script.main = func_def;
-    let script = match script.freeze() {
-        Ok(script) => script,
-        Err(errs) => bail_err!(InternalCompilerError::BoundsCheckErrors(errs)),
-    };
-
-    Ok(CompiledProgram::new(modules, script))
+    let deps = deps.into_iter().chain(modules.iter());
+    let script = compile_script(address, program.script, deps)?;
+    Ok(CompiledProgram { modules, script })
 }
 
-impl<S: Scope + Sized> Compiler<S> {
-    fn new(scope: S) -> Self {
-        Compiler {
-            modules: HashMap::new(),
-            structs: HashMap::new(),
-            functions: HashMap::new(),
-            strings: HashMap::new(),
-            byte_arrays: HashMap::new(),
-            addresses: HashMap::new(),
-            type_signatures: HashMap::new(),
-            function_signatures: HashMap::new(),
-            locals_signatures: HashMap::new(),
-            // resolution scope
-            scope,
+/// Compile a transaction script.
+pub fn compile_script<'a, T: 'a + ModuleAccess>(
+    address: AccountAddress,
+    script: Script,
+    dependencies: impl IntoIterator<Item = &'a T>,
+) -> Result<CompiledScript> {
+    let current_module = QualifiedModuleIdent {
+        address,
+        name: ModuleName::new(file_format::self_module_name().to_owned()),
+    };
+    let mut context = Context::new(dependencies, current_module)?;
+    let self_name = ModuleName::new(ModuleName::self_name().into());
+
+    compile_imports(&mut context, address, script.imports)?;
+    let main_name = FunctionName::new(Identifier::new("main").unwrap());
+    let function = script.main;
+
+    let sig = function_signature(&mut context, &function.signature)?;
+    context.declare_function(self_name.clone(), main_name.clone(), sig)?;
+    let main = compile_function(&mut context, &self_name, main_name, function)?;
+
+    let MaterializedPools {
+        module_handles,
+        struct_handles,
+        function_handles,
+        type_signatures,
+        function_signatures,
+        locals_signatures,
+        identifiers,
+        user_strings,
+        byte_array_pool,
+        address_pool,
+    } = context.materialize_pools();
+    let compiled_script = CompiledScriptMut {
+        module_handles,
+        struct_handles,
+        function_handles,
+        type_signatures,
+        function_signatures,
+        locals_signatures,
+        identifiers,
+        user_strings,
+        byte_array_pool,
+        address_pool,
+        main,
+    };
+    compiled_script
+        .freeze()
+        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+}
+
+/// Compile a module.
+pub fn compile_module<'a, T: 'a + ModuleAccess>(
+    address: AccountAddress,
+    module: ModuleDefinition,
+    dependencies: impl IntoIterator<Item = &'a T>,
+) -> Result<CompiledModule> {
+    let current_module = QualifiedModuleIdent {
+        address,
+        name: module.name,
+    };
+    let mut context = Context::new(dependencies, current_module)?;
+    let self_name = ModuleName::new(ModuleName::self_name().into());
+    // Explicitly declare all imports as they will be included even if not used
+    compile_imports(&mut context, address, module.imports)?;
+
+    // Explicitly declare all structs as they will be included even if not used
+    for s in &module.structs {
+        let ident = QualifiedStructIdent {
+            module: self_name.clone(),
+            name: s.name.clone(),
+        };
+        let (_, tys) = type_formals(&s.type_formals)?;
+        context.declare_struct_handle_index(ident, s.is_nominal_resource, tys)?;
+    }
+
+    for (name, function) in &module.functions {
+        let sig = function_signature(&mut context, &function.signature)?;
+        context.declare_function(self_name.clone(), name.clone(), sig)?;
+    }
+
+    // Current module
+
+    let (struct_defs, field_defs) = compile_structs(&mut context, &self_name, module.structs)?;
+
+    let function_defs = compile_functions(&mut context, &self_name, module.functions)?;
+
+    let MaterializedPools {
+        module_handles,
+        struct_handles,
+        function_handles,
+        type_signatures,
+        function_signatures,
+        locals_signatures,
+        identifiers,
+        user_strings,
+        byte_array_pool,
+        address_pool,
+    } = context.materialize_pools();
+    let compiled_module = CompiledModuleMut {
+        module_handles,
+        struct_handles,
+        function_handles,
+        type_signatures,
+        function_signatures,
+        locals_signatures,
+        identifiers,
+        user_strings,
+        byte_array_pool,
+        address_pool,
+        struct_defs,
+        field_defs,
+        function_defs,
+    };
+    compiled_module
+        .freeze()
+        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+}
+
+fn compile_imports(
+    context: &mut Context,
+    address: AccountAddress,
+    imports: Vec<ImportDefinition>,
+) -> Result<()> {
+    for import in imports {
+        let ident = match import.ident {
+            ModuleIdent::Transaction(name) => QualifiedModuleIdent { address, name },
+            ModuleIdent::Qualified(id) => id,
+        };
+        context.declare_import(ident, import.alias)?;
+    }
+    Ok(())
+}
+
+fn type_formals(ast_tys: &[(TypeVar, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
+    let mut m = HashMap::new();
+    let mut tys = vec![];
+    for (idx, (ty_var, k)) in ast_tys.iter().enumerate() {
+        let old = m.insert(ty_var.clone(), idx);
+        if old.is_some() {
+            bail!("Type formal '{}'' already bound", ty_var)
         }
+        tys.push(kind(k));
     }
+    Ok((m, tys))
+}
 
-    fn import_module(
-        &mut self,
-        address: &AccountAddress,
-        name: &str,
-        module_alias: &ModuleName,
-    ) -> Result<()> {
-        let addr_idx = self.make_address(address)?;
-        let name_idx = self.make_string(&name)?;
-        let mh_idx = self.make_module_handle(addr_idx, name_idx)?;
-        self.scope
-            .link_module(module_alias.name_ref(), address, name, mh_idx)
+fn kind(ast_k: &ast::Kind) -> Kind {
+    match ast_k {
+        ast::Kind::All => Kind::All,
+        ast::Kind::Resource => Kind::Resource,
+        ast::Kind::Unrestricted => Kind::Unrestricted,
     }
+}
 
-    fn import_signature_token(
-        &mut self,
-        module_name: &str,
-        sig_token: SignatureToken,
-    ) -> Result<SignatureToken> {
-        match sig_token {
-            SignatureToken::Bool
-            | SignatureToken::U64
-            | SignatureToken::String
-            | SignatureToken::ByteArray
-            | SignatureToken::Address
-            | SignatureToken::TypeParameter(_) => Ok(sig_token),
-            SignatureToken::Struct(sh_idx, _) => {
-                let module = self.scope.get_imported_module(module_name)?;
-                let struct_handle = module.struct_handle_at(sh_idx);
-                let defining_module_handle = module.module_handle_at(struct_handle.module);
-                let kind = struct_handle.kind;
+fn compile_types(context: &mut Context, tys: &[Type]) -> Result<Vec<SignatureToken>> {
+    tys.iter()
+        .map(|ty| compile_type(context, ty))
+        .collect::<Result<_>>()
+}
 
-                let struct_name = module.string_at(struct_handle.name).to_string();
-                let defining_module_name =
-                    module.string_at(defining_module_handle.name).to_string();
-                let defining_module_addr = *module.address_at(defining_module_handle.address);
-
-                let name_idx = self.make_string(&struct_name)?;
-                let defining_module_name_idx = self.make_string(&defining_module_name)?;
-                let defining_module_addr_idx = self.make_address(&defining_module_addr)?;
-                let defining_module_handle_idx =
-                    self.make_module_handle(defining_module_addr_idx, defining_module_name_idx)?;
-
-                let local_sh_idx =
-                    self.make_struct_handle(defining_module_handle_idx, name_idx, kind)?;
-                Ok(SignatureToken::Struct(local_sh_idx, vec![]))
-            }
-            SignatureToken::Reference(sub_sig_token) => Ok(SignatureToken::Reference(Box::new(
-                self.import_signature_token(module_name, *sub_sig_token)?,
-            ))),
-            SignatureToken::MutableReference(sub_sig_token) => {
-                Ok(SignatureToken::MutableReference(Box::new(
-                    self.import_signature_token(module_name, *sub_sig_token)?,
-                )))
-            }
-        }
-    }
-
-    fn import_function_signature(
-        &mut self,
-        module_name: &str,
-        func_sig: FunctionSignature,
-    ) -> Result<FunctionSignature> {
-        if module_name == ModuleName::SELF {
-            Ok(func_sig)
-        } else {
-            let mut return_types = Vec::<SignatureToken>::new();
-            let mut arg_types = Vec::<SignatureToken>::new();
-            for e in func_sig.return_types {
-                return_types.push(self.import_signature_token(module_name, e)?);
-            }
-            for e in func_sig.arg_types {
-                arg_types.push(self.import_signature_token(module_name, e)?);
-            }
-            Ok(FunctionSignature {
-                return_types,
-                arg_types,
-                kind_constraints: vec![],
-            })
-        }
-    }
-
-    fn define_struct(&mut self, module_idx: ModuleHandleIndex, struct_: &MoveStruct) -> Result<()> {
-        let name = struct_.name.name_ref();
-        let name_idx = self.make_string(name)?;
-        let sh_idx = self.make_struct_handle(
-            module_idx,
-            name_idx,
-            if struct_.resource_kind {
-                Kind::Resource
+fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
+    Ok(match ty {
+        Type::Address => SignatureToken::Address,
+        Type::U64 => SignatureToken::U64,
+        Type::Bool => SignatureToken::Bool,
+        Type::ByteArray => SignatureToken::ByteArray,
+        Type::Reference(is_mutable, inner_type) => {
+            let inner_token = Box::new(compile_type(context, inner_type)?);
+            if *is_mutable {
+                SignatureToken::MutableReference(inner_token)
             } else {
-                Kind::Copyable
-            },
-        )?;
-        let struct_def = self.define_fields(sh_idx, &struct_.fields)?;
-        self.scope.publish_struct_def(
-            name,
-            if struct_.resource_kind {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            },
-            struct_def,
-        )?;
-        Ok(())
-    }
+                SignatureToken::Reference(inner_token)
+            }
+        }
+        Type::Struct(ident, tys) => {
+            let sh_idx = context.struct_handle_index(ident.clone())?;
+            let tokens = compile_types(context, tys)?;
+            SignatureToken::Struct(sh_idx, tokens)
+        }
+        Type::TypeParameter(ty_var) => {
+            SignatureToken::TypeParameter(context.type_formal_index(ty_var)?)
+        }
+        Type::String => bail!("`string` type is currently unused"),
+    })
+}
 
-    fn define_fields(
-        &mut self,
-        sh_idx: StructHandleIndex,
-        fields: &Fields<Type>,
-    ) -> Result<StructDefinition> {
-        let field_count = fields.len();
-        let struct_def = StructDefinition {
+fn function_signature(
+    context: &mut Context,
+    f: &AstFunctionSignature,
+) -> Result<FunctionSignature> {
+    let (map, _) = type_formals(&f.type_formals)?;
+    context.bind_type_formals(map)?;
+    let return_types = compile_types(context, &f.return_type)?;
+    let arg_types = f
+        .formals
+        .iter()
+        .map(|(_, ty)| compile_type(context, ty))
+        .collect::<Result<_>>()?;
+    let type_formals = f.type_formals.iter().map(|(_, k)| kind(k)).collect();
+    Ok(FunctionSignature {
+        return_types,
+        arg_types,
+        type_formals,
+    })
+}
+
+fn compile_structs(
+    context: &mut Context,
+    self_name: &ModuleName,
+    structs: Vec<MoveStruct>,
+) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
+    let mut struct_defs = vec![];
+    let mut field_defs = vec![];
+    for s in structs {
+        let sident = QualifiedStructIdent {
+            module: self_name.clone(),
+            name: s.name.clone(),
+        };
+        let sh_idx = context.struct_handle_index(sident.clone())?;
+        let (map, _) = type_formals(&s.type_formals)?;
+        context.bind_type_formals(map)?;
+        let field_information = compile_fields(context, &mut field_defs, sh_idx, s.fields)?;
+        context.declare_struct_definition_index(s.name)?;
+        struct_defs.push(StructDefinition {
             struct_handle: sh_idx,
-            field_count: (field_count as MemberCount),
-            fields: self.scope.get_next_field_definition_index()?,
-        };
-
-        if field_count > FIELDS_MAX_SIZE {
-            bail!("too many fields {}", struct_def.struct_handle)
-        }
-
-        for field in fields {
-            let field_name = field.0.name();
-            let field_type = field.1;
-            self.publish_field(struct_def.struct_handle, field_name, field_type)?;
-        }
-        Ok(struct_def)
+            field_information,
+        });
     }
+    Ok((struct_defs, field_defs))
+}
 
-    // Compile a main function in a Script.
-    fn compile_main(&mut self, main: &Function) -> Result<FunctionDefinition> {
-        // make main entry point
-        let main_name = "main".to_string();
-        let main_name_idx = self.make_string(&main_name)?;
-        let signature = self.build_function_signature(&main.signature)?;
-        let sig_idx = self.make_function_signature(&signature)?;
-        let fh_idx =
-            self.make_function_handle(ModuleHandleIndex::new(0), main_name_idx, sig_idx)?;
-        // compile script
-        let code = match &main.body {
-            FunctionBody::Move { code, locals } => {
-                self.compile_function(&main.signature.formals, locals, code)?
+fn compile_fields(
+    context: &mut Context,
+    field_pool: &mut Vec<FieldDefinition>,
+    sh_idx: StructHandleIndex,
+    sfields: StructDefinitionFields,
+) -> Result<StructFieldInformation> {
+    Ok(match sfields {
+        StructDefinitionFields::Native => StructFieldInformation::Native,
+        StructDefinitionFields::Move { fields } => {
+            let pool_len = field_pool.len();
+            let field_count = fields.len();
+
+            let field_information = StructFieldInformation::Declared {
+                field_count: (field_count as MemberCount),
+                fields: FieldDefinitionIndex(pool_len as TableIndex),
+            };
+
+            for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
+                let name = context.identifier_index(f.name())?;
+                let sig_token = compile_type(context, &ty)?;
+                let signature = context.type_signature_index(sig_token.clone())?;
+                context.declare_field(sh_idx, f, sig_token, decl_order)?;
+                field_pool.push(FieldDefinition {
+                    struct_: sh_idx,
+                    name,
+                    signature,
+                });
             }
-            FunctionBody::Native => bail!("main() cannot be a native function"),
-        };
-        Ok(FunctionDefinition {
-            function: fh_idx,
-            flags: CodeUnit::PUBLIC,
-            code,
-        })
+            field_information
+        }
+    })
+}
+
+fn compile_functions(
+    context: &mut Context,
+    self_name: &ModuleName,
+    functions: Vec<(FunctionName, Function)>,
+) -> Result<Vec<FunctionDefinition>> {
+    functions
+        .into_iter()
+        .map(|(name, ast_function)| compile_function(context, self_name, name, ast_function))
+        .collect()
+}
+
+fn compile_function(
+    context: &mut Context,
+    self_name: &ModuleName,
+    name: FunctionName,
+    ast_function: Function,
+) -> Result<FunctionDefinition> {
+    let fh_idx = context.function_handle(self_name.clone(), name)?.1;
+
+    let flags = match ast_function.visibility {
+        FunctionVisibility::Internal => 0,
+        FunctionVisibility::Public => CodeUnit::PUBLIC,
+    } | match &ast_function.body {
+        FunctionBody::Move { .. } => 0,
+        FunctionBody::Native => CodeUnit::NATIVE,
+    };
+    let acquires_global_resources = ast_function
+        .acquires
+        .iter()
+        .map(|name| context.struct_definition_index(name))
+        .collect::<Result<_>>()?;
+
+    let code = match ast_function.body {
+        FunctionBody::Move { locals, code } => {
+            let (m, _) = type_formals(&ast_function.signature.type_formals)?;
+            context.bind_type_formals(m)?;
+            compile_function_body(context, ast_function.signature.formals, locals, code)?
+        }
+        FunctionBody::Native => CodeUnit::default(),
+    };
+    Ok(FunctionDefinition {
+        function: fh_idx,
+        flags,
+        acquires_global_resources,
+        code,
+    })
+}
+
+fn compile_function_body(
+    context: &mut Context,
+    formals: Vec<(Var, Type)>,
+    locals: Vec<(Var_, Type)>,
+    block: Block,
+) -> Result<CodeUnit> {
+    let mut function_frame = FunctionFrame::new();
+    let mut locals_signature = LocalsSignature(vec![]);
+    for (var, t) in formals {
+        let sig = compile_type(context, &t)?;
+        function_frame.define_local(&var, sig.clone())?;
+        locals_signature.0.push(sig);
     }
-
-    //
-    // Reference tables filling: string, byte_array, address, signature, *handles
-    //
-
-    fn make_string(&mut self, s: &str) -> Result<StringPoolIndex> {
-        let mut empty = false;
-        let idx;
-        {
-            let str_idx = self.strings.get(s);
-            idx = match str_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_string(s.to_string())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.strings.insert(s.to_string(), idx);
-        }
-        Ok(idx)
+    for (var_, t) in locals {
+        let sig = compile_type(context, &t)?;
+        function_frame.define_local(&var_.value, sig.clone())?;
+        locals_signature.0.push(sig);
     }
+    let sig_idx = context.locals_signature_index(locals_signature)?;
 
-    fn make_byte_array(&mut self, buf: &ByteArray) -> Result<ByteArrayPoolIndex> {
-        let mut empty = false;
-        let idx;
-        {
-            let byte_array_idx = self.byte_arrays.get(buf);
-            idx = match byte_array_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_byte_array(buf.clone())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.byte_arrays.insert(buf.clone(), idx);
-        }
-        Ok(idx)
-    }
+    let mut code = vec![];
+    compile_block(context, &mut function_frame, &mut code, block)?;
+    let max_stack_size = if function_frame.max_stack_depth < 0 {
+        0
+    } else if function_frame.max_stack_depth > i64::from(u16::max_value()) {
+        u16::max_value()
+    } else {
+        function_frame.max_stack_depth as u16
+    };
+    Ok(CodeUnit {
+        locals: sig_idx,
+        max_stack_size,
+        code,
+    })
+}
 
-    fn make_address(&mut self, addr: &AccountAddress) -> Result<AddressPoolIndex> {
-        let mut empty = false;
-        let idx;
-        {
-            let addr_idx = self.addresses.get(addr);
-            idx = match addr_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_address(addr.clone())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.addresses.insert(addr.clone(), idx);
-        }
-        Ok(idx)
-    }
-
-    fn make_type_signature(&mut self, _type: &Type) -> Result<TypeSignatureIndex> {
-        let signature = self.build_type_signature(_type)?;
-        let mut empty = false;
-        let idx;
-        {
-            let sig_idx = self.type_signatures.get(&signature);
-            idx = match sig_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_type_signature(signature.clone())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.type_signatures.insert(signature.clone(), idx);
-        }
-        Ok(idx)
-    }
-
-    fn make_function_signature(
-        &mut self,
-        signature: &FunctionSignature,
-    ) -> Result<FunctionSignatureIndex> {
-        let mut empty = false;
-        let idx;
-        {
-            let sig_idx = self.function_signatures.get(&signature);
-            idx = match sig_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_function_signature(signature.clone())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.function_signatures.insert(signature.clone(), idx);
-        }
-        Ok(idx)
-    }
-
-    fn make_locals_signature(
-        &mut self,
-        signature: &LocalsSignature,
-    ) -> Result<LocalsSignatureIndex> {
-        let mut empty = false;
-        let idx;
-        {
-            let sig_idx = self.locals_signatures.get(signature);
-            idx = match sig_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_locals_signature(signature.clone())?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.locals_signatures.insert(signature.clone(), idx);
-        }
-        Ok(idx)
-    }
-
-    fn make_module_handle(
-        &mut self,
-        addr_idx: AddressPoolIndex,
-        name_idx: StringPoolIndex,
-    ) -> Result<ModuleHandleIndex> {
-        let mh = ModuleHandle {
-            address: addr_idx,
-            name: name_idx,
-        };
-        let mut empty = false;
-        let idx;
-        {
-            let mh_idx = self.modules.get(&mh);
-            idx = match mh_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_module_handle(addr_idx, name_idx)?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.modules.insert(mh, idx);
-        }
-        Ok(idx)
-    }
-
-    fn make_struct_handle(
-        &mut self,
-        module_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        kind: Kind,
-    ) -> Result<StructHandleIndex> {
-        let sh = StructHandle {
-            module: module_idx,
-            name: name_idx,
-            kind,
-            kind_constraints: vec![],
-        };
-        Ok(match self.structs.get(&sh) {
-            None => {
-                let idx = self.scope.make_struct_handle(module_idx, name_idx, kind)?;
-                self.structs.insert(sh, idx);
-                idx
+fn compile_block(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    block: Block,
+) -> Result<ControlFlowInfo> {
+    let mut cf_info = ControlFlowInfo {
+        reachable_break: false,
+        terminal_node: false,
+    };
+    for stmt in block.stmts {
+        let stmt_info = match stmt {
+            Statement::CommandStatement(command) => {
+                compile_command(context, function_frame, code, command)?
             }
-            Some(idx) => *idx,
-        })
-    }
-
-    fn make_function_handle(
-        &mut self,
-        mh_idx: ModuleHandleIndex,
-        name_idx: StringPoolIndex,
-        sig_idx: FunctionSignatureIndex,
-    ) -> Result<FunctionHandleIndex> {
-        let fh = FunctionHandle {
-            module: mh_idx,
-            name: name_idx,
-            signature: sig_idx,
-        };
-        let mut empty = false;
-        let idx;
-        {
-            let fh_idx = self.functions.get(&fh);
-            idx = match fh_idx {
-                None => {
-                    empty = true;
-                    self.scope.make_function_handle(mh_idx, name_idx, sig_idx)?
-                }
-                Some(idx) => *idx,
-            };
-        }
-        if empty {
-            self.functions.insert(fh, idx);
-        }
-        Ok(idx)
-    }
-
-    //
-    // Create definitions, this is effectively only used when compiling modules
-    //
-
-    fn publish_field(
-        &mut self,
-        sh_idx: StructHandleIndex,
-        name: &str,
-        sig: &Type,
-    ) -> Result<FieldDefinitionIndex> {
-        let name_idx = self.make_string(name)?;
-        let sig_idx = self.make_type_signature(sig)?;
-        let field_def = FieldDefinition {
-            struct_: sh_idx,
-            name: name_idx,
-            signature: sig_idx,
-        };
-        let fd_idx = self.scope.publish_field_def(field_def)?;
-        self.scope.link_field(sh_idx, name, fd_idx)?;
-        Ok(fd_idx)
-    }
-
-    fn define_function(
-        &mut self,
-        name: &str,
-        function: &Function,
-    ) -> Result<FunctionDefinitionIndex> {
-        // Use ModuleHandleIndex::new(0) here because module 0 refers to the module being currently
-        // compiled.
-        let mh = ModuleHandleIndex::new(0);
-
-        let name_idx = self.make_string(name)?;
-        let sig = self.build_function_signature(&function.signature)?;
-        let sig_idx = self.make_function_signature(&sig)?;
-        let fh_idx = self.make_function_handle(mh, name_idx, sig_idx)?;
-
-        let flags = match function.visibility {
-            FunctionVisibility::Internal => 0,
-            FunctionVisibility::Public => CodeUnit::PUBLIC,
-        } | match function.body {
-            FunctionBody::Move { .. } => 0,
-            FunctionBody::Native => CodeUnit::NATIVE,
-        };
-
-        let func_def = FunctionDefinition {
-            function: fh_idx,
-            flags,
-            code: CodeUnit::default(), // TODO: eliminate usage of default
-        };
-
-        let fd_idx = self.scope.publish_function_def(func_def)?;
-        self.scope.link_function("", name, fd_idx)?;
-        Ok(fd_idx)
-    }
-
-    //
-    // Signature building methods
-    //
-
-    fn build_type_signature(&mut self, type_: &Type) -> Result<TypeSignature> {
-        let signature_token = self.build_signature_token(type_)?;
-        Ok(TypeSignature(signature_token))
-    }
-
-    fn build_function_signature(
-        &mut self,
-        signature: &AstFunctionSignature,
-    ) -> Result<FunctionSignature> {
-        let mut ret_sig: Vec<SignatureToken> = Vec::new();
-        for t in &signature.return_type {
-            ret_sig.push(self.build_signature_token(&t)?);
-        }
-        let mut arg_sig: Vec<SignatureToken> = Vec::new();
-        for formal in &signature.formals {
-            arg_sig.push(self.build_signature_token(&formal.1)?)
-        }
-        Ok(FunctionSignature {
-            return_types: ret_sig,
-            arg_types: arg_sig,
-            kind_constraints: vec![],
-        })
-    }
-
-    fn build_signature_token(&mut self, type_: &Type) -> Result<SignatureToken> {
-        match type_ {
-            Type::Normal(kind, tag) => self.build_normal_signature_token(&kind, &tag),
-            Type::Reference {
-                is_mutable,
-                kind,
-                tag,
-            } => {
-                let inner_token = Box::new(self.build_normal_signature_token(kind, tag)?);
-                if *is_mutable {
-                    Ok(SignatureToken::MutableReference(inner_token))
-                } else {
-                    Ok(SignatureToken::Reference(inner_token))
-                }
+            Statement::WhileStatement(while_) => {
+                // always assume the loop might not be taken
+                compile_while(context, function_frame, code, while_)?
             }
-        }
-    }
-
-    fn build_normal_signature_token(
-        &mut self,
-        kind: &ast::Kind,
-        tag: &Tag,
-    ) -> Result<SignatureToken> {
-        match (kind, tag) {
-            (ast::Kind::Value, Tag::Address) => Ok(SignatureToken::Address),
-            (ast::Kind::Value, Tag::U64) => Ok(SignatureToken::U64),
-            (ast::Kind::Value, Tag::Bool) => Ok(SignatureToken::Bool),
-            (ast::Kind::Value, Tag::ByteArray) => Ok(SignatureToken::ByteArray),
-            (kind, Tag::Struct(ctype)) => {
-                let module_name = &ctype.module().name();
-                let module_idx = if self.scope.get_name().is_ok() && module_name == ModuleName::SELF
-                {
-                    ModuleHandleIndex::new(0)
-                } else {
-                    self.scope.get_imported_module_handle(module_name)?
-                };
-                let name_idx = self.make_string(&ctype.name().name_ref())?;
-                let kind = match kind {
-                    ast::Kind::Value => Kind::Copyable,
-                    ast::Kind::Resource => Kind::Resource,
-                };
-                let sh_idx = self.make_struct_handle(module_idx, name_idx, kind)?;
-                Ok(SignatureToken::Struct(sh_idx, vec![]))
+            Statement::LoopStatement(loop_) => compile_loop(context, function_frame, code, loop_)?,
+            Statement::IfElseStatement(if_else) => {
+                compile_if_else(context, function_frame, code, if_else)?
             }
-            (ast::Kind::Value, _) => bail!("unknown value type {:?}", tag),
-            (ast::Kind::Resource, _) => bail!("unknown resource type {:?}", tag),
-        }
-    }
-
-    //
-    // Code compilation functions, walk the IR and generate bytecodes
-    //
-    fn compile_function(
-        &mut self,
-        formals: &[(Var, Type)],
-        locals: &[(Var_, Type)],
-        body: &Block,
-    ) -> Result<CodeUnit> {
-        let mut code = CodeUnit::default();
-        let mut function_frame = FunctionFrame::new();
-        for (var, t) in formals {
-            let type_sig = self.build_signature_token(t)?;
-            function_frame.define_local(var, type_sig)?;
-        }
-        for (var_, t) in locals {
-            let type_sig = self.build_signature_token(t)?;
-            function_frame.define_local(&var_.value, type_sig)?;
-        }
-        self.compile_block(body, &mut code, &mut function_frame)?;
-        let sig_idx = self.make_locals_signature(&function_frame.local_types)?;
-        code.locals = sig_idx;
-        code.max_stack_size = if function_frame.max_stack_depth < 0 {
-            0
-        } else if function_frame.max_stack_depth > i64::from(u16::max_value()) {
-            u16::max_value()
-        } else {
-            function_frame.max_stack_depth as u16
+            Statement::EmptyStatement => continue,
         };
-        Ok(code)
+        cf_info = ControlFlowInfo::successor(cf_info, stmt_info);
     }
+    Ok(cf_info)
+}
 
-    fn compile_block(
-        &mut self,
-        body: &Block,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<ControlFlowInfo> {
-        let mut cf_info = ControlFlowInfo {
+fn compile_if_else(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    if_else: IfElse,
+) -> Result<ControlFlowInfo> {
+    compile_expression(context, function_frame, code, if_else.cond)?;
+
+    let brfalse_ins_loc = code.len();
+    code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
+    function_frame.pop()?;
+    let if_cf_info = compile_block(context, function_frame, code, if_else.if_block)?;
+
+    let mut else_block_location = code.len();
+
+    let else_cf_info = match if_else.else_block {
+        None => ControlFlowInfo {
             reachable_break: false,
             terminal_node: false,
-        };
-        for stmt in &body.stmts {
-            debug!("{}", stmt);
-            let stmt_info;
-            match stmt {
-                Statement::CommandStatement(command) => {
-                    stmt_info = self.compile_command(&command, code, function_frame)?;
-                    debug!("{:?}", code);
-                }
-                Statement::WhileStatement(while_) => {
-                    // always assume the loop might not be taken
-                    stmt_info = self.compile_while(&while_, code, function_frame)?;
-                    debug!("{:?}", code);
-                }
-                Statement::LoopStatement(loop_) => {
-                    stmt_info = self.compile_loop(&loop_, code, function_frame)?;
-                    debug!("{:?}", code);
-                }
-                Statement::IfElseStatement(if_else) => {
-                    stmt_info = self.compile_if_else(&if_else, code, function_frame)?;
-                    debug!("{:?}", code);
-                }
-                Statement::VerifyStatement(_) | Statement::AssumeStatement(_) => continue,
-                Statement::EmptyStatement => continue,
-            };
-            cf_info = ControlFlowInfo::successor(cf_info, stmt_info);
-        }
-        Ok(cf_info)
-    }
-
-    fn compile_if_else(
-        &mut self,
-        if_else: &IfElse,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<ControlFlowInfo> {
-        self.compile_expression(&if_else.cond, code, function_frame)?;
-
-        let brfalse_ins_loc = code.code.len();
-        code.code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
-        function_frame.pop()?;
-        let if_cf_info = self.compile_block(&if_else.if_block, code, function_frame)?;
-
-        let mut else_block_location = code.code.len();
-
-        let else_cf_info = match if_else.else_block {
-            None => ControlFlowInfo {
-                reachable_break: false,
-                terminal_node: false,
-            },
-            Some(ref else_block) => {
-                let branch_ins_loc = code.code.len();
-                if !if_cf_info.terminal_node {
-                    code.code.push(Bytecode::Branch(0)); // placeholder, final branch target replaced later
-                    else_block_location += 1;
-                }
-                let else_cf_info = self.compile_block(else_block, code, function_frame)?;
-                if !if_cf_info.terminal_node {
-                    code.code[branch_ins_loc] = Bytecode::Branch(code.code.len() as u16);
-                }
-                else_cf_info
+        },
+        Some(else_block) => {
+            let branch_ins_loc = code.len();
+            if !if_cf_info.terminal_node {
+                code.push(Bytecode::Branch(0)); // placeholder, final branch target replaced later
+                else_block_location += 1;
             }
-        };
+            let else_cf_info = compile_block(context, function_frame, code, else_block)?;
+            if !if_cf_info.terminal_node {
+                code[branch_ins_loc] = Bytecode::Branch(code.len() as u16);
+            }
+            else_cf_info
+        }
+    };
 
-        code.code[brfalse_ins_loc] = Bytecode::BrFalse(else_block_location as u16);
+    code[brfalse_ins_loc] = Bytecode::BrFalse(else_block_location as u16);
 
-        let cf_info = ControlFlowInfo::join(if_cf_info, else_cf_info);
-        Ok(cf_info)
+    let cf_info = ControlFlowInfo::join(if_cf_info, else_cf_info);
+    Ok(cf_info)
+}
+
+fn compile_while(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    while_: While,
+) -> Result<ControlFlowInfo> {
+    let loop_start_loc = code.len();
+    function_frame.push_loop(loop_start_loc)?;
+    compile_expression(context, function_frame, code, while_.cond)?;
+
+    let brfalse_loc = code.len();
+    code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
+    function_frame.pop()?;
+
+    compile_block(context, function_frame, code, while_.block)?;
+    code.push(Bytecode::Branch(loop_start_loc as u16));
+
+    let loop_end_loc = code.len() as u16;
+    code[brfalse_loc] = Bytecode::BrFalse(loop_end_loc);
+    let breaks = function_frame.get_loop_breaks()?;
+    for i in breaks {
+        code[*i] = Bytecode::Branch(loop_end_loc);
     }
 
-    fn compile_while(
-        &mut self,
-        while_: &While,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<ControlFlowInfo> {
-        let loop_start_loc = code.code.len();
-        function_frame.push_loop(loop_start_loc)?;
-        self.compile_expression(&while_.cond, code, function_frame)?;
-
-        let brfalse_loc = code.code.len();
-        code.code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
-        function_frame.pop()?;
-
-        self.compile_block(&while_.block, code, function_frame)?;
-        code.code.push(Bytecode::Branch(loop_start_loc as u16));
-
-        let loop_end_loc = code.code.len() as u16;
-        code.code[brfalse_loc] = Bytecode::BrFalse(loop_end_loc);
-        let breaks = function_frame.get_loop_breaks()?;
-        for i in breaks {
-            code.code[*i] = Bytecode::Branch(loop_end_loc);
-        }
-
-        function_frame.pop_loop()?;
-        Ok(ControlFlowInfo {
-            // this `reachable_break` break is for any outer loop
-            // not the loop that was just compiled
-            reachable_break: false,
-            // While always has the ability to break.
-            // Conceptually we treat
-            //   `while (cond) { body }`
-            // as `
-            //   `loop { if (cond) { body; continue; } else { break; } }`
-            // So a `break` is always reachable
-            terminal_node: false,
-        })
-    }
-
-    fn compile_loop(
-        &mut self,
-        loop_: &Loop,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<ControlFlowInfo> {
-        let loop_start_loc = code.code.len();
-        function_frame.push_loop(loop_start_loc)?;
-
-        let body_cf_info = self.compile_block(&loop_.block, code, function_frame)?;
-        code.code.push(Bytecode::Branch(loop_start_loc as u16));
-
-        let loop_end_loc = code.code.len() as u16;
-        let breaks = function_frame.get_loop_breaks()?;
-        for i in breaks {
-            code.code[*i] = Bytecode::Branch(loop_end_loc);
-        }
-
-        function_frame.pop_loop()?;
+    function_frame.pop_loop()?;
+    Ok(ControlFlowInfo {
         // this `reachable_break` break is for any outer loop
         // not the loop that was just compiled
-        let reachable_break = false;
-        // If the body of the loop does not have a break, it will loop forever
-        // and thus is a terminal node
-        let terminal_node = !body_cf_info.reachable_break;
-        Ok(ControlFlowInfo {
-            reachable_break,
-            terminal_node,
-        })
+        reachable_break: false,
+        // While always has the ability to break.
+        // Conceptually we treat
+        //   `while (cond) { body }`
+        // as `
+        //   `loop { if (cond) { body; continue; } else { break; } }`
+        // So a `break` is always reachable
+        terminal_node: false,
+    })
+}
+
+fn compile_loop(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    loop_: Loop,
+) -> Result<ControlFlowInfo> {
+    let loop_start_loc = code.len();
+    function_frame.push_loop(loop_start_loc)?;
+
+    let body_cf_info = compile_block(context, function_frame, code, loop_.block)?;
+    code.push(Bytecode::Branch(loop_start_loc as u16));
+
+    let loop_end_loc = code.len() as u16;
+    let breaks = function_frame.get_loop_breaks()?;
+    for i in breaks {
+        code[*i] = Bytecode::Branch(loop_end_loc);
     }
 
-    fn compile_command(
-        &mut self,
-        cmd: &Cmd,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<ControlFlowInfo> {
-        debug!("compile command {}", cmd);
-        match cmd {
-            Cmd::Return(exps) => {
-                self.compile_expression(exps, code, function_frame)?;
-                code.code.push(Bytecode::Ret);
-            }
-            Cmd::Abort(exp_opt) => {
-                match exp_opt {
-                    Some(exp) => {
-                        self.compile_expression(exp, code, function_frame)?;
-                    }
-                    None => (),
-                };
-                code.code.push(Bytecode::Abort);
-                function_frame.pop()?;
-            }
-            Cmd::Assign(lhs_variables, rhs_expressions) => {
-                let _expr_type = self.compile_expression(rhs_expressions, code, function_frame)?;
-                for var in lhs_variables.iter().rev() {
-                    let loc_idx = function_frame.get_local(&var.value)?;
-                    let st_loc = Bytecode::StLoc(loc_idx);
-                    code.code.push(st_loc);
-                    function_frame.pop()?;
-                }
-            }
-            Cmd::Unpack(name, bindings, e) => {
-                self.compile_expression(e, code, function_frame)?;
+    function_frame.pop_loop()?;
+    // this `reachable_break` break is for any outer loop
+    // not the loop that was just compiled
+    let reachable_break = false;
+    // If the body of the loop does not have a break, it will loop forever
+    // and thus is a terminal node
+    let terminal_node = !body_cf_info.reachable_break;
+    Ok(ControlFlowInfo {
+        reachable_break,
+        terminal_node,
+    })
+}
 
-                let (_is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                code.code.push(Bytecode::Unpack(def_idx, NO_TYPE_ACTUALS));
-                function_frame.pop()?;
-
-                for lhs_variable in bindings.values().rev() {
-                    let loc_idx = function_frame.get_local(&lhs_variable.value)?;
-                    let st_loc = Bytecode::StLoc(loc_idx);
-                    code.code.push(st_loc);
-                }
-            }
-            Cmd::Mutate(exp, op) => {
-                self.compile_expression(op, code, function_frame)?;
-                self.compile_expression(exp, code, function_frame)?;
-                code.code.push(Bytecode::WriteRef);
-                function_frame.pop()?;
-                function_frame.pop()?;
-            }
-            Cmd::Continue => {
-                let loc = function_frame.get_loop_start()?;
-                code.code.push(Bytecode::Branch(loc as u16));
-            }
-            Cmd::Break => {
-                function_frame.push_loop_break(code.code.len())?;
-                // placeholder, to be replaced when the enclosing while is compiled
-                code.code.push(Bytecode::Branch(0));
-            }
-            Cmd::Exp(exp) => {
-                self.compile_expression(exp, code, function_frame)?;
-            }
-        }
-        let (reachable_break, terminal_node) = match cmd {
+fn compile_command(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    cmd: Cmd_,
+) -> Result<ControlFlowInfo> {
+    let (reachable_break, terminal_node) = match &cmd.value {
             // If we are in a loop, `continue` makes a terminal node
             // Conceptually we treat
             //   `while (cond) { body }`
@@ -1843,460 +772,459 @@ impl<S: Scope + Sized> Compiler<S> {
             Cmd::Break => (true, false),
             _ => (false, false),
         };
-        Ok(ControlFlowInfo {
-            reachable_break,
-            terminal_node,
-        })
+    match cmd.value {
+        Cmd::Return(exps) => {
+            compile_expression(context, function_frame, code, *exps)?;
+            code.push(Bytecode::Ret);
+        }
+        Cmd::Abort(exp_opt) => {
+            if let Some(exp) = exp_opt {
+                compile_expression(context, function_frame, code, *exp)?;
+            }
+            code.push(Bytecode::Abort);
+            function_frame.pop()?;
+        }
+        Cmd::Assign(lvalues, rhs_expressions) => {
+            compile_expression(context, function_frame, code, rhs_expressions)?;
+            compile_lvalues(context, function_frame, code, lvalues)?;
+        }
+        Cmd::Unpack(name, tys, bindings, e) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+
+            compile_expression(context, function_frame, code, *e)?;
+
+            let def_idx = context.struct_definition_index(&name)?;
+            code.push(Bytecode::Unpack(def_idx, type_actuals_id));
+            function_frame.pop()?;
+
+            for (_, lhs_variable) in bindings.iter().rev() {
+                let loc_idx = function_frame.get_local(&lhs_variable.value)?;
+                let st_loc = Bytecode::StLoc(loc_idx);
+                code.push(st_loc);
+            }
+        }
+        Cmd::Continue => {
+            let loc = function_frame.get_loop_start()?;
+            code.push(Bytecode::Branch(loc as u16));
+        }
+        Cmd::Break => {
+            function_frame.push_loop_break(code.len())?;
+            // placeholder, to be replaced when the enclosing while is compiled
+            code.push(Bytecode::Branch(0));
+        }
+        Cmd::Exp(e) => {
+            compile_expression(context, function_frame, code, *e)?;
+        }
     }
+    Ok(ControlFlowInfo {
+        reachable_break,
+        terminal_node,
+    })
+}
 
-    fn make_singleton_vec_deque(&mut self, t: InferredType) -> VecDeque<InferredType> {
-        let mut v = VecDeque::new();
-        v.push_back(t);
-        v
-    }
-
-    fn compile_expression(
-        &mut self,
-        exp: &Exp,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<VecDeque<InferredType>> {
-        debug!("compile  expression {}", exp);
-        match exp {
-            Exp::Move(ref x) => self.compile_move_local(&x.value, code, function_frame),
-            Exp::Copy(ref x) => self.compile_copy_local(&x.value, code, function_frame),
-            Exp::BorrowLocal(ref is_mutable, ref x) => {
-                self.compile_borrow_local(&x.value, *is_mutable, code, function_frame)
-            }
-            Exp::Value(cv) => match cv.as_ref() {
-                CopyableVal::Address(address) => {
-                    let addr_idx = self.make_address(&address)?;
-                    code.code.push(Bytecode::LdAddr(addr_idx));
-                    function_frame.push()?;
-                    Ok(self.make_singleton_vec_deque(InferredType::Address))
-                }
-                CopyableVal::U64(i) => {
-                    code.code.push(Bytecode::LdConst(*i));
-                    function_frame.push()?;
-                    Ok(self.make_singleton_vec_deque(InferredType::U64))
-                }
-                CopyableVal::ByteArray(buf) => {
-                    let buf_idx = self.make_byte_array(buf)?;
-                    code.code.push(Bytecode::LdByteArray(buf_idx));
-                    function_frame.push()?;
-                    Ok(self.make_singleton_vec_deque(InferredType::ByteArray))
-                }
-                CopyableVal::Bool(b) => {
-                    if *b {
-                        code.code.push(Bytecode::LdTrue);
-                    } else {
-                        code.code.push(Bytecode::LdFalse);
-                    }
-                    function_frame.push()?;
-                    Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                }
-                CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
-            },
-            Exp::Pack(name, fields) => {
-                let module_idx = ModuleHandleIndex::new(0);
-                let name_idx = self.make_string(name.name_ref())?;
-                let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
-                for (_, exp) in fields.iter() {
-                    self.compile_expression(exp, code, function_frame)?;
-                }
-
-                code.code.push(Bytecode::Pack(def_idx, NO_TYPE_ACTUALS));
-                for _ in fields.iter() {
-                    function_frame.pop()?;
-                }
-                function_frame.push()?;
-                Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
-            }
-            Exp::UnaryExp(op, e) => {
-                self.compile_expression(e, code, function_frame)?;
-                match op {
-                    UnaryOp::Not => {
-                        code.code.push(Bytecode::Not);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                }
-            }
-            Exp::BinopExp(e1, op, e2) => {
-                self.compile_expression(e1, code, function_frame)?;
-                self.compile_expression(e2, code, function_frame)?;
+fn compile_lvalues(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    lvalues: Vec<LValue_>,
+) -> Result<()> {
+    for lvalue_ in lvalues.into_iter().rev() {
+        match lvalue_.value {
+            LValue::Var(v) => {
+                let loc_idx = function_frame.get_local(&v.value)?;
+                code.push(Bytecode::StLoc(loc_idx));
                 function_frame.pop()?;
-                match op {
-                    BinOp::Add => {
-                        code.code.push(Bytecode::Add);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Sub => {
-                        code.code.push(Bytecode::Sub);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Mul => {
-                        code.code.push(Bytecode::Mul);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Mod => {
-                        code.code.push(Bytecode::Mod);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Div => {
-                        code.code.push(Bytecode::Div);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::BitOr => {
-                        code.code.push(Bytecode::BitOr);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::BitAnd => {
-                        code.code.push(Bytecode::BitAnd);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Xor => {
-                        code.code.push(Bytecode::Xor);
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    BinOp::Or => {
-                        code.code.push(Bytecode::Or);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::And => {
-                        code.code.push(Bytecode::And);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Eq => {
-                        code.code.push(Bytecode::Eq);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Neq => {
-                        code.code.push(Bytecode::Neq);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Lt => {
-                        code.code.push(Bytecode::Lt);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Gt => {
-                        code.code.push(Bytecode::Gt);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Le => {
-                        code.code.push(Bytecode::Le);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    BinOp::Ge => {
-                        code.code.push(Bytecode::Ge);
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                }
             }
-            Exp::Dereference(e) => {
-                let loc_type = self
-                    .compile_expression(e, code, function_frame)?
-                    .pop_front();
-                code.code.push(Bytecode::ReadRef);
-                match loc_type {
-                    Some(InferredType::MutableReference(sig_ref_token)) => {
-                        Ok(self.make_singleton_vec_deque(*sig_ref_token))
-                    }
-                    Some(InferredType::Reference(sig_ref_token)) => {
-                        Ok(self.make_singleton_vec_deque(*sig_ref_token))
-                    }
-                    _ => Ok(self.make_singleton_vec_deque(InferredType::Anything)),
-                }
+            LValue::Mutate(e) => {
+                compile_expression(context, function_frame, code, e)?;
+                code.push(Bytecode::WriteRef);
+                function_frame.pop()?;
+                function_frame.pop()?;
             }
-            Exp::Borrow {
-                ref is_mutable,
-                ref exp,
-                ref field,
-            } => {
-                let this_type_option = self
-                    .compile_expression(exp, code, function_frame)?
-                    .pop_front();
-                match this_type_option {
-                    Some(this_type) => self.compile_load_field_reference(
-                        this_type,
-                        field,
-                        *is_mutable,
-                        code,
-                        function_frame,
-                    ),
-                    None => bail!("Impossible no expression to borrow"),
-                }
-            }
-            Exp::FunctionCall(f, exps) => {
-                let mut actuals_tys = VecDeque::new();
-                for types in self.compile_expression(exps, code, function_frame)? {
-                    actuals_tys.push_back(types);
-                }
-                let result = self.compile_call(f, code, function_frame, actuals_tys)?;
-                Ok(result)
-            }
-            Exp::ExprList(exps) => {
-                let mut result = VecDeque::new();
-                for e in exps {
-                    result.append(&mut self.compile_expression(e, code, function_frame)?);
-                }
-                Ok(result)
+            LValue::Pop => {
+                code.push(Bytecode::Pop);
+
+                function_frame.pop()?;
             }
         }
     }
+    Ok(())
+}
 
-    fn compile_load_field_reference(
-        &mut self,
-        struct_type: InferredType,
-        struct_field: &Field,
-        is_mutable: bool,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<VecDeque<InferredType>> {
-        let sh_idx = struct_type.get_struct_handle()?;
-        // TODO: the clone is to avoid the problem with mut/immut references, review...
-        let field_type = self.scope.get_field_type(sh_idx, struct_field.name())?;
-        let fd_idx = self.scope.get_field_def(sh_idx, struct_field.name())?;
-        function_frame.pop()?;
-        code.code.push(Bytecode::BorrowField(fd_idx));
-        function_frame.push()?;
-        let input_is_mutable = match struct_type {
-            InferredType::Reference(_) => false,
-            _ => true,
-        };
-        let inner_token = Box::new(InferredType::from_signature_token(&field_type.0));
-        Ok(if is_mutable {
-            if !input_is_mutable {
-                bail!("Unsupported Syntax: Cannot take a mutable field reference in an immutable reference. It is not expressible in the bytecode");
-            }
-            self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
-        } else {
-            if input_is_mutable {
-                code.code.push(Bytecode::FreezeRef);
-            }
-            self.make_singleton_vec_deque(InferredType::Reference(inner_token))
-        })
+macro_rules! vec_deque {
+    ($($x:expr),*) => {
+        VecDeque::from(vec![$($x),*])
     }
+}
 
-    fn compile_copy_local(
-        &mut self,
-        v: &Var,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<VecDeque<InferredType>> {
-        let loc_idx = function_frame.get_local(&v)?;
-        let load_loc = Bytecode::CopyLoc(loc_idx);
-        code.code.push(load_loc);
-        function_frame.push()?;
-        let loc_type = function_frame.get_local_type(loc_idx)?;
-        Ok(self.make_singleton_vec_deque(InferredType::from_signature_token(loc_type)))
-    }
-
-    fn compile_move_local(
-        &mut self,
-        v: &Var,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<VecDeque<InferredType>> {
-        let loc_idx = function_frame.get_local(&v)?;
-        let load_loc = Bytecode::MoveLoc(loc_idx);
-        code.code.push(load_loc);
-        function_frame.push()?;
-        let loc_type = function_frame.get_local_type(loc_idx)?;
-        Ok(self.make_singleton_vec_deque(InferredType::from_signature_token(loc_type)))
-    }
-
-    fn compile_borrow_local(
-        &mut self,
-        v: &Var,
-        is_mutable: bool,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-    ) -> Result<VecDeque<InferredType>> {
-        let loc_idx = function_frame.get_local(&v)?;
-        code.code.push(Bytecode::BorrowLoc(loc_idx));
-        function_frame.push()?;
-        let loc_type = function_frame.get_local_type(loc_idx)?;
-        let inner_token = Box::new(InferredType::from_signature_token(loc_type));
-        Ok(if is_mutable {
-            self.make_singleton_vec_deque(InferredType::MutableReference(inner_token))
-        } else {
-            code.code.push(Bytecode::FreezeRef);
-            self.make_singleton_vec_deque(InferredType::Reference(inner_token))
-        })
-    }
-
-    fn compile_call(
-        &mut self,
-        call: &FunctionCall,
-        code: &mut CodeUnit,
-        function_frame: &mut FunctionFrame,
-        mut argument_types: VecDeque<InferredType>,
-    ) -> Result<VecDeque<InferredType>> {
-        match call {
-            FunctionCall::Builtin(function) => {
-                match function {
-                    Builtin::GetTxnGasUnitPrice => {
-                        code.code.push(Bytecode::GetTxnGasUnitPrice);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    Builtin::GetTxnMaxGasUnits => {
-                        code.code.push(Bytecode::GetTxnMaxGasUnits);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    Builtin::GetGasRemaining => {
-                        code.code.push(Bytecode::GetGasRemaining);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    Builtin::GetTxnSender => {
-                        code.code.push(Bytecode::GetTxnSenderAddress);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::Address))
-                    }
-                    Builtin::Exists(name) => {
-                        let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::Exists(def_idx, NO_TYPE_ACTUALS));
-                        function_frame.pop()?;
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::Bool))
-                    }
-                    Builtin::BorrowGlobal(name) => {
-                        let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code
-                            .push(Bytecode::BorrowGlobal(def_idx, NO_TYPE_ACTUALS));
-                        function_frame.pop()?;
-                        function_frame.push()?;
-
-                        let module_idx = ModuleHandleIndex::new(0);
-                        let name_idx = self.make_string(name.name_ref())?;
-                        let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
-                        Ok(
-                            self.make_singleton_vec_deque(InferredType::MutableReference(
-                                Box::new(InferredType::Struct(sh)),
-                            )),
-                        )
-                    }
-                    Builtin::Release => {
-                        code.code.push(Bytecode::ReleaseRef);
-                        function_frame.pop()?;
-                        function_frame.push()?;
-                        Ok(VecDeque::new())
-                    }
-                    Builtin::CreateAccount => {
-                        code.code.push(Bytecode::CreateAccount);
-                        function_frame.pop()?;
-                        function_frame.push()?;
-                        Ok(VecDeque::new())
-                    }
-                    Builtin::EmitEvent => {
-                        code.code.push(Bytecode::EmitEvent);
-                        function_frame.pop()?;
-                        function_frame.pop()?;
-                        function_frame.pop()?;
-                        Ok(VecDeque::new())
-                    }
-                    Builtin::MoveFrom(name) => {
-                        let (is_resource, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code.push(Bytecode::MoveFrom(def_idx, NO_TYPE_ACTUALS));
-                        function_frame.pop()?; // pop the address
-                        function_frame.push()?; // push the return value
-
-                        let module_idx = ModuleHandleIndex::new(0);
-                        let name_idx = self.make_string(name.name_ref())?;
-                        let sh = self.make_struct_handle(module_idx, name_idx, is_resource)?;
-                        Ok(self.make_singleton_vec_deque(InferredType::Struct(sh)))
-                    }
-                    Builtin::MoveToSender(name) => {
-                        let (_, def_idx) = self.scope.get_struct_def(name.name_ref())?;
-                        code.code
-                            .push(Bytecode::MoveToSender(def_idx, NO_TYPE_ACTUALS));
-                        function_frame.push()?;
-                        Ok(VecDeque::new())
-                    }
-                    Builtin::GetTxnSequenceNumber => {
-                        code.code.push(Bytecode::GetTxnSequenceNumber);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::U64))
-                    }
-                    Builtin::GetTxnPublicKey => {
-                        code.code.push(Bytecode::GetTxnPublicKey);
-                        function_frame.push()?;
-                        Ok(self.make_singleton_vec_deque(InferredType::ByteArray))
-                    }
-                    Builtin::Freeze => {
-                        code.code.push(Bytecode::FreezeRef);
-                        function_frame.pop()?; // pop mut ref
-                        function_frame.push()?; // push imm ref
-                        let inner_token = match argument_types.pop_front() {
-                            Some(InferredType::Reference(inner_token))
-                            | Some(InferredType::MutableReference(inner_token)) => inner_token,
-                            // Incorrect call
-                            _ => Box::new(InferredType::Anything),
-                        };
-                        Ok(self.make_singleton_vec_deque(InferredType::Reference(inner_token)))
-                    }
-                    _ => bail!("unsupported builtin function: {}", function),
-                }
-            }
-            FunctionCall::ModuleFunctionCall { module, name } => {
-                let scope_name = self.scope.get_name();
-
-                let mh = if scope_name.is_ok() && module.name() == ModuleName::SELF {
-                    ModuleHandleIndex::new(0)
-                } else {
-                    let target_module = self.scope.get_imported_module(module.name_ref())?;
-                    let mut idx = 0;
-                    while idx < target_module.function_defs().len() {
-                        let fh_idx = target_module
-                            .function_def_at(FunctionDefinitionIndex::new(idx as TableIndex))
-                            .function;
-                        let fh = target_module.function_handle_at(fh_idx);
-                        let func_name = target_module.string_at(fh.name);
-                        if func_name == name.name_ref() {
-                            break;
-                        }
-                        idx += 1;
-                    }
-                    if idx == target_module.function_defs().len() {
-                        bail!(
-                            "Cannot find function `{}' in module `{}'",
-                            name.name_ref(),
-                            module.name_ref()
-                        );
-                    }
-
-                    self.scope.link_function(
-                        module.name_ref(),
-                        name.name_ref(),
-                        FunctionDefinitionIndex::new(idx as u16),
-                    )?;
-                    self.scope.get_imported_module_handle(module.name_ref())?
-                };
-
-                let name_ref = name.name_ref();
-                let name_idx = self.make_string(name_ref)?;
-                let mut func_sig = self.scope.get_function_signature(mh, name_ref)?.clone();
-                func_sig = self.import_function_signature(module.name_ref(), func_sig)?;
-                let return_types = func_sig
-                    .return_types
-                    .iter()
-                    .map(InferredType::from_signature_token)
-                    .collect();
-                let args_count = func_sig.arg_types.len();
-                let sig_idx = self.make_function_signature(&func_sig)?;
-                let fh_idx = self.make_function_handle(mh, name_idx, sig_idx)?;
-                let call = Bytecode::Call(fh_idx, NO_TYPE_ACTUALS);
-                code.code.push(call);
-                for _ in 0..args_count {
-                    function_frame.pop()?;
-                }
-                // Return value of current function is pushed onto the stack.
+fn compile_expression(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    exp: Exp_,
+) -> Result<VecDeque<InferredType>> {
+    Ok(match exp.value {
+        Exp::Move(v) => {
+            let loc_idx = function_frame.get_local(&v.value)?;
+            let load_loc = Bytecode::MoveLoc(loc_idx);
+            code.push(load_loc);
+            function_frame.push()?;
+            let loc_type = function_frame.get_local_type(loc_idx)?;
+            vec_deque![InferredType::from_signature_token(loc_type)]
+        }
+        Exp::Copy(v) => {
+            let loc_idx = function_frame.get_local(&v.value)?;
+            let load_loc = Bytecode::CopyLoc(loc_idx);
+            code.push(load_loc);
+            function_frame.push()?;
+            let loc_type = function_frame.get_local_type(loc_idx)?;
+            vec_deque![InferredType::from_signature_token(loc_type)]
+        }
+        Exp::BorrowLocal(is_mutable, v) => {
+            let loc_idx = function_frame.get_local(&v.value)?;
+            let loc_type = function_frame.get_local_type(loc_idx)?;
+            let inner_token = Box::new(InferredType::from_signature_token(loc_type));
+            if is_mutable {
+                code.push(Bytecode::MutBorrowLoc(loc_idx));
                 function_frame.push()?;
-                Ok(return_types)
+                vec_deque![InferredType::MutableReference(inner_token)]
+            } else {
+                code.push(Bytecode::ImmBorrowLoc(loc_idx));
+                function_frame.push()?;
+                vec_deque![InferredType::Reference(inner_token)]
             }
         }
-    }
+        Exp::Value(cv) => match cv.value {
+            CopyableVal::Address(address) => {
+                let addr_idx = context.address_index(address)?;
+                code.push(Bytecode::LdAddr(addr_idx));
+                function_frame.push()?;
+                vec_deque![InferredType::Address]
+            }
+            CopyableVal::U64(i) => {
+                code.push(Bytecode::LdConst(i));
+                function_frame.push()?;
+                vec_deque![InferredType::U64]
+            }
+            CopyableVal::ByteArray(buf) => {
+                let buf_idx = context.byte_array_index(&buf)?;
+                code.push(Bytecode::LdByteArray(buf_idx));
+                function_frame.push()?;
+                vec_deque![InferredType::ByteArray]
+            }
+            CopyableVal::Bool(b) => {
+                code.push(if b {
+                    Bytecode::LdTrue
+                } else {
+                    Bytecode::LdFalse
+                });
+                function_frame.push()?;
+                vec_deque![InferredType::Bool]
+            }
+            CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
+        },
+        Exp::Pack(name, tys, fields) => {
+            let tokens = LocalsSignature(compile_types(context, &tys)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&name)?;
+
+            let self_name = ModuleName::new(ModuleName::self_name().into());
+            let ident = QualifiedStructIdent {
+                module: self_name,
+                name: name.clone(),
+            };
+            let sh_idx = context.struct_handle_index(ident)?;
+
+            let num_fields = fields.len();
+            for (field_order, (field, e)) in fields.into_iter().enumerate() {
+                // Check that the fields are specified in order matching the definition.
+                let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
+                if field_order != decl_order {
+                    bail!("Field {} defined out of order for struct {}", field, name);
+                }
+
+                compile_expression(context, function_frame, code, e)?;
+            }
+            code.push(Bytecode::Pack(def_idx, type_actuals_id));
+            for _ in 0..num_fields {
+                function_frame.pop()?;
+            }
+            function_frame.push()?;
+
+            vec_deque![InferredType::Struct(sh_idx)]
+        }
+        Exp::UnaryExp(op, e) => {
+            compile_expression(context, function_frame, code, *e)?;
+            match op {
+                UnaryOp::Not => {
+                    code.push(Bytecode::Not);
+                    vec_deque![InferredType::Bool]
+                }
+            }
+        }
+        Exp::BinopExp(e1, op, e2) => {
+            compile_expression(context, function_frame, code, *e1)?;
+            compile_expression(context, function_frame, code, *e2)?;
+            function_frame.pop()?;
+            match op {
+                BinOp::Add => {
+                    code.push(Bytecode::Add);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Sub => {
+                    code.push(Bytecode::Sub);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Mul => {
+                    code.push(Bytecode::Mul);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Mod => {
+                    code.push(Bytecode::Mod);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Div => {
+                    code.push(Bytecode::Div);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::BitOr => {
+                    code.push(Bytecode::BitOr);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::BitAnd => {
+                    code.push(Bytecode::BitAnd);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Xor => {
+                    code.push(Bytecode::Xor);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Or => {
+                    code.push(Bytecode::Or);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::And => {
+                    code.push(Bytecode::And);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Eq => {
+                    code.push(Bytecode::Eq);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Neq => {
+                    code.push(Bytecode::Neq);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Lt => {
+                    code.push(Bytecode::Lt);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Gt => {
+                    code.push(Bytecode::Gt);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Le => {
+                    code.push(Bytecode::Le);
+                    vec_deque![InferredType::Bool]
+                }
+                BinOp::Ge => {
+                    code.push(Bytecode::Ge);
+                    vec_deque![InferredType::Bool]
+                }
+            }
+        }
+        Exp::Dereference(e) => {
+            let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
+
+            code.push(Bytecode::ReadRef);
+            match loc_type {
+                Some(InferredType::MutableReference(sig_ref_token)) => vec_deque![*sig_ref_token],
+                Some(InferredType::Reference(sig_ref_token)) => vec_deque![*sig_ref_token],
+                _ => vec_deque![InferredType::Anything],
+            }
+        }
+        Exp::Borrow {
+            is_mutable,
+            exp,
+            field,
+        } => {
+            let loc_type_opt = compile_expression(context, function_frame, code, *exp)?.pop_front();
+            let loc_type = match loc_type_opt {
+                Some(t) => t,
+                None => bail!("Impossible no expression to borrow"),
+            };
+            let sh_idx = loc_type.get_struct_handle()?;
+            let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
+            function_frame.pop()?;
+            let inner_token = Box::new(InferredType::from_signature_token(&field_type));
+            if is_mutable {
+                code.push(Bytecode::MutBorrowField(fd_idx));
+                function_frame.push()?;
+                vec_deque![InferredType::MutableReference(inner_token)]
+            } else {
+                code.push(Bytecode::ImmBorrowField(fd_idx));
+                function_frame.push()?;
+                vec_deque![InferredType::Reference(inner_token)]
+            }
+        }
+        Exp::FunctionCall(f, exps) => {
+            let mut actuals_tys = vec_deque![];
+            for types in compile_expression(context, function_frame, code, *exps)? {
+                actuals_tys.push_back(types);
+            }
+            compile_call(context, function_frame, code, f, actuals_tys)?
+        }
+        Exp::ExprList(exps) => {
+            let mut result = vec_deque![];
+            for e in exps {
+                result.append(&mut compile_expression(context, function_frame, code, e)?);
+            }
+            result
+        }
+    })
+}
+
+fn compile_call(
+    context: &mut Context,
+    function_frame: &mut FunctionFrame,
+    code: &mut Vec<Bytecode>,
+    call: FunctionCall,
+    mut argument_types: VecDeque<InferredType>,
+) -> Result<VecDeque<InferredType>> {
+    Ok(match call {
+        FunctionCall::Builtin(function) => {
+            match function {
+                Builtin::GetTxnGasUnitPrice => {
+                    code.push(Bytecode::GetTxnGasUnitPrice);
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::GetTxnMaxGasUnits => {
+                    code.push(Bytecode::GetTxnMaxGasUnits);
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::GetGasRemaining => {
+                    code.push(Bytecode::GetGasRemaining);
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::GetTxnSender => {
+                    code.push(Bytecode::GetTxnSenderAddress);
+                    function_frame.push()?;
+                    vec_deque![InferredType::Address]
+                }
+                Builtin::Exists(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::Exists(def_idx, type_actuals_id));
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
+                Builtin::BorrowGlobal(mut_, name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(if mut_ {
+                        Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+                    } else {
+                        Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+                    });
+                    function_frame.pop()?;
+                    function_frame.push()?;
+
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    let inner = Box::new(InferredType::Struct(sh_idx));
+                    vec_deque![if mut_ {
+                        InferredType::MutableReference(inner)
+                    } else {
+                        InferredType::Reference(inner)
+                    }]
+                }
+                Builtin::CreateAccount => {
+                    code.push(Bytecode::CreateAccount);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![]
+                }
+                Builtin::MoveFrom(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    code.push(Bytecode::MoveFrom(def_idx, type_actuals_id));
+                    function_frame.pop()?; // pop the address
+                    function_frame.push()?; // push the return value
+
+                    let self_name = ModuleName::new(ModuleName::self_name().into());
+                    let ident = QualifiedStructIdent {
+                        module: self_name,
+                        name,
+                    };
+                    let sh_idx = context.struct_handle_index(ident)?;
+                    vec_deque![InferredType::Struct(sh_idx)]
+                }
+                Builtin::MoveToSender(name, tys) => {
+                    let tokens = LocalsSignature(compile_types(context, &tys)?);
+                    let type_actuals_id = context.locals_signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+
+                    code.push(Bytecode::MoveToSender(def_idx, type_actuals_id));
+                    function_frame.push()?;
+                    vec_deque![]
+                }
+                Builtin::GetTxnSequenceNumber => {
+                    code.push(Bytecode::GetTxnSequenceNumber);
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::GetTxnPublicKey => {
+                    code.push(Bytecode::GetTxnPublicKey);
+                    function_frame.push()?;
+                    vec_deque![InferredType::ByteArray]
+                }
+                Builtin::Freeze => {
+                    code.push(Bytecode::FreezeRef);
+                    function_frame.pop()?; // pop mut ref
+                    function_frame.push()?; // push imm ref
+                    let inner_token = match argument_types.pop_front() {
+                        Some(InferredType::Reference(inner_token))
+                        | Some(InferredType::MutableReference(inner_token)) => inner_token,
+                        // Incorrect call
+                        _ => Box::new(InferredType::Anything),
+                    };
+                    vec_deque![InferredType::Reference(inner_token)]
+                }
+            }
+        }
+        FunctionCall::ModuleFunctionCall {
+            module,
+            name,
+            type_actuals,
+        } => {
+            let tokens = LocalsSignature(compile_types(context, &type_actuals)?);
+            let type_actuals_id = context.locals_signature_index(tokens)?;
+            let fh_idx = context.function_handle(module.clone(), name.clone())?.1;
+            let call = Bytecode::Call(fh_idx, type_actuals_id);
+            code.push(call);
+            for _ in 0..argument_types.len() {
+                function_frame.pop()?;
+            }
+            // Return value of current function is pushed onto the stack.
+            function_frame.push()?;
+            let signature = &context.function_signature(module, name)?.0;
+            signature
+                .return_types
+                .iter()
+                .map(InferredType::from_signature_token)
+                .collect()
+        }
+    })
 }

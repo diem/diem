@@ -16,25 +16,19 @@ pub const ARG_NUM_PAYLOAD: &str = "--num_payload";
 pub const ARG_PAYLOAD_SIZE: &str = "--payload_size";
 
 pub fn load_configs_from_args(args: &ArgMatches<'_>) -> NodeConfig {
-    let node_config;
-
-    if args.is_present(ARG_CONFIG_PATH) {
+    let node_config = if args.is_present(ARG_CONFIG_PATH) {
         // Allow peer id over-ride via command line
         let peer_id = value_t!(args, ARG_PEER_ID, String).ok();
 
         let config_path =
             value_t!(args, ARG_CONFIG_PATH, String).expect("Path to config file must be specified");
         info!("Loading node config from: {}", &config_path);
-        node_config = NodeConfig::load_config(peer_id, &config_path).expect("NodeConfig");
-
-        info!("Starting Full {}", node_config.base.peer_id);
+        NodeConfig::load(peer_id, &config_path).expect("NodeConfig")
     } else {
         // Note we will silently ignore --peer_id arg here
         info!("Loading test configs");
-        node_config = NodeConfigHelpers::get_single_node_test_config(false /* random ports */);
-
-        info!("Starting Single-Mode {}", node_config.base.peer_id);
-    }
+        NodeConfigHelpers::get_single_node_test_config(false /* random ports */)
+    };
 
     // Node configuration contains important ephemeral port information and should
     // not be subject to being disabled as with other logs
@@ -48,16 +42,6 @@ pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
         metrics::dump_all_metrics_to_file_periodically(
             &node_config.metrics.dir,
             &format!("{}.metrics", peer_id),
-            node_config.metrics.collection_interval_ms,
-        );
-    }
-
-    // TODO: should we do this differently for different binaries?
-    if !node_config.metrics.push_server_addr.is_empty() {
-        metrics::push_all_metrics_to_pushgateway_periodically(
-            "libra_node",
-            &node_config.metrics.push_server_addr,
-            peer_id,
             node_config.metrics.collection_interval_ms,
         );
     }
@@ -84,9 +68,9 @@ pub fn setup_executable(
         is_logging_disabled,
         Some(config.base.node_async_log_chan_size),
     );
-
-    setup_metrics(&config.base.peer_id, &config);
-
+    for network in &config.networks {
+        setup_metrics(&network.peer_id, &config);
+    }
     (config, logger, args)
 }
 

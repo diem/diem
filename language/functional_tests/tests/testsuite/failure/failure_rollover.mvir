@@ -3,7 +3,7 @@ import 0x0.LibraCoin;
 
 main() {
     let addr: address;
-    let ten_coins: R#LibraCoin.T;
+    let ten_coins: LibraCoin.T;
 
     addr = get_txn_sender();
     ten_coins = LibraAccount.withdraw_from_sender(10);
@@ -13,5 +13,5 @@ main() {
     return;
 }
 
-// check: VerificationError
-// check: MoveLocUnavailableError(9)
+// check: VerificationFailure
+// check: MOVELOC_UNAVAILABLE_ERROR

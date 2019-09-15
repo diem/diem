@@ -1,0 +1,24 @@
+//! no-run: verifier, runtime
+
+module M {
+    struct Foo<T> { x: T }
+
+    foo() {
+        let x: &Self.Foo<u64>;
+        let y: Self.Foo<u64>;
+
+        x = borrow_global_mut<Foo<u64>>();
+        _ = move(x);
+
+        exists<Foo<u64>>();
+
+        y = move_from<Foo<u64>>();
+        move_to_sender<Foo<u64>>(move(y));
+    }
+}
+
+// check: [LocalsSignature([Reference(Struct(StructHandleIndex(0), [U64])), Struct(StructHandleIndex(0), [U64])]), LocalsSignature([U64])]
+// check: MutBorrowGlobal(0, LocalsSignatureIndex(1))
+// check: Exists(0, LocalsSignatureIndex(1))
+// check: MoveFrom(0, LocalsSignatureIndex(1))
+// check: MoveToSender(0, LocalsSignatureIndex(1))

@@ -2,21 +2,21 @@ module A {
 
     struct T{v: u64}
 
-    struct K{f: V#Self.T} 
+    struct K{f: Self.T}
 
-    public new_T(v: u64) : V#Self.T {
+    public new_T(v: u64) : Self.T {
         return T{v: move(v)};
     }
 
-    public new_K(f: V#Self.T) : V#Self.K {
+    public new_K(f: Self.T) : Self.K {
         return K{f: move(f)};
     }
 
-    public value(this: &V#Self.K) : u64 {
+    public value(this: &Self.K) : u64 {
         let k: &u64;
         k = &(&move(this).f).v;
         return *move(k);
-    } 
+    }
 }
 
 //! new-transaction
@@ -24,8 +24,8 @@ module A {
 import {{default}}.A;
 
 main() {
-    let x: V#A.T;
-    let y: V#A.K;
+    let x: A.T;
+    let y: A.K;
     let z: u64;
     x = A.new_T(2);
     y = A.new_K(move(x));

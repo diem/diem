@@ -7,21 +7,19 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
+use canonical_serialization::SimpleDeserializer;
 use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
 use state_view::StateView;
 use types::{
     access_path::AccessPath,
+    account_config::AccountResource,
     language_storage::ModuleId,
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
     write_set::WriteSet,
 };
 use vm::CompiledModule;
-use vm_runtime::{
-    loaded_data::{struct_def::StructDef, types::Type},
-    value::Value,
-    MoveVM, VMExecutor, VMVerifier,
-};
+use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 
 /// Provides an environment to run a VM instance.
 ///
@@ -102,13 +100,12 @@ impl FakeExecutor {
     }
 
     /// Reads the resource [`Value`] for an account from this executor's data store.
-    pub fn read_account_resource(&self, account: &Account) -> Option<Value> {
+    pub fn read_account_resource(&self, account: &Account) -> Option<AccountResource> {
         let ap = account.make_access_path();
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .expect("data must exist in data store");
-        let account_type = Self::get_account_struct_def();
-        Account::read_account_resource(&data_blob, account_type)
+        SimpleDeserializer::deserialize(data_blob.as_slice()).ok()
     }
 
     /// Executes the given block of transactions.
@@ -136,24 +133,5 @@ impl FakeExecutor {
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
         let vm = MoveVM::new(&self.config.vm_config);
         vm.validate_transaction(txn, &self.data_store)
-    }
-
-    /// TODO: This is a hack and likely to break soon. THe Account type is replicated here with no
-    /// checks that is the right now. Fix it!
-    fn get_account_struct_def() -> StructDef {
-        // STRUCT DEF StructDef(StructDefInner { field_definitions: [ByteArray,
-        // Struct(StructDef(StructDefInner { field_definitions: [U64] })), U64, U64,
-        // U64] }) let coin = StructDef(StructDefInner { field_definitions:
-        // [Type::U64] })
-        let int_type = Type::U64;
-        let byte_array_type = Type::ByteArray;
-        let coin = Type::Struct(StructDef::new(vec![int_type.clone()]));
-        StructDef::new(vec![
-            byte_array_type,
-            coin,
-            int_type.clone(),
-            int_type.clone(),
-            int_type.clone(),
-        ])
     }
 }

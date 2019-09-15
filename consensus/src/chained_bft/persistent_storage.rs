@@ -76,7 +76,7 @@ pub struct RecoveryData<T> {
     // Liveness data
     highest_timeout_certificates: HighestTimeoutCertificates,
 
-    // whether root is consistent with StateComputer, if not we need to do the state sync before
+    // If root is not consistent with StateComputer, need to state synchronize before
     // starting
     need_sync: bool,
 }

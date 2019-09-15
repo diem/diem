@@ -4,8 +4,7 @@
 use crate::{
     chained_bft::QuorumCert,
     counters,
-    state_replication::{StateComputeResult, StateComputer},
-    state_synchronizer::{StateSynchronizer, SyncStatus},
+    state_replication::{ExecutedState, StateComputeResult, StateComputer},
 };
 use crypto::HashValue;
 use execution_proto::proto::{
@@ -13,23 +12,30 @@ use execution_proto::proto::{
     execution_grpc::ExecutionClient,
 };
 use failure::Result;
-use futures::{compat::Future01CompatExt, Future, FutureExt};
+use futures::{compat::Future01CompatExt, future, Future, FutureExt};
+use logger::prelude::*;
 use proto_conv::{FromProto, IntoProto};
-use std::{pin::Pin, sync::Arc, time::Instant};
+use state_synchronizer::StateSyncClient;
+use std::{
+    convert::TryFrom,
+    pin::Pin,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use types::{
-    ledger_info::LedgerInfoWithSignatures,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus},
+    crypto_proxies::LedgerInfoWithSignatures,
+    transaction::{SignedTransaction, TransactionStatus},
 };
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution: Arc<ExecutionClient>,
-    synchronizer: Arc<StateSynchronizer>,
+    synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSynchronizer>) -> Self {
+    pub fn new(execution: Arc<ExecutionClient>, synchronizer: Arc<StateSyncClient>) -> Self {
         Self {
             execution: Arc::clone(&execution),
             synchronizer,
@@ -42,34 +48,38 @@ impl ExecutionProxy {
     ) -> StateComputeResult {
         let execution_block_response = execution_proto::ExecuteBlockResponse::from_proto(response)
             .expect("Couldn't decode ExecutionBlockResponse from protobuf");
-        let execution_duration_ms = pre_execution_instant.elapsed().as_millis();
+        let execution_duration = pre_execution_instant.elapsed();
         let num_txns = execution_block_response.status().len();
         if num_txns == 0 {
             // no txns in that block
-            counters::EMPTY_BLOCK_EXECUTION_DURATION_MS.observe(execution_duration_ms as f64);
+            counters::EMPTY_BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
         } else {
-            counters::BLOCK_EXECUTION_DURATION_MS.observe(execution_duration_ms as f64);
-            let per_txn_duration = (execution_duration_ms as f64) / (num_txns as f64);
-            counters::TXN_EXECUTION_DURATION_MS.observe(per_txn_duration);
+            counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+            if let Ok(nanos_per_txn) =
+                u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+            {
+                // TODO: use duration_float once it's stable
+                // Tracking: https://github.com/rust-lang/rust/issues/54361
+                counters::TXN_EXECUTION_DURATION_S
+                    .observe_duration(Duration::from_nanos(nanos_per_txn));
+            }
         }
         let mut compute_status = vec![];
-        let mut num_successful_txns = 0;
         for vm_status in execution_block_response.status() {
             let status = match vm_status {
-                TransactionStatus::Keep(_) => {
-                    num_successful_txns += 1;
-                    true
-                }
+                TransactionStatus::Keep(_) => true,
                 TransactionStatus::Discard(_) => false,
             };
             compute_status.push(status);
         }
 
         StateComputeResult {
-            new_state_id: execution_block_response.root_hash(),
+            executed_state: ExecutedState {
+                state_id: execution_block_response.root_hash(),
+                version: execution_block_response.version(),
+                validators: execution_block_response.validators().clone(),
+            },
             compute_status,
-            num_successful_txns,
-            validators: execution_block_response.validators().clone(),
         }
     }
 }
@@ -111,7 +121,7 @@ impl StateComputer for ExecutionProxy {
                 }
                     .boxed()
             }
-            Err(e) => async move { Err(e.into()) }.boxed(),
+            Err(e) => future::err(e.into()).boxed(),
         }
     }
 
@@ -120,11 +130,13 @@ impl StateComputer for ExecutionProxy {
         &self,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        counters::LAST_COMMITTED_VERSION.set(commit.ledger_info().version() as i64);
+        let version = commit.ledger_info().version();
+        counters::LAST_COMMITTED_VERSION.set(version as i64);
         let mut commit_req = CommitBlockRequest::new();
         commit_req.set_ledger_info_with_sigs(commit.into_proto());
 
         let pre_commit_instant = Instant::now();
+        let synchronizer = Arc::clone(&self.synchronizer);
         match self.execution.commit_block_async(&commit_req) {
             Ok(receiver) => {
                 // convert from grpcio enum to failure::Error
@@ -132,9 +144,11 @@ impl StateComputer for ExecutionProxy {
                     match receiver.compat().await {
                         Ok(response) => {
                             if response.get_status() == CommitBlockStatus::SUCCEEDED {
-                                let commit_duration_ms = pre_commit_instant.elapsed().as_millis();
-                                counters::BLOCK_COMMIT_DURATION_MS
-                                    .observe(commit_duration_ms as f64);
+                                counters::BLOCK_COMMIT_DURATION_S
+                                    .observe_duration(pre_commit_instant.elapsed());
+                                if let Err(e) = synchronizer.commit(version).await {
+                                    error!("failed to notify state synchronizer: {:?}", e);
+                                }
                                 Ok(())
                             } else {
                                 Err(grpcio::Error::RpcFailure(grpcio::RpcStatus::new(
@@ -149,27 +163,15 @@ impl StateComputer for ExecutionProxy {
                 }
                     .boxed()
             }
-            Err(e) => async move { Err(e.into()) }.boxed(),
+            Err(e) => future::err(e.into()).boxed(),
         }
     }
 
     /// Synchronize to a commit that not present locally.
-    fn sync_to(
-        &self,
-        commit: QuorumCert,
-    ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>> {
+    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer.sync_to(commit).boxed()
-    }
-
-    fn get_chunk(
-        &self,
-        start_version: u64,
-        target_version: u64,
-        batch_size: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         self.synchronizer
-            .get_chunk(start_version, target_version, batch_size)
+            .sync_to(commit.ledger_info().clone())
             .boxed()
     }
 }

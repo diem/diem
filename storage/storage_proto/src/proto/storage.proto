@@ -38,13 +38,17 @@ service Storage {
     // in the response will be relative to this given ledger version.
     rpc GetTransactions(GetTransactionsRequest) returns (GetTransactionsResponse);
 
-    rpc GetAccountStateWithProofByStateRoot(
-    GetAccountStateWithProofByStateRootRequest)
-    returns (GetAccountStateWithProofByStateRootResponse);
+    rpc GetAccountStateWithProofByVersion(
+    GetAccountStateWithProofByVersionRequest)
+    returns (GetAccountStateWithProofByVersionResponse);
 
-    // Returns information needed for Executor to start up.
-    rpc GetExecutorStartupInfo(GetExecutorStartupInfoRequest)
-    returns (GetExecutorStartupInfoResponse);
+    // Returns information needed for libra core to start up.
+    rpc GetStartupInfo(GetStartupInfoRequest)
+    returns (GetStartupInfoResponse);
+
+    // Returns latest ledger infos per epoch.
+    rpc GetLatestLedgerInfosPerEpoch(GetLatestLedgerInfosPerEpochRequest)
+    returns (GetLatestLedgerInfosPerEpochResponse);
 }
 
 message SaveTransactionsRequest {
@@ -78,15 +82,15 @@ message GetTransactionsResponse {
     types.TransactionListWithProof txn_list_with_proof = 1;
 }
 
-message GetAccountStateWithProofByStateRootRequest {
+message GetAccountStateWithProofByVersionRequest {
     /// The account address to query with.
     bytes address = 1;
 
-    /// The state root hash the query is based on.
-    bytes state_root_hash = 2;
+    /// The version the query is based on.
+    uint64 version = 2;
 }
 
-message GetAccountStateWithProofByStateRootResponse {
+message GetAccountStateWithProofByVersionResponse {
     /// The optional blob of account state blob.
     types.AccountStateBlob account_state_blob = 1;
 
@@ -94,14 +98,14 @@ message GetAccountStateWithProofByStateRootResponse {
     types.SparseMerkleProof sparse_merkle_proof = 2;
 }
 
-message GetExecutorStartupInfoRequest {}
+message GetStartupInfoRequest {}
 
-message GetExecutorStartupInfoResponse {
+message GetStartupInfoResponse {
     // When this is empty, Storage needs to be bootstrapped via the bootstrap API
-    ExecutorStartupInfo info = 1;
+    StartupInfo info = 1;
 }
 
-message ExecutorStartupInfo {
+message StartupInfo {
     // The latest LedgerInfo. Note that at start up storage can have more
     // transactions than the latest LedgerInfo indicates due to an incomplete
     // start up sync.
@@ -112,4 +116,14 @@ message ExecutorStartupInfo {
     bytes account_state_root_hash = 3;
     // From left to right, root hashes of all frozen subtrees.
     repeated bytes ledger_frozen_subtree_hashes = 4;
+}
+
+message GetLatestLedgerInfosPerEpochRequest {
+    /// The last epoch number with available information to the client.
+    uint64 start_epoch = 1;
+}
+
+message GetLatestLedgerInfosPerEpochResponse {
+    /// Vector of latest ledger infos per epoch (not sorted)
+    repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
 }

@@ -27,7 +27,6 @@ macro_rules! with_loaded_vm {
         $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Invariant violation while looking up module")
             .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Cache] Unable to find module in module cache.");
         for m in modules.clone() {
@@ -43,6 +42,9 @@ macro_rules! with_loaded_vm {
         let mut $vm =
             TransactionExecutor::new(&$module_cache, &data_cache, TransactionMetadata::default());
         $vm.turn_off_gas_metering();
-        $vm.execution_stack.push_frame(entry_func);
+        match $vm.execution_stack.push_frame(entry_func) {
+            Ok(_) => {}
+            Err(e) => panic!("Unexpected Runtime Error: {:?}", e),
+        }
     };
 }

@@ -8,15 +8,18 @@ edition = "2018"
 
 [dependencies]
 futures = "0.1.28"
-grpcio = "0.4.4"
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 proptest = "0.9.2"
 proptest-derive = "0.1.0"
-protobuf = "2.7"
+protobuf = "~2.7"
 
-crypto = { path = "../../crypto/legacy_crypto" }
+crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 types = { path = "../../types" }
 
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"]}

@@ -1,23 +1,23 @@
 module Test {
     resource X { }
-    resource T { i: u64, x: R#Self.X, b: bool }
+    resource T { i: u64, x: Self.X, b: bool }
 
-    public new_x(): R#Self.X {
+    public new_x(): Self.X {
         return X { };
     }
 
-    public new_t(x: R#Self.X): R#Self.T {
+    public new_t(x: Self.X): Self.T {
         return T { i: 0, x: move(x), b: false };
     }
 
-    public destroy_x(x: R#Self.X) {
+    public destroy_x(x: Self.X) {
         X { } = move(x);
         return;
     }
 
-    public destroy_t(t: R#Self.T): u64 * R#Self.X * bool {
+    public destroy_t(t: Self.T): u64 * Self.X * bool {
         let i: u64;
-        let x: R#Self.X;
+        let x: Self.X;
         let flag: bool;
         T { i, x, b: flag } = move(t);
         return move(i), move(x), move(flag);
@@ -30,9 +30,9 @@ module Test {
 import {{default}}.Test;
 
 main() {
-    let x: R#Test.X;
+    let x: Test.X;
     let i: u64;
-    let t: R#Test.T;
+    let t: Test.T;
     let b: bool;
 
     x = Test.new_x();

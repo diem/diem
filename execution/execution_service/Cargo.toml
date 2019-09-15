@@ -7,9 +7,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures01 = { package = "futures", version = "0.1.26" }
+futures01 = { version = "0.1.28", default-features = false }
 futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17", features = ["compat"] }
-grpcio = "0.4.4"
+grpcio = { version = "0.4.4", default-features = false }
 
 config = { path = "../../config" }
 execution_proto = { path = "../execution_proto" }
@@ -18,16 +18,7 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 proto_conv = { path = "../../common/proto_conv" }
 storage_client = { path = "../../storage/storage_client" }
-types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
-tempfile = "3.1.0"
-
-config = { path = "../../config" }
-config_builder = { path = "../../config/config_builder" }
-crypto = { path = "../../crypto/legacy_crypto" }
-execution_client = { path = "../execution_client" }
-storage_proto = { path = "../../storage/storage_proto" }
-storage_service = { path = "../../storage/storage_service" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+types = { path = "../../types", features = ["testing"] }

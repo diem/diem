@@ -1,0 +1,14 @@
+main() {
+    let x: u64;
+    let y: &u64;
+
+    x = 7;
+    if (true) {
+        y = &x;
+    }
+
+    return;
+}
+
+// check: VerificationFailure
+// check: JOIN_FAILURE

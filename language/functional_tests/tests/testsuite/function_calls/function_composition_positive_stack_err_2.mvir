@@ -1,5 +1,5 @@
-//check: VerificationError
-//check: PositiveStackSizeAtBlockEnd(0)
+// check: VerificationFailure
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
 
 module A {
     public parity(u: u64): u64 * bool {

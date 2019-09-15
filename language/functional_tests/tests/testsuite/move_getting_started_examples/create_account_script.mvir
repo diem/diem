@@ -6,7 +6,7 @@
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
 main(payee: address, amount: u64) {
-  let coin: R#LibraCoin.T;
+  let coin: LibraCoin.T;
   let account_exists: bool;
 
   // Acquire a LibraCoin.T resource with value `amount` from the sender's

@@ -8,19 +8,25 @@ use crate::{
 };
 
 #[test]
-fn parse_account() {
+fn parse_account_positive() {
     for s in &[
         "//! account: alice",
         "//!account: bob",
         "//! account: bob, 100",
         "//!account:alice,",
-        // TODO: The following should parse. Fix it.
-        // "//!   account :alice,1, 2",
+        "//!   account :alice,1, 2",
         "//! account: bob, 0, 0",
+        "//!    account : bob, 0, 0",
+        "//!    account     :bob,   0,  0",
+        "//!\naccount\n:bob,\n0,\n0",
+        "//!\taccount\t:bob,\t0,\t0",
     ] {
         s.parse::<Entry>().unwrap();
     }
+}
 
+#[test]
+fn parse_account_negative() {
     for s in &["//! account:", "//! account", "//! account: alice, 1, 2, 3"] {
         s.parse::<Entry>().unwrap_err();
     }
@@ -39,19 +45,19 @@ fn build_global_config_1() {
         //! account: bob, 2000, 10
     ").unwrap();
 
-    assert!(config.accounts.len() == 3);
+    assert_eq!(config.accounts.len(), 3);
     assert!(config.accounts.contains_key("default"));
     assert!(config.accounts.contains_key("alice"));
     let bob = config.accounts.get("bob").unwrap();
-    assert!(bob.balance() == 2000);
-    assert!(bob.sequence_number() == 10);
+    assert_eq!(bob.balance(), 2000);
+    assert_eq!(bob.sequence_number(), 10);
 }
 
 #[test]
 fn build_global_config_2() {
     let config = parse_and_build_config("").unwrap();
 
-    assert!(config.accounts.len() == 1);
+    assert_eq!(config.accounts.len(), 1);
     assert!(config.accounts.contains_key("default"));
 }
 
@@ -71,7 +77,7 @@ fn build_global_config_4() {
         //! account: default, 50,
     ").unwrap();
 
-    assert!(config.accounts.len() == 1);
+    assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert!(default.balance() == 50);
+    assert_eq!(default.balance(), 50);
 }

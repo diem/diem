@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use assert_matches::assert_matches;
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
-use crypto::signing::KeyPair;
+use crypto::ed25519::*;
 use execution_proto::proto::execution_grpc;
 use execution_service::ExecutionService;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use proto_conv::FromProto;
+use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
@@ -19,7 +19,7 @@ use types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
     transaction::{Program, SignedTransaction, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
-    vm_error::{VMStatus, VMValidationStatus, VMVerificationError, VMVerificationStatus},
+    vm_error::StatusCode,
 };
 use vm_genesis::encode_transfer_program;
 
@@ -44,6 +44,7 @@ impl TestValidator {
             Arc::clone(&client_env),
             &config.storage.address,
             config.storage.port,
+            None,
         ));
 
         let handle = ExecutionService::new(
@@ -101,9 +102,9 @@ fn test_validate_transaction() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
     );
     let ret = vm_validator
@@ -118,27 +119,24 @@ fn test_validate_invalid_signature() {
     let (config, keypair) = get_test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let (other_private_key, _) = ::crypto::signing::generate_keypair();
+    let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
+    let (other_private_key, _) = compat::generate_keypair(&mut rng);
     // Submit with an account using an different private/public keypair
-    let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         address,
-        0,
-        other_keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        other_private_key,
+        keypair.public_key,
         Some(program),
     );
     let ret = vm_validator
         .validate_transaction(signed_txn)
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::InvalidSignature))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_SIGNATURE);
 }
 
 #[test]
@@ -149,9 +147,9 @@ fn test_validate_known_script_too_large_args() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         Some(Program::new(
             vec![42; MAX_TRANSACTION_SIZE_IN_BYTES],
             vec![],
@@ -163,9 +161,9 @@ fn test_validate_known_script_too_large_args() {
     );
     let txn = SignedTransaction::from_proto(txn).unwrap();
     let ret = vm_validator.validate_transaction(txn).wait().unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::ExceededMaxTransactionSize(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
     );
 }
 
@@ -177,9 +175,9 @@ fn test_validate_max_gas_units_above_max() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         None,
         0,
         0,              /* max gas price */
@@ -189,9 +187,9 @@ fn test_validate_max_gas_units_above_max() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::MaxGasUnitsExceedsMaxGasUnitsBound(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
     );
 }
 
@@ -203,9 +201,9 @@ fn test_validate_max_gas_units_below_min() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         None,
         0,
         0,       /* max gas price */
@@ -215,9 +213,9 @@ fn test_validate_max_gas_units_below_min() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::MaxGasUnitsBelowMinTransactionGasUnits(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
     );
 }
 
@@ -229,9 +227,9 @@ fn test_validate_max_gas_price_above_bounds() {
     let address = account_config::association_address();
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         None,
         0,
         u64::MAX, /* max gas price */
@@ -241,9 +239,9 @@ fn test_validate_max_gas_price_above_bounds() {
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::GasUnitPriceAboveMaxBound(_)))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 }
 
@@ -259,9 +257,9 @@ fn test_validate_max_gas_price_below_bounds() {
     let program = encode_transfer_program(&address, 100);
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
         0,
         0, /* max gas price */
@@ -273,8 +271,8 @@ fn test_validate_max_gas_price_below_bounds() {
         .unwrap();
     assert_eq!(ret, None);
     //assert_eq!(
-    //    ret.unwrap(),
-    //    VMStatus::ValidationStatus(VMValidationStatus::GasUnitPriceBelowMinBound)
+    //    ret.unwrap().major_status,
+    //    StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
     //);
 }
 
@@ -288,18 +286,15 @@ fn test_validate_unknown_script() {
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        keypair.private_key,
+        keypair.public_key,
         None,
     );
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::UnknownScript))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
 }
 
 // Make sure that we can't publish non-whitelisted modules
@@ -316,18 +311,15 @@ fn test_validate_module_publishing() {
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
     );
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::UnknownModule))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
 }
 
 #[test]
@@ -335,27 +327,24 @@ fn test_validate_invalid_auth_key() {
     let (config, _) = get_test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let (other_private_key, _) = ::crypto::signing::generate_keypair();
+    let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
+    let (other_private_key, other_public_key) = compat::generate_keypair(&mut rng);
     // Submit with an account using an different private/public keypair
-    let other_keypair = KeyPair::new(other_private_key);
 
     let address = account_config::association_address();
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
-        other_keypair.private_key().clone(),
-        other_keypair.public_key(),
+        1,
+        other_private_key,
+        other_public_key,
         Some(program),
     );
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::InvalidAuthKey))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
 }
 
 #[test]
@@ -367,9 +356,9 @@ fn test_validate_balance_below_gas_fee() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key.clone(),
+        keypair.public_key,
         Some(program),
         0,
         // Note that this will be dependent upon the max gas price and gas amounts that are set. So
@@ -382,10 +371,8 @@ fn test_validate_balance_below_gas_fee() {
         .wait()
         .unwrap();
     assert_eq!(
-        ret,
-        Some(VMStatus::Validation(
-            VMValidationStatus::InsufficientBalanceForTransactionFee
-        ))
+        ret.unwrap().major_status,
+        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
     );
 }
 
@@ -399,9 +386,9 @@ fn test_validate_account_doesnt_exist() {
     let program = encode_transfer_program(&address, 100);
     let signed_txn = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
         0,
         1, /* max gas price */
@@ -411,9 +398,9 @@ fn test_validate_account_doesnt_exist() {
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_matches!(
-        ret.unwrap(),
-        VMStatus::Validation(VMValidationStatus::SendingAccountDoesNotExist(_))
+    assert_eq!(
+        ret.unwrap().major_status,
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
 }
 
@@ -427,8 +414,8 @@ fn test_validate_sequence_number_too_new() {
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
     );
     let ret = vm_validator
@@ -448,21 +435,16 @@ fn test_validate_invalid_arguments() {
     let program = Program::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         Some(program),
     );
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Verification(vec![VMVerificationStatus::Script(
-            VMVerificationError::TypeMismatch("Actual Type Mismatch".to_string())
-        )]))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);
 }
 
 #[test]
@@ -473,9 +455,9 @@ fn test_validate_non_genesis_write_set() {
     let address = account_config::association_address();
     let signed_txn = transaction_test_helpers::get_write_set_txn(
         address,
-        0,
-        keypair.private_key().clone(),
-        keypair.public_key(),
+        1,
+        keypair.private_key,
+        keypair.public_key,
         None,
     )
     .into_inner();
@@ -483,8 +465,5 @@ fn test_validate_non_genesis_write_set() {
         .validate_transaction(signed_txn)
         .wait()
         .unwrap();
-    assert_eq!(
-        ret,
-        Some(VMStatus::Validation(VMValidationStatus::RejectedWriteSet))
-    );
+    assert_eq!(ret.unwrap().major_status, StatusCode::REJECTED_WRITE_SET);
 }

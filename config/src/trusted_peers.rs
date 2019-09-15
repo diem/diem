@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto::{
-    signing,
-    utils::{encode_to_string, from_encoded_string},
-    x25519::{self, X25519PrivateKey, X25519PublicKey},
+    ed25519::{compat, *},
+    traits::ValidKeyStringExt,
+    x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
-    fs::File,
-    io::{Read, Write},
-    path::Path,
+    hash::BuildHasher,
 };
 use types::account_address::AccountAddress;
 
@@ -22,163 +20,88 @@ use types::account_address::AccountAddress;
 mod trusted_peers_test;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TrustedPeer {
+pub struct NetworkPubKeys {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
-    network_signing_pubkey: signing::PublicKey,
+    #[serde(rename = "ns")]
+    pub network_signing_pubkey: Ed25519PublicKey,
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
-    network_identity_pubkey: X25519PublicKey,
-    #[serde(serialize_with = "serialize_key")]
-    #[serde(deserialize_with = "deserialize_key")]
-    consensus_pubkey: signing::PublicKey,
+    #[serde(rename = "ni")]
+    pub network_identity_pubkey: X25519StaticPublicKey,
 }
 
-pub struct TrustedPeerPrivateKeys {
-    network_signing_private_key: signing::PrivateKey,
-    network_identity_private_key: X25519PrivateKey,
-    consensus_private_key: signing::PrivateKey,
-}
-
-impl TrustedPeerPrivateKeys {
-    pub fn get_network_signing_private(&self) -> signing::PrivateKey {
-        self.network_signing_private_key.clone()
-    }
-    pub fn get_network_identity_private(&self) -> X25519PrivateKey {
-        self.network_identity_private_key.clone()
-    }
-    pub fn get_consensus_private(&self) -> signing::PrivateKey {
-        self.consensus_private_key.clone()
-    }
-}
-
-impl TrustedPeer {
-    pub fn get_network_signing_public(&self) -> signing::PublicKey {
-        self.network_signing_pubkey
-    }
-    pub fn get_network_identity_public(&self) -> X25519PublicKey {
-        self.network_identity_pubkey
-    }
-    pub fn get_consensus_public(&self) -> signing::PublicKey {
-        self.consensus_pubkey
-    }
-}
-
-pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    K: Serialize,
-{
-    serializer.serialize_str(&encode_to_string(key))
-}
-
-pub fn deserialize_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>
-where
-    D: Deserializer<'de>,
-    K: DeserializeOwned + 'static,
-{
-    let encoded_key: String = Deserialize::deserialize(deserializer)?;
-
-    Ok(from_encoded_string(encoded_key))
+pub struct NetworkPeerPrivateKeys {
+    pub network_signing_private_key: Ed25519PrivateKey,
+    pub network_identity_private_key: X25519StaticPrivateKey,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TrustedPeersConfig {
-    pub peers: HashMap<String, TrustedPeer>,
+pub struct ConsensusPeer {
+    #[serde(rename = "aa")]
+    pub account_address: String,
+    #[serde(serialize_with = "serialize_key")]
+    #[serde(deserialize_with = "deserialize_key")]
+    #[serde(rename = "c")]
+    pub consensus_pubkey: Ed25519PublicKey,
 }
 
-impl TrustedPeersConfig {
-    pub fn load_config<P: AsRef<Path>>(path: P) -> Self {
-        let path = path.as_ref();
-        let mut file = File::open(path)
-            .unwrap_or_else(|_| panic!("Cannot open Trusted Peers Config file {:?}", path));
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .unwrap_or_else(|_| panic!("Error reading Trusted Peers Config file {:?}", path));
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct NetworkPeersConfig {
+    // TODO: Replace HashMap with Vec<NetworkPubKeys> after migration of network stack to using
+    // NetworkIdentityKey as node identifier.
+    #[serde(flatten)]
+    #[serde(serialize_with = "serialize_ordered_map")]
+    pub peers: HashMap<String, NetworkPubKeys>,
+}
 
-        Self::parse(&contents)
-    }
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ConsensusPeersConfig {
+    #[serde(default)]
+    pub peers: Vec<ConsensusPeer>,
+}
 
-    pub fn save_config<P: AsRef<Path>>(&self, output_file: P) {
-        let contents = toml::to_vec(&self).expect("Error serializing");
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct UpstreamPeersConfig {
+    /// List of PeerIds serialized as string.
+    pub upstream_peers: Vec<String>,
+}
 
-        let mut file = File::create(output_file).expect("Error opening file");
-
-        file.write_all(&contents).expect("Error writing file");
-    }
-
-    pub fn get_public_keys(&self, peer_id: &str) -> TrustedPeer {
-        self.peers
-            .get(peer_id)
-            .unwrap_or_else(|| panic!("Missing keys for {}", peer_id))
-            .clone()
-    }
-
-    pub fn get_consensus_keys(&self, peer_id: &str) -> signing::PublicKey {
-        self.get_public_keys(peer_id).consensus_pubkey
-    }
-
-    pub fn get_network_signing_keys(&self, peer_id: &str) -> signing::PublicKey {
-        self.get_public_keys(peer_id).network_signing_pubkey
-    }
-
-    pub fn get_network_identity_keys(&self, peer_id: &str) -> X25519PublicKey {
-        self.get_public_keys(peer_id).network_identity_pubkey
-    }
-
-    /// Returns a map of AccountAddress to its PublicKey for consensus.
-    pub fn get_trusted_consensus_peers(&self) -> HashMap<AccountAddress, signing::PublicKey> {
-        let mut res = HashMap::new();
-        for (account, keys) in &self.peers {
-            res.insert(
-                AccountAddress::try_from(account.clone()).expect("Failed to parse account addr"),
-                keys.consensus_pubkey,
-            );
-        }
-        res
-    }
-
+impl NetworkPeersConfig {
     /// Returns a map of AccountAddress to a pair of PublicKeys for network peering. The first
     /// PublicKey is the one used for signing, whereas the second is to determine eligible members
     /// of the network.
     pub fn get_trusted_network_peers(
         &self,
-    ) -> HashMap<AccountAddress, (signing::PublicKey, X25519PublicKey)> {
+    ) -> HashMap<AccountAddress, (Ed25519PublicKey, X25519StaticPublicKey)> {
         self.peers
             .iter()
             .map(|(account, keys)| {
                 (
                     AccountAddress::try_from(account.clone())
                         .expect("Failed to parse account addr"),
-                    (keys.network_signing_pubkey, keys.network_identity_pubkey),
+                    (
+                        keys.network_signing_pubkey.clone(),
+                        keys.network_identity_pubkey.clone(),
+                    ),
                 )
             })
             .collect()
     }
-
-    fn parse(config_string: &str) -> Self {
-        toml::from_str(config_string).expect("Unable to parse Config")
-    }
 }
 
-impl Default for TrustedPeersConfig {
-    fn default() -> TrustedPeersConfig {
-        Self {
-            peers: HashMap::new(),
-        }
-    }
-}
+// TODO: move to mod utils.
+pub struct ConfigHelpers {}
 
-pub struct TrustedPeersConfigHelpers {}
-
-impl TrustedPeersConfigHelpers {
-    /// Creates a new TrustedPeersConfig with the given number of peers,
-    /// as well as a hashmap of all the test validator nodes' private keys.
-    pub fn get_test_config(
+// TODO: Update comment.
+/// Creates a new TrustedPeersConfig with the given number of peers,
+/// as well as a hashmap of all the test validator nodes' private keys.
+impl ConfigHelpers {
+    pub fn get_test_consensus_config(
         number_of_peers: usize,
         seed: Option<[u8; 32]>,
-    ) -> (HashMap<String, TrustedPeerPrivateKeys>, TrustedPeersConfig) {
-        let mut peers = HashMap::new();
+    ) -> (HashMap<String, Ed25519PrivateKey>, ConsensusPeersConfig) {
+        let mut consensus_peers = Vec::new();
         let mut peers_private_keys = HashMap::new();
         // deterministically derive keypairs from a seeded-rng
         let seed = if let Some(seed) = seed {
@@ -186,28 +109,103 @@ impl TrustedPeersConfigHelpers {
         } else {
             [0u8; 32]
         };
-
         let mut fast_rng = StdRng::from_seed(seed);
         for _ in 0..number_of_peers {
-            let (private0, public0) = signing::generate_keypair_for_testing(&mut fast_rng);
-            let (private1, public1) = x25519::generate_keypair_for_testing(&mut fast_rng);
-            let (private2, public2) = signing::generate_keypair_for_testing(&mut fast_rng);
+            // TODO: generate to preserve peer ids.
+            let _ = compat::generate_keypair(&mut fast_rng);
+            let _ = x25519::compat::generate_keypair(&mut fast_rng);
+            let (private0, public0) = compat::generate_keypair(&mut fast_rng);
+            let peer_id = AccountAddress::from_public_key(&public0);
+            consensus_peers.push(ConsensusPeer {
+                account_address: peer_id.to_string(),
+                consensus_pubkey: public0,
+            });
+            // save the private keys in a different hashmap
+            peers_private_keys.insert(peer_id.to_string(), private0);
+        }
+        (
+            peers_private_keys,
+            ConsensusPeersConfig {
+                peers: consensus_peers,
+            },
+        )
+    }
+
+    pub fn get_test_network_peers_config(
+        consensus_peers: &ConsensusPeersConfig,
+        seed: Option<[u8; 32]>,
+    ) -> (HashMap<String, NetworkPeerPrivateKeys>, NetworkPeersConfig) {
+        let mut network_peers = HashMap::new();
+        let mut peers_private_keys = HashMap::new();
+        // deterministically derive keypairs from a seeded-rng
+        let seed = if let Some(seed) = seed {
+            seed
+        } else {
+            [0u8; 32]
+        };
+        let mut fast_rng = StdRng::from_seed(seed);
+        for validator in &consensus_peers.peers {
+            let (private0, public0) = compat::generate_keypair(&mut fast_rng);
+            let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
             // save the public_key in peers hashmap
-            let peer = TrustedPeer {
+            let peer = NetworkPubKeys {
                 network_signing_pubkey: public0,
                 network_identity_pubkey: public1,
-                consensus_pubkey: public2,
             };
-            let peer_id = AccountAddress::from(peer.consensus_pubkey);
-            peers.insert(peer_id.to_string(), peer);
+            let peer_id = validator.account_address.clone();
+            network_peers.insert(peer_id.clone(), peer);
             // save the private keys in a different hashmap
-            let private_keys = TrustedPeerPrivateKeys {
+            let private_keys = NetworkPeerPrivateKeys {
                 network_signing_private_key: private0,
                 network_identity_private_key: private1,
-                consensus_private_key: private2,
             };
-            peers_private_keys.insert(peer_id.to_string(), private_keys);
+            peers_private_keys.insert(peer_id, private_keys);
         }
-        (peers_private_keys, TrustedPeersConfig { peers })
+        (
+            peers_private_keys,
+            NetworkPeersConfig {
+                peers: network_peers,
+            },
+        )
     }
+
+    pub fn get_test_upstream_peers_config(
+        network_peers: &NetworkPeersConfig,
+    ) -> UpstreamPeersConfig {
+        let upstream_peers = network_peers.peers.keys().cloned().collect();
+        UpstreamPeersConfig { upstream_peers }
+    }
+}
+
+pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    K: Serialize + ValidKeyStringExt,
+{
+    key.to_encoded_string()
+        .map_err(<S::Error as serde::ser::Error>::custom)
+        .and_then(|str| serializer.serialize_str(&str[..]))
+}
+
+pub fn deserialize_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>
+where
+    D: Deserializer<'de>,
+    K: ValidKeyStringExt + DeserializeOwned + 'static,
+{
+    let encoded_key: String = Deserialize::deserialize(deserializer)?;
+
+    ValidKeyStringExt::from_encoded_string(&encoded_key)
+        .map_err(<D::Error as serde::de::Error>::custom)
+}
+
+pub fn serialize_ordered_map<S, H>(
+    value: &HashMap<String, NetworkPubKeys, H>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    H: BuildHasher,
+{
+    let ordered: BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

@@ -37,16 +37,17 @@ use crate::{
     connectivity_manager::ConnectivityRequest,
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
-    proto::{DiscoveryMsg, Note, PeerInfo},
+    proto::{DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo},
     utils, NetworkPublicKeys, ProtocolId,
 };
 use bytes::Bytes;
 use channel;
 use crypto::{
+    ed25519::*,
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, Signature as LegacySignature,
+    HashValue,
 };
-use failure::Fail;
+use failure::{format_err, Fail};
 use futures::{
     compat::{Future01CompatExt, Sink01CompatExt},
     future::{Future, FutureExt, TryFutureExt},
@@ -55,7 +56,6 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use logger::prelude::*;
-use nextgen_crypto::ed25519::*;
 use parity_multiaddr::Multiaddr;
 use protobuf::{self, Message};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
@@ -123,8 +123,18 @@ where
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         msg_timeout: Duration,
     ) -> Self {
+        // TODO(philiphayes): wire through config
+        let dns_seed_addr = b"example.com";
+
         let self_peer_info = create_peer_info(self_addrs);
-        let self_note = create_note(&signer, self_peer_id, self_peer_info.clone());
+        let self_full_node_payload = create_full_node_payload(dns_seed_addr);
+        let self_note = create_note(
+            &signer,
+            self_peer_id,
+            self_peer_info.clone(),
+            self_full_node_payload.clone(),
+        );
+
         let known_peers = vec![(self_peer_id, (self_peer_info, self_note.clone()))]
             .into_iter()
             .collect();
@@ -146,6 +156,7 @@ where
     // Connect with all the seed peers. If current node is also a seed peer, remove it from the
     // list.
     async fn connect_to_seed_peers(&mut self) {
+        debug!("Connecting to seed peers");
         let self_peer_id =
             PeerId::try_from(self.self_note.get_peer_id()).expect("PeerId parsing failed");
         for (peer_id, peer_info) in self
@@ -159,9 +170,8 @@ where
                     peer_info
                         .get_addrs()
                         .iter()
-                        .map(|addr| {
-                            Multiaddr::try_from(addr.clone()).expect("Multiaddr parsing failed")
-                        })
+                        .cloned()
+                        .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing failed"))
                         .collect(),
                 ))
                 .await
@@ -317,8 +327,10 @@ where
             PeerId::try_from(self.self_note.get_peer_id()).expect("PeerId parsing fails");
         for note in remote_notes {
             let peer_id = PeerId::try_from(note.get_peer_id()).expect("PeerId parsing fails");
+            let peer_info_bytes = note.get_signed_peer_info().get_peer_info();
             let peer_info: PeerInfo =
-                protobuf::parse_from_bytes(note.get_peer_info()).expect("PeerId parsing fails");
+                protobuf::parse_from_bytes(peer_info_bytes).expect("PeerInfo parsing fails");
+
             match self.known_peers.get_mut(&peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
                 // nothing.
@@ -345,18 +357,26 @@ where
                     assert_ne!(peer_id, self_peer_id);
                     // Update internal state of the peer with new Note.
                     self.known_peers.insert(peer_id, (peer_info.clone(), note));
+
+                    // The multiaddrs in the peer's discovery Note.
+                    let mut peer_addrs: Vec<Multiaddr> = peer_info
+                        .get_addrs()
+                        .iter()
+                        .cloned()
+                        .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing fails"))
+                        .collect();
+
+                    // Append the addrs in the seed PeerInfo if this peer is
+                    // configured as one of our seed peers.
+                    if let Some(seed_info) = self.seed_peers.get(&peer_id) {
+                        let seed_addrs_iter = seed_info.get_addrs().iter().cloned().map(|addr| {
+                            Multiaddr::try_from(addr).expect("Multiaddr parsing fails")
+                        });
+                        peer_addrs.extend(seed_addrs_iter);
+                    }
+
                     self.conn_mgr_reqs_tx
-                        .send(ConnectivityRequest::UpdateAddresses(
-                            peer_id,
-                            peer_info
-                                .get_addrs()
-                                .iter()
-                                .map(|addr| {
-                                    Multiaddr::try_from(addr.clone())
-                                        .expect("Multiaddr parsing fails")
-                                })
-                                .collect(),
-                        ))
+                        .send(ConnectivityRequest::UpdateAddresses(peer_id, peer_addrs))
                         .await
                         .expect("ConnectivityRequest::UpdateAddresses send");
                 }
@@ -380,25 +400,56 @@ fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
     peer_info
 }
 
+fn create_full_node_payload(dns_seed_addr: &[u8]) -> FullNodePayload {
+    let mut full_node_payload = FullNodePayload::new();
+    // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
+    // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
+    // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
+    let time_since_epoch = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("System clock reset to before unix epoch")
+        .as_millis() as u64;
+    full_node_payload.set_epoch(time_since_epoch);
+    full_node_payload.set_dns_seed_addr(dns_seed_addr.into());
+    full_node_payload
+}
+
 // Creates a note by signing the given peer info, and combining the signature, peer_info and
 // peer_id into a note.
-fn create_note(signer: &Signer<Ed25519PrivateKey>, peer_id: PeerId, peer_info: PeerInfo) -> Note {
-    let raw_info = peer_info
+fn create_note(
+    signer: &Signer<Ed25519PrivateKey>,
+    peer_id: PeerId,
+    peer_info: PeerInfo,
+    full_node_payload: FullNodePayload,
+) -> Note {
+    let peer_info_bytes = peer_info
         .write_to_bytes()
         .expect("Protobuf serialization fails");
-    // Now that we have the serialized peer info, we sign it.
-    let signature = sign(&signer, &raw_info);
-    let mut note = Note::default();
+    let peer_info_signature = sign(&signer, &peer_info_bytes);
+
+    let mut signed_peer_info = SignedPeerInfo::new();
+    signed_peer_info.set_peer_info(peer_info_bytes.into());
+    signed_peer_info.set_signature(peer_info_signature.into());
+
+    let payload_bytes = full_node_payload
+        .write_to_bytes()
+        .expect("Protobuf serialization fails");
+    let payload_signature = sign(&signer, &payload_bytes);
+
+    let mut signed_full_node_payload = SignedFullNodePayload::new();
+    signed_full_node_payload.set_payload(payload_bytes.into());
+    signed_full_node_payload.set_signature(payload_signature.into());
+
+    let mut note = Note::new();
     note.set_peer_id(peer_id.into());
-    note.set_peer_info(raw_info.into());
-    note.set_signature(signature.into());
+    note.set_signed_peer_info(signed_peer_info);
+    note.set_signed_full_node_payload(signed_full_node_payload);
     note
 }
 
 // Handles an inbound substream from a remote peer as follows:
 // 1. Reads the DiscoveryMsg sent by the remote.
 // 2. Verifies signatures on all notes contained in the message.
-// 3. Sends a message to the discovery peer with the notes received from the remote.
 async fn handle_inbound_substream<TSubstream>(
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     peer_id: PeerId,
@@ -408,54 +459,82 @@ async fn handle_inbound_substream<TSubstream>(
 where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + 'static,
 {
-    // Read msg from stream.
-    let result = recv_msg(substream.substream)
+    // Read the `DiscoveryMsg` from the remote
+    let res_msg = recv_msg(substream.substream)
         .boxed()
         .compat()
         .timeout(timeout)
         .compat()
         .map_err(Into::<NetworkError>::into)
-        .await
-        .and_then(|mut msg| {
-            let _ = msg
-                .get_notes()
-                .iter()
-                .map(|note| {
-                    is_valid(&note.to_owned(), trusted_peers.clone()).map_err(|e| {
-                        security_log(SecurityEvent::InvalidNetworkPeer)
-                            .error(&e)
-                            .data(&note)
-                            .data(&trusted_peers)
-                            .log();
-                        e
-                    })
-                })
-                .collect::<Result<Vec<_>, NetworkError>>()?;
-            Ok(msg.take_notes().into_vec())
-        });
-    (peer_id, result)
+        .await;
+
+    // Check that all received `Note`s are valid -- reject the whole message
+    // if any `Note` is invalid.
+    let res_notes = res_msg.and_then(|mut msg| {
+        msg.get_notes().iter().try_for_each(|note| {
+            is_valid(&note, &trusted_peers).map_err(|err| {
+                security_log(SecurityEvent::InvalidDiscoveryMsg)
+                    .error(&err)
+                    .data(&peer_id)
+                    .data(&note)
+                    .data(&trusted_peers)
+                    .log();
+                err
+            })
+        })?;
+        Ok(msg.take_notes().into_vec())
+    });
+
+    (peer_id, res_notes)
 }
 
 // Verifies validity of notes. Following conditions should be met for validity:
 // 1. We should be able to correctly parse the peer id in each note.
-// 2. The signature should be verified to be of the given peer for the serialized peer info.
+// 2. The signature of the serialized peer info should be valid for the given peer_id.
 // 3. The address(es) in the PeerInfo should be correctly parsable as Multiaddrs.
+// 4. The signature of the serialized full node payload should be valid for the given peer_id.
 fn is_valid(
     note: &Note,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    trusted_peers: &RwLock<HashMap<PeerId, NetworkPublicKeys>>,
 ) -> Result<(), NetworkError> {
+    // validate PeerId
+
     let peer_id = PeerId::try_from(note.get_peer_id())
         .map_err(|err| err.context(NetworkErrorKind::ParsingError))?;
-    verify_signatures(
-        trusted_peers,
-        peer_id,
-        note.get_signature(),
-        note.get_peer_info(),
-    )?;
-    let peer_info: PeerInfo = protobuf::parse_from_bytes(note.get_peer_info())?;
+
+    // validate PeerInfo
+
+    if !note.has_signed_peer_info() {
+        return Err(format_err!("Discovery Note missing signed_peer_info field")
+            .context(NetworkErrorKind::ParsingError)
+            .into());
+    }
+    let signed_peer_info = note.get_signed_peer_info();
+
+    let peer_info_bytes = signed_peer_info.get_peer_info();
+    let peer_info_signature = signed_peer_info.get_signature();
+    verify_signature(trusted_peers, peer_id, peer_info_signature, peer_info_bytes)?;
+
+    let peer_info: PeerInfo = protobuf::parse_from_bytes(peer_info_bytes)?;
     for addr in peer_info.get_addrs() {
         let _: Multiaddr = Multiaddr::try_from(addr.clone())?;
     }
+
+    // validate FullNodePayload (optional)
+    // TODO(philiphayes): actually use the FullNodePayload
+
+    if note.has_signed_full_node_payload() {
+        let signed_full_node_payload = note.get_signed_full_node_payload();
+
+        let payload_bytes = signed_full_node_payload.get_payload();
+        let payload_signature = signed_full_node_payload.get_signature();
+        verify_signature(trusted_peers, peer_id, payload_signature, payload_bytes)?;
+
+        let _: FullNodePayload = protobuf::parse_from_bytes(payload_bytes)?;
+
+        // TODO(philiphayes): validate internal fields
+    }
+
     Ok(())
 }
 
@@ -465,8 +544,8 @@ fn get_hash(msg: &[u8]) -> HashValue {
     hasher.finish()
 }
 
-fn verify_signatures(
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+fn verify_signature(
+    trusted_peers: &RwLock<HashMap<PeerId, NetworkPublicKeys>>,
     signer: PeerId,
     signature: &[u8],
     msg: &[u8],
@@ -477,10 +556,7 @@ fn verify_signatures(
             .unwrap()
             .iter()
             .map(|(peer_id, network_public_keys)| {
-                (
-                    *peer_id,
-                    network_public_keys.signing_public_key.clone().into(),
-                )
+                (*peer_id, network_public_keys.signing_public_key.clone())
             })
             .collect(),
         1, /* quorum size */
@@ -496,8 +572,7 @@ fn sign(signer: &Signer<Ed25519PrivateKey>, msg: &[u8]) -> Vec<u8> {
     let signature: Ed25519Signature = signer
         .sign_message(get_hash(msg))
         .expect("Message signing fails");
-    let sig: LegacySignature = signature.into();
-    sig.to_compact().to_vec()
+    signature.to_bytes().to_vec()
 }
 
 async fn push_state_to_peer<TSubstream>(

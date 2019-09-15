@@ -13,7 +13,11 @@ mod mock_vm;
 use crate::block_processor::BlockProcessor;
 use config::config::NodeConfig;
 use crypto::{
-    hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    ed25519::*,
+    hash::{
+        TransactionAccumulatorHasher, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
+        SPARSE_MERKLE_PLACEHOLDER_HASH,
+    },
     HashValue,
 };
 use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkResponse};
@@ -21,15 +25,18 @@ use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
 use logger::prelude::*;
+use scratchpad::SparseMerkleTree;
 use std::{
     collections::HashMap,
     marker::PhantomData,
+    rc::Rc,
     sync::{mpsc, Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageWrite};
 use types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    transaction::{SignedTransaction, TransactionListWithProof},
+    proof::accumulator::Accumulator,
+    transaction::{SignedTransaction, TransactionListWithProof, Version},
 };
 use vm_runtime::VMExecutor;
 
@@ -60,13 +67,13 @@ where
         config: &NodeConfig,
     ) -> Self {
         let startup_info = storage_read_client
-            .get_executor_startup_info()
+            .get_startup_info()
             .expect("Failed to read startup info from storage.");
 
         let (
             state_root_hash,
             frozen_subtrees_in_accumulator,
-            num_elements_in_accumulator,
+            num_leaves_in_accumulator,
             committed_timestamp_usecs,
             committed_block_id,
         ) = match startup_info {
@@ -76,7 +83,7 @@ where
                 (
                     info.account_state_root_hash,
                     info.ledger_frozen_subtree_hashes,
-                    ledger_info.version() + 1,
+                    info.latest_version + 1,
                     ledger_info.timestamp_usecs(),
                     ledger_info.consensus_block_id(),
                 )
@@ -106,7 +113,7 @@ where
                             committed_timestamp_usecs,
                             state_root_hash,
                             frozen_subtrees_in_accumulator,
-                            num_elements_in_accumulator,
+                            num_leaves_in_accumulator,
                             committed_block_id,
                             storage_read_client,
                             storage_write_client,
@@ -120,7 +127,7 @@ where
             phantom: PhantomData,
         };
 
-        if num_elements_in_accumulator == 0 {
+        if committed_block_id == *PRE_GENESIS_BLOCK_ID {
             let genesis_transaction = config
                 .execution
                 .get_genesis_transaction()
@@ -153,6 +160,7 @@ where
             *GENESIS_BLOCK_ID,
             /* epoch_num = */ 0,
             /* timestamp_usecs = */ 0,
+            None,
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new());
@@ -199,7 +207,7 @@ where
     /// Commits a block and all its ancestors.
     pub fn commit_block(
         &self,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> oneshot::Receiver<Result<CommitBlockResponse>> {
         debug!(
             "Received request to commit block {:x}.",
@@ -231,7 +239,7 @@ where
     pub fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
     ) -> oneshot::Receiver<Result<ExecuteChunkResponse>> {
         debug!(
             "Received request to execute chunk. Chunk size: {}. Target version: {}.",
@@ -287,12 +295,45 @@ enum Command {
         resp_sender: oneshot::Sender<Result<ExecuteBlockResponse>>,
     },
     CommitBlock {
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
         resp_sender: oneshot::Sender<Result<CommitBlockResponse>>,
     },
     ExecuteChunk {
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
         resp_sender: oneshot::Sender<Result<ExecuteChunkResponse>>,
     },
+}
+
+#[derive(Clone, Debug)]
+pub struct ExecutedTrees {
+    /// The in-memory Sparse Merkle Tree representing a specific state after execution. If this
+    /// tree is presenting the latest commited state, it will have a single Subtree node (or
+    /// Empty node) whose hash equals the root hash of the newest Sparse Merkle Tree in
+    /// storage.
+    state_tree: Rc<SparseMerkleTree>,
+
+    /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
+    /// `state_tree`.
+    transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
+}
+
+impl ExecutedTrees {
+    pub fn state_tree(&self) -> &Rc<SparseMerkleTree> {
+        &self.state_tree
+    }
+
+    pub fn txn_accumulator(&self) -> &Rc<Accumulator<TransactionAccumulatorHasher>> {
+        &self.transaction_accumulator
+    }
+
+    pub fn version_and_state_root(&self) -> (Option<Version>, HashValue) {
+        let num_elements = self.txn_accumulator().num_leaves();
+        let version = if num_elements > 0 {
+            Some(num_elements - 1)
+        } else {
+            None
+        };
+        (version, self.state_tree().root_hash())
+    }
 }

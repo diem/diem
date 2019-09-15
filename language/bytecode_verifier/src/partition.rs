@@ -19,7 +19,7 @@ impl Partition {
     // adds a nonce to the partition; new_nonce must be a fresh nonce
     pub fn add_nonce(&mut self, new_nonce: Nonce) {
         let nonce_const = new_nonce.inner();
-        self.nonce_to_id.insert(new_nonce.clone(), nonce_const);
+        self.nonce_to_id.insert(new_nonce, nonce_const);
         let mut singleton_set = BTreeSet::new();
         singleton_set.insert(new_nonce);
         self.id_to_nonce_set.insert(nonce_const, singleton_set);
@@ -28,8 +28,8 @@ impl Partition {
     // removes a nonce that already exists in the partition
     pub fn remove_nonce(&mut self, nonce: Nonce) {
         let id = self.nonce_to_id.remove(&nonce).unwrap();
-        self.id_to_nonce_set.entry(id).and_modify(|x| {
-            x.remove(&nonce);
+        self.id_to_nonce_set.entry(id).and_modify(|nonce_set| {
+            nonce_set.remove(&nonce);
         });
         if self.id_to_nonce_set[&id].is_empty() {
             self.id_to_nonce_set.remove(&id).unwrap();
@@ -45,12 +45,10 @@ impl Partition {
         }
         let mut nonce_set2 = self.id_to_nonce_set.remove(&id2).unwrap();
         for nonce in &nonce_set2 {
-            self.nonce_to_id
-                .entry(nonce.clone())
-                .and_modify(|x| *x = id1);
+            self.nonce_to_id.entry(*nonce).and_modify(|id| *id = id1);
         }
-        self.id_to_nonce_set.entry(id1).and_modify(|x| {
-            x.append(&mut nonce_set2);
+        self.id_to_nonce_set.entry(id1).and_modify(|nonce_set| {
+            nonce_set.append(&mut nonce_set2);
         });
     }
 
@@ -65,10 +63,8 @@ impl Partition {
     pub fn construct_canonical_partition(&self, nonce_map: &BTreeMap<Nonce, Nonce>) -> Self {
         let mut id_to_nonce_set = BTreeMap::new();
         for nonce_set in self.id_to_nonce_set.values() {
-            let canonical_nonce_set: BTreeSet<Nonce> = nonce_set
-                .iter()
-                .map(|nonce| nonce_map[nonce].clone())
-                .collect();
+            let canonical_nonce_set: BTreeSet<Nonce> =
+                nonce_set.iter().map(|nonce| nonce_map[nonce]).collect();
             let canonical_id = Self::canonical_id(&canonical_nonce_set);
             id_to_nonce_set.insert(canonical_id, canonical_nonce_set);
         }
@@ -94,7 +90,7 @@ impl Partition {
         let mut id_pair_to_nonce_set = BTreeMap::new();
         for (nonce, id) in self.nonce_to_id.iter() {
             let id_pair = (id, partition.nonce_to_id[nonce]);
-            nonce_to_id_pair.insert(nonce.clone(), id_pair);
+            nonce_to_id_pair.insert(nonce, id_pair);
             id_pair_to_nonce_set.entry(id_pair).or_insert({
                 let nonce_set_for_id_pair: BTreeSet<Nonce> = self.id_to_nonce_set[&id_pair.0]
                     .intersection(&partition.id_to_nonce_set[&id_pair.1])
@@ -131,7 +127,7 @@ impl Partition {
         let mut nonce_to_id = BTreeMap::new();
         for (id, nonce_set) in id_to_nonce_set.iter() {
             for nonce in nonce_set {
-                nonce_to_id.insert(nonce.clone(), id.clone());
+                nonce_to_id.insert(*nonce, id.clone());
             }
         }
         nonce_to_id

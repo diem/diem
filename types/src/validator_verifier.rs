@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
+use crypto::*;
 use failure::prelude::*;
 use logger::prelude::*;
-use nextgen_crypto::*;
 use std::collections::HashMap;
 
 /// Errors possible during signature verification.
@@ -82,11 +82,6 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         Self::new(author_to_public_keys)
     }
 
-    /// Helper method to initialize with an empty validator set.
-    pub fn new_empty() -> Self {
-        Self::new(HashMap::new())
-    }
-
     /// Verify the correctness of a signature of a hash by a known author.
     pub fn verify_signature(
         &self,
@@ -146,7 +141,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
                     let sig: PublicKey::SignatureMaterial = signature.clone().into();
                     self.author_to_public_keys
                         .get(&author)
-                        .and_then(|pub_key| Some((pub_key.clone(), sig)))
+                        .map(|pub_key| (pub_key.clone(), sig))
                 })
                 .collect();
         // Fallback is required to identify the source of the problem if batching fails.
@@ -212,12 +207,8 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Returns a ordered list of account addresses from smallest to largest.
     pub fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
-        let mut account_addresses: Vec<AccountAddress> = self
-            .author_to_public_keys
-            .keys()
-            .into_iter()
-            .cloned()
-            .collect();
+        let mut account_addresses: Vec<AccountAddress> =
+            self.author_to_public_keys.keys().cloned().collect();
         account_addresses.sort();
         account_addresses
     }
@@ -245,8 +236,7 @@ mod tests {
         validator_signer::ValidatorSigner,
         validator_verifier::{ValidatorVerifier, VerifyError},
     };
-    use crypto::HashValue;
-    use nextgen_crypto::{ed25519::*, test_utils::TEST_SEED};
+    use crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
     use std::collections::HashMap;
 
     #[test]
@@ -297,7 +287,7 @@ mod tests {
         for validator in validator_signers.iter() {
             author_to_signature_map.insert(
                 validator.author(),
-                validator.sign_message(random_hash).unwrap().into(),
+                validator.sign_message(random_hash).unwrap(),
             );
         }
 

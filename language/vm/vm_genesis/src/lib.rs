@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{VMConfig, VMPublishingOption};
-use crypto::{signing, PrivateKey, PublicKey};
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
@@ -16,12 +16,12 @@ use stdlib::{
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
 };
-use tiny_keccak::Keccak;
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
+    identifier::Identifier,
     transaction::{
         Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
@@ -36,36 +36,46 @@ use vm_runtime::{
         module_cache::{BlockModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE},
-    value::Local,
+    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE},
 };
+use vm_runtime_types::value::Value;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
 
 lazy_static! {
-    pub static ref GENESIS_KEYPAIR: (PrivateKey, PublicKey) = {
-        let mut rng: StdRng = SeedableRng::from_seed(GENESIS_SEED);
-        signing::generate_keypair_for_testing(&mut rng)
+    pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
+        let mut rng = StdRng::from_seed(GENESIS_SEED);
+        compat::generate_keypair(&mut rng)
     };
 }
 
 pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureCheckedTransaction> {
     let (private_key, public_key) = &*GENESIS_KEYPAIR;
-    raw_txn.sign(private_key, *public_key)
+    raw_txn.sign(private_key, public_key.clone())
 }
 
-#[derive(Debug, Clone)]
+// Identifiers for well-known functions.
+lazy_static! {
+    static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
+    static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref ROTATE_AUTHENTICATION_KEY: Identifier =
+        { Identifier::new("rotate_authentication_key").unwrap() };
+    static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
+}
+
+#[derive(Debug)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct Account {
     pub addr: AccountAddress,
-    pub privkey: PrivateKey,
-    pub pubkey: PublicKey,
+    pub privkey: Ed25519PrivateKey,
+    pub pubkey: Ed25519PublicKey,
 }
 
 impl Account {
     pub fn new(rng: &mut StdRng) -> Self {
-        let (privkey, pubkey) = crypto::signing::generate_keypair_for_testing(rng);
-        let addr = pubkey.into();
+        let (privkey, pubkey) = compat::generate_keypair(&mut *rng);
+        let addr = AccountAddress::from_public_key(&pubkey);
         Account {
             addr,
             privkey,
@@ -116,12 +126,12 @@ impl Accounts {
         self.accounts[account].addr
     }
 
-    pub fn get_account(&self, account: usize) -> Account {
-        self.accounts[account].clone()
+    pub fn get_account(&self, account: usize) -> &Account {
+        &self.accounts[account]
     }
 
-    pub fn get_public_key(&self, account: usize) -> PublicKey {
-        self.accounts[account].pubkey
+    pub fn get_public_key(&self, account: usize) -> Ed25519PublicKey {
+        self.accounts[account].pubkey.clone()
     }
 
     pub fn create_txn_with_args(
@@ -170,7 +180,7 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compile_program(&AccountAddress::default(), body, stdlib_modules()).unwrap();
+        compile_program(AccountAddress::default(), body.clone(), stdlib_modules()).unwrap();
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -256,14 +266,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         CREATE_ACCOUNT_TXN.clone(),
     ]
     .into_iter()
-    .map(|s| {
-        let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-        let mut keccak = Keccak::new_sha3_256();
-
-        keccak.update(&s);
-        keccak.finalize(&mut hash);
-        hash
-    })
+    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect()
 }
 
@@ -292,15 +295,15 @@ impl StateView for FakeStateView {
 }
 
 pub fn encode_genesis_transaction(
-    private_key: &PrivateKey,
-    public_key: PublicKey,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
 ) -> SignatureCheckedTransaction {
     encode_genesis_transaction_with_validator(private_key, public_key, vec![])
 }
 
 pub fn encode_genesis_transaction_with_validator(
-    private_key: &PrivateKey,
-    public_key: PublicKey,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
     // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
@@ -314,7 +317,7 @@ pub fn encode_genesis_transaction_with_validator(
     let state_view = FakeStateView;
     let vm_cache = VMModuleCache::new(&arena);
     let genesis_addr = account_config::association_address();
-    let genesis_auth_key = ByteArray::new(AccountAddress::from(public_key).to_vec());
+    let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(&public_key).to_vec());
 
     let genesis_write_set = {
         let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
@@ -325,28 +328,39 @@ pub fn encode_genesis_transaction_with_validator(
             txn_data.sender = genesis_addr;
 
             let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
-            txn_executor.create_account(genesis_addr).unwrap().unwrap();
+            txn_executor.create_account(genesis_addr).unwrap();
             txn_executor
-                .execute_function(&COIN_MODULE, "initialize", vec![])
-                .unwrap()
+                .create_account(account_config::core_code_address())
+                .unwrap();
+            txn_executor
+                .execute_function(&BLOCK_MODULE, &INITIALIZE, vec![])
+                .unwrap();
+            txn_executor
+                .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
                 .unwrap();
 
             txn_executor
                 .execute_function(
                     &ACCOUNT_MODULE,
-                    "mint_to_address",
-                    vec![Local::address(genesis_addr), Local::u64(INIT_BALANCE)],
+                    &MINT_TO_ADDRESS,
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
                 )
-                .unwrap()
                 .unwrap();
 
             txn_executor
                 .execute_function(
                     &ACCOUNT_MODULE,
-                    "rotate_authentication_key",
-                    vec![Local::bytearray(genesis_auth_key)],
+                    &ROTATE_AUTHENTICATION_KEY,
+                    vec![Value::byte_array(genesis_auth_key)],
                 )
-                .unwrap()
+                .unwrap();
+
+            // Bump the sequence number for the Association account. If we don't do this and a
+            // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
+            // arises: both the genesis transaction and the subsequent transaction have sequence
+            // number 0
+            txn_executor
+                .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
                 .unwrap();
 
             let stdlib_modules = modules
@@ -359,7 +373,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .collect();
 
             txn_executor
-                .make_write_set(stdlib_modules, Ok(Ok(())))
+                .make_write_set(stdlib_modules, Ok(()))
                 .unwrap()
                 .write_set()
                 .clone()

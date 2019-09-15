@@ -1,17 +1,16 @@
-// check: no field type referencing in scripts
-// TODO is it possible to get this to compile to let the bytecode verifier complain?
+// check: Unbound field v
 
 module Token {
     resource T {v: u64}
 
-    public new(v: u64): R#Self.T {
+    public new(v: u64): Self.T {
         return T{v: move(v)};
     }
 
-    public value(this: &R#Self.T): u64 {
+    public value(this: &Self.T): u64 {
         let vref: &u64;
         vref = &copy(this).v;
-        release(move(this));
+        _ = move(this);
         return *move(vref);
     }
 
@@ -21,7 +20,7 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: R#Self.T) {
+    public publish(t: Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
@@ -34,14 +33,14 @@ import {{default}}.Token;
 
 main() {
     let addr: address;
-    let t: R#Token.T;
-    let tref: &mut R#Token.T;
+    let t: Token.T;
+    let tref: &mut Token.T;
     let balance_ref: &u64;
 
     addr = get_txn_sender();
     t = Token.new(1);
     tref = &mut t;
     balance_ref = &move(tref).v;
-    release(move(balance_ref));
+    _ = move(balance_ref);
     return;
 }

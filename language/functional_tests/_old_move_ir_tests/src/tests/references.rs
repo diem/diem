@@ -19,11 +19,11 @@ modules:
 module M {{
     struct A{{f: u64}}
 
-    public new(x: u64): V#Self.A {{
+    public new(x: u64): Self.A {{
         return A{{f: move(x)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f1;
         let f2;
 
@@ -32,7 +32,7 @@ module M {{
         *move(f1) = 4;
         *move(f2) = 5;
 
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -60,14 +60,14 @@ modules:
 module M2 {{
     struct A{{f: u64}}
 
-    public new(x: u64): V#Self.A {{
+    public new(x: u64): Self.A {{
         return A{{f: move(x)}};
     }}
 
-    public f(a: &mut V#Self.A): &mut u64 {{
+    public f(a: &mut Self.A): &mut u64 {{
         let f;
         f = &mut copy(a).f;
-        release(move(a));
+        _ = move(a);
         return move(f);
     }}
 }}
@@ -82,7 +82,7 @@ main() {{
     f1 = M2.f(copy(x_ref));
     *copy(f1) = 4;
     *move(f1) = 5;
-    release(move(x_ref));
+    _ = move(x_ref);
     return;
 }}",
         sender
@@ -116,18 +116,18 @@ fn mutate_nested_reference() {
         "
 modules:
 module M {{
-    struct A{{f: V#Self.B}}
+    struct A{{f: Self.B}}
     struct B{{g: u64}}
 
-    public A(f: V#Self.B): V#Self.A {{
+    public A(f: Self.B): Self.A {{
         return A{{f: move(f)}};
     }}
 
-    public B(g: u64): V#Self.B {{
+    public B(g: u64): Self.B {{
         return B{{g: move(g)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f_ref;
         let g_ref;
         let b;
@@ -137,7 +137,7 @@ module M {{
         *move(g_ref) = 5;
         b = Self.B(2);
         *move(f_ref) = move(b);
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -165,18 +165,18 @@ main() {{
         "
 modules:
 module M2 {{
-    struct A{{f: V#Self.B}}
+    struct A{{f: Self.B}}
     struct B{{g: u64}}
 
-    public A(f: V#Self.B): V#Self.A {{
+    public A(f: Self.B): Self.A {{
         return A{{f: move(f)}};
     }}
 
-    public B(g: u64): V#Self.B {{
+    public B(g: u64): Self.B {{
         return B{{g: move(g)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f_ref;
         let g_ref;
         let b;
@@ -188,7 +188,7 @@ module M2 {{
         *move(f_ref) = move(b);
         *move(g_ref) = 5;
 
-        release(move(a));
+        _ = move(a);
 
         return;
     }}
@@ -242,18 +242,18 @@ fn mutate_sibling_reference() {
         "
 modules:
 module M {{
-    struct A{{f: V#Self.B}}
+    struct A{{f: Self.B}}
     struct B{{g: u64, h: u64}}
 
-    public A(f: V#Self.B): V#Self.A {{
+    public A(f: Self.B): Self.A {{
         return A{{f: move(f)}};
     }}
 
-    public B(g: u64, h: u64): V#Self.B {{
+    public B(g: u64, h: u64): Self.B {{
         return B{{g: move(g), h: move(h)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f;
         let g;
         let h;
@@ -268,7 +268,7 @@ module M {{
         h = *move(h_ref);
         assert(move(h) == 1, 42);
         f = *move(f_ref);
-        release(move(a));
+        _ = move(a);
         return;
     }}
 }}
@@ -300,18 +300,18 @@ main() {{
         "
 modules:
 module M2 {{
-    struct A{{f: V#Self.B}}
+    struct A{{f: Self.B}}
     struct B{{g: u64, h: u64}}
 
-    public A(f: V#Self.B): V#Self.A {{
+    public A(f: Self.B): Self.A {{
         return A{{f: move(f)}};
     }}
 
-    public B(g: u64, h: u64): V#Self.B {{
+    public B(g: u64, h: u64): Self.B {{
         return B{{g: move(g), h: move(h)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f_ref;
         let h_ref;
         let b;
@@ -323,7 +323,7 @@ module M2 {{
         b = Self.B(2, 3);
         *move(f_ref) = move(b);
         h = *move(h_ref);
-        release(move(a));
+        _ = move(a);
     }}
 }}
 script:
@@ -350,18 +350,18 @@ main() {{
         "
 modules:
 module M3 {{
-    struct A{{f: V#Self.B}}
+    struct A{{f: Self.B}}
     struct B{{g: u64, h: u64}}
 
-    public A(f: V#Self.B): V#Self.A {{
+    public A(f: Self.B): Self.A {{
         return A{{f: move(f)}};
     }}
 
-    public B(g: u64, h: u64): V#Self.B {{
+    public B(g: u64, h: u64): Self.B {{
         return B{{g: move(g), h: move(h)}};
     }}
 
-    public t(a: &mut V#Self.A) {{
+    public t(a: &mut Self.A) {{
         let f_ref;
         let g_ref;
         let b;
@@ -373,7 +373,7 @@ module M3 {{
         b = Self.B(2, 3);
         *move(f_ref) = move(b);
         g = *move(g_ref);
-        release(move(a));
+        _ = move(a);
     }}
 }}
 script:

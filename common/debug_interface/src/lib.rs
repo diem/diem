@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::proto::{
-    node_debug_interface::{DumpJemallocHeapProfileRequest, GetNodeDetailsRequest},
+    node_debug_interface::GetNodeDetailsRequest,
     node_debug_interface_grpc::NodeDebugInterfaceClient,
 };
 use failure::prelude::*;
@@ -14,6 +14,8 @@ pub mod proto;
 
 pub mod node_debug_helpers;
 pub mod node_debug_service;
+#[macro_use]
+pub mod json_log;
 
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {
@@ -57,14 +59,5 @@ impl NodeDebugClient {
                 )),
             })
             .collect()
-    }
-
-    pub fn dump_heap_profile(&self) -> Result<i32> {
-        let response = self
-            .client
-            .dump_jemalloc_heap_profile(&DumpJemallocHeapProfileRequest::new())
-            .context("Unable to request heap dump")?;
-
-        Ok(response.status_code)
     }
 }

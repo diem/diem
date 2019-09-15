@@ -6,13 +6,11 @@ use crate::{
         DisconnectReason, InternalEvent, Peer, PeerHandle, PeerManager, PeerManagerNotification,
         PeerManagerRequest,
     },
-    protocols::{
-        identity::{exchange_identity, Identity},
-        peer_id_exchange::PeerIdExchange,
-    },
+    protocols::identity::{exchange_identity, Identity},
     ProtocolId,
 };
 use channel;
+use config::config::RoleType;
 use futures::{
     channel::oneshot,
     compat::Compat01As03,
@@ -40,25 +38,20 @@ const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 // Builds a concrete typed transport (instead of using impl Trait) for testing PeerManager.
 // Specifically this transport is compatible with the `build_test_connection` test helper making
 // it easy to build connections without going through the whole transport pipeline.
-fn build_test_transport(
-    own_peer_id: PeerId,
-) -> BoxedTransport<(Identity, Yamux<MemorySocket>), std::io::Error> {
+pub fn build_test_transport(
+    own_identity: Identity,
+) -> BoxedTransport<(Identity, Yamux<MemorySocket>), impl ::std::error::Error> {
     let memory_transport = MemoryTransport::default();
-    let peer_id_exchange_config = PeerIdExchange::new(own_peer_id);
-    let own_identity = Identity::new(own_peer_id, Vec::new());
-
     memory_transport
-        .and_then(move |socket, origin| peer_id_exchange_config.exchange_peer_id(socket, origin))
-        .and_then(|(peer_id, socket), origin| {
+        .and_then(|socket, origin| {
             async move {
                 let muxer = Yamux::upgrade_connection(socket, origin).await?;
-                Ok((peer_id, muxer))
+                Ok(muxer)
             }
         })
-        .and_then(move |(peer_id, muxer), origin| {
+        .and_then(move |muxer, origin| {
             async move {
                 let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                assert_eq!(identity.peer_id(), peer_id);
 
                 Ok((identity, muxer))
             }
@@ -76,7 +69,7 @@ fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
 }
 
 fn build_test_identity(peer_id: PeerId) -> Identity {
-    Identity::new(peer_id, Vec::new())
+    Identity::new(peer_id, Vec::new(), RoleType::Validator)
 }
 
 fn build_test_peer(
@@ -297,7 +290,7 @@ fn build_test_peer_manager(
     peer_id: PeerId,
 ) -> (
     PeerManager<
-        BoxedTransport<(Identity, Yamux<MemorySocket>), std::io::Error>,
+        BoxedTransport<(Identity, Yamux<MemorySocket>), impl std::error::Error>,
         Yamux<MemorySocket>,
     >,
     channel::Sender<PeerManagerRequest<impl AsyncRead + AsyncWrite>>,
@@ -310,7 +303,7 @@ fn build_test_peer_manager(
     protocol_handlers.insert(protocol.clone(), hello_tx);
 
     let peer_manager = PeerManager::new(
-        build_test_transport(peer_id),
+        build_test_transport(Identity::new(peer_id, vec![], RoleType::Validator)),
         executor.clone(),
         peer_id,
         "/memory/0".parse().unwrap(),

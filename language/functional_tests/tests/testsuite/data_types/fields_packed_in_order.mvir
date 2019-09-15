@@ -1,0 +1,25 @@
+// Pack operands should be evaluated in declaration order, not alphanumeric.
+
+module M {
+    struct T {
+        b: u64,
+        a: u64
+    }
+    public error(code: u64): u64 {
+        abort(move(code));
+        return 0;
+    }
+    public new(): Self.T {
+        return T { b: Self.error(42), a: Self.error(100) };
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+main() {
+  let m: M.T;
+  m = M.new();
+  return;
+}
+// check: ABORTED
+// check: 42

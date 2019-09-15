@@ -12,8 +12,8 @@ mod block_store;
 mod block_tree;
 
 use crate::{
-    chained_bft::safety::vote_msg::VoteMsgVerificationError,
-    state_replication::{ExecutedState, StateComputeResult},
+    chained_bft::consensus_types::vote_msg::VoteMsgVerificationError,
+    state_replication::StateComputeResult,
 };
 pub use block_store::{BlockStore, NeedFetchResult};
 use network::protocols::rpc::error::RpcError;
@@ -21,11 +21,11 @@ use types::validator_verifier::VerifyError;
 
 #[derive(Debug, PartialEq, Fail)]
 /// The possible reasons for failing to retrieve a block by id from a given peer.
-#[allow(dead_code)]
 #[derive(Clone)]
 pub enum BlockRetrievalFailure {
     /// Could not find a given author
     #[fail(display = "Unknown author: {:?}", author)]
+    #[allow(dead_code)]
     UnknownAuthor { author: Author },
 
     /// Any sort of a network failure (should probably have an enum for network failures).
@@ -34,6 +34,7 @@ pub enum BlockRetrievalFailure {
 
     /// The remote peer did not recognize the given block id.
     #[fail(display = "Block id {:?} not recognized by the peer", block_id)]
+    #[allow(dead_code)]
     UnknownBlockId { block_id: HashValue },
 
     /// Cannot retrieve a block from itself
@@ -49,7 +50,6 @@ pub enum BlockRetrievalFailure {
     InvalidResponse,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Fail)]
 /// Status after trying to insert a block into the BlockStore
 pub enum InsertError {
@@ -66,7 +66,7 @@ pub enum InsertError {
     #[fail(display = "InvalidBlockRound")]
     InvalidBlockRound,
     /// The block's timestamp is not greater than that of the parent.
-    #[fail(display = "InvalidTiemstamp")]
+    #[fail(display = "InvalidTimestamp")]
     NonIncreasingTimestamp,
     /// The block is not newer than the root of the tree.
     #[fail(display = "OldBlock")]
@@ -83,9 +83,6 @@ pub enum InsertError {
     /// Block's parent is not certified with the QC carried by the block.
     #[fail(display = "ParentNotCertified")]
     ParentNotCertified,
-    /// State version corresponding to block's parent not found.
-    #[fail(display = "ParentVersionNotFound")]
-    ParentVersionNotFound,
     /// Some of the block's ancestors could not be retrieved.
     #[fail(display = "AncestorRetrievalError")]
     AncestorRetrievalError,
@@ -157,25 +154,16 @@ pub trait BlockReader: Send + Sync {
     /// Try to get a block with the block_id, return an Arc of it if found.
     fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>>;
 
-    /// Try to get a state id (HashValue) of the system corresponding to block execution.
-    fn get_state_for_block(&self, block_id: HashValue) -> Option<ExecutedState>;
-
-    /// Try to get an execution result given the specified block id.
+    /// Try to get a compute result given the specified block id.
+    ///
+    /// Returns an option since all blocks should have a compute result or None for root block
+    /// since it has already been committed.
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
 
     /// Get the current root block of the BlockTree.
     fn root(&self) -> Arc<Block<Self::Payload>>;
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>>;
-
-    /// Returns true if a given "ancestor" block is an ancestor of a given "block".
-    /// Returns a failure if not all the blocks are present between the block's height and the
-    /// parent's height.
-    fn is_ancestor(
-        &self,
-        ancestor: &Block<Self::Payload>,
-        block: &Block<Self::Payload>,
-    ) -> Result<bool, BlockTreeError>;
 
     /// Returns all the blocks between the root and the given block, including the given block
     /// but excluding the root.
@@ -199,7 +187,7 @@ pub trait BlockReader: Send + Sync {
     ///   of a parent.
     fn create_block(
         &self,
-        parent: Arc<Block<Self::Payload>>,
+        parent: &Block<Self::Payload>,
         payload: Self::Payload,
         round: Round,
         timestamp_usecs: u64,

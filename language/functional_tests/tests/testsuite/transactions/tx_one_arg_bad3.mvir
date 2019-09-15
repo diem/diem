@@ -7,4 +7,4 @@ main(x: u64) {
 }
 
 // check: Discard
-// check: TypeMismatch
+// check: TYPE_MISMATCH

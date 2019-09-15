@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{fuzz_targets::new_value, FuzzTargetImpl};
-use proptest::{prelude::*, test_runner::TestRunner};
+use crate::FuzzTargetImpl;
+use proptest::prelude::*;
+use proptest_helpers::ValueGenerator;
 use vm::file_format::{CompiledModule, CompiledModuleMut};
 
 #[derive(Clone, Debug, Default)]
@@ -17,13 +18,13 @@ impl FuzzTargetImpl for CompiledModuleTarget {
         "VM CompiledModule (custom deserializer)"
     }
 
-    fn generate(&self, runner: &mut TestRunner) -> Vec<u8> {
-        let value = new_value(runner, any_with::<CompiledModuleMut>(16));
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        let value = gen.generate(any_with::<CompiledModuleMut>(16));
         let mut out = vec![];
         value
             .serialize(&mut out)
             .expect("serialization should work");
-        out
+        Some(out)
     }
 
     fn fuzz(&self, data: &[u8]) {

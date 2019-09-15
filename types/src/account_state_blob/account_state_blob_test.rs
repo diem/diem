@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use proptest::{collection::vec, prelude::*};
+use proptest::collection::vec;
 use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 fn hash_blob(blob: &[u8]) -> HashValue {

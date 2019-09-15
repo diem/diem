@@ -7,17 +7,25 @@ publish = false
 edition = "2018"
 
 [dependencies]
-clap = "2.32"
-get_if_addrs = "0.5.3"
-hex = "0.3.2"
-parity-multiaddr = "0.4.0"
+get_if_addrs = { version = "0.5.3", default-features = false }
+hex = { version = "0.3.2", default-features = false }
+mirai-annotations = "1.4.0"
+parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.96", features = ["derive"] }
-tempfile = "3.1.0"
-toml = "0.4"
+serde = { version = "1.0.99", default-features = false }
+toml = { version = "0.5.3", default-features = false }
 
-crypto = { path = "../crypto/legacy_crypto" }
+crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 logger = { path = "../common/logger" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
+tools = { path = "../common/tools" }
 types = { path = "../types" }
+
+[dev-dependencies]
+types = { path = "../types", features = ["testing"] }
+crypto = { path = "../crypto/crypto", features = ["testing"] }
+
+[features]
+default = []
+testing = ["crypto/testing", "types/testing"]

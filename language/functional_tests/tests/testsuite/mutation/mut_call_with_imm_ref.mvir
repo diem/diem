@@ -1,24 +1,25 @@
-//check: VerificationError { kind: FunctionDefinition, idx: 2, err: CallTypeMismatchError(4) }
+// check: VerificationFailure
+// check: CALL_TYPE_MISMATCH_ERROR
 
 module Token {
     resource T{value: u64}
-    public new(m: u64): R#Self.T {
+    public new(m: u64): Self.T {
         return T{value: copy(m)};
     }
-    public destroy(t: R#Self.T) {
+    public destroy(t: Self.T) {
         let value: u64;
         T {value} = move(t);
         return;
     }
 
-    public read_value(this: &R#Self.T): u64 {
+    public read_value(this: &Self.T): u64 {
         let val: &u64;
         val = &copy(this).value;
         Self.bump_value(move(this));
         return *move(val);
     }
 
-    public bump_value(this: &mut R#Self.T) {
+    public bump_value(this: &mut Self.T) {
         let val: &mut u64;
         let x: u64;
         val = &mut move(this).value;
@@ -33,7 +34,7 @@ module Token {
 import {{default}}.Token;
 
 main() {
-    let t: R#Token.T;
+    let t: Token.T;
     let i: u64;
     t = Token.new(42);
     i = Token.read_value(&t);

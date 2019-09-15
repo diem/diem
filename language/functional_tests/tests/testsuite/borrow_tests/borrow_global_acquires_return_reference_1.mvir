@@ -1,0 +1,25 @@
+module A {
+    resource T1{v: u64}
+
+    public test1(x: &mut Self.T1) acquires T1 {
+        let y: &mut u64;
+        // the acquire of t1 does not pollute y
+        y = Self.borrow_acquires_t1(move(x));
+        Self.acquires_t1();
+        _ = move(y);
+
+        return;
+    }
+
+    borrow_acquires_t1(x: &mut Self.T1): &mut u64 acquires T1 {
+        _ = borrow_global_mut<T1>(get_txn_sender());
+        return &mut move(x).v;
+    }
+
+    acquires_t1() acquires T1 {
+        let v: u64;
+        T1 { v } = move_from<T1>(get_txn_sender());
+        return;
+    }
+
+}

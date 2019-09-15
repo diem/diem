@@ -15,19 +15,16 @@ variable "ssh_priv_key_file" {
 variable "ssh_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow SSH access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "ssh_sources_ipv6" {
   type        = list(string)
   description = "List of IPv6 CIDR blocks from which to allow SSH access"
-  default     = ["::/0"]
 }
 
 variable "api_sources_ipv4" {
   type        = list(string)
   description = "List of IPv4 CIDR blocks from which to allow API access"
-  default     = ["0.0.0.0/0"]
 }
 
 variable "image_repo" {
@@ -49,7 +46,12 @@ variable "peer_ids" {
 
 variable "validator_type" {
   description = "EC2 instance type of validator instances"
-  default     = "m5.large"
+  default     = "c5d.large"
+}
+
+variable "validator_ebs_size" {
+  description = "Size of validator EBS volume in GB"
+  default     = 30
 }
 
 variable "zone_id" {
@@ -67,6 +69,29 @@ variable "validator_log_level" {
   default     = "debug"
 }
 
+variable "validator_linux_capabilities" {
+  type        = list(string)
+  description = "List of capabilities needed as Linux parameters"
+  default     = []
+}
+
+variable "validator_node_sources_ipv4" {
+  type        = list(string)
+  description = "List of IPv4 CIDR blocks from which to allow Validator Node access"
+  default     = []
+}
+
+variable "validator_node_sources_ipv6" {
+  type        = list(string)
+  description = "List of IPv6 CIDR blocks from which to allow Validator Node access"
+  default     = []
+}
+
+variable "validator_use_public_ip" {
+  type        = bool
+  default     = false
+}
+
 variable "append_workspace_dns" {
   description = "Append Terraform workspace to DNS names created"
   default     = true
@@ -75,4 +100,9 @@ variable "append_workspace_dns" {
 variable "prometheus_pagerduty_key" {
   default     = ""
   description = "Key for Prometheus-PagerDuty integration"
+}
+
+variable "monitoring_snapshot" {
+  default     = ""
+  description = "EBS snapshot ID to initialise monitoring data with"
 }

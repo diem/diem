@@ -5,4 +5,4 @@ module Currency {
 module Currency {
 }
 
-// check: DuplicateModuleName
+// check: DUPLICATE_MODULE_NAME

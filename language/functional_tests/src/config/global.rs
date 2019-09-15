@@ -36,7 +36,7 @@ impl FromStr for Entry {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s1 = s.trim_start().trim_end();
+        let s1 = s.split_whitespace().collect::<String>();
         if !s1.starts_with("//!") {
             return Err(
                 ErrorKind::Other("global config entry must start with //!".to_string()).into(),
@@ -54,14 +54,8 @@ impl FromStr for Entry {
                 )
                 .into());
             }
-            let balance = match v.get(1) {
-                Some(s) => Some(s.parse::<u64>()?),
-                None => None,
-            };
-            let sequence_number = match v.get(2) {
-                Some(s) => Some(s.parse::<u64>()?),
-                None => None,
-            };
+            let balance = v.get(1).and_then(|s| s.parse::<u64>().ok());
+            let sequence_number = v.get(2).and_then(|s| s.parse::<u64>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,

@@ -1,12 +1,13 @@
 import 0x0.LibraCoin;
 
 main() {
-    let z: R#LibraCoin.T;
+    let z: LibraCoin.T;
     z = LibraCoin.zero();
     // z is allowed to be unused
     abort 0;
 }
 
-// not: VerificationError
+// not: VerificationFailure
 
-// check: Aborted(0)
+// check: ABORTED
+// check: 0

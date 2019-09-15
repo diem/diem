@@ -1,20 +1,25 @@
-// check: no struct handle index 1
-// TODO is it possible to get this to compile to let the bytecode verifier complain?
-
 module A {
-    import 0x0.LibraCoin;
-    resource A { c: R#LibraCoin.T }
-    public new(c: R#LibraCoin.T): R#Self.A {
+    resource Coin { balance: u64 }
+    resource A { c: Self.Coin }
+
+    public zero(): Self.Coin {
+        return Coin { balance: 0 };
+    }
+
+    public new(c: Self.Coin): Self.A {
         return A { c: move(c) };
     }
-    public destroy_a(a: R#Self.A) {
-        let c: R#LibraCoin.T;
+
+    public destroy_a(a: Self.A) {
+        let c: Self.Coin;
+        let balance: u64;
         A { c } = move(a);
-        LibraCoin.destroy_zero(move(c));
+        Coin { balance } = move(c);
         return;
     }
-    public mutate(a_ref: &mut R#Self.A) {
-        let ref: &mut R#LibraCoin.T;
+
+    public mutate(a_ref: &mut Self.A) {
+        let ref: &mut Self.Coin;
         let ref_balance: &mut u64;
 
         ref = &mut move(a_ref).c;
@@ -28,13 +33,12 @@ module A {
 //! new-transaction
 
 import {{default}}.A;
-import 0x0.LibraCoin;
 
 main() {
-    let zero_resource: R#LibraCoin.T;
-    let s: R#A.A;
+    let zero_resource: A.Coin;
+    let s: A.A;
 
-    zero_resource = LibraCoin.zero();
+    zero_resource = A.zero();
     s = A.new(move(zero_resource));
     A.mutate(&mut s);
     A.destroy_a(move(s));

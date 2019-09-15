@@ -1,15 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
-use cli::client_proxy::ClientProxy;
-use libra_swarm::swarm::LibraSwarm;
+use cli::{
+    client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
+};
+use config::config::RoleType;
+use crypto::{ed25519::*, SigningKey};
+use libra_swarm::{swarm::LibraSwarm, utils};
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-fn setup_swarm_and_client_proxy(
+fn setup_env(
     num_nodes: usize,
     client_port_index: usize,
+    template_path: Option<String>,
+    role: RoleType,
 ) -> (LibraSwarm, ClientProxy) {
     ::logger::init_for_e2e_testing();
 
@@ -17,17 +23,17 @@ fn setup_swarm_and_client_proxy(
         generate_keypair::load_faucet_key_or_create_default(None);
 
     let swarm = LibraSwarm::launch_swarm(
-        num_nodes,
-        false, /* disable_logging */
+        num_nodes, /* num nodes */
+        false,     /* disable_logging */
         faucet_account_keypair,
-        true, /* tee_logs */
         None, /* config_dir */
+        template_path,
     );
-    let port = *swarm
-        .get_validators_public_ports()
-        .get(client_port_index)
-        .unwrap();
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let port = swarm.get_ac_port(client_port_index, role);
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let client_proxy = ClientProxy::new(
         "localhost",
         port.to_string().as_str(),
@@ -37,7 +43,8 @@ fn setup_swarm_and_client_proxy(
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()
@@ -47,6 +54,13 @@ fn setup_swarm_and_client_proxy(
     )
     .unwrap();
     (swarm, client_proxy)
+}
+
+fn setup_swarm_and_client_proxy(
+    num_nodes: usize,
+    client_port_index: usize,
+) -> (LibraSwarm, ClientProxy) {
+    setup_env(num_nodes, client_port_index, None, RoleType::Validator)
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
@@ -78,6 +92,58 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
     assert_eq!(
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "2"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_execute_custom_module_and_script() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "50"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(50.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+
+    let recipient_address = client_proxy.create_next_account(false).unwrap().address;
+    client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
+
+    let module_path =
+        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/module.mvir");
+    let unwrapped_module_path = module_path.to_str().unwrap();
+    let module_params = &["compile", "0", unwrapped_module_path, "module"];
+    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
+
+    client_proxy
+        .publish_module(&["publish", "0", &module_compiled_path[..]])
+        .unwrap();
+
+    let script_path =
+        utils::workspace_root().join("testsuite/tests/libratest/dev_modules/script.mvir");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+    let formatted_recipient_address = format!("0x{}", recipient_address);
+
+    client_proxy
+        .execute_script(&[
+            "execute",
+            "0",
+            &script_compiled_path[..],
+            &formatted_recipient_address[..],
+            "10",
+        ])
+        .unwrap();
+
+    assert_eq!(
+        Decimal::from_f64(49.999_990),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(1.000_010),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
@@ -218,10 +284,13 @@ fn test_basic_state_synchronization() {
     assert!(swarm.add_node(node_to_restart.clone(), false).is_ok());
 
     // Wait for all the nodes to catch up
-    swarm.wait_for_all_nodes_to_catchup();
+    assert!(swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
+    tmp_mnemonic_file
+        .create_as_file()
+        .expect("could not create temporary mnemonic_file_path");
     let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
@@ -232,7 +301,8 @@ fn test_basic_state_synchronization() {
         /* faucet server */ None,
         Some(
             tmp_mnemonic_file
-                .into_temp_path()
+                .path()
+                .to_path_buf()
                 .canonicalize()
                 .expect("Unable to get canonical path of mnemonic_file_path")
                 .to_str()
@@ -250,4 +320,98 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(15.0),
         Decimal::from_str(&client_proxy2.get_balance(&["b", "1"]).unwrap()).ok()
     );
+}
+
+#[test]
+fn test_external_transaction_signer() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+
+    // generate key pair
+    let mut seed: [u8; 32] = [0u8; 32];
+    seed[..4].copy_from_slice(&[1, 2, 3, 4]);
+    let key_pair = compat::generate_keypair(None);
+    let private_key = key_pair.0;
+    let public_key = key_pair.1;
+
+    // create transfer parameters
+    let sender_address = AccountAddress::from_public_key(&public_key);
+    let receiver_address = client_proxy
+        .get_account_address_from_parameter(
+            "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a",
+        )
+        .unwrap();
+    let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
+    let gas_unit_price = 123;
+    let max_gas_amount = 1000;
+
+    // mint to the sender address
+    client_proxy
+        .mint_coins(&["mintb", &format!("{}", sender_address), "10"], true)
+        .unwrap();
+
+    // prepare transfer transaction
+    let sequence_number = client_proxy
+        .get_sequence_number(&["sequence", &format!("{}", sender_address)])
+        .unwrap();
+
+    let unsigned_txn = client_proxy
+        .prepare_transfer_coins(
+            sender_address,
+            sequence_number,
+            receiver_address,
+            amount,
+            Some(gas_unit_price),
+            Some(max_gas_amount),
+        )
+        .unwrap();
+
+    assert_eq!(unsigned_txn.sender(), sender_address);
+
+    // sign the transaction with the private key
+    let signature = private_key.sign_message(&unsigned_txn.hash());
+
+    // submit the transaction
+    let submit_txn_result =
+        client_proxy.submit_signed_transaction(unsigned_txn, public_key, signature);
+
+    assert!(submit_txn_result.is_ok());
+
+    // query the transaction and check it contains the same values as requested
+    let submitted_signed_txn = client_proxy
+        .get_committed_txn_by_acc_seq(&[
+            "txn_acc_seq",
+            &format!("{}", sender_address),
+            &sequence_number.to_string(),
+            "false",
+        ])
+        .unwrap()
+        .unwrap()
+        .0;
+
+    assert_eq!(submitted_signed_txn.sender(), sender_address);
+    assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);
+    assert_eq!(submitted_signed_txn.gas_unit_price(), gas_unit_price);
+    assert_eq!(submitted_signed_txn.max_gas_amount(), max_gas_amount);
+    match submitted_signed_txn.payload() {
+        TransactionPayload::Program(program) => {
+            assert!(program.modules().is_empty(), "Modules should be empty.");
+            match program.args().len() {
+                2 => match (&program.args()[0], &program.args()[1]) {
+                    (
+                        TransactionArgument::Address(arg_receiver),
+                        TransactionArgument::U64(arg_amount),
+                    ) => {
+                        assert_eq!(arg_receiver.clone(), receiver_address);
+                        assert_eq!(arg_amount.clone(), amount);
+                    }
+                    _ => panic!(
+                        "The first argument for payment transaction must be recipient address \
+                         and the second argument must be amount."
+                    ),
+                },
+                _ => panic!("Signed transaction payload arguments must have two arguments."),
+            }
+        }
+        _ => panic!("Signed transaction payload expected to be of struct Program"),
+    }
 }

@@ -1,15 +1,17 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: RetUnsafeToDestroyError(5) }
+// check: VerificationFailure
+// check: RET_UNSAFE_TO_DESTROY_ERROR
+
 module A {
     import 0x0.LibraCoin;
 
-    resource T{g: R#LibraCoin.T}
+    resource T{g: LibraCoin.T}
 
-    public new(g: R#LibraCoin.T): R#Self.T {
+    public new(g: LibraCoin.T): Self.T {
         return T{g: move(g)};
     }
 
-    public destroy(a: R#Self.T) {
-        let c: R#LibraCoin.T;
+    public destroy(a: Self.T) {
+        let c: LibraCoin.T;
         T{g: c} = move(a);
         LibraCoin.destroy_zero(move(c));
         return;
@@ -22,8 +24,8 @@ import {{default}}.A;
 import 0x0.LibraCoin;
 
 main() {
-    let zero_resource: R#LibraCoin.T;
-    let s: R#A.T;
+    let zero_resource: LibraCoin.T;
+    let s: A.T;
     zero_resource = LibraCoin.zero();
     s = A.new(move(zero_resource));
 

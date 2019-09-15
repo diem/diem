@@ -4,19 +4,24 @@
 //! This module provides mock storage clients for tests.
 
 use canonical_serialization::SimpleSerializer;
-use crypto::{signing::generate_keypair, HashValue};
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
 use proto_conv::{FromProto, IntoProto};
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
 use std::{collections::BTreeMap, pin::Pin};
 use storage_client::StorageRead;
-use storage_proto::ExecutorStartupInfo;
+use storage_proto::StartupInfo;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
+    event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
-    proof::definition::SparseMerkleProof,
+    proof::SparseMerkleProof,
     proto::{
         account_state_blob::AccountStateWithProof,
         get_with_proof::{
@@ -32,6 +37,7 @@ use types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::Version,
     validator_change::ValidatorChangeEventWithProof,
+    vm_error::StatusCode,
 };
 
 /// This is a mock of the storage read client used in tests.
@@ -48,8 +54,8 @@ impl StorageRead for MockStorageReadClient {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        LedgerInfoWithSignatures<Ed25519Signature>,
+        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
     )> {
         let request = types::get_with_proof::UpdateToLatestLedgerRequest::new(
             client_known_version,
@@ -75,8 +81,8 @@ impl StorageRead for MockStorageReadClient {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        LedgerInfoWithSignatures<Ed25519Signature>,
+                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
                     )>,
                 > + Send,
         >,
@@ -109,30 +115,45 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_account_state_with_proof_by_state_root(
+    fn get_account_state_with_proof_by_version(
         &self,
         _address: AccountAddress,
-        _state_root_hash: HashValue,
+        _version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!()
     }
 
-    fn get_account_state_with_proof_by_state_root_async(
+    fn get_account_state_with_proof_by_version_async(
         &self,
         _address: AccountAddress,
-        _state_root_hash: HashValue,
+        _version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
     {
         unimplemented!();
     }
 
-    fn get_executor_startup_info(&self) -> Result<Option<ExecutorStartupInfo>> {
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         unimplemented!()
     }
 
-    fn get_executor_startup_info_async(
+    fn get_startup_info_async(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<ExecutorStartupInfo>>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
+        unimplemented!()
+    }
+
+    fn get_latest_ledger_infos_per_epoch(
+        &self,
+        _start_epoch: u64,
+    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+        unimplemented!()
+    }
+
+    fn get_latest_ledger_infos_per_epoch_async(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>
+    {
         unimplemented!()
     }
 }
@@ -168,8 +189,9 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     100,
                     0,
                     types::byte_array::ByteArray::new(vec![]),
-                    0,
-                    0,
+                    false,
+                    EventHandle::random_handle(0),
+                    EventHandle::random_handle(0),
                 );
                 version_data.insert(
                     types::account_config::account_resource_path(),
@@ -186,6 +208,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                         HashValue::zero(),
                         HashValue::zero(),
                         0,
+                        StatusCode::UNKNOWN_STATUS,
                     );
                     let transaction_info_to_account_proof = types::proof::SparseMerkleProof::new(None, vec![]);
                     types::proof::AccountStateProof::new(
@@ -238,11 +261,14 @@ fn get_mock_txn_data(
     Vec<types::proto::transaction::SignedTransaction>,
     Vec<TransactionInfo>,
 ) {
-    let (priv_key, pub_key) = generate_keypair();
+    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let seed_buf: [u8; 32] = seed_rng.gen();
+    let mut rng = StdRng::from_seed(seed_buf);
+    let (priv_key, pub_key) = compat::generate_keypair(&mut rng);
     let mut txns = vec![];
     let mut infos = vec![];
     for i in start_seq..=end_seq {
-        let signed_txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key, None);
+        let signed_txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None);
         txns.push(signed_txn);
 
         let info = get_transaction_info().into_proto();
@@ -261,5 +287,6 @@ fn get_transaction_info() -> types::transaction::TransactionInfo {
         HashValue::zero(),
         HashValue::zero(),
         0,
+        StatusCode::UNKNOWN_STATUS,
     )
 }

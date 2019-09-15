@@ -1,0 +1,47 @@
+//! no-run: verifier, runtime
+
+module M {
+    resource R {}
+
+    public foo<T>(x: T) {
+        return;
+    }
+
+    public bar<T1, T2: resource, T3: unrestricted>(x: T3, y: T2, z: T1) {
+        return;
+    }
+}
+
+
+
+
+//! new-transaction
+//! no-run: verifier, runtime
+
+import {{default}}.M;
+
+main() {
+    M.foo<u64>();
+    return;
+}
+
+//! check: FunctionSignature
+//! check: TypeParameter(0)
+//! check: [All]
+
+
+
+
+//! new-transaction
+//! no-run: verifier, runtime
+
+import {{default}}.M;
+
+main() {
+    M.bar<u64, M.R, bool>();
+    return;
+}
+
+//! check: FunctionSignature
+//! check: [TypeParameter(2), TypeParameter(1), TypeParameter(0)]
+//! check: [Unrestricted, Resource, All]

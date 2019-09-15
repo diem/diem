@@ -5,8 +5,9 @@ main() {
     x = 5;
     imm_ref = &x;
     imm_ref = freeze(move(imm_ref));
-    release(move(imm_ref));
+    _ = move(imm_ref);
     return;
 }
 
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: FreezeRefTypeMismatchError(6) }
+// check: VerificationFailure
+// check: FREEZEREF_TYPE_MISMATCH_ERROR

@@ -28,6 +28,10 @@ impl ByteArray {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    pub fn into_inner(self) -> Vec<u8> {
+        self.0
+    }
 }
 
 impl std::fmt::Debug for ByteArray {
@@ -53,14 +57,14 @@ impl std::ops::Index<usize> for ByteArray {
 
 impl CanonicalSerialize for ByteArray {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_variable_length_bytes(&self.0)?;
+        serializer.encode_bytes(&self.0)?;
         Ok(())
     }
 }
 
 impl CanonicalDeserialize for ByteArray {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_variable_length_bytes()?;
+        let bytes = deserializer.decode_bytes()?;
         Ok(ByteArray(bytes))
     }
 }

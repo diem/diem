@@ -5,8 +5,12 @@
 //!
 //! Currently, the information shared as part of this protocol includes the peer identity and a
 //! list of protocols supported by the peer.
-use crate::{proto::IdentityMsg, ProtocolId};
+use crate::{
+    proto::{IdentityMsg, IdentityMsg_Role},
+    ProtocolId,
+};
 use bytes::Bytes;
+use config::config::RoleType;
 use futures::{
     compat::{Compat, Sink01CompatExt},
     sink::SinkExt,
@@ -29,19 +33,25 @@ const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identity {
     peer_id: PeerId,
+    role: RoleType,
     supported_protocols: Vec<ProtocolId>,
 }
 
 impl Identity {
-    pub fn new(peer_id: PeerId, supported_protocols: Vec<ProtocolId>) -> Self {
+    pub fn new(peer_id: PeerId, supported_protocols: Vec<ProtocolId>, role: RoleType) -> Self {
         Self {
             peer_id,
+            role,
             supported_protocols,
         }
     }
 
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
+    }
+
+    pub fn role(&self) -> RoleType {
+        self.role
     }
 
     pub fn is_protocol_supported(&self, protocol: &ProtocolId) -> bool {
@@ -94,6 +104,11 @@ where
     let mut msg = IdentityMsg::new();
     msg.set_supported_protocols(own_identity.supported_protocols().to_vec());
     msg.set_peer_id(own_identity.peer_id().into());
+    msg.set_role(if own_identity.role() == RoleType::Validator {
+        IdentityMsg_Role::VALIDATOR
+    } else {
+        IdentityMsg_Role::FULL_NODE
+    });
 
     // Send serialized message to peer.
     let bytes = msg
@@ -116,8 +131,12 @@ where
         )
     })?;
     let peer_id = PeerId::try_from(response.take_peer_id()).expect("Invalid PeerId");
-    let identity = Identity::new(peer_id, response.take_supported_protocols());
-
+    let role = if response.get_role() == IdentityMsg_Role::VALIDATOR {
+        RoleType::Validator
+    } else {
+        RoleType::FullNode
+    };
+    let identity = Identity::new(peer_id, response.take_supported_protocols(), role);
     Ok((identity, connection))
 }
 
@@ -127,6 +146,7 @@ mod tests {
         protocols::identity::{exchange_identity, Identity},
         ProtocolId,
     };
+    use config::config::RoleType;
     use futures::{executor::block_on, future::join};
     use memsocket::MemorySocket;
     use netcore::{
@@ -153,6 +173,7 @@ mod tests {
                 ProtocolId::from_static(b"/proto/1.0.0"),
                 ProtocolId::from_static(b"/proto/2.0.0"),
             ],
+            RoleType::Validator,
         );
         let client_identity = Identity::new(
             PeerId::random(),
@@ -161,6 +182,7 @@ mod tests {
                 ProtocolId::from_static(b"/proto/2.0.0"),
                 ProtocolId::from_static(b"/proto/3.0.0"),
             ],
+            RoleType::Validator,
         );
         let server_identity_config = server_identity.clone();
         let client_identity_config = client_identity.clone();

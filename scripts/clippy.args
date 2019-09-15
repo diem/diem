@@ -3,12 +3,13 @@
 
 # Allowed lints
 allowed_lints=(
-	"-A" "clippy::match_bool"
-	"-A" "clippy::get_unwrap"
+    "-A" "clippy::get_unwrap"
+    "-A" "clippy::match_bool"
     "-A" "clippy::new_without_default"
 
-    # Added with compiler bump nightly-2019-04-13
-    "-A" "clippy::identity-conversion"
+    # Deriving Arbitrary often causes this warning to show up.
+    "-A" "clippy::unit_arg"
+
     # Clippy seems to complain about async functions
     "-A" "clippy::needless_lifetimes"
     # This ends up being platform dependent, e.g. the Instant type

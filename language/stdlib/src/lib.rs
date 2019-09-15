@@ -11,7 +11,7 @@ use types::{account_address::AccountAddress, account_config};
 
 lazy_static! {
     static ref STDLIB_MODULES: Vec<VerifiedModule> =
-        { build_stdlib(&account_config::core_code_address()) };
+        { build_stdlib(account_config::core_code_address()) };
 }
 
 /// Returns a reference to the standard library, compiled with the
@@ -26,17 +26,16 @@ pub fn stdlib_modules() -> &'static [VerifiedModule] {
 ///
 /// A copy of the stdlib built with the [default address](account_config::core_code_address) is
 /// available through [`stdlib_modules`].
-pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
+pub fn build_stdlib(address: AccountAddress) -> Vec<VerifiedModule> {
     let mut stdlib_modules = vec![];
 
     for module_def in stdlib::module_defs() {
-        let compiled_module = compile_module(address, *module_def, &stdlib_modules)
+        let compiled_module = compile_module(address, (*module_def).clone(), &stdlib_modules)
             .expect("stdlib module failed to compile");
         let verified_module =
             VerifiedModule::new(compiled_module).expect("stdlib module failed to verify");
 
-        let (verified_module, verification_errors) =
-            verify_module_dependencies(verified_module, &stdlib_modules);
+        let verification_errors = verify_module_dependencies(&verified_module, &stdlib_modules);
         // Fail if the module doesn't verify
         for e in &verification_errors {
             println!("{:?}", e);

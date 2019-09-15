@@ -1,14 +1,14 @@
-// check: VerificationError
-// check: ReadRefResourceError(11)
+// check: VerificationFailure
+// check: READREF_RESOURCE_ERROR
 
 module Token {
     resource T {v: u64}
 
-    public new(v: u64): R#Self.T {
+    public new(v: u64): Self.T {
         return T{v: move(v)};
     }
 
-    public value(this: &R#Self.T): u64 {
+    public value(this: &Self.T): u64 {
         let vref: &u64;
         let res: u64;
         vref = &move(this).v;
@@ -22,21 +22,21 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: R#Self.T) {
+    public publish(t: Self.T) {
         move_to_sender<T>(move(t));
         return;
     }
 
-    public test() {
+    public test() acquires T {
         let addr: address;
-        let t: R#Self.T;
-        let tref: &mut R#Self.T;
-        let y: R#Self.T;
+        let t: Self.T;
+        let tref: &mut Self.T;
+        let y: Self.T;
 
         addr = get_txn_sender();
         t = Self.new(0);
         Self.publish(move(t));
-        tref = borrow_global<T>(move(addr));
+        tref = borrow_global_mut<T>(move(addr));
         y = *move(tref);
         return;
     }

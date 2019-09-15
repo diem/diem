@@ -35,13 +35,16 @@ USAGE:
     compiler [FLAGS] [OPTIONS] <source_path>
 
 FLAGS:
-    -h, --help         Prints help information
-        --no-stdlib    Do not automatically compile stdlib dependencies
-        --no-verify    Do not automatically run the bytecode verifier
-    -s, --script       Treat input file as a script (default is to treat file as a module)
-    -V, --version      Prints version information
+    -h, --help                 Prints help information
+    -l, --list_dependencies    Instead of compiling the source, emit a dependency list of the compiled source
+    -m, --module               Treat input file as a module (default is to treat file as a program)
+        --no-stdlib            Do not automatically compile stdlib dependencies
+        --no-verify            Do not automatically run the bytecode verifier
+    -V, --version              Prints version information
 
 OPTIONS:
+    -a, --address <address>       Account address used for publishing
+        --deps <deps_path>        Path to the list of modules that we want to link with
     -o, --output <output_path>    Serialize and write the compiled output to this file
 
 ARGS:
@@ -57,10 +60,10 @@ ARGS:
 * Alternatively, the binary can be run directly with `cargo run -p compiler`.
 
 To compile and verify `foo.mvir`, which contains a Move IR module:
-> `compiler foo.mvir`
+> `compiler -m foo.mvir`
 
 To compile and verify `bar.mvir`, which contains a transaction script:
-> `compiler -s bar.mvir`
+> `compiler bar.mvir`
 
 ## Folder Structure
 

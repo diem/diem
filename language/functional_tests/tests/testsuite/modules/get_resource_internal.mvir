@@ -1,8 +1,8 @@
-// check: no struct definition referencing in scripts
+// check: Missing struct definition for T
 
 module Token {
     resource T { }
-    public new(): R#Self.T {
+    public new(): Self.T {
         return T{ };
     }
 }
@@ -13,10 +13,10 @@ import {{default}}.Token;
 
 main() {
     let sender: address;
-    let yes: &mut R#Token.T;
+    let yes: &mut Token.T;
 
     sender = get_txn_sender();
-    yes = borrow_global<T>(copy(sender));
-    release(move(yes));
+    yes = borrow_global_mut<T>(copy(sender));
+    _ = move(yes);
     return;
 }

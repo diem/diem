@@ -4,16 +4,18 @@
 //! This module implements the checker for verifying correctness of function bodies.
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
-use crate::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
+use crate::control_flow_graph::VMControlFlowGraph;
+use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{VMStaticViolation, VerificationError},
+    errors::append_err_info,
     file_format::{CompiledModule, FunctionDefinition},
     IndexKind,
 };
 
 use crate::{
-    stack_usage_verifier::StackUsageVerifier, type_memory_safety::TypeAndMemorySafetyAnalysis,
+    acquires_list_verifier::AcquiresVerifier, stack_usage_verifier::StackUsageVerifier,
+    type_memory_safety::TypeAndMemorySafetyAnalysis,
 };
 
 pub struct CodeUnitVerifier<'a> {
@@ -21,7 +23,7 @@ pub struct CodeUnitVerifier<'a> {
 }
 
 impl<'a> CodeUnitVerifier<'a> {
-    pub fn verify(module: &'a CompiledModule) -> Vec<VerificationError> {
+    pub fn verify(module: &'a CompiledModule) -> Vec<VMStatus> {
         let verifier = Self { module };
         verifier
             .module
@@ -32,34 +34,41 @@ impl<'a> CodeUnitVerifier<'a> {
                 verifier
                     .verify_function(function_definition)
                     .into_iter()
-                    .map(move |err| VerificationError {
-                        kind: IndexKind::FunctionDefinition,
-                        idx,
-                        err,
-                    })
+                    .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, idx))
             })
             .flatten()
             .collect()
     }
 
-    fn verify_function(&self, function_definition: &FunctionDefinition) -> Vec<VMStaticViolation> {
+    fn verify_function(&self, function_definition: &FunctionDefinition) -> Vec<VMStatus> {
         if function_definition.is_native() {
             return vec![];
         }
-        let result: Result<VMControlFlowGraph, VMStaticViolation> =
-            VMControlFlowGraph::new(&function_definition.code.code);
-        match result {
-            Ok(cfg) => self.verify_function_inner(function_definition, &cfg),
-            Err(e) => vec![e],
+
+        let code = &function_definition.code.code;
+
+        // Check to make sure that the bytecode vector ends with a branching instruction.
+        if let Some(bytecode) = code.last() {
+            if !bytecode.is_unconditional_branch() {
+                return vec![VMStatus::new(StatusCode::INVALID_FALL_THROUGH)];
+            }
+        } else {
+            return vec![VMStatus::new(StatusCode::INVALID_FALL_THROUGH)];
         }
+
+        self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
     }
 
     fn verify_function_inner(
         &self,
         function_definition: &FunctionDefinition,
         cfg: &VMControlFlowGraph,
-    ) -> Vec<VMStaticViolation> {
+    ) -> Vec<VMStatus> {
         let errors = StackUsageVerifier::verify(self.module, function_definition, cfg);
+        if !errors.is_empty() {
+            return errors;
+        }
+        let errors = AcquiresVerifier::verify(self.module, function_definition);
         if !errors.is_empty() {
             return errors;
         }

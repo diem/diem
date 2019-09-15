@@ -1,0 +1,34 @@
+groups:
+- name: recording_rules
+  # use global evaluation interval
+  # Metric (record) name should follow this convention:
+  # level:metric_name:operation
+  # level -- aggregation level
+  # metric -- original metric name
+  # operation -- list of operations that were applied, newest first
+  rules:
+  # Consensus metrics
+  - record: consensus_committed_version:irate1m
+    expr: irate(consensus_gauge{op='last_committed_version'}[1m])
+  - record: consensus_committed_blocks:irate1m
+    expr: irate(consensus_gauge{op='last_committed_round'}[1m])
+
+  # E2E counters
+  - record: mempool_e2e_latency_sum:irate1m
+    expr: irate(mempool_duration_sum{op='e2e.latency'}[1m])
+  - record: mempool_e2e_latency_count:irate1m
+    expr: irate(mempool_duration_count{op='e2e.latency'}[1m])
+  - record: mempool_e2e_latency_mean:irate1m
+    expr: mempool_e2e_latency_sum:irate1m / mempool_e2e_latency_count:irate1m
+
+  # Execution counters
+  - record: consensus_execution_duration_sum:irate1m
+    expr: irate(consensus_duration_sum_s{op='txn_execution_duration_s'}[1m])
+  - record: consensus_execution_duration_count:irate1m
+    expr: irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])
+  - record: consensus_execution_duration_mean_s:irate1m
+    expr: consensus_execution_duration_sum_s:irate1m / consensus_execution_duration_count:irate1m
+
+  # gRPC metrics
+  - record: grpc_req:irate1m
+    expr: irate(num_req[1m])

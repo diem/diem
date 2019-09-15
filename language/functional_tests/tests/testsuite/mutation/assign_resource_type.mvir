@@ -1,20 +1,21 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 2, err: WriteRefResourceError(5) }
+// check: VerificationFailure
+// check: WRITEREF_RESOURCE_ERROR
 
 module A {
     import 0x0.LibraCoin;
-    resource T {fr: R#LibraCoin.T}
+    resource T {fr: LibraCoin.T}
 
-    public new(y: R#LibraCoin.T): R#Self.T {
+    public new(y: LibraCoin.T): Self.T {
         return T{fr: move(y)};
     }
-    public destroy(a: R#Self.T) {
-        let fr: R#LibraCoin.T;
+    public destroy(a: Self.T) {
+        let fr: LibraCoin.T;
         T { fr } = move(a);
         LibraCoin.destroy_zero(move(fr));
         return;
     }
-    public t(this: &mut R#Self.T, y: R#LibraCoin.T) {
-        let x: &mut R#LibraCoin.T;
+    public t(this: &mut Self.T, y: LibraCoin.T) {
+        let x: &mut LibraCoin.T;
         x = &mut move(this).fr;
         *move(x) = move(y);
         return;
@@ -27,8 +28,8 @@ import {{default}}.A;
 import 0x0.LibraCoin;
 
 main() {
-    let z: R#LibraCoin.T;
-    let r: R#A.T;
+    let z: LibraCoin.T;
+    let r: A.T;
     z = LibraCoin.zero();
     r = A.new(move(z));
     z = LibraCoin.zero();

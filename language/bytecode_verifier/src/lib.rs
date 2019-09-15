@@ -6,6 +6,7 @@
 // Bounds checks are implemented in the `vm` crate.
 pub mod absint;
 pub mod abstract_state;
+pub mod acquires_list_verifier;
 pub mod check_duplication;
 pub mod code_unit_verifier;
 pub mod control_flow_graph;

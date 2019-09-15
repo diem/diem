@@ -7,15 +7,24 @@
 //! Currently, the only consensus protocol supported is LibraBFT (based on
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
-#![deny(missing_docs)]
+#![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![feature(async_await)]
-#![feature(checked_duration_since)]
-#![recursion_limit = "128"]
-#[macro_use]
+#![recursion_limit = "512"]
 extern crate failure;
 
+#[allow(unused_imports)]
+#[macro_use]
+extern crate debug_interface;
+
+#[cfg(not(feature = "fuzzing"))]
 mod chained_bft;
+#[cfg(feature = "fuzzing")]
+pub mod chained_bft;
+
+#[cfg(not(any(test, feature = "fuzzing")))]
 mod util;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod util;
 
 /// Defines the public consensus provider traits to implement for
 /// use in the Libra Core blockchain.
@@ -25,5 +34,4 @@ mod counters;
 
 mod state_computer;
 mod state_replication;
-mod state_synchronizer;
 mod txn_manager;

@@ -1,0 +1,41 @@
+// This test checks that for each function definition
+//   1) type parameters have correct kind constraints
+//   2) variables have correct types
+
+//! no-run: verifier, runtime
+
+module M {
+    public id<T> (x: T) {
+        return move(x);
+    }
+}
+
+// check: FunctionSignature
+
+// check: type_formals
+// check: [All]
+
+// check: LocalsSignature([TypeParameter(0)])
+
+
+
+//! new-transaction
+//! no-run: verifier, runtime
+
+module M {
+    public foo<T1, T2, T3: resource, T4: unrestricted>(x1: T4, x2: T3) {
+        let x3: T2;
+        let x4: T1;
+    }
+}
+
+// check: FunctionSignature
+
+// check: type_formals
+// check: [All, All, Resource, Unrestricted]
+
+// check: LocalsSignature
+// check: TypeParameter(3)
+// check: TypeParameter(2)
+// check: TypeParameter(1)
+// check: TypeParameter(0)

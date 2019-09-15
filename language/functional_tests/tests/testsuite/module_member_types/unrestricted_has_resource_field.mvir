@@ -1,10 +1,11 @@
-// check: VerificationError { kind: StructDefinition, idx: 0, err: InvalidResourceField }
+// check: VerificationFailure
+// check: INVALID_RESOURCE_FIELD
 
 module Test {
     import 0x0.LibraCoin;
 
     struct T{
-        fc: R#LibraCoin.T,
+        fc: LibraCoin.T,
         fint: u64,
     }
 }

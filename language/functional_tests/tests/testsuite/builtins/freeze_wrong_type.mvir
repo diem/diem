@@ -6,8 +6,9 @@ main() {
     x = 5;
     x_ref = &mut x;
     imm_ref = freeze(move(x_ref));
-    release(move(imm_ref));
+    _ = move(imm_ref);
     return;
 }
 
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: StLocTypeMismatchError(6) }
+// check: VerificationFailure
+// check: STLOC_TYPE_MISMATCH_ERROR

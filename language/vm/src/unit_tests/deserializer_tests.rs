@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::*,
     file_format::{CompiledModule, CompiledScript},
     file_format_common::*,
 };
+use types::vm_error::StatusCode;
 
 #[test]
 fn malformed_simple() {
@@ -13,29 +13,32 @@ fn malformed_simple() {
     let mut binary = vec![];
     let mut res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary"),
-        BinaryError::Malformed
+        res.expect_err("Expected malformed binary").major_status,
+        StatusCode::MALFORMED
     );
 
     // under-sized binary
     binary = vec![0u8, 0u8, 0u8];
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary"),
-        BinaryError::Malformed
+        res.expect_err("Expected malformed binary").major_status,
+        StatusCode::MALFORMED
     );
 
     // bad magic
     binary = vec![0u8; 15];
     res = CompiledScript::deserialize(&binary);
-    assert_eq!(res.expect_err("Expected bad magic"), BinaryError::BadMagic);
+    assert_eq!(
+        res.expect_err("Expected bad magic").major_status,
+        StatusCode::BAD_MAGIC
+    );
 
     // only magic
     binary = BinaryConstants::LIBRA_MAGIC.to_vec();
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary"),
-        BinaryError::Malformed
+        res.expect_err("Expected malformed binary").major_status,
+        StatusCode::MALFORMED
     );
 
     // bad major version
@@ -46,8 +49,8 @@ fn malformed_simple() {
     binary.push(0); // rest of binary ;)
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected unknown version"),
-        BinaryError::UnknownVersion
+        res.expect_err("Expected unknown version").major_status,
+        StatusCode::UNKNOWN_VERSION
     );
 
     // bad minor version
@@ -58,7 +61,7 @@ fn malformed_simple() {
     binary.push(0); // rest of binary ;)
     let res1 = CompiledModule::deserialize(&binary);
     assert_eq!(
-        res1.expect_err("Expected unknown version"),
-        BinaryError::UnknownVersion
+        res1.expect_err("Expected unknown version").major_status,
+        StatusCode::UNKNOWN_VERSION
     );
 }

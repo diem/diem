@@ -16,7 +16,8 @@ impl Command for DevCommand {
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         let commands: Vec<Box<dyn Command>> = vec![
             Box::new(DevCommandCompile {}),
-            Box::new(SubmitTransactionFromDiskCommand {}),
+            Box::new(DevCommandPublish {}),
+            Box::new(DevCommandExecute {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -30,13 +31,13 @@ impl Command for DevCommandCompile {
         vec!["compile", "c"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<file_path> [output_file_path (compile into tmp file by default)]"
+        "<sender_account_address>|<sender_account_ref_id> <file_path> <module|script> [output_file_path (compile into tmp file by default)]"
     }
     fn get_description(&self) -> &'static str {
         "Compile move program"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() < 2 || params.len() > 3 {
+        if params.len() < 4 || params.len() > 5 {
             println!("Invalid number of arguments for compilation");
             return;
         }
@@ -48,41 +49,58 @@ impl Command for DevCommandCompile {
     }
 }
 
-pub struct SubmitTransactionFromDiskCommand {}
+/// Sub command to publish move resource
+pub struct DevCommandPublish {}
 
-impl Command for SubmitTransactionFromDiskCommand {
+impl Command for DevCommandPublish {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["submit", "submitb", "s", "sb"]
+        vec!["publish", "p"]
     }
-    fn get_description(&self) -> &'static str {
-        "Load a RawTransaction from file and submit to the network"
-    }
+
     fn get_params_help(&self) -> &'static str {
-        "\n\t<signer_account_address>|<signer_account_ref_id> <path_to_raw_transaction> Suffix 'b' is for blocking. "
+        "<sender_account_address>|<sender_account_ref_id> <compiled_module_path>"
     }
+
+    fn get_description(&self) -> &'static str {
+        "Publish move module on-chain"
+    }
+
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() != 3 {
-            println!(
-                "Invalid number of arguments for submitting transaction, got {}",
-                params.len()
-            );
+            println!("Invalid number of arguments to publish module");
             return;
         }
-        let is_blocking = blocking_cmd(&params[0]);
-        match client.submit_transaction_from_disk(params, is_blocking) {
-            Ok(index_and_seq) => {
-                if is_blocking {
-                    println!("Finished transaction!");
-                } else {
-                    println!("Transaction submitted to validator");
-                }
-                println!(
-                    "To query for transaction status, run: query txn_acc_seq {} {} \
-                     <fetch_events=true|false>",
-                    index_and_seq.account_index, index_and_seq.sequence_number
-                );
-            }
-            Err(e) => report_error("Failed to perform transaction", e),
+        match client.publish_module(params) {
+            Ok(_) => println!("Successfully published module"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+/// Sub command to execute custom move script
+pub struct DevCommandExecute {}
+
+impl Command for DevCommandExecute {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["execute", "e"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<sender_account_address>|<sender_account_ref_id> <compiled_module_path> [parameters]"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Execute custom move script"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() < 3 {
+            println!("Invalid number of arguments to execute script");
+            return;
+        }
+        match client.execute_script(params) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
         }
     }
 }

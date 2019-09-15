@@ -3,35 +3,48 @@
 
 use config::{
     config::{NodeConfig, NodeConfigHelpers},
-    trusted_peers::{TrustedPeersConfig, TrustedPeersConfigHelpers},
+    trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
-use crypto::signing::{self, KeyPair};
+use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use proto_conv::IntoProtoBytes;
+use rand::{Rng, SeedableRng};
 use std::{convert::TryFrom, fs::File, io::prelude::*, path::Path};
 use types::{account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys};
 use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction<P: AsRef<Path>>(
     path: P,
-    faucet_account_keypair: &KeyPair,
-    trusted_peer_config: &TrustedPeersConfig,
+    faucet_account_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    consensus_peers_config: &ConsensusPeersConfig,
+    network_peers_config: &NetworkPeersConfig,
 ) -> Result<()> {
-    let validator_set = trusted_peer_config
+    let validator_set = consensus_peers_config
         .peers
         .iter()
-        .map(|(peer_id, peer)| {
+        .map(|peer| {
+            let peer_id = peer.account_address.clone();
             ValidatorPublicKeys::new(
                 AccountAddress::try_from(peer_id.clone()).expect("[config] invalid peer_id"),
-                peer.get_consensus_public().into(),
-                peer.get_network_signing_public().into(),
-                peer.get_network_identity_public(),
+                peer.consensus_pubkey.clone(),
+                network_peers_config
+                    .peers
+                    .get(&peer_id)
+                    .unwrap()
+                    .network_signing_pubkey
+                    .clone(),
+                network_peers_config
+                    .peers
+                    .get(&peer_id)
+                    .unwrap()
+                    .network_identity_pubkey
+                    .clone(),
             )
         })
         .collect();
     let transaction = encode_genesis_transaction_with_validator(
-        faucet_account_keypair.private_key(),
-        faucet_account_keypair.public_key(),
+        &faucet_account_keypair.private_key,
+        faucet_account_keypair.public_key.clone(),
         validator_set,
     );
     let mut file = File::create(path)?;
@@ -40,16 +53,25 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
 }
 
 /// Returns the config as well as the genesis keyapir
-pub fn get_test_config() -> (NodeConfig, KeyPair) {
+pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519PublicKey>) {
     // TODO: test config should be moved here instead of config crate
     let config = NodeConfigHelpers::get_single_node_test_config(true);
-    let (private_key, _) = signing::generate_keypair();
-    let keypair = KeyPair::new(private_key);
+    // Those configs should be different on every call. We bypass the
+    // costly StdRng initialization
+    let mut seed_rng = rand::rngs::OsRng::new().expect("can't access OsRng");
+    let seed_buf: [u8; 32] = seed_rng.gen();
+    let mut rng = rand::rngs::StdRng::from_seed(seed_buf);
+    let (private_key, _) = compat::generate_keypair(&mut rng);
+    let keypair = KeyPair::from(private_key);
 
+    let (_, test_consensus_peers) = ConfigHelpers::get_test_consensus_config(1, None);
+    let (_, test_network_peers) =
+        ConfigHelpers::get_test_network_peers_config(&test_consensus_peers, None);
     gen_genesis_transaction(
         &config.execution.genesis_file_location,
         &keypair,
-        &TrustedPeersConfigHelpers::get_test_config(1, None).1,
+        &test_consensus_peers,
+        &test_network_peers,
     )
     .expect("[config] failed to create genesis transaction");
     (config, keypair)

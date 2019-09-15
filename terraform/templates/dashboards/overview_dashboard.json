@@ -188,7 +188,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(executor{op=\"num_accounts\"})",
+          "expr": "max(storage_gauge{op=\"new_state_leaves\"}) - max(storage_gauge{op=\"stale_state_leaves\"})",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -625,7 +625,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "e2e latency",
+      "title": "E2E Latency",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -641,8 +641,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "ms",
+          "format": "s",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -654,7 +654,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -934,7 +934,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"faucet\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")\n",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"faucet\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")\n",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -1471,7 +1471,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -1833,7 +1833,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2134,7 +2134,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2508,7 +2508,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2812,7 +2812,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -3186,7 +3186,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -3490,7 +3490,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -3864,7 +3864,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -4168,7 +4168,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -4542,7 +4542,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -4846,7 +4846,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -5220,7 +5220,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -5524,7 +5524,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -5898,7 +5898,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -6202,7 +6202,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -6576,7 +6576,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -6880,7 +6880,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -7254,7 +7254,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -7558,7 +7558,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{8}).*\")",
+          "expr": "label_replace(build_info{workspace=\"$workspace\", role=\"validator\", peer_id=\"$peer_id\"}, \"short_rev\", \"$1\", \"revision\", \"(.{7}).*\")",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -7932,7 +7932,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -8058,8 +8058,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "stable",
-          "value": "stable"
+          "text": "dev",
+          "value": "dev"
         },
         "datasource": "Prometheus",
         "definition": "label_values(workspace)",

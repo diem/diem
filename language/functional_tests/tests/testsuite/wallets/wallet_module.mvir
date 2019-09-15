@@ -1,4 +1,3 @@
-modules:
 module ApprovalGroup {
     import 0x0.Signature;
 
@@ -22,7 +21,7 @@ module ApprovalGroup {
     // create a new approval group
     public create(pk1: bytearray,
                pk2: bytearray,
-               pk3: bytearray): R#Self.T {
+               pk3: bytearray): Self.T {
         return T {
             pk1: move(pk1),
             pk2: move(pk2),
@@ -33,7 +32,7 @@ module ApprovalGroup {
 
     // evaluate whether the approval group can exercise its authority
     // right now only the threshold policy is checked
-    public has_authority(group: &R#Self.T,
+    public has_authority(group: &Self.T,
                       pk1: bytearray,
                       sig1: bytearray,
                       pk2: bytearray,
@@ -49,7 +48,7 @@ module ApprovalGroup {
     }
 
     // helper function to evaluate the threshold policy
-    verify_sig(group: &R#Self.T, pk: bytearray, sig: bytearray, hash: bytearray): bool {
+    verify_sig(group: &Self.T, pk: bytearray, sig: bytearray, hash: bytearray): bool {
         let result: bool;
         if ((copy(pk) == *& copy(group).pk1) ||
             (copy(pk) == *& copy(group).pk2) ||
@@ -58,12 +57,15 @@ module ApprovalGroup {
         } else {
             result = false;
         }
-        release(move(group));
+        _ = move(group);
         return move(result);
     }
 
 }
 
+
+
+//! new-transaction
 module ColdWallet {
     import 0x0.AddressUtil;
     import 0x0.U64Util;
@@ -74,9 +76,9 @@ module ColdWallet {
     import Transaction.ApprovalGroup;
 
     resource T {
-        balance: R#LibraCoin.T,
+        balance: LibraCoin.T,
         sequence_num: u64,
-        genesis_group: R#ApprovalGroup.T,
+        genesis_group: ApprovalGroup.T,
     }
 
     // This struct is unused, only intended to define the format of a transaction
@@ -90,9 +92,9 @@ module ColdWallet {
     }
 
     // create a new ColdWallet with a dafault genesis group
-    public create(genesis_group: R#ApprovalGroup.T) {
-        let zero_balance: R#LibraCoin.T;
-        let wallet: R#Self.T;
+    public create(genesis_group: ApprovalGroup.T) {
+        let zero_balance: LibraCoin.T;
+        let wallet: Self.T;
         zero_balance = LibraCoin.zero();
         wallet = T {
             balance: move(zero_balance),
@@ -103,17 +105,17 @@ module ColdWallet {
         return;
     }
 
-    public publish(self: R#Self.T) {
+    public publish(self: Self.T) {
         move_to_sender<T>(move(self));
         return;
     }
 
     // deposit money into a payee's cold wallet
-    public deposit(payee: address, to_deposit: R#LibraCoin.T) {
+    public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
 
-        let payee_wallet_ref: &mut R#Self.T;
+        let payee_wallet_ref: &mut Self.T;
         // Load the payee's account
-        payee_wallet_ref = borrow_global<T>(move(payee));
+        payee_wallet_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut move(payee_wallet_ref).balance, move(to_deposit));
         return;
@@ -122,24 +124,26 @@ module ColdWallet {
     // withdraw money from this wallet, and send to a payee account
     // Note that this implementation moves the fund into the payee's Libra account, without assuming
     // there's a cold wallet module under that account
-    public withdraw_from_payer(payer: address,
-                            payee: address,
-                            amount: u64,
-                            pk1: bytearray,
-                            sig1: bytearray,
-                            pk2: bytearray,
-                            sig2: bytearray) {
+    public withdraw_from_payer(
+        payer: address,
+        payee: address,
+        amount: u64,
+        pk1: bytearray,
+        sig1: bytearray,
+        pk2: bytearray,
+        sig2: bytearray
+    ) acquires T {
 
-        let payer_ref: &mut R#Self.T;
+        let payer_ref: &mut Self.T;
         let transaction_bytes: bytearray;
         let prefix: bytearray;
         let hash: bytearray;
         let seq: u64;
-        let withdraw_amount: R#LibraCoin.T;
+        let withdraw_amount: LibraCoin.T;
         let has_authority: bool;
         let account_balance: u64;
 
-        payer_ref = borrow_global<T>(copy(payer));
+        payer_ref = borrow_global_mut<T>(copy(payer));
         account_balance = LibraCoin.value(&copy(payer_ref).balance);
         assert(copy(amount) <= move(account_balance), 1001);
 
@@ -165,13 +169,13 @@ module ColdWallet {
             // how to handle error?
 
         }
-        release(move(payer_ref));
+        _ = move(payer_ref);
         return;
     }
 
     // helper to get the expected serialization of a transaction
     // serialization format: 'prefix' || payee_address || amount || sequence_number
-    get_transaction_bytes(payer: address, payee: address, amount: u64, wallet: &mut R#Self.T): bytearray {
+    get_transaction_bytes(payer: address, payee: address, amount: u64, wallet: &mut Self.T): bytearray {
         let constant: bytearray;
         let prefix: bytearray;
         let payer_bytes: bytearray;
@@ -185,10 +189,10 @@ module ColdWallet {
         // TODO: consider moving into resource
         // TODO: move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
-        constant = b"636F6C6477616C6C65742E7472616E73616374696F6E";
+        constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
         payer_bytes = AddressUtil.address_to_bytes(move(payer));
         prefix = BytearrayUtil.bytearray_concat(move(payer_bytes), move(constant));
-        
+
         payee_bytes = AddressUtil.address_to_bytes(move(payee));
         amount_bytes = U64Util.u64_to_bytes(move(amount));
         seq_bytes = U64Util.u64_to_bytes(*&move(wallet).sequence_num);
@@ -197,26 +201,23 @@ module ColdWallet {
         transaction_bytes = BytearrayUtil.bytearray_concat(move(first_three), move(seq_bytes));
         return move(transaction_bytes);
     }
- }
-
-script:
-main() {
-    return;
 }
+
+
 
 //! new-transaction
 import Transaction.ApprovalGroup;
 import Transaction.ColdWallet;
 main() {
-    let genesis_group: R#ApprovalGroup.T;
+    let genesis_group: ApprovalGroup.T;
     let pk1: bytearray;
     let pk2: bytearray;
     let pk3: bytearray;
-    let wallet : R#ColdWallet.T;
+    let wallet : ColdWallet.T;
 
-    pk1 = b"1234";
-    pk2 = b"5678";
-    pk3 = b"abc123";
+    pk1 = h"1234";
+    pk2 = h"5678";
+    pk3 = h"abc123";
 
     genesis_group = ApprovalGroup.create(move(pk1), move(pk2), move(pk3));
     ColdWallet.create(move(genesis_group));

@@ -334,7 +334,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_qc_ms'}[1m])/irate(consensus_duration_count{op='creation_to_qc_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -342,7 +342,7 @@
           "refId": "A"
         },
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_receival_ms'}[1m])/irate(consensus_duration_count{op='creation_to_receival_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='creation_to_receival_s'}[1m])/irate(consensus_duration_count{op='creation_to_receival_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}: vote",
@@ -1048,7 +1048,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_duration_sum{op='state_sync_duration_ms'}",
+          "expr": "consensus_duration_sum{op='state_sync_duration_s'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1218,7 +1218,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus_duration_sum{op='block_retrieval_duration_ms'}",
+          "expr": "consensus_duration_sum{op='block_retrieval_duration_s'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1661,7 +1661,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='proposal_success_wait_ms'}[1m])/irate(consensus_duration_count{op='proposal_success_wait_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='proposal_success_wait_s'}[1m])/irate(consensus_duration_count{op='proposal_success_wait_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1747,7 +1747,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='proposal_failure_wait_ms'}[1m])/irate(consensus_duration_count{op='proposal_failure_wait_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='proposal_failure_wait_s'}[1m])/irate(consensus_duration_count{op='proposal_failure_wait_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2177,7 +2177,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='vote_success_wait_ms'}[1m])/irate(consensus_duration_count{op='vote_success_wait_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='vote_success_wait_s'}[1m])/irate(consensus_duration_count{op='vote_success_wait_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2263,7 +2263,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='vote_failure_wait_ms'}[1m])/irate(consensus_duration_count{op='vote_failure_wait_ms'}[1m])",
+          "expr": "irate(consensus_duration_sum{op='vote_failure_wait_s'}[1m])/irate(consensus_duration_count{op='vote_failure_wait_s'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

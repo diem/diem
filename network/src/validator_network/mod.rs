@@ -11,15 +11,20 @@ pub mod network_builder;
 
 mod consensus;
 mod mempool;
+mod state_synchronizer;
 #[cfg(test)]
 mod test;
 
 // Public re-exports
+pub use crate::interface::LibraNetworkProvider;
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
 };
 pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
+pub use state_synchronizer::{
+    StateSynchronizerEvents, StateSynchronizerSender, STATE_SYNCHRONIZER_MSG_PROTOCOL,
+};
 use types::PeerId;
 
 /// Events received by network clients in a validator

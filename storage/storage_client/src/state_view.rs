@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::StorageRead;
-use crypto::{
-    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
-    HashValue,
-};
+use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
 use scratchpad::{AccountState, SparseMerkleTree};
 use state_view::StateView;
@@ -18,7 +15,8 @@ use std::{
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    proof::{definition::SparseMerkleProof, verify_sparse_merkle_element},
+    proof::{verify_sparse_merkle_element, SparseMerkleProof},
+    transaction::Version,
 };
 
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
@@ -27,6 +25,9 @@ pub struct VerifiedStateView<'a> {
     /// A gateway implementing persistent storage interface, which can be a RPC client or direct
     /// accessor.
     reader: Arc<dyn StorageRead>,
+
+    /// The most recent version in persistent storage.
+    latest_persistent_version: Option<Version>,
 
     /// The most recent state root hash in persistent storage.
     latest_persistent_state_root: HashValue,
@@ -80,12 +81,18 @@ impl<'a> VerifiedStateView<'a> {
     /// on top of it represented by `speculative_state`.
     pub fn new(
         reader: Arc<dyn StorageRead>,
-        latest_persistent_state_root: HashValue,
+        latest_persistent_version_and_state_root: (Option<Version>, HashValue),
         speculative_state: &'a SparseMerkleTree,
     ) -> Self {
         Self {
             reader,
-            latest_persistent_state_root,
+            latest_persistent_version: latest_persistent_version_and_state_root.0,
+            // if num_elements_in_accumulator > 0 {
+            //     Some(num_elements_in_accumulator - 1)
+            // } else {
+            //     None
+            // },
+            latest_persistent_state_root: latest_persistent_version_and_state_root.1,
             speculative_state,
             account_to_btree_cache: RefCell::new(HashMap::new()),
             account_to_proof_cache: RefCell::new(HashMap::new()),
@@ -126,11 +133,12 @@ impl<'a> StateView for VerifiedStateView<'a> {
                     // No matter it is in db or unknown, we have to query from db since even the
                     // former case, we don't have the blob data but only its hash.
                     AccountState::ExistsInDB | AccountState::Unknown => {
-                        let (blob, proof) =
-                            self.reader.get_account_state_with_proof_by_state_root(
-                                address,
-                                self.latest_persistent_state_root,
-                            )?;
+                        let (blob, proof) = match self.latest_persistent_version {
+                            Some(version) => self
+                                .reader
+                                .get_account_state_with_proof_by_version(address, version)?,
+                            None => (None, SparseMerkleProof::new(None, vec![])),
+                        };
                         verify_sparse_merkle_element(
                             self.latest_persistent_state_root,
                             address.hash(),
@@ -172,6 +180,6 @@ impl<'a> StateView for VerifiedStateView<'a> {
     }
 
     fn is_genesis(&self) -> bool {
-        self.latest_persistent_state_root == *SPARSE_MERKLE_PLACEHOLDER_HASH
+        self.latest_persistent_version.is_none()
     }
 }

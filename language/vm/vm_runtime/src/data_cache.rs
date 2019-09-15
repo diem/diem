@@ -2,21 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
-use crate::{
-    loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Local, MutVal, Reference, Value},
-};
 use logger::prelude::*;
 use state_view::StateView;
 use std::{collections::btree_map::BTreeMap, mem::replace};
 use types::{
     access_path::AccessPath,
     language_storage::ModuleId,
+    vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use vm::{
     errors::*,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+};
+use vm_runtime_types::{
+    loaded_data::struct_def::StructDef,
+    value::{GlobalRef, Struct, Value},
 };
 
 /// The wrapper around the StateVersionView for the block.
@@ -38,7 +39,7 @@ impl<'block> BlockDataCache<'block> {
         }
     }
 
-    pub fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation> {
+    pub fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         match self.data_map.get(access_path) {
             Some(data) => Ok(Some(data.clone())),
             None => match self.data_view.get(&access_path) {
@@ -46,7 +47,7 @@ impl<'block> BlockDataCache<'block> {
                 // TODO: should we forward some error info?
                 Err(_) => {
                     crit!("[VM] Error getting data from storage for {:?}", access_path);
-                    Err(VMInvariantViolation::StorageError)
+                    Err(VMStatus::new(StatusCode::STORAGE_ERROR))
                 }
             },
         }
@@ -69,11 +70,11 @@ impl<'block> BlockDataCache<'block> {
 /// Trait for the StateVersionView or a mock implementation of the remote cache.
 /// Unit and integration tests should use this to mock implementations of "storage"
 pub trait RemoteCache {
-    fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation>;
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>>;
 }
 
 impl<'block> RemoteCache for BlockDataCache<'block> {
-    fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>, VMInvariantViolation> {
+    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         BlockDataCache::get(self, access_path)
     }
 }
@@ -109,46 +110,36 @@ impl<'txn> TransactionDataCache<'txn> {
         if !self.data_map.contains_key(ap) {
             match self.data_cache.get(ap)? {
                 Some(bytes) => {
-                    let res = try_runtime!(Ok(Value::simple_deserialize(&bytes, def)));
-                    let new_root = GlobalRef::make_root(ap.clone(), MutVal::new(res));
+                    let res = Value::simple_deserialize(&bytes, def)?;
+                    let new_root = GlobalRef::make_root(ap.clone(), res);
                     self.data_map.insert(ap.clone(), new_root);
                 }
                 None => {
-                    return Ok(Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::MissingData,
-                    }));
+                    return Err(vm_error(Location::new(), StatusCode::MISSING_DATA));
                 }
             };
         }
-        Ok(Ok(self.data_map.get_mut(ap).expect("data must exist")))
+        Ok(self.data_map.get_mut(ap).expect("data must exist"))
     }
 
     /// BorrowGlobal opcode cache implementation
     pub fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
         let root_ref = match self.load_data(ap, def) {
-            Ok(Ok(gref)) => gref,
-            Ok(Err(e)) => {
-                warn!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
-                return Ok(Err(e));
-            }
+            Ok(gref) => gref,
             Err(e) => {
-                error!(
-                    "[VM] (BorrowGlobal) Internal error reading data for {}: {:?}",
-                    ap, e
-                );
+                error!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
                 return Err(e);
             }
         };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             // shallow_ref increment ref count
-            Ok(Ok(root_ref.shallow_clone()))
+            Ok(root_ref.clone())
         } else {
-            Ok(Err(VMRuntimeError {
-                loc: Location::new(),
-                err: VMErrorKind::GlobalAlreadyBorrowed,
-            }))
+            Err(
+                vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
+                    .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
+            )
         }
     }
 
@@ -157,8 +148,8 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-    ) -> Result<(bool, AbstractMemorySize<GasCarrier>), VMInvariantViolation> {
-        Ok(match self.load_data(ap, def)? {
+    ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)> {
+        Ok(match self.load_data(ap, def) {
             Ok(gref) => {
                 if gref.is_deleted() {
                     (false, AbstractMemorySize::new(0))
@@ -171,30 +162,22 @@ impl<'txn> TransactionDataCache<'txn> {
     }
 
     /// MoveFrom opcode cache implementation
-    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Local> {
+    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value> {
         let root_ref = match self.load_data(ap, def) {
-            Ok(Ok(gref)) => gref,
-            Ok(Err(e)) => {
-                warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
-                return Ok(Err(e));
-            }
+            Ok(gref) => gref,
             Err(e) => {
-                error!(
-                    "[VM] (MoveFrom) Internal error reading data for {}: {:?}",
-                    ap, e
-                );
+                warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
                 return Err(e);
             }
         };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
-            Ok(Ok(Local::Value(root_ref.move_from())))
+            Ok(root_ref.move_from()?)
         } else {
-            Ok(Err(VMRuntimeError {
-                loc: Location::new(),
-                // better name? this is true even for moved from data
-                err: VMErrorKind::GlobalAlreadyBorrowed,
-            }))
+            Err(
+                vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
+                    .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
+            )
         }
     }
 
@@ -203,27 +186,27 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-        res: MutVal,
+        res: Struct,
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)
-        let can_write = match self.load_data(ap, def)? {
+        let can_write = match self.load_data(ap, def) {
             Ok(data) => data.is_deleted(),
-            Err(e) => match e.err {
-                VMErrorKind::MissingData => true,
-                _ => return Ok(Err(e)),
+            Err(e) => match e.major_status {
+                StatusCode::MISSING_DATA => true,
+                _ => return Err(e),
             },
         };
         if can_write {
             let new_root = GlobalRef::move_to(ap.clone(), res);
             self.data_map.insert(ap.clone(), new_root);
-            Ok(Ok(()))
+            Ok(())
         } else {
             warn!("[VM] Cannot write over existing resource {}", ap);
-            Ok(Err(VMRuntimeError {
-                loc: Location::new(),
-                err: VMErrorKind::CannotWriteExistingResource,
-            }))
+            Err(vm_error(
+                Location::new(),
+                StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,
+            ))
         }
     }
 
@@ -235,7 +218,7 @@ impl<'txn> TransactionDataCache<'txn> {
     pub fn make_write_set(
         &mut self,
         to_be_published_modules: Vec<(ModuleId, Vec<u8>)>,
-    ) -> VMRuntimeResult<WriteSet> {
+    ) -> VMResult<WriteSet> {
         let mut write_set = WriteSetMut::new(Vec::new());
         let data_map = replace(&mut self.data_map, BTreeMap::new());
         for (key, global_ref) in data_map {
@@ -246,35 +229,44 @@ impl<'txn> TransactionDataCache<'txn> {
                 let deleted = global_ref.is_deleted();
                 if let Some(data) = global_ref.get_data() {
                     if deleted {
+                        // The write set will not grow to this size due to the gas limit.
+                        // Expressing the bound in terms of the gas limit is impractical
+                        // for MIRAI to check to we set a safe upper bound.
+                        assume!(write_set.len() < usize::max_value());
                         write_set.push((key, WriteOp::Deletion));
                     } else if let Some(blob) = data.simple_serialize() {
+                        // The write set will not grow to this size due to the gas limit.
+                        // Expressing the bound in terms of the gas limit is impractical
+                        // for MIRAI to check to we set a safe upper bound.
+                        assume!(write_set.len() < usize::max_value());
                         write_set.push((key, WriteOp::Value(blob)));
                     } else {
-                        return Err(VMRuntimeError {
-                            loc: Location::new(),
-                            err: VMErrorKind::ValueSerializerError,
-                        });
+                        return Err(vm_error(
+                            Location::new(),
+                            StatusCode::VALUE_SERIALIZATION_ERROR,
+                        ));
                     }
                 } else {
-                    return Err(VMRuntimeError {
-                        loc: Location::new(),
-                        err: VMErrorKind::MissingReleaseRef,
-                    });
+                    return Err(
+                        vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
+                            .with_sub_status(sub_status::DRE_MISSING_RELEASEREF),
+                    );
                 }
             }
         }
 
         // Insert the code blob to the writeset.
-        for (key, blob) in to_be_published_modules.into_iter() {
-            write_set.push(((&key).into(), WriteOp::Value(blob)));
+        if write_set.len() <= usize::max_value() - to_be_published_modules.len() {
+            for (key, blob) in to_be_published_modules.into_iter() {
+                write_set.push(((&key).into(), WriteOp::Value(blob)));
+            }
+        } else {
+            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
         }
 
         match write_set.freeze() {
             Ok(ws) => Ok(ws),
-            Err(_) => Err(VMRuntimeError {
-                loc: Location::new(),
-                err: VMErrorKind::DataFormatError,
-            }),
+            Err(_) => Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR)),
         }
     }
 

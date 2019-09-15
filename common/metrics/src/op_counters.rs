@@ -7,8 +7,31 @@
 use prometheus::{
     core::{Collector, Desc},
     proto::MetricFamily,
-    Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts,
+    Histogram, HistogramOpts, HistogramTimer, HistogramVec, IntCounter, IntCounterVec, IntGauge,
+    IntGaugeVec, Opts,
 };
+
+use std::time::Duration;
+
+/// A small wrapper around Histogram to handle the special case
+/// of duration buckets.
+/// This Histogram will handle the correct granularty for logging
+/// time duration in a way that fits the used buckets.
+pub struct DurationHistogram {
+    histogram: Histogram,
+}
+
+impl DurationHistogram {
+    pub fn new(histogram: Histogram) -> DurationHistogram {
+        DurationHistogram { histogram }
+    }
+
+    pub fn observe_duration(&self, d: Duration) {
+        // Duration is full seconds + nanos elapsed from the presious full second
+        let v = d.as_secs() as f64 + f64::from(d.subsec_nanos()) / 1e9;
+        self.histogram.observe(v);
+    }
+}
 
 #[derive(Clone)]
 pub struct OpMetrics {
@@ -16,7 +39,7 @@ pub struct OpMetrics {
     counters: IntCounterVec,
     gauges: IntGaugeVec,
     peer_gauges: IntGaugeVec,
-    histograms: HistogramVec,
+    duration_histograms: HistogramVec,
 }
 
 impl OpMetrics {
@@ -45,7 +68,7 @@ impl OpMetrics {
                 &["op", "remote_peer_id"],
             )
             .unwrap(),
-            histograms: HistogramVec::new(
+            duration_histograms: HistogramVec::new(
                 HistogramOpts::new(
                     format!("{}_duration", name_str.clone()),
                     format!("Histogram values for {}", name_str),
@@ -80,7 +103,11 @@ impl OpMetrics {
 
     #[inline]
     pub fn histogram(&self, name: &str) -> Histogram {
-        self.histograms.with_label_values(&[name])
+        self.duration_histograms.with_label_values(&[name])
+    }
+
+    pub fn duration_histogram(&self, name: &str) -> DurationHistogram {
+        DurationHistogram::new(self.duration_histograms.with_label_values(&[name]))
     }
 
     #[inline]
@@ -114,7 +141,19 @@ impl OpMetrics {
 
     #[inline]
     pub fn observe(&self, op: &str, v: f64) {
-        self.histograms.with_label_values(&[op]).observe(v);
+        self.duration_histograms.with_label_values(&[op]).observe(v);
+    }
+
+    pub fn observe_duration(&self, op: &str, d: Duration) {
+        // Duration is full seconds + nanos elapsed from the presious full second
+        let v = d.as_secs() as f64 + f64::from(d.subsec_nanos()) / 1e9;
+        self.duration_histograms.with_label_values(&[op]).observe(v);
+    }
+
+    pub fn timer(&self, op: &str) -> HistogramTimer {
+        self.duration_histograms
+            .with_label_values(&[op])
+            .start_timer()
     }
 }
 
@@ -124,7 +163,7 @@ impl Collector for OpMetrics {
         ms.extend(self.counters.desc());
         ms.extend(self.gauges.desc());
         ms.extend(self.peer_gauges.desc());
-        ms.extend(self.histograms.desc());
+        ms.extend(self.duration_histograms.desc());
         ms
     }
 
@@ -133,7 +172,7 @@ impl Collector for OpMetrics {
         ms.extend(self.counters.collect());
         ms.extend(self.gauges.collect());
         ms.extend(self.peer_gauges.collect());
-        ms.extend(self.histograms.collect());
+        ms.extend(self.duration_histograms.collect());
         ms
     }
 }

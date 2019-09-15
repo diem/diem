@@ -7,4 +7,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.1.28"
+hex = "0.3.2"
+rand = "0.6.5"

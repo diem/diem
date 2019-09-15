@@ -1,15 +1,15 @@
 module Token {
     resource T { count: u64 }
 
-    public test() {
-        let t_ref: &mut R#Self.T;
+    public test() acquires T {
+        let t_ref: &mut Self.T;
         let count_ref: &mut u64;
         let local: u64;
         let local_ref: &mut u64;
         let sender: address;
         move_to_sender<T>(T { count: 0 });
         sender = get_txn_sender();
-        t_ref = borrow_global<T>(move(sender));
+        t_ref = borrow_global_mut<T>(move(sender));
         count_ref = &mut move(t_ref).count;
         local = 0;
         local_ref = &mut local;

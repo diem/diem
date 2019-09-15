@@ -24,12 +24,12 @@ proptest! {
     }
 
     #[test]
-    fn test_executor_startup_info(executor_startup_info in any::<ExecutorStartupInfo>()) {
-        assert_protobuf_encode_decode(&executor_startup_info);
+    fn test_startup_info(startup_info in any::<StartupInfo>()) {
+        assert_protobuf_encode_decode(&startup_info);
     }
 
     #[test]
-    fn test_get_executor_startup_info_response(res in any::<GetExecutorStartupInfoResponse>()) {
+    fn test_get_startup_info_response(res in any::<GetStartupInfoResponse>()) {
         assert_protobuf_encode_decode(&res);
     }
 }

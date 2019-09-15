@@ -3,13 +3,13 @@ locals {
   dns_suffix = var.append_workspace_dns ? ".${terraform.workspace}" : ""
 }
 
-resource "aws_route53_record" "prometheus" {
+resource "aws_route53_record" "monitoring" {
   count   = local.zone_id == "" ? 0 : 1
   zone_id = local.zone_id
   name    = "prometheus${local.dns_suffix}"
   type    = "A"
   ttl     = 60
-  records = [aws_instance.prometheus.public_ip]
+  records = [aws_instance.monitoring.public_ip]
 }
 
 resource "aws_lb" "validator-ac" {
@@ -22,7 +22,7 @@ resource "aws_lb" "validator-ac" {
 resource "aws_lb_target_group" "validator-ac" {
   name     = "${terraform.workspace}-ac"
   protocol = "TCP"
-  port     = 30307
+  port     = 8000
   vpc_id   = aws_vpc.testnet.id
 }
 

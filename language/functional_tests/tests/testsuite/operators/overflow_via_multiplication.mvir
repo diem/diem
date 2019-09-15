@@ -4,5 +4,5 @@ main() {
   return;
 }
 
-// check: ArithmeticError
+// check: ARITHMETIC_ERROR
 // TODO: check for overflow once vm errors are improved

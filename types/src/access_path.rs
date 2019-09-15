@@ -35,15 +35,13 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-// This is caused by deriving Arbitrary for AccessPath.
-#![allow(clippy::unit_arg)]
-
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        account_received_event_path, account_resource_path, account_sent_event_path,
-        association_address,
+        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
     },
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
@@ -54,32 +52,23 @@ use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{self, Formatter},
-    slice::Iter,
-    str::{self, FromStr},
-};
+use std::{fmt, slice::Iter};
 
-#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Field(String);
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
+pub struct Field(Identifier);
 
 impl Field {
-    pub fn new(s: &str) -> Field {
-        Field(s.to_string())
+    pub fn new(name: Identifier) -> Field {
+        Field(name)
     }
 
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &IdentStr {
         &self.0
-    }
-}
-
-impl From<String> for Field {
-    fn from(s: String) -> Self {
-        Field(s)
     }
 }
 
@@ -96,20 +85,8 @@ pub enum Access {
 }
 
 impl Access {
-    pub fn new(s: &str) -> Self {
-        Access::Field(Field::new(s))
-    }
-}
-
-impl FromStr for Access {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        if let Ok(idx) = s.parse::<u64>() {
-            Ok(Access::Index(idx))
-        } else {
-            Ok(Access::Field(Field::new(s)))
-        }
+    pub fn new(name: Identifier) -> Self {
+        Access::Field(Field::new(name))
     }
 }
 
@@ -180,7 +157,7 @@ impl Accesses {
         for access in self.0.iter() {
             match access {
                 Access::Field(s) => {
-                    let access_str = s.name().as_ref();
+                    let access_str = s.name().as_str();
                     assert!(access_str != "");
                     path.push_str(access_str)
                 }
@@ -211,20 +188,6 @@ impl From<Vec<Access>> for Accesses {
     }
 }
 
-impl From<Vec<u8>> for Accesses {
-    fn from(mut raw_bytes: Vec<u8>) -> Accesses {
-        let access_str = String::from_utf8(raw_bytes.split_off(HashValue::LENGTH + 1)).unwrap();
-        let fields_str = access_str.split(SEPARATOR).collect::<Vec<&str>>();
-        let mut accesses = vec![];
-        for access_str in fields_str.into_iter() {
-            if access_str != "" {
-                accesses.push(Access::from_str(access_str).unwrap());
-            }
-        }
-        Accesses::from(accesses)
-    }
-}
-
 impl TrieKey for Accesses {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_separated_string().into_bytes()
@@ -247,10 +210,10 @@ lazy_static! {
     Deserialize,
     Ord,
     PartialOrd,
-    Arbitrary,
     FromProto,
     IntoProto,
 )]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::access_path::AccessPath)]
 pub struct AccessPath {
     pub address: AccountAddress,
@@ -287,7 +250,7 @@ impl AccessPath {
     /// That AccessPath can be used as a key into the event storage to retrieve all sent
     /// events for a given account.
     pub fn new_for_sent_event(address: AccountAddress) -> Self {
-        Self::new(address, account_sent_event_path())
+        Self::new(address, ACCOUNT_SENT_EVENT_PATH.to_vec())
     }
 
     /// Create an AccessPath to the event for the target account (the receiver)
@@ -297,7 +260,7 @@ impl AccessPath {
     /// That AccessPath can be used as a key into the event storage to retrieve all received
     /// events for a given account.
     pub fn new_for_received_event(address: AccountAddress) -> Self {
-        Self::new(address, account_received_event_path())
+        Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
     }
 
     pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {
@@ -350,7 +313,7 @@ impl fmt::Debug for AccessPath {
 }
 
 impl fmt::Display for AccessPath {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.path.len() < 1 + HashValue::LENGTH {
             write!(f, "{:?}", self)
         } else {
@@ -378,7 +341,7 @@ impl CanonicalSerialize for AccessPath {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.address)?
-            .encode_variable_length_bytes(&self.path)?;
+            .encode_bytes(&self.path)?;
         Ok(())
     }
 }
@@ -386,7 +349,7 @@ impl CanonicalSerialize for AccessPath {
 impl CanonicalDeserialize for AccessPath {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let address = deserializer.decode_struct::<AccountAddress>()?;
-        let path = deserializer.decode_variable_length_bytes()?;
+        let path = deserializer.decode_bytes()?;
 
         Ok(Self { address, path })
     }

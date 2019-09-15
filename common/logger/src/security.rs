@@ -36,11 +36,17 @@ pub enum SecurityEvent {
     /// Consensus received an invalid new round message
     InvalidConsensusRound,
 
+    /// Consensus received an invalid sync info message
+    InvalidSyncInfoMsg,
+
     /// A block being committed or executed is invalid
     InvalidBlock,
 
     /// Network identified an invalid peer
     InvalidNetworkPeer,
+
+    /// Network discovery received an invalid DiscoveryMsg
+    InvalidDiscoveryMsg,
 
     /// Error for testing
     #[cfg(test)]

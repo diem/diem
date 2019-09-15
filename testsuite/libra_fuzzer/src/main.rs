@@ -1,6 +1,5 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 //! Helpers for fuzz testing.
 
 use lazy_static::lazy_static;
@@ -65,7 +64,11 @@ enum Command {
     },
     /// List fuzz targets
     #[structopt(name = "list")]
-    List,
+    List {
+        /// Only print out names, no descriptions.
+        #[structopt(long = "no-desc", short = "n")]
+        no_desc: bool,
+    },
 }
 
 /// The default directory for corpuses. Also return whether the directory was freshly created.
@@ -113,9 +116,9 @@ fn main() {
             target,
         } => {
             let corpus_dir = corpus_dir.unwrap_or_else(|| default_corpus_dir(target).0);
-            commands::make_corpus(target, num_items, &corpus_dir, opt.debug)
+            let item_count = commands::make_corpus(target, num_items, &corpus_dir, opt.debug)
                 .expect("Failed to create corpus");
-            println!("Wrote {} items to corpus", num_items);
+            println!("Wrote {} items to corpus", item_count);
         }
         Command::Fuzz {
             corpus_dir,
@@ -142,8 +145,8 @@ fn main() {
             let artifact_dir = artifact_dir.unwrap_or_else(|| default_artifact_dir(target));
             commands::fuzz_target(target, corpus_dir, artifact_dir, args).unwrap();
         }
-        Command::List => {
-            commands::list_targets();
+        Command::List { no_desc } => {
+            commands::list_targets(no_desc);
         }
     }
 }

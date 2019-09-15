@@ -21,6 +21,7 @@ use lru_cache::LruCache;
 use std::{
     cmp::{max, min},
     collections::HashSet,
+    convert::TryFrom,
 };
 use ttl_cache::TtlCache;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
@@ -34,7 +35,7 @@ pub struct Mempool {
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
-    metrics_cache: TtlCache<(AccountAddress, u64), i64>,
+    pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), i64>,
     pub system_transaction_timeout: Duration,
 }
 
@@ -84,10 +85,10 @@ impl Mempool {
 
     fn log_latency(&mut self, account: AccountAddress, sequence_number: u64, metric: &str) {
         if let Some(&creation_time) = self.metrics_cache.get(&(account, sequence_number)) {
-            OP_COUNTERS.observe(
-                metric,
-                (Utc::now().timestamp_millis() - creation_time) as f64,
-            );
+            if let Ok(time_delta_ms) = u64::try_from(Utc::now().timestamp_millis() - creation_time)
+            {
+                OP_COUNTERS.observe_duration(metric, Duration::from_millis(time_delta_ms));
+            }
         }
     }
 
@@ -146,11 +147,13 @@ impl Mempool {
             .duration_since(UNIX_EPOCH)
             .expect("init timestamp failure")
             + self.system_transaction_timeout;
-        self.metrics_cache.insert(
-            (txn.sender(), txn.sequence_number()),
-            Utc::now().timestamp_millis(),
-            Duration::from_secs(100),
-        );
+        if timeline_state != TimelineState::NonQualified {
+            self.metrics_cache.insert(
+                (txn.sender(), txn.sequence_number()),
+                Utc::now().timestamp_millis(),
+                Duration::from_secs(100),
+            );
+        }
 
         let txn_info = MempoolTransaction::new(txn, expiration_time, gas_amount, timeline_state);
 
@@ -219,7 +222,7 @@ impl Mempool {
             self.log_latency(
                 transaction.sender(),
                 transaction.sequence_number(),
-                "txn_pre_consensus_ms",
+                "txn_pre_consensus_s",
             );
         }
         block

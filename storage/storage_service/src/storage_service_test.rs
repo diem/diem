@@ -5,7 +5,9 @@ use super::*;
 use config::config::NodeConfigHelpers;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
-use libradb::{mock_genesis::db_with_mock_genesis, test_helper::arb_blocks_to_commit};
+use libradb::mock_genesis::db_with_mock_genesis;
+#[cfg(any(test, feature = "testing"))]
+use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
 use std::collections::HashMap;
 use storage_client::{
@@ -16,13 +18,13 @@ use types::get_with_proof::{RequestItem, ResponseItem};
 fn start_test_storage_with_read_write_client(
     need_to_use_genesis: bool,
 ) -> (
-    tempfile::TempDir,
+    tools::tempdir::TempPath,
     ServerHandle,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
     let mut config = NodeConfigHelpers::get_single_node_test_config(/* random_ports = */ true);
-    let tmp_dir = tempfile::tempdir().unwrap();
+    let tmp_dir = tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
     // initialize db with genesis info.
@@ -42,6 +44,7 @@ fn start_test_storage_with_read_write_client(
         Arc::new(EnvBuilder::new().build()),
         &config.storage.address,
         config.storage.port,
+        None,
     );
     (tmp_dir, storage_server_handle, read_client, write_client)
 }

@@ -1,16 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_address::AccountAddress,
-    byte_array::ByteArray,
-    proto::transaction::{TransactionArgument as ProtoArgument, TransactionArgument_ArgType},
+use crate::transaction::transaction_argument::TransactionArgument;
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use byteorder::{LittleEndian, WriteBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
+use std::fmt;
 
 pub const SCRIPT_HASH_LENGTH: usize = 32;
 
@@ -58,107 +55,21 @@ impl fmt::Debug for Program {
     }
 }
 
-impl FromProto for Program {
-    type ProtoType = crate::proto::transaction::Program;
-
-    fn from_proto(proto_program: Self::ProtoType) -> Result<Self> {
-        let mut args = vec![];
-        for arg in proto_program.get_arguments() {
-            let argument = match arg.get_field_type() {
-                TransactionArgument_ArgType::U64 => {
-                    let mut bytes = [0u8; 8];
-                    let data = arg.get_data();
-                    ensure!(
-                        bytes.len() == data.len(),
-                        "data has incorrect length: expected {} bytes, found {} bytes",
-                        bytes.len(),
-                        data.len()
-                    );
-                    bytes.copy_from_slice(arg.get_data());
-                    let amount = u64::from_le_bytes(bytes);
-                    TransactionArgument::U64(amount)
-                }
-                TransactionArgument_ArgType::ADDRESS => {
-                    TransactionArgument::Address(AccountAddress::try_from(arg.get_data())?)
-                }
-                TransactionArgument_ArgType::STRING => {
-                    TransactionArgument::String(String::from_utf8(arg.get_data().to_vec())?)
-                }
-                TransactionArgument_ArgType::BYTEARRAY => {
-                    TransactionArgument::ByteArray(ByteArray::new(arg.get_data().to_vec()))
-                }
-            };
-            args.push(argument);
-        }
-        let mut modules = vec![];
-        for m in proto_program.get_modules() {
-            modules.push(m.to_vec());
-        }
-        Ok(Program::new(
-            proto_program.get_code().to_vec(),
-            modules,
-            args,
-        ))
+impl CanonicalSerialize for Program {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_vec(&self.code)?;
+        serializer.encode_vec(&self.args)?;
+        serializer.encode_vec(&self.modules)?;
+        Ok(())
     }
 }
 
-impl IntoProto for Program {
-    type ProtoType = crate::proto::transaction::Program;
+impl CanonicalDeserialize for Program {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let code: Vec<u8> = deserializer.decode_vec()?;
+        let args: Vec<TransactionArgument> = deserializer.decode_vec()?;
+        let modules: Vec<Vec<u8>> = deserializer.decode_vec()?;
 
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto_program = Self::ProtoType::new();
-        proto_program.set_code(self.code);
-        for arg in self.args {
-            let mut argument = ProtoArgument::new();
-
-            match arg {
-                TransactionArgument::U64(amount) => {
-                    argument.set_field_type(TransactionArgument_ArgType::U64);
-                    let mut amount_vec = vec![];
-                    amount_vec
-                        .write_u64::<LittleEndian>(amount)
-                        .expect("Writing to a vec is guaranteed to work");
-                    argument.set_data(amount_vec);
-                }
-                TransactionArgument::Address(address) => {
-                    argument.set_field_type(TransactionArgument_ArgType::ADDRESS);
-                    argument.set_data(address.as_ref().to_vec());
-                }
-                TransactionArgument::String(string) => {
-                    argument.set_field_type(TransactionArgument_ArgType::STRING);
-                    argument.set_data(string.into_bytes());
-                }
-                TransactionArgument::ByteArray(byte_array) => {
-                    argument.set_field_type(TransactionArgument_ArgType::BYTEARRAY);
-                    argument.set_data(byte_array.as_bytes().to_vec())
-                }
-            }
-            proto_program.mut_arguments().push(argument);
-        }
-        for m in self.modules {
-            proto_program.mut_modules().push(m);
-        }
-        proto_program
-    }
-}
-
-#[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub enum TransactionArgument {
-    U64(u64),
-    Address(AccountAddress),
-    ByteArray(ByteArray),
-    String(String),
-}
-
-impl fmt::Debug for TransactionArgument {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TransactionArgument::U64(value) => write!(f, "{{U64: {}}}", value),
-            TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
-            TransactionArgument::String(string) => write!(f, "{{STRING: {}}}", string),
-            TransactionArgument::ByteArray(byte_array) => {
-                write!(f, "{{ByteArray: 0x{}}}", byte_array)
-            }
-        }
+        Ok(Program::new(code, modules, args))
     }
 }

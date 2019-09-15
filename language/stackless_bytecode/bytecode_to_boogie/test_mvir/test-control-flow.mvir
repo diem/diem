@@ -1,0 +1,13 @@
+module TestControlFlow {
+
+	// bytecode: [MoveLoc(0), BrFalse(6), LdConst(1), LdConst(2), Add, Ret, LdConst(0), Ret]
+	public branch_once(cond: bool) : u64 {
+
+		if (move(cond)) {
+			return 1+2;
+		} else {
+			return 0;
+		}
+	}
+
+}

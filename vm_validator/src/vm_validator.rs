@@ -71,13 +71,12 @@ impl TransactionValidation for VMValidator {
             .storage_read_client
             .update_to_latest_ledger(/* client_known_version = */ 0, vec![item])
         {
-            Ok((mut items, _, _)) => {
+            Ok((mut items, ledger_info_with_sigs, _)) => {
                 if items.len() != 1 {
                     return Box::new(err(format_err!(
                         "Unexpected number of items ({}).",
                         items.len()
-                    )
-                    .into()));
+                    )));
                 }
 
                 match items.remove(0) {
@@ -89,7 +88,10 @@ impl TransactionValidation for VMValidator {
                         let smt = SparseMerkleTree::new(state_root);
                         let state_view = VerifiedStateView::new(
                             Arc::clone(&self.storage_read_client),
-                            state_root,
+                            (
+                                Some(ledger_info_with_sigs.ledger_info().version()),
+                                state_root,
+                            ),
                             &smt,
                         );
                         Box::new(ok(self.vm.validate_transaction(txn, &state_view)))
@@ -97,7 +99,7 @@ impl TransactionValidation for VMValidator {
                     _ => panic!("Unexpected item in response."),
                 }
             }
-            Err(e) => Box::new(err(e.into())),
+            Err(e) => Box::new(err(e)),
         }
     }
 }

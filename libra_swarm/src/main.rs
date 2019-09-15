@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use config::config::RoleType;
 use libra_swarm::{client, swarm::LibraSwarm};
 use std::path::Path;
 use structopt::StructOpt;
+use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -15,9 +17,9 @@ struct Args {
     /// Number of nodes to start (1 by default)
     #[structopt(short = "n", long = "num_nodes")]
     pub num_nodes: Option<usize>,
-    /// Disable logging (for performance testing)"
-    #[structopt(short = "d", long = "disable_logging")]
-    pub disable_logging: bool,
+    /// Enable logging
+    #[structopt(short = "l", long = "enable_logging")]
+    pub enable_logging: bool,
     /// Start client
     #[structopt(short = "s", long = "start_client")]
     pub start_client: bool,
@@ -45,14 +47,14 @@ fn main() {
 
     let swarm = LibraSwarm::launch_swarm(
         num_nodes,
-        args.disable_logging,
+        !args.enable_logging,
         faucet_account_keypair,
-        false, /* tee_logs */
         args.config_dir.clone(),
+        None, /* template_path */
     );
 
-    let config = &swarm.config.get_configs()[0].1;
-    let validator_set_file = &config.base.trusted_peers_file;
+    let config = &swarm.config.configs[0].1;
+    let validator_set_file = &config.consensus.consensus_peers_file;
     println!("To run the Libra CLI client in a separate process and connect to the local cluster of nodes you just spawned, use this command:");
     println!(
         "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",
@@ -66,12 +68,13 @@ fn main() {
         faucet_key_file_path,
     );
 
-    let tmp_mnemonic_file = tempfile::NamedTempFile::new().unwrap();
+    let tmp_mnemonic_file = TempPath::new();
+    tmp_mnemonic_file.create_as_file().unwrap();
     if args.start_client {
         let client = client::InteractiveClient::new_with_inherit_io(
-            *swarm.get_validators_public_ports().get(0).unwrap(),
+            swarm.get_ac_port(0, RoleType::Validator),
             Path::new(&faucet_key_file_path),
-            &tmp_mnemonic_file.into_temp_path(),
+            &tmp_mnemonic_file.path(),
             swarm.get_trusted_peers_config_path(),
         );
         println!("Loading client...");

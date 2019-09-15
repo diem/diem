@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::QuorumCert, state_synchronizer::SyncStatus};
+use crate::chained_bft::QuorumCert;
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use failure::Result;
@@ -9,9 +9,7 @@ use futures::Future;
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, sync::Arc};
 use types::{
-    ledger_info::LedgerInfoWithSignatures,
-    transaction::{TransactionListWithProof, Version},
-    validator_set::ValidatorSet,
+    crypto_proxies::LedgerInfoWithSignatures, transaction::Version, validator_set::ValidatorSet,
 };
 
 /// A structure that specifies the result of the execution.
@@ -22,19 +20,13 @@ use types::{
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
+#[derive(Debug, Default, PartialEq)]
 pub struct StateComputeResult {
-    /// The new state generated after the execution.
-    pub new_state_id: HashValue,
+    pub executed_state: ExecutedState,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
     pub compute_status: Vec<bool>,
-    /// Counts the number of `true` values in the `compute_status` field.
-    pub num_successful_txns: u64,
-    /// If set, these are the validator public keys that will be used to start the next epoch
-    /// immediately after this state is committed
-    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
-    pub validators: Option<ValidatorSet>,
 }
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
@@ -61,10 +53,18 @@ pub trait TxnManager: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// Executed state derived from StateComputeResult that is maintained with every proposed block.
+/// state_id encodes both the information of the version and the validators.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutedState {
+    /// Tracks the execution state of a proposed block
     pub state_id: HashValue,
+    /// Version of after executing a proposed block.  This state must be persisted to ensure
+    /// that on restart that the version is calculated correctly
     pub version: Version,
+    /// If set, this is the validator set that should be changed to if this block is committed.
+    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
+    pub validators: Option<ValidatorSet>,
 }
 
 impl ExecutedState {
@@ -72,14 +72,18 @@ impl ExecutedState {
         ExecutedState {
             state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
             version: 0,
+            validators: None,
         }
     }
 }
 
 impl CanonicalSerialize for ExecutedState {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_raw_bytes(self.state_id.as_ref())?;
+        serializer.encode_bytes(self.state_id.as_ref())?;
         serializer.encode_u64(self.version)?;
+        if let Some(validators) = &self.validators {
+            serializer.encode_struct(validators)?;
+        }
         Ok(())
     }
 }
@@ -111,19 +115,7 @@ pub trait StateComputer: Send + Sync {
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    /// Synchronize to a commit that not present locally.
-    fn sync_to(
-        &self,
-        commit: QuorumCert,
-    ) -> Pin<Box<dyn Future<Output = Result<SyncStatus>> + Send>>;
-
-    /// Get a chunk of transactions as a batch
-    fn get_chunk(
-        &self,
-        start_version: u64,
-        target_version: u64,
-        batch_size: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
+    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
 }
 
 pub trait StateMachineReplication {

@@ -4,7 +4,7 @@
 use crate::{
     account::{Account, AccountData},
     account_universe::{
-        txn_one_account_result, AUTransactionGen, AccountPairGen, AccountPairMut, AccountUniverse,
+        txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
     common_transactions::create_account_txn,
     gas_costs,
@@ -14,7 +14,7 @@ use proptest_derive::Arbitrary;
 use proptest_helpers::Index;
 use types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{ExecutionStatus, VMStatus, VMValidationStatus},
+    vm_error::{StatusCode, VMStatus},
 };
 
 /// Represents a create-account transaction performed in the account universe.
@@ -31,8 +31,7 @@ pub struct CreateAccountGen {
 
 impl AUTransactionGen for CreateAccountGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let sender_idx = self.sender.index(universe.num_accounts());
-        let sender = &mut universe.accounts[sender_idx];
+        let sender = universe.pick(&self.sender).1;
 
         let txn = create_account_txn(
             sender.account(),
@@ -73,11 +72,11 @@ pub struct CreateExistingAccountGen {
 
 impl AUTransactionGen for CreateExistingAccountGen {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
-        let AccountPairMut {
+        let AccountPair {
             account_1: sender,
             account_2: receiver,
             ..
-        } = self.sender_receiver.pick_mut(universe);
+        } = self.sender_receiver.pick(universe);
 
         let txn = create_account_txn(
             sender.account(),
@@ -92,13 +91,11 @@ impl AUTransactionGen for CreateExistingAccountGen {
         let status = if enough_max_gas {
             sender.sequence_number += 1;
             sender.balance -= *gas_costs::CREATE_EXISTING_ACCOUNT;
-            TransactionStatus::Keep(VMStatus::Execution(
-                ExecutionStatus::CannotWriteExistingResource,
-            ))
+            TransactionStatus::Keep(VMStatus::new(StatusCode::CANNOT_WRITE_EXISTING_RESOURCE))
         } else {
             // Not enough gas to get past the prologue.
-            TransactionStatus::Discard(VMStatus::Validation(
-                VMValidationStatus::InsufficientBalanceForTransactionFee,
+            TransactionStatus::Discard(VMStatus::new(
+                StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
             ))
         };
 

@@ -1,8 +1,8 @@
-// check: no struct definition referencing in scripts
+// check: Missing struct definition for T
 
 module Token {
     resource T { }
-    public new(): R#Self.T {
+    public new(): Self.T {
         return T{ };
     }
 }

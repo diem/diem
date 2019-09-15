@@ -23,52 +23,58 @@
 //! [`storage_client`](../storage_client/index.html) don't need to depending on the entire
 //! [`storage_service`](../storage_client/index.html).
 
-#![allow(clippy::unit_arg)]
-
 pub mod proto;
 
-use crypto::HashValue;
+use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::definition::SparseMerkleProof,
+    proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 
-/// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByStateRootRequest`]
+/// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(PartialEq, Eq, Clone, FromProto, IntoProto)]
-#[ProtoType(crate::proto::storage::GetAccountStateWithProofByStateRootRequest)]
-pub struct GetAccountStateWithProofByStateRootRequest {
+#[derive(PartialEq, Eq, Clone, IntoProto)]
+#[ProtoType(crate::proto::storage::GetAccountStateWithProofByVersionRequest)]
+pub struct GetAccountStateWithProofByVersionRequest {
     /// The access path to query with.
     pub address: AccountAddress,
 
-    /// the state root hash the query is based on.
-    pub state_root_hash: HashValue,
+    /// The version the query is based on.
+    pub version: Version,
 }
 
-impl GetAccountStateWithProofByStateRootRequest {
+impl GetAccountStateWithProofByVersionRequest {
     /// Constructor.
-    pub fn new(address: AccountAddress, state_root_hash: HashValue) -> Self {
-        Self {
-            address,
-            state_root_hash,
-        }
+    pub fn new(address: AccountAddress, version: Version) -> Self {
+        Self { address, version }
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByStateRootResponse`]
+impl FromProto for GetAccountStateWithProofByVersionRequest {
+    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionRequest;
+
+    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
+        let address = AccountAddress::from_proto(object.take_address())?;
+        let version = object.get_version();
+        Ok(Self { address, version })
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(PartialEq, Eq, Clone)]
-pub struct GetAccountStateWithProofByStateRootResponse {
+pub struct GetAccountStateWithProofByVersionResponse {
     /// The account state blob requested.
     pub account_state_blob: Option<AccountStateBlob>,
 
@@ -76,7 +82,7 @@ pub struct GetAccountStateWithProofByStateRootResponse {
     pub sparse_merkle_proof: SparseMerkleProof,
 }
 
-impl GetAccountStateWithProofByStateRootResponse {
+impl GetAccountStateWithProofByVersionResponse {
     /// Constructor.
     pub fn new(
         account_state_blob: Option<AccountStateBlob>,
@@ -89,8 +95,8 @@ impl GetAccountStateWithProofByStateRootResponse {
     }
 }
 
-impl FromProto for GetAccountStateWithProofByStateRootResponse {
-    type ProtoType = crate::proto::storage::GetAccountStateWithProofByStateRootResponse;
+impl FromProto for GetAccountStateWithProofByVersionResponse {
+    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionResponse;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let account_state_blob = if object.has_account_state_blob() {
@@ -107,8 +113,8 @@ impl FromProto for GetAccountStateWithProofByStateRootResponse {
     }
 }
 
-impl IntoProto for GetAccountStateWithProofByStateRootResponse {
-    type ProtoType = crate::proto::storage::GetAccountStateWithProofByStateRootResponse;
+impl IntoProto for GetAccountStateWithProofByVersionResponse {
+    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionResponse;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut object = Self::ProtoType::new();
@@ -122,7 +128,7 @@ impl IntoProto for GetAccountStateWithProofByStateRootResponse {
 }
 
 impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
-    for GetAccountStateWithProofByStateRootResponse
+    for GetAccountStateWithProofByVersionResponse
 {
     fn into(self) -> (Option<AccountStateBlob>, SparseMerkleProof) {
         (self.account_state_blob, self.sparse_merkle_proof)
@@ -133,11 +139,12 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct SaveTransactionsRequest {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
-    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
 }
 
 impl SaveTransactionsRequest {
@@ -145,7 +152,7 @@ impl SaveTransactionsRequest {
     pub fn new(
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+        ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
     ) -> Self {
         SaveTransactionsRequest {
             txns_to_commit,
@@ -203,7 +210,8 @@ impl IntoProto for SaveTransactionsRequest {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct GetTransactionsRequest {
     pub start_version: Version,
     pub batch_size: u64,
@@ -258,7 +266,8 @@ impl IntoProto for GetTransactionsRequest {
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::storage::GetTransactionsResponse)]
 pub struct GetTransactionsResponse {
     pub txn_list_with_proof: TransactionListWithProof,
@@ -273,20 +282,21 @@ impl GetTransactionsResponse {
     }
 }
 
-/// Helper to construct and parse [`proto::storage::ExecutorStartupInfo`]
+/// Helper to construct and parse [`proto::storage::StartupInfo`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
-pub struct ExecutorStartupInfo {
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+pub struct StartupInfo {
     pub ledger_info: LedgerInfo,
     pub latest_version: Version,
     pub account_state_root_hash: HashValue,
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
 }
 
-impl FromProto for ExecutorStartupInfo {
-    type ProtoType = crate::proto::storage::ExecutorStartupInfo;
+impl FromProto for StartupInfo {
+    type ProtoType = crate::proto::storage::StartupInfo;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
@@ -307,8 +317,8 @@ impl FromProto for ExecutorStartupInfo {
     }
 }
 
-impl IntoProto for ExecutorStartupInfo {
-    type ProtoType = crate::proto::storage::ExecutorStartupInfo;
+impl IntoProto for StartupInfo {
+    type ProtoType = crate::proto::storage::StartupInfo;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -325,21 +335,22 @@ impl IntoProto for ExecutorStartupInfo {
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetExecutorStartupInfoResponse`]
+/// Helper to construct and parse [`proto::storage::GetStartupInfoResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
 /// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
-pub struct GetExecutorStartupInfoResponse {
-    pub info: Option<ExecutorStartupInfo>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+pub struct GetStartupInfoResponse {
+    pub info: Option<StartupInfo>,
 }
 
-impl FromProto for GetExecutorStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetExecutorStartupInfoResponse;
+impl FromProto for GetStartupInfoResponse {
+    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
 
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let info = if object.has_info() {
-            Some(ExecutorStartupInfo::from_proto(object.take_info())?)
+            Some(StartupInfo::from_proto(object.take_info())?)
         } else {
             None
         };
@@ -348,8 +359,8 @@ impl FromProto for GetExecutorStartupInfoResponse {
     }
 }
 
-impl IntoProto for GetExecutorStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetExecutorStartupInfoResponse;
+impl IntoProto for GetStartupInfoResponse {
+    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -357,6 +368,52 @@ impl IntoProto for GetExecutorStartupInfoResponse {
             proto.set_info(info.into_proto())
         }
         proto
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
+///
+/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
+/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochRequest)]
+pub struct GetLatestLedgerInfosPerEpochRequest {
+    pub start_epoch: u64,
+}
+
+impl GetLatestLedgerInfosPerEpochRequest {
+    /// Constructor.
+    pub fn new(start_epoch: u64) -> Self {
+        Self { start_epoch }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
+///
+/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
+/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
+#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochResponse)]
+pub struct GetLatestLedgerInfosPerEpochResponse {
+    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>,
+}
+
+impl GetLatestLedgerInfosPerEpochResponse {
+    /// Constructor.
+    pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>) -> Self {
+        Self {
+            latest_ledger_infos,
+        }
+    }
+}
+
+impl Into<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>
+    for GetLatestLedgerInfosPerEpochResponse
+{
+    fn into(self) -> Vec<LedgerInfoWithSignatures<Ed25519Signature>> {
+        self.latest_ledger_infos
     }
 }
 

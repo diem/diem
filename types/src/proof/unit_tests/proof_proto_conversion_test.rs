@@ -3,7 +3,8 @@
 
 use crate::proof::{
     definition::bitmap::{AccumulatorBitmap, SparseMerkleBitmap},
-    AccountStateProof, AccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
+    SignedTransactionProof, SparseMerkleProof,
 };
 use crypto::{
     hash::{TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -310,6 +311,13 @@ proptest! {
 
     #[test]
     fn test_sparse_merkle_protobuf_conversion_roundtrip(proof in any::<SparseMerkleProof>()) {
+        assert_protobuf_encode_decode(&proof);
+    }
+
+    #[test]
+    fn test_accumulator_consistency_protobuf_conversion_roundtrip(
+        proof in any::<AccumulatorConsistencyProof>(),
+    ) {
         assert_protobuf_encode_decode(&proof);
     }
 

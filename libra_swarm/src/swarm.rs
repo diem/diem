@@ -1,13 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    output_tee::{OutputTee, OutputTeeGuard},
-    utils,
-};
-use config::config::NodeConfig;
+use crate::utils;
+use config::config::{NodeConfig, RoleType};
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
-use crypto::signing::KeyPair;
+use crypto::{ed25519::*, test_utils::KeyPair};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use logger::prelude::*;
@@ -17,11 +14,10 @@ use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Child, Command},
     str::FromStr,
 };
-use tempfile::TempDir;
-use tools::output_capture::OutputCapture;
+use tools::tempdir::TempPath;
 
 const LIBRA_NODE_BIN: &str = "libra_node";
 
@@ -31,7 +27,6 @@ pub struct LibraNode {
     ac_port: u16,
     peer_id: String,
     log: PathBuf,
-    output_tee_guard: Option<OutputTeeGuard>,
 }
 
 impl Drop for LibraNode {
@@ -49,9 +44,6 @@ impl Drop for LibraNode {
                 }
             }
         }
-        if let Some(output_tee_guard) = self.output_tee_guard.take() {
-            output_tee_guard.join();
-        }
     }
 }
 
@@ -61,10 +53,11 @@ impl LibraNode {
         config_path: &Path,
         logdir: &Path,
         disable_logging: bool,
-        tee_logs: bool,
     ) -> Result<Self> {
-        let peer_id = config.base.peer_id.clone();
-        let log = logdir.join(format!("{}.log", peer_id));
+        // For now, We consider the peer id on the first network config as the node's peer id.
+        // TODO: Create a peer id independent node identifier.
+        let peer_id = config.networks.get(0).unwrap().peer_id.clone();
+        let log = logdir.join(format!("{}.log", SwarmConfig::get_alias(&config)));
         let log_file = File::create(&log)?;
         let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
         node_command
@@ -80,32 +73,13 @@ impl LibraNode {
             node_command.arg("-d");
         }
 
-        if tee_logs {
-            node_command.stdout(Stdio::piped()).stderr(Stdio::piped());
-        } else {
-            node_command
-                .stdout(log_file.try_clone()?)
-                .stderr(log_file.try_clone()?);
-        };
+        node_command
+            .stdout(log_file.try_clone()?)
+            .stderr(log_file.try_clone()?);
 
-        let mut node = node_command
+        let node = node_command
             .spawn()
             .context("Error launching node process")?;
-
-        let output_tee_guard = if tee_logs {
-            let prefix = format!("[{}] ", &peer_id[..8]);
-            let capture = OutputCapture::grab();
-            let tee = OutputTee::new(
-                capture,
-                Box::new(log_file),
-                Box::new(node.stdout.take().expect("Can't get child stdout")),
-                Box::new(node.stderr.take().expect("Can't get child stderr")),
-                prefix,
-            );
-            Some(tee.start())
-        } else {
-            None
-        };
 
         let debug_client = NodeDebugClient::new(
             "localhost",
@@ -117,7 +91,6 @@ impl LibraNode {
             ac_port: config.admission_control.admission_control_service_port,
             peer_id,
             log,
-            output_tee_guard,
         })
     }
 
@@ -209,11 +182,11 @@ pub enum HealthStatus {
     RpcFailure(failure::Error),
 }
 
-/// A wrapper that unifies PathBuf and TempDir.
+/// A wrapper that unifies PathBuf and TempPath.
 #[derive(Debug)]
 pub enum LibraSwarmDir {
     Persistent(PathBuf),
-    Temporary(TempDir),
+    Temporary(TempPath),
 }
 
 impl AsRef<Path> for LibraSwarmDir {
@@ -230,9 +203,9 @@ pub struct LibraSwarm {
     // Output log, LibraNodes' config file, libradb etc, into this dir.
     pub dir: Option<LibraSwarmDir>,
     // Maps the peer id of a node to the LibraNode struct
-    pub nodes: HashMap<String, LibraNode>,
+    pub validator_nodes: HashMap<String, LibraNode>,
+    pub full_nodes: Vec<LibraNode>,
     pub config: SwarmConfig,
-    tee_logs: bool,
 }
 
 #[derive(Debug, Fail)]
@@ -252,19 +225,20 @@ impl LibraSwarm {
     pub fn launch_swarm(
         num_nodes: usize,
         disable_logging: bool,
-        faucet_account_keypair: KeyPair,
-        tee_logs: bool,
+        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         config_dir: Option<String>,
+        template_path: Option<String>,
     ) -> Self {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
+            let swarm_config_dir = Self::setup_config_dir(&config_dir);
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
             match Self::launch_swarm_attempt(
                 num_nodes,
                 disable_logging,
                 faucet_account_keypair.clone(),
-                tee_logs,
-                &config_dir,
+                swarm_config_dir,
+                &template_path,
             ) {
                 Ok(swarm) => {
                     return swarm;
@@ -275,55 +249,71 @@ impl LibraSwarm {
         panic!("Max out {} attempts to launch swarm", num_launch_attempts);
     }
 
+    /// Either create a persistent directory for swarm or return a temporary one.
+    /// If specified persistent directory already exists,
+    /// assumably due to previous launch failure, it will be removed.
+    /// The directory for the last failed attempt won't be removed.
+    fn setup_config_dir(config_dir: &Option<String>) -> LibraSwarmDir {
+        let dir = match config_dir {
+            Some(dir_str) => {
+                let path_buf = PathBuf::from_str(&dir_str).expect("unable to create config dir");
+                if path_buf.exists() {
+                    std::fs::remove_dir_all(dir_str).expect("unable to delete previous config dir");
+                }
+                std::fs::create_dir_all(dir_str).expect("unable to create config dir");
+                LibraSwarmDir::Persistent(path_buf)
+            }
+            None => {
+                let temp_dir = TempPath::new();
+                temp_dir
+                    .create_as_dir()
+                    .expect("unable to create temporary config dir");
+                LibraSwarmDir::Temporary(temp_dir)
+            }
+        };
+        println!("Base directory containing logs and configs: {:?}", &dir);
+        dir
+    }
+
     fn launch_swarm_attempt(
         num_nodes: usize,
         disable_logging: bool,
-        faucet_account_keypair: KeyPair,
-        tee_logs: bool,
-        config_dir: &Option<String>,
+        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+        dir: LibraSwarmDir,
+        template_path: &Option<String>,
     ) -> std::result::Result<Self, SwarmLaunchFailure> {
-        let dir = match config_dir {
-            Some(dir_str) => {
-                std::fs::create_dir_all(dir_str).expect("unable to create config dir");
-                LibraSwarmDir::Persistent(
-                    PathBuf::from_str(&dir_str).expect("unable to create config dir"),
-                )
-            }
-            None => LibraSwarmDir::Temporary(
-                tempfile::tempdir().expect("unable to create temporary config dir"),
-            ),
-        };
-        let logs_dir_path = &dir.as_ref().join("logs");
-        println!("Base directory containing logs and configs: {:?}", &dir);
+        let logs_dir_path = dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path).unwrap();
-        let base = utils::workspace_root().join("config/data/configs/node.config.toml");
+        let base = utils::workspace_root().join(
+            template_path
+                .as_ref()
+                .unwrap_or(&"config/data/configs/node.config.toml".to_string()),
+        );
         let mut config_builder = SwarmConfigBuilder::new();
+
         config_builder
             .with_ipv4()
-            .with_nodes(num_nodes)
+            .with_num_nodes(num_nodes)
             .with_base(base)
             .with_output_dir(&dir)
-            .with_faucet_keypair(faucet_account_keypair)
-            .randomize_ports();
+            .with_faucet_keypair(faucet_account_keypair);
         let config = config_builder.build().unwrap();
 
         let mut swarm = Self {
             dir: Some(dir),
-            nodes: HashMap::new(),
+            validator_nodes: HashMap::new(),
+            full_nodes: vec![],
             config,
-            tee_logs,
         };
         // For each config launch a node
-        for (path, node_config) in swarm.config.get_configs() {
-            let node = LibraNode::launch(
-                &node_config,
-                &path,
-                &logs_dir_path,
-                disable_logging,
-                tee_logs,
-            )
-            .unwrap();
-            swarm.nodes.insert(node.peer_id(), node);
+        for (path, node_config) in &swarm.config.configs {
+            let node =
+                LibraNode::launch(&node_config, &path, &logs_dir_path, disable_logging).unwrap();
+            if node_config.is_validator() {
+                swarm.validator_nodes.insert(node.peer_id(), node);
+            } else {
+                swarm.full_nodes.push(node);
+            }
         }
 
         swarm.wait_for_startup()?;
@@ -336,7 +326,7 @@ impl LibraSwarm {
 
     fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
-        if self.nodes.len() == 1 {
+        if self.validator_nodes.len() == 1 {
             return Ok(());
         }
 
@@ -346,12 +336,13 @@ impl LibraSwarm {
             debug!("Wait for connectivity attempt: {}", i);
 
             if self
-                .nodes
+                .validator_nodes
                 .values()
-                .all(|node| node.check_connectivity(self.nodes.len() as i64 - 1))
+                .all(|node| node.check_connectivity(self.validator_nodes.len() as i64 - 1))
             {
                 return Ok(());
             }
+            // TODO check full node connectivity for full nodes
 
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
@@ -361,11 +352,15 @@ impl LibraSwarm {
 
     fn wait_for_startup(&mut self) -> std::result::Result<(), SwarmLaunchFailure> {
         let num_attempts = 120;
-        let mut done = vec![false; self.nodes.len()];
-
+        let mut done = vec![false; self.validator_nodes.len() + self.full_nodes.len()];
         for i in 0..num_attempts {
             debug!("Wait for startup attempt: {} of {}", i, num_attempts);
-            for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
+            for (node, done) in self
+                .validator_nodes
+                .values_mut()
+                .chain(self.full_nodes.iter_mut())
+                .zip(done.iter_mut())
+            {
                 if *done {
                     continue;
                 }
@@ -403,12 +398,12 @@ impl LibraSwarm {
     pub fn wait_for_all_nodes_to_catchup(&mut self) -> bool {
         let num_attempts = 60;
         let last_committed_round_str = "consensus{op=committed_blocks_count}";
-        let mut done = vec![false; self.nodes.len()];
+        let mut done = vec![false; self.validator_nodes.len()];
 
         let mut last_committed_round = 0;
         // First, try to retrieve the max value across all the committed rounds
         debug!("Calculating max committed round across the validators.");
-        for node in self.nodes.values() {
+        for node in self.validator_nodes.values() {
             match node.get_metric(last_committed_round_str) {
                 Some(val) => {
                     debug!("\tNode {} last committed round = {}", node.peer_id, val);
@@ -427,9 +422,11 @@ impl LibraSwarm {
         for i in 0..num_attempts {
             debug!(
                 "Wait for catchup, target_commit_round = {}, attempt: {} of {}",
-                last_committed_round, i, num_attempts
+                last_committed_round,
+                i + 1,
+                num_attempts
             );
-            for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
+            for (node, done) in self.validator_nodes.values_mut().zip(done.iter_mut()) {
                 if *done {
                     continue;
                 }
@@ -469,31 +466,46 @@ impl LibraSwarm {
         false
     }
 
-    /// Vector with the public AC ports of the validators.
-    pub fn get_validators_public_ports(&self) -> Vec<u16> {
-        self.nodes.values().map(|node| node.ac_port()).collect()
+    /// A specific public AC port of a validator or a full node.
+    pub fn get_ac_port(&self, index: usize, role: RoleType) -> u16 {
+        match role {
+            RoleType::Validator => *self
+                .validator_nodes
+                .values()
+                .map(|node| node.ac_port())
+                .collect::<Vec<u16>>()
+                .get(index)
+                .unwrap(),
+            RoleType::FullNode => *self
+                .full_nodes
+                .iter()
+                .map(|node| node.ac_port())
+                .collect::<Vec<u16>>()
+                .get(index)
+                .unwrap(),
+        }
     }
 
     /// Vector with the peer ids of the validators in the swarm.
     pub fn get_validators_ids(&self) -> Vec<String> {
-        self.nodes.keys().cloned().collect()
+        self.validator_nodes.keys().cloned().collect()
     }
 
     /// Vector with the debug ports of all the validators in the swarm.
     pub fn get_validators_debug_ports(&self) -> Vec<u16> {
         self.config
-            .get_configs()
+            .configs
             .iter()
             .map(|(_, c)| c.debug_interface.admission_control_node_debug_port)
             .collect()
     }
 
     pub fn get_validator(&self, peer_id: &str) -> Option<&LibraNode> {
-        self.nodes.get(peer_id)
+        self.validator_nodes.get(peer_id)
     }
 
     pub fn kill_node(&mut self, peer_id: &str) {
-        self.nodes.remove(peer_id);
+        self.validator_nodes.remove(peer_id);
     }
 
     pub fn add_node(
@@ -503,35 +515,30 @@ impl LibraSwarm {
     ) -> std::result::Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
         // `launch_node`.
-        let mut configs = vec![];
-        for (path, config) in self.config.get_configs() {
-            configs.push((path.clone(), config.clone()));
-        }
-        for (path, config) in configs {
-            if config.base.peer_id == peer_id {
-                return self.launch_node(peer_id, &path, &config, disable_logging);
-            }
-        }
-        panic!(
-            "PeerId {} not found in any of the admission control service ports.",
-            peer_id
-        );
+        self.launch_node(peer_id, disable_logging)
     }
 
     fn launch_node(
         &mut self,
         peer_id: String,
-        path: &PathBuf,
-        config: &NodeConfig,
         disable_logging: bool,
     ) -> std::result::Result<(), SwarmLaunchFailure> {
+        let (path, config) = self
+            .config
+            .configs
+            .iter()
+            .find(|(_path, config)| config.networks.get(0).unwrap().peer_id == peer_id)
+            .expect(
+                &format!(
+                    "PeerId {} not found in any of the admission control service ports.",
+                    peer_id
+                )[..],
+            );
         let logs_dir_path = self.dir.as_ref().map(|x| x.as_ref().join("logs")).unwrap();
-        let mut node =
-            LibraNode::launch(config, path, &logs_dir_path, disable_logging, self.tee_logs)
-                .unwrap();
+        let mut node = LibraNode::launch(config, path, &logs_dir_path, disable_logging).unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
-                self.nodes.insert(peer_id, node);
+                self.validator_nodes.insert(peer_id, node);
                 return self.wait_for_connectivity();
             }
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
@@ -540,7 +547,7 @@ impl LibraSwarm {
     }
 
     pub fn get_trusted_peers_config_path(&self) -> String {
-        let (path, _) = self.config.get_trusted_peers_config();
+        let (path, _) = &self.config.consensus_peers;
         path.canonicalize()
             .expect("Unable to get canonical path of trusted peers config file")
             .to_str()
@@ -555,7 +562,7 @@ impl Drop for LibraSwarm {
         if std::thread::panicking() {
             if let Some(dir) = self.dir.take() {
                 if let LibraSwarmDir::Temporary(temp_dir) = dir {
-                    let log_path = temp_dir.into_path();
+                    let log_path = temp_dir.path();
                     println!("logs located at {:?}", log_path);
                 }
             }

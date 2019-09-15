@@ -1,0 +1,12 @@
+module A {
+    three(): u64 * u64 * u64 {
+        return 0, 1, 2;
+    }
+
+    pop() {
+        Self.three();
+        _, _ = ();
+        _ = ();
+        return;
+    }
+}

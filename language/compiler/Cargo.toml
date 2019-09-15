@@ -13,6 +13,8 @@ ir_to_bytecode = { path = "ir_to_bytecode" }
 stdlib = { path = "../stdlib" }
 types = { path = "../../types" }
 vm = { path = "../vm" }
-log = "0.4.7"
 structopt = "0.2.15"
 serde_json = "1.0.40"
+
+[dev-dependencies]
+types = { path = "../../types", features = ["testing"] }

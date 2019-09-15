@@ -60,7 +60,8 @@ impl From<PeerManagerError> for RpcError {
     fn from(err: PeerManagerError) -> Self {
         match err {
             PeerManagerError::NotConnected(peer_id) => RpcError::NotConnected(peer_id),
-            _ => unreachable!("open_substream only returns NotConnected errors"),
+            PeerManagerError::IoError(err) => RpcError::IoError(err),
+            _ => unreachable!("open_substream only returns NotConnected or IoError"),
         }
     }
 }

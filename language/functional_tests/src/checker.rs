@@ -40,7 +40,17 @@ impl FromStr for Directive {
             // TODO: implement transaction directive
             unimplemented!();
         }
-        Ok(Directive::Check(s.to_string()))
+        if s.starts_with("check:")
+            || s.starts_with("sameln:")
+            || s.starts_with("nextln:")
+            || s.starts_with("unordered:")
+            || s.starts_with("not:")
+            || s.starts_with("regex:")
+        {
+            Ok(Directive::Check(s.to_string()))
+        } else {
+            Err(ErrorKind::Other("unrecognized directive".to_string()).into())
+        }
     }
 }
 
@@ -96,7 +106,11 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
                             break;
                         }
                     }
-                    EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+                    EvaluationOutput::Output(output) => {
+                        outputs.push(output.to_check_string());
+                        i += 1;
+                    }
+                    EvaluationOutput::Error(s) => {
                         outputs.push(s.to_string());
                         i += 1;
                     }
@@ -112,7 +126,10 @@ pub fn check(res: &EvaluationResult, directives: &[Directive]) -> Result<()> {
 
     for output in &res.outputs[i..] {
         match output {
-            EvaluationOutput::Output(s) | EvaluationOutput::Error(s) => {
+            EvaluationOutput::Output(output) => {
+                outputs.push(output.to_check_string());
+            }
+            EvaluationOutput::Error(s) => {
                 outputs.push(s.to_string());
             }
             EvaluationOutput::Stage(_) | EvaluationOutput::Transaction => {}

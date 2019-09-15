@@ -1,0 +1,14 @@
+module M {
+    id<T>(x: T): T {
+        return move(x);
+    }
+
+    foo<T: resource>(x: T)  {
+        let y: T;
+        y = Self.id<T>(move(x));
+        y = copy(y);
+        return;
+    }
+}
+
+// check: COPYLOC_RESOURCE_ERROR

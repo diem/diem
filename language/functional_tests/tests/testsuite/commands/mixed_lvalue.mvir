@@ -1,0 +1,41 @@
+module A {
+
+    struct S { f: u64 }
+
+    four(): u64 * u64 * u64 * u64 {
+        return 0, 1, 2, 3;
+    }
+
+    mixed() {
+        let x: u64;
+        let r: u64;
+        let r_ref: &mut u64;
+        let s: Self.S;
+
+        r = 0;
+        r_ref = &mut r;
+        s = S { f: 0 };
+
+        _, x, *copy(r_ref), *&mut (&mut s).f = Self.four();
+        assert(move(x) == 1, 42);
+        assert(*copy(r_ref) == 2, 42);
+        assert(*&(&s).f == 3, 42);
+
+        *&mut (&mut s).f, _, x, *copy(r_ref) = Self.four();
+        assert(move(x) == 2, 42);
+        assert(*copy(r_ref) == 3, 42);
+        assert(*&(&s).f == 0, 42);
+
+        *copy(r_ref), *&mut (&mut s).f, _, x = Self.four();
+        assert(move(x) == 3, 42);
+        assert(*copy(r_ref) == 0, 42);
+        assert(*&(&s).f == 1, 42);
+
+        x, *copy(r_ref), *&mut (&mut s).f, _ = Self.four();
+        assert(move(x) == 0, 42);
+        assert(*move(r_ref) == 1, 42);
+        assert(*&(&s).f == 2, 42);
+
+        return;
+    }
+}

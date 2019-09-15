@@ -1,0 +1,175 @@
+module PaymentChannel {
+    import 0x0.Signature;
+    import 0x0.LibraCoin;
+    import 0x0.LibraAccount;
+    import 0x0.AddressUtil;
+    import 0x0.BytearrayUtil;
+    import 0x0.U64Util;
+
+    // This is the PaymentChannel resource
+    // It keeps track of the balances for funder and counterparty
+    //
+    resource T {
+        funder_capacity: LibraCoin.T,
+        counterparty_capacity: LibraCoin.T,
+        seq_id: u64,
+        funder_pk: bytearray,
+        counterparty_pk: bytearray,
+        funder_addr: address,
+    }
+
+    counterparty_balance(this: &Self.T): u64 {
+        let counterparty_balance: u64;
+        let counterparty_capacity_ref: &LibraCoin.T;
+        counterparty_capacity_ref = &move(this).counterparty_capacity;
+        counterparty_balance = LibraCoin.value(move(counterparty_capacity_ref));
+        return move(counterparty_balance);
+    }
+
+    funder_balance(this: &Self.T): u64 {
+        let funder_balance: u64;
+        let funder_capacity_ref: &LibraCoin.T;
+        funder_capacity_ref = &move(this).funder_capacity;
+        funder_balance = LibraCoin.value(move(funder_capacity_ref));
+        return move(funder_balance);
+    }
+
+    seq_id(this: &Self.T): u64 {
+        let seq_id: u64;
+        seq_id = *&move(this).seq_id;
+        return move(seq_id);
+    }
+
+    funder_pk(this: &Self.T): bytearray {
+        let funder_pk: bytearray;
+        funder_pk = *&move(this).funder_pk;
+        return move(funder_pk);
+    }
+
+    counterparty_pk(this: &Self.T): bytearray {
+        let counterparty_pk: bytearray;
+        counterparty_pk = *&move(this).counterparty_pk;
+        return move(counterparty_pk);
+    }
+
+    funder_addr(this: &Self.T): address {
+        let funder: address;
+        funder = *&move(this).funder_addr;
+        return move(funder);
+    }
+
+    public new_payment_channel(funding: LibraCoin.T, funder_pk: bytearray, counterparty_pk: bytearray): Self.T {
+	let sender: address;
+        let counterparty_capacity: LibraCoin.T;
+	sender = get_txn_sender();
+        counterparty_capacity = LibraCoin.zero();
+
+        return T{
+            funder_capacity: move(funding),
+            counterparty_capacity: move(counterparty_capacity),
+            seq_id: 0,
+            funder_pk: move(funder_pk),
+            counterparty_pk: move(counterparty_pk),
+	    funder_addr: move(sender),
+        };
+    }
+
+   ver(this: &Self.T, amt_to_transfer: u64, new_seq_id: u64, public_key: bytearray, signature: bytearray, commit: address): bool {
+        let seq_id: u64;
+        let ver: bool;
+        let message: bytearray;
+	let amt_to_transfer_bytes: bytearray;
+        let commit_to_bytes: bytearray;
+        let partial_concat: bytearray;
+	let new_seq_id_bytes: bytearray;
+
+        seq_id = Self.seq_id(move(this));
+
+        if (copy(seq_id) >= copy(new_seq_id)) {
+            return false;
+	}
+
+        amt_to_transfer_bytes = U64Util.u64_to_bytes(move(amt_to_transfer));
+        new_seq_id_bytes = U64Util.u64_to_bytes(move(new_seq_id));
+        commit_to_bytes = AddressUtil.address_to_bytes(move(commit));
+
+        partial_concat = BytearrayUtil.bytearray_concat(move(amt_to_transfer_bytes), move(new_seq_id_bytes));
+        message = BytearrayUtil.bytearray_concat(move(partial_concat), move(commit_to_bytes));
+        ver = Signature.ed25519_verify(move(signature), move(public_key), move(message));
+        return move(ver);
+    }
+
+    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+        let sender: address;
+        let ver_funder: bool;
+        let ver_counterparty: bool;
+        let ref: &Self.T;
+        let transfer_amt: LibraCoin.T;
+        let funder_pk: bytearray;
+        let counterparty_pk: bytearray;
+
+        ref = freeze(copy(this));
+        sender = get_txn_sender();
+
+        funder_pk = Self.funder_pk(copy(ref));
+        counterparty_pk = Self.counterparty_pk(copy(ref));
+
+        ver_funder = Self.ver(copy(ref), copy(amt_to_transfer), copy(new_seq_id), move(funder_pk), move(funder_signature), copy(sender));
+        ver_counterparty = Self.ver(move(ref), copy(amt_to_transfer), copy(new_seq_id), move(counterparty_pk), move(counterparty_signature), copy(sender));
+
+        assert(move(ver_funder) == true, 42);
+        assert(move(ver_counterparty) == true, 42);
+
+        transfer_amt = LibraCoin.withdraw(&mut copy(this).funder_capacity, copy(amt_to_transfer));
+        LibraCoin.deposit(&mut copy(this).counterparty_capacity, move(transfer_amt));
+
+        *(&mut move(this).seq_id) = move(new_seq_id);
+
+        return;
+    }
+
+    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: bytearray, counterparty_signature: bytearray) {
+        let funder_addr: address;
+        let counterparty_addr: address;
+
+        let funder_capacity_ref: &mut LibraCoin.T;
+        let counterparty_capacity_ref: &mut LibraCoin.T;
+
+        let funder_balance: u64;
+        let counterparty_balance: u64;
+
+        let funder_to_withdraw: LibraCoin.T;
+        let counterparty_to_withdraw: LibraCoin.T;
+
+        let ref: &Self.T;
+
+        Self.update(copy(this), move(amt_to_transfer), move(new_seq_id), move(funder_signature), move(counterparty_signature));
+
+        ref = freeze(copy(this));
+
+        counterparty_addr = get_txn_sender();
+        counterparty_balance = Self.counterparty_balance(move(ref));
+
+        counterparty_capacity_ref = &mut copy(this).counterparty_capacity;
+        counterparty_to_withdraw = LibraCoin.withdraw(move(counterparty_capacity_ref), move(counterparty_balance));
+        LibraAccount.deposit(move(counterparty_addr), move(counterparty_to_withdraw));
+
+        ref = freeze(copy(this));
+
+        funder_addr = Self.funder_addr(copy(ref));
+        funder_balance = Self.counterparty_balance(move(ref));
+
+        funder_capacity_ref = &mut move(this).funder_capacity;
+        funder_to_withdraw = LibraCoin.withdraw(move(funder_capacity_ref), move(funder_balance));
+        LibraAccount.deposit(move(funder_addr), move(funder_to_withdraw));
+
+        return;
+    }
+}
+
+//! new-transaction
+import {{default}}.PaymentChannel;
+
+main() {
+    return;
+}

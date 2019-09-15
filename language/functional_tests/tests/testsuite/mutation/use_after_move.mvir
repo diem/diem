@@ -1,9 +1,10 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 1, err: WriteRefExistsBorrowError(10) }
+// check: VerificationFailure
+// check: WRITEREF_EXISTS_BORROW_ERROR
 
 module B {
     struct T{g: u64}
 
-    public new(g: u64): V#Self.T {
+    public new(g: u64): Self.T {
         return T { g: move(g) };
     }
 }
@@ -12,16 +13,16 @@ module B {
 
 module A {
     import Transaction.B;
-    struct T{value: V#B.T}
-    public new(m: V#B.T): V#Self.T {
+    struct T{value: B.T}
+    public new(m: B.T): Self.T {
         return T{value: move(m)};
     }
 
-    public t(this: &mut V#Self.T) {
-        let ref1: &mut V#B.T;
-        let ref2: &mut V#B.T;
-        let b2: V#B.T;
-        let x: V#B.T;
+    public t(this: &mut Self.T) {
+        let ref1: &mut B.T;
+        let ref2: &mut B.T;
+        let b2: B.T;
+        let x: B.T;
         ref1 = &mut move(this).value;
         ref2 = copy(ref1);
         b2 = B.new(3);
@@ -39,9 +40,9 @@ import {{default}}.A;
 import {{default}}.B;
 
 main() {
-    let b: V#B.T;
-    let a: V#A.T;
-    let a_ref: &mut V#A.T;
+    let b: B.T;
+    let a: A.T;
+    let a_ref: &mut A.T;
     b = B.new(1);
     a = A.new(move(b));
     a_ref = &mut a;

@@ -1,25 +1,25 @@
 module Tester {
     struct T{v: u64}
 
-    public new(v: u64): V#Self.T  {
+    public new(v: u64): Self.T  {
         return T{v: move(v)};
     }
 
-    public replace(t: &mut V#Self.T) {
-        let t2: &mut V#Self.T;
+    public replace(t: &mut Self.T) {
+        let t2: &mut Self.T;
         let t_v: &mut u64;
-        let new_t: V#Self.T;
+        let new_t: Self.T;
         t2 = copy(t);
         t_v = &mut copy(t2).v;
         *move(t_v) = 10000;
 
         new_t = Self.new(1);
         *move(t2) = move(new_t);
-        release(move(t));
+        _ = move(t);
         return;
     }
 
-    public value(this: &mut V#Self.T): u64 {
+    public value(this: &mut Self.T): u64 {
         let ref_v: &u64;
         ref_v = &move(this).v;
         return *move(ref_v);
@@ -32,10 +32,10 @@ module Tester {
 import {{default}}.Tester;
 
 main() {
-    let t: V#Tester.T;
-    let ref_t: &mut V#Tester.T;
+    let t: Tester.T;
+    let ref_t: &mut Tester.T;
     let v_from_ref: u64;
-    let tt: &mut V#Tester.T;
+    let tt: &mut Tester.T;
     let v_from_t: u64;
     t = Tester.new(0);
     ref_t = &mut t;

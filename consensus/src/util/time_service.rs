@@ -142,11 +142,13 @@ pub enum WaitingSuccess {
 }
 
 /// Error states for wait_if_possible
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Fail)]
 pub enum WaitingError {
     /// The waiting period exceeds the maximum allowed duration, returning immediately
+    #[fail(display = "MaxWaitExceeded")]
     MaxWaitExceeded,
     /// Waiting to ensure the current time exceeds min_duration_since_epoch failed
+    #[fail(display = "WaitFailed")]
     WaitFailed {
         current_duration_since_epoch: Duration,
         wait_duration: Duration,

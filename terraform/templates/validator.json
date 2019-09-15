@@ -6,27 +6,34 @@
         "memory": ${mem},
         "essential": true,
         "portMappings": [
-            {"containerPort": 30307, "hostPort": 30307},
-            {"containerPort": 30303, "hostPort": 30303},
-            {"containerPort": 14297, "hostPort": 14297},
-	    {"containerPort": 30306, "hostPort": 30306}
+            {"containerPort": 6180, "hostPort": 6180},
+            {"containerPort": 8000, "hostPort": 8000},
+            {"containerPort": 9101, "hostPort": 9101},
+            {"containerPort": 6191, "hostPort": 6191}
         ],
         "mountPoints": [
-            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"},
+            {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"},
+            {"sourceVolume": "network-peers", "containerPath": "/opt/libra/etc/network_peers.config.toml"}
         ],
         "environment": [
             {"name": "PEER_ID", "value": "${peer_id}"},
-            {"name": "SELF_IP", "value": "${self_ip}"},
+            {"name": "NODE_CONFIG", "value": ${node_config}},
             {"name": "SEED_PEERS", "value": ${seed_peers}},
-            {"name": "TRUSTED_PEERS", "value": ${trusted_peers}},
             {"name": "GENESIS_BLOB", "value": ${genesis_blob}},
             {"name": "RUST_LOG", "value": "${log_level}"}
         ],
+        "linuxParameters": {
+            "capabilities": {
+                 "add": ${capabilities}
+             }
+        },
         "ulimits": [
             {"name": "nofile", "softLimit": 131072, "hardLimit": 131072}
         ],
         "secrets": [
-            {"name": "PEER_KEYPAIRS", "valueFrom": "${secret}"}
+            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"},
+            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"}
         ],
         "logConfiguration": {
             "logDriver": "awslogs",

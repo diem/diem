@@ -10,7 +10,7 @@
 //!
 //! [noise]: http://noiseprotocol.org/
 
-use crypto::x25519::{X25519PrivateKey, X25519PublicKey};
+use crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use futures::io::{AsyncRead, AsyncWrite};
 use netcore::{
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
@@ -22,6 +22,7 @@ use std::io;
 mod socket;
 
 pub use self::socket::NoiseSocket;
+use crypto::ValidKey;
 
 const NOISE_IX_25519_AESGCM_SHA256_PROTOCOL_NAME: &[u8] = b"/noise_ix_25519_aesgcm_sha256/1.0.0";
 const NOISE_IX_PARAMETER: &str = "Noise_IX_25519_AESGCM_SHA256";
@@ -35,11 +36,11 @@ pub struct NoiseConfig {
 
 impl NoiseConfig {
     /// Create a new NoiseConfig with the provided keypair
-    pub fn new(keypair: (X25519PrivateKey, X25519PublicKey)) -> Self {
+    pub fn new(keypair: (X25519StaticPrivateKey, X25519StaticPublicKey)) -> Self {
         let parameters: NoiseParams = NOISE_IX_PARAMETER.parse().expect("Invalid protocol name");
         let keypair = Keypair {
             private: keypair.0.to_bytes().to_vec(),
-            public: keypair.1.as_bytes().to_vec(),
+            public: keypair.1.to_bytes().to_vec(),
         };
         Self {
             keypair,
