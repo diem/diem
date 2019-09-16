@@ -163,16 +163,26 @@ pub fn run_generation(args: Args) {
         if let Some(verified_module) = verified_module {
             if RUN_ON_VM {
                 debug!("Running on VM...");
-                match run_vm(verified_module) {
-                    Ok(_) => {
-                        // We cannot execute more than u64::max_value() iterations.
-                        verify!(executed_programs < u64::max_value());
-                        executed_programs += 1
+                let execution_result = panic::catch_unwind(|| run_vm(verified_module));
+                match execution_result {
+                    Ok(execution_result) => {
+                        match execution_result {
+                            Ok(_) => {
+                                // We cannot execute more than u64::max_value() iterations.
+                                verify!(executed_programs < u64::max_value());
+                                executed_programs += 1
+                            }
+                            Err(e) => {
+                                // TODO: Uncomment this to allow saving of modules that fail
+                                // the VM runtime.
+                                // output_error_case(module.clone(), args.output_path.clone(), i);
+                                error!("{}", e)
+                            }
+                        }
                     }
-                    Err(e) => {
-                        // TODO: Uncomment this to allow saving of modules that fail the VM runtime
-                        // output_error_case(module.clone(), args.output_path.clone(), i);
-                        error!("{}", e)
+                    Err(_) => {
+                        // Save modules that cause the VM runtime to panic
+                        output_error_case(module.clone(), args.output_path.clone(), i);
                     }
                 }
             }

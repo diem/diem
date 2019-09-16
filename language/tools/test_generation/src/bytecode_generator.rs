@@ -187,11 +187,11 @@ impl BytecodeGenerator {
                 BytecodeType::NoArg(Bytecode::CreateAccount),
             ),
             (
-                StackEffect::Sub,
+                StackEffect::Nop,
                 BytecodeType::StructAndLocalIndex(Bytecode::Pack),
             ),
             (
-                StackEffect::Add,
+                StackEffect::Nop,
                 BytecodeType::StructAndLocalIndex(Bytecode::Unpack),
             ),
             (

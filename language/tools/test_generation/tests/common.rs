@@ -26,7 +26,9 @@ pub fn run_instruction(instruction: Bytecode, initial_state: AbstractState) -> A
             | Bytecode::MutBorrowField(_)
             | Bytecode::ImmBorrowField(_)
             | Bytecode::MutBorrowGlobal(_, _)
-            | Bytecode::ImmBorrowGlobal(_, _) => {
+            | Bytecode::ImmBorrowGlobal(_, _)
+            | Bytecode::MoveToSender(_, _)
+            | Bytecode::CreateAccount => {
                 let len = summary.preconditions.len();
                 summary.preconditions[..(len - 1)]
                     .iter()
