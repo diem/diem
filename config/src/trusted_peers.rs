@@ -12,8 +12,12 @@ use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
     hash::BuildHasher,
+    str::FromStr,
 };
-use types::account_address::AccountAddress;
+use types::{
+    account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys,
+    validator_set::ValidatorSet,
+};
 
 #[cfg(test)]
 #[path = "unit_tests/trusted_peers_test.rs"]
@@ -84,6 +88,38 @@ impl NetworkPeersConfig {
                 )
             })
             .collect()
+    }
+}
+
+impl ConsensusPeersConfig {
+    /// Return a sorted vector of ValidatorPublicKey's
+    pub fn get_validator_set(&self, network_peers_config: &NetworkPeersConfig) -> ValidatorSet {
+        let mut keys: Vec<ValidatorPublicKeys> = self
+            .peers
+            .iter()
+            .map(|(peer_id_str, peer_info)| {
+                ValidatorPublicKeys::new(
+                    AccountAddress::from_str(peer_id_str).expect("[config] invalid peer_id"),
+                    peer_info.consensus_pubkey.clone(),
+                    network_peers_config
+                        .peers
+                        .get(peer_id_str)
+                        .unwrap()
+                        .network_signing_pubkey
+                        .clone(),
+                    network_peers_config
+                        .peers
+                        .get(peer_id_str)
+                        .unwrap()
+                        .network_identity_pubkey
+                        .clone(),
+                )
+            })
+            .collect();
+        // self.peers is a HashMap, so iterating over it produces a differently ordered vector each
+        // time. Sort by account address to produce a canonical ordering
+        keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
+        ValidatorSet::new(keys)
     }
 }
 

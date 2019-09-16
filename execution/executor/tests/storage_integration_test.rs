@@ -104,7 +104,12 @@ fn test_execution_with_storage() {
         config.storage.port,
     ));
 
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let seed = [1u8; 32];
+    // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
+    // in this random validator set gets created in genesis. If one of {account1, account2,
+    // account3} already exists in genesis, the code below will fail.
+    assert!(seed != TEST_SEED);
+    let mut rng = ::rand::rngs::StdRng::from_seed(seed);
     let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
     let account1 = AccountAddress::from_public_key(&pubkey1);
     let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
