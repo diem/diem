@@ -6,7 +6,7 @@ if [ -e /dev/nvme1n1 ]; then
 	fi
 
 	cat >> /etc/fstab <<-EOF
-	/dev/nvme1n1  /data  ext4  defaults,noatime  0  2
+	/dev/nvme1n1  /data  ext4  defaults,noatime,nofail  0  2
 	EOF
 
 	mkdir /data
