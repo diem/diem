@@ -399,10 +399,13 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             ))],
         },
         Bytecode::CreateAccount => Summary {
-            preconditions: vec![state_stack_has!(
-                0,
-                Some(AbstractValue::new_primitive(SignatureToken::Address))
-            )],
+            preconditions: vec![
+                state_stack_has!(
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::Address))
+                ),
+                state_memory_safe!(None),
+            ],
             effects: vec![state_stack_pop!()],
         },
         Bytecode::Pack(i, _) => Summary {
@@ -497,6 +500,7 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             preconditions: vec![
                 state_struct_is_resource!(i),
                 state_stack_has_struct!(Some(i)),
+                state_memory_safe!(None),
             ],
             effects: vec![state_stack_pop!()],
         },

@@ -266,20 +266,56 @@ impl CFG {
                 basic_block.locals_in =
                     cfg_copy.merge_locals(cfg_copy.get_parent_ids(block_id as BlockIDSize));
             }
-            // basic_block.locals_out = basic_block.locals_in.clone();
             basic_block.locals_out = CFG::vary_locals(&mut rng, basic_block.locals_in.clone());
         }
     }
 
+    /// Decide the serialization order of the blocks in the CFG
+    pub fn serialize_block_order(&self) -> Vec<BlockIDSize> {
+        let mut block_order: Vec<BlockIDSize> = Vec::new();
+        let mut block_queue: VecDeque<BlockIDSize> = VecDeque::new();
+        block_queue.push_back(0);
+        while !block_queue.is_empty() {
+            let block_id_front = block_queue.pop_front();
+            // The queue is non-empty so the front block id will not be none
+            assume!(block_id_front.is_some());
+            let block_id = block_id_front.unwrap();
+            let child_ids = self.get_children_ids(block_id);
+            if child_ids.len() == 2 {
+                block_queue.push_front(child_ids[0]);
+                block_queue.push_back(child_ids[1]);
+            } else if child_ids.len() == 1 {
+                block_queue.push_back(child_ids[0]);
+            } else if child_ids.is_empty() {
+                // We construct the CFG such that blocks have either 0, 1, or 2
+                // children.
+                unreachable!(
+                    "Invalid number of children for basic block {:?}",
+                    child_ids.len()
+                );
+            }
+            // This operation is expensive but is performed just when
+            // serializing the module.
+            if !block_order.contains(&block_id) {
+                block_order.push(block_id);
+            }
+        }
+        debug!("Block order: {:?}", block_order);
+        block_order
+    }
+
     /// Get the serialized code offset of a basic block based on its position in the serialized
     /// instruction sequence.
-    fn get_block_offset(cfg: &CFG, block_id: BlockIDSize) -> u16 {
+    fn get_block_offset(cfg: &CFG, block_order: &[BlockIDSize], block_id: BlockIDSize) -> u16 {
         checked_assume!(
             (0..block_id).all(|id| cfg.basic_blocks.get(&id).is_some()),
             "Error: Invalid block_id given"
         );
         let mut offset: u16 = 0;
-        for i in 0..block_id {
+        for i in block_order {
+            if *i == block_id {
+                break;
+            }
             if let Some(block) = cfg.basic_blocks.get(&i) {
                 offset += block.instructions.len() as u16;
             }
@@ -296,10 +332,10 @@ impl CFG {
         );
         let cfg_copy = self.clone();
         let mut bytecode: Vec<Bytecode> = Vec::new();
-        for i in 0..self.basic_blocks.len() {
-            let block_id = i as BlockIDSize;
+        let block_order = self.serialize_block_order();
+        for block_id in &block_order {
             let block = self.basic_blocks.get_mut(&block_id);
-            // Basic blocks are indexed in increasing order
+            // The generated block order contains every block
             assume!(block.is_some());
             let block = block.unwrap();
             // All basic blocks should have instructions filled in at this point
@@ -308,10 +344,10 @@ impl CFG {
                 "Error: block created with no instructions",
             );
             let last_instruction_index = block.instructions.len() - 1;
-            if cfg_copy.num_children(block_id) == 2 {
-                let child_id: BlockIDSize = cfg_copy.get_children_ids(block_id)[1];
+            let child_ids = cfg_copy.get_children_ids(*block_id);
+            if child_ids.len() == 2 {
                 // The left child (fallthrough) is serialized before the right (jump)
-                let offset = CFG::get_block_offset(&cfg_copy, child_id);
+                let offset = CFG::get_block_offset(&cfg_copy, &block_order, child_ids[1]);
                 match block.instructions.last() {
                     Some(Bytecode::BrTrue(_)) => {
                         block.instructions[last_instruction_index] =
@@ -326,9 +362,8 @@ impl CFG {
                         block.instructions.last()
                     ),
                 };
-            } else if cfg_copy.num_children(block_id) == 1 {
-                let child_id: BlockIDSize = cfg_copy.get_children_ids(block_id)[0];
-                let offset = CFG::get_block_offset(&cfg_copy, child_id);
+            } else if child_ids.len() == 1 {
+                let offset = CFG::get_block_offset(&cfg_copy, &block_order, child_ids[0]);
                 match block.instructions.last() {
                     Some(Bytecode::Branch(_)) => {
                         block.instructions[last_instruction_index] = Bytecode::Branch(offset);
@@ -338,11 +373,6 @@ impl CFG {
                         block.instructions.last()
                     ),
                 }
-            } else if cfg_copy.num_children(block_id) != 0 {
-                unreachable!(
-                    "Invalid number of children for basic block {:?}",
-                    cfg_copy.get_children_ids(block_id).len()
-                );
             }
             bytecode.extend(block.instructions.clone());
         }

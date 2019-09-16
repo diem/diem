@@ -69,23 +69,11 @@ fi
 export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads"
 export CARGO_INCREMENTAL=0
 
-# Remove existing coverage output
-echo "Cleaning existing coverage info..."
-if [ -d "$TOOL_DIR/../../../target/" ]
-then
-	find $TOOL_DIR/../../../target/ -type f -name "*.gcda" -delete
-	find $TOOL_DIR/../../../target/ -type f -name "*.gcno" -delete
-fi
-
 # Clean the project
 echo "Cleaning project..."
 cargo clean
 
-# Build test generator with flags necessary for coverage output
-echo "Building test generator with coverage instrumentation..."
-cargo build
-
-# Run tests
+# Run bytecode test generator
 echo "Running bytecode test generator..."
 RUST_LOG=info cargo run -- --iterations 1000
 
