@@ -299,7 +299,9 @@ impl GasMeter {
             }
             Bytecode::IsOffchain
             | Bytecode::GetTxnReceiverAddress
-            | Bytecode::IsChannelTxn => {
+            | Bytecode::IsChannelTxn
+            | Bytecode::GetTxnReceiverPublicKey
+            | Bytecode::GetTxnChannelSequenceNumber => {
                 let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }

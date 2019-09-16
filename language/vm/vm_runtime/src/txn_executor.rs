@@ -59,7 +59,9 @@ lazy_static! {
     /// The ModuleId for the Event
     pub static ref EVENT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
-
+    /// The ModuleId for the ChannelAccount module
+    pub static ref CHANNEL_ACCOUNT_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ChannelAccount").unwrap()) };
 }
 
 // Names for special functions.
@@ -679,6 +681,24 @@ where
                     let is_channel_txn = self.txn_data.is_channel_txn();
                     self.execution_stack.push(Local::bool(is_channel_txn))?;
                 }
+                Bytecode::GetTxnReceiverPublicKey => {
+                    if let Some(channel_metadata) = self.txn_data.channel_metadata() {
+                        self
+                            .execution_stack
+                            .push(Local::bytearray(ByteArray::new(channel_metadata.receiver_public_key.to_bytes().to_vec())))?;
+                    }else{
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
+                    }
+                }
+                Bytecode::GetTxnChannelSequenceNumber => {
+                    if let Some(channel_metadata) = self.txn_data.channel_metadata() {
+                        self
+                            .execution_stack
+                            .push(Local::u64(channel_metadata.channel_sequence_number))?;
+                    }else{
+                        return Err(VMStatus::new(StatusCode::LINKER_ERROR));
+                    }
+                }
             }
             pc += 1;
         }
@@ -697,14 +717,14 @@ where
         let participant: AccountAddress;
         if is_sender {
             address = txn_data.sender;
-            participant = match txn_data.receiver {
-                Some(p) => p,
+            participant = match txn_data.channel_metadata() {
+                Some(p) => p.receiver,
                 None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
             };
         }else{
             participant = txn_data.sender;
-            address = match txn_data.receiver {
-                Some(p) => p,
+            address = match txn_data.channel_metadata() {
+                Some(p) => p.receiver,
                 None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
             };
         }
@@ -877,7 +897,13 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
+        let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]).and_then(|_|{
+            if self.txn_data.is_channel_txn() {
+                self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+            }else{
+                Ok(())
+            }
+        });
         self.gas_meter.enable_metering();
         result
     }
@@ -886,7 +912,13 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
+        let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]).and_then(|_|{
+            if self.txn_data.is_channel_txn() {
+                self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+            }else{
+                Ok(())
+            }
+        });
         self.gas_meter.enable_metering();
         result
     }

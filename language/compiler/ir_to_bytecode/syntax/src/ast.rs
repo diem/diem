@@ -348,6 +348,8 @@ pub enum Builtin {
     MoveToReceiverChannel(StructName, Vec<Type>),
     /// Check current transaction is channel transaction.
     IsChannelTxn,
+    GetTxnReceiverPublicKey,
+    GetTxnChannelSequenceNumber
 }
 
 /// Enum for different function calls
@@ -1356,6 +1358,8 @@ impl fmt::Display for Builtin {
             Builtin::MoveToSenderChannel(t, tys) => write!(f, "move_to_sender_channel<{}{}>", t, format_type_actuals(tys)),
             Builtin::MoveToReceiverChannel(t, tys) => write!(f, "move_to_receiver_channel<{}{}>", t, format_type_actuals(tys)),
             Builtin::IsChannelTxn => write!(f, "is_channel_txn"),
+            Builtin::GetTxnReceiverPublicKey => write!(f, "get_txn_receiver_public_key"),
+            Builtin::GetTxnChannelSequenceNumber => write!(f, "get_txn_channel_sequence_number"),
         }
     }
 }

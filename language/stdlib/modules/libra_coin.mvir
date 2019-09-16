@@ -105,7 +105,7 @@ module LibraCoin {
 
         // Check that `amount` is less than the coin's value
         value = *(&mut copy(coin_ref).value);
-        assert(copy(value) >= copy(amount), 10);
+        assert(copy(value) >= copy(amount), copy(value));
 
         // Split the coin
         *(&mut move(coin_ref).value) = move(value) - copy(amount);

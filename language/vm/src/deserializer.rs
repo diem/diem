@@ -1105,6 +1105,8 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 Bytecode::MoveToReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
             },
             Opcodes::IS_CHANNEL_TXN => Bytecode::IsChannelTxn,
+            Opcodes::GET_TXN_RECEIVER_PUBLIC_KEY => Bytecode::GetTxnReceiverPublicKey,
+            Opcodes::GET_TXN_CHANNEL_SEQUENCE_NUMBER => Bytecode::GetTxnChannelSequenceNumber,
         };
         code.push(bytecode);
     }
@@ -1291,6 +1293,8 @@ impl Opcodes {
             0x3F => Ok(Opcodes::MOVE_TO_SENDER_CHANNEL),
             0x40 => Ok(Opcodes::MOVE_TO_RECEIVER_CHANNEL),
             0x41 => Ok(Opcodes::IS_CHANNEL_TXN),
+            0x42 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
+            0x43 => Ok(Opcodes::GET_TXN_CHANNEL_SEQUENCE_NUMBER),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

@@ -334,7 +334,9 @@ lazy_static! {
             (MoveFromReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 917, 1),
             (MoveToSenderChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
             (MoveToReceiverChannel(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
-            (IsChannelTxn, 30, 1),
+            (IsChannelTxn, 29, 1),
+            (GetTxnReceiverPublicKey, 41, 1),
+            (GetTxnChannelSequenceNumber, 29, 1),
         ];
         CostTable::new(instrs)
     };

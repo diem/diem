@@ -20,6 +20,7 @@ filecheck = "0.4.0"
 datatest = "0.3.5"
 lazy_static = "1.3.0"
 regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
+crypto = { path = "../../crypto/crypto" }
 
 [dev-dependencies]
 types = { path = "../../types", features = ["testing"] }

@@ -113,7 +113,9 @@ impl<'txn> RemoteCache for WriteSetDataCache<'txn>{
 
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         match self.data_map.get(access_path) {
-            Some(data) => Ok(Some(data.clone())),
+            Some(data) => {
+                Ok(Some(data.clone()))
+            },
             None => self.data_cache.get(access_path),
         }
     }

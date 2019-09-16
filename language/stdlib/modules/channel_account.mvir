@@ -152,6 +152,25 @@ module ChannelAccount {
         return Self.balance(false);
     }
 
+    channel_sequence_number(is_sender:bool): u64{
+      let account_ref: &Self.T;
+
+      if(copy(is_sender)){
+          account_ref = freeze(borrow_sender_channel<T>());
+      }else{
+          account_ref = freeze(borrow_receiver_channel<T>());
+      }
+      return *&move(account_ref).channel_sequence_number;
+    }
+
+    public sender_sequence_number(): u64 {
+        return Self.channel_sequence_number(true);
+    }
+
+    public receiver_sequence_number(): u64 {
+        return Self.channel_sequence_number(false);
+    }
+
     closed(is_sender:bool) : bool{
         let account_ref: &Self.T;
 
@@ -191,10 +210,50 @@ module ChannelAccount {
 
     // The prologue is invoked at the beginning of every channel transaction
     prologue() {
+        let sender_sequence_number_value: u64;
+        let receiver_sequence_number_value: u64;
+        let transaction_channel_sequence_number_value: u64;
+
+        transaction_channel_sequence_number_value = get_txn_channel_sequence_number();
+
+        // sequence_number 0 should be open channel txn.
+        if(copy(transaction_channel_sequence_number_value) == 0){
+            assert(exist_sender_channel<T>()==false, 400);
+            assert(exist_receiver_channel<T>()==false, 401);
+        }else{
+            sender_sequence_number_value = Self.sender_sequence_number();
+            receiver_sequence_number_value = Self.receiver_sequence_number();
+            assert(copy(sender_sequence_number_value) == copy(receiver_sequence_number_value), 402);
+            if(is_offchain()){
+                assert(copy(transaction_channel_sequence_number_value) == copy(sender_sequence_number_value), 403);
+            }else{
+                assert(copy(transaction_channel_sequence_number_value) >= copy(sender_sequence_number_value), 404);
+            }
+        }
         return;
     }
 
+    update_sequence_number(is_sender:bool, sequence_number: u64){
+       let account_ref: &mut Self.T;
+
+       if(copy(is_sender)){
+           account_ref = borrow_sender_channel<T>();
+       }else{
+           account_ref = borrow_receiver_channel<T>();
+       }
+       *(&mut move(account_ref).channel_sequence_number) = move(sequence_number);
+       return;
+    }
+
     epilogue(){
-        return;
+       let transaction_channel_sequence_number_value: u64;
+       let new_sequence_number: u64;
+
+       transaction_channel_sequence_number_value = get_txn_channel_sequence_number();
+       new_sequence_number = move(transaction_channel_sequence_number_value) + 1;
+
+       Self.update_sequence_number(true, copy(new_sequence_number));
+       Self.update_sequence_number(false, move(new_sequence_number));
+       return;
     }
 }

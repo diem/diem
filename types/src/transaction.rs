@@ -593,13 +593,35 @@ impl SignedTransaction {
     pub fn receiver(&self) -> Option<AccountAddress> {
         match &self.raw_txn.payload {
             TransactionPayload::ChannelScript(channel_payload) => Some(channel_payload.receiver),
+            TransactionPayload::ChannelWriteSet(channel_payload)=> Some(channel_payload.receiver),
             _ => None
         }
+    }
+
+    pub fn receiver_public_key(&self) -> Option<Ed25519PublicKey>{
+        self.receiver_public_key.clone()
+    }
+
+    pub fn receiver_signature(&self) -> Option<Ed25519Signature> {
+        self.receiver_signature.clone()
     }
 
     pub fn set_receiver_public_key_and_signature(&mut self, public_key: Ed25519PublicKey, signature: Ed25519Signature){
         self.receiver_public_key = Some(public_key);
         self.receiver_signature = Some(signature);
+    }
+
+    //TODO refactor
+    pub fn sign_by_receiver(&mut self,  private_key: &Ed25519PrivateKey, public_key: Ed25519PublicKey) -> Result<()>{
+        let hash = match self.payload(){
+            TransactionPayload::ChannelWriteSet(payload) => payload.hash(),
+            TransactionPayload::ChannelScript(payload) => payload.hash(),
+            _ => bail!("the txn is not a channel txn.")
+        };
+        let signature = private_key.sign_message(&hash);
+        self.receiver_public_key = Some(public_key);
+        self.receiver_signature = Some(signature);
+        Ok(())
     }
 
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if

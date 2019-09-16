@@ -1323,6 +1323,18 @@ fn compile_call(
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
                 }
+                Builtin::GetTxnReceiverPublicKey => {
+                    code.push(Bytecode::GetTxnReceiverPublicKey);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::ByteArray]
+                }
+                Builtin::GetTxnChannelSequenceNumber => {
+                    code.push(Bytecode::GetTxnChannelSequenceNumber);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
             }
         }
         FunctionCall::ModuleFunctionCall {

@@ -183,6 +183,8 @@ pub enum Opcodes {
     MOVE_TO_SENDER_CHANNEL      = 0x3F,
     MOVE_TO_RECEIVER_CHANNEL    = 0x40,
     IS_CHANNEL_TXN              = 0x41,
+    GET_TXN_RECEIVER_PUBLIC_KEY = 0x42,
+    GET_TXN_CHANNEL_SEQUENCE_NUMBER = 0x43,
 }
 
 /// Upper limit on the binary size

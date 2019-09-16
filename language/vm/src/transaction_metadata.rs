@@ -3,7 +3,13 @@
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
 use crypto::ed25519::{compat, Ed25519PublicKey};
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
+use types::{account_address::AccountAddress, transaction::{SignedTransaction, TransactionPayload, ChannelScriptPayload, ChannelWriteSetPayload}};
+
+pub struct ChannelMetadata{
+    pub receiver: AccountAddress,
+    pub channel_sequence_number: u64,
+    pub receiver_public_key: Ed25519PublicKey,
+}
 
 pub struct TransactionMetadata {
     pub sender: AccountAddress,
@@ -12,11 +18,23 @@ pub struct TransactionMetadata {
     pub max_gas_amount: GasUnits<GasCarrier>,
     pub gas_unit_price: GasPrice<GasCarrier>,
     pub transaction_size: AbstractMemorySize<GasCarrier>,
-    pub receiver: Option<AccountAddress>,
+    pub channel_metadata: Option<ChannelMetadata>,
 }
 
 impl TransactionMetadata {
     pub fn new(txn: &SignedTransaction) -> Self {
+        let channel_metadata = match txn.payload(){
+            TransactionPayload::ChannelScript(ChannelScriptPayload{channel_sequence_number,write_set:_, receiver, ..})
+            |TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload{channel_sequence_number,write_set:_, receiver}) => {
+                Some(ChannelMetadata{
+                    receiver:*receiver,
+                    channel_sequence_number: *channel_sequence_number,
+                    receiver_public_key: txn.receiver_public_key().expect("channel txn must contains receiver_public_key")
+                })
+            }
+            _ => None
+        };
+
         Self {
             sender: txn.sender(),
             public_key: txn.public_key(),
@@ -24,7 +42,7 @@ impl TransactionMetadata {
             max_gas_amount: GasUnits::new(txn.max_gas_amount()),
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),
             transaction_size: AbstractMemorySize::new(txn.raw_txn_bytes_len() as u64),
-            receiver: txn.receiver(),
+            channel_metadata,
         }
     }
 
@@ -53,11 +71,15 @@ impl TransactionMetadata {
     }
 
     pub fn receiver(&self) -> Option<AccountAddress> {
-        self.receiver
+        self.channel_metadata.as_ref().map(|metadata|metadata.receiver)
+    }
+
+    pub fn channel_metadata(&self) -> Option<&ChannelMetadata>{
+        self.channel_metadata.as_ref()
     }
 
     pub fn is_channel_txn(&self) -> bool {
-        match self.receiver{
+        match self.channel_metadata {
             Some(_) => true,
             None => false,
         }
@@ -74,7 +96,7 @@ impl Default for TransactionMetadata {
             max_gas_amount: GasUnits::new(100_000_000),
             gas_unit_price: GasPrice::new(0),
             transaction_size: AbstractMemorySize::new(0),
-            receiver: None,
+            channel_metadata: None,
         }
     }
 }

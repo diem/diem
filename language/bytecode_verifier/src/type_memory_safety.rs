@@ -1201,6 +1201,22 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 });
                 Ok(())
             }
+
+            Bytecode::GetTxnReceiverPublicKey => {
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::ByteArray,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            Bytecode::GetTxnChannelSequenceNumber => {
+                self.stack.push(StackAbstractValue {
+                    signature: SignatureToken::U64,
+                    value: AbstractValue::full_value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
         }
     }
 }

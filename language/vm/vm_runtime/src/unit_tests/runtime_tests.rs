@@ -731,7 +731,7 @@ fn test_transaction_info() {
             max_gas_amount: GasUnits::new(100_000_009),
             gas_unit_price: GasPrice::new(5),
             transaction_size: AbstractMemorySize::new(100),
-            receiver: None,
+            channel_metadata: None,
         }
     };
     let data_cache = FakeDataCache::new();

@@ -1139,12 +1139,14 @@ pub enum Bytecode {
     MoveToSenderChannel(StructDefinitionIndex, LocalsSignatureIndex),
     MoveToReceiverChannel(StructDefinitionIndex, LocalsSignatureIndex),
     IsChannelTxn,
+    GetTxnReceiverPublicKey,
+    GetTxnChannelSequenceNumber,
 }
 
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 65;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 67;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1214,6 +1216,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::MoveToSenderChannel(a, b)=> write!(f, "MoveToSenderChannel({},{:?})", a, b),
             Bytecode::MoveToReceiverChannel(a, b)=> write!(f, "MoveToReceiverChannel({},{:?})", a, b),
             Bytecode::IsChannelTxn => write!(f, "IsChannelTxn"),
+            Bytecode::GetTxnReceiverPublicKey => write!(f, "GetTxnReceiverPublicKey"),
+            Bytecode::GetTxnChannelSequenceNumber => write!(f, "GetTxnChannelSequenceNumber"),
         }
     }
 }

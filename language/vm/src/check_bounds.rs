@@ -396,7 +396,8 @@ impl FunctionDefinition {
                     | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
                     | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
                     | GetGasRemaining | GetTxnSenderAddress | CreateAccount
-                    | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn => None,
+                    | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn
+                    | GetTxnReceiverPublicKey | GetTxnChannelSequenceNumber => None,
                 }
             })
             .collect()

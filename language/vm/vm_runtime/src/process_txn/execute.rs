@@ -12,7 +12,6 @@ use vm::{
     access::ModuleAccess,
     errors::{vm_error, Location},
 };
-use config::config::VMMode;
 
 /// Represents a transaction that has been executed.
 pub struct ExecutedTransaction {
@@ -221,12 +220,7 @@ where
                 VerTxn::Script(func) => func,
                 _ => unreachable!("TransactionPayload::Script expects VerTxn::Program"),
             };
-            // only onchain vm need cache pre write_set, because onchain state is behind offchain
-            // offchain state is always latest.
-            if txn_executor.vm_mode() == VMMode::Onchain {
-                //Cache pre offchain tx write_set,then execute script.
-                txn_executor.cache_write_set(&channel_payload.write_set);
-            }
+
             let (_, args) = channel_payload.script.into_inner();
             txn_executor.setup_main_args(args);
             let script_output = match txn_executor.execute_function_impl(main) {

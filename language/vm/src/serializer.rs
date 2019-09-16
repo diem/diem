@@ -736,6 +736,8 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, types_idx.0)
         },
         Bytecode::IsChannelTxn => binary.push(Opcodes::IS_CHANNEL_TXN as u8),
+        Bytecode::GetTxnReceiverPublicKey => binary.push(Opcodes::GET_TXN_RECEIVER_PUBLIC_KEY as u8),
+        Bytecode::GetTxnChannelSequenceNumber => binary.push(Opcodes::GET_TXN_CHANNEL_SEQUENCE_NUMBER as u8),
     };
     res?;
     Ok(())

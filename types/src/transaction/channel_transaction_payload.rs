@@ -2,8 +2,10 @@ use failure::prelude::*;
 use crate::write_set::WriteSet;
 use crate::account_address::AccountAddress;
 use crate::transaction::Script;
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, CanonicalDeserializer, CanonicalDeserialize};
+use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, CanonicalDeserializer, CanonicalDeserialize, SimpleSerializer};
 use serde::{Deserialize, Serialize};
+use crypto::hash::{CryptoHash, TestOnlyHasher, CryptoHasher};
+use crypto::HashValue;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChannelWriteSetPayload {
@@ -49,6 +51,20 @@ impl CanonicalDeserialize for ChannelWriteSetPayload {
     }
 }
 
+impl CryptoHash for ChannelWriteSetPayload {
+    //TODO use special hasher
+    type Hasher = TestOnlyHasher;
+
+    fn hash(&self) -> HashValue {
+        let mut state = Self::Hasher::default();
+        state.write(
+            SimpleSerializer::<Vec<u8>>::serialize(self)
+                .expect("Failed to serialize ChannelWriteSetPayload")
+                .as_slice(),
+        );
+        state.finish()
+    }
+}
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChannelScriptPayload {
@@ -95,5 +111,20 @@ impl CanonicalDeserialize for ChannelScriptPayload {
             receiver,
             script,
         })
+    }
+}
+
+impl CryptoHash for ChannelScriptPayload {
+    //TODO use special hasher
+    type Hasher = TestOnlyHasher;
+
+    fn hash(&self) -> HashValue {
+        let mut state = Self::Hasher::default();
+        state.write(
+            SimpleSerializer::<Vec<u8>>::serialize(self)
+                .expect("Failed to serialize ChannelScriptPayload")
+                .as_slice(),
+        );
+        state.finish()
     }
 }

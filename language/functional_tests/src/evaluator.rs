@@ -25,9 +25,10 @@ use types::{
     vm_error::StatusCode,
 };
 use vm::file_format::{CompiledModule, CompiledScript};
-use types::account_address::AccountAddress;
 use types::transaction::ChannelScriptPayload;
 use types::write_set::WriteSet;
+use types::access_path::AccessPath;
+use types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -142,7 +143,7 @@ fn make_script_transaction(
     data: &AccountData,
     script: CompiledScript,
     args: Vec<TransactionArgument>,
-    receiver: Option<AccountAddress>,
+    receiver: Option<(&AccountData,u64)>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
@@ -150,17 +151,22 @@ fn make_script_transaction(
 
     let account = data.account();
     let account_resource = exec.read_account_resource(&account).unwrap();
-    let mut txn = match receiver {
+    let txn = match receiver {
         //TODO support channel sequence number
-        Some(receiver) => RawTransaction::new_channel_script(
-            *data.address(),
-            account_resource.sequence_number(),
-            ChannelScriptPayload::new(0, WriteSet::default(), receiver, script),
-            account_resource.balance(),
-            1,
-            Duration::from_secs(u64::max_value()),
-        ).sign(&account.privkey, account.pubkey.clone())?
-            .into_inner(),
+        Some((receiver, channel_sequence_number)) => {
+            let payload = ChannelScriptPayload::new(channel_sequence_number, WriteSet::default(), *receiver.address(), script);
+            let mut txn = RawTransaction::new_channel_script(
+                *data.address(),
+                account_resource.sequence_number(),
+                payload,
+                account_resource.balance(),
+                1,
+                Duration::from_secs(u64::max_value()),
+            ).sign(&account.privkey, account.pubkey.clone())?
+                .into_inner();
+            txn.sign_by_receiver(&receiver.account().privkey, receiver.account().pubkey.clone())?;
+            txn
+        },
         None => RawTransaction::new_script(
             *data.address(),
             account_resource.sequence_number(),
@@ -285,7 +291,12 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
     for transaction in transactions {
         // get the account data of the sender
         let data = config.accounts.get(&transaction.config.sender).unwrap();
-        let receiver = transaction.config.receiver.as_ref().and_then(|receiver|config.accounts.get(receiver)).map(|account_data|account_data.address().clone());
+        let receiver = transaction.config.receiver.as_ref().and_then(|receiver|config.accounts.get(receiver)).and_then(|receiver_account|{
+            let access_path = AccessPath::channel_resource_access_path(*data.address(), *receiver_account.address(), channel_account_struct_tag());
+            let channel_sequence_number = exec.read_from_access_path(&access_path).map(|bytes|ChannelAccountResource::make_from(bytes).unwrap().channel_sequence_number()).unwrap_or(0);
+            Some((receiver_account, channel_sequence_number))
+        });
+        //.map(|account_data|account_data.address().clone());
         let addr = data.address();
 
         // start processing a new transaction

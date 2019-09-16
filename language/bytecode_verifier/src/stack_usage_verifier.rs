@@ -159,7 +159,9 @@ impl<'a> StackUsageVerifier<'a> {
 
             Bytecode::IsOffchain
             | Bytecode::GetTxnReceiverAddress
-            | Bytecode::IsChannelTxn => 1,
+            | Bytecode::IsChannelTxn
+            | Bytecode::GetTxnReceiverPublicKey
+            | Bytecode::GetTxnChannelSequenceNumber => 1,
 
             Bytecode::ExistSenderChannel(_, _)
             | Bytecode::ExistReceiverChannel(_, _) => 1,
