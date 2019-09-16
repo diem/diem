@@ -137,6 +137,7 @@ fn test_accumulator_proof_max_siblings_rightmost() {
 }
 
 #[test]
+#[allow(clippy::range_plus_one)]
 fn test_accumulator_proof_sibling_overflow() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
