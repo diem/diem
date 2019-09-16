@@ -142,8 +142,9 @@ impl ConfigHelpers {
         } else {
             [0u8; 32]
         };
+        let peers_ordered: BTreeMap<_, _> = consensus_peers.peers.iter().collect();
         let mut fast_rng = StdRng::from_seed(seed);
-        for account_address in consensus_peers.peers.keys() {
+        for peer_id in peers_ordered.keys().cloned() {
             let (private0, public0) = compat::generate_keypair(&mut fast_rng);
             let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
             // Generate extra keypairs to preserve peer ids.
@@ -153,14 +154,13 @@ impl ConfigHelpers {
                 network_signing_pubkey: public0,
                 network_identity_pubkey: public1,
             };
-            let peer_id = account_address.clone();
             network_peers.insert(peer_id.clone(), peer);
             // save the private keys in a different hashmap
             let private_keys = NetworkPeerPrivateKeys {
                 network_signing_private_key: private0,
                 network_identity_private_key: private1,
             };
-            peers_private_keys.insert(peer_id, private_keys);
+            peers_private_keys.insert(peer_id.clone(), private_keys);
         }
         (
             peers_private_keys,
