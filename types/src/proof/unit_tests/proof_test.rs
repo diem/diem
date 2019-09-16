@@ -6,11 +6,12 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        definition::MAX_PROOF_DEPTH, verify_account_state, verify_event, verify_signed_transaction,
-        verify_sparse_merkle_element, verify_test_accumulator_element, AccountStateProof,
-        AccumulatorProof, EventAccumulatorInternalNode, EventProof, MerkleTreeInternalNode,
-        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
-        TestAccumulatorInternalNode, TransactionAccumulatorInternalNode,
+        definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
+        verify_signed_transaction, verify_sparse_merkle_element, verify_test_accumulator_element,
+        AccountStateProof, AccumulatorProof, EventAccumulatorInternalNode, EventProof,
+        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode,
+        TransactionAccumulatorInternalNode,
     },
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
@@ -102,7 +103,7 @@ fn test_verify_three_element_accumulator() {
 fn test_accumulator_proof_max_siblings_leftmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..MAX_PROOF_DEPTH as u8 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -120,7 +121,7 @@ fn test_accumulator_proof_max_siblings_leftmost() {
 fn test_accumulator_proof_max_siblings_rightmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..MAX_PROOF_DEPTH as u8 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -139,7 +140,7 @@ fn test_accumulator_proof_max_siblings_rightmost() {
 fn test_accumulator_proof_sibling_overflow() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..MAX_PROOF_DEPTH as u8 + 1 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 + 1 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
