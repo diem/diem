@@ -100,8 +100,7 @@ impl Deref for DataStorage {
 
 impl Drop for DataStorage {
     fn drop(&mut self) {
-        println!("{}", "drop write db");
-        self.libra_db = Arc::new(None);
+        info!("{}", "shutdown write db.");
     }
 }
 
@@ -121,8 +120,7 @@ impl Deref for ReadDataStorage {
 
 impl Drop for ReadDataStorage {
     fn drop(&mut self) {
-        println!("{}", "drop read db");
-        self.libra_db = Arc::new(None);
+        info!("{}", "shutdown read db.");
     }
 }
 
@@ -169,8 +167,7 @@ impl WriteData for DataStorage {
                 self.deref().save_transactions(txns_to_commit.as_slice(), first_version, &None)
             }
             None => {
-                //TODO
-                Ok(())
+                Err(format_err!("save tx err."))
             }
         }
     }
@@ -187,8 +184,7 @@ impl WriteData for DataStorage {
                 self.deref().save_transactions(txns_to_commit.as_slice(), 0, ledger_info_with_sigs)
             }
             None => {
-                //TODO
-                Ok(())
+                Err(format_err!("save genesis tx err."))
             }
         }
     }
