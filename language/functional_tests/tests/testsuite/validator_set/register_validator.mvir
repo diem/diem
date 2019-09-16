@@ -1,0 +1,14 @@
+import 0x0.ValidatorSet;
+
+// register Alice as a validator candidate, then rotate a key + check that it worked
+main() {
+    ValidatorSet.register_candidate_validator(h"10", h"20", h"30");
+
+    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"30", 77);
+
+    ValidatorSet.rotate_consensus_pubkey(h"40");
+
+    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"40", 88);
+
+    return;
+}
