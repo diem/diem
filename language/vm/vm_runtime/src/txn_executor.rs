@@ -59,6 +59,9 @@ lazy_static! {
     pub static ref EVENT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
 
+    /// The ModuleId for the validator set
+    pub static ref VALIDATOR_SET_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorSet").unwrap()) };
 }
 
 // Names for special functions.
@@ -720,6 +723,24 @@ where
         }
 
         self.execute_function_impl(func)
+    }
+
+    /// Execute a function with the sender set to `sender`, restoring the original sender afterward.
+    /// This should only be used in the logic for generating the genesis block.
+    #[allow(non_snake_case)]
+    pub fn execute_function_with_sender_FOR_GENESIS_ONLY(
+        &mut self,
+        address: AccountAddress,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        args: Vec<Value>,
+    ) -> VMResult<()> {
+        let old_sender = self.txn_data.sender();
+        self.txn_data.sender = address;
+
+        let res = self.execute_function(module, function_name, args);
+        self.txn_data.sender = old_sender;
+        res
     }
 
     /// Get the value on the top of the value stack.

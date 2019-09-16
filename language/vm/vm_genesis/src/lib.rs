@@ -36,7 +36,9 @@ use vm_runtime::{
         module_cache::{BlockModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE},
+    txn_executor::{
+        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_SET_MODULE,
+    },
 };
 use vm_runtime_types::value::Value;
 
@@ -57,8 +59,11 @@ pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureChec
 
 // Identifiers for well-known functions.
 lazy_static! {
+    static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
+        Identifier::new("register_candidate_validator").unwrap();
     static ref ROTATE_AUTHENTICATION_KEY: Identifier =
         { Identifier::new("rotate_authentication_key").unwrap() };
     static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
@@ -302,9 +307,6 @@ pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
     _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
-    // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
-    //       Fix it later when we have collections.
-
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
@@ -357,6 +359,19 @@ pub fn encode_genesis_transaction_with_validator(
             // number 0
             txn_executor
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
+                .unwrap();
+
+            // Initialize the validator set.
+            txn_executor
+                .create_account(account_config::validator_set_address())
+                .unwrap();
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::validator_set_address(),
+                    &VALIDATOR_SET_MODULE,
+                    &INITIALIZE,
+                    vec![],
+                )
                 .unwrap();
 
             let stdlib_modules = modules
