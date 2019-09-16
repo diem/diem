@@ -15,6 +15,7 @@ pub mod test_helper;
 
 pub mod errors;
 pub mod schema;
+pub mod data_storage;
 
 mod change_set;
 mod event_store;
@@ -24,6 +25,7 @@ mod pruner;
 mod state_store;
 mod system_store;
 mod transaction_store;
+mod data_storage_test;
 
 #[cfg(test)]
 mod libradb_test;
@@ -423,6 +425,7 @@ impl LibraDB {
             .collect::<Result<()>>()?;
 
         // Transaction accumulator updates. Get result root hash.
+
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used()))
             .collect::<Vec<_>>();
