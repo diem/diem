@@ -18,11 +18,11 @@ use sha2::Sha512;
 /// Extended private key that includes additional child_path and chain-code.
 pub struct ExtendedPrivKey {
     /// Full key path.
-    pub key_path: String,
+    key_path: String,
     /// Private key.
-    pub private_key: SecretKey,
+    private_key: SecretKey,
     /// Chain code.
-    pub chain_code: [u8; 32],
+    chain_code: [u8; 32],
 }
 
 impl ExtendedPrivKey {
@@ -46,6 +46,21 @@ impl ExtendedPrivKey {
     /// Get public key.
     pub fn get_public(&self) -> PublicKey {
         (&self.private_key).into()
+    }
+
+    /// Get key path.
+    pub fn get_key_path(&self) -> &str {
+        &self.key_path
+    }
+
+    /// Get private key.
+    pub fn get_private(&self) -> &SecretKey {
+        &self.private_key
+    }
+
+    /// Get chain code.
+    pub fn get_chain_code(&self) -> &[u8; 32] {
+        &self.chain_code
     }
 
     /// Derive a child key from this key and a child number.

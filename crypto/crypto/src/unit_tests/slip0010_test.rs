@@ -11,8 +11,8 @@ fn test_slip0010_vectors() {
         let seed = hex::decode(t.seed).unwrap();
         let path = t.path;
         let key = Slip0010::derive_from_path(path, &seed).unwrap();
-        assert_eq!(t.c_code, hex::encode(key.chain_code));
-        assert_eq!(t.pr_key, hex::encode(key.private_key.to_bytes()));
+        assert_eq!(t.c_code, hex::encode(key.get_chain_code()));
+        assert_eq!(t.pr_key, hex::encode(key.get_private().to_bytes()));
         assert_eq!(t.pb_key, hex::encode(key.get_public().to_bytes()));
     }
 }
