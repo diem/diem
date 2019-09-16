@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::ed25519::*;
+use crypto::{ed25519::*, traits::ValidKey};
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
@@ -15,7 +15,7 @@ use types::{
     byte_array::ByteArray,
     identifier::Identifier,
     transaction::{RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument},
-    validator_public_keys::ValidatorPublicKeys,
+    validator_set::ValidatorSet,
 };
 use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
@@ -184,13 +184,13 @@ pub fn encode_genesis_transaction(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
 ) -> SignatureCheckedTransaction {
-    encode_genesis_transaction_with_validator(private_key, public_key, vec![])
+    encode_genesis_transaction_with_validator(private_key, public_key, ValidatorSet::new(vec![]))
 }
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    _validator_set: Vec<ValidatorPublicKeys>,
+    validator_set: ValidatorSet,
 ) -> SignatureCheckedTransaction {
     const INIT_BALANCE: u64 = 1_000_000_000;
 
@@ -258,6 +258,43 @@ pub fn encode_genesis_transaction_with_validator(
                     vec![],
                 )
                 .unwrap();
+            for validator_keys in validator_set.payload() {
+                // First, add a ValidatorConfig resource under each account
+                let validator_address = *validator_keys.account_address();
+                txn_executor.create_account(validator_address).unwrap();
+                txn_executor
+                    .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        validator_address,
+                        &VALIDATOR_SET_MODULE,
+                        &REGISTER_CANDIDATE_VALIDATOR,
+                        vec![
+                            Value::byte_array(ByteArray::new(
+                                validator_keys
+                                    .network_signing_public_key()
+                                    .to_bytes()
+                                    .to_vec(),
+                            )),
+                            Value::byte_array(ByteArray::new(
+                                validator_keys
+                                    .network_identity_public_key()
+                                    .to_bytes()
+                                    .to_vec(),
+                            )),
+                            Value::byte_array(ByteArray::new(
+                                validator_keys.consensus_public_key().to_bytes().to_vec(),
+                            )),
+                        ],
+                    )
+                    .unwrap();
+                // Then, add the account to the validator set
+                txn_executor
+                    .execute_function(
+                        &VALIDATOR_SET_MODULE,
+                        &ADD_VALIDATOR,
+                        vec![Value::address(validator_address)],
+                    )
+                    .unwrap()
+            }
 
             let stdlib_modules = modules
                 .iter()

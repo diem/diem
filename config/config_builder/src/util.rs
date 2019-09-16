@@ -9,8 +9,7 @@ use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use proto_conv::IntoProtoBytes;
 use rand::{Rng, SeedableRng};
-use std::{fs::File, io::prelude::*, path::Path, str::FromStr};
-use types::{account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys};
+use std::{fs::File, io::prelude::*, path::Path};
 use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction<P: AsRef<Path>>(
@@ -19,32 +18,10 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
     consensus_peers_config: &ConsensusPeersConfig,
     network_peers_config: &NetworkPeersConfig,
 ) -> Result<()> {
-    let validator_set = consensus_peers_config
-        .peers
-        .iter()
-        .map(|(peer_id_str, peer_info)| {
-            ValidatorPublicKeys::new(
-                AccountAddress::from_str(peer_id_str).expect("[config] invalid peer_id"),
-                peer_info.consensus_pubkey.clone(),
-                network_peers_config
-                    .peers
-                    .get(peer_id_str)
-                    .unwrap()
-                    .network_signing_pubkey
-                    .clone(),
-                network_peers_config
-                    .peers
-                    .get(peer_id_str)
-                    .unwrap()
-                    .network_identity_pubkey
-                    .clone(),
-            )
-        })
-        .collect();
     let transaction = encode_genesis_transaction_with_validator(
         &faucet_account_keypair.private_key,
         faucet_account_keypair.public_key.clone(),
-        validator_set,
+        consensus_peers_config.get_validator_set(network_peers_config),
     );
     let mut file = File::create(path)?;
     file.write_all(&transaction.into_proto_bytes()?)?;

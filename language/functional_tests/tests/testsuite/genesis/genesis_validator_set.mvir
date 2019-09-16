@@ -1,0 +1,25 @@
+import 0x0.LibraAccount;
+import 0x0.ValidatorSet;
+
+// check that the genesis validator set has been created and has the expected size
+main() {
+    assert(LibraAccount.exists(0x1D8), 77);
+    assert(ValidatorSet.size() == 10, 78);
+
+    // check that one of the addresses we expect is in there...
+    assert(
+        ValidatorSet.is_validator(
+            0x0ee649f4ecf0ba104dce72a291325f4bffb74939370825eb3cb553fd9717adbb
+        ),
+        79
+    );
+
+    // ... and that unexpected addresses aren't
+    assert(!ValidatorSet.is_validator(0x88), 80);
+
+    // registering a new *candidate* validator shouldn't change the validator set size
+    ValidatorSet.register_candidate_validator(h"10", h"20", h"30");
+    assert(ValidatorSet.size() == 10, 81);
+
+    return;
+}

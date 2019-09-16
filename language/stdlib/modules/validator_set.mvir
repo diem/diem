@@ -32,6 +32,42 @@ module ValidatorSet {
         return;
     }
 
+    // Return the size of the current validator set
+    public size(): u64 acquires T {
+        let validator_set_ref: &Self.T;
+
+        validator_set_ref = borrow_global<T>(0x1D8);
+        return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
+    }
+
+    // Return true if addr is a current validator
+    public is_validator(addr: address): bool acquires T {
+        let size: u64;
+        let i: u64;
+        let vector_ref: &Vector.T<Self.ValidatorInfo>;
+        let info_ref: &Self.ValidatorInfo;
+
+        vector_ref = &borrow_global<T>(0x1D8).validators;
+        size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
+        if (copy(size) == 0) {
+            return false;
+        }
+
+        i = 0;
+        info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+        while (copy(i) < copy(size)) {
+            if (*&copy(info_ref).addr == copy(addr)) {
+            // TODO: below doesn't work, looks like a compiler bug
+            //if (*(&Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i)).addr) == copy(addr)) {
+                return true;
+            }
+            info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+            i = copy(i) + 1;
+        }
+
+        return false;
+    }
+
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig
     // resource under their account
     public register_candidate_validator(
@@ -81,11 +117,15 @@ module ValidatorSet {
         config_ref = borrow_global<ValidatorConfig>(copy(account_address));
         // TODO: check for LIT, compute voting power based on LIT + stake
         validator_set_ref = borrow_global_mut<T>(0x1D8);
-        // TODO: Vector.push_back is not yet implemented
-        //Vector.push_back<Self.ValidatorInfo>(
-        //    &mut move(validator_set_ref).validators,
-        //    ValidatorInfo { addr: move(account_address), validator_keys: *&move(config_ref).keys }
-        //);
+        Vector.push_back<Self.ValidatorInfo>(
+            &mut move(validator_set_ref).validators,
+            ValidatorInfo {
+                addr: move(account_address),
+                network_signing_pubkey: *&copy(config_ref).network_signing_pubkey,
+                network_identity_pubkey: *&copy(config_ref).network_identity_pubkey,
+                consensus_pubkey: *&move(config_ref).consensus_pubkey,
+            }
+        );
 
         return;
     }
