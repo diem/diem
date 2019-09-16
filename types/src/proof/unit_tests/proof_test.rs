@@ -6,7 +6,7 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        verify_account_state, verify_event, verify_signed_transaction,
+        definition::MAX_PROOF_DEPTH, verify_account_state, verify_event, verify_signed_transaction,
         verify_sparse_merkle_element, verify_test_accumulator_element, AccountStateProof,
         AccumulatorProof, EventAccumulatorInternalNode, EventProof, MerkleTreeInternalNode,
         SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
@@ -99,10 +99,10 @@ fn test_verify_three_element_accumulator() {
 }
 
 #[test]
-fn test_accumulator_proof_64_siblings_leftmost() {
+fn test_accumulator_proof_max_siblings_leftmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..64 {
+    for i in 0..MAX_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -117,10 +117,10 @@ fn test_accumulator_proof_64_siblings_leftmost() {
 }
 
 #[test]
-fn test_accumulator_proof_64_siblings_rightmost() {
+fn test_accumulator_proof_max_siblings_rightmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..64 {
+    for i in 0..MAX_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -129,17 +129,17 @@ fn test_accumulator_proof_64_siblings_rightmost() {
         .fold(element_hash, |hash, sibling_hash| {
             TestAccumulatorInternalNode::new(*sibling_hash, hash).hash()
         });
-    let leaf_index = std::u64::MAX;
+    let leaf_index = (std::u64::MAX - 1) / 2;
     let proof = AccumulatorProof::new(siblings);
 
     assert!(verify_test_accumulator_element(root_hash, element_hash, leaf_index, &proof).is_ok());
 }
 
 #[test]
-fn test_accumulator_proof_65_siblings() {
+fn test_accumulator_proof_sibling_overflow() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..65 {
+    for i in 0..MAX_PROOF_DEPTH as u8 + 1 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings

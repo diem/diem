@@ -15,6 +15,7 @@ use crate::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
+    proof::definition::MAX_PROOF_DEPTH,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
 };
 use crypto::{
@@ -319,8 +320,9 @@ fn verify_accumulator_element<H: Clone + CryptoHasher>(
 ) -> Result<()> {
     let siblings = accumulator_proof.siblings();
     ensure!(
-        siblings.len() <= 64,
-        "Accumulator proof has more than 64 ({}) siblings.",
+        siblings.len() <= MAX_PROOF_DEPTH,
+        "Accumulator proof has more than {} ({}) siblings.",
+        MAX_PROOF_DEPTH,
         siblings.len()
     );
 
