@@ -513,10 +513,11 @@ fn test_dependency_fails_verification() {
     }
     ";
     let compiler = Compiler {
-        code: bad_module_code,
         ..Compiler::default()
     };
-    let module = compiler.into_compiled_module().expect("Failed to compile");
+    let module = compiler
+        .into_compiled_module(bad_module_code)
+        .expect("Failed to compile");
     executor.add_module(&module.self_id(), &module);
 
     // Create a transaction that tries to use that module.
@@ -534,7 +535,6 @@ fn test_dependency_fails_verification() {
     ";
 
     let compiler = Compiler {
-        code,
         address: *sender.address(),
         // This is OK because we *know* the module is unverified.
         extra_deps: vec![VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
@@ -542,7 +542,7 @@ fn test_dependency_fails_verification() {
         )],
         ..Compiler::default()
     };
-    let script = compiler.into_script_blob().expect("Failed to compile");
+    let script = compiler.into_script_blob(code).expect("Failed to compile");
     let txn = sender.account().create_signed_txn(
         TransactionPayload::Script(Script::new(script, vec![])),
         10,

@@ -492,12 +492,11 @@ fn test_multi_level_cache_write_back() {
 
 fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
     let compiler = Compiler {
-        code: s.as_ref(),
         skip_stdlib_deps: true,
         ..Compiler::default()
     };
     compiler
-        .into_compiled_program()
+        .into_compiled_program(s.as_ref())
         .expect("Failed to compile program")
         .modules
 }

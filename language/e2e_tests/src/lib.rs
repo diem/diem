@@ -37,11 +37,12 @@ pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMR
     let address = AccountAddress::default();
     println!("{}", address);
     let compiler = Compiler {
-        code: program,
         address,
         ..Compiler::default()
     };
-    let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
+    let compiled_program = compiler
+        .into_compiled_program(program)
+        .expect("Failed to compile");
     let (verified_script, modules) =
         verify(&address, compiled_program.script, compiled_program.modules);
     execute(verified_script, args, modules)
