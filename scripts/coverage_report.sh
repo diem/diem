@@ -69,27 +69,13 @@ then
 	fi
 fi
 
+# Set the flags necessary for coverage output
 export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads"
 export CARGO_INCREMENTAL=0
 
 # Clean the project
 echo "Cleaning project..."
 (cd $TEST_DIR; cargo clean)
-
-# Build with flags necessary for coverage output
-echo "Building with coverage instrumentation..."
-(cd $TEST_DIR; cargo build)
-
-# Remove existing coverage output
-echo "Cleaning existing coverage info..."
-if [ -d "./target" ]
-then
-	find target -type f -name "*.gcda" -delete
-	find target -type f -name "*.gcno" -delete
-else
-	echo "Error: target directory does not exist. Did cargo build fail?" >&2
-	exit 1
-fi
 
 # Run tests
 echo "Running tests..."
