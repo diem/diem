@@ -73,11 +73,21 @@ impl NodeKey {
         &self.nibble_path
     }
 
-    /// Generates a child node_key based on this node key.
+    /// Generates a child node key based on this node key.
     pub fn gen_child_node_key(&self, version: Version, n: Nibble) -> Self {
         let mut node_nibble_path = self.nibble_path().clone();
         node_nibble_path.push(n);
         Self::new(version, node_nibble_path)
+    }
+
+    /// Generates parent node key at the same version based on this node key.
+    pub fn gen_parent_node_key(&self) -> Self {
+        let mut node_nibble_path = self.nibble_path().clone();
+        assert!(
+            node_nibble_path.pop().is_some(),
+            "Current node key is root.",
+        );
+        Self::new(self.version, node_nibble_path)
     }
 
     /// Sets the version to the given version.

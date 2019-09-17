@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    node_type::{Node, NodeKey},
-    StaleNodeIndex, TreeReader, TreeUpdateBatch,
+    node_type::{LeafNode, Node, NodeKey},
+    NodeBatch, StaleNodeIndex, TreeReader, TreeUpdateBatch, TreeWriter,
 };
 use failure::prelude::*;
 use std::{
@@ -18,6 +18,31 @@ pub(crate) struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNo
 impl TreeReader for MockTreeStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
         Ok(self.0.read().unwrap().0.get(node_key).cloned())
+    }
+
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
+        let locked = self.0.read().unwrap();
+        let mut node_key_and_node: Option<(NodeKey, LeafNode)> = None;
+
+        for (key, value) in locked.0.iter() {
+            if let Node::Leaf(leaf_node) = value {
+                if node_key_and_node.is_none()
+                    || leaf_node.account_key() > node_key_and_node.as_ref().unwrap().1.account_key()
+                {
+                    node_key_and_node.replace((key.clone(), leaf_node.clone()));
+                }
+            }
+        }
+
+        Ok(node_key_and_node)
+    }
+}
+
+impl TreeWriter for MockTreeStore {
+    fn write_node_batch(&self, node_batch: NodeBatch) -> Result<()> {
+        let mut locked = self.0.write().unwrap();
+        locked.0.extend(node_batch.into_iter());
+        Ok(())
     }
 }
 
