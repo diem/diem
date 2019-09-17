@@ -463,34 +463,20 @@ impl ClientProxy {
                 space_delim_strings[3]
             ),
         };
-        let output_path = {
-            if space_delim_strings.len() == 5 {
-                space_delim_strings[4].to_string()
-            } else {
-                let tmp_path = TempPath::new();
-                let path = tmp_path
-                    .as_ref()
-                    .to_str()
-                    .ok_or_else(|| format_err!("failed to create tmp file"))?
-                    .to_string();
-                self.temp_files.push(tmp_path.as_ref().to_path_buf());
-                path
-            }
-        };
-        let tmp_source_path = TempPath::new();
-        let mut tmp_source_file = std::fs::File::create(tmp_source_path.as_ref())?;
+
+        let tmp_source_path = TempPath::new().as_ref().with_extension("mvir");
+        let output_path = &tmp_source_path.with_extension("mv");
+        let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
         let mut code = fs::read_to_string(file_path)?;
         code = code.replace("{{sender}}", &format!("0x{}", address));
         writeln!(tmp_source_file, "{}", code)?;
-
-        let dependencies_file =
-            self.handle_dependencies(tmp_source_path.path().display(), is_module)?;
+        self.temp_files.push(output_path.to_path_buf());
+        let dependencies_file = self.handle_dependencies(tmp_source_path.display(), is_module)?;
 
         let mut args = format!(
-            "run -p compiler -- {} -a {} -o {}{}",
-            tmp_source_path.path().display(),
+            "run -p compiler -- {} -a {}{}",
+            tmp_source_path.display(),
             address,
-            output_path,
             if is_module { " -m" } else { "" },
         );
         if let Some(file) = &dependencies_file {
@@ -504,7 +490,12 @@ impl ClientProxy {
         if !status.success() {
             return Err(format_err!("compilation failed"));
         }
-        Ok(output_path)
+        Ok(output_path
+            .to_str()
+            .expect(
+                "TempPath::new() should always generate a path that can be converted to a string",
+            )
+            .to_string())
     }
 
     fn handle_dependencies(
