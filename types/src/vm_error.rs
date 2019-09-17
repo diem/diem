@@ -137,10 +137,13 @@ impl VMStatus {
     pub fn set_message(&mut self, message: String) {
         self.message = Some(message);
     }
-
-    /// Append the message `message` to the message field of the VM status.
-    pub fn append_message(mut self, message: String) -> Self {
+    /// Append the message `message` to the message field of the VM status, and insert a seperator
+    /// if the original message is non-empty.
+    pub fn append_message_with_separator(mut self, separator: char, message: String) -> Self {
         if let Some(ref mut msg) = self.message {
+            if !msg.is_empty() {
+                msg.push(separator);
+            }
             msg.push_str(&message);
         } else {
             self.message = Some(message);
@@ -192,8 +195,8 @@ impl VMStatus {
 
     /// Append two VMStatuses together. The major status is kept from the caller.
     pub fn append(self, other: Self) -> Self {
-        let msg = format!("\n{}", other);
-        self.append_message(msg)
+        let msg = format!("{}", other);
+        self.append_message_with_separator('\n', msg)
     }
 }
 

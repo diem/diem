@@ -124,7 +124,7 @@ pub fn verification_error(kind: IndexKind, idx: usize, err: StatusCode) -> VMSta
 
 pub fn append_err_info(status: VMStatus, kind: IndexKind, idx: usize) -> VMStatus {
     let msg = format!("at index {} while indexing {}", idx, kind);
-    status.append_message(msg)
+    status.append_message_with_separator(' ', msg)
 }
 
 pub fn err_at_offset(status: StatusCode, offset: usize) -> VMStatus {
