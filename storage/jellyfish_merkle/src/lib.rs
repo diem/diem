@@ -66,6 +66,7 @@ mod jellyfish_merkle_test;
 mod mock_tree_store;
 mod nibble_path;
 pub mod node_type;
+pub mod restore;
 mod tree_cache;
 
 use crypto::{hash::CryptoHash, HashValue};
@@ -91,6 +92,15 @@ pub trait TreeReader {
 
     /// Gets node given a node key. Returns `None` if the node does not exist.
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>>;
+
+    /// Gets the rightmost leaf. Note that this assumes we are in the process of restoring the tree
+    /// and all nodes are at the same version.
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>>;
+}
+
+pub trait TreeWriter {
+    /// Writes a node batch into storage.
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()>;
 }
 
 /// Node batch that will be written into db atomically with other batches.
@@ -527,5 +537,12 @@ where
     #[cfg(test)]
     pub fn get(&self, key: HashValue, version: Version) -> Result<Option<AccountStateBlob>> {
         Ok(self.get_with_proof(key, version)?.0)
+    }
+
+    #[cfg(test)]
+    pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
+        let root_node_key = NodeKey::new_empty_path(version);
+        let root_node = self.reader.get_node(&root_node_key)?;
+        Ok(root_node.hash())
     }
 }
