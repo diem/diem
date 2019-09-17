@@ -36,7 +36,8 @@ use std::{
 use tokio::runtime::{Builder, Runtime};
 use types::{
     account_address::AccountAddress,
-    ledger_info::{LedgerInfo as TypesLedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo as TypesLedgerInfo,
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},

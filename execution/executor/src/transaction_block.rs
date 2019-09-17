@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block_tree::Block, ExecutedTrees};
-use crypto::{ed25519::*, hash::EventAccumulatorHasher, HashValue};
+use crypto::{hash::EventAccumulatorHasher, HashValue};
 use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
@@ -16,7 +16,7 @@ use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::LedgerInfoWithSignatures,
     proof::accumulator::Accumulator,
     transaction::{SignedTransaction, TransactionStatus},
 };
@@ -44,7 +44,7 @@ pub struct TransactionBlock {
 
     /// The signatures on this block. Not all committed blocks will have signatures, if multiple
     /// blocks are committed at once.
-    ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+    ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
 
     /// The response for `execute_block` request.
     execute_response: Option<ExecuteBlockResponse>,
@@ -90,7 +90,7 @@ impl TransactionBlock {
     }
 
     /// Returns the signatures on this block.
-    pub fn ledger_info_with_sigs(&self) -> &Option<LedgerInfoWithSignatures<Ed25519Signature>> {
+    pub fn ledger_info_with_sigs(&self) -> &Option<LedgerInfoWithSignatures> {
         &self.ledger_info_with_sigs
     }
 
@@ -175,7 +175,7 @@ impl TransactionBlock {
 
 impl Block for TransactionBlock {
     type Output = ProcessedVMOutput;
-    type Signature = LedgerInfoWithSignatures<Ed25519Signature>;
+    type Signature = LedgerInfoWithSignatures;
 
     fn is_committed(&self) -> bool {
         self.committed

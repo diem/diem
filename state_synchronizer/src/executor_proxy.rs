@@ -14,7 +14,10 @@ use network::proto::GetChunkResponse;
 use proto_conv::IntoProto;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use types::{crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures, PeerId};
+use types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    PeerId,
+};
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
@@ -35,13 +38,10 @@ pub trait ExecutorProxyTrait: Sync + Send {
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>>;
 
-    fn validate_ledger_info(
-        &self,
-        target: &LedgerInfoWithSignatures<Ed25519Signature>,
-    ) -> Result<()>;
+    fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -103,7 +103,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
+        target: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
         let client = Arc::clone(&self.storage_client);
         async move {

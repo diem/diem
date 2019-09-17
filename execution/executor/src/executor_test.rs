@@ -8,7 +8,7 @@ use crate::{
     Executor, OP_COUNTERS,
 };
 use config::config::{NodeConfig, NodeConfigHelpers};
-use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, HashValue};
+use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
 use proptest::prelude::*;
@@ -25,7 +25,8 @@ use storage_proto::proto::storage_grpc::create_storage;
 use storage_service::StorageService;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
     transaction::{SignedTransaction, TransactionListWithProof, Version},
 };
 use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
@@ -157,7 +158,7 @@ fn gen_ledger_info(
     root_hash: HashValue,
     commit_block_id: HashValue,
     timestamp_usecs: u64,
-) -> LedgerInfoWithSignatures<Ed25519Signature> {
+) -> LedgerInfoWithSignatures {
     let ledger_info = LedgerInfo::new(
         version,
         root_hash,
@@ -278,10 +279,7 @@ rusty_fork_test! {
 /// Generates a list of `TransactionListWithProof`s according to the given ranges.
 fn create_transaction_chunks(
     chunk_ranges: Vec<std::ops::Range<Version>>,
-) -> (
-    Vec<TransactionListWithProof>,
-    LedgerInfoWithSignatures<Ed25519Signature>,
-) {
+) -> (Vec<TransactionListWithProof>, LedgerInfoWithSignatures) {
     assert_eq!(chunk_ranges.first().unwrap().start, 1);
     for i in 1..chunk_ranges.len() {
         let previous_range = &chunk_ranges[i - 1];

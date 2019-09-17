@@ -18,10 +18,10 @@ prop_compose! {
 prop_compose! {
     fn arb_ledger_infos_with_sigs()(
         partial_ledger_infos_with_sigs in vec(
-            any_with::<LedgerInfoWithSignatures<Ed25519Signature>>((1..3).into()).no_shrink(), 1..100
+            any_with::<LedgerInfoWithSignatures>((1..3).into()).no_shrink(), 1..100
         ),
         start_epoch in 0..10000u64,
-    ) -> Vec<LedgerInfoWithSignatures<Ed25519Signature>> {
+    ) -> Vec<LedgerInfoWithSignatures> {
         partial_ledger_infos_with_sigs
             .iter()
             .enumerate()

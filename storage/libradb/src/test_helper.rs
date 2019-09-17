@@ -5,25 +5,18 @@
 
 use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
-use crypto::{ed25519::*, hash::CryptoHash};
+use crypto::hash::CryptoHash;
 use proptest::{collection::vec, prelude::*};
 use tools::tempdir::TempPath;
 use types::{
+    crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proptest_types::{AccountInfoUniverse, TransactionToCommitGen},
 };
 
 fn to_blocks_to_commit(
-    partial_blocks: Vec<(
-        Vec<TransactionToCommit>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-    )>,
-) -> Result<
-    Vec<(
-        Vec<TransactionToCommit>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-    )>,
-> {
+    partial_blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+) -> Result<Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>> {
     // Use temporary LibraDB and STORE LEVEL APIs to calculate hashes on a per transaction basis.
     // Result is used to test the batch PUBLIC API for saving everything, i.e. `save_transactions()`
     let tmp_dir = TempPath::new();
@@ -106,14 +99,14 @@ prop_compose! {
         batches in vec(
             (
                 vec(any::<TransactionToCommitGen>(), 0..=2),
-                any::<LedgerInfoWithSignatures<Ed25519Signature>>()
+                any::<LedgerInfoWithSignatures>()
             ),
             1..10,
         ),
     ) ->
         Vec<(
             Vec<TransactionToCommit>,
-            LedgerInfoWithSignatures<Ed25519Signature>,
+            LedgerInfoWithSignatures,
         )>
     {
         let partial_blocks = batches
