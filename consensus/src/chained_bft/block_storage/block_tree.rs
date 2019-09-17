@@ -4,6 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockTreeError, VoteReceptionResult},
+        common::Author,
         consensus_types::{
             block::{Block, ExecutedBlock},
             quorum_cert::QuorumCert,
@@ -28,6 +29,23 @@ use std::{
 };
 use types::crypto_proxies::LedgerInfoWithSignatures;
 
+struct BlockHash {
+    digest: HashValue,
+    li_sig: HashMap<HashValue, LedgerInfoWithSignatures>
+}
+impl BlockHash {
+    /// Store BlockId to LedgerInfo hash mapping
+    pub fn new(
+        digest: HashValue,
+        li_sig: HashMap<HashValue, LedgerInfoWithSignatures>,
+    ) -> Self {
+        BlockHash {
+            digest,
+            li_sig,
+        }
+    }
+}
+
 /// This structure maintains a consistent block tree of parent and children links. Blocks contain
 /// parent links and are immutable.  For all parent links, a child link exists. This structure
 /// should only be used internally in BlockStore.
@@ -50,7 +68,9 @@ pub struct BlockTree<T> {
     /// (including the 3-chain of a voted proposal).
     /// Thus, the structure of `id_to_votes` is as follows:
     /// HashMap<proposed_block_id, HashMap<ledger_info_digest, LedgerInfoWithSignatures>>
-    id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures>>,
+    id_to_votes: HashMap<HashValue, BlockHash>,
+    // Map of Voting Author to proposed_block_id
+    author_to_block: HashMap<Author, HashValue>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -99,6 +119,7 @@ where
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_ledger_info: Arc::new(root_ledger_info),
             id_to_votes: HashMap::new(),
+            author_to_block: HashMap::new(),
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -249,23 +270,42 @@ where
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
-        // All the votes collected for all the execution results of a given proposal.
-        let block_votes = self
-            .id_to_votes
-            .entry(block_id)
-            .or_insert_with(HashMap::new);
+
+        let author = vote_msg.author();
+        if let Some(old_block_id) = self.author_to_block.get(&author) {
+            if block_id == *old_block_id {
+                // Author has already voted for this block
+                return VoteReceptionResult::DuplicateVote;
+            }
+            if let Some(old_block_hash) = self.id_to_votes.get_mut(&old_block_id) {
+                let digest = old_block_hash.digest;
+                let old_block_votes = &mut old_block_hash.li_sig;
+                if let Some(li_sig) = old_block_votes.get_mut(&digest) {
+                    if li_sig.remove_signature(author) {
+                        // Last vote/signature for block removed, cleanup hashmap.
+                        old_block_votes.remove(&digest);
+                        self.id_to_votes.remove(&old_block_id);
+                    }
+                }
+            }
+            self.author_to_block.remove(&author);
+        }
+        self.author_to_block.entry(author).or_insert(block_id);
 
         // Note that the digest covers the ledger info information, which is also indirectly
         // covering vote data hash (in its `consensus_data_hash` field).
         let digest = vote_msg.ledger_info().hash();
+
+        // All the votes collected for all the execution results of a given proposal.
+        let block_hash = self
+            .id_to_votes
+            .entry(block_id)
+            .or_insert_with(|| { BlockHash::new(digest, HashMap::new())});
+        let block_votes = &mut block_hash.li_sig;
+
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });
-
-        let author = vote_msg.author();
-        if li_with_sig.signatures().contains_key(&author) {
-            return VoteReceptionResult::DuplicateVote;
-        }
         vote_msg.signature().clone().add_to_li(author, li_with_sig);
 
         let num_votes = li_with_sig.signatures().len();

@@ -728,6 +728,15 @@ impl<T: Payload> EventProcessor<T> {
         let deadline = self.pacemaker.current_round_deadline();
         let preferred_peer = vote.author();
         // TODO [Reconfiguration] Verify epoch of the vote message.
+       if self.pacemaker.current_round() != vote.block_round() {
+            debug!(
+                "Vote from {} rejected because round is incorrect. Pacemaker: {}, Vote: {}",
+                vote.author(),
+                self.pacemaker.current_round(),
+                vote.block_round(),
+            );
+            return None;
+        }
         // Add the vote and check whether it completes a new QC.
         if let VoteReceptionResult::NewQuorumCertificate(qc) =
             self.block_store.insert_vote(vote, quorum_size)

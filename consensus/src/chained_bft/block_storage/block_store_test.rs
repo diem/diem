@@ -343,7 +343,7 @@ fn test_insert_vote() {
     // Set up enough different authors to support different votes for the same block.
     let qc_size = 10;
     let mut signers = vec![];
-
+    ::logger::try_init_for_testing();
     for i in 0..qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));
     }
