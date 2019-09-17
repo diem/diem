@@ -399,6 +399,7 @@ pub enum StatusCode {
     STORAGE_ERROR = 2008,
     INTERNAL_TYPE_ERROR = 2009,
     EVENT_KEY_MISMATCH = 2010,
+    UNREACHABLE = 2011,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999

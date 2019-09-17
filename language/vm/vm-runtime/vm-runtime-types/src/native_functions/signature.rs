@@ -9,7 +9,10 @@ use libra_crypto::{
     traits::*,
     HashValue,
 };
-use libra_types::byte_array::ByteArray;
+use libra_types::{
+    byte_array::ByteArray,
+    vm_error::{StatusCode, VMStatus},
+};
 use std::{collections::VecDeque, convert::TryFrom};
 
 // TODO: Talk to Crypto to determine these costs
@@ -41,7 +44,13 @@ const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
 pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 3 {
-        return NativeReturnStatus::InvalidArguments;
+        let msg = format!(
+            "wrong number of arguments for ed25519_signature_verification expected 3 found {}",
+            arguments.len()
+        );
+        return NativeReturnStatus::InvariantError(
+            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
+        );
     }
     let msg = pop_arg!(arguments, ByteArray);
     let pubkey = pop_arg!(arguments, ByteArray);
@@ -54,7 +63,8 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> 
         Err(_) => {
             return NativeReturnStatus::Aborted {
                 cost,
-                error_code: DEFAULT_ERROR_CODE,
+                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                    .with_sub_status(DEFAULT_ERROR_CODE),
             }
         }
     };
@@ -63,7 +73,8 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> 
         Err(_) => {
             return NativeReturnStatus::Aborted {
                 cost,
-                error_code: DEFAULT_ERROR_CODE,
+                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                    .with_sub_status(DEFAULT_ERROR_CODE),
             }
         }
     };
@@ -81,7 +92,13 @@ pub fn native_ed25519_threshold_signature_verification(
     mut arguments: VecDeque<Value>,
 ) -> NativeReturnStatus {
     if arguments.len() != 4 {
-        return NativeReturnStatus::InvalidArguments;
+        let msg = format!(
+            "wrong number of arguments for ed25519_signature_verification expected 4 found {}",
+            arguments.len()
+        );
+        return NativeReturnStatus::InvariantError(
+            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
+        );
     }
     let message = pop_arg!(arguments, ByteArray);
     let public_keys = pop_arg!(arguments, ByteArray);
@@ -145,7 +162,8 @@ fn ed25519_threshold_signature_verification(
                         Err(_) => {
                             return Err(NativeReturnStatus::Aborted {
                                 cost: abort_cost,
-                                error_code: DEFAULT_ERROR_CODE,
+                                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                                    .with_sub_status(DEFAULT_ERROR_CODE),
                             })
                         }
                         Ok(hash_value) => hash_value,
@@ -160,7 +178,8 @@ fn ed25519_threshold_signature_verification(
                         {
                             Err(NativeReturnStatus::Aborted {
                                 cost: abort_cost,
-                                error_code: SIGNATURE_VERIFICATION_FAILURE,
+                                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                                    .with_sub_status(SIGNATURE_VERIFICATION_FAILURE),
                             })
                         }
                     }
@@ -170,7 +189,8 @@ fn ed25519_threshold_signature_verification(
                 {
                     Err(NativeReturnStatus::Aborted {
                         cost: abort_cost,
-                        error_code: PUBLIC_KEY_DESERIALIZATION_FAILURE,
+                        error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                            .with_sub_status(PUBLIC_KEY_DESERIALIZATION_FAILURE),
                     })
                 }
             }
@@ -180,7 +200,8 @@ fn ed25519_threshold_signature_verification(
         {
             Err(NativeReturnStatus::Aborted {
                 cost: abort_cost,
-                error_code: SIGNATURE_DESERIALIZATION_FAILURE,
+                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                    .with_sub_status(SIGNATURE_DESERIALIZATION_FAILURE),
             })
         }
     }
@@ -228,7 +249,8 @@ fn sanity_check(
         // Invalid bitmap length
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: INVALID_BITMAP_LENGTH_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(INVALID_BITMAP_LENGTH_FAILURE),
         });
     }
 
@@ -244,7 +266,8 @@ fn sanity_check(
         // Bitmap is all zeros
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: ZERO_BITMAP_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(ZERO_BITMAP_FAILURE),
         });
     }
     // Ensure we have as many signatures as the number of set bits in bitmap.
@@ -252,7 +275,8 @@ fn sanity_check(
         // Mismatch between Bitmap Hamming weight and number of signatures
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: SIGNATURE_SIZE_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(SIGNATURE_SIZE_FAILURE),
         });
     }
     // Ensure that we have at least as many keys as the index of the last set bit in bitmap.
@@ -260,7 +284,8 @@ fn sanity_check(
         // Bitmap points to a non-existent key
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: BITMAP_PUBLIC_KEY_SIZE_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(BITMAP_PUBLIC_KEY_SIZE_FAILURE),
         });
     }
     // Ensure no more than BITMAP_SIZE keys.
@@ -268,7 +293,8 @@ fn sanity_check(
         // Length of bytes of concatenated keys exceeds the maximum allowed
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: OVERSIZED_PUBLIC_KEY_SIZE_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(OVERSIZED_PUBLIC_KEY_SIZE_FAILURE),
         });
     }
     // Ensure ByteArray for keys is a multiple of 32 bytes.
@@ -276,7 +302,8 @@ fn sanity_check(
         // Concatenated Ed25519 public keys should be a multiple of 32 bytes
         return Err(NativeReturnStatus::Aborted {
             cost: abort_cost,
-            error_code: INVALID_PUBLIC_KEY_SIZE_FAILURE,
+            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                .with_sub_status(INVALID_PUBLIC_KEY_SIZE_FAILURE),
         });
     }
     Ok(bitmap_count_ones as u64)

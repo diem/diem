@@ -113,7 +113,6 @@ mod counters;
 pub mod foreign_contracts;
 
 mod block_processor;
-mod frame;
 mod gas_meter;
 mod move_vm;
 mod process_txn;
@@ -124,13 +123,9 @@ mod unit_tests;
 pub mod code_cache;
 pub mod data_cache;
 pub mod identifier;
+pub mod interpreter;
 pub mod loaded_data;
 pub mod txn_executor;
-
-#[cfg(feature = "instruction_synthesis")]
-pub mod execution_stack;
-#[cfg(not(feature = "instruction_synthesis"))]
-mod execution_stack;
 
 pub use move_vm::MoveVM;
 pub use process_txn::verify::static_verify_program;
@@ -143,7 +138,6 @@ use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
 };
-use vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.
 pub trait VMVerifier {

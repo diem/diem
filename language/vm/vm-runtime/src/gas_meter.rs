@@ -2,20 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Gas metering logic for the Move VM.
-use crate::{
-    code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
-    loaded_data::function::FunctionReference,
-};
+use crate::{interpreter::InterpreterForGasCost, loaded_data::function::FunctionReference};
 use libra_types::{
-    account_address::ADDRESS_LENGTH, transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
-    vm_error::StatusCode,
+    account_address::ADDRESS_LENGTH,
+    transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
+    vm_error::{StatusCode, VMStatus},
 };
-use vm::{
-    access::ModuleAccess,
-    errors::{vm_error, VMResult},
-    file_format::Bytecode,
-    gas_schedule::*,
-};
+use vm::{access::ModuleAccess, errors::VMResult, file_format::Bytecode, gas_schedule::*};
 
 /// Holds the state of the gas meter.
 pub struct GasMeter {
@@ -44,18 +37,13 @@ impl GasMeter {
     /// transaction can contain arbitrary amounts of bytes in the `note` field. We also want to
     /// disinsentivize large transactions with large notes, so we charge the same amount up to a
     /// cutoff, after which we start charging at a greater rate.
-    pub fn charge_transaction_gas<'alloc, 'txn, P>(
+    pub fn charge_transaction_gas(
         &mut self,
         transaction_size: AbstractMemorySize<GasCarrier>,
-        stk: &ExecutionStack<'alloc, 'txn, P>,
-    ) -> VMResult<()>
-    where
-        'alloc: 'txn,
-        P: ModuleCache<'alloc>,
-    {
+    ) -> VMResult<()> {
         precondition!(transaction_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         let cost = calculate_intrinsic_gas(transaction_size);
-        self.consume_gas(cost, stk)
+        self.consume_gas(cost)
     }
 
     /// Queries the internal state of the gas meter to determine if it has at
@@ -84,19 +72,18 @@ impl GasMeter {
     }
 
     /// A wrapper that calculates and then consumes the gas unless metering is disabled.
-    pub fn calculate_and_consume<'alloc, 'txn, P>(
+    pub fn calculate_and_consume<'a, 'alloc, 'txn>(
         &mut self,
         instr: &Bytecode,
-        stk: &ExecutionStack<'alloc, 'txn, P>,
+        interpreter: InterpreterForGasCost<'a, 'alloc, 'txn>,
         memory_size: AbstractMemorySize<GasCarrier>,
     ) -> VMResult<()>
     where
         'alloc: 'txn,
-        P: ModuleCache<'alloc>,
     {
         if self.meter_on {
-            let instruction_gas = self.gas_for_instruction(instr, stk, memory_size)?;
-            self.consume_gas(instruction_gas, stk)
+            let instruction_gas = self.gas_for_instruction(instr, interpreter, memory_size)?;
+            self.consume_gas(instruction_gas)
         } else {
             Ok(())
         }
@@ -104,15 +91,14 @@ impl GasMeter {
 
     /// Calculate the gas usage for an instruction taking into account the current stack state, and
     /// the size of memory that is being accessed.
-    pub fn gas_for_instruction<'alloc, 'txn, P>(
+    pub fn gas_for_instruction<'a, 'alloc, 'txn>(
         &mut self,
         instr: &Bytecode,
-        stk: &ExecutionStack<'alloc, 'txn, P>,
+        interpreter: InterpreterForGasCost<'a, 'alloc, 'txn>,
         memory_size: AbstractMemorySize<GasCarrier>,
     ) -> VMResult<GasUnits<GasCarrier>>
     where
         'alloc: 'txn,
-        P: ModuleCache<'alloc>,
     {
         // Get the base cost for the instruction.
         let instruction_reqs = match instr {
@@ -162,8 +148,8 @@ impl GasMeter {
             }
             Bytecode::Eq
             | Bytecode::Neq => {
-                let lhs_size = stk.peek()?.size();
-                let rhs_size = stk.peek_at(1)?.size();
+                let lhs_size = interpreter.peek()?.size();
+                let rhs_size = interpreter.peek_at(1)?.size();
                 let max_size = lhs_size.map2(rhs_size, std::cmp::max);
                 Self::gas_of(static_cost_instr(instr, max_size))
             }
@@ -173,7 +159,7 @@ impl GasMeter {
                 Self::gas_of(default_gas)
             }
             Bytecode::LdByteArray(idx) => {
-                let byte_array_ref = stk.top_frame()?.module().byte_array_at(*idx);
+                let byte_array_ref = interpreter.module().byte_array_at(*idx);
                 let byte_array_len = AbstractMemorySize::new(byte_array_ref.len() as GasCarrier);
                 let byte_array_len = words_in(byte_array_len);
                 let default_gas = static_cost_instr(instr, byte_array_len);
@@ -181,7 +167,7 @@ impl GasMeter {
             }
             // We charge by the length of the string being stored on the stack.
             Bytecode::LdStr(idx) => {
-                let string_ref = stk.top_frame()?.module().user_string_at(*idx);
+                let string_ref = interpreter.module().user_string_at(*idx);
                 let str_len = AbstractMemorySize::new(string_ref.len() as GasCarrier);
                 let str_len = words_in(str_len);
                 let default_gas = static_cost_instr(instr, str_len);
@@ -189,7 +175,7 @@ impl GasMeter {
             }
             Bytecode::StLoc(_) => {
                 // Get the local to store
-                let local = stk.peek()?;
+                let local = interpreter.peek()?;
                 // Get the size of the local
                 let size = local.size();
                 let default_gas = static_cost_instr(instr, size);
@@ -197,17 +183,16 @@ impl GasMeter {
             }
             // Note that a moveLoc incurs a copy overhead
             Bytecode::CopyLoc(local_idx) | Bytecode::MoveLoc(local_idx) => {
-                let local = stk.top_frame()?.copy_loc(*local_idx)?;
+                let local = interpreter.copy_loc(*local_idx)?;
                 let size = local.size();
                 let default_gas = static_cost_instr(instr, size);
                 Self::gas_of(default_gas)
             }
             Bytecode::Call(call_idx, _) => {
-                let self_module = &stk.top_frame()?.module();
-                let function_ref = stk
-                    .module_cache
-                    .resolve_function_ref(self_module, *call_idx)?
-                    .ok_or_else(|| vm_error(stk.location().unwrap_or_default(), StatusCode::LINKER_ERROR))?;
+                let function_ref = interpreter
+                    .module_cache()
+                    .resolve_function_ref(interpreter.module(), *call_idx)?
+                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
                 if function_ref.is_native() {
                     GasUnits::new(0) // This will be costed at the call site/by the native function
                 } else {
@@ -217,11 +202,11 @@ impl GasMeter {
                 }
             }
             Bytecode::Unpack(_, _) => {
-                let size = stk.peek()?.size();
+                let size = interpreter.peek()?.size();
                 Self::gas_of(static_cost_instr(instr, size))
             }
             Bytecode::Pack(struct_idx, _) => {
-                let struct_def = &stk.top_frame()?.module().struct_def_at(*struct_idx);
+                let struct_def = interpreter.module().struct_def_at(*struct_idx);
                 // Similar logic applies here as in Call, so we probably don't need to take
                 // into account the size of the values on the value stack that we are placing into
                 // the struct.
@@ -234,9 +219,9 @@ impl GasMeter {
             }
             Bytecode::WriteRef => {
                 // Get a reference to the value that we are going to write
-                let write_val = stk.peek_at(1)?;
+                let write_val = interpreter.peek_at(1)?;
                 // Grab the reference that's going to be written to
-                let ref_val = stk.peek()?;
+                let ref_val = interpreter.peek()?;
                 // Get the size of this value and charge accordingly.
                 let size = write_val.size();
                 let mut default_gas = static_cost_instr(instr, size);
@@ -263,7 +248,7 @@ impl GasMeter {
                 // NB: We don't charge for reads from global memory: we charge once for the read
                 // from global memory that is performed by a BorrowGlobal operation. After this,
                 // all ReadRefs will be reading from local cache and we don't need to distinguish.
-                let size = stk.peek()?.size();
+                let size = interpreter.peek()?.size();
                 let default_gas = static_cost_instr(instr, size);
                 Self::gas_of(default_gas)
             }
@@ -310,15 +295,7 @@ impl GasMeter {
 
     /// Consume the amount of gas given by `gas_amount`. If there is not enough gas
     /// left in the internal state, an `OutOfGasError` is returned.
-    pub fn consume_gas<'alloc, 'txn, P>(
-        &mut self,
-        gas_amount: GasUnits<GasCarrier>,
-        stk: &ExecutionStack<'alloc, 'txn, P>,
-    ) -> VMResult<()>
-    where
-        'alloc: 'txn,
-        P: ModuleCache<'alloc>,
-    {
+    pub fn consume_gas(&mut self, gas_amount: GasUnits<GasCarrier>) -> VMResult<()> {
         if !self.meter_on {
             return Ok(());
         }
@@ -331,8 +308,7 @@ impl GasMeter {
         } else {
             // Zero out the internal gas state
             self.current_gas_left = GasUnits::new(0);
-            let location = stk.location().unwrap_or_default();
-            Err(vm_error(location, StatusCode::OUT_OF_GAS))
+            Err(VMStatus::new(StatusCode::OUT_OF_GAS))
         }
     }
 

@@ -11,6 +11,7 @@ use libra_types::{
     account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
 };
 use std::collections::{HashMap, VecDeque};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
@@ -29,10 +30,10 @@ pub enum NativeReturnStatus {
         /// The cost for running that function up to the point of the abort
         cost: u64,
         /// The error code aborted on
-        error_code: u64,
+        error_code: VMStatus,
     },
-    /// `InvalidArguments` should not occur unless there is some error in the bytecode verifier
-    InvalidArguments,
+    /// `InvariantError` should not occur unless there is some error in the bytecode verifier
+    InvariantError(VMStatus),
 }
 
 /// Struct representing the expected definition for a native function
@@ -215,7 +216,12 @@ lazy_static! {
         );
         // Event
         add!(m, addr, "Event", "write_to_event_store",
-            |_| { NativeReturnStatus::InvalidArguments },
+            |_| {
+                NativeReturnStatus::InvariantError(
+                    VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "write_to_event_store does not have a native implementation"
+                                .to_string()))
+             },
             vec![Kind::Unrestricted],
             vec![ByteArray, U64, TypeParameter(0)],
             vec![]
@@ -228,8 +234,8 @@ lazy_static! {
 macro_rules! pop_arg {
     ($arguments:ident, $t:ty) => {{
         match $arguments.pop_back().unwrap().value_as::<$t>() {
-            Some(val) => val,
-            None => return NativeReturnStatus::InvalidArguments,
+            Ok(val) => val,
+            Err(err) => return NativeReturnStatus::InvariantError(err),
         }
     }};
 }

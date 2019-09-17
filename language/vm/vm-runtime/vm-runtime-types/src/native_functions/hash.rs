@@ -4,7 +4,10 @@
 use super::dispatch::NativeReturnStatus;
 use crate::value::Value;
 use libra_crypto::HashValue;
-use libra_types::byte_array::ByteArray;
+use libra_types::{
+    byte_array::ByteArray,
+    vm_error::{StatusCode, VMStatus},
+};
 use sha2::{Digest, Sha256};
 use std::collections::VecDeque;
 
@@ -13,7 +16,13 @@ const SHA3_COST: u64 = 30;
 
 pub fn native_sha2_256(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 1 {
-        return NativeReturnStatus::InvalidArguments;
+        let msg = format!(
+            "wrong number of arguments for sha2_256 expected 1 found {}",
+            arguments.len()
+        );
+        return NativeReturnStatus::InvariantError(
+            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
+        );
     }
     let hash_arg = pop_arg!(arguments, ByteArray);
     let cost = SHA2_COST * hash_arg.len() as u64;
@@ -28,7 +37,13 @@ pub fn native_sha2_256(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
 
 pub fn native_sha3_256(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 1 {
-        return NativeReturnStatus::InvalidArguments;
+        let msg = format!(
+            "wrong number of arguments for sha3_256 expected 1 found {}",
+            arguments.len()
+        );
+        return NativeReturnStatus::InvariantError(
+            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
+        );
     }
     let hash_arg = pop_arg!(arguments, ByteArray);
     let cost = SHA3_COST * hash_arg.len() as u64;
