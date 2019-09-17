@@ -208,18 +208,11 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
-        debug!("EventProcessor: receive proposal {}", proposal_msg);
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
         let current_round = self.pacemaker.current_round();
         if proposal_msg.round() < current_round {
-            warn!(
-                "Proposal {} is ignored because its round {} < current round {}",
-                proposal_msg,
-                proposal_msg.round(),
-                current_round
-            );
             return None;
         }
         if self
@@ -502,6 +495,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
     async fn process_proposed_block(&mut self, proposal: Block<T>) {
+        debug!("EventProcessor: process_proposed_block {}", proposal);
         // Safety invariant: For any valid proposed block, its parent block == the block pointed to
         // by its QC.
         debug_checked_precondition_eq!(
