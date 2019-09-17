@@ -2,7 +2,7 @@
 FROM debian:stretch as builder
 
 RUN echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list \
-    && apt-get update && apt-get install -y protobuf-compiler/stretch-backports cmake curl \
+    && apt-get update && apt-get install -y protobuf-compiler/stretch-backports cmake g++ curl \
     && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
