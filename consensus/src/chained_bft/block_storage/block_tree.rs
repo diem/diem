@@ -406,6 +406,8 @@ where
         if cur_block_id != self.root_id {
             return None;
         }
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
         Some(res)
     }
 

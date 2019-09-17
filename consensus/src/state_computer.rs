@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::StateComputer};
+use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use crypto::HashValue;
-use executor::{Executor, StateComputeResult};
+use executor::{
+    transaction_block::ProcessedVMOutput, CommittableBlock, ExecutedTrees, Executor,
+    StateComputeResult,
+};
 use failure::Result;
 use futures::{Future, FutureExt};
 use libra_types::{
@@ -42,25 +45,26 @@ impl StateComputer for ExecutionProxy {
 
     fn compute(
         &self,
-        // The id of a parent block, on top of which the given transactions should be executed.
-        parent_block_id: HashValue,
-        // The id of a current block.
-        block_id: HashValue,
-        // Transactions to execute.
-        transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+        // The block to be executed.
+        block: &Block<Self::Payload>,
+        // The executed trees after executing the parent block.
+        parent_executed_trees: ExecutedTrees,
+    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>> {
         let pre_execution_instant = Instant::now();
         let execute_future = self.executor.execute_block(
-            transactions
+            block
+                .payload()
+                .unwrap_or(&Self::Payload::default())
                 .iter()
                 .map(|txn| Transaction::UserTransaction(txn.clone()))
                 .collect(),
-            parent_block_id,
-            block_id,
+            parent_executed_trees,
+            block.parent_id(),
+            block.id(),
         );
         async move {
             match execute_future.await {
-                Ok(Ok(state_compute_result)) => {
+                Ok(Ok((output, state_compute_result))) => {
                     let execution_duration = pre_execution_instant.elapsed();
                     let num_txns = state_compute_result.compute_status.len();
                     if num_txns == 0 {
@@ -78,7 +82,7 @@ impl StateComputer for ExecutionProxy {
                                 .observe_duration(Duration::from_nanos(nanos_per_txn));
                         }
                     }
-                    Ok(state_compute_result)
+                    Ok((output, state_compute_result))
                 }
                 Ok(Err(e)) => Err(e),
                 Err(e) => Err(e.into()),
@@ -90,14 +94,32 @@ impl StateComputer for ExecutionProxy {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures,
+        payload_and_output_list: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        let version = commit.ledger_info().version();
+        let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
 
         let pre_commit_instant = Instant::now();
         let synchronizer = Arc::clone(&self.synchronizer);
-        let commit_future = self.executor.commit_block(commit);
+
+        let committable_blocks = payload_and_output_list
+            .into_iter()
+            .map(|payload_and_output| {
+                CommittableBlock::new(
+                    payload_and_output
+                        .0
+                        .into_iter()
+                        .map(Transaction::UserTransaction)
+                        .collect(),
+                    payload_and_output.1,
+                )
+            })
+            .collect();
+
+        let commit_future = self
+            .executor
+            .commit_blocks(committable_blocks, finality_proof);
         async move {
             match commit_future.await {
                 Ok(Ok(())) => {
@@ -121,5 +143,9 @@ impl StateComputer for ExecutionProxy {
         self.synchronizer
             .sync_to(commit.ledger_info().clone())
             .boxed()
+    }
+
+    fn committed_trees(&self) -> ExecutedTrees {
+        self.executor.committed_trees()
     }
 }

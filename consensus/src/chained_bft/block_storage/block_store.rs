@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader, VoteReceptionResult},
-        persistent_storage::PersistentStorage,
+        persistent_storage::{PersistentStorage, RecoveryData},
     },
     state_replication::StateComputer,
 };
@@ -12,21 +12,19 @@ use consensus_types::{
     block::{Block, ExecutedBlock},
     common::{Payload, Round},
     quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate,
     vote_msg::VoteMsg,
 };
 use crypto::HashValue;
+use executor::{transaction_block::ProcessedVMOutput, StateComputeResult};
 use failure::ResultExt;
-use logger::prelude::*;
-
-use crate::chained_bft::persistent_storage::RecoveryData;
-use consensus_types::timeout_certificate::TimeoutCertificate;
-use executor::StateComputeResult;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
+use logger::prelude::*;
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
@@ -112,10 +110,11 @@ impl<T: Payload> BlockStore<T> {
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
         let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
-
         // root_compute_res will not used anywhere so use default value to simplify code.
         let root_compute_res = StateComputeResult::default();
-        let executed_root_block = ExecutedBlock::new(root_block, root_compute_res);
+        // TODO: check root matches the committed_trees.
+        let root_output = ProcessedVMOutput::new(vec![], state_computer.committed_trees());
+        let executed_root_block = ExecutedBlock::new(root_block, root_output, root_compute_res);
         let mut tree = BlockTree::new(
             executed_root_block,
             root_qc,
@@ -129,24 +128,25 @@ impl<T: Payload> BlockStore<T> {
             .collect::<HashMap<_, _>>();
         for block in blocks {
             assert!(!block.is_genesis_block());
-            let compute_res = state_computer
-                .compute(
-                    block.parent_id(),
-                    block.id(),
-                    block.payload().unwrap_or(&T::default()),
-                )
+            let parent_trees = tree
+                .get_block(&block.parent_id())
+                .expect("Parent block must exist")
+                .executed_trees()
+                .clone();
+            let (output, state_compute_result) = state_computer
+                .compute(&block, parent_trees)
                 .await
                 .expect("fail to rebuild scratchpad");
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(
                     qc.certified_state_id(),
-                    compute_res.executed_state.state_id,
+                    state_compute_result.executed_state.state_id,
                     "We have inconsistent executed state with Quorum Cert for block {}",
                     block.id()
                 );
             }
-            tree.insert_block(ExecutedBlock::new(block, compute_res))
+            tree.insert_block(ExecutedBlock::new(block, output, state_compute_result))
                 .expect("Block insertion failed while build the tree");
         }
         quorum_certs.into_iter().for_each(|(_, qc)| {
@@ -219,31 +219,32 @@ impl<T: Payload> BlockStore<T> {
                 return Err(e);
             }
         };
+
         // Reconfiguration rule - if a block is a child of reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
         let parent_state = parent_block.compute_result();
-        let compute_res = if parent_state.has_reconfiguration() {
+        let (output, state_compute_result) = if parent_state.has_reconfiguration() {
             ensure!(
                 block.payload().filter(|p| **p != T::default()).is_none(),
                 "Reconfiguration suffix should not carry payload"
             );
-            StateComputeResult {
-                executed_state: parent_state.executed_state.clone(),
-                compute_status: vec![],
-            }
+            (
+                parent_block.output().as_ref().clone(),
+                StateComputeResult {
+                    executed_state: parent_state.executed_state.clone(),
+                    compute_status: vec![],
+                },
+            )
         } else {
+            let parent_trees = parent_block.executed_trees().clone();
             // Although NIL blocks don't have payload, we still send a T::default() to compute
             // because we may inject a block prologue transaction.
             self.state_computer
-                .compute(
-                    parent_block.id(),
-                    block.id(),
-                    block.payload().unwrap_or(&T::default()),
-                )
+                .compute(&block, parent_trees)
                 .await
                 .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
         };
-        Ok(ExecutedBlock::new(block, compute_res))
+        Ok(ExecutedBlock::new(block, output, state_compute_result))
     }
 
     /// Check if we're far away from this ledger info and need to sync.
@@ -568,6 +569,7 @@ impl<T: Payload> BlockStore<T> {
     ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         let executed_block = self.execute_block(block).await?;
+        let output = executed_block.output().as_ref().clone();
         let mut compute_result = executed_block.compute_result().as_ref().clone();
         compute_result.executed_state.validators = Some(ValidatorSet::new(vec![]));
         Ok(self
@@ -576,6 +578,7 @@ impl<T: Payload> BlockStore<T> {
             .unwrap()
             .insert_block(ExecutedBlock::new(
                 executed_block.block().clone(),
+                output,
                 compute_result,
             ))?)
     }

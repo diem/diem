@@ -4,7 +4,7 @@
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
-use executor::Executor;
+use executor::{CommittableBlock, Executor};
 use failure::prelude::*;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
@@ -188,15 +188,23 @@ fn test_execution_with_storage() {
         ));
     }
 
-    let state_compute_result =
-        block_on(executor.execute_block(block1.clone(), *GENESIS_BLOCK_ID, block1_id))
-            .unwrap()
-            .unwrap();
+    let (output1, state_compute_result_1) = block_on(executor.execute_block(
+        block1.clone(),
+        executor.committed_trees().clone(),
+        *GENESIS_BLOCK_ID,
+        block1_id,
+    ))
+    .unwrap()
+    .unwrap();
+    let block1_trees = output1.executed_trees().clone();
     let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(6, state_compute_result.root_hash(), block1_id);
-    block_on(executor.commit_block(ledger_info_with_sigs))
-        .unwrap()
-        .unwrap();
+        gen_ledger_info_with_sigs(6, state_compute_result_1.root_hash(), block1_id);
+    block_on(executor.commit_blocks(
+        vec![CommittableBlock::new(block1.clone(), Arc::new(output1))],
+        ledger_info_with_sigs,
+    ))
+    .unwrap()
+    .unwrap();
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -425,15 +433,18 @@ fn test_execution_with_storage() {
     assert_eq!(account3_received_events.len(), 3);
 
     // Execution the 2nd block.
-    let state_compute_result =
-        block_on(executor.execute_block(block2.clone(), block1_id, block2_id))
+    let (output2, state_compute_result_2) =
+        block_on(executor.execute_block(block2.clone(), block1_trees, block1_id, block2_id))
             .unwrap()
             .unwrap();
     let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(20, state_compute_result.root_hash(), block2_id);
-    block_on(executor.commit_block(ledger_info_with_sigs))
-        .unwrap()
-        .unwrap();
+        gen_ledger_info_with_sigs(20, state_compute_result_2.root_hash(), block2_id);
+    block_on(executor.commit_blocks(
+        vec![CommittableBlock::new(block2.clone(), Arc::new(output2))],
+        ledger_info_with_sigs,
+    ))
+    .unwrap()
+    .unwrap();
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {

@@ -317,7 +317,7 @@ fn test_path_from_root() {
 
     assert_eq!(
         block_store.path_from_root(b3.id()),
-        Some(vec![b3.clone(), b2.clone(), b1.clone()])
+        Some(vec![b1.clone(), b2.clone(), b3.clone()])
     );
     assert_eq!(block_store.path_from_root(genesis.id()), Some(vec![]));
 

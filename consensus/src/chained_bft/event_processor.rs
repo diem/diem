@@ -773,7 +773,25 @@ impl<T: Payload> EventProcessor<T> {
             block_to_commit.id()
         );
 
-        if let Err(e) = self.state_computer.commit(finality_proof).await {
+        let blocks_to_commit = self
+            .block_store
+            .path_from_root(block_id_to_commit)
+            .unwrap_or_else(Vec::new);
+
+        let payload_and_output_list = blocks_to_commit
+            .iter()
+            .map(|b| {
+                (
+                    b.payload().unwrap_or(&T::default()).clone(),
+                    Arc::clone(b.output()),
+                )
+            })
+            .collect();
+        if let Err(e) = self
+            .state_computer
+            .commit(payload_and_output_list, finality_proof)
+            .await
+        {
             // We assume that state computer cannot enter an inconsistent state that might
             // violate safety of the protocol. Specifically, an executor service is going to panic
             // if it fails to persist the commit requests, which would crash the whole process
@@ -787,11 +805,7 @@ impl<T: Payload> EventProcessor<T> {
         // At this moment the new state is persisted and we can notify the clients.
         // Multiple blocks might be committed at once: notify about all the transactions in the
         // path from the old root to the new root.
-        for committed in self
-            .block_store
-            .path_from_root(block_id_to_commit)
-            .unwrap_or_else(Vec::new)
-        {
+        for committed in blocks_to_commit {
             if let Some(time_to_commit) = duration_since_epoch()
                 .checked_sub(Duration::from_micros(committed.timestamp_usecs()))
             {

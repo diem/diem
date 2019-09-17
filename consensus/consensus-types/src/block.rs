@@ -11,7 +11,7 @@ use crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use executor::StateComputeResult;
+use executor::{transaction_block::ProcessedVMOutput, ExecutedTrees, StateComputeResult};
 use failure::{ensure, format_err};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
@@ -96,16 +96,26 @@ pub struct Block<T> {
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
 /// block data, each executed block also has other derived meta data which could be regenerated from
 /// blocks.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct ExecutedBlock<T> {
     /// Block data that cannot be regenerated.
     block: Block<T>,
-    /// The state compute results is calculated for all the pending blocks prior to insertion to
+    /// The processed output needed by executor.
+    output: Arc<ProcessedVMOutput>,
+    /// The state compute result is calculated for all the pending blocks prior to insertion to
     /// the tree (the initial root node might not have it, because it's been already
     /// committed). The execution results are not persisted: they're recalculated again for the
     /// pending blocks upon restart.
     compute_result: Arc<StateComputeResult>,
 }
+
+impl<T: PartialEq> PartialEq for ExecutedBlock<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.block == other.block && self.compute_result == other.compute_result
+    }
+}
+
+impl<T: Eq> Eq for ExecutedBlock<T> where T: PartialEq {}
 
 impl<T: PartialEq> Display for Block<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
@@ -380,11 +390,20 @@ where
 }
 
 impl<T> ExecutedBlock<T> {
-    pub fn new(block: Block<T>, compute_result: StateComputeResult) -> Self {
+    pub fn new(
+        block: Block<T>,
+        output: ProcessedVMOutput,
+        compute_result: StateComputeResult,
+    ) -> Self {
         Self {
             block,
+            output: Arc::new(output),
             compute_result: Arc::new(compute_result),
         }
+    }
+
+    pub fn output(&self) -> &Arc<ProcessedVMOutput> {
+        &self.output
     }
 
     pub fn block(&self) -> &Block<T> {
@@ -426,6 +445,10 @@ where
 
     pub fn is_nil_block(&self) -> bool {
         self.block().is_nil_block()
+    }
+
+    pub fn executed_trees(&self) -> &ExecutedTrees {
+        self.output.executed_trees()
     }
 }
 

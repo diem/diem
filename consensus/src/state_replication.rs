@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use crypto::HashValue;
-use executor::StateComputeResult;
+use executor::{transaction_block::ProcessedVMOutput, ExecutedTrees, StateComputeResult};
 use failure::Result;
 use futures::Future;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
@@ -44,23 +44,22 @@ pub trait StateComputer: Send + Sync {
     /// In case all the transactions are failed, new_state_id is equal to the previous state id.
     fn compute(
         &self,
-        // The id of a parent block, on top of which the given transactions should be executed.
-        // We're going to use a special GENESIS_BLOCK_ID constant defined in crypto::hash module to
-        // refer to the block id of the Genesis block, which is executed in a special way.
-        parent_block_id: HashValue,
-        // The id of a current block.
-        block_id: HashValue,
-        // Transactions to execute.
-        transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>>;
+        // The block that will be computed.
+        block: &Block<Self::Payload>,
+        // The executed trees of parent block.
+        executed_trees: ExecutedTrees,
+    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        commit: LedgerInfoWithSignatures,
+        blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
+
+    fn committed_trees(&self) -> ExecutedTrees;
 
     fn sync_to_or_bail(&self, commit: QuorumCert) {
         let status = futures::executor::block_on(self.sync_to(commit));
