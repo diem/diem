@@ -147,13 +147,12 @@ fn main() {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
         let compiler = Compiler {
             address,
-            code: &source,
             skip_stdlib_deps: args.no_stdlib,
             extra_deps: deps,
             ..Compiler::default()
         };
         let (compiled_program, dependencies) = compiler
-            .into_compiled_program_and_deps()
+            .into_compiled_program_and_deps(&source)
             .expect("Failed to compile program");
 
         let compiled_program = if !args.no_verify {
