@@ -25,7 +25,7 @@ use std::{
 };
 use ttl_cache::TtlCache;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
-
+/// TODO doc
 pub struct Mempool {
     // stores metadata of all transactions in mempool (of all states)
     transactions: TransactionStore,
@@ -36,6 +36,7 @@ pub struct Mempool {
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
     pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), i64>,
+    /// TODO doc
     pub system_transaction_timeout: Duration,
 }
 
