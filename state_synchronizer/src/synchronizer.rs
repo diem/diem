@@ -6,7 +6,6 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
 use config::config::{NodeConfig, StateSyncConfig};
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -16,7 +15,7 @@ use futures::{
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::LedgerInfoWithSignatures;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -76,10 +75,7 @@ pub struct StateSyncClient {
 
 impl StateSyncClient {
     /// Sync validator's state up to given `version`
-    pub fn sync_to(
-        &self,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
-    ) -> impl Future<Output = Result<bool>> {
+    pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<bool>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {

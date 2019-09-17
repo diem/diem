@@ -9,7 +9,6 @@ use crate::{
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
 use crypto::{
-    ed25519::*,
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
@@ -29,7 +28,7 @@ use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::LedgerInfoWithSignatures,
     proof::{accumulator::Accumulator, SparseMerkleProof},
     transaction::{
         SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
@@ -281,7 +280,7 @@ where
     fn execute_and_commit_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<()> {
         if ledger_info_with_sigs.ledger_info().timestamp_usecs() <= self.committed_timestamp_usecs {
             warn!(
@@ -425,7 +424,7 @@ where
     fn verify_chunk(
         &self,
         txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures,
     ) -> Result<(u64, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),

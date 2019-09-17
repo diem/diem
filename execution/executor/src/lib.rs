@@ -13,7 +13,6 @@ mod mock_vm;
 use crate::block_processor::BlockProcessor;
 use config::config::NodeConfig;
 use crypto::{
-    ed25519::*,
     hash::{
         TransactionAccumulatorHasher, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
@@ -34,7 +33,8 @@ use std::{
 };
 use storage_client::{StorageRead, StorageWrite};
 use types::{
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
     proof::accumulator::Accumulator,
     transaction::{SignedTransaction, TransactionListWithProof, Version},
 };
@@ -207,7 +207,7 @@ where
     /// Commits a block and all its ancestors.
     pub fn commit_block(
         &self,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> oneshot::Receiver<Result<CommitBlockResponse>> {
         debug!(
             "Received request to commit block {:x}.",
@@ -239,7 +239,7 @@ where
     pub fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> oneshot::Receiver<Result<ExecuteChunkResponse>> {
         debug!(
             "Received request to execute chunk. Chunk size: {}. Target version: {}.",
@@ -295,12 +295,12 @@ enum Command {
         resp_sender: oneshot::Sender<Result<ExecuteBlockResponse>>,
     },
     CommitBlock {
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
         resp_sender: oneshot::Sender<Result<CommitBlockResponse>>,
     },
     ExecuteChunk {
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
         resp_sender: oneshot::Sender<Result<ExecuteChunkResponse>>,
     },
 }

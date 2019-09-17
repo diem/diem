@@ -19,7 +19,8 @@ use std::collections::HashMap;
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode,
     transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
     vm_error::StatusCode,
@@ -27,7 +28,7 @@ use types::{
 
 fn gen_mock_genesis() -> (
     TransactionInfo,
-    LedgerInfoWithSignatures<Ed25519Signature>,
+    LedgerInfoWithSignatures,
     TransactionToCommit,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
@@ -100,7 +101,7 @@ lazy_static! {
     /// other mocked information including validator signatures.
     pub static ref GENESIS_INFO: (
         TransactionInfo,
-        LedgerInfoWithSignatures<Ed25519Signature>,
+        LedgerInfoWithSignatures,
         TransactionToCommit
     ) = gen_mock_genesis();
 }

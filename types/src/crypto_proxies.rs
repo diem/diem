@@ -22,6 +22,7 @@
 use crate::{
     account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
+    validator_change::ValidatorChangeEventWithProof as RawValidatorChangeEventWithProof,
     validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::{ValidatorVerifier as RawValidatorVerifier, VerifyError},
 };
@@ -85,3 +86,4 @@ pub type Signature = SignatureWrapper<Ed25519Signature>;
 pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
+pub type ValidatorChangeEventWithProof = RawValidatorChangeEventWithProof<Ed25519Signature>;

@@ -8,7 +8,6 @@ use crate::{
     LedgerInfo, PeerId,
 };
 use config::config::StateSyncConfig;
-use crypto::ed25519::*;
 use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::prelude::*;
 use futures::{
@@ -29,7 +28,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::timer::Interval;
-use types::{ledger_info::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof};
+use types::{
+    crypto_proxies::LedgerInfoWithSignatures, proto::transaction::TransactionListWithProof,
+};
 
 /// message used by StateSyncClient for communication with Coordinator
 pub enum CoordinatorMessage {
@@ -451,7 +452,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     async fn store_transactions(
         &self,
-        ledger_info: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info: LedgerInfoWithSignatures,
         txn_list_with_proof: TransactionListWithProof,
     ) -> Result<ExecuteChunkResponse> {
         let mut req = ExecuteChunkRequest::new();

@@ -40,7 +40,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use crypto::{ed25519::*, hash::CryptoHash, HashValue};
+use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
@@ -55,14 +55,13 @@ use types::{
     account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::EventWithProof,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{RequestItem, ResponseItem},
-    ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, EventProof, SignedTransactionProof, SparseMerkleProof},
     transaction::{
         SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
         Version,
     },
-    validator_change::ValidatorChangeEventWithProof,
 };
 
 lazy_static! {
@@ -309,7 +308,7 @@ impl LibraDB {
     pub fn get_latest_ledger_infos_per_epoch(
         &self,
         start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+    ) -> Result<Vec<LedgerInfoWithSignatures>> {
         self.ledger_store
             .get_latest_ledger_infos_per_epoch(start_epoch)
     }
@@ -326,7 +325,7 @@ impl LibraDB {
         &self,
         txns_to_commit: &[TransactionToCommit],
         first_version: Version,
-        ledger_info_with_sigs: &Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_sigs: &Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
         let num_txns = txns_to_commit.len() as u64;
         // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
@@ -446,8 +445,8 @@ impl LibraDB {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
+        LedgerInfoWithSignatures,
+        Vec<ValidatorChangeEventWithProof>,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
 

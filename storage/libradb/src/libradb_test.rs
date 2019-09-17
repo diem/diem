@@ -6,7 +6,7 @@ use crate::{
     mock_genesis::{db_with_mock_genesis, GENESIS_INFO},
     test_helper::arb_blocks_to_commit,
 };
-use crypto::{ed25519::*, hash::CryptoHash};
+use crypto::hash::CryptoHash;
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
@@ -17,10 +17,7 @@ use types::{
 };
 
 fn test_save_blocks_impl(
-    input: Vec<(
-        Vec<TransactionToCommit>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-    )>,
+    input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
 ) -> Result<()> {
     let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
@@ -73,10 +70,7 @@ fn test_save_blocks_impl(
 }
 
 fn test_sync_transactions_impl(
-    input: Vec<(
-        Vec<TransactionToCommit>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-    )>,
+    input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
 ) -> Result<()> {
     let tmp_dir = TempPath::new();
     let db = db_with_mock_genesis(&tmp_dir)?;
@@ -298,7 +292,7 @@ fn verify_committed_transactions(
     db: &LibraDB,
     txns_to_commit: &[TransactionToCommit],
     first_version: Version,
-    ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
+    ledger_info_with_sigs: &LedgerInfoWithSignatures,
     is_latest: bool,
 ) -> Result<()> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
