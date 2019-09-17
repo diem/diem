@@ -28,11 +28,21 @@ storage_client = { path = "../../storage/storage_client" }
 types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }
 
+storage_service = { path = "../../storage/storage_service", optional = true }
+proptest_helpers = { path = "../../common/proptest_helpers", optional = true }
+proptest = { version = "0.9.4", optional = true }
+
 [dev-dependencies]
 assert_matches = "1.3.0"
 rand = "0.6.5"
 storage_service = { path = "../../storage/storage_service" }
 types = { path = "../../types", features = ["testing"] }
+proptest_helpers = { path = "../../common/proptest_helpers" }
+proptest = "0.9.4"
 
 [build-dependencies]
 build_helpers = { path = "../../common/build_helpers" }
+
+[features]
+default = []
+fuzzing = ["storage_service", "proptest_helpers", "proptest"]

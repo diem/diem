@@ -23,7 +23,8 @@ structopt = { version = "0.2.18", default-features = false }
 types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
-consensus = { path = "../../consensus"}
+consensus = { path = "../../consensus" }
+admission_control_service = { path = "../../admission_control/admission_control_service" }
 
 [dev-dependencies]
 datatest = "0.4.2"
@@ -37,4 +38,4 @@ vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", fea
 [features]
 default = ["testing", "fuzzing"]
 testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
-fuzzing = ["consensus/fuzzing"]
+fuzzing = ["consensus/fuzzing", "admission_control_service/fuzzing"]
