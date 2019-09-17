@@ -787,7 +787,9 @@ where
                     match transaction.payload() {
                         TransactionPayload::Program(_)
                         | TransactionPayload::Module(_)
-                        | TransactionPayload::Script(_) => {
+                        | TransactionPayload::Script(_)
+                        | TransactionPayload::ChannelWriteSet(_)
+                        | TransactionPayload::ChannelScript(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
                         TransactionPayload::WriteSet(_) => (),
