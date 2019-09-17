@@ -135,7 +135,7 @@ impl DataStorage {
             read_db: ReadDataStorage { libra_db: Arc::clone(&write_db), shutdown_r_sender: Arc::new(Mutex::new(shutdown_r_sender)) },
             shutdown_w_sender: Mutex::new(shutdown_w_sender),
             //shutdown_r_receiver_vec: receivers,
-        },shutdown_w_receiver)
+        }, shutdown_w_receiver)
     }
 
     pub fn genesis_state(&self) -> Result<Option<bool>> {
@@ -191,16 +191,9 @@ impl WriteData for DataStorage {
 }
 
 impl ReadDataStorage {
-    fn get_latest_version(&self) -> Result<Option<Version>> {
+    pub fn get_latest_version_state(&self) -> Result<Option<(HashValue, Version)>> {
         match self.get_startup_info()? {
-            Some(info) => { Ok(Some(info.latest_version)) }
-            None => Ok(None),
-        }
-    }
-
-    fn get_latest_state_root(&self) -> Result<Option<HashValue>> {
-        match self.get_startup_info()? {
-            Some(info) => { Ok(Some(info.account_state_root_hash)) }
+            Some(info) => { Ok(Some((info.account_state_root_hash, info.latest_version))) }
             None => Ok(None),
         }
     }
@@ -256,11 +249,17 @@ impl ReadData for ReadDataStorage {
     }
 
     fn latest_version(&self) -> Option<Version> {
-        self.get_latest_version().expect("get latest version err.")
+        match self.get_latest_version_state().expect("get latest version err.") {
+            Some(v_s) => Some(v_s.1),
+            None => None,
+        }
     }
 
     fn latest_state_root(&self) -> Option<HashValue> {
-        self.get_latest_state_root().expect("get latest state root err.")
+        match self.get_latest_version_state().expect("get latest state root err.") {
+            Some(v_s) => Some(v_s.0),
+            None => None,
+        }
     }
 }
 
