@@ -43,9 +43,9 @@ impl TypeContext {
     }
 
     pub fn get_type(&self, idx: u16) -> Result<Type, VMStatus> {
-        self.0
-            .get(idx as usize)
-            .cloned()
-            .ok_or_else(|| VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR))
+        self.0.get(idx as usize).cloned().ok_or_else(|| {
+            let msg = format!("get type on an invalid type index {}", idx);
+            VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg)
+        })
     }
 }

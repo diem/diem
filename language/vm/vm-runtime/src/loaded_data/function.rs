@@ -94,6 +94,19 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
     }
 }
 
+impl<'txn> FunctionRef<'txn> {
+    pub fn pretty_string(&self) -> String {
+        let signature = self.signature();
+        format!(
+            "{}::{}({:?}){:?}",
+            self.module().name(),
+            self.name().as_str(),
+            signature.arg_types,
+            signature.return_types
+        )
+    }
+}
+
 /// Resolved form of a function definition
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FunctionDef {

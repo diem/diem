@@ -36,8 +36,9 @@ use vm::{
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
+    data_cache::TransactionDataCache,
+    interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
-    txn_executor::TransactionExecutor,
 };
 use vm_runtime_types::{native_functions::hash, value::Value};
 
@@ -173,16 +174,14 @@ fn stack_instructions(options: &Opt) {
             );
             let instr_costs: Vec<u64> = stack_gen
                 .map(|stack_state| {
-                    let (instr, size) = RandomStackGenerator::stack_transition(
-                        &mut vm.execution_stack,
-                        stack_state,
-                    );
+                    let (instr, size) =
+                        RandomStackGenerator::stack_transition(&mut vm, stack_state);
                     // Clear the VM's data cache -- otherwise we'll windup grabbing the data from
                     // the cache on subsequent iterations and across future instructions that
                     // effect global memory.
                     vm.clear_writes();
                     let before = Instant::now();
-                    let ignore = vm.execute_block(&[instr], 0);
+                    let ignore = vm.execute_code_snippet(&[instr]);
                     let time = before.elapsed().as_nanos();
                     // Check to make sure we didn't error. Need to special case the abort bytecode.
                     if instruction != Bytecode::Abort {

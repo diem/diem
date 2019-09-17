@@ -141,7 +141,10 @@ pub struct GlobalRef {
 impl ValueImpl {
     fn into_value(self) -> VMResult<Value> {
         match self {
-            ValueImpl::Invalid => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
+            ValueImpl::Invalid => {
+                let msg = "Cannot cast an INVALID value".to_string();
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
             ValueImpl::PromotedReference(reference) => reference.into_value(),
             _ => Ok(Value(self)),
         }
@@ -149,7 +152,10 @@ impl ValueImpl {
 
     fn copy_value(&self) -> VMResult<Value> {
         match self {
-            ValueImpl::Invalid => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
+            ValueImpl::Invalid => {
+                let msg = "Cannot cast an INVALID value".to_string();
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
             ValueImpl::PromotedReference(reference) => reference.copy_value(),
             _ => Ok(Value(self.clone())),
         }
@@ -158,7 +164,10 @@ impl ValueImpl {
     fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
         match self {
             ValueImpl::Struct(s) => s.get_field_reference(field_offset),
-            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
+            _ => {
+                let msg = format!("Borrow field must be called on a Struct, found {:?}", self);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 
@@ -200,7 +209,10 @@ impl ValueImpl {
             (ValueImpl::GlobalRef(gr), ValueImpl::Reference(reference)) => gr.equals_ref(reference),
             (ValueImpl::Reference(reference), ValueImpl::GlobalRef(gr)) => gr.equals_ref(reference),
             // Should we allow comparing native structs?
-            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
+            _ => {
+                let msg = format!("Invalid equality called between {:?} and {:?}", self, v2);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 
@@ -225,6 +237,24 @@ impl ValueImpl {
                 Type::Reference(Box::new(reference.to_type_FOR_TESTING()))
             }
             ValueImpl::PromotedReference(reference) => reference.to_type_FOR_TESTING(),
+        }
+    }
+
+    fn pretty_string(&self) -> String {
+        match self {
+            ValueImpl::Invalid => "Invalid".to_string(),
+            ValueImpl::U64(i) => format!("U64({})", i),
+            ValueImpl::Address(addr) => format!("Address({})", addr.short_str()),
+            ValueImpl::Bool(b) => format!("Bool({})", b),
+            ValueImpl::ByteArray(ba) => format!("ByteArray({})", ba),
+            ValueImpl::String(s) => format!("String({})", s),
+            ValueImpl::Struct(s) => format!("Struct({})", s.pretty_string()),
+            ValueImpl::NativeStruct(v) => format!("NativeStruct({:?})", v),
+            ValueImpl::Reference(reference) => format!("Reference({})", reference.pretty_string()),
+            ValueImpl::GlobalRef(reference) => format!("GlobalRef({})", reference.pretty_string()),
+            ValueImpl::PromotedReference(reference) => {
+                format!("PromotedReference({})", reference.pretty_string())
+            }
         }
     }
 }
@@ -280,9 +310,9 @@ impl Value {
     }
 
     /// Convert a Value into a `T` if the value represents a type `T`.
-    pub fn value_as<T>(self) -> Option<T>
+    pub fn value_as<T>(self) -> VMResult<T>
     where
-        Option<T>: From<Value>,
+        VMResult<T>: From<Value>,
     {
         std::convert::Into::into(self)
     }
@@ -325,6 +355,10 @@ impl Value {
     pub fn to_type_FOR_TESTING(&self) -> Type {
         self.0.to_type_FOR_TESTING()
     }
+
+    pub fn pretty_string(&self) -> String {
+        self.0.pretty_string()
+    }
 }
 
 //
@@ -333,93 +367,123 @@ impl Value {
 // (e.g. Add) the values popped from the stack are expected to be u64 and should fail otherwise.
 //
 
-impl From<Value> for Option<u64> {
-    fn from(value: Value) -> Option<u64> {
+impl From<Value> for VMResult<u64> {
+    fn from(value: Value) -> VMResult<u64> {
         match value.0 {
-            ValueImpl::U64(i) => Some(i),
-            _ => None,
+            ValueImpl::U64(i) => Ok(i),
+            _ => {
+                let msg = format!("Cannot cast {:?} to u64", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<bool> {
-    fn from(value: Value) -> Option<bool> {
+impl From<Value> for VMResult<bool> {
+    fn from(value: Value) -> VMResult<bool> {
         match value.0 {
-            ValueImpl::Bool(b) => Some(b),
-            _ => None,
+            ValueImpl::Bool(b) => Ok(b),
+            _ => {
+                let msg = format!("Cannot cast {:?} to bool", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<AccountAddress> {
-    fn from(value: Value) -> Option<AccountAddress> {
+impl From<Value> for VMResult<AccountAddress> {
+    fn from(value: Value) -> VMResult<AccountAddress> {
         match value.0 {
-            ValueImpl::Address(address) => Some(address),
-            _ => None,
+            ValueImpl::Address(address) => Ok(address),
+            _ => {
+                let msg = format!("Cannot cast {:?} to Address", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<ByteArray> {
-    fn from(value: Value) -> Option<ByteArray> {
+impl From<Value> for VMResult<ByteArray> {
+    fn from(value: Value) -> VMResult<ByteArray> {
         match value.0 {
-            ValueImpl::ByteArray(byte_array) => Some(byte_array),
-            _ => None,
+            ValueImpl::ByteArray(byte_array) => Ok(byte_array),
+            _ => {
+                let msg = format!("Cannot cast {:?} to ByteArray", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<VMString> {
-    fn from(value: Value) -> Option<VMString> {
+impl From<Value> for VMResult<VMString> {
+    fn from(value: Value) -> VMResult<VMString> {
         match value.0 {
-            ValueImpl::String(s) => Some(s),
-            _ => None,
+            ValueImpl::String(s) => Ok(s),
+            _ => {
+                let msg = format!("Cannot cast {:?} to String", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<Struct> {
-    fn from(value: Value) -> Option<Struct> {
+impl From<Value> for VMResult<Struct> {
+    fn from(value: Value) -> VMResult<Struct> {
         match value.0 {
-            ValueImpl::Struct(s) => Some(s),
-            _ => None,
+            ValueImpl::Struct(s) => Ok(s),
+            _ => {
+                let msg = format!("Cannot cast {:?} to Struct", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<NativeStructValue> {
-    fn from(value: Value) -> Option<NativeStructValue> {
+impl From<Value> for VMResult<NativeStructValue> {
+    fn from(value: Value) -> VMResult<NativeStructValue> {
         match value.0 {
-            ValueImpl::NativeStruct(s) => Some(s),
-            _ => None,
+            ValueImpl::NativeStruct(s) => Ok(s),
+            _ => {
+                let msg = format!("Cannot cast {:?} to NativeStructValue", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<ReferenceValue> {
-    fn from(value: Value) -> Option<ReferenceValue> {
+impl From<Value> for VMResult<ReferenceValue> {
+    fn from(value: Value) -> VMResult<ReferenceValue> {
         match value.0 {
-            ValueImpl::Reference(reference) => Some(ReferenceValue::Reference(reference)),
-            ValueImpl::GlobalRef(reference) => Some(ReferenceValue::GlobalRef(reference)),
-            _ => None,
+            ValueImpl::Reference(reference) => Ok(ReferenceValue::Reference(reference)),
+            ValueImpl::GlobalRef(reference) => Ok(ReferenceValue::GlobalRef(reference)),
+            _ => {
+                let msg = format!("Cannot cast {:?} to ReferenceValue", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<Reference> {
-    fn from(value: Value) -> Option<Reference> {
+impl From<Value> for VMResult<Reference> {
+    fn from(value: Value) -> VMResult<Reference> {
         match value.0 {
-            ValueImpl::Reference(reference) => Some(reference),
-            _ => None,
+            ValueImpl::Reference(reference) => Ok(reference),
+            _ => {
+                let msg = format!("Cannot cast {:?} to Reference", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
 
-impl From<Value> for Option<GlobalRef> {
-    fn from(value: Value) -> Option<GlobalRef> {
+impl From<Value> for VMResult<GlobalRef> {
+    fn from(value: Value) -> VMResult<GlobalRef> {
         match value.0 {
-            ValueImpl::GlobalRef(reference) => Some(reference),
-            _ => None,
+            ValueImpl::GlobalRef(reference) => Ok(reference),
+            _ => {
+                let msg = format!("Cannot cast {:?} to GlobalReference", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 }
@@ -466,24 +530,34 @@ impl MutVal {
         self.peek().equals(&v2.peek())
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
     {
         match &mut *self.0.borrow_mut() {
             ValueImpl::NativeStruct(s) => op(s),
-            _ => None,
+            _ => {
+                let msg = format!("Cannot cast {:?} to NativeStruct", self);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&NativeStructValue) -> Option<T>,
+        F: FnOnce(&NativeStructValue) -> VMResult<T>,
     {
         match &*self.0.borrow_mut() {
             ValueImpl::NativeStruct(s) => op(s),
-            _ => None,
+            _ => {
+                let msg = format!("Cannot cast {:?} to NativeStruct", self);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
+    }
+
+    fn pretty_string(&self) -> String {
+        self.peek().pretty_string()
     }
 }
 
@@ -502,7 +576,8 @@ impl Struct {
         if let Some(field_ref) = self.0.get(field_offset) {
             field_ref.copy_value()
         } else {
-            Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR))
+            let msg = format!("Invalid field at index {} for {:?}", field_offset, self);
+            Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
         }
     }
 
@@ -511,7 +586,8 @@ impl Struct {
         if let Some(field_ref) = self.0.get(field_offset) {
             Ok(Value::reference(Reference(field_ref.clone())))
         } else {
-            Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR))
+            let msg = format!("Invalid field at index {} for {:?}", field_offset, self);
+            Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
         }
     }
 
@@ -524,7 +600,8 @@ impl Struct {
 
     fn equals(&self, s2: &Struct) -> VMResult<bool> {
         if self.0.len() != s2.0.len() {
-            return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR));
+            let msg = format!("Equals on different types {:?} for {:?}", self, s2);
+            return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
         }
         for (v1, v2) in self.0.iter().zip(&s2.0) {
             if !v1.equals(v2)? {
@@ -542,6 +619,14 @@ impl Struct {
         let fields = self.0.iter().map(MutVal::to_type_FOR_TESTING).collect();
         StructDef::new(fields)
     }
+
+    fn pretty_string(&self) -> String {
+        let mut st = "".to_string();
+        for field in &self.0 {
+            st.push_str(format!("{}, ", field.pretty_string()).as_str());
+        }
+        st
+    }
 }
 
 // Private API for a `Reference`. It is jut a pass through layer. All those should disappear
@@ -552,7 +637,7 @@ impl Reference {
         Reference(MutVal::new(value))
     }
 
-    pub(crate) fn new_from_cell(val: MutVal) -> Self {
+    fn new_from_cell(val: MutVal) -> Self {
         Reference(val)
     }
 
@@ -588,18 +673,22 @@ impl Reference {
         self.0.to_type_FOR_TESTING()
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
     {
         self.0.mutate_native_struct(op)
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&NativeStructValue) -> Option<T>,
+        F: FnOnce(&NativeStructValue) -> VMResult<T>,
     {
         self.0.read_native_struct(op)
+    }
+
+    fn pretty_string(&self) -> String {
+        self.0.pretty_string()
     }
 }
 
@@ -615,7 +704,10 @@ impl ReferenceValue {
         match value.0 {
             ValueImpl::Reference(reference) => Ok(ReferenceValue::Reference(reference)),
             ValueImpl::GlobalRef(reference) => Ok(ReferenceValue::GlobalRef(reference)),
-            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)),
+            _ => {
+                let msg = format!("ReferenceValue must be built from a reference {:?}", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
         }
     }
 
@@ -644,9 +736,9 @@ impl ReferenceValue {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    pub(crate) fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
     {
         match self {
             ReferenceValue::GlobalRef(reference) => reference.mutate_native_struct(op),
@@ -654,9 +746,9 @@ impl ReferenceValue {
         }
     }
 
-    pub(crate) fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    pub(crate) fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&NativeStructValue) -> Option<T>,
+        F: FnOnce(&NativeStructValue) -> VMResult<T>,
     {
         match self {
             ReferenceValue::GlobalRef(reference) => reference.read_native_struct(op),
@@ -664,10 +756,9 @@ impl ReferenceValue {
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn get_native_struct_reference<F>(&self, op: F) -> Option<Value>
+    pub(crate) fn get_native_struct_reference<F>(&self, op: F) -> VMResult<Value>
     where
-        F: FnOnce(&NativeStructValue) -> Option<MutVal>,
+        F: FnOnce(&NativeStructValue) -> VMResult<MutVal>,
     {
         match self {
             ReferenceValue::GlobalRef(reference) => reference
@@ -700,6 +791,10 @@ impl RootAccessPath {
     #[allow(dead_code)]
     fn mark_deleted(&mut self) {
         self.status = GlobalDataStatus::DELETED;
+    }
+
+    fn pretty_string(&self) -> String {
+        format!("{:?}, {:?}", self.status, self.ap)
     }
 }
 
@@ -784,16 +879,16 @@ impl GlobalRef {
         self.reference.write_value(value);
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&NativeStructValue) -> Option<T>,
+        F: FnOnce(&NativeStructValue) -> VMResult<T>,
     {
         self.reference.read_native_struct(op)
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> Option<T>
+    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
     where
-        F: FnOnce(&mut NativeStructValue) -> Option<T>,
+        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
     {
         self.root.borrow_mut().mark_dirty();
         self.reference.mutate_native_struct(op)
@@ -813,6 +908,15 @@ impl GlobalRef {
     #[doc(hidden)]
     fn to_type_FOR_TESTING(&self) -> Type {
         self.reference.to_type_FOR_TESTING()
+    }
+
+    fn pretty_string(&self) -> String {
+        format!(
+            "({}, {}), {}",
+            Rc::strong_count(&self.root),
+            self.root.borrow().pretty_string(),
+            self.reference.pretty_string()
+        )
     }
 }
 
@@ -893,7 +997,11 @@ impl Locals {
         if let Some(local_ref) = self.0.get_mut(idx) {
             match local_ref {
                 ValueImpl::GlobalRef(_) | ValueImpl::Reference(_) | ValueImpl::Invalid => {
-                    Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR))
+                    let msg = format!(
+                        "BorrowLoc on an invalid local {:?} at index {}",
+                        local_ref, idx
+                    );
+                    Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
                 }
                 ValueImpl::PromotedReference(reference) => Ok(Value::reference(reference.clone())),
                 _ => {
@@ -930,6 +1038,14 @@ impl Locals {
             }
         }
         true
+    }
+
+    pub fn pretty_string(&self) -> String {
+        let mut locals = "".to_string();
+        for (i, local) in self.0.iter().enumerate() {
+            locals.push_str(format!("[{}]: {}\n", i, local.pretty_string()).as_str());
+        }
+        locals
     }
 }
 

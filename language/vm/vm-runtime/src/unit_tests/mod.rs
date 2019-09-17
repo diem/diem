@@ -6,7 +6,6 @@ use libra_types::identifier::Identifier;
 mod block_chunking_test;
 mod identifier_prop_tests;
 mod module_cache_tests;
-mod runtime_tests;
 
 // Helper methods for identifiers in tests.
 
