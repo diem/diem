@@ -6,8 +6,6 @@ use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use futures::{future::Future, stream::Stream};
-use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
 use num_traits::{
@@ -15,6 +13,7 @@ use num_traits::{
     identities::Zero,
 };
 use proto_conv::IntoProto;
+use reqwest;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
@@ -28,7 +27,6 @@ use std::{
     sync::Arc,
     thread, time,
 };
-use tokio::{self, runtime::Runtime};
 use tools::tempdir::TempPath;
 use types::{
     access_path::AccessPath,
@@ -967,32 +965,31 @@ impl ClientProxy {
         num_coins: u64,
         is_blocking: bool,
     ) -> Result<()> {
-        let mut runtime = Runtime::new().unwrap();
-        let client = hyper::Client::new();
+        let client = reqwest::ClientBuilder::new().use_sys_proxy().build()?;
 
-        let url = format!(
-            "http://{}?amount={}&address={:?}",
-            self.faucet_server, num_coins, receiver
-        )
-        .parse::<hyper::Uri>()?;
+        let url = reqwest::Url::parse_with_params(
+            format!("http://{}", self.faucet_server).as_str(),
+            &[
+                ("amount", num_coins.to_string().as_str()),
+                ("address", format!("{:?}", receiver).as_str()),
+            ],
+        )?;
 
-        let request = hyper::Request::post(url).body(hyper::Body::empty())?;
-        let response = runtime.block_on(client.request(request))?;
+        let mut response = client.post(url).send()?;
         let status_code = response.status();
-        let body = response.into_body().concat2().wait()?;
-        let raw_data = std::str::from_utf8(&body)?;
-
-        if status_code != 200 {
+        let body = response.text()?;
+        if !status_code.is_success() {
             return Err(format_err!(
                 "Failed to query remote faucet server[status={}]: {:?}",
-                status_code,
-                raw_data,
+                status_code.as_str(),
+                body,
             ));
         }
-        let sequence_number = raw_data.parse::<u64>()?;
+        let sequence_number = body.parse::<u64>()?;
         if is_blocking {
             self.wait_for_transaction(association_address(), sequence_number);
         }
+
         Ok(())
     }
 
