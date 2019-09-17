@@ -15,7 +15,7 @@ use crate::{
     state_replication::ExecutedState,
 };
 use channel;
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -29,7 +29,7 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::TaskExecutor;
-use types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
+use types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 
 /// `NetworkPlayground` mocks the network implementation and provides convenience
 /// methods for testing. Test clients can use `wait_for_messages` or
@@ -393,7 +393,7 @@ fn test_rpc() {
     let mut nodes = Vec::new();
     let mut author_to_public_keys = HashMap::new();
     for i in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([i as u8; 32]);
+        let random_validator_signer = ValidatorSigner::random([i as u8; 32]);
         author_to_public_keys.insert(
             random_validator_signer.author(),
             random_validator_signer.public_key(),

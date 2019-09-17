@@ -17,12 +17,12 @@ use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     account_state_blob::AccountStateWithProof,
+    crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     test_helpers::transaction_test_helpers::get_test_signed_txn as get_test_signed_txn_proto,
     transaction::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
-    validator_verifier::ValidatorVerifier,
 };
 use vm_genesis::{encode_create_account_script, encode_transfer_script};
 
