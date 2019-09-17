@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_tree::{Block, BlockTree},
-    transaction_block::{ProcessedVMOutput, TransactionBlock, TransactionData},
-    Command, ExecutedState, ExecutedTrees, StateComputeResult, OP_COUNTERS,
+    transaction_block::{ProcessedVMOutput, TransactionData},
+    Chunk, Command, CommittableBlockBatch, ExecutableBlock, ExecutedState, ExecutedTrees,
+    StateComputeResult, OP_COUNTERS,
 };
-use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
 use crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
@@ -17,11 +16,10 @@ use futures::channel::oneshot;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::LedgerInfoWithSignatures,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
-        Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
-        TransactionPayload, TransactionStatus, TransactionToCommit, Version,
+        Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
+        TransactionToCommit, Version,
     },
     write_set::{WriteOp, WriteSet},
 };
@@ -31,8 +29,7 @@ use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
     convert::TryFrom,
     marker::PhantomData,
-    rc::Rc,
-    sync::{mpsc, Arc},
+    sync::{mpsc, Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use vm_runtime::VMExecutor;
@@ -43,6 +40,12 @@ enum Mode {
     Syncing,
 }
 
+fn error_when_syncing(id: HashValue) -> Error {
+    let message = format!("Syncing. Unable to serve request for block {:x}.", id);
+    warn!("{}", message);
+    format_err!("{}", message)
+}
+
 pub(crate) struct BlockProcessor<V> {
     /// Where the processor receives commands.
     command_receiver: mpsc::Receiver<Command>,
@@ -50,16 +53,16 @@ pub(crate) struct BlockProcessor<V> {
     /// The timestamp of the last committed ledger info.
     committed_timestamp_usecs: u64,
 
-    committed_trees: ExecutedTrees,
+    committed_trees: Arc<Mutex<ExecutedTrees>>,
 
-    /// The main block tree data structure that holds all the uncommitted blocks in memory.
-    block_tree: BlockTree<TransactionBlock>,
+    /// The cached executable blocks.
+    blocks_to_execute: VecDeque<(
+        ExecutableBlock,
+        oneshot::Sender<Result<(ProcessedVMOutput, StateComputeResult)>>,
+    )>,
 
-    /// The blocks that are ready to be sent to storage. After pruning `block_tree` we always put
-    /// the blocks here before sending them to storage, so in the case when storage is temporarily
-    /// unavailable, we will still prune `block_tree` as normal but blocks will stay here for a bit
-    /// longer.
-    blocks_to_store: VecDeque<TransactionBlock>,
+    /// The blocks that are ready to be sent to storage.
+    block_batch_to_commit: Option<(CommittableBlockBatch, oneshot::Sender<Result<()>>)>,
 
     /// Client to storage service.
     storage_read_client: Arc<dyn StorageRead>,
@@ -83,10 +86,7 @@ where
     pub fn new(
         command_receiver: mpsc::Receiver<Command>,
         committed_timestamp_usecs: u64,
-        previous_state_root_hash: HashValue,
-        previous_frozen_subtrees_in_accumulator: Vec<HashValue>,
-        previous_num_leaves_in_accumulator: LeafCount,
-        last_committed_block_id: HashValue,
+        committed_trees: Arc<Mutex<ExecutedTrees>>,
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
         vm_config: VMConfig,
@@ -94,18 +94,9 @@ where
         BlockProcessor {
             command_receiver,
             committed_timestamp_usecs,
-            committed_trees: ExecutedTrees {
-                state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
-                transaction_accumulator: Rc::new(
-                    InMemoryAccumulator::new(
-                        previous_frozen_subtrees_in_accumulator,
-                        previous_num_leaves_in_accumulator,
-                    )
-                    .expect("The startup info read from storage should be valid."),
-                ),
-            },
-            block_tree: BlockTree::new(last_committed_block_id),
-            blocks_to_store: VecDeque::new(),
+            committed_trees,
+            blocks_to_execute: VecDeque::new(),
+            block_batch_to_commit: None,
             storage_read_client,
             storage_write_client,
             mode: Mode::Normal,
@@ -123,48 +114,15 @@ where
                 self.process_command(cmd);
             }
 
-            // Prune the block tree and check if there are eligible blocks ready to be sent to
-            // storage (the blocks that have finished execution and been marked as committed). This
-            // will move these blocks from the block tree to `self.blocks_to_store`.
-            //
-            // Note: If save_blocks_to_storage below fails, these blocks will stay in
-            // `self.blocks_to_store`. This is okay because consensus will not retry committing
-            // these blocks after it receives the errors. Instead it will try to commit a
-            // descendant block later, which will be found in the block tree and cause the entire
-            // chain to be saved if storage has recovered. (If consensus retries committing these
-            // moved blocks, we won't find these blocks in the block tree because we only look up
-            // the blocks in the block tree, so we will return an error.)
-            self.blocks_to_store
-                .extend(self.block_tree.prune().into_iter());
-            if !self.blocks_to_store.is_empty() {
-                let time = std::time::Instant::now();
-                let mut save_op = || {
-                    self.save_blocks_to_storage().map_err(|err| {
-                        error!("Failed to save blocks to storage: {}", err);
-                        backoff::Error::Transient(err)
-                    })
-                };
-                let mut backoff = Self::storage_retry_backoff();
-                match save_op.retry(&mut backoff) {
-                    Ok(()) => {
-                        OP_COUNTERS.observe_duration("blocks_commit_time_s", time.elapsed());
-                    }
-                    Err(_err) => crit!(
-                        "Failed to save blocks to storage after trying for {} seconds.",
-                        backoff.get_elapsed_time().as_secs(),
-                    ),
-                }
+            // Check if there are blocks waiting to be committed.
+            // Continue if this function made progress (Committed some blocks).
+            if self.maybe_commit_blocks() {
+                continue;
             }
 
             // If we do not have anything else to do, check if there is a block pending execution.
             // Continue if this function made progress (executed one block).
             if self.maybe_execute_block() {
-                continue;
-            }
-
-            // In case the previous attempt to send blocks to storage failed, we want to retry
-            // instead of waiting for new command.
-            if !self.blocks_to_store.is_empty() {
                 continue;
             }
 
@@ -177,115 +135,90 @@ where
         }
     }
 
+    fn maybe_commit_blocks(&mut self) -> bool {
+        // Note: If save_blocks_to_storage below fails, these blocks will stay in
+        // `self.block_batches_to_store`. This is okay because consensus will not retry committing
+        // these blocks after it receives the errors. Instead it will try to commit a
+        // descendant block later, which will be found in the block tree and cause the entire
+        // chain to be saved if storage has recovered. (If consensus retries committing these
+        // moved blocks, we won't find these blocks in the block tree because we only look up
+        // the blocks in the block tree, so we will return an error.)
+        let (block_batch, resp_sender) = match self.block_batch_to_commit.take() {
+            Some((block_batch, resp_sender)) => (block_batch, resp_sender),
+            None => return false,
+        };
+
+        let res = self.commit_block_batch(block_batch);
+        if let Err(_err) = resp_sender.send(res) {
+            warn!("Failed to send commit block batch response.");
+        };
+        true
+    }
+
     /// Processes a single command from consensus. Note that this only modifies the block tree, the
     /// actual block execution and commit may happen later.
     fn process_command(&mut self, cmd: Command) {
         match cmd {
             Command::ExecuteBlock {
-                transactions,
-                parent_id,
-                id,
+                executable_block,
                 resp_sender,
             } => {
                 if let Mode::Syncing = self.mode {
-                    Self::send_error_when_syncing(resp_sender, id);
+                    if let Err(_err) =
+                        resp_sender.send(Err(error_when_syncing(executable_block.id)))
+                    {
+                        warn!("Failed to send execute block error (sync mode).");
+                    };
                     return;
                 }
-
-                // If the block already exists, we simply store the sender via which the response
-                // will be sent when available. Otherwise construct a block and add to the block
-                // tree.
-                match self.block_tree.get_block_mut(id) {
-                    Some(block) => {
-                        warn!("Block {:x} already exists.", id);
-                        block.queue_execute_block_response_sender(resp_sender);
-                    }
-                    None => {
-                        let block = TransactionBlock::new(transactions, parent_id, id, resp_sender);
-                        // If `add_block` errors, we return the error immediately. Otherwise the
-                        // response will be returned once the block is executed.
-                        if let Err(err) = self.block_tree.add_block(block) {
-                            let resp = Err(format_err!("{}", err));
-                            let mut block = err.into_block();
-                            block.send_execute_block_response(resp);
-                        }
-                    }
-                }
+                self.blocks_to_execute
+                    .push_back((executable_block, resp_sender));
             }
-            Command::CommitBlock {
-                ledger_info_with_sigs,
+            Command::CommitBlockBatch {
+                committable_block_batch,
                 resp_sender,
             } => {
-                let id = ledger_info_with_sigs.ledger_info().consensus_block_id();
+                let id = committable_block_batch
+                    .finality_proof
+                    .ledger_info()
+                    .consensus_block_id();
                 if let Mode::Syncing = self.mode {
-                    Self::send_error_when_syncing(resp_sender, id);
+                    if let Err(_err) = resp_sender.send(Err(error_when_syncing(id))) {
+                        warn!("Failed to send commit blocks error (sync mode).");
+                    };
                     return;
                 }
-
-                match self.block_tree.mark_as_committed(id, ledger_info_with_sigs) {
-                    Ok(()) => {
-                        let block = self
-                            .block_tree
-                            .get_block_mut(id)
-                            .expect("Block must exist if mark_as_committed succeeded.");
-                        // We have successfully marked the block as committed, but the real
-                        // response will not be sent to consensus until the block is successfully
-                        // persisted in storage. So we just save the sender in the block.
-                        block.set_commit_response_sender(resp_sender);
-                    }
-                    Err(err) => resp_sender
-                        .send(Err(format_err!("{}", err)))
-                        .expect("Failed to send error message."),
-                }
+                assert!(self
+                    .block_batch_to_commit
+                    .replace((committable_block_batch, resp_sender))
+                    .is_none());
             }
-            Command::ExecuteChunk {
-                txn_list_with_proof,
-                ledger_info_with_sigs,
-                resp_sender,
-            } => {
-                let res = self
-                    .execute_and_commit_chunk(
-                        txn_list_with_proof.clone(),
-                        ledger_info_with_sigs.clone(),
-                    )
-                    .map_err(|e| {
-                        security_log(SecurityEvent::InvalidChunkExecutor)
-                            .error(&e)
-                            .data(txn_list_with_proof)
-                            .data(ledger_info_with_sigs)
-                            .log();
-                        e
-                    });
-                resp_sender
-                    .send(res)
-                    .expect("Failed to send execute chunk response.");
+            Command::ExecuteAndCommitChunk { chunk, resp_sender } => {
+                let res = self.execute_and_commit_chunk(chunk.clone()).map_err(|e| {
+                    security_log(SecurityEvent::InvalidChunkExecutor)
+                        .error(&e)
+                        .data(chunk.txn_list_with_proof)
+                        .data(chunk.ledger_info_with_sigs)
+                        .log();
+                    e
+                });
+                if let Err(_err) = resp_sender.send(res) {
+                    warn!("Failed to send execute and commit chunk response.");
+                }
             }
         }
     }
 
-    fn send_error_when_syncing<T>(resp_sender: oneshot::Sender<Result<T>>, id: HashValue)
-    where
-        T: std::fmt::Debug,
-    {
-        let message = format!("Syncing. Unable to serve request for block {:x}.", id);
-        warn!("{}", message);
-        resp_sender
-            .send(Err(format_err!("{}", message)))
-            .expect("Failed to send error message.");
-    }
-
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
-    fn execute_and_commit_chunk(
-        &mut self,
-        txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<()> {
-        if ledger_info_with_sigs.ledger_info().timestamp_usecs() <= self.committed_timestamp_usecs {
+    fn execute_and_commit_chunk(&mut self, chunk: Chunk) -> Result<()> {
+        if chunk.ledger_info_with_sigs.ledger_info().timestamp_usecs()
+            <= self.committed_timestamp_usecs
+        {
             warn!(
                 "Ledger info is too old: local timestamp: {}, timestamp in request: {}.",
                 self.committed_timestamp_usecs,
-                ledger_info_with_sigs.ledger_info().timestamp_usecs(),
+                chunk.ledger_info_with_sigs.ledger_info().timestamp_usecs(),
             );
             return Ok(());
         }
@@ -294,16 +227,21 @@ where
             self.mode = Mode::Syncing;
             info!("Start syncing...");
         }
+
+        let mut committed_trees = self.committed_trees.lock().unwrap();
         info!(
             "Local version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
-            self.committed_trees.txn_accumulator().num_leaves() - 1,
-            txn_list_with_proof.first_transaction_version,
-            txn_list_with_proof.transaction_and_infos.len(),
+            committed_trees.txn_accumulator().num_leaves() - 1,
+            chunk.txn_list_with_proof.first_transaction_version,
+            chunk.txn_list_with_proof.transaction_and_infos.len(),
         );
 
         let (num_txns_to_skip, first_version) =
-            self.verify_chunk(&txn_list_with_proof, &ledger_info_with_sigs)?;
+            Self::verify_chunk(&chunk, committed_trees.txn_accumulator().num_leaves())?;
+
+        let (txn_list_with_proof, li_with_sigs) =
+            (chunk.txn_list_with_proof, chunk.ledger_info_with_sigs);
         info!("Skipping the first {} transactions.", num_txns_to_skip);
         let (transactions, infos): (Vec<_>, Vec<_>) = txn_list_with_proof
             .transaction_and_infos
@@ -314,8 +252,8 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_trees.version_and_state_root(),
-            self.committed_trees.state_tree(),
+            committed_trees.version_and_state_root(),
+            committed_trees.state_tree(),
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
@@ -348,7 +286,7 @@ where
             account_to_proof,
             &transactions,
             vm_outputs,
-            &self.committed_trees,
+            &committed_trees,
         )?;
 
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
@@ -384,21 +322,19 @@ where
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
-        let ledger_info_to_commit = if self.committed_trees.txn_accumulator().num_leaves()
+        let ledger_info_to_commit = if committed_trees.txn_accumulator().num_leaves()
             + txns_to_commit.len() as LeafCount
-            == ledger_info_with_sigs.ledger_info().version() + 1
+            == li_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
             // given ledger info in the verification process above, so this check can possibly fail
             // only when input transaction list is empty.
             ensure!(
-                ledger_info_with_sigs
-                    .ledger_info()
-                    .transaction_accumulator_hash()
+                li_with_sigs.ledger_info().transaction_accumulator_hash()
                     == output.executed_trees().txn_accumulator().root_hash(),
                 "Root hash in ledger info does not match local computation."
             );
-            Some(ledger_info_with_sigs)
+            Some(li_with_sigs)
         } else {
             // This means that the current chunk is not the last one. If it's empty, there's
             // nothing to write to storage. Since storage expect either new transaction or new
@@ -414,35 +350,32 @@ where
             ledger_info_to_commit.clone(),
         )?;
 
-        self.committed_trees = output.executed_trees().clone();
+        *committed_trees = output.executed_trees().clone();
+        // Drop the read lock explicitely to avoid wrapping the code above into a code block.
+        drop(committed_trees);
+
         if let Some(ledger_info_with_sigs) = ledger_info_to_commit {
             self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
-            self.block_tree
-                .reset(ledger_info_with_sigs.ledger_info().consensus_block_id());
             self.mode = Mode::Normal;
             info!(
                 "Synced to version {}.",
                 ledger_info_with_sigs.ledger_info().version()
             );
         }
-
         Ok(())
     }
 
     /// Verifies proofs using provided ledger info. Also verifies that the version of the first
     /// transaction matches the latest committed transaction. If the first few transaction happens
     /// to be older, returns how many need to be skipped and the first version to be committed.
-    fn verify_chunk(
-        &self,
-        txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    ) -> Result<(LeafCount, Version)> {
+    fn verify_chunk(chunk: &Chunk, num_committed_txns: u64) -> Result<(LeafCount, Version)> {
+        let txn_list_with_proof = &chunk.txn_list_with_proof;
+        let ledger_info_with_sigs = &chunk.ledger_info_with_sigs;
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
             txn_list_with_proof.first_transaction_version,
         )?;
 
-        let num_committed_txns = self.committed_trees.txn_accumulator().num_leaves();
         if txn_list_with_proof.transaction_and_infos.is_empty() {
             return Ok((0, num_committed_txns as Version /* first_version */));
         }
@@ -464,17 +397,9 @@ where
         ))
     }
 
-    /// If `save_blocks_to_storage` below fails, we retry based on this setting.
-    fn storage_retry_backoff() -> ExponentialBackoff {
-        let mut backoff = ExponentialBackoff::default();
-        backoff.max_interval = std::time::Duration::from_secs(10);
-        backoff.max_elapsed_time = Some(std::time::Duration::from_secs(120));
-        backoff
-    }
-
     /// Saves eligible blocks to persistent storage. If the blocks are successfully persisted, they
-    /// will be removed from `self.blocks_to_store` and the in-memory Sparse Merkle Trees in these
-    /// blocks will be pruned. Otherwise nothing happens.
+    /// will be taken from `self.block_batch_to_store` and the in-memory Sparse Merkle Trees in
+    /// these blocks will be pruned. Otherwise nothing happens.
     ///
     /// If we have multiple blocks and not all of them have signatures, we may send them to storage
     /// in a few batches. For example, if we have
@@ -483,32 +408,15 @@ where
     /// ```
     /// and only `C` and `E` have signatures, we will send `A`, `B` and `C` in the first batch,
     /// then `D` and `E` later in the another batch.
-    fn save_blocks_to_storage(&mut self) -> Result<()> {
-        // The blocks we send to storage in this batch. In the above example, this means block A, B
-        // and C.
-        let mut block_batch = vec![];
-        for block in &mut self.blocks_to_store {
-            let should_stop = block.ledger_info_with_sigs().is_some();
-            block_batch.push(block);
-            if should_stop {
-                break;
-            }
-        }
-        assert!(!block_batch.is_empty());
-
+    fn commit_block_batch(&mut self, block_batch: CommittableBlockBatch) -> Result<()> {
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         let mut txns_to_commit = vec![];
         let mut num_accounts_created = 0;
-        for block in &block_batch {
-            for (txn, txn_data) in itertools::zip_eq(
-                block.transactions(),
-                block
-                    .output()
-                    .as_ref()
-                    .expect("All blocks in self.blocks_to_store should have finished execution.")
-                    .transaction_data(),
-            ) {
+        for block in &block_batch.blocks {
+            for (txn, txn_data) in
+                itertools::zip_eq(&block.transactions, block.output.transaction_data())
+            {
                 if let TransactionStatus::Keep(_) = txn_data.status() {
                     txns_to_commit.push(TransactionToCommit::new(
                         txn.clone(),
@@ -523,18 +431,20 @@ where
         }
 
         let last_block = block_batch
-            .last_mut()
-            .expect("There must be at least one block with signatures.");
+            .blocks
+            .last()
+            .expect("CommittableBlockBatch has at least 1 block.");
 
         // Check that the version in ledger info (computed by consensus) matches the version
         // computed by us. TODO: we should also verify signatures and check that timestamp is
         // strictly increasing.
-        let ledger_info_with_sigs = last_block
-            .ledger_info_with_sigs()
-            .as_ref()
-            .expect("This block must have signatures.");
+        let ledger_info_with_sigs = block_batch.finality_proof;
         let version = ledger_info_with_sigs.ledger_info().version();
-        let num_txns_in_accumulator = last_block.executed_trees().txn_accumulator().num_leaves();
+        let num_txns_in_accumulator = last_block
+            .output
+            .executed_trees()
+            .txn_accumulator()
+            .num_leaves();
         assert_eq!(
             version + 1,
             num_txns_in_accumulator as Version,
@@ -563,20 +473,9 @@ where
         // Now that the blocks are persisted successfully, we can reply to consensus and update
         // in-memory state.
         self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
-        self.committed_trees = last_block.executed_trees().clone();
-        last_block.send_commit_block_response();
-
-        let num_saved = block_batch.len();
-        for _i in 0..num_saved {
-            let block = self
-                .blocks_to_store
-                .pop_front()
-                .expect("self.blocks_to_store must have more blocks.");
-            let block_data = block
-                .output()
-                .as_ref()
-                .expect("All blocks in self.blocks_to_store should have output.");
-            for txn_data in block_data.transaction_data() {
+        *self.committed_trees.lock().unwrap() = last_block.output.executed_trees().clone();
+        for block in block_batch.blocks {
+            for txn_data in block.output.transaction_data() {
                 txn_data.prune_state_tree();
             }
         }
@@ -588,37 +487,38 @@ where
     /// Returns `true` if a block was successfully executed, `false` if there was no block to
     /// execute.
     fn maybe_execute_block(&mut self) -> bool {
-        let id = match self.block_tree.get_block_to_execute() {
-            Some(block_id) => block_id,
+        let (executable_block, resp_sender) = match self.blocks_to_execute.pop_front() {
+            Some((block, resp_sender)) => (block, resp_sender),
             None => return false,
         };
 
         {
             let _timer = OP_COUNTERS.timer("block_execute_time_s");
-            self.execute_block(id);
+            let res = self.execute_block(executable_block);
+            if let Err(_err) = resp_sender.send(res) {
+                warn!("Failed to send execute block response.");
+            };
         }
-
         true
     }
 
-    fn execute_block(&mut self, id: HashValue) {
-        let parent_trees = self.get_trees_from_parent(id);
-
-        let block_to_execute = self
-            .block_tree
-            .get_block_mut(id)
-            .expect("Block to execute should exist.");
-
+    fn execute_block(
+        &mut self,
+        executable_block: ExecutableBlock,
+    ) -> Result<(ProcessedVMOutput, StateComputeResult)> {
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            self.committed_trees.version_and_state_root(),
-            parent_trees.state_tree(),
+            self.committed_trees
+                .lock()
+                .unwrap()
+                .version_and_state_root(),
+            executable_block.parent_trees.state_tree(),
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(
-                block_to_execute.transactions().to_vec(),
+                executable_block.transactions.clone(),
                 &self.vm_config,
                 &state_view,
             )
@@ -634,57 +534,31 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
-        match Self::process_vm_outputs(
+        let output = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
-            block_to_execute.transactions(),
+            &executable_block.transactions,
             vm_outputs,
-            &parent_trees,
-        ) {
-            Ok(output) => {
-                let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-                let version =
-                    (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
-                block_to_execute.set_output(output);
+            &executable_block.parent_trees,
+        )
+        .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
-                // Now that we have the root hash and execution status we can send the response to
-                // consensus.
-                // TODO: The VM will support a special transaction to set the validators for the
-                // next epoch that is part of a block execution.
-                let state_compute_result = StateComputeResult {
-                    executed_state: ExecutedState {
-                        state_id: accu_root_hash,
-                        version,
-                        validators: None,
-                    },
-                    compute_status: status,
-                };
-                block_to_execute.set_execute_block_response(state_compute_result);
-            }
-            Err(err) => {
-                block_to_execute.send_execute_block_response(Err(format_err!(
-                    "Failed to execute block: {}",
-                    err
-                )));
-                // If we failed to execute this block, remove the block and its descendants from
-                // the block tree.
-                self.block_tree.remove_subtree(id);
-            }
-        }
-    }
+        let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
+        let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
 
-    /// Given id of the block that is about to be executed, returns the state tree and the
-    /// transaction accumulator at the end of the parent block.
-    fn get_trees_from_parent(&self, id: HashValue) -> ExecutedTrees {
-        let parent_id = self
-            .block_tree
-            .get_block(id)
-            .expect("Block should exist.")
-            .parent_id();
-        match self.block_tree.get_block(parent_id) {
-            Some(parent_block) => parent_block.executed_trees().clone(),
-            None => self.committed_trees.clone(),
-        }
+        // Now that we have the root hash and execution status we can send the response to
+        // consensus.
+        // TODO: The VM will support a special transaction to set the validators for the
+        // next epoch that is part of a block execution.
+        let state_compute_result = StateComputeResult {
+            executed_state: ExecutedState {
+                state_id: accu_root_hash,
+                version,
+                validators: None,
+            },
+            compute_status: status,
+        };
+        Ok((output, state_compute_result))
     }
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
@@ -699,7 +573,7 @@ where
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
         let mut txn_data = vec![];
-        let mut current_state_tree = Rc::clone(parent_trees.state_tree());
+        let mut current_state_tree = Arc::clone(parent_trees.state_tree());
         // The hash of each individual TransactionInfo object. This will not include the
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
@@ -754,8 +628,8 @@ where
                 blobs,
                 vm_output.events().to_vec(),
                 vm_output.status().clone(),
-                Rc::clone(&state_tree),
-                Rc::new(event_tree),
+                Arc::clone(&state_tree),
+                Arc::new(event_tree),
                 vm_output.gas_used(),
                 num_accounts_created,
             ));
@@ -769,7 +643,7 @@ where
             txn_data,
             ExecutedTrees {
                 state_tree: current_state_tree,
-                transaction_accumulator: Rc::new(current_transaction_accumulator),
+                transaction_accumulator: Arc::new(current_transaction_accumulator),
             },
         ))
     }
@@ -785,7 +659,7 @@ where
         previous_state_tree: &SparseMerkleTree,
     ) -> Result<(
         HashMap<AccountAddress, AccountStateBlob>,
-        Rc<SparseMerkleTree>,
+        Arc<SparseMerkleTree>,
         usize, /* num_account_created */
     )> {
         let mut updated_blobs = HashMap::new();
@@ -832,7 +706,7 @@ where
             let account_blob = AccountStateBlob::try_from(account_btree)?;
             updated_blobs.insert(addr, account_blob);
         }
-        let state_tree = Rc::new(
+        let state_tree = Arc::new(
             previous_state_tree
                 .update(
                     updated_blobs

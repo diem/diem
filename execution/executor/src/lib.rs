@@ -1,16 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#![allow(dead_code)]
 
 mod block_processor;
 mod block_tree;
-mod transaction_block;
+pub mod transaction_block;
 
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]
 mod mock_vm;
 
-use crate::block_processor::BlockProcessor;
+use crate::{block_processor::BlockProcessor, transaction_block::ProcessedVMOutput};
 use config::config::NodeConfig;
 use crypto::{
     hash::{
@@ -35,7 +36,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::{
     marker::PhantomData,
-    rc::Rc,
     sync::{mpsc, Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageWrite};
@@ -114,6 +114,9 @@ pub struct Executor<V> {
     /// of the channel and processes the commands.
     command_sender: Mutex<Option<mpsc::Sender<Command>>>,
 
+    /// The lasted committed trees.
+    committed_trees: Arc<Mutex<ExecutedTrees>>,
+
     phantom: PhantomData<V>,
 }
 
@@ -131,20 +134,16 @@ where
             .get_startup_info()
             .expect("Failed to read startup info from storage.");
 
-        let (
-            state_root_hash,
-            frozen_subtrees_in_accumulator,
-            num_leaves_in_accumulator,
-            committed_timestamp_usecs,
-            committed_block_id,
-        ) = match startup_info {
+        let (committed_trees, committed_timestamp_usecs, committed_block_id) = match startup_info {
             Some(info) => {
                 info!("Startup info read from DB: {:?}.", info);
                 let ledger_info = info.ledger_info;
                 (
-                    info.account_state_root_hash,
-                    info.ledger_frozen_subtree_hashes,
-                    info.latest_version + 1,
+                    Arc::new(Mutex::new(ExecutedTrees::new(
+                        info.account_state_root_hash,
+                        info.ledger_frozen_subtree_hashes,
+                        info.latest_version + 1,
+                    ))),
                     ledger_info.timestamp_usecs(),
                     ledger_info.consensus_block_id(),
                 )
@@ -152,9 +151,7 @@ where
             None => {
                 info!("Startup info is empty. Will start from GENESIS.");
                 (
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    vec![],
-                    0,
+                    Arc::new(Mutex::new(ExecutedTrees::new_empty())),
                     0,
                     *PRE_GENESIS_BLOCK_ID,
                 )
@@ -163,6 +160,7 @@ where
 
         let (command_sender, command_receiver) = mpsc::channel();
 
+        let cloned_committed_trees = committed_trees.clone();
         let vm_config = config.vm_config.clone();
         let executor = Executor {
             block_processor_thread: Some(
@@ -172,10 +170,7 @@ where
                         let mut block_processor = BlockProcessor::<V>::new(
                             command_receiver,
                             committed_timestamp_usecs,
-                            state_root_hash,
-                            frozen_subtrees_in_accumulator,
-                            num_leaves_in_accumulator,
-                            committed_block_id,
+                            cloned_committed_trees,
                             storage_read_client,
                             storage_write_client,
                             vm_config,
@@ -186,6 +181,7 @@ where
             ),
             command_sender: Mutex::new(Some(command_sender)),
             phantom: PhantomData,
+            committed_trees,
         };
 
         if committed_block_id == *PRE_GENESIS_BLOCK_ID {
@@ -204,8 +200,10 @@ where
         // Create a block with genesis_txn being the only transaction. Execute it then commit it
         // immediately.
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
-        let state_compute_result = block_on(self.execute_block(
-            vec![genesis_txn],
+        let genesis_txns = vec![genesis_txn];
+        let (output, state_compute_result) = block_on(self.execute_block(
+            genesis_txns.clone(),
+            ExecutedTrees::new_empty(),
             *PRE_GENESIS_BLOCK_ID,
             *GENESIS_BLOCK_ID,
         ))
@@ -222,10 +220,17 @@ where
             /* timestamp_usecs = */ 0,
             None,
         );
-        let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
-        block_on(self.commit_block(ledger_info_with_sigs))
-            .expect("Response sender was unexpectedly dropped.")
-            .expect("Failed to commit genesis block.");
+        let ledger_info_with_sigs =
+            LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());
+        block_on(self.commit_blocks(
+            vec![CommittableBlock {
+                transactions: genesis_txns,
+                output: Arc::new(output),
+            }],
+            ledger_info_with_sigs,
+        ))
+        .expect("Response sender was unexpectedly dropped.")
+        .expect("Failed to commit genesis block.");
         info!("GENESIS transaction is committed.")
     }
 
@@ -233,9 +238,10 @@ where
     pub fn execute_block(
         &self,
         transactions: Vec<Transaction>,
+        parent_trees: ExecutedTrees,
         parent_id: HashValue,
         id: HashValue,
-    ) -> oneshot::Receiver<Result<StateComputeResult>> {
+    ) -> oneshot::Receiver<Result<(ProcessedVMOutput, StateComputeResult)>> {
         debug!(
             "Received request to execute block. Parent id: {:x}. Id: {:x}.",
             parent_id, id
@@ -250,9 +256,12 @@ where
         {
             Some(sender) => sender
                 .send(Command::ExecuteBlock {
-                    transactions,
-                    parent_id,
-                    id,
+                    executable_block: ExecutableBlock {
+                        transactions,
+                        parent_trees,
+                        parent_id,
+                        id,
+                    },
                     resp_sender,
                 })
                 .expect("Did block processor thread panic?"),
@@ -263,9 +272,10 @@ where
         resp_receiver
     }
 
-    /// Commits a block and all its ancestors. Returns `Ok(())` if successful.
-    pub fn commit_block(
+    /// Commits a block and all its ancestors within a block batch. Returns `Ok(())` if successful.
+    pub fn commit_blocks(
         &self,
+        blocks: Vec<CommittableBlock>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> oneshot::Receiver<Result<()>> {
         debug!(
@@ -274,6 +284,7 @@ where
         );
 
         let (resp_sender, resp_receiver) = oneshot::channel();
+        // TODO: check li_sigs's consensus id matches the last block.
         match self
             .command_sender
             .lock()
@@ -281,8 +292,11 @@ where
             .as_ref()
         {
             Some(sender) => sender
-                .send(Command::CommitBlock {
-                    ledger_info_with_sigs,
+                .send(Command::CommitBlockBatch {
+                    committable_block_batch: CommittableBlockBatch {
+                        blocks,
+                        finality_proof: ledger_info_with_sigs,
+                    },
                     resp_sender,
                 })
                 .expect("Did block processor thread panic?"),
@@ -295,7 +309,7 @@ where
 
     /// Executes and commits a chunk of transactions that are already committed by majority of the
     /// validators.
-    pub fn execute_chunk(
+    pub fn execute_and_commit_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -314,9 +328,11 @@ where
             .as_ref()
         {
             Some(sender) => sender
-                .send(Command::ExecuteChunk {
-                    txn_list_with_proof,
-                    ledger_info_with_sigs,
+                .send(Command::ExecuteAndCommitChunk {
+                    chunk: Chunk {
+                        txn_list_with_proof,
+                        ledger_info_with_sigs,
+                    },
                     resp_sender,
                 })
                 .expect("Did block processor thread panic?"),
@@ -325,6 +341,10 @@ where
                 .expect("Failed to send error message."),
         }
         resp_receiver
+    }
+
+    pub fn committed_trees(&self) -> ExecutedTrees {
+        (*self.committed_trees.lock().unwrap()).clone()
     }
 }
 
@@ -344,22 +364,60 @@ impl<V> Drop for Executor<V> {
     }
 }
 
+#[derive(Debug)]
+struct CommittableBlockBatch {
+    blocks: Vec<CommittableBlock>,
+    finality_proof: LedgerInfoWithSignatures,
+}
+
+#[derive(Debug)]
+pub struct CommittableBlock {
+    transactions: Vec<Transaction>,
+    output: Arc<ProcessedVMOutput>,
+}
+
+impl CommittableBlock {
+    pub fn new(transactions: Vec<Transaction>, output: Arc<ProcessedVMOutput>) -> Self {
+        Self {
+            transactions,
+            output,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ExecutableBlock {
+    id: HashValue,
+    parent_id: HashValue,
+    parent_trees: ExecutedTrees,
+    transactions: Vec<Transaction>,
+}
+
+#[derive(Clone, Debug)]
+struct Chunk {
+    txn_list_with_proof: TransactionListWithProof,
+    ledger_info_with_sigs: LedgerInfoWithSignatures,
+}
+
+impl Chunk {
+    fn ledger_info(&self) -> &LedgerInfo {
+        self.ledger_info_with_sigs.ledger_info()
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum Command {
     ExecuteBlock {
-        transactions: Vec<Transaction>,
-        parent_id: HashValue,
-        id: HashValue,
-        resp_sender: oneshot::Sender<Result<StateComputeResult>>,
+        executable_block: ExecutableBlock,
+        resp_sender: oneshot::Sender<Result<(ProcessedVMOutput, StateComputeResult)>>,
     },
-    CommitBlock {
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    CommitBlockBatch {
+        committable_block_batch: CommittableBlockBatch,
         resp_sender: oneshot::Sender<Result<()>>,
     },
-    ExecuteChunk {
-        txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ExecuteAndCommitChunk {
+        chunk: Chunk,
         resp_sender: oneshot::Sender<Result<()>>,
     },
 }
@@ -370,19 +428,19 @@ pub struct ExecutedTrees {
     /// tree is presenting the latest commited state, it will have a single Subtree node (or
     /// Empty node) whose hash equals the root hash of the newest Sparse Merkle Tree in
     /// storage.
-    state_tree: Rc<SparseMerkleTree>,
+    state_tree: Arc<SparseMerkleTree>,
 
     /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
     /// `state_tree`.
-    transaction_accumulator: Rc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+    transaction_accumulator: Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
 }
 
 impl ExecutedTrees {
-    pub fn state_tree(&self) -> &Rc<SparseMerkleTree> {
+    pub fn state_tree(&self) -> &Arc<SparseMerkleTree> {
         &self.state_tree
     }
 
-    pub fn txn_accumulator(&self) -> &Rc<InMemoryAccumulator<TransactionAccumulatorHasher>> {
+    pub fn txn_accumulator(&self) -> &Arc<InMemoryAccumulator<TransactionAccumulatorHasher>> {
         &self.transaction_accumulator
     }
 
@@ -394,5 +452,23 @@ impl ExecutedTrees {
             None
         };
         (version, self.state_tree().root_hash())
+    }
+
+    pub fn new(
+        state_root_hash: HashValue,
+        frozen_subtrees_in_accumulator: Vec<HashValue>,
+        num_leaves_in_accumulator: u64,
+    ) -> ExecutedTrees {
+        ExecutedTrees {
+            state_tree: Arc::new(SparseMerkleTree::new(state_root_hash)),
+            transaction_accumulator: Arc::new(
+                InMemoryAccumulator::new(frozen_subtrees_in_accumulator, num_leaves_in_accumulator)
+                    .expect("The startup info read from storage should be valid."),
+            ),
+        }
+    }
+
+    pub fn new_empty() -> ExecutedTrees {
+        Self::new(*SPARSE_MERKLE_PLACEHOLDER_HASH, vec![], 0)
     }
 }

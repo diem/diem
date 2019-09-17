@@ -5,7 +5,7 @@ use crate::{
     mock_vm::{
         encode_mint_transaction, encode_transfer_transaction, MockVM, DISCARD_STATUS, KEEP_STATUS,
     },
-    Executor, OP_COUNTERS,
+    CommittableBlock, Executor, OP_COUNTERS,
 };
 use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
@@ -92,9 +92,14 @@ fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
     };
     let id = gen_block_id(txn_index + 1);
 
-    let state_compute_result = block_on(executor.execute_block(vec![txn], parent_block_id, id))
-        .unwrap()
-        .unwrap();
+    let (output, state_compute_result) = block_on(executor.execute_block(
+        vec![txn.clone()],
+        executor.committed_trees(),
+        parent_block_id,
+        id,
+    ))
+    .unwrap()
+    .unwrap();
     assert_eq!(state_compute_result.version(), txn_index + 1);
 
     let ledger_info = gen_ledger_info(
@@ -103,9 +108,15 @@ fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
         id,
         txn_index + 1,
     );
-    block_on(executor.commit_block(ledger_info))
-        .unwrap()
-        .unwrap();
+    block_on(executor.commit_blocks(
+        vec![CommittableBlock {
+            transactions: vec![txn],
+            output: Arc::new(output),
+        }],
+        ledger_info,
+    ))
+    .unwrap()
+    .unwrap();
 }
 
 struct TestExecutor {
@@ -195,10 +206,14 @@ fn test_executor_status() {
     let parent_block_id = *GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
 
-    let response =
-        block_on(executor.execute_block(vec![txn0, txn1, txn2], parent_block_id, block_id))
-            .unwrap()
-            .unwrap();
+    let (_output, state_compute_result) = block_on(executor.execute_block(
+        vec![txn0, txn1, txn2],
+        executor.committed_trees(),
+        parent_block_id,
+        block_id,
+    ))
+    .unwrap()
+    .unwrap();
 
     assert_eq!(
         vec![
@@ -206,7 +221,7 @@ fn test_executor_status() {
             KEEP_STATUS.clone(),
             DISCARD_STATUS.clone()
         ],
-        *response.status()
+        *state_compute_result.status()
     );
 }
 
@@ -220,13 +235,21 @@ fn test_executor_one_block() {
 
     let txns = (0..version)
         .map(|i| wrap_user_txn(encode_mint_transaction(gen_address(i), 100)))
-        .collect();
-    let execute_block_future = executor.execute_block(txns, parent_block_id, block_id);
-    let execute_block_response = block_on(execute_block_future).unwrap().unwrap();
-    assert_eq!(execute_block_response.version(), 100);
+        .collect::<Vec<_>>();
+    let execute_block_future = executor.execute_block(
+        txns.clone(),
+        executor.committed_trees(),
+        parent_block_id,
+        block_id,
+    );
+    let (output, state_compute_result) = block_on(execute_block_future).unwrap().unwrap();
+    assert_eq!(state_compute_result.version(), 100);
 
-    let ledger_info = gen_ledger_info(version, execute_block_response.root_hash(), block_id, 1);
-    let commit_block_future = executor.commit_block(ledger_info);
+    let ledger_info = gen_ledger_info(version, state_compute_result.root_hash(), block_id, 1);
+    let commit_block_future = executor.commit_blocks(
+        vec![CommittableBlock::new(txns, Arc::new(output))],
+        ledger_info,
+    );
     block_on(commit_block_future).unwrap().unwrap();
 }
 
@@ -253,10 +276,14 @@ fn test_executor_execute_same_block_multiple_times() {
         let executor = TestExecutor::new();
         let mut responses = vec![];
         for _i in 0..100 {
-            let execute_block_future =
-                executor.execute_block(txns.clone(), parent_block_id, block_id);
-            let execute_block_response = block_on(execute_block_future).unwrap().unwrap();
-            responses.push(execute_block_response);
+            let execute_block_future = executor.execute_block(
+                txns.clone(),
+                executor.committed_trees(),
+                parent_block_id,
+                block_id,
+            );
+            let (_output, state_compute_result) = block_on(execute_block_future).unwrap().unwrap();
+            responses.push(state_compute_result);
         }
         responses.dedup();
         assert_eq!(responses.len(), 1);
@@ -265,13 +292,17 @@ fn test_executor_execute_same_block_multiple_times() {
         let executor = TestExecutor::new();
         let mut futures = vec![];
         for _i in 0..100 {
-            let execute_block_future =
-                executor.execute_block(txns.clone(), parent_block_id, block_id);
+            let execute_block_future = executor.execute_block(
+                txns.clone(),
+                executor.committed_trees(),
+                parent_block_id,
+                block_id,
+            );
             futures.push(execute_block_future);
         }
         let mut responses: Vec<_> = futures
             .into_iter()
-            .map(|fut| block_on(fut).unwrap().unwrap())
+            .map(|fut| block_on(fut).unwrap().unwrap().1)
             .collect();
         responses.dedup();
         assert_eq!(responses.len(), 1);
@@ -316,14 +347,22 @@ fn create_transaction_chunks(
     }
     let id = gen_block_id(1);
 
-    let response = block_on(executor.execute_block(txns.clone(), *GENESIS_BLOCK_ID, id))
-        .unwrap()
-        .unwrap();
+    let (output, state_compute_result) = block_on(executor.execute_block(
+        txns.clone(),
+        executor.committed_trees(),
+        *GENESIS_BLOCK_ID,
+        id,
+    ))
+    .unwrap()
+    .unwrap();
     let ledger_version = txns.len() as u64;
-    let ledger_info = gen_ledger_info(ledger_version, response.root_hash(), id, 1);
-    block_on(executor.commit_block(ledger_info.clone()))
-        .unwrap()
-        .unwrap();
+    let ledger_info = gen_ledger_info(ledger_version, state_compute_result.root_hash(), id, 1);
+    block_on(executor.commit_blocks(
+        vec![CommittableBlock::new(txns, Arc::new(output))],
+        ledger_info.clone(),
+    ))
+    .unwrap()
+    .unwrap();
 
     let storage_client = StorageReadServiceClient::new(
         Arc::new(EnvBuilder::new().build()),
@@ -352,7 +391,7 @@ fn create_transaction_chunks(
 }
 
 #[test]
-fn test_executor_execute_chunk() {
+fn test_executor_execute_and_commit_chunk() {
     let first_batch_size = 30;
     let second_batch_size = 40;
     let third_batch_size = 20;
@@ -380,7 +419,7 @@ fn test_executor_execute_chunk() {
     );
 
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
-    block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -388,7 +427,7 @@ fn test_executor_execute_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
     // Execute the second chunk. After that we should still get the genesis ledger info from DB.
-    block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -396,15 +435,18 @@ fn test_executor_execute_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
     // Execute an empty chunk. After that we should still get the genesis ledger info from DB.
-    block_on(executor.execute_chunk(TransactionListWithProof::new_empty(), ledger_info.clone()))
-        .unwrap()
-        .unwrap();
+    block_on(
+        executor
+            .execute_and_commit_chunk(TransactionListWithProof::new_empty(), ledger_info.clone()),
+    )
+    .unwrap()
+    .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
     // Execute the second chunk again. After that we should still get the same thing.
-    block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -412,7 +454,7 @@ fn test_executor_execute_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
     // Execute the third chunk. After that we should get the new ledger info.
-    block_on(executor.execute_chunk(chunks[2].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[2].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -423,7 +465,7 @@ fn test_executor_execute_chunk() {
 }
 
 #[test]
-fn test_executor_execute_chunk_restart() {
+fn test_executor_execute_and_commit_chunk_restart() {
     let first_batch_size = 30;
     let second_batch_size = 40;
 
@@ -448,7 +490,7 @@ fn test_executor_execute_chunk_restart() {
             config.storage.port,
         );
 
-        block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
+        block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -465,7 +507,7 @@ fn test_executor_execute_chunk_restart() {
             config.storage.port,
         );
 
-        block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
+        block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -509,29 +551,43 @@ impl TestBlock {
 fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
     let executor = TestExecutor::new();
     let mut iter = transactions.into_iter();
-    let first_txn = iter.next();
-    let response = block_on(executor.execute_block(
-        first_txn.map_or(vec![], |txn| vec![txn]),
+    let first_txn = iter.next().map_or(vec![], |txn| vec![txn]);
+    let first_id = gen_block_id(1);
+    let mut response = block_on(executor.execute_block(
+        first_txn.clone(),
+        executor.committed_trees(),
         *GENESIS_BLOCK_ID,
         gen_block_id(1),
     ))
     .unwrap()
     .unwrap();
-    let mut root_hash = response.root_hash();
+    let mut trees = response.0.executed_trees().clone();
+    let mut root_hash = response.1.root_hash();
+    let ledger_info = gen_ledger_info(first_txn.len() as u64, root_hash, first_id, 0);
+    block_on(executor.commit_blocks(
+        vec![CommittableBlock::new(first_txn, Arc::new(response.0))],
+        ledger_info,
+    ))
+    .unwrap()
+    .unwrap();
 
     for (i, txn) in iter.enumerate() {
         let parent_block_id = gen_block_id(i as u64 + 1);
         // when i = 0, id should be 2.
         let id = gen_block_id(i as u64 + 2);
-        let response = block_on(executor.execute_block(vec![txn], parent_block_id, id))
+        response = block_on(executor.execute_block(vec![txn.clone()], trees, parent_block_id, id))
             .unwrap()
             .unwrap();
 
-        root_hash = response.root_hash();
+        trees = response.0.executed_trees().clone();
+        root_hash = response.1.root_hash();
         let ledger_info = gen_ledger_info(i as u64 + 2, root_hash, id, i as u64 + 1);
-        block_on(executor.commit_block(ledger_info))
-            .unwrap()
-            .unwrap();
+        block_on(executor.commit_blocks(
+            vec![CommittableBlock::new(vec![txn], Arc::new(response.0))],
+            ledger_info,
+        ))
+        .unwrap()
+        .unwrap();
     }
     root_hash
 }
@@ -556,22 +612,22 @@ proptest! {
         // Execute block A, B and C. Hold all results in memory.
         let executor = TestExecutor::new();
 
-        let response_a = block_on(executor.execute_block(
-            block_a.txns.clone(), block_a.parent_id, block_a.id,
+        let (output_a, state_compute_result_a) = block_on(executor.execute_block(
+            block_a.txns.clone(), executor.committed_trees(), block_a.parent_id, block_a.id,
         )).unwrap().unwrap();
-        prop_assert_eq!(response_a.version(), a_size);
-        let response_b = block_on(executor.execute_block(
-            block_b.txns.clone(), block_b.parent_id, block_b.id,
+        prop_assert_eq!(state_compute_result_a.version(), a_size);
+        let (_output_b, state_compute_result_b) = block_on(executor.execute_block(
+            block_b.txns.clone(), output_a.executed_trees().clone(), block_b.parent_id, block_b.id,
         )).unwrap().unwrap();
-        prop_assert_eq!(response_b.version(), a_size + b_size);
-        let response_c = block_on(executor.execute_block(
-            block_c.txns.clone(), block_c.parent_id, block_c.id,
+        prop_assert_eq!(state_compute_result_b.version(), a_size + b_size);
+        let (_output_c, state_compute_result_c) = block_on(executor.execute_block(
+            block_c.txns.clone(), output_a.executed_trees().clone(), block_c.parent_id, block_c.id,
         )).unwrap().unwrap();
-        prop_assert_eq!(response_c.version(), a_size + c_size);
+        prop_assert_eq!(state_compute_result_c.version(), a_size + c_size);
 
-        let root_hash_a = response_a.root_hash();
-        let root_hash_b = response_b.root_hash();
-        let root_hash_c = response_c.root_hash();
+        let root_hash_a = state_compute_result_a.root_hash();
+        let root_hash_b = state_compute_result_b.root_hash();
+        let root_hash_c = state_compute_result_c.root_hash();
 
         // Execute block A and B. Execute and commit one transaction at a time.
         let expected_root_hash_a = run_transactions_naive(block_a.txns.clone());
@@ -605,28 +661,28 @@ proptest! {
         // First execute and commit one block, then destroy executor.
         {
             let executor = create_executor(&config);
-            let response_a = block_on(executor.execute_block(
-                block_a.txns.clone(), block_a.parent_id, block_a.id,
+            let (output_a, state_compute_result_a) = block_on(executor.execute_block(
+                block_a.txns.clone(), executor.committed_trees(), block_a.parent_id, block_a.id,
             )).unwrap().unwrap();
-            let root_hash = response_a.root_hash();
+            let root_hash = state_compute_result_a.root_hash();
             let ledger_info = gen_ledger_info(block_a.txns.len() as u64, root_hash, block_a.id, 1);
-            block_on(executor.commit_block(ledger_info)).unwrap().unwrap();
+            block_on(executor.commit_blocks(vec![CommittableBlock::new(block_a.txns.clone(), Arc::new(output_a))], ledger_info)).unwrap().unwrap();
         }
 
         // Now we construct a new executor and run one more block.
         let root_hash = {
             let executor = create_executor(&config);
-            let response_b = block_on(executor.execute_block(
-                block_b.txns.clone(), block_b.parent_id, block_b.id,
+            let (output_b, state_compute_result_b) = block_on(executor.execute_block(
+                block_b.txns.clone(), executor.committed_trees(), block_b.parent_id, block_b.id,
             )).unwrap().unwrap();
-            let root_hash = response_b.root_hash();
+            let root_hash = state_compute_result_b.root_hash();
             let ledger_info = gen_ledger_info(
                 (block_a.txns.len() + block_b.txns.len()) as u64,
                 root_hash,
                 block_b.id,
                 2,
             );
-            block_on(executor.commit_block(ledger_info)).unwrap().unwrap();
+            block_on(executor.commit_blocks(vec![CommittableBlock::new(block_b.txns.clone(), Arc::new(output_b))], ledger_info)).unwrap().unwrap();
             root_hash
         };
 
