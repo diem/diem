@@ -37,12 +37,12 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    crypto_proxies::ValidatorVerifier,
     transaction::{
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
         TransactionPayload, Version,
     },
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
-    validator_verifier::ValidatorVerifier,
 };
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";

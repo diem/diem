@@ -69,8 +69,8 @@ use std::{
 };
 use tokio::{codec::Framed, prelude::FutureExt as _};
 use types::{
-    validator_signer::ValidatorSigner as Signer,
-    validator_verifier::ValidatorVerifier as SignatureValidator, PeerId,
+    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
+    PeerId,
 };
 use unsigned_varint::codec::UviBytes;
 
@@ -114,7 +114,7 @@ where
     pub fn new(
         self_peer_id: PeerId,
         self_addrs: Vec<Multiaddr>,
-        signer: Signer<Ed25519PrivateKey>,
+        signer: Signer,
         seed_peers: HashMap<PeerId, PeerInfo>,
         trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
@@ -417,7 +417,7 @@ fn create_full_node_payload(dns_seed_addr: &[u8]) -> FullNodePayload {
 // Creates a note by signing the given peer info, and combining the signature, peer_info and
 // peer_id into a note.
 fn create_note(
-    signer: &Signer<Ed25519PrivateKey>,
+    signer: &Signer,
     peer_id: PeerId,
     peer_info: PeerInfo,
     full_node_payload: FullNodePayload,
@@ -550,7 +550,7 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::<Ed25519PublicKey>::new_with_quorum_size(
+    let verifier = SignatureValidator::new_with_quorum_size(
         trusted_peers
             .read()
             .unwrap()
@@ -568,7 +568,7 @@ fn verify_signature(
     Ok(())
 }
 
-fn sign(signer: &Signer<Ed25519PrivateKey>, msg: &[u8]) -> Vec<u8> {
+fn sign(signer: &Signer, msg: &[u8]) -> Vec<u8> {
     let signature: Ed25519Signature = signer
         .sign_message(get_hash(msg))
         .expect("Message signing fails");
