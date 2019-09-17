@@ -14,12 +14,12 @@
 pub mod admission_control_node;
 /// AC gRPC service.
 pub mod admission_control_service;
+#[cfg(any(test, feature = "fuzzing"))]
+/// Useful Mocks
+pub mod mocks;
 use lazy_static::lazy_static;
 use metrics::OpMetrics;
 
 lazy_static! {
     static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("admission_control");
 }
-
-#[cfg(test)]
-mod unit_tests;

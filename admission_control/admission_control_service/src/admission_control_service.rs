@@ -40,6 +40,11 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 #[path = "unit_tests/admission_control_service_test.rs"]
 mod admission_control_service_test;
 
+#[cfg(any(feature = "fuzzing", test))]
+#[path = "admission_control_fuzzing.rs"]
+/// fuzzing module for admission control
+pub mod fuzzing;
+
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
 pub struct AdmissionControlService<M, V> {

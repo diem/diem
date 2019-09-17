@@ -13,13 +13,15 @@ use proto_conv::FromProto;
 use std::time::SystemTime;
 use types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 
-// Define a local mempool to use for unit tests here, ignore methods not used by the test
+/// Define a local mempool to use for unit tests and fuzzing,
+/// ignore methods not used
 #[derive(Clone)]
 pub struct LocalMockMempool {
     created_time: SystemTime,
 }
 
 impl LocalMockMempool {
+    /// Creates a new instance of localMockMempool
     pub fn new() -> Self {
         Self {
             created_time: SystemTime::now(),

@@ -6,7 +6,7 @@ use crate::{
         AdmissionControlService, SubmitTransactionRequest,
         SubmitTransactionResponse as ProtoSubmitTransactionResponse,
     },
-    unit_tests::LocalMockMempool,
+    mocks::local_mock_mempool::LocalMockMempool,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
@@ -23,7 +23,7 @@ use types::{
 };
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
-fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
+pub fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
     AdmissionControlService::new(
         Some(Arc::new(LocalMockMempool::new())),
         Arc::new(MockStorageReadClient),

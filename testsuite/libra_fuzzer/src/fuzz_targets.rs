@@ -57,6 +57,7 @@ macro_rules! proto_fuzz_target {
 }
 
 // List fuzz target modules here.
+mod admission_control;
 mod compiled_module;
 mod consensus_proposal;
 mod inner_signed_transaction;
@@ -72,6 +73,7 @@ lazy_static! {
             Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
             Box::new(vm_value::ValueTarget::default()),
             Box::new(consensus_proposal::ConsensusProposal::default()),
+            Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
         ];
         targets.into_iter().map(|target| (target.name(), target)).collect()
     };
