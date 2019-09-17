@@ -470,16 +470,18 @@ impl<T: Payload> EventProcessor<T> {
         self.safety_rules.update(qc);
 
         let mut highest_committed_proposal_round = None;
-        if let Some(new_commit) = qc.committed_block_id() {
-            if let Some(block) = self.block_store.get_block(new_commit) {
-                let finality_proof = qc.ledger_info().clone();
-                // We don't want to use NIL commits for pacemaker round interval calculations.
-                if !block.is_nil_block() {
-                    highest_committed_proposal_round = Some(block.round());
-                }
-                self.process_commit(block, finality_proof).await;
+        if let Some(block) = qc
+            .committed_block_id()
+            .and_then(|new_commit| self.block_store.get_block(new_commit))
+        {
+            // We don't want to use NIL commits for pacemaker round interval calculations.
+            if !block.is_nil_block() {
+                highest_committed_proposal_round = Some(block.round());
             }
+            let finality_proof = qc.ledger_info().clone();
+            self.process_commit(block, finality_proof).await;
         }
+
         if let Some(new_round_event) = self.pacemaker.process_certificates(
             qc.certified_block_round(),
             highest_committed_proposal_round,
