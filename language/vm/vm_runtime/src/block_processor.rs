@@ -23,6 +23,8 @@ use types::{
     write_set::WriteSet,
 };
 use vm_cache_map::Arena;
+use types::transaction::TransactionPayload;
+use crate::data_cache::{WriteSetDataCache, RemoteCache};
 
 pub fn execute_block<'alloc>(
     txn_block: Vec<SignedTransaction>,
@@ -71,15 +73,17 @@ pub fn execute_block<'alloc>(
 
     for transaction in signature_verified_block {
         let output = match transaction {
-            Ok(t) => transaction_flow(
+            Ok(t) => {
+                let txn_cache =  WriteSetDataCache::new_with_txn_payload(t.payload().clone(), &data_cache);
+                transaction_flow(
                 t,
                 &module_cache,
                 script_cache,
-                &data_cache,
+                &txn_cache,
                 mode,
                 publishing_option,
                 vm_mode
-            ),
+            )},
             Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
         };
         report_execution_status(output.status());
@@ -111,7 +115,7 @@ fn transaction_flow<'alloc, P>(
     txn: SignatureCheckedTransaction,
     module_cache: P,
     script_cache: &ScriptCache<'alloc>,
-    data_cache: &BlockDataCache<'_>,
+    data_cache: &dyn RemoteCache,
     mode: ValidationMode,
     publishing_option: &VMPublishingOption,
     vm_mode: VMMode,
@@ -120,6 +124,7 @@ where
     P: ModuleCache<'alloc>,
 {
     let arena = Arena::new();
+
     let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
 
     let validated_txn = match process_txn.validate(mode, publishing_option, vm_mode) {

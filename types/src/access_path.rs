@@ -342,6 +342,13 @@ impl DataPath {
             _ => None,
         }
     }
+
+    pub fn participant(&self) -> Option<AccountAddress> {
+        match self{
+            DataPath::ChannelResource {participant,tag:_} => Some(*participant),
+            _ => None
+        }
+    }
 }
 
 impl From<&DataPath> for Vec<u8> {

@@ -132,6 +132,15 @@ impl WriteSet {
     pub fn merge(first:&WriteSet, second:&WriteSet) -> Self{
         WriteSetMut::merge(&first.0,&second.0).freeze().expect("freeze should success.")
     }
+
+    pub fn get(&self, access_path: &AccessPath) -> Option<&WriteOp>{
+        for (ap,op) in self{
+            if ap == access_path {
+                return Some(op)
+            }
+        }
+        None
+    }
 }
 
 /// A mutable version of `WriteSet`.

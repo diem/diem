@@ -1071,10 +1071,6 @@ where
             },
         ))
     }
-    /// Cache pre write_set then execute script, just for channel transaction.
-    pub fn cache_write_set(&mut self, write_set: &WriteSet){
-        self.data_view.cache_write_set(write_set);
-    }
 
     pub fn vm_mode(&self) -> VMMode {
         self.vm_mode

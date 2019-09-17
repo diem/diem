@@ -19,6 +19,7 @@ use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     value::{GlobalRef, Local, MutVal, Reference, Value},
 };
+use types::transaction::TransactionPayload;
 
 /// The wrapper around the StateVersionView for the block.
 /// It keeps track of the value that have been changed during execution of a block.
@@ -81,30 +82,28 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
 }
 
 //TODO(jole) refactor this for channel transaction.
-struct WriteSetDataCache<'txn>{
-    data_map: BTreeMap<AccessPath, Vec<u8>>,
+pub struct WriteSetDataCache<'txn>{
+    write_set: WriteSet,
     data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> WriteSetDataCache<'txn>{
 
-    pub fn new(data_cache: &'txn dyn RemoteCache) -> Self{
+    pub fn new(write_set: WriteSet, data_cache: &'txn dyn RemoteCache) -> Self{
         Self{
-            data_map: BTreeMap::new(),
+            write_set,
             data_cache,
         }
     }
-
-    pub fn cache_write_set(&mut self, write_set: &WriteSet){
-        for (ref ap, ref write_op) in write_set.iter() {
-            match write_op {
-                WriteOp::Value(blob) => {
-                    self.data_map.insert(ap.clone(), blob.clone());
-                }
-                WriteOp::Deletion => {
-                    self.data_map.remove(ap);
-                }
-            }
+    //TODO optimize
+    pub fn new_with_txn_payload(payload: TransactionPayload, data_cache: &'txn dyn RemoteCache) -> Self{
+        let write_set = match payload{
+            TransactionPayload::ChannelScript(channel_payload) => channel_payload.write_set,
+            _ => WriteSet::default()
+        };
+        Self{
+            write_set,
+            data_cache
         }
     }
 }
@@ -112,9 +111,10 @@ impl<'txn> WriteSetDataCache<'txn>{
 impl<'txn> RemoteCache for WriteSetDataCache<'txn>{
 
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        match self.data_map.get(access_path) {
-            Some(data) => {
-                Ok(Some(data.clone()))
+        match self.write_set.get(access_path) {
+            Some(op) => match op{
+                WriteOp::Value(value) => Ok(Some(value.clone())),
+                WriteOp::Deletion => Ok(None)
             },
             None => self.data_cache.get(access_path),
         }
@@ -131,13 +131,13 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: WriteSetDataCache<'txn>,
+    data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
     pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
         TransactionDataCache {
-            data_cache: WriteSetDataCache::new(data_cache),
+            data_cache,
             data_map: BTreeMap::new(),
         }
     }
@@ -317,7 +317,4 @@ impl<'txn> TransactionDataCache<'txn> {
         self.data_map.clear()
     }
 
-    pub fn cache_write_set(&mut self, write_set: &WriteSet) {
-        self.data_cache.cache_write_set(write_set);
-    }
 }

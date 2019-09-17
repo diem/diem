@@ -336,15 +336,6 @@ where
         let mut txn_state =
             ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, vm_mode);
 
-        // only onchain vm need cache pre write_set, because onchain state is behind offchain.
-        // offchain vm state is always latest.
-        if vm_mode == VMMode::Onchain {
-            if let TransactionPayload::ChannelScript(channel_payload) = txn.payload() {
-                //Cache pre offchain tx write_set,then execute script.
-                txn_state.txn_executor.cache_write_set(&channel_payload.write_set);
-            }
-        }
-
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
         // TODO: write-set transactions (other than genesis??) should also run the prologue.
