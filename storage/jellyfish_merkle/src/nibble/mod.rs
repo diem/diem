@@ -158,6 +158,17 @@ impl NibblePath {
         poped_nibble
     }
 
+    /// Returns the last nibble.
+    pub fn last(&self) -> Option<Nibble> {
+        let last_byte_option = self.bytes.last();
+        if self.num_nibbles % 2 == 0 {
+            last_byte_option.map(|last_byte| Nibble(*last_byte & 0x0f))
+        } else {
+            let last_byte = last_byte_option.expect("Last byte must exist if num_nibbles is odd.");
+            Some(Nibble(*last_byte >> 4))
+        }
+    }
+
     /// Get the i-th bit.
     fn get_bit(&self, i: usize) -> bool {
         assert!(i / 4 < self.num_nibbles);
