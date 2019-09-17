@@ -240,6 +240,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }
             }
         }
+        self.peer_manager.remove_requests(version);
     }
 
     fn get_state(&self, callback: oneshot::Sender<u64>) {

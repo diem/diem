@@ -9,7 +9,7 @@ use rand::{
     thread_rng,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     time::{Duration, SystemTime},
 };
 
@@ -44,7 +44,7 @@ pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
     // Latest requested block versions from a peer
-    requests: HashMap<u64, (PeerId, SystemTime)>,
+    requests: BTreeMap<u64, (PeerId, SystemTime)>,
     weighted_index: Option<WeightedIndex<f64>>,
 }
 
@@ -57,7 +57,7 @@ impl PeerManager {
         Self {
             peers,
             network_senders: HashMap::new(),
-            requests: HashMap::new(),
+            requests: BTreeMap::new(),
             weighted_index: None,
         }
     }
@@ -192,6 +192,10 @@ impl PeerManager {
             return *id == peer_id;
         }
         false
+    }
+
+    pub fn remove_requests(&mut self, version: u64) {
+        self.requests = self.requests.split_off(&(version + 1));
     }
 
     pub fn process_timeout(&mut self, current_requested_version: u64, timeout: u64) {

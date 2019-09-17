@@ -39,3 +39,23 @@ fn test_peer_manager() {
     assert!(pick_counts.get(&peers[0]).unwrap() < pick_counts.get(&peers[2]).unwrap());
     assert!(pick_counts.get(&peers[0]).unwrap() < pick_counts.get(&peers[3]).unwrap());
 }
+
+#[test]
+fn test_remove_requests() {
+    let peers = vec![PeerId::random(), PeerId::random()];
+    let mut peer_manager = PeerManager::new(peers.clone());
+
+    peer_manager.process_request(1, peers[0]);
+    peer_manager.process_request(3, peers[1]);
+    peer_manager.process_request(5, peers[0]);
+    peer_manager.process_request(10, peers[0]);
+    peer_manager.process_request(12, peers[1]);
+
+    peer_manager.remove_requests(5);
+
+    assert!(!peer_manager.has_requested(1, peers[0]));
+    assert!(!peer_manager.has_requested(3, peers[1]));
+    assert!(!peer_manager.has_requested(5, peers[0]));
+    assert!(peer_manager.has_requested(10, peers[0]));
+    assert!(peer_manager.has_requested(12, peers[1]));
+}
