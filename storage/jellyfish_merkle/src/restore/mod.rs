@@ -8,7 +8,7 @@
 mod restore_test;
 
 use crate::{
-    nibble::NibblePath,
+    nibble::{NibbleIterator, NibblePath},
     node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey},
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
@@ -250,74 +250,23 @@ where
             match self.partial_nodes[i].children[child_index] {
                 Some(ref child_info) => {
                     // If the next node is an internal node, we just continue the loop with the
-                    // next nibble. Here we deal with the leaf case. We may need to insert multiple
-                    // internal nodes depending on the length of the common prefix of the existing
-                    // key and the new key.
+                    // next nibble. Here we deal with the leaf case.
                     if let ChildInfo::Leaf { node } = child_info {
-                        assert_eq!(i, self.partial_nodes.len() - 1);
+                        assert_eq!(
+                            i,
+                            self.partial_nodes.len() - 1,
+                            "If we see a leaf, there will be no more partial internal nodes on \
+                             lower level, since they would have been frozen.",
+                        );
 
                         let existing_leaf = node.clone();
-
-                        // The node at this position becomes an internal node. Since we may insert
-                        // more nodes at this position in the future, we do not know its hash yet.
-                        self.partial_nodes[i]
-                            .set_child(child_index, ChildInfo::Internal { hash: None });
-
-                        let common_prefix_len =
-                            existing_leaf.account_key().common_prefix_bits_len(new_key) / 4;
-
-                        // All these internal node will now have a single internal node child.
-                        for _ in i + 1..common_prefix_len {
-                            let visited_nibbles = nibbles.visited_nibbles().collect();
-                            let next_nibble = nibbles.next().expect("This nibble must exist.");
-                            let new_node_key = NodeKey::new(self.version, visited_nibbles);
-
-                            let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
-                            internal_info.set_child(
-                                u8::from(next_nibble) as usize,
-                                ChildInfo::Internal { hash: None },
-                            );
-                            self.partial_nodes.push(internal_info);
-                        }
-
-                        // The last internal node will have two leaf node children.
-                        let visited_nibbles = nibbles.visited_nibbles().collect();
-                        let new_node_key = NodeKey::new(self.version, visited_nibbles);
-                        let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
-
-                        // Next we put the existing leaf as a child of this internal node.
-                        let existing_child_index =
-                            existing_leaf.account_key().get_nibble(common_prefix_len);
-                        internal_info.set_child(
-                            existing_child_index as usize,
-                            ChildInfo::Leaf {
-                                node: existing_leaf,
-                            },
+                        self.insert_at_leaf(
+                            child_index,
+                            existing_leaf,
+                            new_key,
+                            new_value,
+                            nibbles,
                         );
-
-                        // Do not set the new child for now. We always call `freeze` first, then
-                        // set the new child later, because this way it's easier in `freeze` to
-                        // find the right leaf -- it's always the rightmost leaf on the lowest
-                        // level.
-                        self.partial_nodes.push(internal_info);
-                        self.freeze(self.partial_nodes.len());
-
-                        // Now we set the new child.
-                        let new_child_index = new_key.get_nibble(common_prefix_len);
-                        assert!(
-                            new_child_index > existing_child_index,
-                            "New leaf must be on the right.",
-                        );
-                        self.partial_nodes
-                            .last_mut()
-                            .expect("This node must exist.")
-                            .set_child(
-                                new_child_index as usize,
-                                ChildInfo::Leaf {
-                                    node: LeafNode::new(new_key, new_value),
-                                },
-                            );
-
                         break;
                     }
                 }
@@ -342,6 +291,77 @@ where
         }
 
         Ok(())
+    }
+
+    /// Inserts a new account at the position of the existing leaf node. We may need to create
+    /// multiple internal nodes depending on the length of the common prefix of the existing key
+    /// and the new key.
+    fn insert_at_leaf<'b>(
+        &mut self,
+        child_index: usize,
+        existing_leaf: LeafNode,
+        new_key: HashValue,
+        new_value: AccountStateBlob,
+        mut remaining_nibbles: NibbleIterator<'b>,
+    ) {
+        let num_existing_partial_nodes = self.partial_nodes.len();
+
+        // The node at this position becomes an internal node. Since we may insert more nodes at
+        // this position in the future, we do not know its hash yet.
+        self.partial_nodes[num_existing_partial_nodes - 1]
+            .set_child(child_index, ChildInfo::Internal { hash: None });
+
+        let common_prefix_len = existing_leaf.account_key().common_prefix_bits_len(new_key) / 4;
+
+        // All these internal node will now have a single internal node child.
+        for _ in num_existing_partial_nodes..common_prefix_len {
+            let visited_nibbles = remaining_nibbles.visited_nibbles().collect();
+            let next_nibble = remaining_nibbles.next().expect("This nibble must exist.");
+            let new_node_key = NodeKey::new(self.version, visited_nibbles);
+
+            let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
+            internal_info.set_child(
+                u8::from(next_nibble) as usize,
+                ChildInfo::Internal { hash: None },
+            );
+            self.partial_nodes.push(internal_info);
+        }
+
+        // The last internal node will have two leaf node children.
+        let visited_nibbles = remaining_nibbles.visited_nibbles().collect();
+        let new_node_key = NodeKey::new(self.version, visited_nibbles);
+        let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
+
+        // Next we put the existing leaf as a child of this internal node.
+        let existing_child_index = existing_leaf.account_key().get_nibble(common_prefix_len);
+        internal_info.set_child(
+            existing_child_index as usize,
+            ChildInfo::Leaf {
+                node: existing_leaf,
+            },
+        );
+
+        // Do not set the new child for now. We always call `freeze` first, then set the new child
+        // later, because this way it's easier in `freeze` to find the correct leaf to freeze --
+        // it's always the rightmost leaf on the lowest level.
+        self.partial_nodes.push(internal_info);
+        self.freeze(self.partial_nodes.len());
+
+        // Now we set the new child.
+        let new_child_index = new_key.get_nibble(common_prefix_len);
+        assert!(
+            new_child_index > existing_child_index,
+            "New leaf must be on the right.",
+        );
+        self.partial_nodes
+            .last_mut()
+            .expect("This node must exist.")
+            .set_child(
+                new_child_index as usize,
+                ChildInfo::Leaf {
+                    node: LeafNode::new(new_key, new_value),
+                },
+            );
     }
 
     /// Puts the nodes that will not be changed in `self.frozen_nodes`.
