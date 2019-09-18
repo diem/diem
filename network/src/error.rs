@@ -50,7 +50,7 @@ pub enum NetworkErrorKind {
     #[fail(display = "Parsing error")]
     ParsingError,
 
-    #[fail(display = "Peer disconnected")]
+    #[fail(display = "Failed to connect to peer")]
     NotConnected,
 }
 
