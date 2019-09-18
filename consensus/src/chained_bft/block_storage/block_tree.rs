@@ -31,18 +31,12 @@ use types::crypto_proxies::LedgerInfoWithSignatures;
 
 struct BlockHash {
     digest: HashValue,
-    li_sig: HashMap<HashValue, LedgerInfoWithSignatures>
+    li_sig: HashMap<HashValue, LedgerInfoWithSignatures>,
 }
 impl BlockHash {
     /// Store BlockId to LedgerInfo hash mapping
-    pub fn new(
-        digest: HashValue,
-        li_sig: HashMap<HashValue, LedgerInfoWithSignatures>,
-    ) -> Self {
-        BlockHash {
-            digest,
-            li_sig,
-        }
+    pub fn new(digest: HashValue, li_sig: HashMap<HashValue, LedgerInfoWithSignatures>) -> Self {
+        BlockHash { digest, li_sig }
     }
 }
 
@@ -300,7 +294,7 @@ where
         let block_hash = self
             .id_to_votes
             .entry(block_id)
-            .or_insert_with(|| { BlockHash::new(digest, HashMap::new())});
+            .or_insert_with(|| BlockHash::new(digest, HashMap::new()));
         let block_votes = &mut block_hash.li_sig;
 
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
