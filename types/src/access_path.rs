@@ -63,6 +63,7 @@ use crate::account_config::account_struct_tag;
 use std::convert::TryFrom;
 use std::ops::Index;
 use crate::account_address::ADDRESS_LENGTH;
+use crate::channel_account::{ChannelAccountResource, channel_account_struct_tag};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(Identifier);
@@ -308,6 +309,10 @@ impl DataPath {
             participant,
             tag,
         }
+    }
+
+    pub fn channel_account_path(participant: AccountAddress) -> Self{
+        Self::channel_resource_path(participant, channel_account_struct_tag())
     }
 
     pub fn to_vec(&self) -> Vec<u8> {

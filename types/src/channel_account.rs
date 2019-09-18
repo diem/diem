@@ -1,7 +1,4 @@
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer,
-};
+use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use crate::account_address::AccountAddress;
@@ -76,6 +73,10 @@ impl ChannelAccountResource {
 
     pub fn participant(self) -> AccountAddress {
         self.participant
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        SimpleSerializer::serialize(self).unwrap()
     }
 }
 
