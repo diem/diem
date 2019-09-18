@@ -402,17 +402,15 @@ impl<T: Payload> EventProcessor<T> {
             Some((vote, vote_round)) if (*vote_round == round) => Some(vote.clone()),
             _ => {
                 // Try to generate a backup vote
-                match self.gen_backup_vote(round).await {
+                let backup_vote_res = self.gen_backup_vote(round).await;
+                match &backup_vote_res {
                     Ok(backup_vote_msg) => {
                         self.last_vote_sent
                             .replace((backup_vote_msg.clone(), round));
-                        Some(backup_vote_msg)
                     }
-                    Err(e) => {
-                        warn!("Failed to generate a backup vote: {}", e);
-                        None
-                    }
-                }
+                    Err(e) => warn!("Failed to generate a backup vote: {}", e),
+                };
+                backup_vote_res.ok()
             }
         };
 
