@@ -285,7 +285,7 @@ where
                 let old_block_votes = &mut block_pending_votes.li_digest_to_signatures;
                 if let Some(li_digest_to_sig) = old_block_votes.get_mut(&digest) {
                     li_digest_to_sig.remove_signature(author);
-                    if li_digest_to_sig.signatures().len() == 0 {
+                    if li_digest_to_sig.signatures().is_empty() {
                         // Last vote/signature for block removed, cleanup hashmap.
                         old_block_votes.remove(&digest);
                         self.id_to_votes.remove(&old_block_id);
