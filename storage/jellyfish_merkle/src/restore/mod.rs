@@ -42,10 +42,7 @@ impl InternalInfo {
     fn new_uninitialized(node_key: NodeKey) -> Self {
         Self {
             node_key,
-            children: [
-                None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-                None, None,
-            ],
+            children: Default::default(),
         }
     }
 
@@ -123,6 +120,10 @@ pub struct JellyfishMerkleRestore<'a, S> {
 
     /// The nodes that have been fully restored and are ready to be written to storage.
     frozen_nodes: NodeBatch,
+
+    /// The most recently added key. With this we are able to ensure the keys come in increasing
+    /// order.
+    previous_key: Option<HashValue>,
 }
 
 impl<'a, S> JellyfishMerkleRestore<'a, S>
@@ -150,6 +151,7 @@ where
             version,
             partial_nodes,
             frozen_nodes: NodeBatch::new(),
+            previous_key: None,
         })
     }
 
@@ -218,9 +220,16 @@ where
 
     /// Restores a chunk of accounts. This function assumes that the given chunk has been validated
     /// and comes in the correct order.
-    pub fn restore(&mut self, chunk: Vec<(HashValue, AccountStateBlob)>) -> Result<()> {
+    pub fn add_chunk(&mut self, chunk: Vec<(HashValue, AccountStateBlob)>) -> Result<()> {
         for (key, value) in chunk {
-            self.restore_one(key, value)?;
+            if let Some(ref prev_key) = self.previous_key {
+                ensure!(
+                    key > *prev_key,
+                    "Account keys must come in increasing order.",
+                )
+            }
+            self.add_one(key, value)?;
+            self.previous_key.replace(key);
         }
 
         // Write the frozen nodes to storage.
@@ -231,7 +240,7 @@ where
     }
 
     /// Restores one account.
-    fn restore_one(&mut self, new_key: HashValue, new_value: AccountStateBlob) -> Result<()> {
+    fn add_one(&mut self, new_key: HashValue, new_value: AccountStateBlob) -> Result<()> {
         let nibble_path = NibblePath::new(new_key.to_vec());
         let mut nibbles = nibble_path.nibbles();
 
@@ -286,13 +295,19 @@ where
                             },
                         );
 
-                        // Do not set the new child for now. Do it later after freezing the
-                        // previous leaf.
+                        // Do not set the new child for now. We always call `freeze` first, then
+                        // set the new child later, because this way it's easier in `freeze` to
+                        // find the right leaf -- it's always the rightmost leaf on the lowest
+                        // level.
                         self.partial_nodes.push(internal_info);
                         self.freeze(self.partial_nodes.len());
 
                         // Now we set the new child.
                         let new_child_index = new_key.get_nibble(common_prefix_len);
+                        assert!(
+                            new_child_index > existing_child_index,
+                            "New leaf must be on the right.",
+                        );
                         self.partial_nodes
                             .last_mut()
                             .expect("This node must exist.")

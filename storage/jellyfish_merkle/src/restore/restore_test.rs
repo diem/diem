@@ -24,7 +24,7 @@ proptest! {
         let db = MockTreeStore::default();
         let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
         for (key, value) in &btree {
-            restore.restore(vec![(*key, value.clone())]).unwrap();
+            restore.add_chunk(vec![(*key, value.clone())]).unwrap();
         }
         restore.finish().unwrap();
 
@@ -46,7 +46,7 @@ proptest! {
 
         {
             let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
-            restore.restore(batch1).unwrap();
+            restore.add_chunk(batch1).unwrap();
             // Do not call `finish`.
         }
 
@@ -63,7 +63,7 @@ proptest! {
                 .filter(|(k, _v)| *k > rightmost_key)
                 .collect();
             let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
-            restore.restore(remaining_accounts).unwrap();
+            restore.add_chunk(remaining_accounts).unwrap();
             restore.finish().unwrap();
         }
 
