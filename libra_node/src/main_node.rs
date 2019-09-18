@@ -228,6 +228,13 @@ pub fn setup_network(
 pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
     crash_handler::setup_panic_handler();
 
+    // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
+    // cause confusion, otherwise the threads would have their parent's name.
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|index| format!("rayon-global-{}", index))
+        .build_global()
+        .expect("Building rayon global thread pool should work.");
+
     let mut instant = Instant::now();
     let storage = start_storage_service(&node_config);
     debug!(
