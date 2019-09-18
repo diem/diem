@@ -9,6 +9,7 @@ use cluster_test::{
     log_prune::LogPruner,
     slack::SlackClient,
     suite::ExperimentSuite,
+    tx_emitter::TxEmitter,
 };
 use failure::{
     self,
@@ -32,6 +33,10 @@ pub fn main() {
         let util = ClusterUtil::setup(&matches);
         util.prune_logs();
         return;
+    } else if matches.is_present(ARG_EMIT_TX) {
+        let util = ClusterUtil::setup(&matches);
+        util.emit_tx();
+        return;
     }
 
     let mut runner = ClusterTestRunner::setup(&matches);
@@ -49,6 +54,8 @@ pub fn main() {
         runner.wipe_all_db(true);
     } else if matches.is_present(ARG_REBOOT) {
         runner.reboot();
+    } else if matches.is_present(ARG_RESTART) {
+        runner.restart();
     }
 }
 
@@ -85,6 +92,12 @@ impl ClusterUtil {
     pub fn prune_logs(&self) {
         let log_prune = LogPruner::new(self.aws.clone());
         log_prune.prune_logs();
+    }
+
+    pub fn emit_tx(self) {
+        let _g = logger::set_default_global_logger(false, Some(256));
+        let emitter = TxEmitter::new(&self.cluster);
+        emitter.run();
     }
 }
 
@@ -174,7 +187,12 @@ impl ClusterTestRunner {
             println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
             return Ok(false);
         }
-        self.wipe_all_db(false);
+        if env::var("WIPE_ON_DEPLOY") == Ok("yes".to_string()) {
+            println!("WIPE_ON_DEPLOY is set, wiping validators");
+            self.wipe_all_db(false);
+        } else {
+            println!("WIPE_ON_DEPLOY is not set, keeping database");
+        }
         self.deployment_manager.redeploy(hash)?;
         println!("Waiting for 60 seconds to allow ECS to restart tasks...");
         thread::sleep(Duration::from_secs(60));
@@ -377,6 +395,11 @@ impl ClusterTestRunner {
         }
         println!("Completed");
     }
+
+    fn restart(self) {
+        self.deployment_manager.update_all_services().unwrap();
+        println!("Completed");
+    }
 }
 
 const ARG_WORKPLACE: &str = "workplace";
@@ -388,7 +411,9 @@ const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
 const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
 const ARG_REBOOT: &str = "reboot";
-const ARG_PRUNE: &str = "prune_logs";
+const ARG_RESTART: &str = "restart";
+const ARG_EMIT_TX: &str = "emit-tx";
+const ARG_PRUNE: &str = "prune-logs";
 
 fn arg_matches() -> ArgMatches<'static> {
     // Parameters
@@ -411,6 +436,8 @@ fn arg_matches() -> ArgMatches<'static> {
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
     let prune_logs = Arg::with_name(ARG_PRUNE).long("--prune-logs");
     let reboot = Arg::with_name(ARG_REBOOT).long("--reboot");
+    let restart = Arg::with_name(ARG_RESTART).long("--restart");
+    let emit_tx = Arg::with_name(ARG_EMIT_TX).long("--emit-tx");
     // This grouping requires one and only one action (tail logs, run test, etc)
     let action_group = ArgGroup::with_name("action")
         .args(&[
@@ -420,6 +447,8 @@ fn arg_matches() -> ArgMatches<'static> {
             ARG_HEALTH_CHECK,
             ARG_WIPE_ALL_DB,
             ARG_REBOOT,
+            ARG_RESTART,
+            ARG_EMIT_TX,
             ARG_PRUNE,
         ])
         .required(true);
@@ -437,7 +466,9 @@ fn arg_matches() -> ArgMatches<'static> {
             health_check,
             wipe_all_db,
             reboot,
+            restart,
             prune_logs,
+            emit_tx,
         ])
         .get_matches()
 }
