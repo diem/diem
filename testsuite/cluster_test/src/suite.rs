@@ -13,7 +13,7 @@ impl ExperimentSuite {
         let mut experiments = vec![];
         let count = min(3, cluster.instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
-        for _ in 0..100 {
+        for _ in 0..20 {
             let b: Box<dyn Experiment> = Box::new(RebootRandomValidators::new(count, cluster));
             experiments.push(b);
         }

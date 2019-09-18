@@ -26,3 +26,11 @@ termion = "1.5.3"
 benchmark = { path = "../../benchmark", features = ["testing"]}
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 debug_interface = { path = "../../common/debug_interface"}
+admission_control_proto = { path = "../../admission_control/admission_control_proto" }
+client = { path = "../../client" }
+logger = { path = "../../common/logger" }
+
+types = { path = "../../types" }
+vm_genesis = { path = "../../language/vm/vm_genesis" }
+proto_conv = { path = "../../common/proto_conv" }
+crypto = { path = "../../crypto/crypto" }
