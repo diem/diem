@@ -157,8 +157,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                     if message.has_chunk_response() {
                                         if let Err(err) = self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
                                             error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
+                                            counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_FAILURE, peer_id));
                                         } else {
                                             self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
+                                            counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_SUCCESS, peer_id));
                                         }
                                     }
                                 }
@@ -184,6 +186,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     async fn request_sync(&mut self, target: LedgerInfo, callback: oneshot::Sender<bool>) {
         let requested_version = target.ledger_info().version();
+        counters::TARGET_VERSION.set(requested_version as i64);
         self.known_version = self
             .executor_proxy
             .get_latest_version()
@@ -224,6 +227,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let is_update = version > self.known_version;
         self.known_version = std::cmp::max(version, self.known_version);
         if is_update {
+            if let Ok(duration_since_last_commit) =
+                SystemTime::now().duration_since(self.last_commit.unwrap_or(UNIX_EPOCH))
+            {
+                counters::SYNC_PROGRESS_DURATION.observe_duration(duration_since_last_commit);
+            }
             self.last_commit = Some(SystemTime::now());
             if let Err(err) = self.check_subscriptions().await {
                 error!("[state sync] failed to check subscriptions: {:?}", err);
@@ -238,6 +246,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
         self.peer_manager.remove_requests(version);
+        counters::COMMITTED_VERSION.set(version as i64);
     }
 
     fn get_state(&self, callback: oneshot::Sender<u64>) {
@@ -326,6 +335,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer_id: &PeerId,
         mut response: GetChunkResponse,
     ) -> Result<()> {
+        counters::OP_COUNTERS.inc(&format!("{}.{}", counters::RESPONSES_RECEIVED, peer_id));
         let txn_list_with_proof =
             TransactionListWithProof::from_proto(response.take_txn_list_with_proof())?;
 
@@ -411,6 +421,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     self.peer_manager
                         .process_timeout(self.known_version + 1, timeout);
                     self.request_next_chunk(0).await;
+                    counters::TIMEOUT.inc();
                 }
             }
         }
@@ -447,6 +458,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 if sender.send_to(peer_id, msg).await.is_err() {
                     error!("[state sync] failed to send p2p message");
                 }
+                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::REQUESTS_SENT, peer_id));
             }
         }
     }
