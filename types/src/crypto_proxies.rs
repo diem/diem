@@ -57,14 +57,6 @@ impl<Sig: RawSignature> SignatureWrapper<Sig> {
     ) {
         li_with_sig.add_signature(author, self.0)
     }
-
-    pub fn remove_from_li(
-        self,
-        author: AccountAddress,
-        li_with_sig: &mut RawLedgerInfoWithSignatures<Sig>,
-    ) -> bool {
-        li_with_sig.remove_signature(author)
-    }
 }
 
 impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {

@@ -29,14 +29,22 @@ use std::{
 };
 use types::crypto_proxies::LedgerInfoWithSignatures;
 
-struct BlockHash {
+/// This structure maintains digest of proposed block from VoteMsg and link to hashmap that
+/// aggregates all votes. We only remember latest vote from Author. Digest is used to identify
+/// and prune pending vote from same Author.
+struct BlockPendingVotes {
     digest: HashValue,
-    li_sig: HashMap<HashValue, LedgerInfoWithSignatures>,
+    li_digest_to_signatures: HashMap<HashValue, LedgerInfoWithSignatures>,
 }
-impl BlockHash {
-    /// Store BlockId to LedgerInfo hash mapping
-    pub fn new(digest: HashValue, li_sig: HashMap<HashValue, LedgerInfoWithSignatures>) -> Self {
-        BlockHash { digest, li_sig }
+impl BlockPendingVotes {
+    pub fn new(
+        digest: HashValue,
+        li_digest_to_signatures: HashMap<HashValue, LedgerInfoWithSignatures>,
+    ) -> Self {
+        BlockPendingVotes {
+            digest,
+            li_digest_to_signatures,
+        }
     }
 }
 
@@ -61,10 +69,11 @@ pub struct BlockTree<T> {
     /// LedgerInfo digest covers the potential commit ids, as well as the vote information
     /// (including the 3-chain of a voted proposal).
     /// Thus, the structure of `id_to_votes` is as follows:
-    /// HashMap<proposed_block_id, HashMap<ledger_info_digest, LedgerInfoWithSignatures>>
-    id_to_votes: HashMap<HashValue, BlockHash>,
-    // Map of Voting Author to proposed_block_id
-    author_to_block: HashMap<Author, HashValue>,
+    /// HashMap<proposed_block_id, {digest, HashMap<ledger_info_digest, LedgerInfoWithSignatures>}>
+    id_to_votes: HashMap<HashValue, BlockPendingVotes>,
+    /// Map of Author to last voted block id. Any pending vote from Author is cleaned up whenever
+    /// new vote is added by same Author
+    author_to_last_voted_block_id: HashMap<Author, HashValue>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -113,7 +122,7 @@ where
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_ledger_info: Arc::new(root_ledger_info),
             id_to_votes: HashMap::new(),
-            author_to_block: HashMap::new(),
+            author_to_last_voted_block_id: HashMap::new(),
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -266,25 +275,25 @@ where
         }
 
         let author = vote_msg.author();
-        if let Some(old_block_id) = self.author_to_block.get(&author) {
+        if let Some(old_block_id) = self.author_to_last_voted_block_id.get(&author) {
             if block_id == *old_block_id {
                 // Author has already voted for this block
                 return VoteReceptionResult::DuplicateVote;
             }
-            if let Some(old_block_hash) = self.id_to_votes.get_mut(&old_block_id) {
-                let digest = old_block_hash.digest;
-                let old_block_votes = &mut old_block_hash.li_sig;
-                if let Some(li_sig) = old_block_votes.get_mut(&digest) {
-                    if li_sig.remove_signature(author) {
+            if let Some(block_pending_votes) = self.id_to_votes.get_mut(&old_block_id) {
+                let digest = block_pending_votes.digest;
+                let old_block_votes = &mut block_pending_votes.li_digest_to_signatures;
+                if let Some(li_digest_to_sig) = old_block_votes.get_mut(&digest) {
+                    li_digest_to_sig.remove_signature(author);
+                    if li_digest_to_sig.signatures().len() == 0 {
                         // Last vote/signature for block removed, cleanup hashmap.
                         old_block_votes.remove(&digest);
                         self.id_to_votes.remove(&old_block_id);
                     }
                 }
             }
-            self.author_to_block.remove(&author);
         }
-        self.author_to_block.entry(author).or_insert(block_id);
+        self.author_to_last_voted_block_id.insert(author, block_id);
 
         // Note that the digest covers the ledger info information, which is also indirectly
         // covering vote data hash (in its `consensus_data_hash` field).
@@ -294,8 +303,8 @@ where
         let block_hash = self
             .id_to_votes
             .entry(block_id)
-            .or_insert_with(|| BlockHash::new(digest, HashMap::new()));
-        let block_votes = &mut block_hash.li_sig;
+            .or_insert_with(|| BlockPendingVotes::new(digest, HashMap::new()));
+        let block_votes = &mut block_hash.li_digest_to_signatures;
 
         let li_with_sig = block_votes.entry(digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
