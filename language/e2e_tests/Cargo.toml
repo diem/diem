@@ -17,6 +17,7 @@ rand = "0.6.5"
 state_view = { path = "../../storage/state_view" }
 types = { path = "../../types" }
 vm = { path = "../vm" }
+vm_genesis = { path = "../vm/vm_genesis", features = ["testing"] }
 vm_runtime = { path = "../vm/vm_runtime" }
 vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
 proptest = "0.9.3"
@@ -29,5 +30,4 @@ logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
 
 [dev-dependencies]
-vm_genesis = { path = "../vm/vm_genesis", features = ["testing"] }
 types = { path = "../../types", features = ["testing"] }
