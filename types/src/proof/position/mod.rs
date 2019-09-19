@@ -50,7 +50,8 @@ impl Position {
 
     /// What position is the node within the level? i.e. how many nodes
     /// are to the left of this node at the same level
-    pub fn pos_counting_from_left(self) -> u64 {
+    #[cfg(test)]
+    fn pos_counting_from_left(self) -> u64 {
         self.0 >> (self.level() + 1)
     }
 
@@ -95,7 +96,7 @@ impl Position {
         Self::child(self, NodeDirection::Right)
     }
 
-    pub fn child(self, dir: NodeDirection) -> Self {
+    fn child(self, dir: NodeDirection) -> Self {
         assert!(!self.is_leaf());
 
         let direction_bit = match dir {
@@ -105,29 +106,15 @@ impl Position {
         Self((self.0 | direction_bit) & !(isolate_rightmost_zero_bit(self.0) >> 1))
     }
 
-    /// Whether this position is a left child of its parent.
+    /// Whether this position is a left child of its parent.  The observation is that,
+    /// after stripping out all right-most 1 bits, a left child will have a bit pattern
+    /// of xxx00(11..), while a right child will be represented by xxx10(11..)
     pub fn is_left_child(self) -> bool {
-        match self.direction_from_parent() {
-            NodeDirection::Left => true,
-            NodeDirection::Right => false,
-        }
+        self.0 & (isolate_rightmost_zero_bit(self.0) << 1) == 0
     }
 
-    /// This method takes in a node position and return NodeDirection based on if it's left or right
-    /// child Similar to sibling. The observation is that,
-    /// after strip out the right-most common bits,
-    /// if next right-most bits is 0, it is left child. Otherwise, right child
-    pub fn direction_from_parent(self) -> NodeDirection {
-        match self.0 & (isolate_rightmost_zero_bit(self.0) << 1) {
-            0 => NodeDirection::Left,
-            _ => NodeDirection::Right,
-        }
-    }
-
-    // Given the position, return the leaf index counting from the left
-    pub fn to_leaf_index(self) -> u64 {
-        assert!(self.is_leaf());
-        self.pos_counting_from_left()
+    pub fn is_right_child(self) -> bool {
+        !self.is_left_child()
     }
 
     // Opposite of get_left_node_count_from_position.
@@ -143,22 +130,6 @@ impl Position {
     /// because they are corresponding to level's indicator. Then remove next zero right after.
     pub fn sibling(self) -> Self {
         Self(self.0 ^ (isolate_rightmost_zero_bit(self.0) << 1))
-    }
-
-    /// Given a position, returns the position next to it on the right on the same level. For
-    /// example, given input 5 this function should return 9.
-    ///
-    /// ```text
-    ///       3
-    ///    /     \
-    ///   1       5       9
-    ///  / \     / \     / \
-    /// 0   2   4   6   8   10
-    /// ```
-    pub fn get_next_sibling(self) -> Self {
-        let level = self.level();
-        let pos = self.pos_counting_from_left();
-        Self::from_level_and_pos(level, pos + 1)
     }
 
     // Given a leaf index, calculate the position of a minimum root which contains this leaf
