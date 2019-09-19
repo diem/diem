@@ -259,23 +259,27 @@ impl ModuleBuilder {
         // Generate a bunch of random function signatures over these types.
         let functions = (0..self.table_size)
             .map(|_| {
-                let num_locals = self.gen.gen_range(1, MAX_NUM_LOCALS);
                 let num_args = self.gen.gen_range(1, MAX_FUNCTION_CALL_SIZE);
+                let num_locals = self.gen.gen_range(num_args, MAX_NUM_LOCALS);
                 let num_return_types = self.gen.gen_range(1, MAX_RETURN_TYPES_LENGTH);
 
-                let locals = (0..num_locals)
+                let args: Vec<SignatureToken> = (0..num_args)
                     .map(|_| {
                         let index = self.gen.gen_range(0, sig_toks.len());
                         sig_toks[index].clone()
                     })
                     .collect();
 
-                let args = (0..num_args)
-                    .map(|_| {
-                        let index = self.gen.gen_range(0, sig_toks.len());
-                        sig_toks[index].clone()
-                    })
-                    .collect();
+                // We make sure that the first `num_args` locals of the function body match the
+                // function signature.
+                let mut locals = args.clone();
+
+                // Now we generate the rest of the locals for the function; these can be of
+                // arbitrary types.
+                for _ in num_args..num_locals {
+                    let index = self.gen.gen_range(0, sig_toks.len());
+                    locals.push(sig_toks[index].clone())
+                }
 
                 let return_types = (0..num_return_types)
                     .map(|_| {

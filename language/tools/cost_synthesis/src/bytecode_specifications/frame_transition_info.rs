@@ -28,14 +28,20 @@ pub(crate) fn frame_transitions<'alloc, 'txn, P>(
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
+    while stk.call_stack_height() > 1 {
+        stk.pop_call().unwrap();
+    }
+
     let module = module_info.0;
     if should_push_frame(instr) {
         let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0));
+        // We push a frame here since it won't pop anything off of the value stack.
         stk.push_frame(empty_frame).unwrap();
     }
 
     if let Some(function_idx) = module_info.1 {
         let frame = FunctionRef::new(module, function_idx);
-        stk.push_frame(frame).unwrap();
+        // NB: push_call will pop |function_args| number of values off of the value stack.
+        stk.push_call(frame).unwrap();
     }
 }

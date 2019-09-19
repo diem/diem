@@ -54,19 +54,24 @@ struct Opt {
     /// The maximum stack size generated.
     #[structopt(short = "ms", long = "max-stack-size", default_value = "100")]
     max_stack_size: u64,
+
+    #[structopt(short = "o", long = "output")]
+    output: bool,
 }
 
-fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>) {
-    let mut writer = csv::Writer::from_path(path).unwrap();
-    let keys: Vec<_> = data.keys().collect();
-    let datavars: Vec<_> = data.values().collect();
-    writer.write_record(&keys).unwrap();
-    for i in 0..datavars[0].len() {
-        let row: Vec<_> = datavars.iter().map(|v| v[i]).collect();
-        writer.serialize(&row).unwrap();
-    }
+fn output_to_csv(path: &Path, data: HashMap<String, Vec<u64>>, output: bool) {
+    if output {
+        let mut writer = csv::Writer::from_path(path).unwrap();
+        let keys: Vec<_> = data.keys().collect();
+        let datavars: Vec<_> = data.values().collect();
+        writer.write_record(&keys).unwrap();
+        for i in 0..datavars[0].len() {
+            let row: Vec<_> = datavars.iter().map(|v| v[i]).collect();
+            writer.serialize(&row).unwrap();
+        }
 
-    writer.flush().unwrap();
+        writer.flush().unwrap();
+    }
 }
 
 fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<GasCarrier>) -> u64 {
@@ -202,7 +207,11 @@ fn stack_instructions(options: &Opt) {
         })
         .collect();
 
-    output_to_csv(Path::new("data/bytecode_instruction_costs.csv"), costs);
+    output_to_csv(
+        Path::new("data/bytecode_instruction_costs.csv"),
+        costs,
+        options.output,
+    );
 }
 
 macro_rules! bench_native {
@@ -240,7 +249,11 @@ fn natives(options: &Opt) {
         cost_table,
         options.num_iters
     );
-    output_to_csv(Path::new("data/native_function_costs.csv"), cost_table);
+    output_to_csv(
+        Path::new("data/native_function_costs.csv"),
+        cost_table,
+        options.output,
+    );
 }
 
 pub fn main() {
