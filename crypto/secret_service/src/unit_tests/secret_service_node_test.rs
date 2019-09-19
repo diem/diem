@@ -81,8 +81,7 @@ fn test_generate_key() {
     gen_req.set_spec(KeyType::Ed25519);
 
     let result = client.generate_key(&gen_req);
-    if result.is_ok() {
-        let response = result.ok().unwrap();
+    if let Ok(response) = result {
         let is_successful = response.get_code() == ErrorCode::Success;
         assert!(is_successful);
     } else {
