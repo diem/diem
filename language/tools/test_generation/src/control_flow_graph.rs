@@ -286,7 +286,7 @@ impl CFG {
                 block_queue.push_back(child_ids[1]);
             } else if child_ids.len() == 1 {
                 block_queue.push_back(child_ids[0]);
-            } else if child_ids.is_empty() {
+            } else if !child_ids.is_empty() {
                 // We construct the CFG such that blocks have either 0, 1, or 2
                 // children.
                 unreachable!(

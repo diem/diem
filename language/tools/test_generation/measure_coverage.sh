@@ -89,6 +89,6 @@ grcov $TOOL_DIR/../../../target/ -t lcov --llvm --branch --ignore-dir "/*" -o $C
 # Generate HTML report
 echo "Generating report at ${COVERAGE_DIR}..."
 # Flag "--ignore-errors source" ignores missing source files
-(cd $TOOL_DIR/../../../; genhtml -o $COVERAGE_DIR --show-details --highlight --ignore-errors source --legend $COVERAGE_DIR/lcov.info)
+(cd $TOOL_DIR/../../../; genhtml -o $COVERAGE_DIR --show-details --highlight --ignore-errors source --legend --branch-coverage $COVERAGE_DIR/lcov.info)
 
 echo "Done. Please view report at ${COVERAGE_DIR}/index.html"
