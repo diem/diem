@@ -1311,6 +1311,7 @@ dependencies = [
  "storage_proto 0.1.0",
  "storage_service 0.1.0",
  "types 0.1.0",
+ "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
 ]
 
