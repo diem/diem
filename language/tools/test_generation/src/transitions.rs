@@ -301,14 +301,12 @@ pub fn stack_unpack_struct(
 }
 
 pub fn stack_struct_has_field(state: &AbstractState, field_index: FieldDefinitionIndex) -> bool {
-    if let Some(abstract_value) = state.stack_peek(0).clone() {
-        if let Some(struct_handle_index) =
-            SignatureToken::get_struct_handle_from_reference(&abstract_value.token)
-        {
-            return state
-                .module
-                .is_field_in_struct(field_index, struct_handle_index);
-        }
+    if let Some(struct_handle_index) = state.stack_peek(0).clone().and_then(|abstract_value| {
+        SignatureToken::get_struct_handle_from_reference(&abstract_value.token)
+    }) {
+        return state
+            .module
+            .is_field_in_struct(field_index, struct_handle_index);
     }
     false
 }
