@@ -28,7 +28,7 @@ use types::{
     },
     validator_public_keys::ValidatorPublicKeys,
 };
-use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
+use vm::{access::ModuleAccess, file_format::Bytecode, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::{
@@ -199,6 +199,43 @@ fn compile_script(body: &ast::Program) -> Vec<u8> {
 pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
     Script::new(
         PEER_TO_PEER_TXN.clone(),
+        vec![
+            TransactionArgument::Address(*recipient),
+            TransactionArgument::U64(amount),
+        ],
+    )
+}
+
+/// Encode a program transferring `amount` coins from `sender` to `recipient` but padd the output
+/// bytecode with unreachable instructions.
+#[cfg(any(test, feature = "testing"))]
+pub fn encode_transfer_script_with_padding(
+    recipient: &AccountAddress,
+    amount: u64,
+    padding_size: u64,
+) -> Script {
+    let mut script_mut = compile_program(
+        AccountAddress::default(),
+        PEER_TO_PEER_TRANSFER_TXN_BODY.clone(),
+        stdlib_modules(),
+    )
+    .unwrap()
+    .script
+    .into_inner();
+    script_mut
+        .main
+        .code
+        .code
+        .extend(std::iter::repeat(Bytecode::Ret).take(padding_size as usize));
+    let mut script_bytes = vec![];
+    script_mut
+        .freeze()
+        .unwrap()
+        .serialize(&mut script_bytes)
+        .unwrap();
+
+    Script::new(
+        script_bytes,
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
