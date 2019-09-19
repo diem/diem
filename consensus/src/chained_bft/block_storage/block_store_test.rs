@@ -344,6 +344,7 @@ fn test_insert_vote() {
     let qc_size = 10;
     let mut signers = vec![];
 
+    ::logger::try_init_for_testing();
     for i in 0..qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));
     }
@@ -426,6 +427,8 @@ fn test_vote_aggregation() {
     let qc_size = 2;
     let mut signers = vec![];
 
+    ::logger::try_init_for_testing();
+
     for i in 0..=qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));
     }
@@ -492,6 +495,142 @@ fn test_vote_aggregation() {
             signers[2].author(),
             li1.clone(),
             &signers[2],
+        ),
+        qc_size,
+    ) {
+        VoteReceptionResult::NewQuorumCertificate(_) => (),
+        _ => {
+            panic!("QC not formed!");
+        }
+    }
+}
+
+#[test]
+/// Verify that we only account for latest vote from Validator and correctly cleanup last vote.
+fn test_malicious_vote_validator() {
+    let qc_size = 2;
+    let mut signers = vec![];
+
+    ::logger::try_init_for_testing();
+
+    for i in 0..=qc_size {
+        signers.push(ValidatorSigner::random([i as u8; 32]));
+    }
+    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
+    let bad_signer = ValidatorSigner::random([3u8; 32]);
+
+    let block_store = build_empty_tree_with_custom_signing(my_signer);
+    let genesis = block_store.root();
+    let mut inserter = TreeInserter::new(block_store.clone());
+    let block0 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let block1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+
+    // Ledger Info and Vote data used by first 2 signers for Block 0
+    let li0 = placeholder_ledger_info();
+    let li1 = LedgerInfo::new(
+        1,
+        HashValue::zero(),
+        HashValue::zero(),
+        HashValue::zero(),
+        0,
+        0,
+        None,
+    );
+
+    let block0_vote_data = VoteData::new(
+        block0.id(),
+        block_store
+            .get_compute_result(block0.id())
+            .unwrap()
+            .executed_state
+            .state_id,
+        block0.round(),
+        block0.quorum_cert().parent_block_id(),
+        block0.quorum_cert().parent_block_round(),
+        block0.quorum_cert().grandparent_block_id(),
+        block0.quorum_cert().grandparent_block_round(),
+    );
+    let block1_vote_data = VoteData::new(
+        block1.id(),
+        block_store
+            .get_compute_result(block1.id())
+            .unwrap()
+            .executed_state
+            .state_id,
+        block1.round(),
+        block1.quorum_cert().parent_block_id(),
+        block1.quorum_cert().parent_block_round(),
+        block1.quorum_cert().grandparent_block_id(),
+        block1.quorum_cert().grandparent_block_round(),
+    );
+
+    // bad_signer votes on Block0 with li0
+    assert_eq!(
+        block_store.insert_vote_and_qc(
+            VoteMsg::new(
+                block0_vote_data.clone(),
+                bad_signer.author(),
+                li0.clone(),
+                &bad_signer
+            ),
+            qc_size
+        ),
+        VoteReceptionResult::VoteAdded(1)
+    );
+
+    // bad_signer changes vote to Block1 with li1, making earlier vote on Block0 obsolete
+    assert_eq!(
+        block_store.insert_vote_and_qc(
+            VoteMsg::new(
+                block1_vote_data.clone(),
+                bad_signer.author(),
+                li1.clone(),
+                &bad_signer
+            ),
+            qc_size
+        ),
+        VoteReceptionResult::VoteAdded(1)
+    );
+
+    // Signer0 votes on Block0 with li0. No QC since bad_signer changed the vote
+    assert_eq!(
+        block_store.insert_vote_and_qc(
+            VoteMsg::new(
+                block0_vote_data.clone(),
+                signers[0].author(),
+                li0.clone(),
+                &signers[0]
+            ),
+            qc_size
+        ),
+        VoteReceptionResult::VoteAdded(1)
+    );
+
+    // Signer2 votes on Block0 with li0, QC!
+    match block_store.insert_vote_and_qc(
+        VoteMsg::new(
+            block0_vote_data.clone(),
+            signers[1].author(),
+            li0.clone(),
+            &signers[1],
+        ),
+        qc_size,
+    ) {
+        VoteReceptionResult::NewQuorumCertificate(_) => (),
+        _ => {
+            panic!("QC not formed!");
+        }
+    }
+
+    // Block1 already has vote from bad_signer. Add Signer0 vote on Block1 with li1 to form QC!
+    match block_store.insert_vote_and_qc(
+        VoteMsg::new(
+            block1_vote_data.clone(),
+            signers[0].author(),
+            li1.clone(),
+            &signers[0],
         ),
         qc_size,
     ) {

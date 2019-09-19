@@ -4,6 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockTreeError, VoteReceptionResult},
+        common::Author,
         consensus_types::{
             block::{Block, ExecutedBlock},
             quorum_cert::QuorumCert,
@@ -28,6 +29,14 @@ use std::{
 };
 use types::crypto_proxies::LedgerInfoWithSignatures;
 
+/// This structure maintains tuple of block_id and LedgerInfo for last voted block by an Author
+/// We only remember latest vote from Author. Digest is used to identify and prune pending vote from
+/// same Author.
+struct BlockPendingVote {
+    block_id: HashValue,
+    digest: HashValue,
+}
+
 /// This structure maintains a consistent block tree of parent and children links. Blocks contain
 /// parent links and are immutable.  For all parent links, a child link exists. This structure
 /// should only be used internally in BlockStore.
@@ -51,6 +60,9 @@ pub struct BlockTree<T> {
     /// Thus, the structure of `id_to_votes` is as follows:
     /// HashMap<proposed_block_id, HashMap<ledger_info_digest, LedgerInfoWithSignatures>>
     id_to_votes: HashMap<HashValue, HashMap<HashValue, LedgerInfoWithSignatures>>,
+    /// Map of Author to last voted block id & digest. Any pending vote from Author is cleaned up
+    /// whenever new vote is added by same Author
+    author_to_last_voted_block_id: HashMap<Author, BlockPendingVote>,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -99,6 +111,7 @@ where
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_ledger_info: Arc::new(root_ledger_info),
             id_to_votes: HashMap::new(),
+            author_to_last_voted_block_id: HashMap::new(),
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -240,15 +253,62 @@ where
         Ok(())
     }
 
+    /// Check if vote is valid. If this is the first vote from Author, add it to map. If Author has
+    /// already voted on same block then return DuplicateVote error. If Author has already voted
+    /// on some other block, prune last vote and insert new one in map.
+    fn check_vote_valid(&mut self, vote_msg: &VoteMsg) -> Result<(), VoteReceptionResult> {
+        let author = vote_msg.author();
+        let block_id = vote_msg.block_id();
+        let digest = vote_msg.ledger_info().hash();
+
+        let last_voted_block = match self
+            .author_to_last_voted_block_id
+            .insert(author, BlockPendingVote { block_id, digest })
+        {
+            None => {
+                // First vote from Author, do nothing.
+                return Ok(());
+            }
+            Some(last_voted_block) => last_voted_block,
+        };
+
+        // Prune last pending vote from Author
+        if block_id == last_voted_block.block_id {
+            // Author has already voted for this block
+            return Err(VoteReceptionResult::DuplicateVote);
+        }
+
+        if let Some(block_pending_votes) = self.id_to_votes.get_mut(&last_voted_block.block_id) {
+            if let Some(li_digest_to_sig) = block_pending_votes.get_mut(&last_voted_block.digest) {
+                // Removing signature from last voted block
+                li_digest_to_sig.remove_signature(author);
+                if li_digest_to_sig.signatures().is_empty() {
+                    // Last vote/signature for block, remove digest entry
+                    block_pending_votes.remove(&last_voted_block.digest);
+                    if block_pending_votes.is_empty() {
+                        self.id_to_votes.remove(&last_voted_block.block_id);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub(super) fn insert_vote(
         &mut self,
         vote_msg: &VoteMsg,
         min_votes_for_qc: usize,
     ) -> VoteReceptionResult {
+        let author = vote_msg.author();
         let block_id = vote_msg.block_id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
+
+        if let Err(e) = self.check_vote_valid(vote_msg) {
+            return e;
+        }
+
         // All the votes collected for all the execution results of a given proposal.
         let block_votes = self
             .id_to_votes
@@ -262,10 +322,6 @@ where
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });
 
-        let author = vote_msg.author();
-        if li_with_sig.signatures().contains_key(&author) {
-            return VoteReceptionResult::DuplicateVote;
-        }
         vote_msg.signature().clone().add_to_li(author, li_with_sig);
 
         let num_votes = li_with_sig.signatures().len();
