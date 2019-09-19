@@ -4,8 +4,8 @@
 //! This module contains the public APIs supported by the bytecode verifier.
 use crate::{
     check_duplication::DuplicationChecker, code_unit_verifier::CodeUnitVerifier,
-    resources::ResourceTransitiveChecker, signature::SignatureChecker,
-    struct_defs::RecursiveStructDefChecker,
+    instantiation_loops::InstantiationLoopChecker, resources::ResourceTransitiveChecker,
+    signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
 use failure::Error;
 use std::{collections::BTreeMap, fmt};
@@ -162,6 +162,9 @@ impl VerifiedModule {
         }
         if errors.is_empty() {
             errors.append(&mut RecursiveStructDefChecker::new(&module).verify());
+        }
+        if errors.is_empty() {
+            errors.append(&mut InstantiationLoopChecker::new(&module).verify())
         }
         if errors.is_empty() {
             errors.append(&mut CodeUnitVerifier::verify(&module));

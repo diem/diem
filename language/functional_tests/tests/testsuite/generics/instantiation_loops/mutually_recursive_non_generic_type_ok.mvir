@@ -1,0 +1,13 @@
+module M {
+    struct S<T> {}
+
+    f<T>() {
+        Self.g<Self.S<T>>();
+        return;
+    }
+
+    g<T>() {
+        Self.f<u64>();
+        return;
+    }
+}
