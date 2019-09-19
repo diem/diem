@@ -22,13 +22,22 @@ pub struct TxEmitter {
     bench: Benchmarker,
     clients: Vec<(Instance, AdmissionControlClient)>,
 }
+
 use crypto::{test_utils::KeyPair, traits::Uniform};
+use itertools::zip;
+use proto_conv::FromProto;
 use rand::{
     rngs::{EntropyRng, StdRng},
     Rng, SeedableRng,
 };
 use types::{
     account_address::AccountAddress,
+    account_config::get_account_resource_or_default,
+    get_with_proof::ResponseItem,
+    proto::get_with_proof::{
+        GetAccountStateRequest, RequestItem, RequestItem_oneof_requested_items,
+        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+    },
     transaction::{Script, TransactionPayload},
     transaction_helpers::create_signed_txn,
 };
@@ -97,6 +106,7 @@ impl TxEmitter {
                 .spawn(move || thread.run())
                 .unwrap();
             join_handles.push(join_handle);
+            thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
         println!("Threads started");
         for join_handle in join_handles {
@@ -125,6 +135,7 @@ impl SubmissionThread {
     fn run(mut self) {
         let wait_millis = get_env("WAIT_MILLIS", 50);
         let wait = Duration::from_millis(wait_millis);
+        let wait_committed = get_env("WAIT_COMMITTED", true);
         loop {
             let gen_requests = gen_ring_requests(&mut self.accounts);
             for request in gen_requests {
@@ -143,8 +154,58 @@ impl SubmissionThread {
                     println!("Thread for {} won't sleep", self.instance);
                 }
             }
+            if wait_committed {
+                wait_for_accounts_sequence(&self.client, &self.accounts);
+            }
         }
     }
+}
+
+fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[AccountData]) {
+    let mut update_request = UpdateToLatestLedgerRequest::new();
+    for account in accounts {
+        let mut request_item = RequestItem::new();
+        let mut account_state_request = GetAccountStateRequest::new();
+        account_state_request.address = account.address.to_vec();
+        request_item.requested_items = Some(
+            RequestItem_oneof_requested_items::get_account_state_request(account_state_request),
+        );
+        update_request.requested_items.push(request_item);
+    }
+    loop {
+        let resp = client.update_to_latest_ledger(&update_request);
+        match resp {
+            Err(e) => println!("Failed to query ledger info: {:?}", e),
+            Ok(resp) => {
+                if is_sequence_equal(accounts, resp) {
+                    break;
+                }
+            }
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn is_sequence_equal(accounts: &[AccountData], resp: UpdateToLatestLedgerResponse) -> bool {
+    for (account, item) in zip(accounts, resp.response_items.into_iter()) {
+        let item = ResponseItem::from_proto(item).expect("ResponseItem::from_proto failed");
+        if let ResponseItem::GetAccountState {
+            account_state_with_proof,
+        } = item
+        {
+            let account_resource = get_account_resource_or_default(&account_state_with_proof.blob)
+                .expect("get_account_resource_or_default failed");
+            if account_resource.sequence_number() != account.sequence_number {
+                return false;
+            }
+        } else {
+            panic!(
+                "Unexpected item in UpdateToLatestLedgerResponse: {:?}",
+                item
+            );
+        }
+    }
+    true
 }
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -180,7 +241,7 @@ fn gen_transfer_txn_request(
     gen_submit_transaction_request(script, sender)
 }
 
-pub fn gen_ring_requests(accounts: &mut [AccountData]) -> Vec<SubmitTransactionRequest> {
+fn gen_ring_requests(accounts: &mut [AccountData]) -> Vec<SubmitTransactionRequest> {
     let mut receiver_addrs: Vec<AccountAddress> =
         accounts.iter().map(|account| account.address).collect();
     receiver_addrs.rotate_left(1);
