@@ -46,13 +46,17 @@ impl<'a> StackUsageVerifier<'a> {
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);
         for i in block_start..=cfg.block_end(block_id) {
-            stack_size_increment += self.instruction_effect(&code[i as usize]);
-            if stack_size_increment < 0 {
+            let (num_pops, num_pushes) = self.instruction_effect(&code[i as usize]);
+            // Check that the stack height is sufficient to accomodate the number
+            // of pops this instruction does
+            if stack_size_increment < num_pops {
                 return vec![err_at_offset(
                     StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
                     block_start as usize,
                 )];
             }
+            stack_size_increment -= num_pops;
+            stack_size_increment += num_pushes;
         }
 
         if stack_size_increment == 0 {
@@ -65,61 +69,50 @@ impl<'a> StackUsageVerifier<'a> {
         }
     }
 
-    fn instruction_effect(&self, instruction: &Bytecode) -> i32 {
+    /// The effect of an instruction is a tuple where the first element
+    /// is the number of pops it does, and the second element is the number
+    /// of pushes it does
+    fn instruction_effect(&self, instruction: &Bytecode) -> (u32, u32) {
         match instruction {
-            Bytecode::Pop | Bytecode::BrTrue(_) | Bytecode::BrFalse(_) | Bytecode::StLoc(_) => -1,
+            // Instructions that pop, but don't push
+            Bytecode::Pop
+            | Bytecode::BrTrue(_)
+            | Bytecode::BrFalse(_)
+            | Bytecode::CreateAccount
+            | Bytecode::Abort
+            | Bytecode::MoveToSender(_, _)
+            | Bytecode::StLoc(_) => (1, 0),
 
-            Bytecode::Ret => {
-                let return_count = self.function_definition_view.signature().return_count() as i32;
-                -return_count
-            }
-
-            Bytecode::Branch(_) | Bytecode::MutBorrowField(_) | Bytecode::ImmBorrowField(_) => 0,
-
+            // Instructions that push, but don't pop
             Bytecode::LdConst(_)
             | Bytecode::LdAddr(_)
             | Bytecode::LdStr(_)
             | Bytecode::LdTrue
             | Bytecode::LdFalse
+            | Bytecode::LdByteArray(_)
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
             | Bytecode::MutBorrowLoc(_)
-            | Bytecode::ImmBorrowLoc(_) => 1,
+            | Bytecode::ImmBorrowLoc(_)
+            | Bytecode::GetTxnGasUnitPrice
+            | Bytecode::GetTxnMaxGasUnits
+            | Bytecode::GetGasRemaining
+            | Bytecode::GetTxnPublicKey
+            | Bytecode::GetTxnSequenceNumber
+            | Bytecode::GetTxnSenderAddress => (0, 1),
 
-            Bytecode::Call(idx, _) => {
-                let function_handle = self.module.function_handle_at(*idx);
-                let signature = self.module.function_signature_at(function_handle.signature);
-                let arg_count = signature.arg_types.len() as i32;
-                let return_count = signature.return_types.len() as i32;
-                return_count - arg_count
-            }
+            // Instructions that pop and push once
+            Bytecode::Not
+            | Bytecode::FreezeRef
+            | Bytecode::ReadRef
+            | Bytecode::Exists(_, _)
+            | Bytecode::MutBorrowGlobal(_, _)
+            | Bytecode::ImmBorrowGlobal(_, _)
+            | Bytecode::MutBorrowField(_)
+            | Bytecode::ImmBorrowField(_)
+            | Bytecode::MoveFrom(_, _) => (1, 1),
 
-            Bytecode::Pack(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                let field_count = match &struct_definition.field_information {
-                    // 'Native' here is an error that will be caught by the bytecode verifier later
-                    StructFieldInformation::Native => 0,
-                    StructFieldInformation::Declared { field_count, .. } => *field_count,
-                };
-                let num_fields = i32::from(field_count);
-                1 - num_fields
-            }
-
-            Bytecode::Unpack(idx, _) => {
-                let struct_definition = self.module.struct_def_at(*idx);
-                let field_count = match &struct_definition.field_information {
-                    // 'Native' here is an error that will be caught by the bytecode verifier later
-                    StructFieldInformation::Native => 0,
-                    StructFieldInformation::Declared { field_count, .. } => *field_count,
-                };
-                let num_fields = i32::from(field_count);
-                num_fields - 1
-            }
-
-            Bytecode::ReadRef => 0,
-
-            Bytecode::WriteRef => -2,
-
+            // Binary operations (pop twice and push once)
             Bytecode::Add
             | Bytecode::Sub
             | Bytecode::Mul
@@ -135,27 +128,52 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::Lt
             | Bytecode::Gt
             | Bytecode::Le
-            | Bytecode::Ge
-            | Bytecode::Abort => -1,
+            | Bytecode::Ge => (2, 1),
 
-            Bytecode::Not => 0,
+            // WriteRef pops twice but does not push
+            Bytecode::WriteRef => (2, 0),
 
-            Bytecode::FreezeRef
-            | Bytecode::Exists(_, _)
-            | Bytecode::MutBorrowGlobal(_, _)
-            | Bytecode::ImmBorrowGlobal(_, _)
-            | Bytecode::MoveFrom(_, _) => 0,
-            Bytecode::MoveToSender(_, _) => -1,
+            // Branch neither pops nor pushes
+            Bytecode::Branch(_) => (0, 0),
 
-            Bytecode::GetTxnGasUnitPrice
-            | Bytecode::GetTxnMaxGasUnits
-            | Bytecode::GetGasRemaining
-            | Bytecode::GetTxnPublicKey
-            | Bytecode::GetTxnSequenceNumber
-            | Bytecode::GetTxnSenderAddress => 1,
-            Bytecode::CreateAccount => -1,
+            // Return performs `return_count` pops
+            Bytecode::Ret => {
+                let return_count = self.function_definition_view.signature().return_count() as u32;
+                (return_count, 0)
+            }
 
-            Bytecode::LdByteArray(_) => 1,
+            // Call performs `arg_count` pops and `return_count` pushes
+            Bytecode::Call(idx, _) => {
+                let function_handle = self.module.function_handle_at(*idx);
+                let signature = self.module.function_signature_at(function_handle.signature);
+                let arg_count = signature.arg_types.len() as u32;
+                let return_count = signature.return_types.len() as u32;
+                (arg_count, return_count)
+            }
+
+            // Pack performs `num_fields` pops and one push
+            Bytecode::Pack(idx, _) => {
+                let struct_definition = self.module.struct_def_at(*idx);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = u32::from(field_count);
+                (num_fields, 1)
+            }
+
+            // Unpack performs one pop and `num_fields` pushes
+            Bytecode::Unpack(idx, _) => {
+                let struct_definition = self.module.struct_def_at(*idx);
+                let field_count = match &struct_definition.field_information {
+                    // 'Native' here is an error that will be caught by the bytecode verifier later
+                    StructFieldInformation::Native => 0,
+                    StructFieldInformation::Declared { field_count, .. } => *field_count,
+                };
+                let num_fields = u32::from(field_count);
+                (1, num_fields)
+            }
         }
     }
 }
