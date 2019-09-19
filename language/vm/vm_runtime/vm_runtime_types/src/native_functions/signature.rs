@@ -68,10 +68,7 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> 
         }
     };
 
-    let bool_value = match sig.verify_arbitrary_msg(msg.as_bytes(), &pk) {
-        Ok(()) => true,
-        Err(_) => false,
-    };
+    let bool_value = sig.verify_arbitrary_msg(msg.as_bytes(), &pk).is_ok();
     let return_values = vec![Value::bool(bool_value)];
     NativeReturnStatus::Success {
         cost,
