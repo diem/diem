@@ -3,7 +3,8 @@
 
 use config::config::PersistableConfig;
 use std::{fs::File, io::prelude::*};
-use vm_genesis::{default_config, encode_genesis_transaction, GENESIS_KEYPAIR};
+use transaction_builder::default_config;
+use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";

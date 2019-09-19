@@ -30,7 +30,7 @@ client = { path = "../../client" }
 logger = { path = "../../common/logger" }
 
 types = { path = "../../types" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+transaction_builder = { path = "../../language/transaction_builder" }
 proto_conv = { path = "../../common/proto_conv" }
 crypto = { path = "../../crypto/crypto" }
 generate_keypair = { path = "../../config/generate_keypair" }

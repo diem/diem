@@ -14,8 +14,6 @@ pub use types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, TransactionArgument, TransactionPayload},
 };
-pub use vm_genesis;
-
 pub(crate) mod account_commands;
 /// Main instance of client holding corresponding information, e.g. account address.
 pub mod client_proxy;

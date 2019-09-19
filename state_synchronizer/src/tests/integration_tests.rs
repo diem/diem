@@ -33,6 +33,7 @@ use std::{
     },
 };
 use tokio::runtime::{Builder, Runtime};
+use transaction_builder::encode_transfer_script;
 use types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -42,7 +43,7 @@ use types::{
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
     vm_error::StatusCode,
 };
-use vm_genesis::{encode_transfer_script, GENESIS_KEYPAIR};
+use vm_genesis::GENESIS_KEYPAIR;
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;

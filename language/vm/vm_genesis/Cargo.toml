@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
+transaction_builder = { path = "../../transaction_builder"}
 ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
@@ -29,6 +30,3 @@ proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../../common/proptest_helpers" }
 types = { path = "../../../types", features = ["testing"] }
-
-[features]
-testing = ["types/testing", "crypto/testing"]

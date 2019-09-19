@@ -14,6 +14,7 @@ use rand::SeedableRng;
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
+use transaction_builder::{encode_create_account_script, encode_transfer_script};
 use types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -27,7 +28,6 @@ use types::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
 };
-use vm_genesis::{encode_create_account_script, encode_transfer_script};
 use vm_runtime::MoveVM;
 
 fn gen_block_id(index: u8) -> HashValue {

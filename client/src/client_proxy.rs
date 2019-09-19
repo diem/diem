@@ -346,7 +346,7 @@ impl ClientProxy {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
 
-            let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
+            let program = transaction_builder::encode_transfer_script(&receiver_address, num_coins);
             let req = self.create_submit_transaction_req(
                 TransactionPayload::Script(program),
                 sender,
@@ -384,7 +384,7 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
+        let program = transaction_builder::encode_transfer_script(&receiver_address, num_coins);
 
         Ok(create_unsigned_txn(
             TransactionPayload::Script(program),
@@ -941,7 +941,7 @@ impl ClientProxy {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
         let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
-        let program = vm_genesis::encode_mint_script(&receiver, num_coins);
+        let program = transaction_builder::encode_mint_script(&receiver, num_coins);
         let req = self.create_submit_transaction_req(
             TransactionPayload::Script(program),
             sender,

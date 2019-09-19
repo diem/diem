@@ -84,7 +84,7 @@ fn single_peer_to_peer_with_padding() {
     let transfer_amount = 1_000;
     let txn = sender.account().create_signed_txn_impl(
         *sender.address(),
-        TransactionPayload::Script(vm_genesis::encode_transfer_script_with_padding(
+        TransactionPayload::Script(transaction_builder::encode_transfer_script_with_padding(
             receiver.address(),
             transfer_amount,
             1000,
