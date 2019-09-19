@@ -264,10 +264,9 @@ impl<'txn> TransactionDataCache<'txn> {
             return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
         }
 
-        match write_set.freeze() {
-            Ok(ws) => Ok(ws),
-            Err(_) => Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR)),
-        }
+        write_set
+            .freeze()
+            .map_err(|_| vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR))
     }
 
     /// Flush out the cache and restart from a clean state

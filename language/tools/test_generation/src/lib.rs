@@ -41,9 +41,9 @@ use vm_runtime_types::value::Value;
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
-    let verifier_panic = panic::catch_unwind(|| match VerifiedModule::new(module.clone()) {
-        Ok(verified_module) => Ok(verified_module),
-        Err((_, errs)) => Err(format!("Module verification failed: {:#?}", errs)),
+    let verifier_panic = panic::catch_unwind(|| {
+        VerifiedModule::new(module.clone())
+            .map_err(|(_, errs)| format!("Module verification failed: {:#?}", errs))
     });
     verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
 }
