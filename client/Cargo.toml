@@ -32,7 +32,7 @@ metrics = { path = "../common/metrics" }
 proto_conv = { path = "../common/proto_conv" }
 types = { path = "../types" }
 tools = { path = "../common/tools/" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
+transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }

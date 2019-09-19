@@ -27,7 +27,6 @@ state_view = { path = "../../storage/state_view" }
 storage_client = { path = "../../storage/storage_client" }
 types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
 
 [dev-dependencies]
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }

@@ -16,6 +16,7 @@ crypto = { path = "../../crypto/crypto"}
 rand = "0.6.5"
 state_view = { path = "../../storage/state_view" }
 types = { path = "../../types" }
+transaction_builder = { path = "../transaction_builder"}
 vm = { path = "../vm" }
 vm_genesis = { path = "../vm/vm_genesis", features = ["testing"] }
 vm_runtime = { path = "../vm/vm_runtime" }

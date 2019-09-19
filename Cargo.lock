@@ -211,8 +211,8 @@ dependencies = [
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
- "vm_genesis 0.1.0",
 ]
 
 [[package]]
@@ -565,8 +565,8 @@ dependencies = [
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
- "vm_genesis 0.1.0",
 ]
 
 [[package]]
@@ -1311,7 +1311,6 @@ dependencies = [
  "storage_proto 0.1.0",
  "storage_service 0.1.0",
  "types 0.1.0",
- "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
 ]
 
@@ -2011,6 +2010,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
  "stdlib 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_genesis 0.1.0",
@@ -4767,10 +4767,12 @@ dependencies = [
 name = "transaction_builder"
 version = "0.1.0"
 dependencies = [
+ "config 0.1.0",
+ "crypto 0.1.0",
  "failure_ext 0.1.0",
- "proto_conv 0.1.0",
- "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ir_to_bytecode 0.1.0",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdlib 0.1.0",
  "types 0.1.0",
  "vm 0.1.0",
 ]
@@ -4993,6 +4995,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
  "stdlib 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",

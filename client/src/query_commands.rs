@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{client_proxy::ClientProxy, commands::*};
+use transaction_builder::get_transaction_name;
 use types::account_config::get_account_resource_or_default;
-use vm_genesis::get_transaction_name;
 
 /// Major command for query operations.
 pub struct QueryCommand {}
