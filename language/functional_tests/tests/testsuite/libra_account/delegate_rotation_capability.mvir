@@ -1,0 +1,115 @@
+//! account: alice
+//! account: bob
+
+//! sender: alice
+// A module that lets the account owner rotate their auth key as they normally would, but also
+// allows a different address `master_key_address` to rotate the auth key. This is useful for
+// implementing (e.g.) a hot wallet with a cold recovery key.
+module SharedKeyRotation {
+    import 0x0.LibraAccount;
+
+    resource T {
+        // cap.address can rotate the auth key for cap.address
+        cap: LibraAccount.KeyRotationCapability,
+        // master_key_address can also rotate the auth key for cap.address
+        master_key_address: address,
+    }
+
+    // Publish a SharedRotation resource for the account `cap.address` with master key
+    // `master_key_address` under the sender's account
+    public publish(cap: LibraAccount.KeyRotationCapability, master_key_address: address) {
+        let t: Self.T;
+
+        t = T { cap: move(cap), master_key_address: move(master_key_address) };
+        move_to_sender<T>(move(t));
+        return;
+    }
+
+    // Rotate the auth key for the account at wallet_address/SharedKeyRotation.T/cap/address to
+    // new_key
+    public rotate(wallet_address: address, new_key: bytearray) acquires T {
+        let wallet_ref: &mut Self.T;
+        let sender: address;
+
+        wallet_ref = borrow_global_mut<T>(move(wallet_address));
+        sender = get_txn_sender();
+        if ((*&copy(wallet_ref).master_key_address == copy(sender)) ||
+            (*LibraAccount.key_rotation_capability_address(&copy(wallet_ref).cap) == move(sender))
+        ) {
+            LibraAccount.rotate_authentication_key_with_capability(
+                &move(wallet_ref).cap,
+                move(new_key)
+            );
+            return;
+        } else {
+            abort(77);
+        }
+    }
+}
+
+//! new-transaction
+//! sender: alice
+import {{alice}}.SharedKeyRotation;
+import 0x0.LibraAccount;
+// create a SharedKeyRotation for Alice's account with Bob's account key as the master key
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 1, 77);
+    SharedKeyRotation.publish(LibraAccount.extract_sender_key_rotation_capability(), {{bob}});
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+import 0x0.AddressUtil;
+import {{alice}}.SharedKeyRotation;
+import 0x0.LibraAccount;
+// Alice can rotate her key. Here, she rotates it to its original value
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 2, 78);
+    SharedKeyRotation.rotate({{alice}}, AddressUtil.address_to_bytes({{alice}}));
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import {{alice}}.SharedKeyRotation;
+import 0x0.LibraAccount;
+// Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
+    SharedKeyRotation.rotate({{alice}}, h"00");
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+// Alice should no longer be able to send a tx from her account
+main() {
+    return;
+}
+
+// check: DiscardedTransaction
+// check: INVALID_AUTH_KEY
+
+//! new-transaction
+//! sender: bob
+import 0x0.AddressUtil;
+import {{alice}}.SharedKeyRotation;
+import 0x0.LibraAccount;
+// Bob now rotates the key back to its old value
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
+    SharedKeyRotation.rotate({{alice}}, AddressUtil.address_to_bytes({{alice}}));
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+// And then Alice should be able to send a tx once again
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 3, 79);
+    // TODO: seems that this code isn't getting run because the test passes...
+    assert(LibraAccount.sequence_number({{alice}}) == 33, 80);
+    return;
+}

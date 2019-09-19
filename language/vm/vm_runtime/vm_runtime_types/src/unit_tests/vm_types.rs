@@ -24,6 +24,7 @@ fn account_type() {
     coin_fields.push(Value::u64(balance));
     account_fields.push(Value::struct_(Struct::new(coin_fields)));
     account_fields.push(Value::bool(false));
+    account_fields.push(Value::bool(false));
     account_fields.push(Value::struct_(Struct::new(vec![
         Value::u64(received_events_count),
         Value::byte_array(recv_events_key.clone()),
