@@ -259,6 +259,10 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         self.signatures.entry(validator).or_insert(signature);
     }
 
+    pub fn remove_signature(&mut self, validator: AccountAddress) {
+        self.signatures.remove(&validator);
+    }
+
     pub fn signatures(&self) -> &HashMap<AccountAddress, Sig> {
         &self.signatures
     }
