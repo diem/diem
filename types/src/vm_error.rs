@@ -407,6 +407,7 @@ pub enum StatusCode {
     GLOBAL_REFERENCE_ERROR = 1073,
     CONTRAINT_KIND_MISMATCH = 1074,
     NUMBER_OF_TYPE_ACTUALS_MISMATCH = 1075,
+    LOOP_IN_INSTANTIATION_GRAPH = 1076,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
