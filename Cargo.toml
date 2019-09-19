@@ -9,6 +9,7 @@ members = [
     "common/bounded-executor",
     "common/canonical_serialization",
     "common/crash_handler",
+    "common/datatest-stable",
     "common/debug_interface",
     "common/executable_helpers",
     "common/failure_ext",
