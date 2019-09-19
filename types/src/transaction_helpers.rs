@@ -16,7 +16,7 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use crate::transaction::{ChannelScriptPayload, TransactionPayload, ChannelWriteSetPayload};
+use crate::transaction::{ChannelScriptPayload, ChannelWriteSetPayload};
 use crypto::hash::{TestOnlyHasher, CryptoHasher};
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator

@@ -63,7 +63,7 @@ use crate::account_config::account_struct_tag;
 use std::convert::TryFrom;
 use std::ops::Index;
 use crate::account_address::ADDRESS_LENGTH;
-use crate::channel_account::{ChannelAccountResource, channel_account_struct_tag};
+use crate::channel_account::{channel_account_struct_tag};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(Identifier);

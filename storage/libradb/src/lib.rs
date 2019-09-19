@@ -25,7 +25,6 @@ mod pruner;
 mod state_store;
 mod system_store;
 mod transaction_store;
-mod data_storage_test;
 
 #[cfg(test)]
 mod libradb_test;

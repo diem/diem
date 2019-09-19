@@ -569,13 +569,13 @@ where
                 }
                 Bytecode::IsOffchain => {
                     let is_offchain = self.vm_mode.is_offchain();
-                    self.execution_stack.push(Local::bool(is_offchain))?;
+                    self.execution_stack.push(Value::bool(is_offchain))?;
                 }
                 Bytecode::GetTxnReceiverAddress => {
                     if let Some(receiver) = self.txn_data.receiver() {
                         self
                         .execution_stack
-                        .push(Local::address(receiver))?;
+                        .push(Value::address(receiver))?;
                     }else{
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
@@ -606,13 +606,13 @@ where
                 }
                 Bytecode::IsChannelTxn => {
                     let is_channel_txn = self.txn_data.is_channel_txn();
-                    self.execution_stack.push(Local::bool(is_channel_txn))?;
+                    self.execution_stack.push(Value::bool(is_channel_txn))?;
                 }
                 Bytecode::GetTxnReceiverPublicKey => {
                     if let Some(channel_metadata) = self.txn_data.channel_metadata() {
                         self
                             .execution_stack
-                            .push(Local::bytearray(ByteArray::new(channel_metadata.receiver_public_key.to_bytes().to_vec())))?;
+                            .push(Value::byte_array(ByteArray::new(channel_metadata.receiver_public_key.to_bytes().to_vec())))?;
                     }else{
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
@@ -621,7 +621,7 @@ where
                     if let Some(channel_metadata) = self.txn_data.channel_metadata() {
                         self
                             .execution_stack
-                            .push(Local::u64(channel_metadata.channel_sequence_number))?;
+                            .push(Value::u64(channel_metadata.channel_sequence_number))?;
                     }else{
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
@@ -658,15 +658,15 @@ where
         Ok((address,participant))
     }
 
-    fn exist_in_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+    fn exist_in_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
         let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
-        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        let ap = make_channel_access_path(curr_module, *idx, address, participant);
         if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
+                        .resolve_struct_def(curr_module, *idx, &self.gas_meter)?
         {
             let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
             self.gas_meter.calculate_and_consume(
@@ -674,46 +674,46 @@ where
                             &self.execution_stack,
                             mem_size
                         )?;
-            self.execution_stack.push(Local::bool(exists))?;
+            self.execution_stack.push(Value::bool(exists))?;
         } else {
             return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
         Ok(())
     }
 
-    fn borrow_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+    fn borrow_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
         let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
-        let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
-        {
-            let global_ref =
-                self.data_view.borrow_global(&ap, struct_def)?;
+        let ap = make_channel_access_path(curr_module, *idx, address, participant);
+        if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+            curr_module,
+            *idx,
+            &self.gas_meter,
+        )? {
+            let global_ref = self.data_view.borrow_global(&ap, struct_def)?;
             self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            &self.execution_stack,
-                            global_ref.size()
-                        )?;
-            self.execution_stack.push(Local::GlobalRef(global_ref))?;
+                &instruction,
+                &self.execution_stack,
+                global_ref.size(),
+            )?;
+            self.execution_stack.push(Value::global_ref(global_ref))?;
         } else {
             return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
+
         Ok(())
     }
 
-    fn move_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+    fn move_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
         let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
-        let ap = make_channel_access_path(curr_module, idx, address, participant);
+        let ap = make_channel_access_path(curr_module, *idx, address, participant);
         if let Some(struct_def) = self
                         .execution_stack
                         .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
+                        .resolve_struct_def(curr_module, *idx, &self.gas_meter)?
         {
             let resource =
                 self.data_view.move_resource_from(&ap, struct_def)?;
@@ -729,36 +729,27 @@ where
         Ok(())
     }
 
-    fn move_to_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: StructDefinitionIndex) -> VMResult<()>{
+    fn move_to_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
         let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
-        let ap = make_channel_access_path(curr_module, idx, address, participant);
-        if let Some(struct_def) = self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, idx, &self.gas_meter)?
-        {
-            let local = self.execution_stack.pop()?;
-
-            if let Some(resource) = local.value() {
-                self.gas_meter.calculate_and_consume(
-                                &instruction,
-                                &self.execution_stack,
-                                resource.size()
-                            )?;
-                self
-                                .data_view
-                                .move_resource_to(&ap, struct_def, resource)?;
-            } else {
-                return Err(vm_error(
-                    self.execution_stack.location()?,
-                    StatusCode::TYPE_ERROR,
-                ));
-            }
+        let ap = make_channel_access_path(curr_module, *idx, address, participant);
+        if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+            curr_module,
+            *idx,
+            &self.gas_meter,
+        )? {
+            let resource = self.execution_stack.pop_as::<Struct>()?;
+            self.gas_meter.calculate_and_consume(
+                &instruction,
+                &self.execution_stack,
+                resource.size(),
+            )?;
+            self.data_view.move_resource_to(&ap, struct_def, resource)?;
         } else {
             return Err(VMStatus::new(StatusCode::LINKER_ERROR));
         }
+
         Ok(())
     }
 

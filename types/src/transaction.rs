@@ -51,7 +51,6 @@ pub use script::{Script, SCRIPT_HASH_LENGTH};
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 pub use channel_transaction_payload::{ChannelWriteSetPayload, ChannelScriptPayload};
-use crate::vm_error::{StatusCode};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 

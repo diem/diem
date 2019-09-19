@@ -23,7 +23,6 @@ use types::{
     write_set::WriteSet,
 };
 use vm_cache_map::Arena;
-use types::transaction::TransactionPayload;
 use crate::data_cache::{WriteSetDataCache, RemoteCache};
 
 pub fn execute_block<'alloc>(
