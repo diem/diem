@@ -21,9 +21,10 @@ use vm::{
     access::*,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
-        FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, LocalIndex, MemberCount,
-        ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex, TableIndex, UserStringIndex, NO_TYPE_ACTUALS,
+        FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, FunctionSignature,
+        LocalIndex, MemberCount, ModuleHandle, SignatureToken, StructDefinition,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
+        UserStringIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
     vm_string::VMString,
@@ -332,11 +333,11 @@ where
         &'txn LoadedModule,
         LocalIndex,
         FunctionDefinitionIndex,
-        Value,
+        Stack,
     ) {
         // We pick a random function from the module in which to store the local
         let function_handle_idx = self.next_function_handle_idx();
-        let (module, function_definition, function_def_idx) =
+        let (module, function_definition, function_def_idx, function_sig) =
             self.resolve_function_handle(function_handle_idx);
         let type_sig = &module
             .locals_signature_at(function_definition.code.locals)
@@ -345,12 +346,11 @@ where
         let local_index = self.gen.gen_range(0, type_sig.len());
         let type_tok = &type_sig[local_index];
         let stack_local = self.resolve_to_value(type_tok, &[]);
-        (
-            module,
-            local_index as LocalIndex,
-            function_def_idx,
-            stack_local,
-        )
+        let mut stack = vec![stack_local];
+        for type_tok in function_sig.arg_types.iter() {
+            stack.push(self.resolve_to_value(type_tok, &[]))
+        }
+        (module, local_index as LocalIndex, function_def_idx, stack)
     }
 
     fn fill_instruction_arg(&mut self) -> (Bytecode, usize) {
@@ -458,8 +458,12 @@ where
         &'txn LoadedModule,
         &'txn FunctionDefinition,
         FunctionDefinitionIndex,
+        &'txn FunctionSignature,
     ) {
         let function_handle = self.root_module.function_handle_at(function_handle_index);
+        let function_signature = self
+            .root_module
+            .function_signature_at(function_handle.signature);
         let function_name = self.root_module.identifier_at(function_handle.name);
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
@@ -500,7 +504,7 @@ where
         };
 
         let function_def = module.function_def_at(function_def_idx);
-        (module, function_def, function_def_idx)
+        (module, function_def, function_def_idx, function_signature)
     }
 
     // Build an inhabitant of the type given by `sig_token`. We pass the current stack state in
@@ -578,9 +582,13 @@ where
                 // We can just pick a random address -- this is incorrect by the bytecode semantics
                 // (since we're moving to an account that doesn't exist), but since we don't need
                 // correctness beyond this instruction it's OK.
-                let addr = Value::address(self.next_addr(true));
-                let size = addr.size();
-                let stack = vec![addr];
+                let struct_definition = self.root_module.struct_def_at(struct_handle_idx);
+                let struct_stack = self.resolve_to_value(
+                    &SignatureToken::Struct(struct_definition.struct_handle, vec![]),
+                    &[],
+                );
+                let size = struct_stack.size();
+                let stack = vec![struct_stack];
                 StackState::new(
                     (self.root_module, None),
                     self.random_pad(stack),
@@ -648,7 +656,6 @@ where
             }
             Call(_, _) => {
                 let function_handle_idx = self.next_function_handle_idx();
-                let function_idx = self.resolve_function_handle(function_handle_idx).2;
                 let function_handle = self.root_module.function_handle_at(function_handle_idx);
                 let function_sig = self
                     .root_module
@@ -664,7 +671,7 @@ where
                     acc.add(local.size())
                 });
                 StackState::new(
-                    (self.root_module, Some(function_idx)),
+                    (self.root_module, None),
                     self.random_pad(stack),
                     Call(function_handle_idx, NO_TYPE_ACTUALS),
                     size,
@@ -746,9 +753,10 @@ where
                     &[],
                 );
                 let field_size = struct_stack
-                    .as_struct_ref()
-                    .expect("[BorrowField] Must be a Struct")
-                    .get_field_reference(usize::from(field_index))
+                    .clone()
+                    .value_as::<ReferenceValue>()
+                    .expect("[BorrowField] Struct should be a reference.")
+                    .borrow_field(usize::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")
                     .size();
                 let fdi = FieldDefinitionIndex::new(field_index);
@@ -767,23 +775,23 @@ where
             }
             StLoc(_) => {
                 let (module, local_idx, function_idx, stack_local) = self.next_local_state();
-                let size = stack_local.size();
+                let size = stack_local[0].size();
                 StackState::new(
                     (module, Some(function_idx)),
-                    self.random_pad(vec![stack_local]),
+                    self.random_pad(stack_local),
                     StLoc(local_idx as LocalIndex),
                     size,
                     HashMap::new(),
                 )
             }
             CopyLoc(_) | MoveLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) => {
-                let (module, local_idx, function_idx, frame_local) = self.next_local_state();
-                let size = frame_local.size();
+                let (module, local_idx, function_idx, mut frame_local) = self.next_local_state();
+                let size = frame_local[0].size();
                 let mut locals_mapping = HashMap::new();
-                locals_mapping.insert(local_idx as LocalIndex, frame_local);
+                locals_mapping.insert(local_idx as LocalIndex, frame_local.remove(0));
                 StackState::new(
                     (module, Some(function_idx)),
-                    self.random_pad(Vec::new()),
+                    self.random_pad(frame_local),
                     CopyLoc(local_idx as LocalIndex),
                     size,
                     locals_mapping,
@@ -860,6 +868,7 @@ where
         P: ModuleCache<'alloc>,
     {
         // Set the value stack
+        // This needs to happen before the frame transition.
         stk.set_stack(stack_state.stack);
 
         // Perform the frame transition (if there is any needed)

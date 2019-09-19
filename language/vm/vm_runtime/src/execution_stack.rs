@@ -169,7 +169,9 @@ where
 
     pub fn push_frame(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         if self.function_stack.len() < (FUNCTION_STACK_SIZE_LIMIT as usize) {
-            self.function_stack.push(Frame::new(func, Locals::new(0)));
+            let count = func.local_count();
+            self.function_stack
+                .push(Frame::new(func, Locals::new(count)));
             Ok(())
         } else {
             Err(vm_error(self.location()?, StatusCode::CALL_STACK_OVERFLOW))
