@@ -259,10 +259,7 @@ impl IntoProto for StatusCode {
 impl FromProto for StatusCode {
     type ProtoType = u64;
     fn from_proto(proto_code: Self::ProtoType) -> Result<Self> {
-        match StatusCode::try_from(proto_code) {
-            Ok(status) => Ok(status),
-            Err(_) => Ok(StatusCode::UNKNOWN_STATUS),
-        }
+        StatusCode::try_from(proto_code).or_else(|_| Ok(StatusCode::UNKNOWN_STATUS))
     }
 }
 
