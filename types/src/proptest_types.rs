@@ -600,6 +600,7 @@ impl ContractEventGen {
 #[derive(Arbitrary, Debug)]
 struct AccountResourceGen {
     balance: u64,
+    delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
 }
 
@@ -615,6 +616,7 @@ impl AccountResourceGen {
             self.balance,
             account_info.sequence_number,
             ByteArray::new(account_info.public_key.to_bytes().to_vec()),
+            self.delegated_key_rotation_capability,
             self.delegated_withdrawal_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),

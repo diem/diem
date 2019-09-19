@@ -188,6 +188,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     0,
                     types::byte_array::ByteArray::new(vec![]),
                     false,
+                    false,
                     EventHandle::random_handle(0),
                     EventHandle::random_handle(0),
                 );
