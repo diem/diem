@@ -389,7 +389,7 @@ impl Iterator for FrozenSubTreeIterator {
 /// positions of required subtrees if we want to append these subtrees to the existing accumulator
 /// to generate a bigger one of size `new_num_leaves`.
 ///
-/// See [`crate::proof::accumulator::Accumulator`] for more details.
+/// See [`crate::proof::accumulator::Accumulator::append_subtrees`] for more details.
 pub struct FrozenSubtreeSiblingIterator {
     current_num_leaves: u64,
     remaining_new_leaves: u64,

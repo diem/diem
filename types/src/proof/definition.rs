@@ -252,59 +252,26 @@ impl IntoProto for SparseMerkleProof {
 /// be obtained by appending certain leaves to the small one. For example, at some point in time a
 /// client knows that the root hash of the ledger at version 10 is `old_root` (it could be a
 /// waypoint). If a server wants to prove that the new ledger at version `N` is derived from the
-/// old ledger the client knows, it can show the frozen subtrees that form the small accumulator
-/// and the siblings that represent the new leaves. If the client can verify that the provided
-/// frozen subtrees match the old root hash and the new root hash can be obtained by combining the
-/// frozen subtrees with the siblings, it can be convinced that the two accumulators are
-/// consistent.
+/// old ledger the client knows, it can show the subtrees that represent all the new leaves. If
+/// the client can verify that it can indeed obtain the new root hash by appending these new
+/// leaves, it can be convinced that the two accumulators are consistent.
 ///
-/// ```text
-///                                                  new_root (N = 17~32)
-///                                                 /        \
-///                                                /          \
-///                                   old_root (10)            siblings[2]
-///                                  /             \
-///                                /                 \
-///                              /                     \
-///                            /                         \
-///                          /                             \
-///                        /                                 \
-/// frozen_subtree_roots[0]                                   o
-///                    /   \                                 / \
-///                   /     \                               /   \
-///                  o       o                             o     siblings[1]
-///                 / \     / \                           / \
-///                o   o   o   o   frozen_subtree_roots[1]   siblings[0]
-///               / \ / \ / \ / \                      / \
-///               o o o o o o o o                      o o
-/// ```
+/// See [`crate::proof::accumulator::Accumulator::append_subtrees`] for more details.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccumulatorConsistencyProof {
-    /// The root hashes of the frozen subtrees that form the small accumulator.
-    frozen_subtree_roots: Vec<HashValue>,
-
-    /// The siblings representing the newly appended leaves.
-    siblings: Vec<HashValue>,
+    /// The subtrees representing the newly appended leaves.
+    subtrees: Vec<HashValue>,
 }
 
 impl AccumulatorConsistencyProof {
-    /// Constructs a new `AccumulatorConsistencyProof` using given `frozen_subtree_roots` and
-    /// `siblings`.
-    pub fn new(frozen_subtree_roots: Vec<HashValue>, siblings: Vec<HashValue>) -> Self {
-        Self {
-            frozen_subtree_roots,
-            siblings,
-        }
+    /// Constructs a new `AccumulatorConsistencyProof` using given `subtrees`.
+    pub fn new(subtrees: Vec<HashValue>) -> Self {
+        Self { subtrees }
     }
 
-    /// Returns the root hashes of the frozen subtrees.
-    pub fn frozen_subtree_roots(&self) -> &[HashValue] {
-        &self.frozen_subtree_roots
-    }
-
-    /// Returns the siblings.
-    pub fn siblings(&self) -> &[HashValue] {
-        &self.siblings
+    /// Returns the subtrees.
+    pub fn subtrees(&self) -> &[HashValue] {
+        &self.subtrees
     }
 }
 
@@ -312,32 +279,13 @@ impl FromProto for AccumulatorConsistencyProof {
     type ProtoType = crate::proto::proof::AccumulatorConsistencyProof;
 
     fn from_proto(mut proto_proof: Self::ProtoType) -> Result<Self> {
-        let frozen_subtree_roots = proto_proof
-            .take_frozen_subtree_roots()
+        let subtrees = proto_proof
+            .take_subtrees()
             .into_iter()
             .map(|hash_bytes| HashValue::from_slice(&hash_bytes))
             .collect::<Result<Vec<_>>>()?;
 
-        let num_siblings = proto_proof.get_num_siblings() as usize;
-        ensure!(
-            num_siblings <= MAX_ACCUMULATOR_PROOF_DEPTH,
-            "Too many ({}) siblings in the proof.",
-            num_siblings,
-        );
-        ensure!(
-            proto_proof.get_non_default_siblings().len() <= num_siblings,
-            "Expect {} siblings in total. Got {} non-default siblings.",
-            num_siblings,
-            proto_proof.get_non_default_siblings().len(),
-        );
-        let mut siblings = proto_proof
-            .take_non_default_siblings()
-            .into_iter()
-            .map(|hash_bytes| HashValue::from_slice(&hash_bytes))
-            .collect::<Result<Vec<_>>>()?;
-        siblings.resize(num_siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
-
-        Ok(Self::new(frozen_subtree_roots, siblings))
+        Ok(Self::new(subtrees))
     }
 }
 
@@ -346,22 +294,9 @@ impl IntoProto for AccumulatorConsistencyProof {
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto_proof = Self::ProtoType::new();
-
-        for frozen_subtree_root in self.frozen_subtree_roots {
-            proto_proof
-                .mut_frozen_subtree_roots()
-                .push(frozen_subtree_root.to_vec());
+        for subtree in self.subtrees {
+            proto_proof.mut_subtrees().push(subtree.to_vec());
         }
-        proto_proof.set_num_siblings(self.siblings.len() as u32);
-        for sibling in self.siblings {
-            if sibling == *ACCUMULATOR_PLACEHOLDER_HASH {
-                break;
-            }
-            proto_proof
-                .mut_non_default_siblings()
-                .push(sibling.to_vec());
-        }
-
         proto_proof
     }
 }
