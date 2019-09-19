@@ -49,7 +49,7 @@ Welcome to Libra!
 This script will download and install the necessary dependencies needed to
 build Libra Core. This includes:
 	* Rust (and the necessary components, e.g. rust-fmt, clippy)
-	* CMake, protobuf, go (for building protobuf)
+	* CMake, protobuf
 
 If you'd prefer to install these dependencies yourself, please exit this script
 now with Ctrl-C.
@@ -97,21 +97,6 @@ else
 		sudo pacman -Syu cmake --noconfirm
 	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
 		brew install cmake
-	fi
-fi
-
-echo "Installing Go......"
-if which go &>/dev/null; then
-	echo "Go is already installed"
-else
-	if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
-		sudo yum install golang -y
-	elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-		sudo apt-get install golang -y
-	elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
-		sudo pacman -Syu go --noconfirm
-	elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-		brew install go
 	fi
 fi
 

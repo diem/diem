@@ -3,7 +3,7 @@
 
 use crate::{
     account::AccountData, assert_prologue_parity, assert_status_eq,
-    compile::compile_program_with_address, executor::FakeExecutor, transaction_status_eq,
+    compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
 use config::config::VMPublishingOption;
 use types::{
@@ -25,24 +25,18 @@ fn bad_module_address() {
 
     let program = String::from(
         "
-        modules:
         module M {
 
-        }
-
-        script:
-        main() {
-          return;
         }
         ",
     );
 
     // compile with account 1's address
-    let compiled_script = compile_program_with_address(account1.address(), &program, vec![]);
+    let compiled_module = compile_module_with_address(account1.address(), &program);
     // send with account 2's address
     let txn = account2.account().create_signed_txn_impl(
         *account2.address(),
-        compiled_script,
+        compiled_module,
         10,
         100_000,
         1,
@@ -76,22 +70,16 @@ fn duplicate_module() {
 
     let program = String::from(
         "
-        modules:
         module M {
 
         }
-
-        script:
-        main() {
-          return;
-        }
         ",
     );
-    let compiled_script = compile_program_with_address(account.address(), &program, vec![]);
+    let compiled_module = compile_module_with_address(account.address(), &program);
 
     let txn1 = account.account().create_signed_txn_impl(
         *account.address(),
-        compiled_script.clone(),
+        compiled_module.clone(),
         sequence_number,
         100_000,
         1,
@@ -99,7 +87,7 @@ fn duplicate_module() {
 
     let txn2 = account.account().create_signed_txn_impl(
         *account.address(),
-        compiled_script,
+        compiled_module,
         sequence_number + 1,
         100_000,
         1,
@@ -132,17 +120,12 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
 
     let program = String::from(
         "
-        modules:
         module M {
-        }
-        script:
-        main () {
-            return;
         }
         ",
     );
 
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);
+    let random_script = compile_module_with_address(sender.address(), &program);
     let txn =
         sender
             .account()
@@ -166,16 +149,12 @@ pub fn test_publishing_allow_modules() {
 
     let program = String::from(
         "
-        modules:
         module M {
         }
-        script:
-        main () {
-            return;
-        }",
+        ",
     );
 
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
+    let random_script = compile_module_with_address(sender.address(), &program);
     let txn =
         sender
             .account()
@@ -185,62 +164,4 @@ pub fn test_publishing_allow_modules() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
-}
-
-#[test]
-pub fn test_publishing_with_error() {
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
-
-    // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
-    executor.add_account_data(&sender);
-
-    let program = String::from(
-        "
-        modules:
-        module M {
-        }
-        script:
-        main () {
-            assert(false, 42);
-            return;
-        }",
-    );
-
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
-    let txn1 =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
-    let program = String::from(
-        "
-        modules:
-        module M {
-        }
-        script:
-        main () {
-            return;
-        }",
-    );
-
-    let random_script = compile_program_with_address(sender.address(), &program, vec![]);;
-    let txn2 =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 11, 100_000, 1);
-
-    assert_eq!(executor.verify_transaction(txn1.clone()), None);
-    assert_eq!(executor.verify_transaction(txn2.clone()), None);
-
-    let result = executor.execute_block(vec![txn1, txn2]);
-    assert!(transaction_status_eq(
-        &result[0].status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(42))
-    ));
-
-    assert!(transaction_status_eq(
-        &result[1].status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
-    ));
 }

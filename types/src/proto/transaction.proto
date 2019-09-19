@@ -96,6 +96,8 @@ message TransactionToCommit {
     repeated Event events = 3;
     // The amount of gas used.
     uint64 gas_used = 4;
+    // The major status of executing the transaction.
+    uint64 major_status = 5;
 }
 
 // A list of consecutive transactions with proof. This is mainly used for state

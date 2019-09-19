@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use test_generation::run_generation;
+use structopt::StructOpt;
+use test_generation::{config::Args, run_generation};
 
 pub fn main() {
-    run_generation(1000);
+    let args = Args::from_args();
+    run_generation(args);
 }

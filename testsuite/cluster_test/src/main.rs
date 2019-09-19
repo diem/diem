@@ -48,7 +48,7 @@ pub fn main() {
     } else if matches.is_present(ARG_WIPE_ALL_DB) {
         runner.wipe_all_db(true);
     } else if matches.is_present(ARG_REBOOT) {
-        runner.reboot(matches.values_of_lossy(ARG_REBOOT).unwrap());
+        runner.reboot();
     }
 }
 
@@ -360,20 +360,15 @@ impl ClusterTestRunner {
         println!("Done");
     }
 
-    fn reboot(self, validators: Vec<String>) {
+    fn reboot(self) {
         let mut reboots = vec![];
-        for validator in validators {
-            match self.cluster.get_instance(&validator) {
-                None => println!("{} not found", validator),
-                Some(instance) => {
-                    println!("Rebooting {}", validator);
-                    let reboot = Reboot::new(instance.clone());
-                    if let Err(err) = reboot.apply() {
-                        println!("Failed to reboot {}: {:?}", validator, err);
-                    } else {
-                        reboots.push(reboot);
-                    }
-                }
+        for instance in self.cluster.instances() {
+            println!("Rebooting {}", instance);
+            let reboot = Reboot::new(instance.clone());
+            if let Err(err) = reboot.apply() {
+                println!("Failed to reboot {}: {:?}", instance, err);
+            } else {
+                reboots.push(reboot);
             }
         }
         println!("Waiting to complete");
@@ -415,10 +410,7 @@ fn arg_matches() -> ArgMatches<'static> {
     let tail_logs = Arg::with_name(ARG_TAIL_LOGS).long("--tail-logs");
     let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
     let prune_logs = Arg::with_name(ARG_PRUNE).long("--prune-logs");
-    let reboot = Arg::with_name(ARG_REBOOT)
-        .long("--reboot")
-        .takes_value(true)
-        .use_delimiter(true);
+    let reboot = Arg::with_name(ARG_REBOOT).long("--reboot");
     // This grouping requires one and only one action (tail logs, run test, etc)
     let action_group = ArgGroup::with_name("action")
         .args(&[

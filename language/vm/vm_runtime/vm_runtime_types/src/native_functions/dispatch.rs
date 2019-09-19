@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{hash, primitive_helpers, signature, vector};
-use crate::{native_structs::dispatch::dispatch_native_struct, value::Local};
+use super::{hash, primitive_helpers, signature};
+use crate::{
+    native_structs::{dispatch::dispatch_native_struct, vector::NativeVector},
+    value::Value,
+};
 use std::collections::{HashMap, VecDeque};
 use types::{
     account_address::AccountAddress,
@@ -18,8 +21,8 @@ pub enum NativeReturnStatus {
     Success {
         /// The cost for running that function
         cost: u64,
-        /// The `Vec<Local>` values will be pushed on the stack
-        return_values: Vec<Local>,
+        /// The `Vec<Value>` values will be pushed on the stack
+        return_values: Vec<Value>,
     },
     /// Represents the execution of an abort instruction with the given error code
     Aborted {
@@ -35,7 +38,7 @@ pub enum NativeReturnStatus {
 /// Struct representing the expected definition for a native function
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function
-    pub dispatch: fn(VecDeque<Local>) -> NativeReturnStatus,
+    pub dispatch: fn(VecDeque<Value>) -> NativeReturnStatus,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context
@@ -146,13 +149,13 @@ lazy_static! {
         );
         // Vector
         add!(m, addr, "Vector", "length",
-            vector::native_length,
+            NativeVector::native_length,
             vec![Kind::All],
             vec![Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
             vec![U64]
         );
         add!(m, addr, "Vector", "empty",
-            vector::native_empty,
+            NativeVector::native_empty,
             vec![Kind::All],
             vec![],
             vec![
@@ -160,7 +163,7 @@ lazy_static! {
             ]
         );
         add!(m, addr, "Vector", "borrow",
-            vector::native_borrow,
+            NativeVector::native_borrow,
             vec![Kind::All],
             vec![
                 Reference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
@@ -169,8 +172,18 @@ lazy_static! {
                 Reference(Box::new(TypeParameter(0)))
             ]
         );
+        add!(m, addr, "Vector", "borrow_mut",
+            NativeVector::native_borrow,
+            vec![Kind::All],
+            vec![
+                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                 U64],
+            vec![
+                MutableReference(Box::new(TypeParameter(0)))
+            ]
+        );
         add!(m, addr, "Vector", "push_back",
-            vector::native_push_back,
+            NativeVector::native_push_back,
             vec![Kind::All],
             vec![
                 MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
@@ -178,10 +191,17 @@ lazy_static! {
             ],
             vec![]
         );
+        add!(m, addr, "Vector", "pop_back",
+            NativeVector::native_pop,
+            vec![Kind::All],
+            vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
+            vec![TypeParameter(0)]
+        );
         // Event
         add!(m, addr, "Event", "write_to_event_store",
             |_| { NativeReturnStatus::InvalidArguments },
-            vec![ByteArray, U64, ByteArray],
+            vec![Kind::Unrestricted],
+            vec![ByteArray, U64, TypeParameter(0)],
             vec![]
         );
         m

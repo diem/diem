@@ -1,0 +1,15 @@
+// FIXME: We haven't implemented the resource checker for generics. Come back and add verification error once that's
+// done.
+module ResourceHandle {
+    import 0x0.Event;
+    import 0x0.LibraCoin;
+    resource T {
+        foo: Event.Handle<LibraCoin.T>
+    }
+
+    public new(): Self.T {
+        let handle: Event.Handle<LibraCoin.T>;
+        handle = Event.new_event_handle<LibraCoin.T>();
+        return T { foo: move(handle) };
+    }
+}

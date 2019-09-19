@@ -4,7 +4,7 @@
 use super::*;
 use crypto::HashValue;
 use schemadb::schema::assert_encode_decode;
-use types::transaction::TransactionInfo;
+use types::{transaction::TransactionInfo, vm_error::StatusCode};
 
 #[test]
 fn test_encode_decode() {
@@ -13,6 +13,7 @@ fn test_encode_decode() {
         HashValue::random(),
         HashValue::random(),
         7,
+        StatusCode::EXECUTED,
     );
     assert_encode_decode::<TransactionInfoSchema>(&0u64, &txn_info);
 }

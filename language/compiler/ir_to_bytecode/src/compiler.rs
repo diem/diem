@@ -174,10 +174,10 @@ impl FunctionFrame {
     }
 
     fn get_local_type(&self, idx: u8) -> Result<&SignatureToken> {
-        match self.local_types.0.get(idx as usize) {
-            None => bail!("variable {} undefined", idx),
-            Some(sig_token) => Ok(sig_token),
-        }
+        self.local_types
+            .0
+            .get(idx as usize)
+            .ok_or_else(|| format_err!("variable {} undefined", idx))
     }
 
     fn define_local(&mut self, var: &Var, type_: SignatureToken) -> Result<u8> {

@@ -12,7 +12,11 @@ fn functional_tests(input: &str) -> Result<()> {
     let (config, directives, transactions) = parse_input(input)?;
     let res = eval(&config, &transactions)?;
     if let Err(e) = check(&res, &directives) {
-        println!("{:#?}", res);
+        if res.use_debug_output {
+            println!("{:?}", res);
+        } else {
+            println!("{}", res);
+        }
         return Err(e);
     }
     Ok(())

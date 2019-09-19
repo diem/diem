@@ -87,11 +87,6 @@ impl<'a> VerifiedStateView<'a> {
         Self {
             reader,
             latest_persistent_version: latest_persistent_version_and_state_root.0,
-            // if num_elements_in_accumulator > 0 {
-            //     Some(num_elements_in_accumulator - 1)
-            // } else {
-            //     None
-            // },
             latest_persistent_state_root: latest_persistent_version_and_state_root.1,
             speculative_state,
             account_to_btree_cache: RefCell::new(HashMap::new()),

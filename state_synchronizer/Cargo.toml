@@ -37,3 +37,4 @@ crypto = { path = "../crypto/crypto", features = ["testing"]}
 parity-multiaddr = "0.5.0"
 types = { path = "../types", features = ["testing"] }
 vm_genesis = { path = "../language/vm/vm_genesis" }
+channel = { path = "../common/channel" }

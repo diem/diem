@@ -36,12 +36,14 @@ use std::{
 use tokio::runtime::{Builder, Runtime};
 use types::{
     account_address::AccountAddress,
-    ledger_info::{LedgerInfo as TypesLedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo as TypesLedgerInfo,
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
+    vm_error::StatusCode,
 };
-use vm_genesis::{encode_transfer_program, GENESIS_KEYPAIR};
+use vm_genesis::{encode_transfer_script, GENESIS_KEYPAIR};
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
@@ -83,7 +85,7 @@ impl MockExecutorProxy {
 
         let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
         let receiver = AccountAddress::new([0xff; 32]);
-        let program = encode_transfer_program(&receiver, 1);
+        let program = encode_transfer_script(&receiver, 1);
         let transaction = get_test_signed_txn(
             sender,
             version + 1,
@@ -92,8 +94,13 @@ impl MockExecutorProxy {
             Some(program),
         );
 
-        let txn_info =
-            TransactionInfo::new(HashValue::zero(), HashValue::zero(), HashValue::zero(), 0);
+        let txn_info = TransactionInfo::new(
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            StatusCode::EXECUTED,
+        );
         let accumulator_proof = AccumulatorProof::new(vec![]);
         let txns = TransactionListWithProof::new(
             vec![(
@@ -153,10 +160,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 }
 
 struct SynchronizerEnv {
+    _runtime: Runtime,
+    _synchronizers: Vec<StateSynchronizer>,
     peers: Vec<PeerId>,
     clients: Vec<Arc<StateSyncClient>>,
-    _synchronizers: Vec<StateSynchronizer>,
-    _runtime: Runtime,
 }
 
 impl SynchronizerEnv {
@@ -238,18 +245,21 @@ impl SynchronizerEnv {
         } else {
             config.networks.get_mut(0).unwrap().role = "validator".to_string();
         }
+        config
+            .state_sync
+            .upstream_peers
+            .upstream_peers
+            .push(peers[1].to_string());
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
                 &config.state_sync,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
-                vec![peers[1]],
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 &get_test_config().0.state_sync,
                 MockExecutorProxy::new(peers[1], handler),
-                vec![],
             ),
         ];
         let clients = synchronizers.iter().map(|s| s.create_client()).collect();

@@ -1,0 +1,12 @@
+import 0x0.Vector;
+main() {
+    let v: Vector.T<u64>;
+    let value_ref: &u64;
+
+    v = Vector.empty<u64>();
+    Vector.push_back<u64>(&mut v, 7);
+    value_ref = Vector.borrow<u64>(&v, 1);
+    return;
+}
+// check: NATIVE_FUNCTION_ERROR
+// check: 1

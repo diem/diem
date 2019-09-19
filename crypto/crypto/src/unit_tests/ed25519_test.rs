@@ -81,7 +81,7 @@ proptest! {
         prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
     }
 
-    // Check for canonical s.
+    // Check for canonical S.
     #[test]
     fn test_signature_malleability(
         hash in any::<HashValue>(),
@@ -90,20 +90,20 @@ proptest! {
         let signature = keypair.private_key.sign_message(&hash);
         let mut serialized = signature.to_bytes();
 
-        let mut r_bits: [u8; 32] = [0u8; 32];
-        r_bits.copy_from_slice(&serialized[..32]);
+        let mut r_bytes: [u8; 32] = [0u8; 32];
+        r_bytes.copy_from_slice(&serialized[..32]);
 
-        let mut s_bits: [u8; 32] = [0u8; 32];
-        s_bits.copy_from_slice(&serialized[32..]);
+        let mut s_bytes: [u8; 32] = [0u8; 32];
+        s_bytes.copy_from_slice(&serialized[32..]);
 
-        // ed25519-dalek signing ensures a canonical s value.
-        let s = Scalar52::from_bytes(&s_bits);
+        // ed25519-dalek signing ensures a canonical S value.
+        let s = Scalar52::from_bytes(&s_bytes);
 
-        // adding L (order of the base point) so that s + L > L
+        // adding L (order of the base point) so that S + L > L
         let malleable_s = Scalar52::add(&s, &L);
-        let malleable_s_bits = malleable_s.to_bytes();
-        // Update the signature (the s part).
-        serialized[32..].copy_from_slice(&malleable_s_bits);
+        let malleable_s_bytes = malleable_s.to_bytes();
+        // Update the signature (the S part).
+        serialized[32..].copy_from_slice(&malleable_s_bytes);
 
         // Check that malleable signatures will pass verification and deserialization in dalek.
         // Construct the corresponding dalek public key.
@@ -120,7 +120,7 @@ proptest! {
         prop_assert!(dalek_public_key.verify(hash.as_ref(), &dalek_sig.unwrap()).is_ok());
 
         let serialized_malleable: &[u8] = &serialized;
-        // from_bytes will fail on malleable signatures. We detect malleable signatures
+        // try_from will fail on malleable signatures. We detect malleable signatures
         // during deserialization.
         prop_assert_eq!(
             Ed25519Signature::try_from(serialized_malleable),
@@ -135,6 +135,15 @@ proptest! {
         // we receive one. Note that this is a second step of validation as we typically check
         // malleable signatures during deserialization.
         prop_assert!(keypair.public_key.verify_signature(&hash, &sig_unchecked).is_err());
+
+        // Update the signature by setting S = L to make it invalid.
+        serialized[32..].copy_from_slice(&L.to_bytes());
+        let serialized_malleable_l: &[u8] = &serialized;
+        // try_from will fail with CanonicalRepresentationError.
+        prop_assert_eq!(
+            Ed25519Signature::try_from(serialized_malleable_l),
+            Err(CryptoMaterialError::CanonicalRepresentationError)
+        );
     }
 }
 

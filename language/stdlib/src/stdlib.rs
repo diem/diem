@@ -48,7 +48,8 @@ lazy_static! {
             &*U64_UTIL_MODULE,
             &*VECTOR_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
-            &*ACCOUNT_MODULE, // depends on Coin, Event, AddressUtil, BytearrayUtil, U64Util
+            &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
+            &*VALIDATOR_SET_MODULE, // depends on LibraAccount
             &*CHANNEL_MODULE,
         ]
     };

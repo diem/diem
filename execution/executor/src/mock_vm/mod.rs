@@ -15,7 +15,7 @@ use types::{
     contract_event::ContractEvent,
     event::EventKey,
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionArgument, TransactionOutput,
+        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionOutput,
         TransactionPayload, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
@@ -252,15 +252,15 @@ fn gen_events(sender: AccountAddress) -> Vec<ContractEvent> {
     )]
 }
 
-pub fn encode_mint_program(amount: u64) -> Program {
+pub fn encode_mint_program(amount: u64) -> Script {
     let argument = TransactionArgument::U64(amount);
-    Program::new(vec![], vec![], vec![argument])
+    Script::new(vec![], vec![argument])
 }
 
-pub fn encode_transfer_program(recipient: AccountAddress, amount: u64) -> Program {
+pub fn encode_transfer_program(recipient: AccountAddress, amount: u64) -> Script {
     let argument1 = TransactionArgument::Address(recipient);
     let argument2 = TransactionArgument::U64(amount);
-    Program::new(vec![], vec![], vec![argument1, argument2])
+    Script::new(vec![], vec![argument1, argument2])
 }
 
 pub fn encode_mint_transaction(sender: AccountAddress, amount: u64) -> SignedTransaction {
@@ -275,9 +275,9 @@ pub fn encode_transfer_transaction(
     encode_transaction(sender, encode_transfer_program(recipient, amount))
 }
 
-fn encode_transaction(sender: AccountAddress, program: Program) -> SignedTransaction {
+fn encode_transaction(sender: AccountAddress, program: Script) -> SignedTransaction {
     let raw_transaction =
-        RawTransaction::new(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
+        RawTransaction::new_script(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
 
     let (privkey, pubkey) = compat::generate_keypair(None);
     raw_transaction
@@ -289,17 +289,16 @@ fn encode_transaction(sender: AccountAddress, program: Program) -> SignedTransac
 fn decode_transaction(txn: &SignedTransaction) -> Transaction {
     let sender = txn.sender();
     match txn.payload() {
-        TransactionPayload::Program(program) => {
-            assert!(program.code().is_empty(), "Code should be empty.");
-            assert!(program.modules().is_empty(), "Modules should be empty.");
-            match program.args().len() {
-                1 => match program.args()[0] {
+        TransactionPayload::Script(script) => {
+            assert!(script.code().is_empty(), "Code should be empty.");
+            match script.args().len() {
+                1 => match script.args()[0] {
                     TransactionArgument::U64(amount) => Transaction::Mint { sender, amount },
                     _ => unimplemented!(
                         "Only one integer argument is allowed for mint transactions."
                     ),
                 },
-                2 => match (&program.args()[0], &program.args()[1]) {
+                2 => match (&script.args()[0], &script.args()[1]) {
                     (TransactionArgument::Address(recipient), TransactionArgument::U64(amount)) => {
                         Transaction::Payment {
                             sender,
@@ -318,8 +317,8 @@ fn decode_transaction(txn: &SignedTransaction) -> Transaction {
         TransactionPayload::WriteSet(_) => {
             unimplemented!("MockVM does not support WriteSet transaction payload.")
         }
-        TransactionPayload::Script(_) => {
-            unimplemented!("MockVM does not support Script transaction payload.")
+        TransactionPayload::Program(_) => {
+            unimplemented!("MockVM does not support Program transaction payload.")
         }
         TransactionPayload::Module(_) => {
             unimplemented!("MockVM does not support Module transaction payload.")

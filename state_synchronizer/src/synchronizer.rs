@@ -4,10 +4,8 @@
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
-    PeerId,
 };
 use config::config::{NodeConfig, StateSyncConfig};
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -17,7 +15,7 @@ use futures::{
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::LedgerInfoWithSignatures;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -29,26 +27,19 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         config: &NodeConfig,
-        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(
             &config.execution,
             &config.storage,
             config.consensus.get_consensus_peers(),
         );
-        Self::bootstrap_with_executor_proxy(
-            network,
-            &config.state_sync,
-            executor_proxy,
-            upstream_peer_ids,
-        )
+        Self::bootstrap_with_executor_proxy(network, &config.state_sync, executor_proxy)
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
-        upstream_peer_ids: Vec<PeerId>,
     ) -> Self {
         let runtime = Builder::new()
             .name_prefix("state-sync-")
@@ -62,7 +53,6 @@ impl StateSynchronizer {
             coordinator_receiver,
             state_sync_config.clone(),
             executor_proxy,
-            upstream_peer_ids.clone(),
         );
         executor.spawn(coordinator.start(network).boxed().unit_error().compat());
 
@@ -85,10 +75,7 @@ pub struct StateSyncClient {
 
 impl StateSyncClient {
     /// Sync validator's state up to given `version`
-    pub fn sync_to(
-        &self,
-        target: LedgerInfoWithSignatures<Ed25519Signature>,
-    ) -> impl Future<Output = Result<bool>> {
+    pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<bool>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {

@@ -139,21 +139,9 @@ use config::config::VMConfig;
 use state_view::StateView;
 use types::{
     transaction::{SignedTransaction, TransactionOutput},
-    vm_error::{StatusCode, VMStatus},
+    vm_error::VMStatus,
 };
-use vm::{errors::VMResult, IndexKind};
-
-pub(crate) fn bounded_fetch<T>(pool: &[T], idx: usize, bound_type: IndexKind) -> VMResult<&T> {
-    pool.get(idx).ok_or_else(|| {
-        let msg = format!(
-            "exceeded index {} while fetching {} of type {}",
-            pool.len(),
-            idx,
-            bound_type
-        );
-        VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg)
-    })
-}
+use vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.
 pub trait VMVerifier {

@@ -9,7 +9,7 @@ use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use proto_conv::IntoProtoBytes;
 use rand::{Rng, SeedableRng};
-use std::{convert::TryFrom, fs::File, io::prelude::*, path::Path};
+use std::{fs::File, io::prelude::*, path::Path, str::FromStr};
 use types::{account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys};
 use vm_genesis::encode_genesis_transaction_with_validator;
 
@@ -22,20 +22,19 @@ pub fn gen_genesis_transaction<P: AsRef<Path>>(
     let validator_set = consensus_peers_config
         .peers
         .iter()
-        .map(|peer| {
-            let peer_id = peer.account_address.clone();
+        .map(|(peer_id_str, peer_info)| {
             ValidatorPublicKeys::new(
-                AccountAddress::try_from(peer_id.clone()).expect("[config] invalid peer_id"),
-                peer.consensus_pubkey.clone(),
+                AccountAddress::from_str(peer_id_str).expect("[config] invalid peer_id"),
+                peer_info.consensus_pubkey.clone(),
                 network_peers_config
                     .peers
-                    .get(&peer_id)
+                    .get(peer_id_str)
                     .unwrap()
                     .network_signing_pubkey
                     .clone(),
                 network_peers_config
                     .peers
-                    .get(&peer_id)
+                    .get(peer_id_str)
                     .unwrap()
                     .network_identity_pubkey
                     .clone(),

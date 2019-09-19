@@ -4,7 +4,7 @@
 use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
-use crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, *};
+use crypto::{test_utils::TEST_SEED, *};
 use futures::future::{FutureExt, TryFutureExt};
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
@@ -53,7 +53,7 @@ fn setup_discovery(
     addrs: Vec<Multiaddr>,
     seed_peer_id: PeerId,
     seed_peer_info: PeerInfo,
-    signer: Signer<Ed25519PrivateKey>,
+    signer: Signer,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
     channel::Receiver<PeerManagerRequest<MemorySocket>>,
@@ -104,9 +104,7 @@ async fn expect_address_update(
     }
 }
 
-fn generate_network_pub_keys_and_signer(
-    peer_id: PeerId,
-) -> (NetworkPublicKeys, Signer<Ed25519PrivateKey>) {
+fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, Signer) {
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (signing_priv_key, _) = compat::generate_keypair(&mut rng);
     let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);

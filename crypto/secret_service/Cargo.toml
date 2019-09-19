@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 futures = "0.1.28"
-grpcio = "0.4.3"
+grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 protobuf = "~2.7"
 rand = "0.6.5"
 rand_chacha = "0.1.1"

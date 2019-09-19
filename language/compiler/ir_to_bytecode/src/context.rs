@@ -295,10 +295,9 @@ impl<'a> Context<'a> {
 
     /// Get the alias for the identifier, fails if it is not bound.
     fn module_alias(&self, ident: &QualifiedModuleIdent) -> Result<&ModuleName> {
-        match self.aliases.get(ident) {
-            None => bail!("Missing import for module {}", ident),
-            Some(n) => Ok(n),
-        }
+        self.aliases
+            .get(ident)
+            .ok_or_else(|| format_err!("Missing import for module {}", ident))
     }
 
     /// Get the handle for the alias, fails if it is not bound.
@@ -525,10 +524,9 @@ impl<'a> Context<'a> {
     //**********************************************************************************************
 
     fn dependency(&self, m: &QualifiedModuleIdent) -> Result<&CompiledDependency> {
-        match self.dependencies.get(m) {
-            None => bail!("Dependency not provided for {}", m),
-            Some(dep) => Ok(dep),
-        }
+        self.dependencies
+            .get(m)
+            .ok_or_else(|| format_err!("Dependency not provided for {}", m))
     }
 
     fn dep_struct_handle(&mut self, s: &QualifiedStructIdent) -> Result<(bool, Vec<Kind>)> {

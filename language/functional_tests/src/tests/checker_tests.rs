@@ -3,7 +3,11 @@
 
 use crate::{
     checker::{check, run_filecheck, Directive},
-    evaluator::{EvaluationOutput, EvaluationResult, Stage, Status},
+    evaluator::{EvaluationOutput, EvaluationResult, OutputType, Stage, Status},
+};
+use vm::{
+    file_format::{empty_module, CompiledModuleMut},
+    vm_string::VMString,
 };
 
 #[test]
@@ -63,22 +67,37 @@ fn make_directives(s: &str) -> Vec<Directive> {
         .collect()
 }
 
+fn make_output(module: CompiledModuleMut) -> EvaluationOutput {
+    EvaluationOutput::Output(Box::new(OutputType::CompiledModule(
+        module.freeze().unwrap(),
+    )))
+}
+
 #[rustfmt::skip]
 #[test]
 fn check_basic() {
+    let mut module = empty_module();
+    module.user_strings = vec![VMString::new("foo")];
+    let foo_mod = make_output(module.clone());
+    module.user_strings = vec![VMString::new("bar")];
+    let bar_mod = make_output(module.clone());
+    module.user_strings = vec![VMString::new("baz")];
+    let baz_mod = make_output(module.clone());
+
     let res = EvaluationResult {
         outputs: vec![
             EvaluationOutput::Transaction,
             EvaluationOutput::Stage(Stage::Compiler),
-            EvaluationOutput::Output("foo".to_string()),
+            foo_mod,
             EvaluationOutput::Stage(Stage::Verifier),
-            EvaluationOutput::Output("baz".to_string()),
+            baz_mod,
             EvaluationOutput::Stage(Stage::Runtime),
-            EvaluationOutput::Output("bar".to_string()),
+            bar_mod,
         ],
         status: Status::Success,
+        use_debug_output: false,
     };
-    
+
     check(&res, &make_directives(r"
         // check: foo
         // stage: runtime
@@ -110,15 +129,22 @@ fn check_basic() {
 #[rustfmt::skip]
 #[test]
 fn check_match_twice() {
+    let mut module = empty_module();
+    module.user_strings = vec![VMString::new("foo")];
+    let foo_mod = make_output(module.clone());
+    module.user_strings = vec![VMString::new("baz")];
+    let baz_mod = make_output(module.clone());
+
     let res = EvaluationResult {
         outputs: vec![
             EvaluationOutput::Transaction,
             EvaluationOutput::Stage(Stage::Compiler),
-            EvaluationOutput::Output("foo".to_string()),
+            foo_mod,
             EvaluationOutput::Stage(Stage::Verifier),
-            EvaluationOutput::Output("baz".to_string()),
+            baz_mod,
         ],
         status: Status::Success,
+        use_debug_output: false,
     };
 
     check(&res, &make_directives(r"
@@ -137,13 +163,17 @@ fn check_match_twice() {
 #[rustfmt::skip]
 #[test]
 fn check_no_stage() {
+    let mut module = empty_module();
+    module.user_strings = vec![VMString::new("baz")];
+    let baz_mod = make_output(module.clone());
     let res = EvaluationResult {
         outputs: vec![
             EvaluationOutput::Transaction,
             EvaluationOutput::Stage(Stage::Verifier),
-            EvaluationOutput::Output("baz".to_string()),
+            baz_mod,
         ],
         status: Status::Success,
+        use_debug_output: false,
     };
 
     check(&res, &make_directives(r"

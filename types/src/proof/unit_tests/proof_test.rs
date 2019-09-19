@@ -6,15 +6,17 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        verify_account_state, verify_event, verify_signed_transaction,
-        verify_sparse_merkle_element, verify_test_accumulator_element, AccountStateProof,
-        AccumulatorProof, EventAccumulatorInternalNode, EventProof, MerkleTreeInternalNode,
-        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
-        TestAccumulatorInternalNode, TransactionAccumulatorInternalNode,
+        definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
+        verify_signed_transaction, verify_sparse_merkle_element, verify_test_accumulator_element,
+        AccountStateProof, AccumulatorProof, EventAccumulatorInternalNode, EventProof,
+        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode,
+        TransactionAccumulatorInternalNode,
     },
     transaction::{
-        Program, RawTransaction, SignedTransaction, TransactionInfo, TransactionListWithProof,
+        RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
     },
+    vm_error::StatusCode,
 };
 use crypto::{
     ed25519::*,
@@ -98,10 +100,10 @@ fn test_verify_three_element_accumulator() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_leftmost() {
+fn test_accumulator_proof_max_siblings_leftmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -116,10 +118,10 @@ fn test_accumulator_proof_63_siblings_leftmost() {
 }
 
 #[test]
-fn test_accumulator_proof_63_siblings_rightmost() {
+fn test_accumulator_proof_max_siblings_rightmost() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..63 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -135,10 +137,11 @@ fn test_accumulator_proof_63_siblings_rightmost() {
 }
 
 #[test]
-fn test_accumulator_proof_64_siblings() {
+#[allow(clippy::range_plus_one)]
+fn test_accumulator_proof_sibling_overflow() {
     let element_hash = b"hello".test_only_hash();
     let mut siblings = vec![];
-    for i in 0..64 {
+    for i in 0..MAX_ACCUMULATOR_PROOF_DEPTH as u8 + 1 {
         siblings.push(HashValue::new([i; 32]));
     }
     let root_hash = siblings
@@ -279,6 +282,7 @@ fn test_verify_signed_transaction() {
         state_root1_hash,
         event_root1_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info1_hash = txn_info1.hash();
 
@@ -357,10 +361,10 @@ fn test_verify_account_state_and_event() {
     let txn_info1_hash = b"worldworld".test_only_hash();
 
     let (privkey, pubkey) = compat::generate_keypair(None);
-    let txn2_hash = RawTransaction::new(
+    let txn2_hash = RawTransaction::new_script(
         AccountAddress::from_public_key(&pubkey),
         /* sequence_number = */ 0,
-        Program::new(vec![], vec![], vec![]),
+        Script::new(vec![], vec![]),
         /* max_gas_amount = */ 0,
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),
@@ -378,6 +382,7 @@ fn test_verify_account_state_and_event() {
         state_root_hash,
         event_root_hash,
         /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
     );
     let txn_info2_hash = txn_info2.hash();
 
@@ -498,6 +503,7 @@ fn arb_signed_txn_list_and_range(
                         txn_info.state_root_hash(),
                         txn_info.event_root_hash(),
                         txn_info.gas_used(),
+                        txn_info.major_status(),
                     ),
                 )
             })

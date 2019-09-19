@@ -46,9 +46,8 @@ impl AbstractValue {
 
     pub fn is_safe_to_destroy(&self) -> bool {
         match self {
-            AbstractValue::Reference(_)
-            | AbstractValue::Value(Kind::All, _)
-            | AbstractValue::Value(Kind::Resource, _) => false,
+            AbstractValue::Reference(_) => true,
+            AbstractValue::Value(Kind::All, _) | AbstractValue::Value(Kind::Resource, _) => false,
             AbstractValue::Value(Kind::Unrestricted, borrowed_nonces) => borrowed_nonces.is_empty(),
         }
     }
@@ -128,16 +127,6 @@ impl AbstractState {
     /// inserts local@idx
     pub fn insert_local(&mut self, idx: LocalIndex, value: AbstractValue) {
         self.locals.insert(idx, value);
-    }
-
-    /// checks if local@idx is a reference
-    pub fn is_reference(&self, idx: LocalIndex) -> bool {
-        self.locals[&idx].is_reference()
-    }
-
-    /// checks if local@idx is a value
-    pub fn is_value(&self, idx: LocalIndex) -> bool {
-        self.locals[&idx].is_value()
     }
 
     /// Return true if self may safely be destroyed
@@ -575,8 +564,8 @@ impl AbstractState {
 
 impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
-    /// both self.is_canonical() and state.is_canonical() must be true
     fn join(&mut self, state: &AbstractState) -> JoinResult {
+        checked_verify!(self.is_canonical() && state.is_canonical());
         // A join failure occurs in each of the following situations:
         // - an unrestricted value is borrowed along one path but unavailable along the other
         // - a value that is not unrestricted, i.e., either reference or resource, is available

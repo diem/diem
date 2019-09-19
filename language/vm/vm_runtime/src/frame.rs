@@ -1,22 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    bounded_fetch,
-    loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
-};
-use std::{fmt, marker::PhantomData, mem::replace};
-use types::vm_error::{StatusCode, VMStatus};
+use crate::loaded_data::{function::FunctionReference, loaded_module::LoadedModule};
+use std::{fmt, marker::PhantomData};
 use vm::{
     errors::{Location, VMResult},
     file_format::{Bytecode, CodeOffset, LocalIndex},
-    IndexKind,
 };
-use vm_runtime_types::value::Local;
+use vm_runtime_types::value::{Locals, Value};
 
 pub struct Frame<'txn, F: 'txn> {
     pc: u16,
-    locals: Vec<Local>,
+    locals: Locals,
     function: F,
     phantom: PhantomData<&'txn F>,
 }
@@ -25,11 +20,10 @@ impl<'txn, F> Frame<'txn, F>
 where
     F: FunctionReference<'txn>,
 {
-    pub fn new(function: F, mut args: Vec<Local>) -> Self {
-        args.resize(function.local_count(), Local::Invalid);
+    pub fn new(function: F, locals: Locals) -> Self {
         Frame {
             pc: 0,
-            locals: args,
+            locals,
             function,
             phantom: PhantomData,
         }
@@ -39,7 +33,7 @@ where
         self.function.code_definition()
     }
 
-    pub fn jump(&mut self, offset: CodeOffset) {
+    pub fn save_pc(&mut self, offset: CodeOffset) {
         self.pc = offset;
     }
 
@@ -47,43 +41,24 @@ where
         self.pc
     }
 
-    pub fn get_local(&self, idx: LocalIndex) -> VMResult<&Local> {
-        bounded_fetch(&self.locals, idx as usize, IndexKind::LocalPool)
-    }
-
-    pub fn invalidate_local(&mut self, idx: LocalIndex) -> VMResult<Local> {
-        if let Some(local_ref) = self.locals.get_mut(idx as usize) {
-            let old_local = replace(local_ref, Local::Invalid);
-            Ok(old_local)
-        } else {
-            let msg = format!(
-                "Invalidated out of bounds position at {} > {} in the Local Pool",
-                idx,
-                self.locals.len()
-            );
-            Err(VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg))
-        }
-    }
-
-    pub fn store_local(&mut self, idx: LocalIndex, local: Local) -> VMResult<()> {
-        // We don't need to check if the local matches the local signature
-        // definition as VM is oblivous to value types.
-        if let Some(local_ref) = self.locals.get_mut(idx as usize) {
-            // What should we do if local already has some other values?
-            *local_ref = local;
-            Ok(())
-        } else {
-            let msg = format!(
-                "Invalidated out of bounds position at {} > {} in the Local Pool",
-                idx,
-                self.locals.len()
-            );
-            Err(VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg))
-        }
-    }
-
     pub fn module(&self) -> &'txn LoadedModule {
         self.function.module()
+    }
+
+    pub fn copy_loc(&self, idx: LocalIndex) -> VMResult<Value> {
+        self.locals.copy_loc(idx as usize)
+    }
+
+    pub fn move_loc(&mut self, idx: LocalIndex) -> VMResult<Value> {
+        self.locals.move_loc(idx as usize)
+    }
+
+    pub fn store_loc(&mut self, idx: LocalIndex, value: Value) -> VMResult<()> {
+        self.locals.store_loc(idx as usize, value)
+    }
+
+    pub fn borrow_loc(&mut self, idx: LocalIndex) -> VMResult<Value> {
+        self.locals.borrow_loc(idx as usize)
     }
 }
 
@@ -99,10 +74,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "\n\tFunction: {}", self.function.name())?;
-        write!(f, "\n\tLocals: [")?;
-        for l in self.locals.iter() {
-            write!(f, "\n\t\t{:?},", l)?;
-        }
+        write!(f, "\n\tLocals: {:?}", self.locals)?;
         write!(f, "\n\t]")
     }
 }
@@ -112,12 +84,12 @@ impl<'txn, F> Frame<'txn, F>
 where
     F: FunctionReference<'txn>,
 {
-    pub fn set_with_states(&mut self, pc: u16, locals: Vec<Local>) {
+    pub fn set_with_states(&mut self, pc: u16, locals: Locals) {
         self.pc = pc;
         self.locals = locals;
     }
 
-    pub fn get_locals(&self) -> &Vec<Local> {
+    pub fn get_locals(&self) -> &Locals {
         &self.locals
     }
 }

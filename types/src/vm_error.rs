@@ -10,6 +10,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -136,10 +137,13 @@ impl VMStatus {
     pub fn set_message(&mut self, message: String) {
         self.message = Some(message);
     }
-
-    /// Append the message `message` to the message field of the VM status.
-    pub fn append_message(mut self, message: String) -> Self {
+    /// Append the message `message` to the message field of the VM status, and insert a seperator
+    /// if the original message is non-empty.
+    pub fn append_message_with_separator(mut self, separator: char, message: String) -> Self {
         if let Some(ref mut msg) = self.message {
+            if !msg.is_empty() {
+                msg.push(separator);
+            }
             msg.push_str(&message);
         } else {
             self.message = Some(message);
@@ -191,8 +195,8 @@ impl VMStatus {
 
     /// Append two VMStatuses together. The major status is kept from the caller.
     pub fn append(self, other: Self) -> Self {
-        let msg = format!("\n{}", other);
-        self.append_message(msg)
+        let msg = format!("{}", other);
+        self.append_message_with_separator('\n', msg)
     }
 }
 
@@ -209,7 +213,7 @@ impl IntoProto for VMStatus {
         proto_status.set_has_message(false);
 
         // Set major status
-        proto_status.set_major_status(self.major_status.into());
+        proto_status.set_major_status(self.major_status.into_proto());
 
         // Set minor status if there is one
         if let Some(sub_status) = self.sub_status {
@@ -231,10 +235,7 @@ impl FromProto for VMStatus {
     type ProtoType = crate::proto::vm_errors::VMStatus;
 
     fn from_proto(mut proto_status: Self::ProtoType) -> Result<Self> {
-        let mut status = match StatusCode::try_from(proto_status.get_major_status()) {
-            Ok(status) => VMStatus::new(status),
-            Err(_) => VMStatus::new(StatusCode::UNKNOWN_STATUS),
-        };
+        let mut status = VMStatus::new(StatusCode::from_proto(proto_status.get_major_status())?);
 
         if proto_status.get_has_sub_status() {
             status.set_sub_status(proto_status.get_sub_status());
@@ -248,9 +249,37 @@ impl FromProto for VMStatus {
     }
 }
 
+impl IntoProto for StatusCode {
+    type ProtoType = u64;
+    fn into_proto(self) -> Self::ProtoType {
+        self.into()
+    }
+}
+
+impl FromProto for StatusCode {
+    type ProtoType = u64;
+    fn from_proto(proto_code: Self::ProtoType) -> Result<Self> {
+        match StatusCode::try_from(proto_code) {
+            Ok(status) => Ok(status),
+            Err(_) => Ok(StatusCode::UNKNOWN_STATUS),
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
 #[derive(
-    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Serialize,
+    Deserialize,
 )]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is
@@ -443,6 +472,7 @@ pub enum StatusCode {
     CODE_DESERIALIZATION_ERROR = 4019,
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
+    NATIVE_FUNCTION_ERROR = 4022,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
@@ -461,4 +491,7 @@ pub mod sub_status {
     pub const DRE_GLOBAL_REF_ALREADY_RELEASED: u64 = 2;
     pub const DRE_MISSING_RELEASEREF: u64 = 3;
     pub const DRE_GLOBAL_ALREADY_BORROWED: u64 = 4;
+
+    // Native Function Error sub-codes
+    pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
 }

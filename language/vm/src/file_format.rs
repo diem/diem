@@ -1108,7 +1108,7 @@ pub enum Bytecode {
     ///
     /// Stack transition:
     ///
-    /// ```..., address_value -> ...```
+    /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex, LocalsSignatureIndex),
     /// Create an account at the address specified. Does not return anything.
     ///

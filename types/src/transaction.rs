@@ -11,7 +11,7 @@ use crate::{
         AccumulatorProof, SignedTransactionProof,
     },
     proto::events::{EventsForVersions, EventsList},
-    vm_error::{StatusType, VMStatus},
+    vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
 use canonical_serialization::{
@@ -44,9 +44,10 @@ mod channel_transaction_payload;
 mod unit_tests;
 
 pub use module::Module;
-pub use program::{Program, SCRIPT_HASH_LENGTH};
+pub use program::Program;
 use protobuf::well_known_types::UInt64Value;
-pub use script::Script;
+pub use script::{Script, SCRIPT_HASH_LENGTH};
+
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 pub use channel_transaction_payload::{ChannelWriteSetPayload, ChannelScriptPayload};
@@ -80,14 +81,14 @@ pub struct RawTransaction {
 }
 
 impl RawTransaction {
-    /// Create a new `RawTransaction` with a program.
+    /// Create a new `RawTransaction` with a payload.
     ///
-    /// Almost all transactions are program transactions. See `new_write_set` for write-set
-    /// transactions.
+    /// It can be either to publish a module, to execute a script, or to issue a writeset
+    /// transaction.
     pub fn new(
         sender: AccountAddress,
         sequence_number: u64,
-        program: Program,
+        payload: TransactionPayload,
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: Duration,
@@ -95,7 +96,7 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::Program(program),
+            payload,
             max_gas_amount,
             gas_unit_price,
             expiration_time,
@@ -847,6 +848,14 @@ pub enum TransactionStatus {
     Keep(VMStatus),
 }
 
+impl TransactionStatus {
+    pub fn vm_status(&self) -> &VMStatus {
+        match self {
+            TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => vm_status,
+        }
+    }
+}
+
 impl From<VMStatus> for TransactionStatus {
     fn from(vm_status: VMStatus) -> Self {
         let should_discard = match vm_status.status_type() {
@@ -947,9 +956,27 @@ impl fmt::Display for TransactionOutput {
     }
 }
 
+impl FromProto for TransactionInfo {
+    type ProtoType = crate::proto::transaction_info::TransactionInfo;
+    fn from_proto(mut proto_txn_info: Self::ProtoType) -> Result<Self> {
+        let signed_txn_hash = HashValue::from_proto(proto_txn_info.take_signed_transaction_hash())?;
+        let state_root_hash = HashValue::from_proto(proto_txn_info.take_state_root_hash())?;
+        let event_root_hash = HashValue::from_proto(proto_txn_info.take_event_root_hash())?;
+        let gas_used = proto_txn_info.get_gas_used();
+        let major_status = StatusCode::from_proto(proto_txn_info.get_major_status())?;
+        Ok(TransactionInfo::new(
+            signed_txn_hash,
+            state_root_hash,
+            event_root_hash,
+            gas_used,
+            major_status,
+        ))
+    }
+}
+
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoProto)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::transaction_info::TransactionInfo)]
 pub struct TransactionInfo {
@@ -965,6 +992,11 @@ pub struct TransactionInfo {
 
     /// The amount of gas used.
     gas_used: u64,
+
+    /// The major status. This will provide the general error class. Note that this is not
+    /// particularly high fidelity in the presence of sub statuses but, the major status does
+    /// determine whether or not the transaction is applied to the global state or not.
+    major_status: StatusCode,
 }
 
 impl TransactionInfo {
@@ -975,12 +1007,14 @@ impl TransactionInfo {
         state_root_hash: HashValue,
         event_root_hash: HashValue,
         gas_used: u64,
+        major_status: StatusCode,
     ) -> TransactionInfo {
         TransactionInfo {
             signed_transaction_hash,
             state_root_hash,
             event_root_hash,
             gas_used,
+            major_status,
         }
     }
 
@@ -1005,6 +1039,10 @@ impl TransactionInfo {
     pub fn gas_used(&self) -> u64 {
         self.gas_used
     }
+
+    pub fn major_status(&self) -> StatusCode {
+        self.major_status
+    }
 }
 
 impl CanonicalSerialize for TransactionInfo {
@@ -1013,7 +1051,8 @@ impl CanonicalSerialize for TransactionInfo {
             .encode_bytes(self.signed_transaction_hash.as_ref())?
             .encode_bytes(self.state_root_hash.as_ref())?
             .encode_bytes(self.event_root_hash.as_ref())?
-            .encode_u64(self.gas_used)?;
+            .encode_u64(self.gas_used)?
+            .encode_u64(self.major_status.into())?;
         Ok(())
     }
 }
@@ -1036,6 +1075,7 @@ pub struct TransactionToCommit {
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     events: Vec<ContractEvent>,
     gas_used: u64,
+    major_status: StatusCode,
 }
 
 impl TransactionToCommit {
@@ -1044,12 +1084,14 @@ impl TransactionToCommit {
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         events: Vec<ContractEvent>,
         gas_used: u64,
+        major_status: StatusCode,
     ) -> Self {
         TransactionToCommit {
             signed_txn,
             account_states,
             events,
             gas_used,
+            major_status,
         }
     }
 
@@ -1067,6 +1109,10 @@ impl TransactionToCommit {
 
     pub fn gas_used(&self) -> u64 {
         self.gas_used
+    }
+
+    pub fn major_status(&self) -> StatusCode {
+        self.major_status
     }
 }
 
@@ -1096,12 +1142,14 @@ impl FromProto for TransactionToCommit {
             .map(ContractEvent::from_proto)
             .collect::<Result<Vec<_>>>()?;
         let gas_used = object.get_gas_used();
+        let major_status = StatusCode::from_proto(object.get_major_status())?;
 
         Ok(TransactionToCommit {
             signed_txn,
             account_states,
             events,
             gas_used,
+            major_status,
         })
     }
 }
@@ -1130,6 +1178,7 @@ impl IntoProto for TransactionToCommit {
                 .collect::<Vec<_>>(),
         ));
         proto.set_gas_used(self.gas_used);
+        proto.set_major_status(self.major_status.into_proto());
         proto
     }
 }

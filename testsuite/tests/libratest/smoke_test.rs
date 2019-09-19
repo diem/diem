@@ -393,25 +393,22 @@ fn test_external_transaction_signer() {
     assert_eq!(submitted_signed_txn.gas_unit_price(), gas_unit_price);
     assert_eq!(submitted_signed_txn.max_gas_amount(), max_gas_amount);
     match submitted_signed_txn.payload() {
-        TransactionPayload::Program(program) => {
-            assert!(program.modules().is_empty(), "Modules should be empty.");
-            match program.args().len() {
-                2 => match (&program.args()[0], &program.args()[1]) {
-                    (
-                        TransactionArgument::Address(arg_receiver),
-                        TransactionArgument::U64(arg_amount),
-                    ) => {
-                        assert_eq!(arg_receiver.clone(), receiver_address);
-                        assert_eq!(arg_amount.clone(), amount);
-                    }
-                    _ => panic!(
-                        "The first argument for payment transaction must be recipient address \
-                         and the second argument must be amount."
-                    ),
-                },
-                _ => panic!("Signed transaction payload arguments must have two arguments."),
-            }
-        }
-        _ => panic!("Signed transaction payload expected to be of struct Program"),
+        TransactionPayload::Script(program) => match program.args().len() {
+            2 => match (&program.args()[0], &program.args()[1]) {
+                (
+                    TransactionArgument::Address(arg_receiver),
+                    TransactionArgument::U64(arg_amount),
+                ) => {
+                    assert_eq!(arg_receiver.clone(), receiver_address);
+                    assert_eq!(arg_amount.clone(), amount);
+                }
+                _ => panic!(
+                    "The first argument for payment transaction must be recipient address \
+                     and the second argument must be amount."
+                ),
+            },
+            _ => panic!("Signed transaction payload arguments must have two arguments."),
+        },
+        _ => panic!("Signed transaction payload expected to be of struct Script"),
     }
 }

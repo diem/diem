@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::VMError;
-use std::collections::HashMap;
-use vm::file_format::{empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken};
+use crate::{borrow_graph::BorrowGraph, error::VMError};
+use std::{collections::HashMap, fmt};
+use vm::file_format::{
+    empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken, StructDefinitionIndex,
+};
 
 /// The BorrowState denotes whether a local is `Available` or
 /// has been moved and is `Unavailable`.
@@ -99,6 +101,17 @@ pub struct AbstractState {
 
     /// The module state
     pub module: CompiledModule,
+
+    /// The global resources acquired by the function corresponding to this abstract state
+    pub acquires_global_resources: Vec<StructDefinitionIndex>,
+
+    /// This flag is set when applying an instruction that should result in an error
+    /// in the VM runtime.
+    aborted: bool,
+
+    /// This graph stores borrow information needed to ensure that bytecode instructions
+    /// are memory safe
+    borrow_graph: BorrowGraph,
 }
 
 impl AbstractState {
@@ -111,6 +124,9 @@ impl AbstractState {
             module: empty_module()
                 .freeze()
                 .expect("Empty module should pass the bounds checker"),
+            acquires_global_resources: Vec::new(),
+            aborted: false,
+            borrow_graph: BorrowGraph::new(0),
         }
     }
 
@@ -119,7 +135,9 @@ impl AbstractState {
     pub fn from_locals(
         module: CompiledModuleMut,
         locals: HashMap<usize, (AbstractValue, BorrowState)>,
+        acquires_global_resources: Vec<StructDefinitionIndex>,
     ) -> AbstractState {
+        let locals_len = locals.len();
         AbstractState {
             stack: Vec::new(),
             locals,
@@ -127,6 +145,9 @@ impl AbstractState {
             module: module
                 .freeze()
                 .expect("Module should pass the bounds checker"),
+            acquires_global_resources,
+            aborted: false,
+            borrow_graph: BorrowGraph::new(locals_len as u8),
         }
     }
 
@@ -303,8 +324,31 @@ impl AbstractState {
         &self.locals
     }
 
-    /// TODO: Determine whether the current state is a final state
+    /// Set the abstract state to be `aborted` when a precondition of an instruction
+    /// fails. (This will happen if `NEGATE_PRECONDITIONs` is true).
+    pub fn abort(&mut self) {
+        self.aborted = true;
+    }
+
+    /// Whether the state is aborted
+    pub fn has_aborted(&self) -> bool {
+        self.aborted
+    }
+
+    /// The final state is one where the stack is empty
     pub fn is_final(&self) -> bool {
         self.stack.is_empty()
+    }
+}
+
+impl fmt::Display for AbstractState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Stack: {:?} | Locals: {:?}", self.stack, self.locals)
+    }
+}
+
+impl fmt::Display for AbstractValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({:?} {:?})", self.token, self.kind)
     }
 }

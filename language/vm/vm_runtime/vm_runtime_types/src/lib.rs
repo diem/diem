@@ -6,8 +6,6 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod value_serializer;
-
 #[cfg(any(test, feature = "testing"))]
 mod proptest_types;
 

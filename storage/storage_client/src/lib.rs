@@ -9,7 +9,6 @@
 
 mod state_view;
 
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
@@ -29,13 +28,12 @@ use storage_proto::{
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    ledger_info::LedgerInfoWithSignatures,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
-    validator_change::ValidatorChangeEventWithProof,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -106,8 +104,8 @@ impl StorageRead for StorageReadServiceClient {
         requested_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
+        LedgerInfoWithSignatures,
+        Vec<ValidatorChangeEventWithProof>,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
     }
@@ -121,8 +119,8 @@ impl StorageRead for StorageReadServiceClient {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures<Ed25519Signature>,
-                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
+                        LedgerInfoWithSignatures,
+                        Vec<ValidatorChangeEventWithProof>,
                     )>,
                 > + Send,
         >,
@@ -223,15 +221,14 @@ impl StorageRead for StorageReadServiceClient {
     fn get_latest_ledger_infos_per_epoch(
         &self,
         start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>> {
+    ) -> Result<Vec<LedgerInfoWithSignatures>> {
         block_on(self.get_latest_ledger_infos_per_epoch_async(start_epoch))
     }
 
     fn get_latest_ledger_infos_per_epoch_async(
         &self,
         start_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
         let proto_req = GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
         convert_grpc_response(
             self.client()
@@ -273,7 +270,7 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
         block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
     }
@@ -282,7 +279,7 @@ impl StorageWrite for StorageWriteServiceClient {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
@@ -308,8 +305,8 @@ pub trait StorageRead: Send + Sync {
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
-        LedgerInfoWithSignatures<Ed25519Signature>,
-        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
+        LedgerInfoWithSignatures,
+        Vec<ValidatorChangeEventWithProof>,
     )>;
 
     /// See [`LibraDB::update_to_latest_ledger`].
@@ -325,8 +322,8 @@ pub trait StorageRead: Send + Sync {
             dyn Future<
                     Output = Result<(
                         Vec<ResponseItem>,
-                        LedgerInfoWithSignatures<Ed25519Signature>,
-                        Vec<ValidatorChangeEventWithProof<Ed25519Signature>>,
+                        LedgerInfoWithSignatures,
+                        Vec<ValidatorChangeEventWithProof>,
                     )>,
                 > + Send,
         >,
@@ -395,7 +392,7 @@ pub trait StorageRead: Send + Sync {
     fn get_latest_ledger_infos_per_epoch(
         &self,
         start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>;
+    ) -> Result<Vec<LedgerInfoWithSignatures>>;
 
     /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
     ///
@@ -404,7 +401,7 @@ pub trait StorageRead: Send + Sync {
     fn get_latest_ledger_infos_per_epoch_async(
         &self,
         start_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
@@ -420,7 +417,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()>;
 
     /// See [`LibraDB::save_transactions`].
@@ -430,7 +427,7 @@ pub trait StorageWrite: Send + Sync {
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 }
 

@@ -9,7 +9,6 @@ use crate::{
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
 use crypto::{
-    ed25519::*,
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
@@ -29,7 +28,7 @@ use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::LedgerInfoWithSignatures,
     proof::{accumulator::Accumulator, SparseMerkleProof},
     transaction::{
         SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
@@ -281,7 +280,7 @@ where
     fn execute_and_commit_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<()> {
         if ledger_info_with_sigs.ledger_info().timestamp_usecs() <= self.committed_timestamp_usecs {
             warn!(
@@ -368,6 +367,7 @@ where
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
+                txn_data.status().vm_status().major_status,
             ));
         }
 
@@ -424,7 +424,7 @@ where
     fn verify_chunk(
         &self,
         txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures<Ed25519Signature>,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures,
     ) -> Result<(u64, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
@@ -500,6 +500,7 @@ where
                         txn_data.account_blobs().clone(),
                         txn_data.events().to_vec(),
                         txn_data.gas_used(),
+                        txn_data.status().vm_status().major_status,
                     ));
                     num_accounts_created += txn_data.num_account_created();
                 }
@@ -698,7 +699,7 @@ where
                 .append(vm_output.events().iter().map(CryptoHash::hash).collect());
 
             match vm_output.status() {
-                TransactionStatus::Keep(_) => {
+                TransactionStatus::Keep(status) => {
                     ensure!(
                         !vm_output.write_set().is_empty(),
                         "Transaction with empty write set should be discarded.",
@@ -710,6 +711,7 @@ where
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
+                        status.major_status,
                     );
                     txn_info_hashes.push(txn_info.hash());
                 }

@@ -54,14 +54,8 @@ impl FromStr for Entry {
                 )
                 .into());
             }
-            let balance = match v.get(1) {
-                Some(s) => Some(s.parse::<u64>()?),
-                None => None,
-            };
-            let sequence_number = match v.get(2) {
-                Some(s) => Some(s.parse::<u64>()?),
-                None => None,
-            };
+            let balance = v.get(1).and_then(|s| s.parse::<u64>().ok());
+            let sequence_number = v.get(2).and_then(|s| s.parse::<u64>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,

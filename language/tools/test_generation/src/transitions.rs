@@ -3,7 +3,8 @@
 
 use crate::{
     abstract_state::{AbstractState, AbstractValue, BorrowState, Mutability},
-    common::VMError,
+    config::ALLOW_MEMORY_UNSAFE,
+    error::VMError,
 };
 use vm::{
     access::*,
@@ -26,6 +27,20 @@ pub fn stack_has(
         }
         None => index < state.stack_len(),
     }
+}
+
+/// Determine the abstract value at `index` is of the given kind, if it exists.
+/// If it does not exist, return `false`.
+pub fn stack_kind_is(state: &AbstractState, index: usize, kind: Kind) -> bool {
+    if index < state.stack_len() {
+        match state.stack_peek(index) {
+            Some(abstract_value) => {
+                return abstract_value.kind == kind;
+            }
+            None => return false,
+        }
+    }
+    false
 }
 
 /// Determine whether two tokens on the stack have the same type
@@ -459,12 +474,45 @@ pub fn stack_function_popn(
     Ok(state)
 }
 
+/// Whether the function acquires any global resources or not
+pub fn function_can_acquire_resource(state: &AbstractState) -> bool {
+    !state.acquires_global_resources.is_empty()
+}
+
+/// TODO: This is a temporary function that represents memory
+/// safety for a reference. This should be removed and replaced
+/// with appropriate memory safety premises when the borrow checking
+/// infrastructure is fully implemented.
+/// `index` is `Some(i)` if the instruction can be memory safe when operating
+/// on non-reference types.
+pub fn memory_safe(state: &AbstractState, index: Option<usize>) -> bool {
+    match index {
+        Some(index) => {
+            if stack_has_reference(state, index, Mutability::Either) {
+                ALLOW_MEMORY_UNSAFE
+            } else {
+                true
+            }
+        }
+        None => ALLOW_MEMORY_UNSAFE,
+    }
+}
+
 /// Wrapper for enclosing the arguments of `stack_has` so that only the `state` needs
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_has {
     ($e1: expr, $e2: expr) => {
         Box::new(move |state| stack_has(state, $e1, $e2))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_kind_is` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_stack_kind_is {
+    ($e: expr, $a: expr) => {
+        Box::new(move |state| stack_kind_is(state, $e, $a))
     };
 }
 
@@ -708,6 +756,24 @@ macro_rules! state_stack_function_popn {
 macro_rules! state_stack_function_call {
     ($e: expr) => {
         Box::new(move |state| stack_function_call(state, $e))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `function_can_acquire_resource` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_function_can_acquire_resource {
+    () => {
+        Box::new(move |state| function_can_acquire_resource(state))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `memory_safe` so that only the
+/// `state` needs to be given.
+#[macro_export]
+macro_rules! state_memory_safe {
+    ($e: expr) => {
+        Box::new(move |state| memory_safe(state, $e))
     };
 }
 

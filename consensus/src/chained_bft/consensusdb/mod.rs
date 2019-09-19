@@ -70,8 +70,6 @@ impl ConsensusDB {
     )> {
         let consensus_state = self.get_state()?;
         let highest_timeout_certificates = self.get_highest_timeout_certificates()?;
-        self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::ConsensusState)?;
         let consensus_blocks = self
             .get_blocks()?
             .into_iter()

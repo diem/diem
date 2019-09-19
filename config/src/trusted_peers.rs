@@ -20,7 +20,7 @@ use types::account_address::AccountAddress;
 mod trusted_peers_test;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NetworkPubKeys {
+pub struct NetworkPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
     #[serde(rename = "ns")]
@@ -36,10 +36,15 @@ pub struct NetworkPeerPrivateKeys {
     pub network_identity_private_key: X25519StaticPrivateKey,
 }
 
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct NetworkPeersConfig {
+    #[serde(flatten)]
+    #[serde(serialize_with = "serialize_ordered_map")]
+    pub peers: HashMap<String, NetworkPeerInfo>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ConsensusPeer {
-    #[serde(rename = "aa")]
-    pub account_address: String,
+pub struct ConsensusPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
     #[serde(rename = "c")]
@@ -47,24 +52,16 @@ pub struct ConsensusPeer {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct NetworkPeersConfig {
-    // TODO: Replace HashMap with Vec<NetworkPubKeys> after migration of network stack to using
-    // NetworkIdentityKey as node identifier.
+pub struct ConsensusPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
-    pub peers: HashMap<String, NetworkPubKeys>,
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct ConsensusPeersConfig {
-    #[serde(default)]
-    pub peers: Vec<ConsensusPeer>,
+    pub peers: HashMap<String, ConsensusPeerInfo>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
-    pub peers: Vec<String>,
+    pub upstream_peers: Vec<String>,
 }
 
 impl NetworkPeersConfig {
@@ -101,7 +98,7 @@ impl ConfigHelpers {
         number_of_peers: usize,
         seed: Option<[u8; 32]>,
     ) -> (HashMap<String, Ed25519PrivateKey>, ConsensusPeersConfig) {
-        let mut consensus_peers = Vec::new();
+        let mut consensus_peers = HashMap::new();
         let mut peers_private_keys = HashMap::new();
         // deterministically derive keypairs from a seeded-rng
         let seed = if let Some(seed) = seed {
@@ -111,15 +108,17 @@ impl ConfigHelpers {
         };
         let mut fast_rng = StdRng::from_seed(seed);
         for _ in 0..number_of_peers {
-            // TODO: generate to preserve peer ids.
+            // Generate extra keypairs to preserve peer ids.
             let _ = compat::generate_keypair(&mut fast_rng);
             let _ = x25519::compat::generate_keypair(&mut fast_rng);
             let (private0, public0) = compat::generate_keypair(&mut fast_rng);
             let peer_id = AccountAddress::from_public_key(&public0);
-            consensus_peers.push(ConsensusPeer {
-                account_address: peer_id.to_string(),
-                consensus_pubkey: public0,
-            });
+            consensus_peers.insert(
+                peer_id.to_string(),
+                ConsensusPeerInfo {
+                    consensus_pubkey: public0,
+                },
+            );
             // save the private keys in a different hashmap
             peers_private_keys.insert(peer_id.to_string(), private0);
         }
@@ -143,23 +142,25 @@ impl ConfigHelpers {
         } else {
             [0u8; 32]
         };
+        let peers_ordered: BTreeMap<_, _> = consensus_peers.peers.iter().collect();
         let mut fast_rng = StdRng::from_seed(seed);
-        for validator in &consensus_peers.peers {
+        for peer_id in peers_ordered.keys().cloned() {
             let (private0, public0) = compat::generate_keypair(&mut fast_rng);
             let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
+            // Generate extra keypairs to preserve peer ids.
+            let _ = compat::generate_keypair(&mut fast_rng);
             // save the public_key in peers hashmap
-            let peer = NetworkPubKeys {
+            let peer = NetworkPeerInfo {
                 network_signing_pubkey: public0,
                 network_identity_pubkey: public1,
             };
-            let peer_id = validator.account_address.clone();
             network_peers.insert(peer_id.clone(), peer);
             // save the private keys in a different hashmap
             let private_keys = NetworkPeerPrivateKeys {
                 network_signing_private_key: private0,
                 network_identity_private_key: private1,
             };
-            peers_private_keys.insert(peer_id, private_keys);
+            peers_private_keys.insert(peer_id.clone(), private_keys);
         }
         (
             peers_private_keys,
@@ -172,13 +173,8 @@ impl ConfigHelpers {
     pub fn get_test_upstream_peers_config(
         network_peers: &NetworkPeersConfig,
     ) -> UpstreamPeersConfig {
-        let mut upstream_peers = Vec::new();
-        for peer in network_peers.peers.keys() {
-            upstream_peers.push(peer.clone());
-        }
-        UpstreamPeersConfig {
-            peers: upstream_peers,
-        }
+        let upstream_peers = network_peers.peers.keys().cloned().collect();
+        UpstreamPeersConfig { upstream_peers }
     }
 }
 
@@ -203,13 +199,14 @@ where
         .map_err(<D::Error as serde::de::Error>::custom)
 }
 
-pub fn serialize_ordered_map<S, H>(
-    value: &HashMap<String, NetworkPubKeys, H>,
+pub fn serialize_ordered_map<S, V, H>(
+    value: &HashMap<String, V, H>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
     H: BuildHasher,
+    V: Serialize,
 {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)

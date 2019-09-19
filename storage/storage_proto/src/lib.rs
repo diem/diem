@@ -25,7 +25,7 @@
 
 pub mod proto;
 
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
@@ -33,7 +33,8 @@ use proto_conv::{FromProto, IntoProto};
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
@@ -144,7 +145,7 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 pub struct SaveTransactionsRequest {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
-    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
 }
 
 impl SaveTransactionsRequest {
@@ -152,7 +153,7 @@ impl SaveTransactionsRequest {
     pub fn new(
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
-        ledger_info_with_signatures: Option<LedgerInfoWithSignatures<Ed25519Signature>>,
+        ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
     ) -> Self {
         SaveTransactionsRequest {
             txns_to_commit,
@@ -397,22 +398,20 @@ impl GetLatestLedgerInfosPerEpochRequest {
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochResponse)]
 pub struct GetLatestLedgerInfosPerEpochResponse {
-    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>,
+    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures>,
 }
 
 impl GetLatestLedgerInfosPerEpochResponse {
     /// Constructor.
-    pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures<Ed25519Signature>>) -> Self {
+    pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures>) -> Self {
         Self {
             latest_ledger_infos,
         }
     }
 }
 
-impl Into<Vec<LedgerInfoWithSignatures<Ed25519Signature>>>
-    for GetLatestLedgerInfosPerEpochResponse
-{
-    fn into(self) -> Vec<LedgerInfoWithSignatures<Ed25519Signature>> {
+impl Into<Vec<LedgerInfoWithSignatures>> for GetLatestLedgerInfosPerEpochResponse {
+    fn into(self) -> Vec<LedgerInfoWithSignatures> {
         self.latest_ledger_infos
     }
 }

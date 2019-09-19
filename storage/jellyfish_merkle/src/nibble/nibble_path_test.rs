@@ -190,6 +190,13 @@ proptest! {
     }
 
     #[test]
+    fn test_last(mut nibble_path in any::<NibblePath>()) {
+        let nibble1 = nibble_path.last();
+        let nibble2 = nibble_path.pop();
+        prop_assert_eq!(nibble1, nibble2);
+    }
+
+    #[test]
     fn test_nibble_iter_roundtrip(nibble_path in any::<NibblePath>()) {
         let nibbles = nibble_path.nibbles();
         let nibble_path2 = nibbles.collect();

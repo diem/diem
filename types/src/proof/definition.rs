@@ -28,6 +28,11 @@ pub struct AccumulatorProof {
     siblings: Vec<HashValue>,
 }
 
+/// Because leaves can only take half the space in the tree, any numbering of the tree leaves
+/// must not take the full width of the total space.  Thus, for a 64-bit ordering, our maximumm
+/// proof depth is limited to 63.
+pub const MAX_ACCUMULATOR_PROOF_DEPTH: usize = 63;
+
 impl AccumulatorProof {
     /// Constructs a new `AccumulatorProof` using a list of siblings.
     pub fn new(siblings: Vec<HashValue>) -> Self {
@@ -315,7 +320,7 @@ impl FromProto for AccumulatorConsistencyProof {
 
         let num_siblings = proto_proof.get_num_siblings() as usize;
         ensure!(
-            num_siblings <= 63,
+            num_siblings <= MAX_ACCUMULATOR_PROOF_DEPTH,
             "Too many ({}) siblings in the proof.",
             num_siblings,
         );

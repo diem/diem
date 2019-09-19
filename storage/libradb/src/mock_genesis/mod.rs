@@ -19,14 +19,16 @@ use std::collections::HashMap;
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode,
-    transaction::{Program, RawTransaction, TransactionInfo, TransactionToCommit},
+    transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
+    vm_error::StatusCode,
 };
 
 fn gen_mock_genesis() -> (
     TransactionInfo,
-    LedgerInfoWithSignatures<Ed25519Signature>,
+    LedgerInfoWithSignatures,
     TransactionToCommit,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
@@ -34,10 +36,10 @@ fn gen_mock_genesis() -> (
     let mut rng = StdRng::from_seed(seed_buf);
     let (privkey, pubkey) = compat::generate_keypair(&mut rng);
     let some_addr = AccountAddress::from_public_key(&pubkey);
-    let raw_txn = RawTransaction::new(
+    let raw_txn = RawTransaction::new_script(
         some_addr,
         /* sequence_number = */ 0,
-        Program::new(vec![], vec![], vec![]),
+        Script::new(vec![], vec![]),
         /* max_gas_amount = */ 0,
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),
@@ -58,6 +60,7 @@ fn gen_mock_genesis() -> (
         account_states.clone(),
         vec![], /* events */
         0,      /* gas_used */
+        StatusCode::EXECUTED,
     );
 
     // The genesis state tree has a single leaf node, so the root hash is the hash of that node.
@@ -67,6 +70,7 @@ fn gen_mock_genesis() -> (
         state_root_hash,
         *ACCUMULATOR_PLACEHOLDER_HASH,
         0,
+        StatusCode::EXECUTED,
     );
 
     let ledger_info = LedgerInfo::new(
@@ -97,7 +101,7 @@ lazy_static! {
     /// other mocked information including validator signatures.
     pub static ref GENESIS_INFO: (
         TransactionInfo,
-        LedgerInfoWithSignatures<Ed25519Signature>,
+        LedgerInfoWithSignatures,
         TransactionToCommit
     ) = gen_mock_genesis();
 }

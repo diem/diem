@@ -5,6 +5,7 @@ use crypto::{
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
     PrivateKey, ValidKeyStringExt,
 };
+use mirai_annotations::verify_unreachable;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -26,7 +27,9 @@ where
                 let key = std::mem::replace(self, PrivateKeyContainer::Removed);
                 match key {
                     PrivateKeyContainer::Present(priv_key) => Some(priv_key),
-                    _ => unreachable!(),
+                    _ => verify_unreachable!(
+                        "mem::replace returned value for PrivateKeyContainer different from the one observed right before the call"
+                    ),
                 }
             }
             _ => None,

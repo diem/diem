@@ -10,7 +10,7 @@
 mod tests;
 
 use config::config::NodeConfig;
-use crypto::{ed25519::*, HashValue};
+use crypto::HashValue;
 use execution_proto::proto::execution_grpc::create_execution;
 use execution_service::ExecutionService;
 use grpc_helpers::ServerHandle;
@@ -18,7 +18,7 @@ use grpcio::{EnvBuilder, ServerBuilder};
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
-use types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
+use types::{crypto_proxies::LedgerInfoWithSignatures, ledger_info::LedgerInfo};
 
 pub fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])
@@ -28,7 +28,7 @@ pub fn gen_ledger_info_with_sigs(
     version: u64,
     root_hash: HashValue,
     commit_block_id: HashValue,
-) -> LedgerInfoWithSignatures<Ed25519Signature> {
+) -> LedgerInfoWithSignatures {
     let ledger_info = LedgerInfo::new(
         version,
         root_hash,

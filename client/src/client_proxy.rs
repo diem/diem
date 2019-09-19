@@ -6,8 +6,6 @@ use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
-use futures::{future::Future, stream::Stream};
-use hyper;
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
 use logger::prelude::*;
 use num_traits::{
@@ -15,20 +13,20 @@ use num_traits::{
     identities::Zero,
 };
 use proto_conv::IntoProto;
+use reqwest;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
     fmt, fs,
-    io::{stdout, Seek, SeekFrom, Write},
+    io::{stdout, Write},
     path::{Display, Path, PathBuf},
     process::{Command, Stdio},
     str::{self, FromStr},
     sync::Arc,
     thread, time,
 };
-use tokio::{self, runtime::Runtime};
 use tools::tempdir::TempPath;
 use types::{
     access_path::AccessPath,
@@ -39,11 +37,12 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    crypto_proxies::ValidatorVerifier,
     transaction::{
-        parse_as_transaction_argument, Program, RawTransaction, SignedTransaction, Version,
+        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
+        TransactionPayload, Version,
     },
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
-    validator_verifier::ValidatorVerifier,
 };
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
@@ -124,10 +123,10 @@ impl ClientProxy {
         // If < 4 validators, all validators have to agree.
         let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
             .into_iter()
-            .map(|peer| {
+            .map(|(peer_id_str, peer_info)| {
                 (
-                    AccountAddress::from_str(&peer.account_address).unwrap(),
-                    peer.consensus_pubkey,
+                    AccountAddress::from_str(&peer_id_str).unwrap(),
+                    peer_info.consensus_pubkey,
                 )
             })
             .collect();
@@ -347,9 +346,9 @@ impl ClientProxy {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
 
-            let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+            let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
             let req = self.create_submit_transaction_req(
-                program,
+                TransactionPayload::Script(program),
                 sender,
                 max_gas_amount, /* max_gas_amount */
                 gas_unit_price, /* gas_unit_price */
@@ -385,10 +384,10 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = vm_genesis::encode_transfer_program(&receiver_address, num_coins);
+        let program = vm_genesis::encode_transfer_script(&receiver_address, num_coins);
 
         Ok(create_unsigned_txn(
-            program,
+            TransactionPayload::Script(program),
             sender_address,
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
@@ -487,19 +486,12 @@ impl ClientProxy {
         let dependencies_file =
             self.handle_dependencies(tmp_source_path.path().display(), is_module)?;
 
-        // custom handler of old module format
-        // TODO: eventually retire code after vm separation between modules and scripts
-        if is_module {
-            code = format!("modules:\n{}\nscript:\nmain(){{\nreturn;\n}}", code);
-            tmp_source_file.seek(SeekFrom::Start(0))?;
-            writeln!(tmp_source_file, "{}", code)?;
-        }
-
         let mut args = format!(
-            "run -p compiler -- -a {} -o {} {}",
+            "run -p compiler -- {} -a {} -o {}{}",
+            tmp_source_path.path().display(),
             address,
             output_path,
-            tmp_source_path.path().display(),
+            if is_module { " -m" } else { "" },
         );
         if let Some(file) = &dependencies_file {
             args.push_str(&format!(" --deps={}", file.as_ref().display()));
@@ -572,7 +564,11 @@ impl ClientProxy {
         Ok(())
     }
 
-    fn submit_program(&mut self, space_delim_strings: &[&str], program: Program) -> Result<()> {
+    fn submit_program(
+        &mut self,
+        space_delim_strings: &[&str],
+        program: TransactionPayload,
+    ) -> Result<()> {
         let sender_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sender_ref_id = self.get_account_ref_id(&sender_address)?;
         let sender = self.accounts.get(sender_ref_id).unwrap();
@@ -589,21 +585,21 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        self.submit_program(space_delim_strings, program)
+        let module = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        self.submit_program(space_delim_strings, TransactionPayload::Module(module))
     }
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let program: Program = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let script: Script = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
+        let (script_bytes, _) = script.into_inner();
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
             .filter_map(|arg| parse_as_transaction_argument(arg).ok())
             .collect();
-        let (script, _, modules) = program.into_inner();
         self.submit_program(
             space_delim_strings,
-            Program::new(script, modules, arguments),
+            TransactionPayload::Script(Script::new(script_bytes, arguments)),
         )
     }
 
@@ -945,9 +941,11 @@ impl ClientProxy {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
         let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
-        let program = vm_genesis::encode_mint_program(&receiver, num_coins);
+        let program = vm_genesis::encode_mint_script(&receiver, num_coins);
         let req = self.create_submit_transaction_req(
-            program, sender, None, /* max_gas_amount */
+            TransactionPayload::Script(program),
+            sender,
+            None, /* max_gas_amount */
             None, /* gas_unit_price */
         )?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
@@ -967,32 +965,31 @@ impl ClientProxy {
         num_coins: u64,
         is_blocking: bool,
     ) -> Result<()> {
-        let mut runtime = Runtime::new().unwrap();
-        let client = hyper::Client::new();
+        let client = reqwest::ClientBuilder::new().use_sys_proxy().build()?;
 
-        let url = format!(
-            "http://{}?amount={}&address={:?}",
-            self.faucet_server, num_coins, receiver
-        )
-        .parse::<hyper::Uri>()?;
+        let url = reqwest::Url::parse_with_params(
+            format!("http://{}", self.faucet_server).as_str(),
+            &[
+                ("amount", num_coins.to_string().as_str()),
+                ("address", format!("{:?}", receiver).as_str()),
+            ],
+        )?;
 
-        let request = hyper::Request::post(url).body(hyper::Body::empty())?;
-        let response = runtime.block_on(client.request(request))?;
+        let mut response = client.post(url).send()?;
         let status_code = response.status();
-        let body = response.into_body().concat2().wait()?;
-        let raw_data = std::str::from_utf8(&body)?;
-
-        if status_code != 200 {
+        let body = response.text()?;
+        if !status_code.is_success() {
             return Err(format_err!(
                 "Failed to query remote faucet server[status={}]: {:?}",
-                status_code,
-                raw_data,
+                status_code.as_str(),
+                body,
             ));
         }
-        let sequence_number = raw_data.parse::<u64>()?;
+        let sequence_number = body.parse::<u64>()?;
         if is_blocking {
             self.wait_for_transaction(association_address(), sequence_number);
         }
+
         Ok(())
     }
 
@@ -1023,7 +1020,7 @@ impl ClientProxy {
     /// Craft a transaction request.
     fn create_submit_transaction_req(
         &self,
-        program: Program,
+        program: TransactionPayload,
         sender_account: &AccountData,
         max_gas_amount: Option<u64>,
         gas_unit_price: Option<u64>,

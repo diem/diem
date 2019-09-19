@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{bounds_error, bytecode_offset_err, verification_error},
+    errors::{append_err_info, bounds_error, bytecode_offset_err, verification_error},
     file_format::{
         Bytecode, CompiledModuleMut, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionSignature, LocalsSignature, ModuleHandle, SignatureToken, StructDefinition,
@@ -93,13 +93,7 @@ impl<'a> BoundsChecker<'a> {
             .map(|(idx, elem)| {
                 elem.check_code_unit_bounds(self.module)
                     .into_iter()
-                    .map(move |err| {
-                        err.append_message(format!(
-                            " at index {} while indexing {}",
-                            idx,
-                            IndexKind::FunctionDefinition
-                        ))
-                    })
+                    .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, idx))
             })
             .flatten()
             .collect()
@@ -113,9 +107,9 @@ impl<'a> BoundsChecker<'a> {
     ) -> Vec<VMStatus> {
         iter.enumerate()
             .map(move |(idx, elem)| {
-                elem.check_bounds(module).into_iter().map(move |err| {
-                    err.append_message(format!(" at index {} while indexing {}", idx, kind))
-                })
+                elem.check_bounds(module)
+                    .into_iter()
+                    .map(move |err| append_err_info(err, kind, idx))
             })
             .flatten()
             .collect()
@@ -292,10 +286,8 @@ impl BoundsCheck for &LocalsSignature {
 impl SignatureToken {
     #[inline]
     fn check_bounds(&self, module: &CompiledModuleMut) -> Option<VMStatus> {
-        match self.struct_index() {
-            Some(sh_idx) => check_bounds_impl(&module.struct_handles, sh_idx),
-            None => None,
-        }
+        self.struct_index()
+            .and_then(|sh_idx| check_bounds_impl(&module.struct_handles, sh_idx))
     }
 }
 

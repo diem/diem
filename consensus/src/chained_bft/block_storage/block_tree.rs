@@ -284,13 +284,12 @@ where
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc
-            if let Some(block) = self.try_get_block(&block_id) {
-                if let Some(time_to_qc) = duration_since_epoch()
-                    .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                {
-                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
-                }
+            if let Some(time_to_qc) = self.try_get_block(&block_id).and_then(|block| {
+                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
+            }) {
+                counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
             }
+
             return VoteReceptionResult::NewQuorumCertificate(Arc::new(quorum_cert));
         }
         VoteReceptionResult::VoteAdded(num_votes)

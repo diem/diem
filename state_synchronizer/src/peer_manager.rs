@@ -4,47 +4,76 @@
 use crate::PeerId;
 use logger::prelude::*;
 use network::validator_network::StateSynchronizerSender;
-use rand::{thread_rng, Rng};
-use std::collections::HashMap;
+use rand::{
+    distributions::{Distribution, WeightedIndex},
+    thread_rng,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    time::{Duration, SystemTime},
+};
 
-#[derive(Default, Debug)]
+const MAX_SCORE: f64 = 100.0;
+const MIN_SCORE: f64 = 1.0;
+
+#[derive(Default, Debug, Clone)]
 pub struct PeerInfo {
     is_alive: bool,
     is_upstream: bool,
+    score: f64,
 }
 
 impl PeerInfo {
-    pub fn new(is_alive: bool, is_upstream: bool) -> Self {
+    pub fn new(is_alive: bool, is_upstream: bool, score: f64) -> Self {
         Self {
             is_alive,
             is_upstream,
+            score,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PeerScoreUpdateType {
+    Success,
+    InvalidChunk,
+    TimeOut,
 }
 
 pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
+    // Latest requested block versions from a peer
+    requests: HashMap<u64, (PeerId, SystemTime)>,
+    weighted_index: Option<WeightedIndex<f64>>,
 }
 
 impl PeerManager {
     pub fn new(peer_ids: Vec<PeerId>) -> Self {
         let peers = peer_ids
             .into_iter()
-            .map(|peer_id| (peer_id, PeerInfo::new(false, true)))
+            .map(|peer_id| (peer_id, PeerInfo::new(false, true, MAX_SCORE)))
             .collect();
         Self {
             peers,
             network_senders: HashMap::new(),
+            requests: HashMap::new(),
+            weighted_index: None,
         }
     }
 
     pub fn set_peers(&mut self, peer_ids: Vec<PeerId>) {
-        let new_peers = peer_ids
-            .into_iter()
-            .map(|peer_id| (peer_id, PeerInfo::new(true, true)))
-            .collect();
-        self.peers = new_peers;
+        let new_peer_ids: HashSet<_> = peer_ids.iter().collect();
+        for (peer_id, info) in self.peers.iter_mut() {
+            info.is_upstream = new_peer_ids.contains(peer_id);
+        }
+        for peer_id in new_peer_ids {
+            if !self.peers.contains_key(peer_id) {
+                self.peers
+                    .insert(*peer_id, PeerInfo::new(false, true, MAX_SCORE));
+            }
+        }
+        self.compute_weighted_index();
         debug!("[state sync] (set_peers) state: {:?}", self.peers);
     }
 
@@ -54,8 +83,10 @@ impl PeerManager {
         if let Some(peer_info) = self.peers.get_mut(&peer_id) {
             peer_info.is_alive = true;
         } else {
-            self.peers.insert(peer_id, PeerInfo::new(true, false));
+            self.peers
+                .insert(peer_id, PeerInfo::new(true, false, MAX_SCORE));
         }
+        self.compute_weighted_index();
         debug!("[state sync] state after: {:?}", self.peers);
     }
 
@@ -64,40 +95,116 @@ impl PeerManager {
         if let Some(peer_info) = self.peers.get_mut(peer_id) {
             peer_info.is_alive = false;
         };
+        self.compute_weighted_index();
     }
 
     pub fn is_empty(&self) -> bool {
-        self.get_active_upstream_peer_ids().is_empty()
+        self.get_active_upstream_peers().is_empty()
     }
 
-    pub fn pick_peer(&mut self) -> Option<(PeerId, StateSynchronizerSender)> {
-        let active_peers = self.get_active_upstream_peer_ids();
-        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
+    pub fn update_score(&mut self, peer_id: &PeerId, update_type: PeerScoreUpdateType) {
+        if let Some(peer_info) = self.peers.get_mut(peer_id) {
+            let old_score = peer_info.score;
+            match update_type {
+                PeerScoreUpdateType::Success => {
+                    let new_score = peer_info.score + 1.0;
+                    peer_info.score = new_score.min(MAX_SCORE);
+                }
+                PeerScoreUpdateType::InvalidChunk => {
+                    let new_score = peer_info.score * 0.8;
+                    peer_info.score = new_score.max(MIN_SCORE);
+                }
+                PeerScoreUpdateType::TimeOut => {
+                    let new_score = peer_info.score * 0.95;
+                    peer_info.score = new_score.max(MIN_SCORE);
+                }
+            }
+            if (old_score - peer_info.score).abs() > std::f64::EPSILON {
+                self.compute_weighted_index();
+            }
+        }
+    }
+
+    fn compute_weighted_index(&mut self) {
+        let active_peers = self.get_active_upstream_peers();
         if !active_peers.is_empty() {
-            let idx = thread_rng().gen_range(0, active_peers.len());
-            let peer_id = *active_peers[idx];
-            if let Some(sender) = self.get_network_sender(&peer_id) {
-                return Some((peer_id, sender));
-            } else {
-                debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+            let weights: Vec<_> = active_peers
+                .iter()
+                .map(|(_, peer_info)| peer_info.score)
+                .collect();
+            match WeightedIndex::new(&weights) {
+                Ok(weighted_index) => {
+                    self.weighted_index = Some(weighted_index);
+                }
+                Err(e) => {
+                    error!(
+                        "[state sync] (pick_peer) failed to compute weighted index, {:?}",
+                        e
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn pick_peer(&self) -> Option<(PeerId, StateSynchronizerSender)> {
+        let active_peers = self.get_active_upstream_peers();
+        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
+
+        if let Some(weighted_index) = &self.weighted_index {
+            let mut rng = thread_rng();
+            if let Some(peer) = active_peers.get(weighted_index.sample(&mut rng)) {
+                let peer_id = *peer.0;
+                if let Some(sender) = self.get_network_sender(&peer_id) {
+                    return Some((peer_id, sender));
+                } else {
+                    debug!("[state sync] (pick_peer) no sender for {}", peer_id);
+                }
             }
         }
         None
     }
 
-    fn get_active_upstream_peer_ids(&self) -> Vec<&PeerId> {
-        debug!(
-            "[state sync] (get_active_upstream_peer_ids) state: {:?}",
-            self.peers
-        );
+    fn get_active_upstream_peers(&self) -> Vec<(&PeerId, &PeerInfo)> {
         self.peers
             .iter()
             .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)
-            .map(|(peer_id, _)| peer_id)
             .collect()
     }
 
     pub fn get_network_sender(&self, peer_id: &PeerId) -> Option<StateSynchronizerSender> {
         self.network_senders.get(peer_id).cloned()
+    }
+
+    pub fn process_request(&mut self, version: u64, peer_id: PeerId) {
+        self.requests.insert(version, (peer_id, SystemTime::now()));
+    }
+
+    pub fn process_response(&mut self, version: u64, peer_id: PeerId) {
+        if let Some((id, _)) = self.requests.get(&version) {
+            if *id == peer_id {
+                self.requests.remove(&version);
+            }
+        }
+    }
+
+    pub fn has_requested(&self, version: u64, peer_id: PeerId) -> bool {
+        if let Some((id, _)) = self.requests.get(&version) {
+            return *id == peer_id;
+        }
+        false
+    }
+
+    pub fn process_timeout(&mut self, current_requested_version: u64, timeout: u64) {
+        let request = self.requests.get(&current_requested_version).cloned();
+        if let Some((peer_id, request_time)) = request {
+            if let Some(timeout_threshold) =
+                request_time.checked_add(Duration::from_millis(timeout))
+            {
+                if SystemTime::now().duration_since(timeout_threshold).is_ok() {
+                    self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
+                    self.requests.remove(&current_requested_version);
+                }
+            }
+        }
     }
 }

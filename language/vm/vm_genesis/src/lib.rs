@@ -23,7 +23,7 @@ use types::{
     byte_array::ByteArray,
     identifier::Identifier,
     transaction::{
-        Program, RawTransaction, SignatureCheckedTransaction, TransactionArgument,
+        RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
         SCRIPT_HASH_LENGTH,
     },
     validator_public_keys::ValidatorPublicKeys,
@@ -36,9 +36,11 @@ use vm_runtime::{
         module_cache::{BlockModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    txn_executor::{TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE},
+    txn_executor::{
+        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_SET_MODULE,
+    },
 };
-use vm_runtime_types::value::Local;
+use vm_runtime_types::value::Value;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -57,8 +59,11 @@ pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureChec
 
 // Identifiers for well-known functions.
 lazy_static! {
+    static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
+        Identifier::new("register_candidate_validator").unwrap();
     static ref ROTATE_AUTHENTICATION_KEY: Identifier =
         { Identifier::new("rotate_authentication_key").unwrap() };
     static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
@@ -144,10 +149,10 @@ impl Accounts {
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignatureCheckedTransaction {
-        RawTransaction::new(
+        RawTransaction::new_script(
             sender,
             sequence_number,
-            Program::new(program, vec![], args),
+            Script::new(program, args),
             max_gas_amount,
             gas_unit_price,
             Duration::from_secs(u64::max_value()),
@@ -191,10 +196,9 @@ fn compile_script(body: &ast::Program) -> Vec<u8> {
 
 /// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
 /// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_program(recipient: &AccountAddress, amount: u64) -> Program {
-    Program::new(
+pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
+    Script::new(
         PEER_TO_PEER_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
@@ -205,13 +209,12 @@ pub fn encode_transfer_program(recipient: &AccountAddress, amount: u64) -> Progr
 /// Encode a program creating a fresh account at `account_address` with `initial_balance` coins
 /// transferred from the sender's account balance. Fails if there is already an account at
 /// `account_address` or if the sender's balance is lower than `initial_balance`.
-pub fn encode_create_account_program(
+pub fn encode_create_account_script(
     account_address: &AccountAddress,
     initial_balance: u64,
-) -> Program {
-    Program::new(
+) -> Script {
+    Script::new(
         CREATE_ACCOUNT_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*account_address),
             TransactionArgument::U64(initial_balance),
@@ -220,10 +223,9 @@ pub fn encode_create_account_program(
 }
 
 /// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_program(new_key: AccountAddress) -> Program {
-    Program::new(
+pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
+    Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        vec![],
         vec![TransactionArgument::ByteArray(ByteArray::new(
             new_key.as_ref().to_vec(),
         ))],
@@ -232,10 +234,9 @@ pub fn rotate_authentication_key_program(new_key: AccountAddress) -> Program {
 
 // TODO: this should go away once we are no longer using it in tests
 /// Encode a program creating `amount` coins for sender
-pub fn encode_mint_program(sender: &AccountAddress, amount: u64) -> Program {
-    Program::new(
+pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
+    Script::new(
         MINT_TXN.clone(),
-        vec![],
         vec![
             TransactionArgument::Address(*sender),
             TransactionArgument::U64(amount),
@@ -302,9 +303,6 @@ pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
     _validator_set: Vec<ValidatorPublicKeys>,
 ) -> SignatureCheckedTransaction {
-    // TODO: Currently validator set is unused because MoveVM doesn't support collections for now.
-    //       Fix it later when we have collections.
-
     const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
@@ -339,7 +337,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
-                    vec![Local::address(genesis_addr), Local::u64(INIT_BALANCE)],
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
                 )
                 .unwrap();
 
@@ -347,7 +345,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &ROTATE_AUTHENTICATION_KEY,
-                    vec![Local::bytearray(genesis_auth_key)],
+                    vec![Value::byte_array(genesis_auth_key)],
                 )
                 .unwrap();
 
@@ -357,6 +355,19 @@ pub fn encode_genesis_transaction_with_validator(
             // number 0
             txn_executor
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
+                .unwrap();
+
+            // Initialize the validator set.
+            txn_executor
+                .create_account(account_config::validator_set_address())
+                .unwrap();
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::validator_set_address(),
+                    &VALIDATOR_SET_MODULE,
+                    &INITIALIZE,
+                    vec![],
+                )
                 .unwrap();
 
             let stdlib_modules = modules

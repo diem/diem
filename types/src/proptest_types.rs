@@ -242,7 +242,7 @@ fn new_raw_transaction(
         TransactionPayload::Program(program) => RawTransaction::new(
             sender,
             sequence_number,
-            program,
+            TransactionPayload::Program(program),
             max_gas_amount,
             gas_unit_price,
             Duration::from_secs(expiration_time_secs),
@@ -730,6 +730,8 @@ pub struct TransactionToCommitGen {
     account_state_gens: Vec<(Index, AccountStateBlobGen)>,
     /// Gas used.
     gas_used: u64,
+    /// Transaction status
+    major_status: StatusCode,
 }
 
 impl TransactionToCommitGen {
@@ -756,7 +758,13 @@ impl TransactionToCommitGen {
             })
             .collect();
 
-        TransactionToCommit::new(signed_txn, account_states, events, self.gas_used)
+        TransactionToCommit::new(
+            signed_txn,
+            account_states,
+            events,
+            self.gas_used,
+            self.major_status,
+        )
     }
 }
 
@@ -780,26 +788,30 @@ impl Arbitrary for TransactionToCommitGen {
             ),
             vec((any::<Index>(), any::<AccountStateBlobGen>()), 0..=1),
             any::<u64>(),
+            any::<StatusCode>(),
         )
-            .prop_map(|(sender, event_emitters, mut touched_accounts, gas_used)| {
-                // To reflect change of account/event sequence numbers, txn sender account and event
-                // emitter accounts must be updated.
-                let (sender_index, sender_blob_gen, txn_gen) = sender;
-                touched_accounts.push((sender_index, sender_blob_gen));
+            .prop_map(
+                |(sender, event_emitters, mut touched_accounts, gas_used, major_status)| {
+                    // To reflect change of account/event sequence numbers, txn sender account and
+                    // event emitter accounts must be updated.
+                    let (sender_index, sender_blob_gen, txn_gen) = sender;
+                    touched_accounts.push((sender_index, sender_blob_gen));
 
-                let mut event_gens = Vec::new();
-                for (index, blob_gen, event_gen) in event_emitters {
-                    touched_accounts.push((index, blob_gen));
-                    event_gens.push((index, event_gen));
-                }
+                    let mut event_gens = Vec::new();
+                    for (index, blob_gen, event_gen) in event_emitters {
+                        touched_accounts.push((index, blob_gen));
+                        event_gens.push((index, event_gen));
+                    }
 
-                Self {
-                    transaction_gen: (sender_index, txn_gen),
-                    event_gens,
-                    account_state_gens: touched_accounts,
-                    gas_used,
-                }
-            })
+                    Self {
+                        transaction_gen: (sender_index, txn_gen),
+                        event_gens,
+                        account_state_gens: touched_accounts,
+                        gas_used,
+                        major_status,
+                    }
+                },
+            )
             .boxed()
     }
 

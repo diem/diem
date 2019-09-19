@@ -12,7 +12,9 @@ use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
 use types::{
-    access_path::AccessPath, account_address::AccountAddress, transaction::Program,
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    transaction::{Module, Script},
     vm_error::VMStatus,
 };
 use vm::file_format::CompiledModule;
@@ -161,16 +163,10 @@ fn main() {
                     .script
                     .serialize(&mut script)
                     .expect("Unable to serialize script");
-                let mut modules = vec![];
-                for m in compiled_program.modules.iter() {
-                    let mut buf = vec![];
-                    m.serialize(&mut buf).expect("Unable to serialize module");
-                    modules.push(buf);
-                }
-                let program = Program::new(script, modules, vec![]);
-                let program_bytes =
-                    serde_json::to_vec(&program).expect("Unable to serialize program");
-                write_output(&path, &program_bytes);
+                let payload = Script::new(script, vec![]);
+                let payload_bytes =
+                    serde_json::to_vec(&payload).expect("Unable to serialize program");
+                write_output(&path, &payload_bytes);
             }
             None => {
                 println!("{}", compiled_program);
@@ -186,11 +182,14 @@ fn main() {
         };
         match args.output_path {
             Some(path) => {
-                let mut out = vec![];
+                let mut module = vec![];
                 compiled_module
-                    .serialize(&mut out)
+                    .serialize(&mut module)
                     .expect("Unable to serialize module");
-                write_output(&path, &out);
+                let payload = Module::new(module);
+                let payload_bytes =
+                    serde_json::to_vec(&payload).expect("Unable to serialize program");
+                write_output(&path, &payload_bytes);
             }
             None => {
                 println!("{}", compiled_module);

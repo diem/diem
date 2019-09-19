@@ -4,8 +4,7 @@
 //! Used for node restarts, network partitions, full node syncs
 #![feature(async_await)]
 #![recursion_limit = "1024"]
-use crypto::ed25519::*;
-use types::{account_address::AccountAddress, ledger_info::LedgerInfoWithSignatures};
+use types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
 
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
@@ -16,7 +15,7 @@ mod peer_manager;
 mod synchronizer;
 
 type PeerId = AccountAddress;
-type LedgerInfo = LedgerInfoWithSignatures<Ed25519Signature>;
+type LedgerInfo = LedgerInfoWithSignatures;
 
 #[cfg(test)]
 mod tests;

@@ -18,10 +18,7 @@ use failure::prelude::*;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use std::{
-    collections::BTreeMap,
-    convert::{TryFrom, TryInto},
-};
+use std::{collections::BTreeMap, convert::TryInto};
 
 lazy_static! {
     // LibraCoin
@@ -55,6 +52,11 @@ pub fn core_code_address() -> AccountAddress {
 
 pub fn association_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xA550C18")
+        .expect("Parsing valid hex literal should always succeed")
+}
+
+pub fn validator_set_address() -> AccountAddress {
+    AccountAddress::from_hex_literal("0x1D8")
         .expect("Parsing valid hex literal should always succeed")
 }
 
@@ -243,11 +245,8 @@ impl AccountEvent {
     pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
         let mut deserializer = SimpleDeserializer::new(bytes);
         let amount = deserializer.decode_u64()?;
-        let offset = deserializer.position() as usize;
-        Ok(Self {
-            account: AccountAddress::try_from(&bytes[offset..])?,
-            amount,
-        })
+        let account = deserializer.decode_struct()?;
+        Ok(Self { account, amount })
     }
 
     /// Get the account related to the event

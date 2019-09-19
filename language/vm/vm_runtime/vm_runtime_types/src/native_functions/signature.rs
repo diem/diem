@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::dispatch::NativeReturnStatus;
-use crate::value::Local;
+use crate::value::Value;
 use bit_vec::BitVec;
 use crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
@@ -39,7 +39,7 @@ const OVERSIZED_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 8;
 /// Concatenated Ed25519 public keys should be a multiple of 32 bytes
 const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
-pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Local>) -> NativeReturnStatus {
+pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
     if arguments.len() != 3 {
         return NativeReturnStatus::InvalidArguments;
     }
@@ -72,7 +72,7 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Local>) -> 
         Ok(()) => true,
         Err(_) => false,
     };
-    let return_values = vec![Local::bool(bool_value)];
+    let return_values = vec![Value::bool(bool_value)];
     NativeReturnStatus::Success {
         cost,
         return_values,
@@ -81,7 +81,7 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Local>) -> 
 
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
-    mut arguments: VecDeque<Local>,
+    mut arguments: VecDeque<Value>,
 ) -> NativeReturnStatus {
     if arguments.len() != 4 {
         return NativeReturnStatus::InvalidArguments;
@@ -103,7 +103,7 @@ pub fn native_ed25519_threshold_signature_verification(
     };
 
     let cost = ed25519_threshold_signature_verification_cost(num_of_sigs, message.len());
-    let return_values = vec![Local::u64(num_of_sigs)];
+    let return_values = vec![Value::u64(num_of_sigs)];
     NativeReturnStatus::Success {
         cost,
         return_values,

@@ -17,7 +17,7 @@ use vm::{
 };
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Local, MutVal, Reference, Value},
+    value::{GlobalRef, Struct, Value},
 };
 use types::transaction::TransactionPayload;
 
@@ -153,7 +153,7 @@ impl<'txn> TransactionDataCache<'txn> {
             match self.data_cache.get(ap)? {
                 Some(bytes) => {
                     let res = Value::simple_deserialize(&bytes, def)?;
-                    let new_root = GlobalRef::make_root(ap.clone(), MutVal::new(res));
+                    let new_root = GlobalRef::make_root(ap.clone(), res);
                     self.data_map.insert(ap.clone(), new_root);
                 }
                 None => {
@@ -176,7 +176,7 @@ impl<'txn> TransactionDataCache<'txn> {
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
             // shallow_ref increment ref count
-            Ok(root_ref.shallow_clone())
+            Ok(root_ref.clone())
         } else {
             Err(
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
@@ -204,7 +204,7 @@ impl<'txn> TransactionDataCache<'txn> {
     }
 
     /// MoveFrom opcode cache implementation
-    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Local> {
+    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value> {
         let root_ref = match self.load_data(ap, def) {
             Ok(gref) => gref,
             Err(e) => {
@@ -214,7 +214,7 @@ impl<'txn> TransactionDataCache<'txn> {
         };
         // is_loadable() checks ref count and whether the data was deleted
         if root_ref.is_loadable() {
-            Ok(Local::Value(root_ref.move_from()))
+            Ok(root_ref.move_from()?)
         } else {
             Err(
                 vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
@@ -228,7 +228,7 @@ impl<'txn> TransactionDataCache<'txn> {
         &mut self,
         ap: &AccessPath,
         def: StructDef,
-        res: MutVal,
+        res: Struct,
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)

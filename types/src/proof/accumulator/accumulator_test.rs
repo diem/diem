@@ -76,7 +76,7 @@ fn compute_root_hash_naive(leaves: &[HashValue]) -> HashValue {
 
     let rightmost_leaf_index = leaves.len() as u64 - 1;
     *position_to_hash
-        .get(&Position::get_root_position(rightmost_leaf_index))
+        .get(&Position::root_from_leaf_index(rightmost_leaf_index))
         .expect("Root position should exist in the map.")
 }
 

@@ -23,4 +23,7 @@ message TransactionInfo {
 
   // The amount of gas used by this transaction.
   uint64 gas_used = 4;
+
+  // The major status of executing this transaction.
+  uint64 major_status = 5;
 }

@@ -7,6 +7,7 @@ use crate::{
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
     trusted_peers::{
         ConfigHelpers, ConsensusPeersConfig, NetworkPeerPrivateKeys, NetworkPeersConfig,
+        UpstreamPeersConfig,
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
@@ -509,15 +510,15 @@ impl ConsensusConfig {
         self.consensus_peers
             .peers
             .iter()
-            .map(|peer| {
+            .map(|(peer_id_str, peer_info)| {
                 (
-                    PeerId::from_str(&peer.account_address).unwrap_or_else(|_| {
+                    PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
                         panic!(
                             "Failed to deserialize PeerId: {} from consensus peers config: ",
-                            peer.account_address,
+                            peer_id_str
                         )
                     }),
-                    peer.consensus_pubkey.clone(),
+                    peer_info.consensus_pubkey.clone(),
                 )
             })
             .collect()
@@ -572,16 +573,20 @@ pub struct StateSyncConfig {
     pub max_chunk_limit: u64,
     // valid maximum timeout limit for sanity check
     pub max_timeout_ms: u64,
+    // List of peers to use as upstream in state sync protocols.
+    #[serde(flatten)]
+    pub upstream_peers: UpstreamPeersConfig,
 }
 
 impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
             chunk_limit: 1000,
-            tick_interval_ms: 10,
+            tick_interval_ms: 100,
             long_poll_timeout_ms: 30000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,
+            upstream_peers: UpstreamPeersConfig::default(),
         }
     }
 }
@@ -680,7 +685,7 @@ impl NodeConfigHelpers {
         }
         let (mut consensus_private_keys, test_consensus_peers) =
             ConfigHelpers::get_test_consensus_config(1, None);
-        let peer_id = test_consensus_peers.peers[0].account_address.clone();
+        let peer_id = test_consensus_peers.peers.keys().nth(0).unwrap().clone();
         let consensus_private_key = consensus_private_keys.remove_entry(&peer_id).unwrap().1;
         config.consensus.consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
         // load node's network keypairs
@@ -849,13 +854,6 @@ impl VMPublishingOption {
     pub fn is_open(&self) -> bool {
         match self {
             VMPublishingOption::Open => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_locked(&self) -> bool {
-        match self {
-            VMPublishingOption::Locked { .. } => true,
             _ => false,
         }
     }

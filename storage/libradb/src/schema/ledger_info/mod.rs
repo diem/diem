@@ -14,7 +14,6 @@
 
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
-use crypto::ed25519::*;
 use failure::prelude::*;
 use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use schemadb::{
@@ -23,12 +22,12 @@ use schemadb::{
     DEFAULT_CF_NAME,
 };
 use std::mem::size_of;
-use types::ledger_info::LedgerInfoWithSignatures;
+use types::crypto_proxies::LedgerInfoWithSignatures;
 
 define_schema!(
     LedgerInfoSchema,
     u64, /* epoch num */
-    LedgerInfoWithSignatures<Ed25519Signature>,
+    LedgerInfoWithSignatures,
     DEFAULT_CF_NAME
 );
 
@@ -43,7 +42,7 @@ impl KeyCodec<LedgerInfoSchema> for u64 {
     }
 }
 
-impl ValueCodec<LedgerInfoSchema> for LedgerInfoWithSignatures<Ed25519Signature> {
+impl ValueCodec<LedgerInfoSchema> for LedgerInfoWithSignatures {
     fn encode_value(&self) -> Result<Vec<u8>> {
         self.clone().into_proto_bytes()
     }

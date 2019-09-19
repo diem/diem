@@ -24,11 +24,11 @@ use types::{
     account_config::get_account_resource_or_default,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    crypto_proxies::ValidatorVerifier,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     transaction::{SignedTransaction, Version},
-    validator_verifier::ValidatorVerifier,
     vm_error::StatusCode,
 };
 
@@ -37,16 +37,12 @@ const MAX_GRPC_RETRY_COUNT: u64 = 1;
 /// Struct holding dependencies of client.
 pub struct GRPCClient {
     client: AdmissionControlClient,
-    validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
+    validator_verifier: Arc<ValidatorVerifier>,
 }
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(
-        host: &str,
-        port: &str,
-        validator_verifier: Arc<ValidatorVerifier<Ed25519PublicKey>>,
-    ) -> Result<Self> {
+    pub fn new(host: &str, port: &str, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
         let conn_addr = format!("{}:{}", host, port);
 
         // Create a GRPC client
