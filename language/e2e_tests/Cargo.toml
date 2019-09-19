@@ -24,10 +24,10 @@ proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../common/proptest_helpers" }
 protobuf = "~2.7"
 proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
-vm_genesis = { path = "../vm/vm_genesis" }
 config =  { path = "../../config" }
 logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
 
 [dev-dependencies]
+vm_genesis = { path = "../vm/vm_genesis", features = ["testing"] }
 types = { path = "../../types", features = ["testing"] }

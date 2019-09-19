@@ -5,12 +5,13 @@ use crate::{
     account::{Account, AccountData},
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
-    transaction_status_eq,
+    gas_costs, transaction_status_eq,
 };
+use config::config::VMPublishingOption;
 use std::time::Instant;
 use types::{
     account_config::AccountEvent,
-    transaction::{SignedTransaction, TransactionOutput, TransactionStatus},
+    transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
 
@@ -66,6 +67,58 @@ fn single_peer_to_peer_with_event() {
                 || sent_ev_path.as_slice() == event.key().as_bytes()
         );
     }
+}
+
+#[test]
+fn single_peer_to_peer_with_padding() {
+    ::logger::try_init_for_testing();
+    // create a FakeExecutor with a genesis from file
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+
+    // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
+    let sender = AccountData::new(1_000_000, 10);
+    let receiver = AccountData::new(100_000, 10);
+    executor.add_account_data(&sender);
+    executor.add_account_data(&receiver);
+
+    let transfer_amount = 1_000;
+    let txn = sender.account().create_signed_txn_impl(
+        *sender.address(),
+        TransactionPayload::Script(vm_genesis::encode_transfer_script_with_padding(
+            receiver.address(),
+            transfer_amount,
+            1000,
+        )),
+        10,
+        gas_costs::TXN_RESERVED, // this is a default for gas
+        1,
+    );
+    let unpadded_txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
+    assert!(txn.raw_txn_bytes_len() > unpadded_txn.raw_txn_bytes_len());
+    // execute transaction
+    let txns: Vec<SignedTransaction> = vec![txn];
+    let output = executor.execute_block(txns);
+    let txn_output = output.get(0).expect("must have a transaction output");
+    assert_eq!(
+        output[0].status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+    );
+
+    executor.apply_write_set(txn_output.write_set());
+
+    // check that numbers in stored DB are correct
+    let gas = txn_output.gas_used();
+    let sender_balance = 1_000_000 - transfer_amount - gas;
+    let receiver_balance = 100_000 + transfer_amount;
+    let updated_sender = executor
+        .read_account_resource(sender.account())
+        .expect("sender must exist");
+    let updated_receiver = executor
+        .read_account_resource(receiver.account())
+        .expect("receiver must exist");
+    assert_eq!(receiver_balance, updated_receiver.balance());
+    assert_eq!(sender_balance, updated_sender.balance());
+    assert_eq!(11, updated_sender.sequence_number());
 }
 
 #[test]
