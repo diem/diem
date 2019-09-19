@@ -326,10 +326,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
     where
         E: de::Error,
     {
-        match X25519StaticPrivateKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        X25519StaticPrivateKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -344,10 +341,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
     where
         E: de::Error,
     {
-        match X25519StaticPublicKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        X25519StaticPublicKey::try_from(value).map_err(E::custom)
     }
 }
 

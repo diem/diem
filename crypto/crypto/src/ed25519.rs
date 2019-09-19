@@ -499,10 +499,7 @@ impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
     where
         E: de::Error,
     {
-        match Ed25519PrivateKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519PrivateKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -517,10 +514,7 @@ impl<'de> de::Visitor<'de> for Ed25519PublicKeyVisitor {
     where
         E: de::Error,
     {
-        match Ed25519PublicKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519PublicKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -535,10 +529,7 @@ impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
     where
         E: de::Error,
     {
-        match Ed25519Signature::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519Signature::try_from(value).map_err(E::custom)
     }
 }
 

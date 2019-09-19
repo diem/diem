@@ -62,9 +62,9 @@ pub fn execute_block<'alloc>(
 
     let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>> = txn_block
         .into_par_iter()
-        .map(|txn| match txn.check_signature() {
-            Ok(t) => Ok(t),
-            Err(_) => Err(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+        .map(|txn| {
+            txn.check_signature()
+                .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE))
         })
         .collect();
 
