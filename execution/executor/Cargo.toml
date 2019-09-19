@@ -41,3 +41,4 @@ types = { path = "../../types", features = ["testing"]}
 storage_proto = { path = "../../storage/storage_proto" }
 storage_service = { path = "../../storage/storage_service" }
 vm_genesis = { path = "../../language/vm/vm_genesis" }
+transaction_builder = { path = "../../language/transaction_builder" }

@@ -604,8 +604,8 @@ dependencies = [
  "rusoto_logs 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
- "vm_genesis 0.1.0",
 ]
 
 [[package]]
@@ -1310,6 +1310,7 @@ dependencies = [
  "storage_client 0.1.0",
  "storage_proto 0.1.0",
  "storage_service 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
@@ -4106,6 +4107,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage_client 0.1.0",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
@@ -5062,8 +5064,8 @@ dependencies = [
  "state_view 0.1.0",
  "storage_client 0.1.0",
  "storage_service 0.1.0",
+ "transaction_builder 0.1.0",
  "types 0.1.0",
- "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
 ]
 

@@ -17,3 +17,6 @@ vm = { path = "../vm" }
 
 [dev-dependencies]
 types = { path = "../../types", features = ["testing"]}
+
+[features]
+testing = ["types/testing", "crypto/testing"]

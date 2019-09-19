@@ -28,4 +28,4 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 storage_service = { path = "../storage/storage_service" }
 types = { path = "../types", features = ["testing"] }
 vm_runtime = { path = "../language/vm/vm_runtime" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
+transaction_builder = { path = "../language/transaction_builder" }

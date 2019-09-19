@@ -17,6 +17,8 @@ use types::{
     byte_array::ByteArray,
     transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
+#[cfg(any(test, feature = "testing"))]
+use vm::file_format::Bytecode;
 
 lazy_static! {
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };

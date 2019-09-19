@@ -22,7 +22,7 @@ use types::{
     },
     vm_error::StatusCode,
 };
-use vm_genesis::encode_transfer_script;
+use transaction_builder::encode_transfer_script;
 use vm_runtime::MoveVM;
 
 struct TestValidator {

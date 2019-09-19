@@ -244,7 +244,7 @@ fn gen_transfer_txn_request(
     receiver: &AccountAddress,
     num_coins: u64,
 ) -> SubmitTransactionRequest {
-    let script = vm_genesis::encode_transfer_script(&receiver, num_coins);
+    let script = transaction_builder::encode_transfer_script(&receiver, num_coins);
     gen_submit_transaction_request(script, sender)
 }
 
@@ -281,7 +281,7 @@ fn gen_mint_txn_request(
     faucet_account: &mut AccountData,
     receiver: &AccountAddress,
 ) -> SubmitTransactionRequest {
-    let program = vm_genesis::encode_mint_script(receiver, 1_000_000);
+    let program = transaction_builder::encode_mint_script(receiver, 1_000_000);
     gen_submit_transaction_request(program, faucet_account)
 }
 

@@ -27,7 +27,7 @@ use types::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
 };
-use vm_genesis::{encode_create_account_script, encode_transfer_script};
+use transaction_builder::{encode_create_account_script, encode_transfer_script};
 use vm_runtime::MoveVM;
 
 fn gen_block_id(index: u8) -> HashValue {

@@ -42,7 +42,8 @@ use types::{
     transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
     vm_error::StatusCode,
 };
-use vm_genesis::{encode_transfer_script, GENESIS_KEYPAIR};
+use vm_genesis::GENESIS_KEYPAIR;
+use transaction_builder::encode_transfer_script;
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
