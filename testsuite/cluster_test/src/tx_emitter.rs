@@ -2,28 +2,27 @@ use crate::{cluster::Cluster, instance::Instance};
 use admission_control_proto::proto::{
     admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
 };
-use benchmark::{
-    load_generator::{LoadGenerator, RingTransferTxnGenerator},
-    Benchmarker,
-};
 use client::{AccountData, AccountStatus};
 use grpcio::{ChannelBuilder, EnvBuilder};
 use proto_conv::IntoProto;
 use std::{
-    env,
+    env, slice,
     str::FromStr,
     sync::Arc,
     thread,
     time::{Duration, Instant},
 };
 
-pub struct TxEmitter {
-    faucet_account: AccountData,
-    bench: Benchmarker,
-    clients: Vec<(Instance, AdmissionControlClient)>,
-}
-
-use crypto::{test_utils::KeyPair, traits::Uniform};
+use crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    traits::Uniform,
+};
+use failure::{
+    self,
+    prelude::{bail, format_err},
+};
+use generate_keypair::load_key_from_file;
 use itertools::zip;
 use proto_conv::FromProto;
 use rand::{
@@ -32,11 +31,11 @@ use rand::{
 };
 use types::{
     account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
+    account_config::{association_address, get_account_resource_or_default},
     get_with_proof::ResponseItem,
     proto::get_with_proof::{
         GetAccountStateRequest, RequestItem, RequestItem_oneof_requested_items,
-        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+        UpdateToLatestLedgerRequest,
     },
     transaction::{Script, TransactionPayload},
     transaction_helpers::create_signed_txn,
@@ -44,20 +43,17 @@ use types::{
 
 const ACCOUNT_PER_CLIENT_DEFAULT: usize = 10;
 const THREADS_PER_CLIENT_DEFAULT: usize = 1;
-const MINT_BATCH_SIZE: u64 = 100; // Max transactions per account in mempool
+const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
+
+pub struct TxEmitter {
+    clients: Vec<(Instance, AdmissionControlClient)>,
+}
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
         let clients = Self::create_ac_clients(cluster);
-        let bench_clients = vec![clients[0].1.clone()];
-        let mut bench = Benchmarker::new(bench_clients, 1, 50);
-        let faucet_account = bench.load_faucet_account("mint.key");
 
-        Self {
-            faucet_account,
-            bench,
-            clients,
-        }
+        Self { clients }
     }
 
     fn create_ac_clients(cluster: &Cluster) -> Vec<(Instance, AdmissionControlClient)> {
@@ -67,35 +63,31 @@ impl TxEmitter {
             let address = format!("{}:8000", instance.ip());
             for _ in 0..threads_per_client {
                 let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
-                let ch = ChannelBuilder::new(env_builder)
-                    .primary_user_agent(&format!("grpc/client-{}", instance.short_hash()))
-                    .connect(&address);
+                let ch = ChannelBuilder::new(env_builder).connect(&address);
                 clients.push((instance.clone(), AdmissionControlClient::new(ch)));
             }
         }
         clients
     }
 
-    pub fn run(mut self) {
-        let generator = RingTransferTxnGenerator::new();
+    pub fn run(self) {
+        let mint_client = &self.clients[0].1;
+        let mut faucet_account = load_faucet_account(mint_client, "mint.key");
         let account_per_client = get_env("ACCOUNT_PER_CLIENT", ACCOUNT_PER_CLIENT_DEFAULT);
-        let num_accounts = (account_per_client * self.clients.len()) as u64;
+        let num_accounts = account_per_client * self.clients.len();
         println!("Minting accounts");
         let mut all_accounts: Vec<AccountData> = vec![];
-        for _ in 0..(num_accounts + MINT_BATCH_SIZE - 1) / MINT_BATCH_SIZE {
-            let mut accounts = gen_random_accounts(MINT_BATCH_SIZE);
-            self.bench.register_accounts(&accounts);
-            let setup_requests =
-                generator.gen_setup_requests(&mut self.faucet_account, &mut accounts);
-            self.bench
-                .mint_accounts(&setup_requests, &mut self.faucet_account);
+        for _ in 0..(num_accounts + MAX_TXN_BATCH_SIZE - 1) / MAX_TXN_BATCH_SIZE {
+            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
+            let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
+            execute_and_wait_transactions(&mint_client, &faucet_account, mint_requests);
             all_accounts.append(&mut accounts);
         }
         println!("Mint is done");
         let mut join_handles = vec![];
+        let mut all_accounts = all_accounts.into_iter();
         for (index, (instance, client)) in self.clients.into_iter().enumerate() {
-            let accounts =
-                all_accounts[index * account_per_client..(index + 1) * account_per_client].to_vec();
+            let accounts = (&mut all_accounts).take(account_per_client).collect();
             let thread = SubmissionThread {
                 accounts,
                 instance,
@@ -162,22 +154,12 @@ impl SubmissionThread {
 }
 
 fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[AccountData]) {
-    let mut update_request = UpdateToLatestLedgerRequest::new();
-    for account in accounts {
-        let mut request_item = RequestItem::new();
-        let mut account_state_request = GetAccountStateRequest::new();
-        account_state_request.address = account.address.to_vec();
-        request_item.requested_items = Some(
-            RequestItem_oneof_requested_items::get_account_state_request(account_state_request),
-        );
-        update_request.requested_items.push(request_item);
-    }
+    let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
-        let resp = client.update_to_latest_ledger(&update_request);
-        match resp {
+        match query_sequence_numbers(client, &addresses) {
             Err(e) => println!("Failed to query ledger info: {:?}", e),
-            Ok(resp) => {
-                if is_sequence_equal(accounts, resp) {
+            Ok(sequence_numbers) => {
+                if is_sequence_equal(accounts, &sequence_numbers) {
                     break;
                 }
             }
@@ -186,26 +168,51 @@ fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[Accou
     }
 }
 
-fn is_sequence_equal(accounts: &[AccountData], resp: UpdateToLatestLedgerResponse) -> bool {
-    for (account, item) in zip(accounts, resp.response_items.into_iter()) {
-        let item = ResponseItem::from_proto(item).expect("ResponseItem::from_proto failed");
+fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool {
+    for (account, sequence_number) in zip(accounts, sequence_numbers) {
+        if *sequence_number != account.sequence_number {
+            return false;
+        }
+    }
+    true
+}
+
+fn query_sequence_numbers(
+    client: &AdmissionControlClient,
+    addresses: &[AccountAddress],
+) -> failure::Result<Vec<u64>> {
+    let mut update_request = UpdateToLatestLedgerRequest::new();
+    for address in addresses {
+        let mut request_item = RequestItem::new();
+        let mut account_state_request = GetAccountStateRequest::new();
+        account_state_request.address = address.to_vec();
+        request_item.requested_items = Some(
+            RequestItem_oneof_requested_items::get_account_state_request(account_state_request),
+        );
+        update_request.requested_items.push(request_item);
+    }
+    let resp = client
+        .update_to_latest_ledger(&update_request)
+        .map_err(|e| format_err!("update_to_latest_ledger failed: {:?} ", e))?;
+    let mut result = Vec::with_capacity(resp.response_items.len());
+    for item in resp.response_items.into_iter() {
+        let item = ResponseItem::from_proto(item)
+            .map_err(|e| format_err!("ResponseItem::from_proto failed: {:?} ", e))?;
         if let ResponseItem::GetAccountState {
             account_state_with_proof,
         } = item
         {
             let account_resource = get_account_resource_or_default(&account_state_with_proof.blob)
-                .expect("get_account_resource_or_default failed");
-            if account_resource.sequence_number() != account.sequence_number {
-                return false;
-            }
+                .map_err(|e| format_err!("get_account_resource_or_default failed: {:?} ", e))?;
+            result.push(account_resource.sequence_number());
         } else {
-            panic!(
+            bail!(
                 "Unexpected item in UpdateToLatestLedgerResponse: {:?}",
                 item
             );
         }
     }
-    true
+    Ok(result)
 }
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -262,10 +269,60 @@ fn gen_random_account(rng: &mut StdRng) -> AccountData {
     }
 }
 
-pub fn gen_random_accounts(num_accounts: u64) -> Vec<AccountData> {
+pub fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
     let seed: [u8; 32] = EntropyRng::new().gen();
     let mut rng = StdRng::from_seed(seed);
     (0..num_accounts)
         .map(|_| gen_random_account(&mut rng))
         .collect()
+}
+
+fn gen_mint_txn_request(
+    faucet_account: &mut AccountData,
+    receiver: &AccountAddress,
+) -> SubmitTransactionRequest {
+    let program = vm_genesis::encode_mint_script(receiver, 1_000_000);
+    gen_submit_transaction_request(program, faucet_account)
+}
+
+fn gen_mint_txn_requests(
+    faucet_account: &mut AccountData,
+    accounts: &[AccountData],
+) -> Vec<SubmitTransactionRequest> {
+    accounts
+        .iter()
+        .map(|account| gen_mint_txn_request(faucet_account, &account.address))
+        .collect()
+}
+
+/// Executes many transactions for single client
+/// This method batches transactions in batches of MAX_TXN_BATCH_SIZE size
+/// Usage example: mint
+fn execute_and_wait_transactions(
+    client: &AdmissionControlClient,
+    account: &AccountData,
+    txn: Vec<SubmitTransactionRequest>,
+) {
+    for request in txn {
+        let resp = client.submit_transaction(&request);
+        match resp {
+            Err(e) => println!("Failed to submit request: {:?}", e),
+            Ok(_r) => {}
+        }
+    }
+    wait_for_accounts_sequence(client, slice::from_ref(account));
+}
+
+fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
+    let key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+        load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
+    let address = association_address();
+    let sequence_number = query_sequence_numbers(client, &[address])
+        .expect("query_sequence_numbers for faucet account failed")[0];
+    AccountData {
+        address,
+        key_pair: Some(key_pair),
+        sequence_number,
+        status: AccountStatus::Persisted,
+    }
 }

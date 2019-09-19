@@ -582,13 +582,13 @@ name = "cluster_test"
 version = "0.1.0"
 dependencies = [
  "admission_control_proto 0.1.0",
- "benchmark 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "client 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
  "failure_ext 0.1.0",
  "flate2 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generate_keypair 0.1.0",
  "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "logger 0.1.0",
