@@ -51,13 +51,9 @@ prop_compose! {
 
 prop_compose! {
     fn arb_accumulator_consistency_proof()(
-        frozen_subtree_roots in vec(any::<HashValue>(), 1..64),
-        non_default_siblings in vec(any::<HashValue>(), 0..30),
-        default_siblings in vec(any::<HashValue>(), 0..30),
+        subtrees in vec(any::<HashValue>(), 0..64),
     ) -> AccumulatorConsistencyProof {
-        let mut siblings = non_default_siblings;
-        siblings.extend(default_siblings.into_iter());
-        AccumulatorConsistencyProof::new(frozen_subtree_roots, siblings)
+        AccumulatorConsistencyProof::new(subtrees)
     }
 }
 

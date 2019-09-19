@@ -52,18 +52,9 @@ message SparseMerkleProof {
 }
 
 message AccumulatorConsistencyProof {
-  // The root hashes of the frozen subtrees that form the small accumulator.
-  // Note that none of these hashes should be default hash.
-  repeated bytes frozen_subtree_roots = 1;
-
-  // The total number of siblings.
-  uint32 num_siblings = 2;
-
-  // The non-default siblings. Note that the entire list of siblings always
-  // start of zero or more non-default siblings, followed by zero of more
-  // default siblings. So given the total number of siblings and the non-default
-  // siblings we should be able to construct the entire sibling list.
-  repeated bytes non_default_siblings = 3;
+  // The root hashes of the subtrees that represent new leaves. Note that none
+  // of these hashes should be default hash.
+  repeated bytes subtrees = 1;
 }
 
 // The complete proof used to authenticate a signed transaction.
