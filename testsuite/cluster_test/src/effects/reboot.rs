@@ -1,5 +1,6 @@
-use crate::{effects::Effect, instance::Instance};
+use crate::{effects::Action, instance::Instance};
 use failure;
+use std::fmt;
 
 pub struct Reboot {
     instance: Instance,
@@ -11,7 +12,7 @@ impl Reboot {
     }
 }
 
-impl Effect for Reboot {
+impl Action for Reboot {
     fn apply(&self) -> failure::Result<()> {
         println!("Rebooting {}", self.instance);
         self.instance.run_cmd(vec![
@@ -36,5 +37,11 @@ impl Effect for Reboot {
                 false
             }
         }
+    }
+}
+
+impl fmt::Display for Reboot {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Reboot {}", self.instance)
     }
 }

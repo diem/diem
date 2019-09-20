@@ -60,6 +60,9 @@ pub trait HealthCheck {
     /// Optionally marks validator as failed, requiring waiting for at least one event from it to
     /// mark it as healthy again
     fn invalidate(&mut self, _validator: &str) {}
+    /// Clean is invoked when cluster is wiped
+    /// This means that checks like commit history check should wipe internal state
+    fn clear(&mut self) {}
 
     fn name(&self) -> &'static str;
 }
@@ -143,6 +146,12 @@ impl HealthCheckRunner {
     pub fn invalidate(&mut self, validator: &str) {
         for hc in self.health_checks.iter_mut() {
             hc.invalidate(validator);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for hc in self.health_checks.iter_mut() {
+            hc.clear();
         }
     }
 }
