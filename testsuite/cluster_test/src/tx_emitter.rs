@@ -12,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -134,8 +135,12 @@ impl SubmissionThread {
                 let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => println!("Failed to submit request to {}: {:?}", self.instance, e),
-                    Ok(_r) => {
-                        //                        println!("r: {:?}", _r)
+                    Ok(r) => {
+                        let r = SubmitTransactionResponse::from_proto(r)
+                            .expect("Failed to parse SubmitTransactionResponse");
+                        if !is_accepted(&r) {
+                            println!("Request declined: {:?}", r);
+                        }
                     }
                 }
                 let now = Instant::now();
@@ -293,9 +298,6 @@ fn gen_mint_txn_requests(
         .collect()
 }
 
-/// Executes many transactions for single client
-/// This method batches transactions in batches of MAX_TXN_BATCH_SIZE size
-/// Usage example: mint
 fn execute_and_wait_transactions(
     client: &AdmissionControlClient,
     account: &AccountData,
@@ -305,7 +307,13 @@ fn execute_and_wait_transactions(
         let resp = client.submit_transaction(&request);
         match resp {
             Err(e) => println!("Failed to submit request: {:?}", e),
-            Ok(_r) => {}
+            Ok(r) => {
+                let r = SubmitTransactionResponse::from_proto(r)
+                    .expect("Failed to parse SubmitTransactionResponse");
+                if !is_accepted(&r) {
+                    println!("Request declined: {:?}", r);
+                }
+            }
         }
     }
     wait_for_accounts_sequence(client, slice::from_ref(account));
@@ -328,4 +336,11 @@ struct AccountData {
     pub address: AccountAddress,
     pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     pub sequence_number: u64,
+}
+
+fn is_accepted(resp: &SubmitTransactionResponse) -> bool {
+    if let Some(ref status) = resp.ac_status {
+        return *status == AdmissionControlStatus::Accepted;
+    }
+    false
 }
