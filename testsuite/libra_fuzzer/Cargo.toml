@@ -27,7 +27,7 @@ consensus = { path = "../../consensus" }
 admission_control_service = { path = "../../admission_control/admission_control_service" }
 
 [dev-dependencies]
-datatest = "0.4.2"
+datatest-stable = { path = "../../common/datatest-stable" }
 stats_alloc = "0.1.8"
 rusty-fork = "0.2.2"
 
@@ -39,3 +39,7 @@ vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", fea
 default = ["testing", "fuzzing"]
 testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
 fuzzing = ["consensus/fuzzing", "admission_control_service/fuzzing"]
+
+[[test]]
+name = "artifacts"
+harness = false
