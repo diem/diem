@@ -46,7 +46,7 @@ pub struct BlockRetrievalResponse<T> {
 }
 
 impl<T: Payload> BlockRetrievalResponse<T> {
-    pub fn verify(&self, mut block_id: HashValue, num_blocks: u64) -> Result<(), failure::Error> {
+    pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> Result<(), failure::Error> {
         if self.status == BlockRetrievalStatus::SUCCEEDED && self.blocks.len() as u64 != num_blocks
         {
             return Err(format_err!(
@@ -55,17 +55,20 @@ impl<T: Payload> BlockRetrievalResponse<T> {
                 self.blocks.len(),
             ));
         }
-        for block in self.blocks.iter() {
-            if block.id() != block_id {
-                return Err(format_err!(
-                    "blocks doesn't form a chain: expect {}, get {}",
-                    block.id(),
-                    block_id
-                ));
-            }
-            block_id = block.parent_id();
-        }
-        Ok(())
+        self.blocks
+            .iter()
+            .try_fold(block_id, |expected_id, block| {
+                if block.id() != expected_id {
+                    Err(format_err!(
+                        "blocks doesn't form a chain: expect {}, get {}",
+                        expected_id,
+                        block.id()
+                    ))
+                } else {
+                    Ok(block.parent_id())
+                }
+            })
+            .map(|_| ())
     }
 }
 
