@@ -245,7 +245,7 @@ fn start_with_proposal_test() {
             .into_iter()
             .map(|(_, mut msg)| VoteMsg::from_proto(msg.take_vote()).unwrap())
             .collect();
-        let proposed_block_id = votes[0].block_id();
+        let proposed_block_id = votes[0].vote_data().block_id();
 
         // Verify that the proposed block id is indeed present in the block store.
         assert!(nodes[0]
@@ -347,7 +347,7 @@ fn basic_commit_and_restart() {
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
             let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
-            block_ids.push(vote_msg.block_id());
+            block_ids.push(vote_msg.vote_data().block_id());
         }
         assert!(
             nodes[0].smr.block_store().unwrap().root().height() >= 6,
@@ -424,7 +424,7 @@ fn basic_block_retrieval() {
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
             let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
-            let proposal_id = vote_msg.block_id();
+            let proposal_id = vote_msg.vote_data().block_id();
             first_proposals.push(proposal_id);
         }
         // The next proposal is delivered to all: as a result nodes[2] should retrieve the missing
@@ -483,7 +483,7 @@ fn block_retrieval_with_timeout() {
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
             let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
-            let proposal_id = vote_msg.block_id();
+            let proposal_id = vote_msg.vote_data().block_id();
             first_proposals.push(proposal_id);
         }
         // The next proposal is delivered to all: as a result nodes[2] should retrieve the missing
@@ -540,7 +540,7 @@ fn basic_state_sync() {
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
             let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
-            let proposal_id = vote_msg.block_id();
+            let proposal_id = vote_msg.vote_data().block_id();
             proposals.push(proposal_id);
         }
 
@@ -617,7 +617,7 @@ fn state_sync_on_timeout() {
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
             let vote_msg = VoteMsg::from_proto(votes[0].1.take_vote()).unwrap();
-            let proposal_id = vote_msg.block_id();
+            let proposal_id = vote_msg.vote_data().block_id();
             proposals.push(proposal_id);
         }
 
@@ -842,6 +842,7 @@ fn secondary_proposers() {
                     .pacemaker_timeout()
                     .vote_msg()
                     .unwrap()
+                    .vote_data()
                     .block_id(),
             );
         }

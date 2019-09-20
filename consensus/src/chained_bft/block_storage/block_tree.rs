@@ -258,7 +258,7 @@ where
     /// on some other block, prune last vote and insert new one in map.
     fn check_vote_valid(&mut self, vote_msg: &VoteMsg) -> Result<(), VoteReceptionResult> {
         let author = vote_msg.author();
-        let block_id = vote_msg.block_id();
+        let block_id = vote_msg.vote_data().block_id();
         let digest = vote_msg.ledger_info().hash();
 
         let last_voted_block = match self
@@ -300,7 +300,7 @@ where
         min_votes_for_qc: usize,
     ) -> VoteReceptionResult {
         let author = vote_msg.author();
-        let block_id = vote_msg.block_id();
+        let block_id = vote_msg.vote_data().block_id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
@@ -329,12 +329,12 @@ where
             let quorum_cert = QuorumCert::new(
                 VoteData::new(
                     block_id,
-                    vote_msg.executed_state_id(),
-                    vote_msg.block_round(),
-                    vote_msg.parent_block_id(),
-                    vote_msg.parent_block_round(),
-                    vote_msg.grandparent_block_id(),
-                    vote_msg.grandparent_block_round(),
+                    vote_msg.vote_data().executed_state_id(),
+                    vote_msg.vote_data().block_round(),
+                    vote_msg.vote_data().parent_block_id(),
+                    vote_msg.vote_data().parent_block_round(),
+                    vote_msg.vote_data().grandparent_block_id(),
+                    vote_msg.vote_data().grandparent_block_round(),
                 ),
                 li_with_sig.clone(),
             );

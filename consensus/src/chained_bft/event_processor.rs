@@ -530,7 +530,7 @@ impl<T: Payload> EventProcessor<T> {
         };
 
         // Safety invariant: The vote being sent is for the proposal that was received.
-        debug_checked_verify_eq!(proposal_id, vote_msg.block_id());
+        debug_checked_verify_eq!(proposal_id, vote_msg.vote_data().block_id());
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
@@ -693,9 +693,9 @@ impl<T: Payload> EventProcessor<T> {
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
-    pub async fn process_vote(&mut self, vote: VoteMsg) {
+    pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
         // Check whether this validator is a valid recipient of the vote.
-        let next_round = vote.block_round() + 1;
+        let next_round = vote_msg.vote_data().block_round() + 1;
         if self
             .proposer_election
             .is_valid_proposer(self.author, next_round)
@@ -703,17 +703,17 @@ impl<T: Payload> EventProcessor<T> {
         {
             debug!(
                 "Received {}, but I am not a valid proposer for round {}, ignore.",
-                vote, next_round
+                vote_msg, next_round
             );
             security_log(SecurityEvent::InvalidConsensusVote)
                 .error("InvalidProposer")
-                .data(vote)
+                .data(vote_msg)
                 .data(next_round)
                 .log();
             return;
         }
 
-        self.add_vote(vote, self.epoch_mgr.quorum_size()).await;
+        self.add_vote(vote_msg, self.epoch_mgr.quorum_size()).await;
     }
 
     /// Add a vote. Fetch missing dependencies if required.
