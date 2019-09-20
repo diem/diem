@@ -186,23 +186,21 @@ impl<T: Payload> RecoveryData<T> {
         // sort by round to guarantee the topological order of parent <- child
         blocks.sort_by_key(Block::round);
         let root_from_consensus = {
-            let id_to_round: HashMap<_, _> = blocks
+            let id_to_id_and_round: HashMap<_, _> = blocks
                 .iter()
-                .map(|block| (block.id(), block.round()))
+                .map(|block| (block.id(), (block.id(), block.round())))
                 .collect();
-            let mut round_and_id = None;
-            for qc in quorum_certs.iter() {
-                if let Some(committed_block_id) = qc.committed_block_id() {
-                    if let Some(round) = id_to_round.get(&committed_block_id) {
-                        match round_and_id {
-                            Some((r, _)) if r > round => (),
-                            _ => round_and_id = Some((round, committed_block_id)),
-                        }
-                    }
-                }
-            }
-            match round_and_id {
-                Some((_, id)) => id,
+
+            let root_id_and_round = quorum_certs
+                .iter()
+                .flat_map(|qc| {
+                    qc.committed_block_id()
+                        .and_then(|bid| id_to_id_and_round.get(&bid))
+                })
+                .min_by_key(|(_id, round)| round);
+
+            match root_id_and_round {
+                Some((id, _)) => *id,
                 None => return Err(format_err!("No LI found in quorum certs.")),
             }
         };
