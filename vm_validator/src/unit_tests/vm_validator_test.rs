@@ -14,6 +14,7 @@ use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
+use transaction_builder::encode_transfer_script;
 use types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
@@ -22,7 +23,6 @@ use types::{
     },
     vm_error::StatusCode,
 };
-use transaction_builder::encode_transfer_script;
 use vm_runtime::MoveVM;
 
 struct TestValidator {
