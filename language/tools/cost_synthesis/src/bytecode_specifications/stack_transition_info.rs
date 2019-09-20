@@ -175,9 +175,9 @@ fn type_transitions(args: Vec<(Vec<SignatureTy>, Vec<SignatureTy>)>) -> Vec<Call
 
 macro_rules! type_transition {
     (fixed: $e1:expr => $e2:expr) => {
-        $e1.into_iter().map(|vec| {
+        $e1.into_iter().flat_map(|vec| {
             type_transitions(vec![ (vec,$e2.clone())]).into_iter()
-        }).flatten().collect()
+        }).collect()
     };
     ($($e1:expr => $e2:expr),+) => {
         type_transitions(vec![ $(($e1,$e2)),+ ])

@@ -30,13 +30,12 @@ impl<'a> CodeUnitVerifier<'a> {
             .function_defs()
             .iter()
             .enumerate()
-            .map(move |(idx, function_definition)| {
+            .flat_map(move |(idx, function_definition)| {
                 verifier
                     .verify_function(function_definition)
                     .into_iter()
                     .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, idx))
             })
-            .flatten()
             .collect()
     }
 

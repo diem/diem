@@ -90,12 +90,11 @@ impl<'a> BoundsChecker<'a> {
             .function_defs
             .iter()
             .enumerate()
-            .map(|(idx, elem)| {
+            .flat_map(|(idx, elem)| {
                 elem.check_code_unit_bounds(self.module)
                     .into_iter()
                     .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, idx))
             })
-            .flatten()
             .collect()
     }
 
@@ -106,12 +105,11 @@ impl<'a> BoundsChecker<'a> {
         module: &CompiledModuleMut,
     ) -> Vec<VMStatus> {
         iter.enumerate()
-            .map(move |(idx, elem)| {
+            .flat_map(move |(idx, elem)| {
                 elem.check_bounds(module)
                     .into_iter()
                     .map(move |err| append_err_info(err, kind, idx))
             })
-            .flatten()
             .collect()
     }
 }

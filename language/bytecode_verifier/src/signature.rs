@@ -64,12 +64,11 @@ impl<'a> SignatureChecker<'a> {
     ) -> Vec<VMStatus> {
         views
             .enumerate()
-            .map(move |(idx, view)| {
+            .flat_map(move |(idx, view)| {
                 view.check_signatures()
                     .into_iter()
                     .map(move |err| append_err_info(err, kind, idx))
             })
-            .flatten()
             .collect()
     }
 }
