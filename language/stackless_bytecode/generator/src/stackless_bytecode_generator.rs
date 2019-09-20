@@ -6,8 +6,8 @@ use vm::{
         SignatureToken,
     },
     views::{
-        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView,
-        StructDefinitionView, ViewInternals,
+        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, StructDefinitionView,
+        ViewInternals,
     },
 };
 
