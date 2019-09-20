@@ -34,11 +34,8 @@ pub fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, M
 
 fn assert_status(response: ProtoSubmitTransactionResponse, status: VMStatus) {
     let rust_resp = SubmitTransactionResponse::from_proto(response).unwrap();
-    if rust_resp.ac_status.is_some() {
-        assert_eq!(
-            rust_resp.ac_status.unwrap(),
-            AdmissionControlStatus::Accepted
-        );
+    if let Some(resp_ac_status) = rust_resp.ac_status {
+        assert_eq!(resp_ac_status, AdmissionControlStatus::Accepted);
     } else {
         let decoded_response = rust_resp.vm_error.unwrap();
         assert_eq!(decoded_response.major_status, status.major_status);

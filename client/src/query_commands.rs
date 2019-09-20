@@ -181,8 +181,7 @@ impl Command for QueryCommandGetTxnByRange {
                         cur_version,
                         txn.format_for_client(get_transaction_name)
                     );
-                    if opt_events.is_some() {
-                        let events = opt_events.unwrap();
+                    if let Some(events) = opt_events {
                         if events.is_empty() {
                             println!("No events returned");
                         } else {
