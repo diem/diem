@@ -2,7 +2,6 @@ use crate::{cluster::Cluster, instance::Instance};
 use admission_control_proto::proto::{
     admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
 };
-use client::{AccountData, AccountStatus};
 use grpcio::{ChannelBuilder, EnvBuilder};
 use proto_conv::IntoProto;
 use std::{
@@ -224,7 +223,7 @@ fn gen_submit_transaction_request(
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
     let signed_txn = create_signed_txn(
-        sender_account.key_pair.as_ref().expect("No keypair"),
+        &sender_account.key_pair,
         TransactionPayload::Script(script),
         sender_account.address,
         sender_account.sequence_number,
@@ -263,13 +262,12 @@ fn gen_random_account(rng: &mut StdRng) -> AccountData {
     let key_pair = KeyPair::generate_for_testing(rng);
     AccountData {
         address: AccountAddress::from_public_key(&key_pair.public_key),
-        key_pair: Some(key_pair),
+        key_pair,
         sequence_number: 0,
-        status: AccountStatus::Local,
     }
 }
 
-pub fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
+fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
     let seed: [u8; 32] = EntropyRng::new().gen();
     let mut rng = StdRng::from_seed(seed);
     (0..num_accounts)
@@ -321,8 +319,13 @@ fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &st
         .expect("query_sequence_numbers for faucet account failed")[0];
     AccountData {
         address,
-        key_pair: Some(key_pair),
+        key_pair,
         sequence_number,
-        status: AccountStatus::Persisted,
     }
+}
+
+struct AccountData {
+    pub address: AccountAddress,
+    pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    pub sequence_number: u64,
 }
