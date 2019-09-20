@@ -1,11 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    common::{Author, Round},
-    consensus_types::vote_data::VoteData,
-};
-use crypto::hash::{CryptoHash, HashValue};
+use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
+use crypto::hash::CryptoHash;
 use failure::Result as ProtoResult;
 use network::proto::Vote as ProtoVote;
 use proto_conv::{FromProto, IntoProto};
@@ -78,32 +75,8 @@ impl VoteMsg {
         }
     }
 
-    /// All the vote data getters are just proxies for retrieving the values from the VoteData
-    pub fn block_id(&self) -> HashValue {
-        self.vote_data.block_id()
-    }
-
-    pub fn executed_state_id(&self) -> HashValue {
-        self.vote_data.executed_state_id()
-    }
-
-    pub fn block_round(&self) -> Round {
-        self.vote_data.block_round()
-    }
-
-    pub fn parent_block_id(&self) -> HashValue {
-        self.vote_data.parent_block_id()
-    }
-
-    pub fn parent_block_round(&self) -> Round {
-        self.vote_data.parent_block_round()
-    }
-
-    pub fn grandparent_block_id(&self) -> HashValue {
-        self.vote_data.grandparent_block_id()
-    }
-    pub fn grandparent_block_round(&self) -> Round {
-        self.vote_data.grandparent_block_round()
+    pub fn vote_data(&self) -> &VoteData {
+        &self.vote_data
     }
 
     /// Return the author of the vote

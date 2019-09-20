@@ -344,7 +344,7 @@ fn process_successful_proposal_test() {
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
-        assert_eq!(pending_for_proposer[0].block_id(), proposal_id);
+        assert_eq!(pending_for_proposer[0].vote_data().block_id(), proposal_id);
         assert_eq!(
             *node.storage.shared_storage.state.lock().unwrap(),
             ConsensusState::new(1, 0),
@@ -395,7 +395,7 @@ fn process_old_proposal_test() {
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
-        assert_eq!(pending_for_me[0].block_id(), new_block_id);
+        assert_eq!(pending_for_me[0].vote_data().block_id(), new_block_id);
         assert!(node.block_store.get_block(old_block_id).is_some());
     });
 }
@@ -839,7 +839,7 @@ fn nil_vote_on_timeout() {
         .unwrap();
         assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
         let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
-        assert_eq!(vote_msg.block_round(), 1);
-        assert_eq!(vote_msg.parent_block_id(), genesis_id);
+        assert_eq!(vote_msg.vote_data().block_round(), 1);
+        assert_eq!(vote_msg.vote_data().parent_block_id(), genesis_id);
     });
 }
