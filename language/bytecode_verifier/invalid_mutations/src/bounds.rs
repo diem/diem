@@ -409,26 +409,26 @@ impl ApplyOutOfBoundsContext {
         module: &'b CompiledModule,
     ) -> impl Iterator<Item = FunctionSignatureTokenIndex> + 'b {
         let module_view = ModuleView::new(module);
-        let return_tokens = module_view
-            .function_signatures()
-            .enumerate()
-            .map(|(idx, signature)| {
-                let idx = FunctionSignatureIndex::new(idx as u16);
-                Self::find_struct_tokens(signature.return_tokens(), move |arg_idx| {
-                    FunctionSignatureTokenIndex::ReturnType(idx, arg_idx)
-                })
-            })
-            .flatten();
-        let arg_tokens = module_view
-            .function_signatures()
-            .enumerate()
-            .map(|(idx, signature)| {
-                let idx = FunctionSignatureIndex::new(idx as u16);
-                Self::find_struct_tokens(signature.arg_tokens(), move |arg_idx| {
-                    FunctionSignatureTokenIndex::ArgType(idx, arg_idx)
-                })
-            })
-            .flatten();
+        let return_tokens =
+            module_view
+                .function_signatures()
+                .enumerate()
+                .flat_map(|(idx, signature)| {
+                    let idx = FunctionSignatureIndex::new(idx as u16);
+                    Self::find_struct_tokens(signature.return_tokens(), move |arg_idx| {
+                        FunctionSignatureTokenIndex::ReturnType(idx, arg_idx)
+                    })
+                });
+        let arg_tokens =
+            module_view
+                .function_signatures()
+                .enumerate()
+                .flat_map(|(idx, signature)| {
+                    let idx = FunctionSignatureIndex::new(idx as u16);
+                    Self::find_struct_tokens(signature.arg_tokens(), move |arg_idx| {
+                        FunctionSignatureTokenIndex::ArgType(idx, arg_idx)
+                    })
+                });
         return_tokens.chain(arg_tokens)
     }
 
@@ -440,11 +440,10 @@ impl ApplyOutOfBoundsContext {
         module_view
             .locals_signatures()
             .enumerate()
-            .map(|(idx, signature)| {
+            .flat_map(|(idx, signature)| {
                 let idx = LocalsSignatureIndex::new(idx as u16);
                 Self::find_struct_tokens(signature.tokens(), move |arg_idx| (idx, arg_idx))
             })
-            .flatten()
     }
 
     #[inline]
