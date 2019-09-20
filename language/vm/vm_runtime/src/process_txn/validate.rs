@@ -122,7 +122,7 @@ where
                 )?)
             }
             TransactionPayload::Module(module) => {
-                println!("validate module {:?}", module);
+                debug!("validate module {:?}", module);
                 Some(ValidatedTransaction::validate(
                     &txn,
                     module_cache,
