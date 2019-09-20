@@ -78,14 +78,14 @@ impl<'a> StacklessModuleGenerator<'a> {
 impl<'a> StacklessBytecodeGenerator<'a> {
     pub fn new(module: &'a CompiledModule, function_definition: &'a FunctionDefinition) -> Self {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-        let mut local_types = vec![];
         let mut temp_count = 0;
+        let mut local_types = vec![];
         if !function_definition_view.is_native() {
             let locals_signature_view = function_definition_view.locals_signature();
+            temp_count = locals_signature_view.len();
             for (_, arg_type_view) in locals_signature_view.tokens().enumerate() {
                 local_types.push(arg_type_view.as_inner().clone());
             }
-            temp_count = locals_signature_view.len();
         }
         StacklessBytecodeGenerator {
             module,
