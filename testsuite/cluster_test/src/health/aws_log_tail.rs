@@ -310,11 +310,7 @@ impl AwsLogThread {
 
     fn log_stream_to_validator_short_str(&self, s: &str) -> Option<String> {
         let cap = self.re_validator.captures(s);
-        if let Some(cap) = cap {
-            Some(cap[1].into())
-        } else {
-            None
-        }
+        cap.map(|cap| cap[1].into())
     }
 
     fn parse_commit_log_entry(&self, e: &LogEntry) -> Option<Commit> {
