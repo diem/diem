@@ -211,24 +211,8 @@ where
         self.storage
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
-        match self
-            .state_computer
-            .sync_to(highest_ledger_info.clone())
-            .await
-        {
-            Ok(true) => (),
-            Ok(false) => panic!(
-                "state synchronizer failure, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-            ),
-            Err(e) => panic!(
-                "state synchronizer failure: {:?}, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                e
-            ),
-        };
+        self.state_computer
+            .sync_to_or_bail(highest_ledger_info.clone());
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let root = (
             blocks.pop().expect("should have 3-chain"),

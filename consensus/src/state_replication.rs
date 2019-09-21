@@ -61,6 +61,24 @@ pub trait StateComputer: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
+
+    fn sync_to_or_bail(&self, commit: QuorumCert) {
+        let status = futures::executor::block_on(self.sync_to(commit));
+        match status {
+            Ok(true) => (),
+            Ok(false) => panic!(
+                "state synchronizer failure, this validator will be killed as it can not \
+                 recover from this error.  After the validator is restarted, synchronization will \
+                 be retried.",
+            ),
+            Err(e) => panic!(
+                "state synchronizer failure: {:?}, this validator will be killed as it can not \
+                 recover from this error.  After the validator is restarted, synchronization will \
+                 be retried.",
+                e
+            ),
+        }
+    }
 }
 
 pub trait StateMachineReplication {
