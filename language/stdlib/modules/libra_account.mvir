@@ -276,14 +276,15 @@ module LibraAccount {
         // Load the transaction sender's account
         sender_account = borrow_global_mut<T>(copy(transaction_sender));
 
-        // Check that the transaction's public key matches the account's current auth key
-        sender_public_key = get_txn_public_key();
-        public_key_hash = Hash.sha3_256(move(sender_public_key));
-        assert(move(public_key_hash) == *(&copy(sender_account).authentication_key), 2);
-
         // Check that the account has enough balance for all of the gas
         // Not check gas when tx execute on offchain vm.
+        // Not check auth key for allow offchain vm to mock another use TODO(jole) security
         if(!is_offchain()){
+            // Check that the transaction's public key matches the account's current auth key
+            sender_public_key = get_txn_public_key();
+            public_key_hash = Hash.sha3_256(move(sender_public_key));
+            assert(move(public_key_hash) == *(&copy(sender_account).authentication_key), 2);
+
             gas_price = get_txn_gas_unit_price();
             gas_units = get_txn_max_gas_units();
             gas_fee = move(gas_price) * move(gas_units);

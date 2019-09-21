@@ -347,6 +347,23 @@ pub enum TransactionPayload {
     ChannelScript(ChannelScriptPayload),
 }
 
+impl TransactionPayload {
+
+    pub fn is_channel_write_set(&self) -> bool{
+        match self{
+            TransactionPayload::ChannelWriteSet(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_channel_script(&self) -> bool{
+        match self{
+            TransactionPayload::ChannelScript(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl CanonicalSerialize for TransactionPayload {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         match self {
