@@ -214,24 +214,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let consensus_state = initial_data.state();
         let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
         if initial_data.need_sync() {
-            loop {
-                // make sure we sync to the root state in case we're not
-                let status = block_on(state_computer.sync_to(initial_data.root_ledger_info()));
-                match status {
-                    Ok(true) => break,
-                    Ok(false) => panic!(
-                    "state synchronizer failure, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                ),
-                    Err(e) => panic!(
-                    "state synchronizer failure: {:?}, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                    e
-                ),
-                }
-            }
+            // make sure we sync to the root state in case we're not
+            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
         }
 
         // the signer is only stored in the SMR to be provided here
