@@ -74,14 +74,13 @@ impl AdmissionControlNode {
         storage_client: Option<Arc<StorageReadServiceClient>>,
     ) -> Result<()> {
         // create storage client if doesn't exist
-        let storage_client: Arc<dyn StorageRead> = match storage_client {
-            Some(c) => c,
-            None => Arc::new(StorageReadServiceClient::new(
+        let storage_client: Arc<dyn StorageRead> = storage_client.unwrap_or_else(|| {
+            Arc::new(StorageReadServiceClient::new(
                 env,
                 &self.node_config.storage.address,
                 self.node_config.storage.port,
-            )),
-        };
+            ))
+        });
 
         let vm_validator = Arc::new(VMValidator::new(
             &self.node_config,

@@ -46,11 +46,7 @@ fn test_artifact(artifact_path: &Path) {
 }
 
 fn no_fork() -> bool {
-    match env::var_os("NO_FORK") {
-        Some(x) => x == "1",
-        // Fork by default.
-        None => false,
-    }
+    env::var_os("NO_FORK").map_or(false, |x| x == "1")
 }
 
 fn test_artifact_impl(artifact_path: &Path) {

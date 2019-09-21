@@ -78,10 +78,10 @@ pub fn protoc_descriptor_set(
 
     protoc
         .write_descriptor_set(DescriptorSetOutArgs {
-            out: match descriptor_set.as_ref().to_str() {
-                Some(s) => s,
-                None => unreachable!("failed to convert path to string"),
-            },
+            out: descriptor_set
+                .as_ref()
+                .to_str()
+                .unwrap_or_else(|| unreachable!("failed to convert path to string")),
             input: from,
             includes,
             include_imports: true,
