@@ -104,14 +104,14 @@ impl BoogieTranslator {
     pub fn emit_struct_code(&mut self) -> String {
         let mut res = String::new();
         for module in self.modules.iter() {
-            let mut handle_to_def = BTreeMap::new();
-            for (idx, struct_def) in module.struct_defs().iter().enumerate() {
-                handle_to_def.insert(struct_def.struct_handle, idx);
-            }
             for (def_idx, struct_def) in module.struct_defs().iter().enumerate() {
                 let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
                 res.push_str(&format!("const unique {}: TypeName;\n", struct_name));
                 res.push_str(&format!("var rs_{}: ResourceStore;\n", struct_name));
+                let struct_definition_view = StructDefinitionView::new(module, struct_def);
+                if struct_definition_view.is_native() {
+                    continue;
+                }
                 let field_info = get_field_info_from_def_index(module, def_idx);
                 for (field_name, _) in field_info {
                     res.push_str(&format!(
@@ -152,6 +152,9 @@ impl BoogieTranslator {
                 .expect("can't find struct def");
             let struct_definition = &def_module.struct_defs()[def_idx];
             let struct_definition_view = StructDefinitionView::new(def_module, struct_definition);
+            if struct_definition_view.is_native() {
+                return 0;
+            }
             for field_definition_view in struct_definition_view.fields().unwrap() {
                 let field_depth = self.get_struct_depth(
                     def_module,
