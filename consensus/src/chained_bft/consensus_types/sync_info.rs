@@ -97,10 +97,8 @@ impl SyncInfo {
     }
 
     pub fn htc_round(&self) -> Round {
-        match self.highest_timeout_certificate() {
-            Some(tc) => tc.round(),
-            None => 0,
-        }
+        self.highest_timeout_certificate()
+            .map_or(0, |tc| tc.round())
     }
 
     /// The highest round the SyncInfo carries.

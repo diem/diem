@@ -108,10 +108,7 @@ impl FakeDataStore {
 impl StateView for FakeDataStore {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         // Since the data is in-memory, it can't fail.
-        match self.data.get(access_path) {
-            None => Ok(None),
-            Some(blob) => Ok(Some(blob.clone())),
-        }
+        Ok(self.data.get(access_path).cloned())
     }
 
     fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {

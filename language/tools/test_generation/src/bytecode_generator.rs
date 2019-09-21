@@ -235,10 +235,7 @@ impl BytecodeGenerator {
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Abort)),
             (StackEffect::Nop, BytecodeType::NoArg(Bytecode::Ret)),
         ];
-        let generator = match seed {
-            Some(seed) => StdRng::from_seed(seed),
-            None => StdRng::from_entropy(),
-        };
+        let generator = seed.map_or_else(StdRng::from_entropy, StdRng::from_seed);
         Self {
             instructions,
             rng: generator,

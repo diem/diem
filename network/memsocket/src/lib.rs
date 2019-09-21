@@ -103,10 +103,7 @@ impl MemoryListener {
             port
         } else {
             loop {
-                let port = match NonZeroU16::new(switchboard.1) {
-                    Some(p) => p,
-                    None => unreachable!(),
-                };
+                let port = NonZeroU16::new(switchboard.1).unwrap_or_else(|| unreachable!());
 
                 // The switchboard is full and all ports are in use
                 if switchboard.0.len() == (std::u16::MAX - 1) as usize {

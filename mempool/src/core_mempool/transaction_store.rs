@@ -246,12 +246,11 @@ impl TransactionStore {
 
     /// returns gas amount required to process all transactions for given account
     pub(crate) fn get_required_balance(&mut self, address: &AccountAddress) -> u64 {
-        match self.transactions.get_mut(&address) {
-            Some(txns) => txns.iter().fold(0, |acc, (_, txn)| {
+        self.transactions.get_mut(&address).map_or(0, |txns| {
+            txns.iter().fold(0, |acc, (_, txn)| {
                 acc + txn.txn.gas_unit_price() * txn.gas_amount
-            }),
-            None => 0,
-        }
+            })
+        })
     }
 
     /// Read `count` transactions from timeline since `timeline_id`

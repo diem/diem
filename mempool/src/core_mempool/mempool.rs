@@ -124,10 +124,8 @@ impl Mempool {
         }
 
         let cached_value = self.sequence_number_cache.get_mut(&txn.sender());
-        let sequence_number = match cached_value {
-            Some(value) => max(*value, db_sequence_number),
-            None => db_sequence_number,
-        };
+        let sequence_number =
+            cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
         self.sequence_number_cache
             .insert(txn.sender(), sequence_number);
 
