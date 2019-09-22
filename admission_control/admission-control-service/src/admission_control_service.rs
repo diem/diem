@@ -14,8 +14,12 @@ use admission_control_proto::{
     AdmissionControlStatus,
 };
 use failure::prelude::*;
-use futures::future::Future;
-use futures03::executor::block_on;
+use futures::{
+    channel::{mpsc, oneshot},
+    executor::block_on,
+    SinkExt,
+};
+use futures_01::future::Future;
 use grpc_helpers::provide_grpc_response;
 use libra_mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
@@ -31,6 +35,7 @@ use libra_types::{
 };
 use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
+use network::validator_network::RpcError;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
@@ -57,6 +62,9 @@ pub struct AdmissionControlService<M, V> {
     /// Flag indicating whether we need to check mempool before validation, drop txn if check
     /// fails.
     need_to_check_mempool_before_validation: bool,
+    /// mpsc sender connection to send transaction message to upstream proxy
+    //    upstream_proxy_sender: mpsc::UnboundedSender<(SubmitTransactionRequest, oneshot::Sender<Result<SubmitTransactionRequest>>)>,
+    upstream_proxy_sender: mpsc::UnboundedSender<SubmitTransactionRequest>,
 }
 
 impl<M: 'static, V> AdmissionControlService<M, V>
@@ -70,12 +78,14 @@ where
         storage_read_client: Arc<dyn StorageRead>,
         vm_validator: Arc<V>,
         need_to_check_mempool_before_validation: bool,
+        upstream_proxy_sender: mpsc::UnboundedSender<SubmitTransactionRequest>,
     ) -> Self {
         AdmissionControlService {
             mempool_client,
             storage_read_client,
             vm_validator,
             need_to_check_mempool_before_validation,
+            upstream_proxy_sender,
         }
     }
 
@@ -235,8 +245,27 @@ where
     ) {
         debug!("[GRPC] AdmissionControl::submit_transaction");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = match self.mempool_client {
-            None => Err(format_err!("Node doesn't accept write requests")),
+        let resp: Result<SubmitTransactionResponse> = match self.mempool_client {
+            None => {
+                //                println!("FINAL RESULT-------------{:?}", result);
+                //                let (req_sender, res_receiver) = oneshot::channel();
+                //                if let Err(e) = self.upstream_proxy_sender.unbounded_send((req, req_sender)) {
+                //                    Err(e)
+                //                }
+                //                let result = futures::executor::block_on(res_receiver);
+                //
+                //                let submit_txn_result = match result {
+                //                    Ok(res) => res,
+                //                    _ => Err(format_err!("Node doesn't accept write requests")),
+                //                };
+                //                submit_txn_result
+                //                Err(format_err!("Node doesn't accept write requests"))
+
+                let result = self.upstream_proxy_sender.unbounded_send(req);
+                let mut response = SubmitTransactionResponse::default();
+                response.status = Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
+                Ok(response)
+            }
             Some(_) => self.submit_transaction_inner(req),
         };
         provide_grpc_response(resp, ctx, sink);

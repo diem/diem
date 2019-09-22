@@ -50,7 +50,7 @@ fn main() {
     let (mut config, _logger) =
         setup_executable(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
 
-    let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&mut config);
+    let _node_handle = libra_node::main_node::setup_environment(&mut config);
 
     let term = Arc::new(AtomicBool::new(false));
     register_signals(Arc::clone(&term));

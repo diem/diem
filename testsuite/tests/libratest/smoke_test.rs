@@ -558,7 +558,10 @@ fn test_full_node_basic_flow() {
         );
     }
 
-    // writes through full node AC are disabled for now
-    let mint_result = full_node_client.mint_coins(&["mintb", "0", "1"], true);
-    assert!(mint_result.is_err());
+    let mint_result = full_node_client.mint_coins(&["mintb", "0", "10"], true);
+    assert!(mint_result.is_ok());
+    assert_eq!(
+        Decimal::from_f64(17.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "0"]).unwrap()).ok()
+    );
 }
