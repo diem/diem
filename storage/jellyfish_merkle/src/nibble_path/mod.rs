@@ -6,43 +6,12 @@
 
 #[cfg(test)]
 mod nibble_path_test;
+
 use crate::ROOT_NIBBLE_HEIGHT;
+use nibble::Nibble;
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{fmt, iter::FromIterator};
-
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Nibble(u8);
-
-impl From<u8> for Nibble {
-    fn from(nibble: u8) -> Self {
-        assert!(nibble < 16);
-        Self(nibble)
-    }
-}
-
-impl From<Nibble> for u8 {
-    fn from(nibble: Nibble) -> Self {
-        nibble.0
-    }
-}
-
-impl fmt::LowerHex for Nibble {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let val = self.0;
-        // delegate to u8's implementation
-        write!(f, "{:x}", val)
-    }
-}
-
-impl Arbitrary for Nibble {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        any::<u8>().prop_map(|u| Self::from(u & 0x0f)).boxed()
-    }
-}
 
 /// NibblePath defines a path in Merkle tree in the unit of nibble (4 bits).
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
@@ -147,10 +116,10 @@ impl NibblePath {
             self.bytes.last_mut().map(|last_byte| {
                 let nibble = *last_byte & 0x0f;
                 *last_byte &= 0xf0;
-                Nibble(nibble)
+                Nibble::from(nibble)
             })
         } else {
-            self.bytes.pop().map(|byte| Nibble(byte >> 4))
+            self.bytes.pop().map(|byte| Nibble::from(byte >> 4))
         };
         if poped_nibble.is_some() {
             self.num_nibbles -= 1;
@@ -162,10 +131,10 @@ impl NibblePath {
     pub fn last(&self) -> Option<Nibble> {
         let last_byte_option = self.bytes.last();
         if self.num_nibbles % 2 == 0 {
-            last_byte_option.map(|last_byte| Nibble(*last_byte & 0x0f))
+            last_byte_option.map(|last_byte| Nibble::from(*last_byte & 0x0f))
         } else {
             let last_byte = last_byte_option.expect("Last byte must exist if num_nibbles is odd.");
-            Some(Nibble(*last_byte >> 4))
+            Some(Nibble::from(*last_byte >> 4))
         }
     }
 
@@ -180,7 +149,7 @@ impl NibblePath {
     /// Get the i-th nibble.
     fn get_nibble(&self, i: usize) -> Nibble {
         assert!(i < self.num_nibbles);
-        Nibble((self.bytes[i / 2] >> (if i % 2 == 1 { 0 } else { 4 })) & 0xf)
+        Nibble::from((self.bytes[i / 2] >> (if i % 2 == 1 { 0 } else { 4 })) & 0xf)
     }
 
     /// Get a bit iterator iterates over the whole nibble path.

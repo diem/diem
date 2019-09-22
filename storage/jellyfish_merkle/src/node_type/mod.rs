@@ -13,7 +13,7 @@
 #[cfg(test)]
 mod node_type_test;
 
-use crate::nibble::{Nibble, NibblePath};
+use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{
@@ -24,6 +24,7 @@ use crypto::{
     HashValue,
 };
 use failure::{Fail, Result, *};
+use nibble::Nibble;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest::{collection::hash_map, prelude::*};
