@@ -6,10 +6,7 @@ use crate::{
         block_storage::{BlockTreeError, VoteReceptionResult},
         common::Author,
         consensus_types::{
-            block::{Block, ExecutedBlock},
-            quorum_cert::QuorumCert,
-            vote_data::VoteData,
-            vote_msg::VoteMsg,
+            block::ExecutedBlock, quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg,
         },
     },
     counters,
@@ -22,12 +19,55 @@ use logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
-    collections::{vec_deque::VecDeque, HashMap},
+    collections::{vec_deque::VecDeque, HashMap, HashSet},
     fmt::Debug,
+    ops::Deref,
     sync::Arc,
     time::Duration,
 };
 use types::crypto_proxies::LedgerInfoWithSignatures;
+
+/// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
+/// that adds `children` field to know the parent-child relationship between blocks.
+struct LinkableBlock<T> {
+    /// Executed block that has raw block data and execution output.
+    executed_block: Arc<ExecutedBlock<T>>,
+    /// The set of children for cascading pruning. Note: a block may have multiple children.
+    children: HashSet<HashValue>,
+}
+
+impl<T> Deref for LinkableBlock<T> {
+    type Target = ExecutedBlock<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.executed_block
+    }
+}
+
+impl<T> LinkableBlock<T> {
+    pub fn new(block: ExecutedBlock<T>) -> Self {
+        Self {
+            executed_block: Arc::new(block),
+            children: HashSet::new(),
+        }
+    }
+
+    pub fn executed_block(&self) -> &Arc<ExecutedBlock<T>> {
+        &self.executed_block
+    }
+
+    pub fn children(&self) -> &HashSet<HashValue> {
+        &self.children
+    }
+
+    pub fn add_child(&mut self, child_id: HashValue) {
+        assert!(
+            self.children.insert(child_id),
+            "Block {:x} already existed.",
+            child_id,
+        );
+    }
+}
 
 /// This structure maintains tuple of block_id and LedgerInfo for last voted block by an Author
 /// We only remember latest vote from Author. Digest is used to identify and prune pending vote from
@@ -42,7 +82,7 @@ struct BlockPendingVote {
 /// should only be used internally in BlockStore.
 pub struct BlockTree<T> {
     /// All the blocks known to this replica (with parent links)
-    id_to_block: HashMap<HashValue, ExecutedBlock<T>>,
+    id_to_block: HashMap<HashValue, LinkableBlock<T>>,
     /// Root of the tree.
     root_id: HashValue,
     /// A certified block id with highest round
@@ -92,7 +132,7 @@ where
         let root_id = root.id();
 
         let mut id_to_block = HashMap::new();
-        id_to_block.insert(root_id, root);
+        id_to_block.insert(root_id, LinkableBlock::new(root));
         counters::NUM_BLOCKS_IN_TREE.set(1);
 
         let root_quorum_cert = Arc::new(root_quorum_cert);
@@ -129,16 +169,24 @@ where
         self.id_to_block.contains_key(block_id)
     }
 
-    fn get_block(&self, block_id: &HashValue) -> &ExecutedBlock<T> {
+    fn get_block(&self, block_id: &HashValue) -> Arc<ExecutedBlock<T>> {
         self.try_get_block(block_id)
             .expect("Block doesn't exist. Use try_get_block if None is a possible return value")
     }
 
-    pub(super) fn try_get_block(&self, block_id: &HashValue) -> Option<&ExecutedBlock<T>> {
-        self.id_to_block.get(block_id)
+    fn get_linkable_block(&self, block_id: &HashValue) -> &LinkableBlock<T> {
+        self.id_to_block
+            .get(block_id)
+            .expect("linkable block doesn't exist.")
     }
 
-    fn try_get_block_mut(&mut self, block_id: &HashValue) -> Option<&mut ExecutedBlock<T>> {
+    pub(super) fn try_get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
+        self.id_to_block
+            .get(block_id)
+            .map(|lb| Arc::clone(lb.executed_block()))
+    }
+
+    fn try_get_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock<T>> {
         self.id_to_block.get_mut(block_id)
     }
 
@@ -154,11 +202,15 @@ where
         }
     }
 
-    pub(super) fn root(&self) -> &ExecutedBlock<T> {
+    pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.root_id)
     }
 
-    pub(super) fn highest_certified_block(&self) -> &ExecutedBlock<T> {
+    fn linkable_root(&self) -> &LinkableBlock<T> {
+        self.get_linkable_block(&self.root_id)
+    }
+
+    pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.highest_certified_block_id)
     }
 
@@ -180,7 +232,7 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
-    ) -> Result<&ExecutedBlock<T>, BlockTreeError> {
+    ) -> Result<Arc<ExecutedBlock<T>>, BlockTreeError> {
         let block_id = block.id();
         if self.block_exists(&block_id) {
             let existing_block = self.get_block(&block_id);
@@ -197,9 +249,11 @@ where
                     id: block.parent_id(),
                 }),
             };
-            assert!(self.id_to_block.insert(block_id, block).is_none());
+            let linkable_block = LinkableBlock::new(block);
+            let arc_block = Arc::clone(linkable_block.executed_block());
+            assert!(self.id_to_block.insert(block_id, linkable_block).is_none());
             counters::NUM_BLOCKS_IN_TREE.inc();
-            Ok(self.get_block(&block_id))
+            Ok(arc_block)
         }
     }
 
@@ -370,7 +424,7 @@ where
 
         let mut blocks_pruned = VecDeque::new();
         let mut blocks_to_be_pruned = Vec::new();
-        blocks_to_be_pruned.push(self.root());
+        blocks_to_be_pruned.push(self.linkable_root());
         while let Some(block_to_remove) = blocks_to_be_pruned.pop() {
             // Add the children to the blocks to be pruned (if any), but stop when it reaches the
             // new root
@@ -378,7 +432,7 @@ where
                 if next_root_id == *child_id {
                     continue;
                 }
-                blocks_to_be_pruned.push(self.get_block(child_id));
+                blocks_to_be_pruned.push(self.get_linkable_block(child_id));
             }
             // Track all the block ids removed
             blocks_pruned.push_back(block_to_remove.id());
@@ -421,24 +475,25 @@ where
     /// a race, in which the root of the tree is propagated forward between retrieving the block
     /// and getting its path from root (e.g., at proposal generator). Hence, we don't want to panic
     /// and prefer to return None instead.
-    pub(super) fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
+    pub(super) fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
         let mut res = vec![];
-        let mut cur_block = block;
-        while cur_block.round() > self.root().round() {
-            let parent_id = cur_block.parent_id();
-            res.push(cur_block);
-            cur_block = match self.try_get_block(&parent_id) {
-                None => {
-                    return None;
+        let mut cur_block_id = block_id;
+        loop {
+            match self.try_get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.root().round() => {
+                    break;
                 }
-                Some(b) => Arc::clone(b.block()),
-            };
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    res.push(block);
+                }
+                None => return None,
+            }
         }
         // At this point cur_block.round() <= self.root.round()
-        if cur_block.id() != self.root_id {
+        if cur_block_id != self.root_id {
             return None;
         }
-
         Some(res)
     }
 
@@ -461,11 +516,11 @@ where
         // BFS over the tree to find the number of blocks in the tree.
         let mut res = 0;
         let mut to_visit = Vec::new();
-        to_visit.push(self.root());
+        to_visit.push(self.linkable_root());
         while let Some(block) = to_visit.pop() {
             res += 1;
             for child_id in block.children() {
-                to_visit.push(self.get_block(child_id));
+                to_visit.push(self.get_linkable_block(child_id));
             }
         }
         res

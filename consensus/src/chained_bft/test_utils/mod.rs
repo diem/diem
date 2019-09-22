@@ -4,7 +4,11 @@
 use crate::chained_bft::{
     block_storage::BlockStore,
     common::Round,
-    consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
+    consensus_types::{
+        block::{Block, ExecutedBlock},
+        quorum_cert::QuorumCert,
+        vote_data::VoteData,
+    },
 };
 use crypto::{hash::CryptoHash, HashValue};
 use executor::ExecutedState;
@@ -68,7 +72,7 @@ impl TreeInserter {
         &mut self,
         parent: &Block<Vec<usize>>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         // Node must carry a QC to its parent
         let parent_qc = placeholder_certificate_for_block(
             vec![self.block_store.signer()],
@@ -88,7 +92,7 @@ impl TreeInserter {
         parent_qc: QuorumCert,
         parent: &Block<Vec<usize>>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
         block_on(self.block_store.insert_block_with_qc(Block::make_block(
             parent,
@@ -106,7 +110,7 @@ impl TreeInserter {
         block: Block<Vec<usize>>,
         block_signer: &ValidatorSigner,
         qc_signers: Vec<&ValidatorSigner>,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
         let new_round = if block.round() > 0 {
             block.round() - 1

@@ -35,6 +35,7 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
+use crypto::HashValue;
 use logger::prelude::*;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
@@ -477,7 +478,7 @@ impl<T: Payload> EventProcessor<T> {
                 highest_committed_proposal_round = Some(block.round());
             }
             let finality_proof = qc.ledger_info().clone();
-            self.process_commit(block, finality_proof).await;
+            self.process_commit(block.id(), finality_proof).await;
         }
 
         if let Some(new_round_event) = self.pacemaker.process_certificates(
@@ -762,11 +763,18 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. Prune the tree.
     async fn process_commit(
         &self,
-        committed_block: Arc<Block<T>>,
+        block_id_to_commit: HashValue,
         finality_proof: LedgerInfoWithSignatures,
     ) {
+        let block_to_commit = match self.block_store.get_block(block_id_to_commit) {
+            Some(block) => block,
+            None => {
+                return;
+            }
+        };
+
         // First make sure that this commit is new.
-        if committed_block.round() <= self.block_store.root().round() {
+        if block_to_commit.round() <= self.block_store.root().round() {
             return;
         }
 
@@ -774,7 +782,7 @@ impl<T: Payload> EventProcessor<T> {
         // commit.
         assert_eq!(
             finality_proof.ledger_info().consensus_block_id(),
-            committed_block.id()
+            block_to_commit.id()
         );
 
         if let Err(e) = self.state_computer.commit(finality_proof).await {
@@ -793,7 +801,7 @@ impl<T: Payload> EventProcessor<T> {
         // path from the old root to the new root.
         for committed in self
             .block_store
-            .path_from_root(Arc::clone(&committed_block))
+            .path_from_root(block_id_to_commit)
             .unwrap_or_else(Vec::new)
         {
             if let Some(time_to_commit) = duration_since_epoch()
@@ -817,14 +825,14 @@ impl<T: Payload> EventProcessor<T> {
                 error!("Failed to notify mempool: {:?}", e);
             }
         }
-        counters::LAST_COMMITTED_ROUND.set(committed_block.round() as i64);
-        debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *committed_block);
+        counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
+        debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
         event!("committed",
-            "block_id": committed_block.id().short_str(),
-            "round": committed_block.round(),
-            "parent_id": committed_block.parent_id().short_str(),
+            "block_id": block_to_commit.id().short_str(),
+            "round": block_to_commit.round(),
+            "parent_id": block_to_commit.parent_id().short_str(),
         );
-        self.block_store.prune_tree(committed_block.id());
+        self.block_store.prune_tree(block_to_commit.id());
     }
 
     /// Retrieve a n chained blocks from the block store starting from
