@@ -39,9 +39,11 @@ impl TreeReader for MockTreeStore {
 }
 
 impl TreeWriter for MockTreeStore {
-    fn write_node_batch(&self, node_batch: NodeBatch) -> Result<()> {
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
         let mut locked = self.0.write().unwrap();
-        locked.0.extend(node_batch.into_iter());
+        for (node_key, node) in node_batch.clone() {
+            assert_eq!(locked.0.insert(node_key, node), None);
+        }
         Ok(())
     }
 }

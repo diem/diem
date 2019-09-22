@@ -8,7 +8,7 @@
 mod restore_test;
 
 use crate::{
-    nibble::{NibbleIterator, NibblePath},
+    nibble_path::{NibbleIterator, NibblePath},
     node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey},
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
@@ -27,6 +27,24 @@ enum ChildInfo {
     Leaf { node: LeafNode },
 }
 
+impl ChildInfo {
+    /// Converts `self` to a child, assuming the hash is known if it's an internal node.
+    fn into_child(self, version: Version) -> Child {
+        match self {
+            Self::Internal { hash } => {
+                Child::new(
+                    hash.expect("Must have been initialized."),
+                    version,
+                    false, /* is_leaf */
+                )
+            }
+            Self::Leaf { node } => {
+                Child::new(node.hash(), version, true /* is_leaf */)
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct InternalInfo {
     /// The node key of this internal node.
@@ -38,8 +56,8 @@ struct InternalInfo {
 }
 
 impl InternalInfo {
-    /// Creates an internal node whose children are all unknown.
-    fn new_uninitialized(node_key: NodeKey) -> Self {
+    /// Creates an empty internal node with no children.
+    fn new_empty(node_key: NodeKey) -> Self {
         Self {
             node_key,
             children: Default::default(),
@@ -52,26 +70,14 @@ impl InternalInfo {
 
     /// Converts `self` to an internal node, assuming all of its children are already known and
     /// fully initialized.
-    fn into_internal_node(self, version: Version) -> (NodeKey, InternalNode) {
+    fn into_internal_node(mut self, version: Version) -> (NodeKey, InternalNode) {
         let mut children = Children::new();
 
         // Calling `into_iter` on an array is equivalent to calling `iter`:
-        // https://github.com/rust-lang/rust/issues/25725.
-        for (index, child_info_option) in self.children.iter().enumerate() {
-            if let Some(child_info) = child_info_option {
-                let child = match child_info {
-                    ChildInfo::Internal { hash } => {
-                        Child::new(
-                            hash.as_ref().copied().expect("Must have been initialized."),
-                            version,
-                            false, /* is_leaf */
-                        )
-                    }
-                    ChildInfo::Leaf { node } => {
-                        Child::new(node.hash(), version, true /* is_leaf */)
-                    }
-                };
-                children.insert((index as u8).into(), child);
+        // https://github.com/rust-lang/rust/issues/25725. So we use `iter_mut` and `take`.
+        for (index, child_info_option) in self.children.iter_mut().enumerate() {
+            if let Some(child_info) = child_info_option.take() {
+                children.insert((index as u8).into(), child_info.into_child(version));
             }
         }
 
@@ -124,6 +130,9 @@ pub struct JellyfishMerkleRestore<'a, S> {
     /// The most recently added key. With this we are able to ensure the keys come in increasing
     /// order.
     previous_key: Option<HashValue>,
+
+    /// The number of keys we have received since the most recent restart.
+    num_keys_received: u64,
 }
 
 impl<'a, S> JellyfishMerkleRestore<'a, S>
@@ -131,18 +140,22 @@ where
     S: 'a + TreeReader + TreeWriter,
 {
     pub fn new(store: &'a S, version: Version) -> Result<Self> {
-        let partial_nodes = match store.get_rightmost_leaf()? {
-            Some((node_key, _leaf_node)) => {
+        let (partial_nodes, previous_key) = match store.get_rightmost_leaf()? {
+            Some((node_key, leaf_node)) => {
                 // If the system crashed in the middle of the previous restoration attempt, we need
                 // to recover the partial nodes to the state right before the crash.
-                Self::recover_partial_nodes(store, version, node_key)?
+                (
+                    Self::recover_partial_nodes(store, version, node_key)?,
+                    Some(leaf_node.account_key()),
+                )
             }
             None => {
                 // If no rightmost leaf exists, it means this is the first time we start and
                 // storage is still empty. We use a single root node in this case.
-                vec![InternalInfo::new_uninitialized(NodeKey::new_empty_path(
-                    version,
-                ))]
+                (
+                    vec![InternalInfo::new_empty(NodeKey::new_empty_path(version))],
+                    None,
+                )
             }
         };
 
@@ -151,7 +164,8 @@ where
             version,
             partial_nodes,
             frozen_nodes: NodeBatch::new(),
-            previous_key: None,
+            previous_key,
+            num_keys_received: 0,
         })
     }
 
@@ -176,16 +190,18 @@ where
             node_key = node_key.gen_parent_node_key();
         }
 
-        // Next we reconstruct all the partial nodes up to the root node.
+        // Next we reconstruct all the partial nodes up to the root node, starting from the bottom.
+        // For all of them, we scan all its possible child positions and see if there is one at
+        // each position. If the node is not the bottom one, there is additionally a partial node
+        // child at the position `previous_child_index`.
         let mut partial_nodes = vec![];
+        // Initialize `previous_child_index` to `None` for the first iteration of the loop so the
+        // code below treats it differently.
         let mut previous_child_index = None;
 
         loop {
-            let mut internal_info = InternalInfo::new_uninitialized(node_key.clone());
+            let mut internal_info = InternalInfo::new_empty(node_key.clone());
 
-            // Scan all its possible children and see if they exist in storage. We need to do this
-            // from index 0 to the previous child index. For the bottom node we just try to find
-            // all its children.
             for i in 0..previous_child_index.unwrap_or(16) {
                 let child_node_key = node_key.gen_child_node_key(version, (i as u8).into());
                 if let Some(node) = store.get_node_option(&child_node_key)? {
@@ -200,9 +216,11 @@ where
                 }
             }
 
+            // If this is not the lowest partial node, it will have a partial node child at
+            // `previous_child_index`. Set the hash of this child to `None` because it is a
+            // partial node and we do not know its hash yet. For the lowest partial node, we just
+            // find all its known children from storage in the loop above.
             if let Some(index) = previous_child_index {
-                // Set the hash of this child to `None` because it is a partial node and we do not
-                // know its hash yet.
                 internal_info.set_child(index, ChildInfo::Internal { hash: None });
             }
 
@@ -228,19 +246,20 @@ where
                     "Account keys must come in increasing order.",
                 )
             }
-            self.add_one(key, value)?;
+            self.add_one(key, value);
             self.previous_key.replace(key);
+            self.num_keys_received += 1;
         }
 
         // Write the frozen nodes to storage.
-        self.store.write_node_batch(self.frozen_nodes.clone())?;
+        self.store.write_node_batch(&self.frozen_nodes)?;
         self.frozen_nodes.clear();
 
         Ok(())
     }
 
     /// Restores one account.
-    fn add_one(&mut self, new_key: HashValue, new_value: AccountStateBlob) -> Result<()> {
+    fn add_one(&mut self, new_key: HashValue, new_value: AccountStateBlob) {
         let nibble_path = NibblePath::new(new_key.to_vec());
         let mut nibbles = nibble_path.nibbles();
 
@@ -249,8 +268,8 @@ where
 
             match self.partial_nodes[i].children[child_index] {
                 Some(ref child_info) => {
-                    // If the next node is an internal node, we just continue the loop with the
-                    // next nibble. Here we deal with the leaf case.
+                    // If there exists an internal node at this position, we just continue the loop
+                    // with the next nibble. Here we deal with the leaf case.
                     if let ChildInfo::Leaf { node } = child_info {
                         assert_eq!(
                             i,
@@ -289,8 +308,6 @@ where
                 }
             }
         }
-
-        Ok(())
     }
 
     /// Inserts a new account at the position of the existing leaf node. We may need to create
@@ -311,15 +328,17 @@ where
         self.partial_nodes[num_existing_partial_nodes - 1]
             .set_child(child_index, ChildInfo::Internal { hash: None });
 
-        let common_prefix_len = existing_leaf.account_key().common_prefix_bits_len(new_key) / 4;
-
-        // All these internal node will now have a single internal node child.
+        // Next we build the new internal nodes from top to bottom. All these internal node except
+        // the bottom one will now have a single internal node child.
+        let common_prefix_len = existing_leaf
+            .account_key()
+            .common_prefix_nibbles_len(new_key);
         for _ in num_existing_partial_nodes..common_prefix_len {
             let visited_nibbles = remaining_nibbles.visited_nibbles().collect();
             let next_nibble = remaining_nibbles.next().expect("This nibble must exist.");
             let new_node_key = NodeKey::new(self.version, visited_nibbles);
 
-            let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
+            let mut internal_info = InternalInfo::new_empty(new_node_key);
             internal_info.set_child(
                 u8::from(next_nibble) as usize,
                 ChildInfo::Internal { hash: None },
@@ -330,12 +349,12 @@ where
         // The last internal node will have two leaf node children.
         let visited_nibbles = remaining_nibbles.visited_nibbles().collect();
         let new_node_key = NodeKey::new(self.version, visited_nibbles);
-        let mut internal_info = InternalInfo::new_uninitialized(new_node_key);
+        let mut internal_info = InternalInfo::new_empty(new_node_key);
 
         // Next we put the existing leaf as a child of this internal node.
         let existing_child_index = existing_leaf.account_key().get_nibble(common_prefix_len);
         internal_info.set_child(
-            existing_child_index as usize,
+            u8::from(existing_child_index) as usize,
             ChildInfo::Leaf {
                 node: existing_leaf,
             },
@@ -357,38 +376,57 @@ where
             .last_mut()
             .expect("This node must exist.")
             .set_child(
-                new_child_index as usize,
+                u8::from(new_child_index) as usize,
                 ChildInfo::Leaf {
                     node: LeafNode::new(new_key, new_value),
                 },
             );
     }
 
-    /// Puts the nodes that will not be changed in `self.frozen_nodes`.
-    fn freeze(&mut self, target_len: usize) {
-        // Freeze the rightmost leaf node on the lowest level. This node was inserted in the
-        // previous `restore_one` call.
+    /// Puts the nodes that will not be changed later in `self.frozen_nodes`.
+    fn freeze(&mut self, num_remaining_partial_nodes: usize) {
+        self.freeze_previous_leaf();
+        self.freeze_internal_nodes(num_remaining_partial_nodes);
+    }
+
+    /// Freezes the previously added leaf node. It should always be the rightmost leaf node on the
+    /// lowest level, inserted in the previous `add_one` call.
+    fn freeze_previous_leaf(&mut self) {
+        // If this is the very first key, there is no previous leaf to freeze.
+        if self.num_keys_received == 0 {
+            return;
+        }
+
         let last_node = self
             .partial_nodes
             .last()
             .expect("Must have at least one partial node.");
-        for i in (0..16).rev() {
-            if let Some(ref child_info) = last_node.children[i] {
-                if let ChildInfo::Leaf { node } = child_info {
-                    let child_node_key = last_node
-                        .node_key
-                        .gen_child_node_key(self.version, (i as u8).into());
-                    self.frozen_nodes
-                        .insert(child_node_key, node.clone().into());
-                    break;
-                }
-            }
-        }
+        let rightmost_child_index = last_node
+            .children
+            .iter()
+            .rposition(|x| x.is_some())
+            .expect("Must have at least one child.");
 
-        // Freeze extra internal nodes.
-        while self.partial_nodes.len() > target_len {
+        match last_node.children[rightmost_child_index] {
+            Some(ChildInfo::Leaf { ref node }) => {
+                let child_node_key = last_node
+                    .node_key
+                    .gen_child_node_key(self.version, (rightmost_child_index as u8).into());
+                self.frozen_nodes
+                    .insert(child_node_key, node.clone().into());
+            }
+            _ => panic!("Must have at least one child and must not have further internal nodes."),
+        }
+    }
+
+    /// Freeze extra internal nodes. Only `num_remaining_nodes` partial internal nodes will be kept
+    /// and the ones on the lower level will be frozen.
+    fn freeze_internal_nodes(&mut self, num_remaining_nodes: usize) {
+        while self.partial_nodes.len() > num_remaining_nodes {
             let last_node = self.partial_nodes.pop().expect("This node must exist.");
             let (node_key, internal_node) = last_node.into_internal_node(self.version);
+            // Keep the hash of this node before moving it into `frozen_nodes`, so we can update
+            // its parent later.
             let node_hash = internal_node.hash();
             self.frozen_nodes.insert(node_key, internal_node.into());
 
@@ -396,18 +434,19 @@ where
             // its parent unless it is root node.
             if let Some(parent_node) = self.partial_nodes.last_mut() {
                 // This internal node must be the rightmost child of its parent at the moment.
-                for i in (0..16).rev() {
-                    if let Some(ref mut child_info) = parent_node.children[i] {
-                        match child_info {
-                            ChildInfo::Internal { ref mut hash } => {
-                                assert_eq!(hash.replace(node_hash), None);
-                            }
-                            ChildInfo::Leaf { .. } => {
-                                panic!("The rightmost child must not be a leaf.");
-                            }
-                        }
-                        break;
+                let rightmost_child_index = parent_node
+                    .children
+                    .iter()
+                    .rposition(|x| x.is_some())
+                    .expect("Must have at least one child.");
+
+                match parent_node.children[rightmost_child_index] {
+                    Some(ChildInfo::Internal { ref mut hash }) => {
+                        assert_eq!(hash.replace(node_hash), None);
                     }
+                    _ => panic!(
+                        "Must have at least one child and the rightmost child must not be a leaf."
+                    ),
                 }
             }
         }
@@ -434,13 +473,13 @@ where
                     let node_key = NodeKey::new_empty_path(self.version);
                     assert!(self.frozen_nodes.is_empty());
                     self.frozen_nodes.insert(node_key, node.into());
-                    self.store.write_node_batch(self.frozen_nodes)?;
+                    self.store.write_node_batch(&self.frozen_nodes)?;
                     return Ok(());
                 }
             }
         }
 
         self.freeze(0);
-        self.store.write_node_batch(self.frozen_nodes)
+        self.store.write_node_batch(&self.frozen_nodes)
     }
 }
