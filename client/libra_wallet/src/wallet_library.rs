@@ -112,10 +112,10 @@ impl WalletLibrary {
     pub fn new_address(&mut self) -> Result<(AccountAddress, ChildNumber)> {
         let child = self.key_factory.private_child(self.key_leaf)?;
         let address = child.get_address()?;
-        let child = self.key_leaf;
+        let old_key_leaf = self.key_leaf;
         self.key_leaf.increment();
-        if self.addr_map.insert(address, child).is_none() {
-            Ok((address, child))
+        if self.addr_map.insert(address, old_key_leaf).is_none() {
+            Ok((address, old_key_leaf))
         } else {
             Err(WalletError::LibraWalletGeneric(
                 "This address is already in your wallet".to_string(),
