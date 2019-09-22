@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::{mock_tree_store::MockTreeStore, nibble::NibblePath, node_type::Node, NodeKey};
+use crate::{mock_tree_store::MockTreeStore, nibble_path::NibblePath, node_type::Node, NodeKey};
 use crypto::HashValue;
 use types::account_state_blob::AccountStateBlob;
 

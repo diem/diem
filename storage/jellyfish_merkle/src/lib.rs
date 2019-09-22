@@ -64,13 +64,13 @@ pub mod iterator;
 mod jellyfish_merkle_test;
 #[cfg(test)]
 mod mock_tree_store;
-mod nibble;
+mod nibble_path;
 pub mod node_type;
 mod tree_cache;
 
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use nibble::{skip_common_prefix, NibbleIterator, NibblePath};
+use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 use proptest_derive::Arbitrary;
 use std::collections::{BTreeMap, BTreeSet};
