@@ -9,8 +9,8 @@ use crate::{
     mocks::local_mock_mempool::LocalMockMempool,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-
 use crypto::{ed25519::*, test_utils::TEST_SEED};
+use futures::channel::mpsc;
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -24,11 +24,13 @@ use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 pub fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
+    let (upstream_proxy_sender, _) = mpsc::unbounded();
     AdmissionControlService::new(
         Some(Arc::new(LocalMockMempool::new())),
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         false,
+        upstream_proxy_sender,
     )
 }
 

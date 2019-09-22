@@ -21,7 +21,8 @@ use crate::{
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
     },
     validator_network::{
-        ConsensusNetworkEvents, ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
+        AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
+        ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
         StateSynchronizerEvents, StateSynchronizerSender,
     },
     ProtocolId,
@@ -35,6 +36,7 @@ use std::{collections::HashMap, fmt::Debug, time::Duration};
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -76,6 +78,10 @@ pub trait LibraNetworkProvider {
         &mut self,
         state_sync_protocols: Vec<ProtocolId>,
     ) -> (StateSynchronizerSender, StateSynchronizerEvents);
+    fn add_admission_control(
+        &mut self,
+        ac_protocols: Vec<ProtocolId>,
+    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents);
     fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
 }
 
@@ -168,6 +174,23 @@ where
             .map(|p| (p.clone(), state_sync_tx.clone()));
         self.upstream_handlers.extend(state_sync_handlers);
         (state_sync_network_sender, state_sync_network_events)
+    }
+
+    fn add_admission_control(
+        &mut self,
+        ac_protocols: Vec<ProtocolId>,
+    ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents) {
+        // Construct Consensus network interfaces
+        let (ac_tx, ac_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_ADMISSION_CONTROL_NETWORK_EVENTS,
+            Duration::from_millis(ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let ac_network_sender = AdmissionControlNetworkSender::new(self.requests_tx.clone());
+        let ac_network_events = AdmissionControlNetworkEvents::new(ac_rx);
+        let ac_handlers = ac_protocols.iter().map(|p| (p.clone(), ac_tx.clone()));
+        self.upstream_handlers.extend(ac_handlers);
+        (ac_network_sender, ac_network_events)
     }
 
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {

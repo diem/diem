@@ -1,32 +1,34 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control::{
-    create_admission_control, AdmissionControlClient,
-};
-use admission_control_service::admission_control_service::AdmissionControlService;
+use admission_control_service::runtime::AdmissionControlRuntime;
 use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use grpc_helpers::ServerHandle;
-use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
-use libra_mempool::{proto::mempool::MempoolClient, MempoolRuntime};
+use grpcio::EnvBuilder;
+use libra_mempool::MempoolRuntime;
 use libra_types::account_address::AccountAddress as PeerId;
 use logger::prelude::*;
 use metrics::metric_server;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        LibraNetworkProvider, CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
-        MEMPOOL_DIRECT_SEND_PROTOCOL, STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        LibraNetworkProvider,
+        // when you add a new protocol const, you must add this in either
+        // .direct_send_protocols or .rpc_protocols vector of network_builder in setup_network()
+        ADMISSION_CONTROL_RPC_PROTOCOL,
+        CONSENSUS_DIRECT_SEND_PROTOCOL,
+        CONSENSUS_RPC_PROTOCOL,
+        MEMPOOL_DIRECT_SEND_PROTOCOL,
+        STATE_SYNCHRONIZER_MSG_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
 use state_synchronizer::StateSynchronizer;
 use std::{
-    cmp::min,
     convert::{TryFrom, TryInto},
     str::FromStr,
     sync::Arc,
@@ -37,10 +39,9 @@ use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceC
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::MoveVM;
-use vm_validator::vm_validator::VMValidator;
 
 pub struct LibraHandle {
-    _ac: ServerHandle,
+    _ac: AdmissionControlRuntime,
     _mempool: Option<MempoolRuntime>,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
@@ -55,55 +56,6 @@ impl Drop for LibraHandle {
             consensus.stop();
         }
     }
-}
-
-fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
-    let env = Arc::new(
-        EnvBuilder::new()
-            .name_prefix("grpc-ac-")
-            .cq_count(min(num_cpus::get() * 2, 32))
-            .build(),
-    );
-    let port = config.admission_control.admission_control_service_port;
-
-    // Create mempool client if the node is validator.
-    let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
-    let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-    let mempool_client = if config.is_validator() {
-        Some(Arc::new(MempoolClient::new(
-            ChannelBuilder::new(env2).connect(&connection_str),
-        )))
-    } else {
-        None
-    };
-
-    // Create storage read client
-    let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-        Arc::new(EnvBuilder::new().name_prefix("grpc-ac-sto-").build()),
-        "localhost",
-        config.storage.port,
-    ));
-
-    let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
-
-    let handle = AdmissionControlService::new(
-        mempool_client,
-        storage_client,
-        vm_validator,
-        config
-            .admission_control
-            .need_to_check_mempool_before_validation,
-    );
-    let service = create_admission_control(handle);
-    let server = ServerBuilder::new(Arc::clone(&env))
-        .register_service(service)
-        .bind(config.admission_control.address.clone(), port)
-        .build()
-        .expect("Unable to create grpc server");
-
-    let connection_str = format!("localhost:{}", port);
-    let client = AdmissionControlClient::new(ChannelBuilder::new(env).connect(&connection_str));
-    (server, client)
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
@@ -165,7 +117,10 @@ pub fn setup_network(
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
         ])
-        .rpc_protocols(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
+        .rpc_protocols(vec![
+            ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
+            ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
+        ]);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
         // encryption.
@@ -219,7 +174,7 @@ pub fn setup_network(
     (runtime, network_provider)
 }
 
-pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
+pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     crash_handler::setup_panic_handler();
 
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
@@ -241,17 +196,32 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     debug!("Executor setup in {} ms", instant.elapsed().as_millis());
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
+    let mut ac_network_sender = None;
+    let mut ac_network_events = vec![];
     let mut validator_network_provider = None;
 
-    for mut network in &mut node_config.networks {
-        let peer_id = PeerId::try_from(network.peer_id.clone()).expect("Invalid PeerId");
-        let (runtime, mut network_provider) = setup_network(peer_id, &mut network);
+    for i in 0..node_config.networks.len() {
+        let peer_id =
+            PeerId::try_from(node_config.networks[i].peer_id.clone()).expect("Invalid PeerId");
+        let (runtime, mut network_provider) = setup_network(peer_id, &mut node_config.networks[i]);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
             ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
         ]));
+
+        let (ac_sender, ac_events) =
+            network_provider.add_admission_control(vec![ProtocolId::from_static(
+                ADMISSION_CONTROL_RPC_PROTOCOL,
+            )]);
+        ac_network_events.push(ac_events);
+
+        let network = &node_config.networks[i];
         if let RoleType::Validator = (&network.role).into() {
             validator_network_provider = Some((peer_id, runtime, network_provider));
+            ac_network_sender = Some(ac_sender);
         } else {
+            if node_config.is_upstream_network(network) {
+                ac_network_sender = Some(ac_sender);
+            }
             // For non-validator roles, the peer_id should be derived from the network identity
             // key.
             assert_eq!(
@@ -282,6 +252,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         Arc::clone(&executor),
         &node_config,
     );
+    let admission_control = AdmissionControlRuntime::bootstrap(
+        &node_config,
+        ac_network_sender.unwrap(),
+        ac_network_events,
+    );
+
     let mut mempool = None;
     let mut consensus = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
@@ -330,20 +306,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
 
-    // Initialize and start AC.
-    instant = Instant::now();
-    let (ac_server, ac_client) = setup_ac(&node_config);
-    let ac = ServerHandle::setup(ac_server);
-    debug!("AC started in {} ms", instant.elapsed().as_millis());
-
-    let libra_handle = LibraHandle {
+    LibraHandle {
         _network_runtimes: network_runtimes,
-        _ac: ac,
+        _ac: admission_control,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         consensus,
         _storage: storage,
         _debug: debug_if,
-    };
-    (ac_client, libra_handle)
+    }
 }

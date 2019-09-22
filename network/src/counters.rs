@@ -67,8 +67,11 @@ lazy_static::lazy_static! {
     /// Counter of pending network events to Consensus
     pub static ref PENDING_CONSENSUS_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_consensus_network_events");
 
-    /// Counter of pending network events to Consensus
+    /// Counter of pending network events to State Synchronizer
     pub static ref PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_state_sync_network_events");
+
+    /// Counter of pending network events to Admission Control
+    pub static ref PENDING_ADMISSION_CONTROL_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_admission_control_network_events");
 
     /// Counter of pending requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_requests");
