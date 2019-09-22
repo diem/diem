@@ -34,6 +34,6 @@ impl Arbitrary for Nibble {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        (0..16u8).prop_map(|u| Self::from(u)).boxed()
+        (0..16u8).prop_map(Self::from).boxed()
     }
 }
