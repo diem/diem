@@ -24,6 +24,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     string::ToString,
+    time::Duration,
 };
 use toml;
 use tools::tempdir::TempPath;
@@ -244,6 +245,7 @@ pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
     pub need_to_check_mempool_before_validation: bool,
+    pub upstream_proxy_timeout: Duration,
 }
 
 impl Default for AdmissionControlConfig {
@@ -252,6 +254,7 @@ impl Default for AdmissionControlConfig {
             address: "0.0.0.0".to_string(),
             admission_control_service_port: 8000,
             need_to_check_mempool_before_validation: false,
+            upstream_proxy_timeout: Duration::from_secs(1),
         }
     }
 }

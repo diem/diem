@@ -1,10 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control_grpc::{
-    create_admission_control, AdmissionControlClient,
-};
-use admission_control_service::admission_control_service::AdmissionControlService;
+use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
+use admission_control_service::runtime::AdmissionControlRuntime;
 use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
@@ -12,10 +10,9 @@ use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_in
 use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
-use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
-use grpcio_sys;
+use grpcio::EnvBuilder;
 use logger::prelude::*;
-use mempool::{proto::mempool_grpc::MempoolClient, MempoolRuntime};
+use mempool::MempoolRuntime;
 use metrics::metric_server;
 use network::{
     validator_network::{
@@ -27,7 +24,6 @@ use network::{
 };
 use state_synchronizer::StateSynchronizer;
 use std::{
-    cmp::min,
     convert::{TryFrom, TryInto},
     str::FromStr,
     sync::Arc,
@@ -39,10 +35,9 @@ use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use types::account_address::AccountAddress as PeerId;
 use vm_runtime::MoveVM;
-use vm_validator::vm_validator::VMValidator;
 
 pub struct LibraHandle {
-    _ac: ServerHandle,
+    _ac: Option<AdmissionControlRuntime>,
     _mempool: Option<MempoolRuntime>,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
@@ -57,55 +52,6 @@ impl Drop for LibraHandle {
             consensus.stop();
         }
     }
-}
-
-fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
-    let env = Arc::new(
-        EnvBuilder::new()
-            .name_prefix("grpc-ac-")
-            .cq_count(unsafe { min(grpcio_sys::gpr_cpu_num_cores() as usize * 2, 32) })
-            .build(),
-    );
-    let port = config.admission_control.admission_control_service_port;
-
-    // Create mempool client if the node is validator.
-    let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
-    let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-    let mempool_client = if config.is_validator() {
-        Some(Arc::new(MempoolClient::new(
-            ChannelBuilder::new(env2).connect(&connection_str),
-        )))
-    } else {
-        None
-    };
-
-    // Create storage read client
-    let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
-        Arc::new(EnvBuilder::new().name_prefix("grpc-ac-sto-").build()),
-        "localhost",
-        config.storage.port,
-    ));
-
-    let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
-
-    let handle = AdmissionControlService::new(
-        mempool_client,
-        storage_client,
-        vm_validator,
-        config
-            .admission_control
-            .need_to_check_mempool_before_validation,
-    );
-    let service = create_admission_control(handle);
-    let server = ServerBuilder::new(Arc::clone(&env))
-        .register_service(service)
-        .bind(config.admission_control.address.clone(), port)
-        .build()
-        .expect("Unable to create grpc server");
-
-    let connection_str = format!("localhost:{}", port);
-    let client = AdmissionControlClient::new(ChannelBuilder::new(env).connect(&connection_str));
-    (server, client)
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
@@ -222,7 +168,9 @@ pub fn setup_network(
     (runtime, network_provider)
 }
 
-pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClient, LibraHandle) {
+pub fn setup_environment(
+    node_config: &mut NodeConfig,
+) -> (Option<AdmissionControlClient>, LibraHandle) {
     crash_handler::setup_panic_handler();
 
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
@@ -289,6 +237,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
     );
     let mut mempool = None;
     let mut consensus = None;
+    let mut ac = None;
+    let mut ac_client = None;
+    let is_validator = validator_network_provider.is_some();
+    //    let mut admission_control = None;
     if let Some((peer_id, runtime, mut network_provider)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
         // initialization is blocked on state synchronizer to sync to the initial root ledger
@@ -306,6 +258,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
+        let (ac_network_sender, ac_network_events) = network_provider
+            .add_admission_control(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
+
         runtime
             .executor()
             .spawn(network_provider.start().unit_error().compat());
@@ -335,13 +290,19 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
             .expect("Failed to start consensus. Can't proceed.");
         consensus = Some(consensus_provider);
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
-    }
 
-    // Initialize and start AC.
-    instant = Instant::now();
-    let (ac_server, ac_client) = setup_ac(&node_config);
-    let ac = ServerHandle::setup(ac_server);
-    debug!("AC started in {} ms", instant.elapsed().as_millis());
+        // Initialize and start AC.
+        instant = Instant::now();
+        let ac_runtime = AdmissionControlRuntime::bootstrap(
+            &node_config,
+            ac_network_sender,
+            vec![ac_network_events],
+            is_validator,
+        );
+        ac_client = Some(ac_runtime.client.clone());
+        ac = Some(ac_runtime);
+        debug!("AC started in {} ms", instant.elapsed().as_millis());
+    }
 
     let libra_handle = LibraHandle {
         _network_runtimes: network_runtimes,
