@@ -178,7 +178,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+    ) -> Result<Arc<ExecutedBlock<T>>, InsertError> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
@@ -204,11 +204,11 @@ impl<T: Payload> BlockStore<T> {
         self.storage
             .save_tree(vec![block.clone()], vec![])
             .map_err(|_| InsertError::StorageFailure)?;
+        let new_block = ExecutedBlock::new(block, compute_res);
         self.inner
             .write()
             .unwrap()
-            .insert_block(ExecutedBlock::new(block, compute_res))
-            .map(|eb| Arc::clone(eb.block()))
+            .insert_block(new_block)
             .map_err(|e| e.into())
     }
 
@@ -418,20 +418,16 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().block_exists(&block_id)
     }
 
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<T>>> {
-        self.inner
-            .read()
-            .unwrap()
-            .try_get_block(&block_id)
-            .map(|eb| Arc::clone(eb.block()))
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<T>>> {
+        self.inner.read().unwrap().try_get_block(&block_id)
     }
 
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {
         self.inner.read().unwrap().get_compute_result(&block_id)
     }
 
-    fn root(&self) -> Arc<Block<T>> {
-        Arc::clone(self.inner.read().unwrap().root().block())
+    fn root(&self) -> Arc<ExecutedBlock<T>> {
+        self.inner.read().unwrap().root()
     }
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>> {
@@ -441,8 +437,8 @@ impl<T: Payload> BlockReader for BlockStore<T> {
             .get_quorum_cert_for_block(&block_id)
     }
 
-    fn path_from_root(&self, block: Arc<Block<T>>) -> Option<Vec<Arc<Block<T>>>> {
-        self.inner.read().unwrap().path_from_root(block)
+    fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
+        self.inner.read().unwrap().path_from_root(block_id)
     }
 
     fn create_block(
@@ -470,8 +466,8 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         )
     }
 
-    fn highest_certified_block(&self) -> Arc<Block<Self::Payload>> {
-        Arc::clone(self.inner.read().unwrap().highest_certified_block().block())
+    fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>> {
+        self.inner.read().unwrap().highest_certified_block()
     }
 
     fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
@@ -515,7 +511,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_block_with_qc(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+    ) -> Result<Arc<ExecutedBlock<T>>, InsertError> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }

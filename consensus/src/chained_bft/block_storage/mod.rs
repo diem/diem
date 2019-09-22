@@ -3,7 +3,10 @@
 
 use crate::chained_bft::{
     common::{Author, Round},
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
+    consensus_types::{
+        block::{Block, ExecutedBlock},
+        quorum_cert::QuorumCert,
+    },
 };
 use crypto::HashValue;
 use std::sync::Arc;
@@ -150,7 +153,7 @@ pub trait BlockReader: Send + Sync {
     fn block_exists(&self, block_id: HashValue) -> bool;
 
     /// Try to get a block with the block_id, return an Arc of it if found.
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<Block<Self::Payload>>>;
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<Self::Payload>>>;
 
     /// Try to get a compute result given the specified block id.
     ///
@@ -159,7 +162,7 @@ pub trait BlockReader: Send + Sync {
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
 
     /// Get the current root block of the BlockTree.
-    fn root(&self) -> Arc<Block<Self::Payload>>;
+    fn root(&self) -> Arc<ExecutedBlock<Self::Payload>>;
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>>;
 
@@ -170,10 +173,8 @@ pub trait BlockReader: Send + Sync {
     /// path_from_root(b2) -> Some([b2, b1])
     /// path_from_root(b0) -> Some([])
     /// path_from_root(a) -> None
-    fn path_from_root(
-        &self,
-        block: Arc<Block<Self::Payload>>,
-    ) -> Option<Vec<Arc<Block<Self::Payload>>>>;
+    fn path_from_root(&self, block_id: HashValue)
+        -> Option<Vec<Arc<ExecutedBlock<Self::Payload>>>>;
 
     /// Generates and returns a block with the given parent and payload.
     /// Note that it does not add the block to the tree, just generates it.
@@ -192,7 +193,7 @@ pub trait BlockReader: Send + Sync {
     ) -> Block<Self::Payload>;
 
     /// Return the certified block with the highest round.
-    fn highest_certified_block(&self) -> Arc<Block<Self::Payload>>;
+    fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>>;
 
     /// Return the quorum certificate with the highest round
     fn highest_quorum_cert(&self) -> Arc<QuorumCert>;

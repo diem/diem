@@ -54,7 +54,7 @@ lazy_static! {
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct StateComputeResult {
     pub executed_state: ExecutedState,
     /// The compute status (success/failure) of the given payload. The specific details are opaque

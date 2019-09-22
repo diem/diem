@@ -5,7 +5,7 @@ use crate::chained_bft::{
     block_storage::{BlockReader, BlockStore, InsertError, NeedFetchResult, VoteReceptionResult},
     common::Author,
     consensus_types::{
-        block::{block_test, Block},
+        block::{block_test, Block, ExecutedBlock},
         quorum_cert::QuorumCert,
         vote_data::VoteData,
         vote_msg::VoteMsg,
@@ -23,7 +23,10 @@ use types::{
     account_address::AccountAddress, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
 };
 
-fn build_simple_tree() -> (Vec<Arc<Block<Vec<usize>>>>, Arc<BlockStore<Vec<usize>>>) {
+fn build_simple_tree() -> (
+    Vec<Arc<ExecutedBlock<Vec<usize>>>>,
+    Arc<BlockStore<Vec<usize>>>,
+) {
     let block_store = build_empty_tree();
     let genesis = block_store.root();
     let genesis_block_id = genesis.id();
@@ -103,7 +106,7 @@ fn test_block_store_create_block() {
 fn test_highest_block_and_quorum_cert() {
     let block_store = build_empty_tree();
     assert_eq!(
-        block_store.highest_certified_block().as_ref(),
+        block_store.highest_certified_block().block(),
         &Block::make_genesis_block()
     );
     assert_eq!(
@@ -118,7 +121,7 @@ fn test_highest_block_and_quorum_cert() {
     let block_round_1 =
         inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
     assert_eq!(
-        block_store.highest_certified_block().as_ref(),
+        block_store.highest_certified_block().block(),
         &Block::make_genesis_block()
     );
     assert_eq!(
@@ -128,10 +131,7 @@ fn test_highest_block_and_quorum_cert() {
 
     // block_round_1 block and quorum certificate is now the highest
     let block_round_3 = inserter.insert_block(block_round_1.as_ref(), 3);
-    assert_eq!(
-        block_store.highest_certified_block().as_ref(),
-        block_round_1.as_ref()
-    );
+    assert_eq!(block_store.highest_certified_block(), block_round_1);
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
         block_store
@@ -143,10 +143,7 @@ fn test_highest_block_and_quorum_cert() {
     // block_round_1 block and quorum certificate is still the highest, since block_round_4
     // also builds on block_round_1
     let block_round_4 = inserter.insert_block(block_round_1.as_ref(), 4);
-    assert_eq!(
-        block_store.highest_certified_block().as_ref(),
-        block_round_1.as_ref()
-    );
+    assert_eq!(block_store.highest_certified_block(), block_round_1);
     assert_eq!(
         block_store.highest_quorum_cert().as_ref(),
         block_store
@@ -215,9 +212,10 @@ proptest! {
                     } else if block.round() <= parent.round() {
                         prop_assert_eq!(res.err(), Some(InsertError::InvalidBlockRound));
                     } else {
-                        prop_assert_eq!(res.clone().ok(),
-                            Some(Arc::new(block.clone())),
-                            "expected ok on block: {:#?}, got {:#?}", block, res);
+                        let executed_block = res.unwrap();
+                        prop_assert_eq!(executed_block.block(),
+                             &block,
+                            "expected ok on block: {:#?}, got {:#?}", block, executed_block.block());
                     }
                 }
             }
@@ -324,18 +322,15 @@ fn test_path_from_root() {
     let b3 = inserter.insert_block(b2.as_ref(), 3);
 
     assert_eq!(
-        block_store.path_from_root(b3.clone()),
+        block_store.path_from_root(b3.id()),
         Some(vec![b3.clone(), b2.clone(), b1.clone()])
     );
-    assert_eq!(block_store.path_from_root(genesis.clone()), Some(vec![]));
+    assert_eq!(block_store.path_from_root(genesis.id()), Some(vec![]));
 
     block_store.prune_tree(b2.id());
 
-    assert_eq!(
-        block_store.path_from_root(b3.clone()),
-        Some(vec![b3.clone()])
-    );
-    assert_eq!(block_store.path_from_root(genesis.clone()), None);
+    assert_eq!(block_store.path_from_root(b3.id()), Some(vec![b3.clone()]));
+    assert_eq!(block_store.path_from_root(genesis.id()), None);
 }
 
 #[test]

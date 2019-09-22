@@ -5,7 +5,11 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, InsertError, NeedFetchResult},
         common::{Author, Payload},
-        consensus_types::{block::Block, quorum_cert::QuorumCert, sync_info::SyncInfo},
+        consensus_types::{
+            block::{Block, ExecutedBlock},
+            quorum_cert::QuorumCert,
+            sync_info::SyncInfo,
+        },
         network::ConsensusNetworkImpl,
         persistent_storage::PersistentStorage,
     },
@@ -114,7 +118,7 @@ where
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<Block<T>>, InsertError> {
+    ) -> Result<Arc<ExecutedBlock<T>>, InsertError> {
         // execute_and_insert_block has shortcut to return block if it exists
         self.block_store.execute_and_insert_block(block).await
     }

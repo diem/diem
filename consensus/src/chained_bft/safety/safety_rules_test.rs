@@ -5,7 +5,7 @@ use crate::chained_bft::{
     block_storage::BlockReader,
     common::Round,
     consensus_types::{
-        block::{block_test, Block},
+        block::{block_test, ExecutedBlock},
         quorum_cert::QuorumCert,
     },
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
@@ -96,7 +96,7 @@ proptest! {
             }
 
             let insert_res = inserter.insert_pre_made_block(block.clone(), &first_signer, qc_signers.iter().collect());
-            let id_and_qc = |ref block: Arc<Block<Vec<usize>>>| { (block.id(), block.quorum_cert().clone()) };
+            let id_and_qc = |ref block: Arc<ExecutedBlock<Vec<usize>>>| { (block.id(), block.quorum_cert().clone()) };
             let (inserted_id, inserted_qc) = id_and_qc(insert_res.clone());
             safety_rules.update(&inserted_qc);
 

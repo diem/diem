@@ -135,7 +135,7 @@ impl<T: Payload> ProposalGenerator<T> {
         // One needs to hold the blocks with the references to the payloads while get_block is
         // being executed: pending blocks vector keeps all the pending ancestors of the extended
         // branch.
-        let pending_blocks = match self.block_store.path_from_root(Arc::clone(&hqc_block)) {
+        let pending_blocks = match self.block_store.path_from_root(hqc_block.id()) {
             Some(res) => res,
             // In case the whole system moved forward between the check of a round and getting
             // path from root.

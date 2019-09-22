@@ -22,7 +22,7 @@ use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     convert::TryFrom,
     fmt::{Display, Formatter},
     ops::Deref,
@@ -109,12 +109,10 @@ pub struct Block<T> {
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
 /// block data, each executed block also has other derived meta data which could be regenerated from
 /// blocks.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExecutedBlock<T> {
     /// Block data that cannot be regenerated.
-    block: Arc<Block<T>>,
-    /// The set of children for cascading pruning. Note: a block may have multiple children.
-    children: HashSet<HashValue>,
+    block: Block<T>,
     /// The state compute results is calculated for all the pending blocks prior to insertion to
     /// the tree (the initial root node might not have it, because it's been already
     /// committed). The execution results are not persisted: they're recalculated again for the
@@ -427,26 +425,13 @@ where
 impl<T> ExecutedBlock<T> {
     pub fn new(block: Block<T>, compute_result: StateComputeResult) -> Self {
         Self {
-            block: Arc::new(block),
-            children: HashSet::new(),
+            block,
             compute_result: Arc::new(compute_result),
         }
     }
 
-    pub fn block(&self) -> &Arc<Block<T>> {
+    pub fn block(&self) -> &Block<T> {
         &self.block
-    }
-
-    pub fn children(&self) -> &HashSet<HashValue> {
-        &self.children
-    }
-
-    pub fn add_child(&mut self, child_id: HashValue) {
-        assert!(
-            self.children.insert(child_id),
-            "Block {:x} already existed.",
-            child_id,
-        );
     }
 
     pub fn compute_result(&self) -> &Arc<StateComputeResult> {
