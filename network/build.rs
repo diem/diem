@@ -8,6 +8,7 @@ fn main() {
         "src/proto/network.proto",
         "src/proto/mempool.proto",
         "src/proto/state_synchronizer.proto",
+        "src/proto/admission_control.proto",
     ];
 
     for file in &proto_files {
