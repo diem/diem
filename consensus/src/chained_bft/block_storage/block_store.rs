@@ -341,10 +341,11 @@ impl<T: Payload> BlockStore<T> {
                 return Self::zero_ledger_info_placeholder();
             }
         };
-        let (state_id, version) = match self.get_compute_result(block_id) {
+        let (state_id, version, next_validator_set) = match self.get_compute_result(block_id) {
             Some(compute_state) => (
                 compute_state.executed_state.state_id,
                 compute_state.executed_state.version,
+                compute_state.executed_state.validators.clone(),
             ),
             None => {
                 return Self::zero_ledger_info_placeholder();
@@ -357,7 +358,7 @@ impl<T: Payload> BlockStore<T> {
             block_id,
             0, // TODO [Reconfiguration] use the real epoch number.
             block.timestamp_usecs(),
-            None,
+            next_validator_set,
         )
     }
 

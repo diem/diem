@@ -37,13 +37,9 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::{
-        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
-    },
+    account_config::{account_resource_path, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
-    validator_set::validator_set_path,
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
@@ -51,7 +47,6 @@ use canonical_serialization::{
 use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
-use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
@@ -192,12 +187,6 @@ impl TrieKey for Accesses {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_separated_string().into_bytes()
     }
-}
-
-lazy_static! {
-    /// The access path where the Validator Set resource is stored.
-    pub static ref VALIDATOR_SET_ACCESS_PATH: AccessPath =
-        AccessPath::new(association_address(), validator_set_path());
 }
 
 #[derive(

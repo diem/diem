@@ -97,6 +97,7 @@ impl ExecutedState {
         ExecutedState {
             state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
             version: 0,
+            // TODO: need to generalize this to compute the validators by executing the genesis tx?
             validators: None,
         }
     }
@@ -220,6 +221,12 @@ where
         .expect("Response sender was unexpectedly dropped.")
         .expect("Failed to execute genesis block.");
 
+        let next_validator_set = state_compute_result.executed_state.validators;
+        assert!(
+            next_validator_set.is_some(),
+            "Executing genesis transaction should always produce a validator set"
+        );
+
         let root_hash = state_compute_result.executed_state.state_id;
         let ledger_info = LedgerInfo::new(
             /* version = */ 0,
@@ -228,7 +235,7 @@ where
             *GENESIS_BLOCK_ID,
             /* epoch_num = */ 0,
             /* timestamp_usecs = */ 0,
-            None,
+            /* validators */ next_validator_set,
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new());

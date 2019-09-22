@@ -33,6 +33,7 @@ use types::{
         SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
     },
+    validator_set::ValidatorSet,
     write_set::{WriteOp, WriteSet},
 };
 use vm_runtime::VMExecutor;
@@ -331,7 +332,7 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
-        let output = Self::process_vm_outputs(
+        let (output, next_validator_set) = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
             &transactions,
@@ -369,6 +370,20 @@ where
                 txn_data.status().vm_status().major_status,
             ));
         }
+
+        // Check that the next validator set produced by local computation (if any) is the same as
+        // the one in ledger info (if any)
+        // TODO: is this check in the right place, or does it belong under the "last chunk" if
+        // statement below?
+        match (ledger_info_with_sigs.ledger_info().next_validator_set(), next_validator_set) {
+            (Some(v_set1), Some(vset2)) => {
+                ensure!(*v_set1 == vset2,
+                        "Next validator set in ledger info does not match next validator set from local computation.")
+            },
+            (ledger_info_opt, local_opt) => {
+                ensure!(ledger_info_opt.is_some() == local_opt.is_some(), "Ledger info and local computation disagree on whether a next validator set was produced")
+            }
+        };
 
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
@@ -625,20 +640,18 @@ where
             vm_outputs,
             &parent_trees,
         ) {
-            Ok(output) => {
+            Ok((output, next_validator_set)) => {
                 let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
                 let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to
                 // consensus.
-                // TODO: The VM will support a special transaction to set the validators for the
-                // next epoch that is part of a block execution.
                 let state_compute_result = StateComputeResult {
                     executed_state: ExecutedState {
                         state_id: accu_root_hash,
                         version,
-                        validators: None,
+                        validators: next_validator_set,
                     },
                     compute_status: status,
                 };
@@ -670,14 +683,15 @@ where
         }
     }
 
-    /// Post-processing of what the VM outputs. Returns the entire block's output.
+    /// Post-processing of what the VM outputs. Returns the entire block's output along with the new
+    /// validator set produced by executing the block (if any)
     fn process_vm_outputs(
         mut account_to_btree: HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
         account_to_proof: HashMap<HashValue, SparseMerkleProof>,
         transactions: &[SignedTransaction],
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
+    ) -> Result<(ProcessedVMOutput, Option<ValidatorSet>)> {
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -687,10 +701,11 @@ where
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
         let mut txn_info_hashes = vec![];
+        let mut next_validator_set = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
-        for (vm_output, signed_txn) in
-            itertools::zip_eq(vm_outputs.into_iter(), transactions.iter())
+        for (processed_txn_count, (vm_output, signed_txn)) in
+            itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()).enumerate()
         {
             let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
                 signed_txn,
@@ -742,16 +757,49 @@ where
                 num_accounts_created,
             ));
             current_state_tree = state_tree;
+
+            // check for change in validator set
+            match signed_txn.payload() {
+                TransactionPayload::Program(_)
+                | TransactionPayload::Module(_)
+                | TransactionPayload::Script(_) =>
+                // TODO: look for ValidatorSet.Change events and propagate validator set
+                {
+                    continue;
+                }
+                TransactionPayload::WriteSet(write_set) => {
+                    ensure!(
+                        processed_txn_count == transactions.len(),
+                        "Write set transaction must be the only transaction in a block"
+                    );
+                    let validator_set_path = ValidatorSet::access_path();
+                    for (access_path, write_op) in write_set {
+                        if *access_path == validator_set_path {
+                            ensure!(
+                                !write_op.is_deletion(),
+                                "Invalid write set transaction: attempting to delete the validator set."
+                            );
+                            if let WriteOp::Value(bytes) = write_op {
+                                next_validator_set = Some(ValidatorSet::from_bytes(bytes)?);
+                                break;
+                            }
+                        }
+                    }
+                }
+            };
         }
 
         let current_transaction_accumulator =
             parent_trees.transaction_accumulator.append(txn_info_hashes);
-        Ok(ProcessedVMOutput::new(
-            txn_data,
-            ExecutedTrees {
-                state_tree: current_state_tree,
-                transaction_accumulator: Rc::new(current_transaction_accumulator),
-            },
+        Ok((
+            ProcessedVMOutput::new(
+                txn_data,
+                ExecutedTrees {
+                    state_tree: current_state_tree,
+                    transaction_accumulator: Rc::new(current_transaction_accumulator),
+                },
+            ),
+            next_validator_set,
         ))
     }
 
