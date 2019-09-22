@@ -135,6 +135,17 @@ fn test_fmt_binary() {
 }
 
 #[test]
+fn test_get_nibble() {
+    let hash = b"hello".test_only_hash();
+    assert_eq!(hash.get_nibble(0), Nibble::from(3));
+    assert_eq!(hash.get_nibble(1), Nibble::from(3));
+    assert_eq!(hash.get_nibble(2), Nibble::from(3));
+    assert_eq!(hash.get_nibble(3), Nibble::from(8));
+    assert_eq!(hash.get_nibble(62), Nibble::from(9));
+    assert_eq!(hash.get_nibble(63), Nibble::from(2));
+}
+
+#[test]
 fn test_common_prefix_bits_len() {
     {
         let hash1 = b"hello".test_only_hash();
@@ -165,6 +176,41 @@ fn test_common_prefix_bits_len() {
         assert_eq!(
             hash1.common_prefix_bits_len(hash2),
             HashValue::LENGTH_IN_BITS
+        );
+    }
+}
+
+#[test]
+fn test_common_prefix_nibbles_len() {
+    {
+        let hash1 = b"hello".test_only_hash();
+        let hash2 = b"HELLO".test_only_hash();
+        assert_eq!(hash1[0], 0b0011_0011);
+        assert_eq!(hash2[0], 0b1011_1000);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
+    }
+    {
+        let hash1 = b"hello".test_only_hash();
+        let hash2 = b"world".test_only_hash();
+        assert_eq!(hash1[0], 0b0011_0011);
+        assert_eq!(hash2[0], 0b0100_0010);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
+    }
+    {
+        let hash1 = b"hello".test_only_hash();
+        let hash2 = b"100011001000".test_only_hash();
+        assert_eq!(hash1[0], 0b0011_0011);
+        assert_eq!(hash2[0], 0b0011_0011);
+        assert_eq!(hash1[1], 0b0011_1000);
+        assert_eq!(hash2[1], 0b0010_0010);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 2);
+    }
+    {
+        let hash1 = b"hello".test_only_hash();
+        let hash2 = b"hello".test_only_hash();
+        assert_eq!(
+            hash1.common_prefix_nibbles_len(hash2),
+            HashValue::LENGTH_IN_NIBBLES
         );
     }
 }

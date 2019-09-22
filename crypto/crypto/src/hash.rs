@@ -71,6 +71,7 @@
 use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use nibble::Nibble;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
@@ -96,7 +97,9 @@ impl HashValue {
     /// The length of the hash in bytes.
     pub const LENGTH: usize = 32;
     /// The length of the hash in bits.
-    pub const LENGTH_IN_BITS: usize = HashValue::LENGTH * 8;
+    pub const LENGTH_IN_BITS: usize = Self::LENGTH * 8;
+    /// The length of the hash in nibbles.
+    pub const LENGTH_IN_NIBBLES: usize = Self::LENGTH * 2;
 
     /// Create a new [`HashValue`] from a byte array.
     pub fn new(hash: [u8; HashValue::LENGTH]) -> Self {
@@ -188,6 +191,20 @@ impl HashValue {
             .zip(other.iter_bits())
             .take_while(|(x, y)| x == y)
             .count()
+    }
+
+    /// Returns the length of common prefix of `self` and `other` in nibbles.
+    pub fn common_prefix_nibbles_len(&self, other: HashValue) -> usize {
+        self.common_prefix_bits_len(other) / 4
+    }
+
+    /// Returns the `index`-th nibble.
+    pub fn get_nibble(&self, index: usize) -> Nibble {
+        Nibble::from(if index % 2 == 0 {
+            self[index / 2] >> 4
+        } else {
+            self[index / 2] & 0x0F
+        })
     }
 
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
