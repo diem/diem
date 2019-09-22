@@ -1,7 +1,6 @@
 #[cfg(any(test, feature = "testing"))]
 use crate::account_address::AccountAddress;
 #[cfg(any(test, feature = "testing"))]
-use canonical_serialization::SimpleSerializer;
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
@@ -50,12 +49,9 @@ impl EventKey {
     #[cfg(any(test, feature = "testing"))]
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut serializer: SimpleSerializer<Vec<u8>> = SimpleSerializer::new();
-        serializer.encode_u64(salt).expect("Can't serialize salt");
-        serializer
-            .encode_struct(addr)
-            .expect("Can't serialize address");
-        EventKey(*HashValue::from_sha3_256(&serializer.get_output()).as_ref())
+        let mut output_bytes = salt.to_be_bytes().to_vec();
+        output_bytes.append(&mut addr.to_vec());
+        EventKey(*HashValue::from_sha3_256(&output_bytes).as_ref())
     }
 }
 

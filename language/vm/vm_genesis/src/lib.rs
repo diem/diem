@@ -56,6 +56,7 @@ lazy_static! {
     static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
     static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
         Identifier::new("register_candidate_validator").unwrap();
     static ref ROTATE_AUTHENTICATION_KEY: Identifier =
@@ -295,6 +296,18 @@ pub fn encode_genesis_transaction_with_validator(
                     )
                     .unwrap()
             }
+            // Finally, trigger a reconfiguration. This emits an event that will be passed along
+            // to the storage layer.
+            // TODO: Direct write set transactions cannot specify emitted events, so this currently
+            // will not work.
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::validator_set_address(),
+                    &VALIDATOR_SET_MODULE,
+                    &RECONFIGURE,
+                    vec![],
+                )
+                .unwrap();
 
             let stdlib_modules = modules
                 .iter()
@@ -305,12 +318,42 @@ pub fn encode_genesis_transaction_with_validator(
                 })
                 .collect();
 
-            txn_executor
-                .make_write_set(stdlib_modules, Ok(()))
-                .unwrap()
-                .write_set()
-                .clone()
-                .into_mut()
+            let txn_output = txn_executor.make_write_set(stdlib_modules, Ok(())).unwrap();
+            // Sanity checks on emitted events:
+            // (1) The genesis tx should emit 3 events: a pair of payment sent/received events for
+            // minting to the genesis address, and a ValidatorSet.ChangeEvent
+            assert_eq!(
+                txn_output.events().len(),
+                3,
+                "Genesis transaction should emit three events, but found {} events: {:?}",
+                txn_output.events().len(),
+                txn_output.events()
+            );
+            // (2) The last event should be the validator set change event
+            let validator_set_change_event = &txn_output.events()[2];
+            assert_eq!(
+                *validator_set_change_event.key(),
+                ValidatorSet::change_event_key(),
+                "Key of emitted event {:?} does not match change event key {:?}",
+                *validator_set_change_event.key(),
+                ValidatorSet::change_event_key()
+            );
+            // (3) This should be the first validator set change event
+            assert_eq!(
+                validator_set_change_event.sequence_number(),
+                0,
+                "Expected sequence number 0 for validator set change event but got {}",
+                validator_set_change_event.sequence_number()
+            );
+
+            // (4) It should emit the validator set we fed into the genesis tx
+            assert_eq!(
+                ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),
+                validator_set,
+                "Validator set in emitted event does not match validator set fed into genesis transaction"
+            );
+
+            txn_output.write_set().clone().into_mut()
         }
     };
     let transaction =
