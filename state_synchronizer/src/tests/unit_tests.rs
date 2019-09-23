@@ -35,9 +35,11 @@ fn test_peer_manager() {
         *counter += 1;
     }
 
-    assert!(pick_counts.get(&peers[0]).unwrap() < pick_counts.get(&peers[1]).unwrap());
-    assert!(pick_counts.get(&peers[0]).unwrap() < pick_counts.get(&peers[2]).unwrap());
-    assert!(pick_counts.get(&peers[0]).unwrap() < pick_counts.get(&peers[3]).unwrap());
+    // unwrap_or needed because the peer with bad score may never be picked, and may be
+    // missing from pick_counts
+    assert!(pick_counts.get(&peers[0]).unwrap_or(&0) < pick_counts.get(&peers[1]).unwrap());
+    assert!(pick_counts.get(&peers[0]).unwrap_or(&0) < pick_counts.get(&peers[2]).unwrap());
+    assert!(pick_counts.get(&peers[0]).unwrap_or(&0) < pick_counts.get(&peers[3]).unwrap());
 }
 
 #[test]
