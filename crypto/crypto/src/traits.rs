@@ -54,12 +54,6 @@ pub trait ValidKey:
     // The for<'a> exactly matches the assumption "deserializable from any lifetime".
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Debug
 {
-    /// TryFrom is the source of truth on whether we can build a valid key.
-    /// => we can use it once we've built, to validate!
-    fn validate(&self) -> std::result::Result<(), CryptoMaterialError> {
-        Self::try_from(self.to_bytes().as_slice())?;
-        Ok(())
-    }
 
     /// Convert the valid key to bytes.
     fn to_bytes(&self) -> Vec<u8>;
