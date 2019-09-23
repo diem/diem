@@ -112,7 +112,7 @@ where
             txn_executor.setup_main_args(args);
 
             // Run main.
-            match txn_executor.execute_function_impl(main) {
+            match txn_executor.interpeter_entrypoint(main) {
                 Ok(_) => txn_executor.transaction_cleanup(publish_modules),
                 Err(err) => match err.status_type() {
                     StatusType::InvariantViolation => {
@@ -189,7 +189,7 @@ where
 
             let (_, args) = script.into_inner();
             txn_executor.setup_main_args(args);
-            match txn_executor.execute_function_impl(main) {
+            match txn_executor.interpeter_entrypoint(main) {
                 Ok(_) => txn_executor.transaction_cleanup(vec![]),
                 Err(err) => match err.status_type() {
                     StatusType::InvariantViolation => {

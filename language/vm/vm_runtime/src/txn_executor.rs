@@ -665,8 +665,9 @@ where
         }
     }
 
-    /// Execute a function given a FunctionRef.
-    pub(crate) fn execute_function_impl(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
+    /// Entrypoint into the interpreter. All external calls need to be routed through this
+    /// function.
+    pub(crate) fn interpeter_entrypoint(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         // We charge an intrinsic amount of gas based upon the size of the transaction submitted
         // (in raw bytes).
         let txn_size = self.txn_data.transaction_size;
@@ -675,6 +676,11 @@ where
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         self.gas_meter
             .charge_transaction_gas(txn_size, &self.execution_stack)?;
+        self.execute_function_impl(func)
+    }
+
+    /// Execute a function given a FunctionRef.
+    fn execute_function_impl(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         let beginning_height = self.execution_stack.call_stack_height();
         self.execution_stack.push_call(func)?;
         // We always start execution from the first instruction.
