@@ -63,10 +63,8 @@ fn print_errors_and_exit(verification_errors: &[VMStatus]) -> ! {
 }
 
 fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
-    let verified_module = match VerifiedModule::new(module) {
-        Ok(module) => module,
-        Err((_, errors)) => print_errors_and_exit(&errors),
-    };
+    let verified_module =
+        VerifiedModule::new(module).unwrap_or_else(|(_, errors)| print_errors_and_exit(&errors));
     let errors = verify_module_dependencies(&verified_module, dependencies);
     if !errors.is_empty() {
         print_errors_and_exit(&errors);
