@@ -88,8 +88,8 @@ variable "validator_node_sources_ipv6" {
 }
 
 variable "validator_use_public_ip" {
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
 
 variable "append_workspace_dns" {
