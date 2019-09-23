@@ -19,14 +19,6 @@ pub enum WriteOp {
 
 impl WriteOp {
     #[inline]
-    pub fn is_value(&self) -> bool {
-        match self {
-            WriteOp::Value(_) => true,
-            WriteOp::Deletion => false,
-        }
-    }
-
-    #[inline]
     pub fn is_deletion(&self) -> bool {
         match self {
             WriteOp::Deletion => true,
