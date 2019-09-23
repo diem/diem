@@ -116,13 +116,21 @@ resource "aws_s3_bucket_object" "consensus_peers" {
   etag   = filemd5("${var.validator_set}/consensus_peers.config.toml")
 }
 
+resource "aws_s3_bucket_object" "genesis_blob" {
+  bucket = aws_s3_bucket.config.id
+  key    = "genesis.blob"
+  source = "${var.validator_set}/genesis.blob"
+  etag   = filemd5("${var.validator_set}/genesis.blob")
+}
+
 data "template_file" "user_data" {
   template = file("templates/ec2_user_data.sh")
 
   vars = {
-    ecs_cluster   = aws_ecs_cluster.testnet.name
-    network_peers = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.network_peers.id}"
+    ecs_cluster     = aws_ecs_cluster.testnet.name
+    network_peers   = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.network_peers.id}"
     consensus_peers = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.consensus_peers.id}"
+    genesis_blob    = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.genesis_blob.id}"
   }
 }
 
@@ -224,21 +232,21 @@ data "template_file" "ecs_task_definition" {
   template = file("templates/validator.json")
 
   vars = {
-    image         = local.image_repo
-    image_version = local.image_version
-    cpu           = local.cpu_by_instance[var.validator_type]
-    mem           = local.mem_by_instance[var.validator_type]
-    node_config   = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
-    seed_peers    = jsonencode(data.template_file.seed_peers.rendered)
-    genesis_blob  = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
-    peer_id       = var.peer_ids[count.index]
-    network_secret        = element(aws_secretsmanager_secret.validator_network.*.arn, count.index)
-    consensus_secret        = element(aws_secretsmanager_secret.validator_consensus.*.arn, count.index)
-    log_level     = var.validator_log_level
-    log_group     = aws_cloudwatch_log_group.testnet.name
-    log_region    = var.region
-    log_prefix    = "validator-${substr(var.peer_ids[count.index], 0, 8)}"
-    capabilities  = jsonencode(var.validator_linux_capabilities)
+    image            = local.image_repo
+    image_version    = local.image_version
+    cpu              = local.cpu_by_instance[var.validator_type]
+    mem              = local.mem_by_instance[var.validator_type]
+    node_config      = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
+    seed_peers       = jsonencode(data.template_file.seed_peers.rendered)
+    genesis_blob     = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
+    peer_id          = var.peer_ids[count.index]
+    network_secret   = element(aws_secretsmanager_secret.validator_network.*.arn, count.index)
+    consensus_secret = element(aws_secretsmanager_secret.validator_consensus.*.arn, count.index)
+    log_level        = var.validator_log_level
+    log_group        = aws_cloudwatch_log_group.testnet.name
+    log_region       = var.region
+    log_prefix       = "validator-${substr(var.peer_ids[count.index], 0, 8)}"
+    capabilities     = jsonencode(var.validator_linux_capabilities)
   }
 }
 
@@ -265,6 +273,11 @@ resource "aws_ecs_task_definition" "validator" {
   volume {
     name      = "network-peers"
     host_path = "/opt/libra/network_peers.config.toml"
+  }
+
+  volume {
+    name      = "genesis-blob"
+    host_path = "/opt/libra/genesis.blob"
   }
 
   placement_constraints {
