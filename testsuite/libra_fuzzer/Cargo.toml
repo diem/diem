@@ -7,6 +7,7 @@ edition = "2018"
 
 # common dependencies
 [dependencies]
+afl = "0.4"
 byteorder = { version = "1.3.2", default-features = false }
 canonical_serialization = { path = "../../common/canonical_serialization" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
@@ -43,3 +44,10 @@ fuzzing = ["consensus/fuzzing", "admission_control_service/fuzzing"]
 [[test]]
 name = "artifacts"
 harness = false
+
+[[bin]]
+name = "inner_signature"
+path = "afl_fuzz/inner_signature.rs"
+[[bin]]
+name = "consensus_proposal"
+path = "afl_fuzz/consensus_proposal.rs"
