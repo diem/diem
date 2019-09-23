@@ -223,9 +223,10 @@ pub fn create_struct(
         .collect();
     // The logic for determine the struct kind was sourced from `SignatureTokenView`
     // TODO: This will need to be updated when struct type actuals are handled
-    let struct_kind = match struct_def_view.is_nominal_resource() {
-        true => Kind::Resource,
-        false => tokens
+    let struct_kind = if struct_def_view.is_nominal_resource() {
+        Kind::Resource
+    } else {
+        tokens
             .iter()
             .map(|token| SignatureTokenView::new(&state.module, token).kind(&[]))
             .fold(Kind::Unrestricted, |acc_kind, next_kind| {
@@ -234,7 +235,7 @@ pub fn create_struct(
                     (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
                     (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
                 }
-            }),
+            })
     };
     let struct_value = AbstractValue::new_struct(
         SignatureToken::Struct(struct_def.struct_handle, tokens),

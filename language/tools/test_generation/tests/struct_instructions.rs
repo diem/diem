@@ -79,9 +79,10 @@ fn create_struct_value(module: &CompiledModule) -> AbstractValue {
         .flatten()
         .map(|field| field.type_signature().token().as_inner().clone())
         .collect();
-    let struct_kind = match struct_def_view.is_nominal_resource() {
-        true => Kind::Resource,
-        false => tokens
+    let struct_kind = if struct_def_view.is_nominal_resource() {
+        Kind::Resource
+    } else {
+        tokens
             .iter()
             .map(|token| SignatureTokenView::new(module, token).kind(&[]))
             .fold(Kind::Unrestricted, |acc_kind, next_kind| {
@@ -90,7 +91,7 @@ fn create_struct_value(module: &CompiledModule) -> AbstractValue {
                     (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
                     (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
                 }
-            }),
+            })
     };
     AbstractValue::new_struct(
         SignatureToken::Struct(struct_def.struct_handle, tokens.clone()),
