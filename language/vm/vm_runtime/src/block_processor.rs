@@ -7,7 +7,7 @@ use crate::{
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters::{report_block_count, report_execution_status},
+    counters::*,
     data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
@@ -69,24 +69,28 @@ pub fn execute_block<'alloc>(
         .collect();
 
     for transaction in signature_verified_block {
-        let output = match transaction {
-            Ok(t) => transaction_flow(
-                t,
-                &module_cache,
-                script_cache,
-                &data_cache,
-                mode,
-                publishing_option,
-            ),
-            Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
-        };
-        report_execution_status(output.status());
-        data_cache.push_write_set(&output.write_set());
+        record_stats! {TXN_TOTAL_TIME_TAKEN_HISTOGRAM, {
+                let output = match transaction {
+                    Ok(t) => transaction_flow(
+                        t,
+                        &module_cache,
+                        script_cache,
+                        &data_cache,
+                        mode,
+                        publishing_option,
+                    ),
+                    Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
+                };
+                report_execution_status(output.status());
+                data_cache.push_write_set(&output.write_set());
 
-        // `result` is initally empty, a single element is pushed per loop iteration and
-        // the number of iterations is bound to the max size of `signature_verified_block`
-        assume!(result.len() < usize::max_value());
-        result.push(output);
+                // `result` is initally empty, a single element is pushed per loop iteration and
+                // the number of iterations is bound to the max size of `signature_verified_block`
+                assume!(result.len() < usize::max_value());
+                result.push(output);
+
+            }
+        }
     }
     trace!("[VM] Execute block finished");
     result
@@ -119,19 +123,30 @@ where
     let arena = Arena::new();
     let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
 
-    let validated_txn = match process_txn.validate(mode, publishing_option) {
+    let validated_txn = record_stats! {TXN_VALIDATION_TIME_TAKEN_HISTOGRAM, {
+    match process_txn.validate(mode, publishing_option) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);
         }
+    }
+    }
     };
-    let verified_txn = match validated_txn.verify(script_cache) {
+
+    let verified_txn = record_stats! {TXN_VERIFICATION_TIME_TAKEN_HISTOGRAM, {
+     match validated_txn.verify(script_cache) {
         Ok(verified_txn) => verified_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);
         }
+    }
+    }
     };
-    let executed_txn = verified_txn.execute();
+
+    let executed_txn = record_stats! {TXN_EXECUTION_TIME_TAKEN_HISTOGRAM, {
+        verified_txn.execute()
+        }
+    };
 
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.

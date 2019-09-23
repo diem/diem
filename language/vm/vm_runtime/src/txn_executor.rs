@@ -4,6 +4,7 @@
 
 use crate::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
+    counters::*,
     data_cache::{RemoteCache, TransactionDataCache},
     execution_stack::ExecutionStack,
     gas_meter::GasMeter,
@@ -602,19 +603,25 @@ where
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
-        self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
-        self.gas_meter.enable_metering();
-        result
+        record_stats! {TXN_PROLOGUE_TIME_TAKEN_HISTOGRAM, {
+                self.gas_meter.disable_metering();
+                let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
+                self.gas_meter.enable_metering();
+                result
+            }
+        }
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
-        self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
-        self.gas_meter.enable_metering();
-        result
+        record_stats! {TXN_EPILOGUE_TIME_TAKEN_HISTOGRAM, {
+                self.gas_meter.disable_metering();
+                let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
+                self.gas_meter.enable_metering();
+                result
+            }
+        }
     }
 
     /// Generate the TransactionOutput on failure. There can be two possibilities:
@@ -674,9 +681,14 @@ where
         // The callers of this function verify the transaction before executing it. Transaction
         // verification ensures the following condition.
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
+        // We count the intrinsic cost of the transaction here, since that needs to also cover the
+        // setup of the function.
+        let starting_gas = self.gas_meter.remaining_gas().get();
         self.gas_meter
             .charge_transaction_gas(txn_size, &self.execution_stack)?;
-        self.execute_function_impl(func)
+        let ret = self.execute_function_impl(func);
+        record_stats!(TXN_EXECUTION_GAS_USAGE_HISTOGRAM.observe(starting_gas as f64));
+        ret
     }
 
     /// Execute a function given a FunctionRef.
@@ -773,6 +785,8 @@ where
             .mul(self.txn_data.gas_unit_price)
             .get();
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
+
+        record_stats!(TXN_TOTAL_GAS_USAGE_HISTOGRAM.observe(gas as f64));
 
         Ok(TransactionOutput::new(
             write_set,

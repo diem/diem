@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::OpMetrics;
-use prometheus::{IntCounter, IntGauge};
-use std::convert::TryFrom;
+use metrics::{DurationHistogram, OpMetrics};
+use prometheus::{Histogram, IntCounter, IntGauge};
+use std::{convert::TryFrom, time::Instant};
 use types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
@@ -23,6 +23,35 @@ lazy_static::lazy_static! {
 
     static ref VERIFIED_TRANSACTION: IntCounter = VM_COUNTERS.counter(TXN_VERIFICATION_SUCCESS);
     static ref BLOCK_TRANSACTION_COUNT: IntGauge = VM_COUNTERS.gauge(TXN_BLOCK_COUNT);
+
+    pub static ref TXN_TOTAL_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.total.time_taken");
+    pub static ref TXN_VERIFICATION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.verification.time_taken");
+    pub static ref TXN_VALIDATION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.validation.time_taken");
+    pub static ref TXN_EXECUTION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.execution.time_taken");
+    pub static ref TXN_PROLOGUE_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.prologue.time_taken");
+    pub static ref TXN_EPILOGUE_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.epilogue.time_taken");
+    pub static ref TXN_TOTAL_GAS_USAGE_HISTOGRAM: Histogram = VM_COUNTERS.histogram("txn.gas.total.gas_usage");
+    pub static ref TXN_EXECUTION_GAS_USAGE_HISTOGRAM: Histogram = VM_COUNTERS.histogram("txn.gas.execution.gas_usage");
+}
+
+pub fn start_profile() -> Instant {
+    Instant::now()
+}
+
+// All statistics gather operations for the time taken/gas usage should go through this macro. This
+// gives us the ability to turn these metrics on and off easily from one place.
+#[macro_export]
+macro_rules! record_stats {
+    ($e:expr) => {
+        $e
+    };
+    ($histrogram:expr, $block:block) => {{
+        let timer = start_profile();
+        let tmp = $block;
+        let duration = timer.elapsed();
+        $histrogram.observe_duration(duration);
+        tmp
+    }};
 }
 
 /// Reports the number of transactions in a block.
