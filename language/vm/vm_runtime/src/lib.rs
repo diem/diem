@@ -106,12 +106,13 @@ extern crate lazy_static;
 extern crate rental;
 #[macro_use]
 extern crate mirai_annotations;
+#[macro_use]
+mod counters;
 
 #[cfg(feature = "mirai-contracts")]
 pub mod foreign_contracts;
 
 mod block_processor;
-mod counters;
 mod frame;
 mod gas_meter;
 mod move_vm;
