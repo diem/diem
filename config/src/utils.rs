@@ -45,8 +45,7 @@ pub fn get_local_ip() -> Option<Multiaddr> {
     get_if_addrs().ok().and_then(|if_addrs| {
         if_addrs
             .into_iter()
-            .filter(|if_addr| !if_addr.is_loopback())
-            .nth(0)
+            .find(|if_addr| !if_addr.is_loopback())
             .and_then(|if_addr| {
                 let mut addr = Multiaddr::empty();
                 match if_addr.ip() {
