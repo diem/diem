@@ -163,9 +163,9 @@ proptest! {
         store.put_many(&writes);
 
         let frozen_subtree_hashes =
-            TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len() as u64).unwrap();
+            TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len()).unwrap();
         let in_mem_acc =
-            InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len() as u64).unwrap();
+            InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len()).unwrap();
         prop_assert_eq!(root_hash, in_mem_acc.root_hash());
     }
 }

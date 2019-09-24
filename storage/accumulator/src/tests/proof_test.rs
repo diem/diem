@@ -31,18 +31,17 @@ proptest! {
         batch2 in vec(any::<HashValue>(), 1..100),
     ) {
         let total_leaves = batch1.len() + batch2.len();
-        let batch1_size = batch1.len() as u64;
         let mut store = MockHashStore::new();
 
         // insert all leaves in two batches
         let (root_hash1, writes1) = TestAccumulator::append(&store, 0, &batch1).unwrap();
         store.put_many(&writes1);
-        let (root_hash2, writes2) = TestAccumulator::append(&store, batch1_size, &batch2).unwrap();
+        let (root_hash2, writes2) = TestAccumulator::append(&store, batch1.len(), &batch2).unwrap();
         store.put_many(&writes2);
 
         // verify proofs for all leaves towards current root
         verify(&store, total_leaves, root_hash2, &batch1, 0);
-        verify(&store, total_leaves, root_hash2, &batch2, batch1_size);
+        verify(&store, total_leaves, root_hash2, &batch2, batch1.len() as u64);
 
         // verify proofs for all leaves of a subtree towards subtree root
         verify(&store, batch1.len(), root_hash1, &batch1, 0);
@@ -59,23 +58,23 @@ proptest! {
         let (root_hash1, writes1) = TestAccumulator::append(&store, 0, &batch1).unwrap();
         store.put_many(&writes1);
         let proof1 =
-            TestAccumulator::get_consistency_proof(&store, batch1.len() as u64, 0).unwrap();
+            TestAccumulator::get_consistency_proof(&store, batch1.len(), 0).unwrap();
         let in_mem_acc1 = empty_in_mem_acc
-            .append_subtrees(proof1.subtrees(), batch1.len() as u64)
+            .append_subtrees(proof1.subtrees(), batch1.len())
             .unwrap();
         prop_assert_eq!(root_hash1, in_mem_acc1.root_hash());
 
         let (root_hash2, writes2) =
-            TestAccumulator::append(&store, batch1.len() as u64, &batch2).unwrap();
+            TestAccumulator::append(&store, batch1.len(), &batch2).unwrap();
         store.put_many(&writes2);
         let proof2 = TestAccumulator::get_consistency_proof(
             &store,
-            (batch1.len() + batch2.len()) as u64,
-            batch1.len() as u64,
+            batch1.len() + batch2.len(),
+            batch1.len()
         )
         .unwrap();
         let in_mem_acc2 = in_mem_acc1
-            .append_subtrees(proof2.subtrees(), batch2.len() as u64)
+            .append_subtrees(proof2.subtrees(), batch2.len())
             .unwrap();
         prop_assert_eq!(root_hash2, in_mem_acc2.root_hash());
     }
@@ -90,7 +89,7 @@ fn verify(
 ) {
     leaves.iter().enumerate().for_each(|(i, hash)| {
         let leaf_index = first_leaf_idx + i as u64;
-        let proof = TestAccumulator::get_proof(store, num_leaves as u64, leaf_index).unwrap();
+        let proof = TestAccumulator::get_proof(store, num_leaves, leaf_index).unwrap();
         verify_test_accumulator_element(root_hash, *hash, leaf_index, &proof).unwrap();
     });
 }
