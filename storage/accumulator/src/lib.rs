@@ -134,7 +134,7 @@ where
     /// returns the result root hash and new nodes to be frozen.
     pub fn append(
         reader: &R,
-        num_existing_leaves: u64,
+        num_existing_leaves: usize,
         new_leaves: &[HashValue],
     ) -> Result<(HashValue, Vec<Node>)> {
         MerkleAccumulatorView::<R, H>::new(reader, num_existing_leaves).append(new_leaves)
@@ -145,7 +145,7 @@ where
     /// if they are non-frozen).
     ///
     /// See [`types::proof::AccumulatorProof`] for proof format.
-    pub fn get_proof(reader: &R, num_leaves: u64, leaf_index: u64) -> Result<AccumulatorProof> {
+    pub fn get_proof(reader: &R, num_leaves: usize, leaf_index: u64) -> Result<AccumulatorProof> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
     }
 
@@ -154,8 +154,8 @@ where
     /// See [`types::proof::AccumulatorConsistencyProof`] for proof format.
     pub fn get_consistency_proof(
         reader: &R,
-        full_acc_leaves: u64,
-        sub_acc_leaves: u64,
+        full_acc_leaves: usize,
+        sub_acc_leaves: usize,
     ) -> Result<AccumulatorConsistencyProof> {
         MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
             .get_consistency_proof(sub_acc_leaves)
@@ -175,7 +175,7 @@ where
     ///      / \     / \     / \
     ///     a   b   c   d   e   placeholder
     /// ```
-    pub fn get_frozen_subtree_hashes(reader: &R, num_leaves: u64) -> Result<Vec<HashValue>> {
+    pub fn get_frozen_subtree_hashes(reader: &R, num_leaves: usize) -> Result<Vec<HashValue>> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_frozen_subtree_hashes()
     }
 }
@@ -184,7 +184,7 @@ where
 /// `num_leaves` on an instance for convenience
 struct MerkleAccumulatorView<'a, R, H> {
     reader: &'a R,
-    num_leaves: u64,
+    num_leaves: usize,
     hasher: PhantomData<H>,
 }
 
@@ -193,7 +193,7 @@ where
     R: HashReader,
     H: CryptoHasher,
 {
-    fn new(reader: &'a R, num_leaves: u64) -> Self {
+    fn new(reader: &'a R, num_leaves: usize) -> Self {
         Self {
             reader,
             num_leaves,
@@ -214,8 +214,8 @@ where
         }
 
         let num_new_leaves = new_leaves.len();
-        let last_new_leaf_count = self.num_leaves + num_new_leaves as u64;
-        let root_level = Position::root_from_leaf_count(last_new_leaf_count).level() as usize;
+        let last_new_leaf_count = self.num_leaves + num_new_leaves;
+        let root_level = Position::root_level_from_leaf_count(last_new_leaf_count);
         let mut to_freeze = Vec::with_capacity(Self::max_to_freeze(num_new_leaves, root_level));
 
         // create one new node for each new leaf hash
@@ -257,12 +257,21 @@ where
         MerkleTreeInternalNode::<H>::new(left, right).hash()
     }
 
+    fn rightmost_leaf_index(&self) -> u64 {
+        (self.num_leaves - 1) as u64
+    }
+
     /// Given leaf level hashes, create leaf level nodes
     fn gen_leaf_level(&self, new_leaves: &[HashValue]) -> Vec<Node> {
         new_leaves
             .iter()
             .enumerate()
-            .map(|(i, hash)| (Position::from_leaf_index(self.num_leaves + i as u64), *hash))
+            .map(|(i, hash)| {
+                (
+                    Position::from_leaf_index((self.num_leaves + i) as u64),
+                    *hash,
+                )
+            })
             .collect()
     }
 
@@ -313,9 +322,10 @@ where
     }
 
     fn get_hash(&self, position: Position) -> Result<HashValue> {
-        if position.is_placeholder(self.num_leaves - 1) {
+        let idx = self.rightmost_leaf_index();
+        if position.is_placeholder(idx) {
             Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
-        } else if position.is_freezable(self.num_leaves - 1) {
+        } else if position.is_freezable(idx) {
             self.reader.get(position)
         } else {
             // non-frozen non-placeholder node
@@ -329,7 +339,7 @@ where
     /// implementation for pub interface `MerkleAccumulator::get_proof`
     fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof> {
         ensure!(
-            leaf_index < self.num_leaves,
+            leaf_index < self.num_leaves as u64,
             "invalid leaf_index {}, num_leaves {}",
             leaf_index,
             self.num_leaves
@@ -351,7 +361,7 @@ where
     }
 
     /// Implementation for public interface `MerkleAccumulator::get_consistency_proof`.
-    fn get_consistency_proof(&self, sub_acc_leaves: u64) -> Result<AccumulatorConsistencyProof> {
+    fn get_consistency_proof(&self, sub_acc_leaves: usize) -> Result<AccumulatorConsistencyProof> {
         ensure!(
             sub_acc_leaves <= self.num_leaves,
             "The other accumulator is bigger than this one. self.num_leaves: {}. \

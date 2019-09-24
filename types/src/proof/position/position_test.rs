@@ -112,6 +112,20 @@ fn test_position_root_from_leaf_index() {
 }
 
 #[test]
+fn test_root_level_from_leaf_count() {
+    assert_eq!(Position::root_level_from_leaf_count(1), 0);
+    assert_eq!(Position::root_level_from_leaf_count(2), 1);
+    assert_eq!(Position::root_level_from_leaf_count(3), 2);
+    assert_eq!(Position::root_level_from_leaf_count(4), 2);
+    for i in 1..100usize {
+        assert_eq!(
+            Position::root_level_from_leaf_count(i),
+            Position::root_from_leaf_count(i).level() as usize
+        );
+    }
+}
+
+#[test]
 fn test_is_freezable() {
     let mut position = Position::from_inorder_index(5);
     assert_eq!(position.is_freezable(2), false);
@@ -245,11 +259,11 @@ fn slow_get_frozen_subtree_roots_impl(root: Position, max_leaf_index: u64) -> Ve
     }
 }
 
-fn slow_get_frozen_subtree_roots(num_leaves: u64) -> Vec<Position> {
+fn slow_get_frozen_subtree_roots(num_leaves: usize) -> Vec<Position> {
     if num_leaves == 0 {
         Vec::new()
     } else {
-        let max_leaf_index = num_leaves - 1;
+        let max_leaf_index = num_leaves as u64 - 1;
         let root = Position::root_from_leaf_count(num_leaves);
         slow_get_frozen_subtree_roots_impl(root, max_leaf_index)
     }
@@ -257,7 +271,7 @@ fn slow_get_frozen_subtree_roots(num_leaves: u64) -> Vec<Position> {
 
 #[test]
 fn test_frozen_subtree_iterator() {
-    for n in 0..10000 {
+    for n in 0..10000usize {
         assert_eq!(
             FrozenSubTreeIterator::new(n).collect::<Vec<_>>(),
             slow_get_frozen_subtree_roots(n),

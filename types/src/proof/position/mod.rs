@@ -149,9 +149,15 @@ impl Position {
         Self(smear_ones_for_u64(leaf.0) >> 1)
     }
 
-    pub fn root_from_leaf_count(leaf_count: u64) -> Self {
-        let leaf = Self::from_leaf_index(leaf_count - 1);
-        Self(smear_ones_for_u64(leaf.0) >> 1)
+    pub fn root_from_leaf_count(leaf_count: usize) -> Self {
+        assert!(leaf_count > 0);
+        Self::root_from_leaf_index((leaf_count - 1) as u64)
+    }
+
+    pub fn root_level_from_leaf_count(leaf_count: usize) -> usize {
+        assert!(leaf_count > 0);
+        let index = (leaf_count - 1) as u64;
+        MAX_ACCUMULATOR_PROOF_DEPTH + 1 - index.leading_zeros() as usize
     }
 
     /// Given a node, find its right most child in its subtree.
@@ -321,9 +327,9 @@ pub struct FrozenSubTreeIterator {
 }
 
 impl FrozenSubTreeIterator {
-    pub fn new(num_leaves: u64) -> Self {
+    pub fn new(num_leaves: usize) -> Self {
         Self {
-            bitmap: num_leaves,
+            bitmap: num_leaves as u64,
             seen_leaves: 0,
         }
     }
