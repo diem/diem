@@ -107,7 +107,7 @@ impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
         host: &str,
-        ac_port: &str,
+        ac_port: u16,
         validator_set_file: &str,
         faucet_account_file: &str,
         sync_on_wallet_recovery: bool,
@@ -1112,7 +1112,7 @@ mod tests {
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             "", /* host */
-            "", /* port */
+            0, /* port */
             &val_set_file,
             &"",
             false,

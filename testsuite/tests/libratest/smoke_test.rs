@@ -36,7 +36,7 @@ fn setup_env(
         .expect("could not create temporary mnemonic_file_path");
     let client_proxy = ClientProxy::new(
         "localhost",
-        port.to_string().as_str(),
+        port,
         &swarm.get_trusted_peers_config_path(),
         &faucet_key_file_path,
         false,
@@ -294,7 +294,7 @@ fn test_basic_state_synchronization() {
     let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
-        ac_port.to_string().as_str(),
+        ac_port,
         &swarm.get_trusted_peers_config_path(),
         "",
         false,
