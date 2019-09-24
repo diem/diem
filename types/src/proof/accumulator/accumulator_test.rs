@@ -123,7 +123,7 @@ proptest! {
         let position_to_hash = compute_hashes_for_all_positions(&all_hashes);
 
         let subtree_hashes: Vec<_> =
-            FrozenSubtreeSiblingIterator::new(hashes1.len() as u64, all_hashes.len() as u64)
+            FrozenSubtreeSiblingIterator::new(hashes1.len(), all_hashes.len())
                 .filter_map(|pos| position_to_hash.get(&pos).cloned())
                 .collect();
         let new_accumulator = accumulator

@@ -265,7 +265,7 @@ fn test_frozen_subtree_iterator() {
     }
 }
 
-fn collect_all_positions(num_leaves: u64, num_new_leaves: u64) -> Vec<u64> {
+fn collect_all_positions(num_leaves: usize, num_new_leaves: usize) -> Vec<u64> {
     FrozenSubtreeSiblingIterator::new(num_leaves, num_new_leaves)
         .map(Position::to_inorder_index)
         .collect()
