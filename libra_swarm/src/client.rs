@@ -158,7 +158,7 @@ impl InProcessTestClient {
         Self {
             client: ClientProxy::new(
                 "localhost",
-                port.to_string().as_str(),
+                port,
                 &validator_set_file,
                 faucet_key_file_path
                     .canonicalize()

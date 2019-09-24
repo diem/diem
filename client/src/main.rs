@@ -15,7 +15,7 @@ use structopt::StructOpt;
 struct Args {
     /// Admission Control port to connect to.
     #[structopt(short = "p", long = "port", default_value = "8000")]
-    pub port: String,
+    pub port: u16,
     /// Host address/name to connect to.
     #[structopt(short = "a", long = "host")]
     pub host: String,
@@ -54,13 +54,18 @@ fn main() -> std::io::Result<()> {
     crash_handler::setup_panic_handler();
     let args = Args::from_args();
 
+    if args.port == 0 {
+        println!("Port number cannot be zero, zero is reserved for random port.");
+        return Ok(());
+    }
+
     let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
 
     let faucet_account_file = args.faucet_account_file.unwrap_or_else(|| "".to_string());
 
     let mut client_proxy = ClientProxy::new(
         &args.host,
-        &args.port,
+        args.port,
         &args.validator_set_file,
         &faucet_account_file,
         args.sync,
@@ -142,3 +147,33 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
     println!("quit | q! \n\tExit this client");
     println!("\n");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_args_port() {
+        let args = Args::from_iter(&["test", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(args.port, 8000);
+	assert_eq!(format!("{}:{}", args.host, args.port), "h:8000");
+        let args = Args::from_iter(&["test", "--port=65535", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(args.port, 65535);
+    }
+
+    #[test]
+    fn test_args_port_too_large() {
+        let result = Args::from_iter_safe(&["test", "--port=65536", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(result.is_ok(), false);
+    }
+
+    #[test]
+    fn test_args_port_invalid() {
+        let result = Args::from_iter_safe(&["test", "--port=abc", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(result.is_ok(), false);
+    }
+
+
+
+}
+
