@@ -17,7 +17,7 @@ proptest! {
     fn test_restore_without_interruption(
         btree in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
     ) {
-        let version = btree.len() as Version - 1;
+        let version = (btree.len() - 1) as Version;
         let expected_root_hash = get_expected_root_hash(&btree);
 
         // For this test, restore everything without interruption.
@@ -33,13 +33,13 @@ proptest! {
 
     #[test]
     fn test_restore_with_interruption(
-        btree1 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..500),
-        btree2 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..500),
+        (all, batch1_size) in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 2..1000)
+            .prop_flat_map(|btree| {
+                let len = btree.len();
+                (Just(btree), 1..len)
+            })
     ) {
-        let batch1_size = btree1.len();
-        let all: BTreeMap<_, _> = btree1.into_iter().chain(btree2.into_iter()).collect();
-        let version = all.len() as Version - 1;
-
+        let version = (all.len() - 1) as Version;
         let expected_root_hash = get_expected_root_hash(&all);
         let batch1: Vec<_> = all.clone().into_iter().take(batch1_size).collect();
         let db = MockTreeStore::default();
@@ -81,7 +81,7 @@ fn get_expected_root_hash(btree: &BTreeMap<HashValue, AccountStateBlob>) -> Hash
             .unwrap();
         db.write_tree_update_batch(batch).unwrap();
     }
-    tree.get_root_hash(btree.len() as Version - 1).unwrap()
+    tree.get_root_hash((btree.len() - 1) as Version).unwrap()
 }
 
 fn assert_success(
