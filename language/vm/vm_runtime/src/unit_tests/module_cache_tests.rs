@@ -68,7 +68,7 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
-                    locals: LocalsSignatureIndex::new(0),
+                    locals: LocalsSignatureIndex::new(1),
                     code: vec![Bytecode::Ret],
                 },
             },
@@ -86,7 +86,10 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 type_formals: vec![],
             },
         ],
-        locals_signatures: vec![LocalsSignature(vec![])],
+        locals_signatures: vec![
+            LocalsSignature(vec![]),
+            LocalsSignature(vec![SignatureToken::U64]),
+        ],
         identifiers: idents(vec![name, "func1", "func2"]),
         user_strings: vec![],
         byte_array_pool: vec![],
