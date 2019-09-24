@@ -79,38 +79,24 @@ fn test_position_level() {
 }
 
 #[test]
-fn test_position_get_next_sibling() {
-    for i in 0..1000 {
-        let left_position = Position::from_inorder_index(i);
-        let position = left_position.get_next_sibling();
-        assert_eq!(left_position.level(), position.level());
-        assert_eq!(
-            left_position.pos_counting_from_left() + 1,
-            position.pos_counting_from_left()
-        );
-    }
-}
-
-#[test]
 fn test_position_is_left_child() {
-    assert!(!Position::from_inorder_index(5).is_left_child());
-    assert!(!Position::from_inorder_index(6).is_left_child());
-    assert!(!Position::from_inorder_index(2).is_left_child());
-    assert!(!Position::from_inorder_index(11).is_left_child());
-    assert!(!Position::from_inorder_index(13).is_left_child());
-    assert!(!Position::from_inorder_index(14).is_left_child());
-    assert!(!Position::from_inorder_index(10).is_left_child());
-
     assert!(Position::from_inorder_index(1).is_left_child());
     assert!(Position::from_inorder_index(0).is_left_child());
     assert!(Position::from_inorder_index(3).is_left_child());
+    assert!(Position::from_inorder_index(7).is_left_child());
     assert!(Position::from_inorder_index(8).is_left_child());
     assert!(Position::from_inorder_index(12).is_left_child());
 }
 
 #[test]
-fn test_position_is_left_child_from_root() {
-    assert!(Position::from_inorder_index(7).is_left_child());
+fn test_position_is_right_child() {
+    assert!(Position::from_inorder_index(5).is_right_child());
+    assert!(Position::from_inorder_index(6).is_right_child());
+    assert!(Position::from_inorder_index(2).is_right_child());
+    assert!(Position::from_inorder_index(11).is_right_child());
+    assert!(Position::from_inorder_index(13).is_right_child());
+    assert!(Position::from_inorder_index(14).is_right_child());
+    assert!(Position::from_inorder_index(10).is_right_child());
 }
 
 #[test]
@@ -411,7 +397,6 @@ fn test_basic_invariants() {
 
     test_invariant_non_leaf(|pos| pos.right_child() == pos.child(NodeDirection::Right));
     test_invariant_non_leaf(|pos| pos.left_child() == pos.child(NodeDirection::Left));
-    test_invariant(|pos| pos == pos.parent().child(pos.direction_from_parent()));
 }
 
 #[test]

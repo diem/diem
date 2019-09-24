@@ -3,7 +3,7 @@ use cluster_test::{
     aws::Aws,
     cluster::Cluster,
     deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
-    effects::{Effect, Reboot},
+    effects::{Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
     log_prune::LogPruner,
@@ -56,6 +56,10 @@ pub fn main() {
         runner.reboot();
     } else if matches.is_present(ARG_RESTART) {
         runner.restart();
+    } else if matches.is_present(ARG_STOP) {
+        runner.stop();
+    } else if matches.is_present(ARG_START) {
+        runner.start();
     }
 }
 
@@ -187,15 +191,17 @@ impl ClusterTestRunner {
             println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
             return Ok(false);
         }
-        if env::var("WIPE_ON_DEPLOY") == Ok("yes".to_string()) {
-            println!("WIPE_ON_DEPLOY is set, wiping validators");
+        self.stop();
+        if env::var("WIPE_ON_DEPLOY") != Ok("no".to_string()) {
+            println!("Wiping validators");
             self.wipe_all_db(false);
         } else {
-            println!("WIPE_ON_DEPLOY is not set, keeping database");
+            println!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
         self.deployment_manager.redeploy(hash)?;
-        println!("Waiting for 60 seconds to allow ECS to restart tasks...");
-        thread::sleep(Duration::from_secs(60));
+        thread::sleep(Duration::from_secs(10));
+        self.health_check_runner.clear();
+        self.start();
         println!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
         Ok(true)
@@ -396,9 +402,43 @@ impl ClusterTestRunner {
         println!("Completed");
     }
 
-    fn restart(self) {
-        self.deployment_manager.update_all_services().unwrap();
+    fn restart(&self) {
+        self.stop();
+        self.start();
         println!("Completed");
+    }
+
+    pub fn stop(&self) {
+        self.activate_all(&self.make_stop_effects())
+    }
+
+    pub fn start(&self) {
+        self.deactivate_all(&self.make_stop_effects())
+    }
+
+    fn make_stop_effects(&self) -> Vec<StopContainer> {
+        self.cluster
+            .instances()
+            .clone()
+            .into_iter()
+            .map(StopContainer::new)
+            .collect()
+    }
+
+    fn activate_all<T: Effect>(&self, effects: &[T]) {
+        for effect in effects {
+            if let Err(e) = effect.activate() {
+                println!("Failed to activate {}: {:?}", effect, e);
+            }
+        }
+    }
+
+    fn deactivate_all<T: Effect>(&self, effects: &[T]) {
+        for effect in effects {
+            if let Err(e) = effect.deactivate() {
+                println!("Failed to deactivate {}: {:?}", effect, e);
+            }
+        }
     }
 }
 
@@ -411,6 +451,8 @@ const ARG_RUN: &str = "run";
 const ARG_RUN_ONCE: &str = "run-once";
 const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
 const ARG_REBOOT: &str = "reboot";
+const ARG_STOP: &str = "stop";
+const ARG_START: &str = "start";
 const ARG_RESTART: &str = "restart";
 const ARG_EMIT_TX: &str = "emit-tx";
 const ARG_PRUNE: &str = "prune-logs";
@@ -437,6 +479,8 @@ fn arg_matches() -> ArgMatches<'static> {
     let prune_logs = Arg::with_name(ARG_PRUNE).long("--prune-logs");
     let reboot = Arg::with_name(ARG_REBOOT).long("--reboot");
     let restart = Arg::with_name(ARG_RESTART).long("--restart");
+    let stop = Arg::with_name(ARG_STOP).long("--stop");
+    let start = Arg::with_name(ARG_START).long("--start");
     let emit_tx = Arg::with_name(ARG_EMIT_TX).long("--emit-tx");
     // This grouping requires one and only one action (tail logs, run test, etc)
     let action_group = ArgGroup::with_name("action")
@@ -448,6 +492,8 @@ fn arg_matches() -> ArgMatches<'static> {
             ARG_WIPE_ALL_DB,
             ARG_REBOOT,
             ARG_RESTART,
+            ARG_STOP,
+            ARG_START,
             ARG_EMIT_TX,
             ARG_PRUNE,
         ])
@@ -467,6 +513,8 @@ fn arg_matches() -> ArgMatches<'static> {
             wipe_all_db,
             reboot,
             restart,
+            stop,
+            start,
             prune_logs,
             emit_tx,
         ])

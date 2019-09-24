@@ -841,8 +841,8 @@ impl ClientProxy {
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
     ) -> Result<AccountData> {
-        let (sequence_number, status) = match sync_with_validator {
-            true => match client.get_account_blob(address) {
+        let (sequence_number, status) = if sync_with_validator {
+            match client.get_account_blob(address) {
                 Ok(resp) => match resp.0 {
                     Some(account_state_blob) => (
                         get_account_resource_or_default(&Some(account_state_blob))?
@@ -855,8 +855,9 @@ impl ClientProxy {
                     error!("Failed to get account state from validator, error: {:?}", e);
                     (0, AccountStatus::Unknown)
                 }
-            },
-            false => (0, AccountStatus::Local),
+            }
+        } else {
+            (0, AccountStatus::Local)
         };
         Ok(AccountData {
             address,

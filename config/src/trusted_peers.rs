@@ -10,7 +10,6 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     collections::{BTreeMap, HashMap},
-    convert::TryFrom,
     hash::BuildHasher,
     str::FromStr,
 };
@@ -66,29 +65,6 @@ pub struct ConsensusPeersConfig {
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
     pub upstream_peers: Vec<String>,
-}
-
-impl NetworkPeersConfig {
-    /// Returns a map of AccountAddress to a pair of PublicKeys for network peering. The first
-    /// PublicKey is the one used for signing, whereas the second is to determine eligible members
-    /// of the network.
-    pub fn get_trusted_network_peers(
-        &self,
-    ) -> HashMap<AccountAddress, (Ed25519PublicKey, X25519StaticPublicKey)> {
-        self.peers
-            .iter()
-            .map(|(account, keys)| {
-                (
-                    AccountAddress::try_from(account.clone())
-                        .expect("Failed to parse account addr"),
-                    (
-                        keys.network_signing_pubkey.clone(),
-                        keys.network_identity_pubkey.clone(),
-                    ),
-                )
-            })
-            .collect()
-    }
 }
 
 impl ConsensusPeersConfig {

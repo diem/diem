@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::PeerId;
+use crate::{counters, PeerId};
 use logger::prelude::*;
 use network::validator_network::StateSynchronizerSender;
 use rand::{
@@ -127,6 +127,8 @@ impl PeerManager {
 
     fn compute_weighted_index(&mut self) {
         let active_peers = self.get_active_upstream_peers();
+        counters::ACTIVE_UPSTREAM_PEERS.set(active_peers.len() as i64);
+
         if !active_peers.is_empty() {
             let weights: Vec<_> = active_peers
                 .iter()

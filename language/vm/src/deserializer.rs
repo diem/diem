@@ -123,11 +123,9 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u8> {
     } else {
         return Err(VMStatus::new(StatusCode::MALFORMED));
     }
-    if let Ok(count) = cursor.read_u8() {
-        Ok(count)
-    } else {
-        Err(VMStatus::new(StatusCode::MALFORMED))
-    }
+    cursor
+        .read_u8()
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 /// Reads all the table headers.

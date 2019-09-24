@@ -81,6 +81,11 @@ impl HealthCheck for CommitHistoryHealthCheck {
         }
     }
 
+    fn clear(&mut self) {
+        self.round_to_commit.clear();
+        self.latest_committed_round.clear();
+    }
+
     fn name(&self) -> &'static str {
         "commit_check"
     }

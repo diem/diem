@@ -2,7 +2,6 @@ use crate::{cluster::Cluster, instance::Instance};
 use admission_control_proto::proto::{
     admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
 };
-use client::{AccountData, AccountStatus};
 use grpcio::{ChannelBuilder, EnvBuilder};
 use proto_conv::IntoProto;
 use std::{
@@ -13,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -135,8 +135,12 @@ impl SubmissionThread {
                 let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => println!("Failed to submit request to {}: {:?}", self.instance, e),
-                    Ok(_r) => {
-                        //                        println!("r: {:?}", _r)
+                    Ok(r) => {
+                        let r = SubmitTransactionResponse::from_proto(r)
+                            .expect("Failed to parse SubmitTransactionResponse");
+                        if !is_accepted(&r) {
+                            println!("Request declined: {:?}", r);
+                        }
                     }
                 }
                 let now = Instant::now();
@@ -224,7 +228,7 @@ fn gen_submit_transaction_request(
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
     let signed_txn = create_signed_txn(
-        sender_account.key_pair.as_ref().expect("No keypair"),
+        &sender_account.key_pair,
         TransactionPayload::Script(script),
         sender_account.address,
         sender_account.sequence_number,
@@ -263,13 +267,12 @@ fn gen_random_account(rng: &mut StdRng) -> AccountData {
     let key_pair = KeyPair::generate_for_testing(rng);
     AccountData {
         address: AccountAddress::from_public_key(&key_pair.public_key),
-        key_pair: Some(key_pair),
+        key_pair,
         sequence_number: 0,
-        status: AccountStatus::Local,
     }
 }
 
-pub fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
+fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
     let seed: [u8; 32] = EntropyRng::new().gen();
     let mut rng = StdRng::from_seed(seed);
     (0..num_accounts)
@@ -295,9 +298,6 @@ fn gen_mint_txn_requests(
         .collect()
 }
 
-/// Executes many transactions for single client
-/// This method batches transactions in batches of MAX_TXN_BATCH_SIZE size
-/// Usage example: mint
 fn execute_and_wait_transactions(
     client: &AdmissionControlClient,
     account: &AccountData,
@@ -307,7 +307,13 @@ fn execute_and_wait_transactions(
         let resp = client.submit_transaction(&request);
         match resp {
             Err(e) => println!("Failed to submit request: {:?}", e),
-            Ok(_r) => {}
+            Ok(r) => {
+                let r = SubmitTransactionResponse::from_proto(r)
+                    .expect("Failed to parse SubmitTransactionResponse");
+                if !is_accepted(&r) {
+                    println!("Request declined: {:?}", r);
+                }
+            }
         }
     }
     wait_for_accounts_sequence(client, slice::from_ref(account));
@@ -321,8 +327,20 @@ fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &st
         .expect("query_sequence_numbers for faucet account failed")[0];
     AccountData {
         address,
-        key_pair: Some(key_pair),
+        key_pair,
         sequence_number,
-        status: AccountStatus::Persisted,
     }
+}
+
+struct AccountData {
+    pub address: AccountAddress,
+    pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    pub sequence_number: u64,
+}
+
+fn is_accepted(resp: &SubmitTransactionResponse) -> bool {
+    if let Some(ref status) = resp.ac_status {
+        return *status == AdmissionControlStatus::Accepted;
+    }
+    false
 }

@@ -498,10 +498,7 @@ fn run_transactions_naive(transactions: Vec<SignedTransaction>) -> HashValue {
     let mut iter = transactions.into_iter();
     let first_txn = iter.next();
     let response = block_on(executor.execute_block(
-        match first_txn {
-            None => vec![],
-            Some(txn) => vec![txn],
-        },
+        first_txn.map_or(vec![], |txn| vec![txn]),
         *GENESIS_BLOCK_ID,
         gen_block_id(1),
     ))

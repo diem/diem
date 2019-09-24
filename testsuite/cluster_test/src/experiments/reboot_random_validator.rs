@@ -1,6 +1,6 @@
 use crate::{
     cluster::Cluster,
-    effects::{Effect, Reboot},
+    effects::{Action, Reboot},
     experiments::Experiment,
     instance::Instance,
 };

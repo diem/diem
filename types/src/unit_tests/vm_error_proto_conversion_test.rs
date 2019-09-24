@@ -9,10 +9,8 @@ use std::convert::TryFrom;
 fn status_roundtrip() {
     let max_error_number = 5000;
     for status_number in 0..max_error_number {
-        let status = match StatusCode::try_from(status_number) {
-            Ok(status) => status,
-            Err(_) => StatusCode::UNKNOWN_STATUS,
-        };
+        let status =
+            StatusCode::try_from(status_number).unwrap_or_else(|_| StatusCode::UNKNOWN_STATUS);
         if status != StatusCode::UNKNOWN_STATUS {
             let stat_number: u64 = status.into();
             assert!(stat_number == status_number);

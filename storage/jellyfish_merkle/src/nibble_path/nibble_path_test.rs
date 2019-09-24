@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nibble::{arb_internal_nibble_path, skip_common_prefix, Nibble, NibblePath};
+use super::{arb_internal_nibble_path, skip_common_prefix, NibblePath};
+use nibble::Nibble;
 use proptest::prelude::*;
 
 #[test]
