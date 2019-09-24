@@ -4,6 +4,7 @@
 use client::{client_proxy::ClientProxy, commands::*};
 use logger::set_default_global_logger;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
+use std::num::NonZeroU16;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -15,7 +16,7 @@ use structopt::StructOpt;
 struct Args {
     /// Admission Control port to connect to.
     #[structopt(short = "p", long = "port", default_value = "8000")]
-    pub port: String,
+    pub port: NonZeroU16,
     /// Host address/name to connect to.
     #[structopt(short = "a", long = "host")]
     pub host: String,
@@ -60,7 +61,7 @@ fn main() -> std::io::Result<()> {
 
     let mut client_proxy = ClientProxy::new(
         &args.host,
-        &args.port,
+        args.port.get(),
         &args.validator_set_file,
         &faucet_account_file,
         args.sync,
@@ -141,4 +142,48 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
     println!("help | h \n\tPrints this help");
     println!("quit | q! \n\tExit this client");
     println!("\n");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_args_port() {
+        let args = Args::from_iter(&["test", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(args.port.get(), 8000);
+        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8000");
+        let args = Args::from_iter(&[
+            "test",
+            "--port=65535",
+            "--host=h",
+            "--validator_set_file=vsf",
+        ]);
+        assert_eq!(args.port.get(), 65535);
+    }
+
+    #[test]
+    fn test_args_port_too_large() {
+        let result = Args::from_iter_safe(&[
+            "test",
+            "--port=65536",
+            "--host=h",
+            "--validator_set_file=vsf",
+        ]);
+        assert_eq!(result.is_ok(), false);
+    }
+
+    #[test]
+    fn test_args_port_invalid() {
+        let result =
+            Args::from_iter_safe(&["test", "--port=abc", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(result.is_ok(), false);
+    }
+
+    #[test]
+    fn test_args_port_zero() {
+        let result =
+            Args::from_iter_safe(&["test", "--port=0", "--host=h", "--validator_set_file=vsf"]);
+        assert_eq!(result.is_ok(), false);
+    }
 }
