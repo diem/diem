@@ -50,6 +50,34 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         let function_signature_view = function_definition_view.signature();
+        if function_signature_view.arg_count() > locals_signature_view.len() {
+            return vec![VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS)
+                .with_message("Fewer locals than parameters".to_string())];
+        }
+        let errors: Vec<VMStatus> = function_signature_view
+            .arg_tokens()
+            .enumerate()
+            .map(|(arg_idx, arg_type_view)| {
+                let arg_token = arg_type_view.as_inner();
+                let local_token = locals_signature_view
+                    .token_at(arg_idx as LocalIndex)
+                    .as_inner();
+                if arg_token == local_token {
+                    vec![]
+                } else {
+                    vec![
+                        VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                            "Type mismatch at index {} between parameter and local",
+                            arg_idx
+                        )),
+                    ]
+                }
+            })
+            .flatten()
+            .collect();
+        if !errors.is_empty() {
+            return errors;
+        }
         let mut locals = BTreeMap::new();
         for (arg_idx, arg_type_view) in function_signature_view.arg_tokens().enumerate() {
             if arg_type_view.is_reference() {
