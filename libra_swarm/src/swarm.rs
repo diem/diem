@@ -564,6 +564,32 @@ impl Drop for LibraSwarm {
                 if let LibraSwarmDir::Temporary(temp_dir) = dir {
                     let log_path = temp_dir.path();
                     println!("logs located at {:?}", log_path);
+
+                    // Dump logs for each validator to stdout when `LIBRA_DUMP_LOGS`
+                    // environment variable is set
+                    if env::var_os("LIBRA_DUMP_LOGS").is_some() {
+                        for (peer_id, node) in &mut self.validator_nodes {
+                            // Skip dumping logs for healthy nodes
+                            if let HealthStatus::Healthy = node.health_check() {
+                                continue;
+                            }
+
+                            // Grab the contents of the node's logs and skip if we were unable to
+                            // grab its logs
+                            let log_contents = match node.get_log_contents() {
+                                Ok(contents) => contents,
+                                Err(_) => continue,
+                            };
+
+                            println!();
+                            println!();
+                            println!("{:=^80}", "");
+                            println!("Validator {}", peer_id);
+                            println!();
+                            println!();
+                            println!("{}", log_contents);
+                        }
+                    }
                 }
             }
         }
