@@ -135,7 +135,7 @@ fn bench_client_muxer_send<T, M>(
     client_transport: T,
 ) -> (M, impl Stream)
 where
-    T: Transport<Output = M> + Send + 'static,
+    T: Transport<Output = M> + Send + Sync + 'static,
     M: StreamMultiplexer + 'static,
 {
     // Client dials the server. Some of our transports have timeouts built in,
