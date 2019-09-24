@@ -629,7 +629,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
-        let block = self
+        let executed_block = self
             .sync_manager
             .execute_and_insert_block(proposed_block)
             .await
@@ -637,6 +637,7 @@ impl<T: Payload> EventProcessor<T> {
                 debug!("Failed to execute_and_insert the block: {:?}", e);
                 e
             })?;
+        let block = executed_block.block();
         // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
         if self.pacemaker.current_round() != block.round() {
@@ -651,7 +652,7 @@ impl<T: Payload> EventProcessor<T> {
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
-        let vote_info = self.safety_rules.voting_rule(&block).map_err(|e| {
+        let vote_info = self.safety_rules.voting_rule(block).map_err(|e| {
             debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
             e
         })?;
@@ -846,9 +847,9 @@ impl<T: Payload> EventProcessor<T> {
         let mut status = BlockRetrievalStatus::SUCCEEDED;
         let mut id = request.block_id;
         while (blocks.len() as u64) < request.num_blocks {
-            if let Some(block) = self.block_store.get_block(id) {
-                id = block.parent_id();
-                blocks.push(Block::clone(&block));
+            if let Some(executed_block) = self.block_store.get_block(id) {
+                id = executed_block.parent_id();
+                blocks.push(executed_block.block().clone());
             } else {
                 status = BlockRetrievalStatus::NOT_ENOUGH_BLOCKS;
                 break;

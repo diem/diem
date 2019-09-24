@@ -223,8 +223,7 @@ fn basic_new_rank_event_test() {
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     block_on(async move {
         let new_round = 1;
         node.event_processor
@@ -325,7 +324,7 @@ fn process_successful_proposal_test() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
         let proposal = Block::make_block(
-            genesis.as_ref(),
+            genesis.block(),
             vec![1],
             1,
             1,
@@ -365,7 +364,7 @@ fn process_old_proposal_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let new_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -374,7 +373,7 @@ fn process_old_proposal_test() {
     );
     let new_block_id = new_block.id();
     let old_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         2,
@@ -416,7 +415,7 @@ fn process_round_mismatch_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -424,7 +423,7 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     let block_skip_round = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         2,
         2,
@@ -468,7 +467,7 @@ fn process_new_round_msg_test() {
     let genesis = non_proposer.block_store.root();
     let block_0 = non_proposer
         .block_store
-        .create_block(&genesis, vec![1], 1, 1);
+        .create_block(genesis.block(), vec![1], 1, 1);
     let block_0_id = block_0.id();
     block_on(
         non_proposer
@@ -549,7 +548,7 @@ fn process_proposer_mismatch_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -557,7 +556,7 @@ fn process_proposer_mismatch_test() {
         node.block_store.signer(),
     );
     let block_incorrect_proposer = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -602,7 +601,7 @@ fn process_timeout_certificate_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -610,7 +609,7 @@ fn process_timeout_certificate_test() {
         node.block_store.signer(),
     );
     let block_skip_round = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         2,
         2,
@@ -654,8 +653,7 @@ fn process_votes_basic_test() {
         .unwrap();
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let vote_data = VoteData::new(
         a1.id(),
         node.block_store
@@ -698,7 +696,7 @@ fn process_block_retrieval() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
 
     let block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -785,12 +783,11 @@ fn basic_restart_test() {
     let mut proposals = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     proposals.push(a1);
     for i in 2..=num_proposals {
         let parent = proposals.last().unwrap();
-        let proposal = inserter.insert_block(parent, i);
+        let proposal = inserter.insert_block(&parent, i);
         proposals.push(proposal);
     }
     for proposal in &proposals {
@@ -802,7 +799,7 @@ fn basic_restart_test() {
         block_on(
             node_mut
                 .event_processor
-                .process_proposed_block(Block::clone(proposal)),
+                .process_proposed_block(proposal.block().clone()),
         );
     }
     // verify after restart we recover the data

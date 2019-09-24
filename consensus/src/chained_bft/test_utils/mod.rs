@@ -70,7 +70,7 @@ impl TreeInserter {
     /// `insert_block_with_qc`.
     pub fn insert_block(
         &mut self,
-        parent: &Block<Vec<usize>>,
+        parent: &ExecutedBlock<Vec<usize>>,
         round: Round,
     ) -> Arc<ExecutedBlock<Vec<usize>>> {
         // Node must carry a QC to its parent
@@ -90,12 +90,12 @@ impl TreeInserter {
     pub fn insert_block_with_qc(
         &mut self,
         parent_qc: QuorumCert,
-        parent: &Block<Vec<usize>>,
+        parent: &ExecutedBlock<Vec<usize>>,
         round: Round,
     ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
         block_on(self.block_store.insert_block_with_qc(Block::make_block(
-            parent,
+            parent.block(),
             vec![self.payload_val],
             round,
             parent.timestamp_usecs() + 1,

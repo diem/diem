@@ -61,10 +61,8 @@ fn test_proposal_generation_parent() {
         true,
     );
     let genesis = block_store.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
 
     // With no certifications the parent is genesis
     // generate proposals for an empty tree.
@@ -143,8 +141,7 @@ fn test_old_proposal_generation() {
         true,
     );
     let genesis = block_store.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let vote_msg_a1 = VoteMsg::new(
         VoteData::new(
             a1.id(),

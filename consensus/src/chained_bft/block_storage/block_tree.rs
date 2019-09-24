@@ -21,7 +21,6 @@ use serde::Serialize;
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
     fmt::Debug,
-    ops::Deref,
     sync::Arc,
     time::Duration,
 };
@@ -34,14 +33,6 @@ struct LinkableBlock<T> {
     executed_block: Arc<ExecutedBlock<T>>,
     /// The set of children for cascading pruning. Note: a block may have multiple children.
     children: HashSet<HashValue>,
-}
-
-impl<T> Deref for LinkableBlock<T> {
-    type Target = ExecutedBlock<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.executed_block
-    }
 }
 
 impl<T> LinkableBlock<T> {
@@ -66,6 +57,15 @@ impl<T> LinkableBlock<T> {
             "Block {:x} already existed.",
             child_id,
         );
+    }
+}
+
+impl<T> LinkableBlock<T>
+where
+    T: Serialize + Default + CanonicalSerialize + PartialEq,
+{
+    pub fn id(&self) -> HashValue {
+        self.executed_block().id()
     }
 }
 
@@ -158,6 +158,22 @@ where
         }
     }
 
+    // This method will only be used in this module.
+    fn get_linkable_block(&self, block_id: &HashValue) -> Option<&LinkableBlock<T>> {
+        self.id_to_block.get(block_id)
+    }
+
+    // This method will only be used in this module.
+    fn get_linkable_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock<T>> {
+        self.id_to_block.get_mut(block_id)
+    }
+
+    // This method will only be used in this module.
+    fn linkable_root(&self) -> &LinkableBlock<T> {
+        self.get_linkable_block(&self.root_id)
+            .expect("Root must exist")
+    }
+
     fn remove_block(&mut self, block_id: HashValue) {
         // Remove the block from the store
         self.id_to_block.remove(&block_id);
@@ -169,25 +185,9 @@ where
         self.id_to_block.contains_key(block_id)
     }
 
-    fn get_block(&self, block_id: &HashValue) -> Arc<ExecutedBlock<T>> {
-        self.try_get_block(block_id)
-            .expect("Block doesn't exist. Use try_get_block if None is a possible return value")
-    }
-
-    fn get_linkable_block(&self, block_id: &HashValue) -> &LinkableBlock<T> {
-        self.id_to_block
-            .get(block_id)
-            .expect("linkable block doesn't exist.")
-    }
-
-    pub(super) fn try_get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
-        self.id_to_block
-            .get(block_id)
+    pub(super) fn get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
+        self.get_linkable_block(block_id)
             .map(|lb| Arc::clone(lb.executed_block()))
-    }
-
-    fn try_get_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock<T>> {
-        self.id_to_block.get_mut(block_id)
     }
 
     pub(super) fn get_compute_result(
@@ -197,21 +197,17 @@ where
         if self.root_id == *block_id {
             None
         } else {
-            self.try_get_block(block_id)
-                .map(|b| b.compute_result().clone())
+            self.get_block(block_id).map(|b| b.compute_result().clone())
         }
     }
 
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
-        self.get_block(&self.root_id)
-    }
-
-    fn linkable_root(&self) -> &LinkableBlock<T> {
-        self.get_linkable_block(&self.root_id)
+        self.get_block(&self.root_id).expect("Root must exist")
     }
 
     pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.highest_certified_block_id)
+            .expect("Highest cerfified block must exist")
     }
 
     pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
@@ -234,8 +230,7 @@ where
         block: ExecutedBlock<T>,
     ) -> Result<Arc<ExecutedBlock<T>>, BlockTreeError> {
         let block_id = block.id();
-        if self.block_exists(&block_id) {
-            let existing_block = self.get_block(&block_id);
+        if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
                        existing_block,
                        block_id,
@@ -243,7 +238,7 @@ where
             checked_verify_eq!(existing_block.compute_result(), block.compute_result());
             Ok(existing_block)
         } else {
-            match self.try_get_block_mut(&block.parent_id()) {
+            match self.get_linkable_block_mut(&block.parent_id()) {
                 Some(parent_block) => parent_block.add_child(block_id),
                 None => bail_err!(BlockTreeError::BlockNotFound {
                     id: block.parent_id(),
@@ -274,7 +269,7 @@ where
             })
         });
 
-        match self.try_get_block(&block_id) {
+        match self.get_block(&block_id) {
             Some(block) => {
                 if block.round() > self.highest_certified_block().round() {
                     self.highest_certified_block_id = block.id();
@@ -289,7 +284,7 @@ where
             .or_insert_with(|| Arc::clone(&qc));
 
         let committed_block_id = qc.ledger_info().ledger_info().consensus_block_id();
-        if let Some(block) = self.id_to_block.get(&committed_block_id) {
+        if let Some(block) = self.get_block(&committed_block_id) {
             if block.round()
                 > self
                     .get_block(
@@ -299,6 +294,7 @@ where
                             .ledger_info()
                             .consensus_block_id(),
                     )
+                    .expect("Highest ledger info's block should exist")
                     .round()
             {
                 self.highest_ledger_info = qc;
@@ -394,7 +390,7 @@ where
             );
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc
-            if let Some(time_to_qc) = self.try_get_block(&block_id).and_then(|block| {
+            if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
                 duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
             }) {
                 counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
@@ -432,7 +428,10 @@ where
                 if next_root_id == *child_id {
                     continue;
                 }
-                blocks_to_be_pruned.push(self.get_linkable_block(child_id));
+                blocks_to_be_pruned.push(
+                    self.get_linkable_block(child_id)
+                        .expect("Child must exist in the tree"),
+                );
             }
             // Track all the block ids removed
             blocks_pruned.push_back(block_to_remove.id());
@@ -479,7 +478,7 @@ where
         let mut res = vec![];
         let mut cur_block_id = block_id;
         loop {
-            match self.try_get_block(&cur_block_id) {
+            match self.get_block(&cur_block_id) {
                 Some(ref block) if block.round() <= self.root().round() => {
                     break;
                 }
@@ -520,7 +519,10 @@ where
         while let Some(block) = to_visit.pop() {
             res += 1;
             for child_id in block.children() {
-                to_visit.push(self.get_linkable_block(child_id));
+                to_visit.push(
+                    self.get_linkable_block(child_id)
+                        .expect("Child must exist in the tree"),
+                );
             }
         }
         res

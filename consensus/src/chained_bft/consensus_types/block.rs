@@ -25,7 +25,6 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt::{Display, Formatter},
-    ops::Deref,
     sync::Arc,
 };
 use types::{
@@ -118,14 +117,6 @@ pub struct ExecutedBlock<T> {
     /// committed). The execution results are not persisted: they're recalculated again for the
     /// pending blocks upon restart.
     compute_result: Arc<StateComputeResult>,
-}
-
-impl<T> Deref for ExecutedBlock<T> {
-    type Target = Block<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.block
-    }
 }
 
 impl<T> Display for Block<T> {
@@ -436,6 +427,43 @@ impl<T> ExecutedBlock<T> {
 
     pub fn compute_result(&self) -> &Arc<StateComputeResult> {
         &self.compute_result
+    }
+}
+
+impl<T> ExecutedBlock<T>
+where
+    T: Serialize + Default + CanonicalSerialize + PartialEq,
+{
+    pub fn get_payload(&self) -> &T {
+        self.block().get_payload()
+    }
+
+    pub fn id(&self) -> HashValue {
+        self.block().id()
+    }
+
+    pub fn parent_id(&self) -> HashValue {
+        self.block().parent_id()
+    }
+
+    pub fn height(&self) -> Height {
+        self.block().height()
+    }
+
+    pub fn round(&self) -> Round {
+        self.block().round()
+    }
+
+    pub fn timestamp_usecs(&self) -> u64 {
+        self.block().timestamp_usecs()
+    }
+
+    pub fn quorum_cert(&self) -> &QuorumCert {
+        self.block().quorum_cert()
+    }
+
+    pub fn is_nil_block(&self) -> bool {
+        self.block().is_nil_block()
     }
 }
 
