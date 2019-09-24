@@ -95,7 +95,7 @@ impl<T: Payload> ProposalGenerator<T> {
             .get_quorum_cert_for_block(hqc_block.id())
             .ok_or_else(|| ProposalGenerationError::GivenRoundTooLow(hqc_block.round()))?;
         Ok(Block::make_nil_block(
-            hqc_block.as_ref(),
+            hqc_block.block(),
             round,
             hqc_block_qc.as_ref().clone(),
         ))
@@ -226,7 +226,7 @@ impl<T: Payload> ProposalGenerator<T> {
             .await
         {
             Ok(txns) => Ok(block_store.create_block(
-                &hqc_block,
+                hqc_block.block(),
                 txns,
                 round,
                 block_timestamp.as_micros() as u64,

@@ -419,7 +419,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
     }
 
     fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<T>>> {
-        self.inner.read().unwrap().try_get_block(&block_id)
+        self.inner.read().unwrap().get_block(&block_id)
     }
 
     fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {

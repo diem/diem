@@ -137,10 +137,10 @@ proptest! {
                 // We have a potential change of commit candidate ->
                 // the current block can be voted on and if gathered a
                 // QC, would trigger a different commit
-                let block_arc = block_tree.get_block(inserted_id).expect("we just inserted this");
-                let vote_info = safety_rules.voting_rule(&block_arc).and_then(|x| Ok(x.potential_commit_id()));
+                let executed_block = block_tree.get_block(inserted_id).expect("we just inserted this");
+                let vote_info = safety_rules.voting_rule(executed_block.block()).and_then(|x| Ok(x.potential_commit_id()));
                 prop_assert_eq!(vote_info, Ok(Some(highest_contiguous_3_chain_prefix.0)),
-                                "Commit mismatch: expected committing {:?} upon hearing about {:?} with preferred block {:?} because of chain {:#?}\n", highest_contiguous_3_chain_prefix.0, block.id(), highest_two_chain.0, highest_contiguous_3_chain_prefix.2
+                                "Commit mismatch: expected committing {:?} upon hearing about {:?} with preferred block {:?} because of chain {:#?}\n", highest_contiguous_3_chain_prefix.0, executed_block.id(), highest_two_chain.0, highest_contiguous_3_chain_prefix.2
                 );
                 commit_candidate = highest_contiguous_3_chain_prefix.0;
             }
@@ -177,15 +177,13 @@ fn test_preferred_block_rule() {
     //
     // PB should change from genesis to b1, and then to a2.
     let genesis = block_tree.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
-    let b2 = inserter.insert_block(a1.as_ref(), 3);
-    let a2 = inserter.insert_block(b1.as_ref(), 4);
-    let b3 = inserter.insert_block(b2.as_ref(), 5);
-    let a3 = inserter.insert_block(a2.as_ref(), 6);
-    let a4 = inserter.insert_block(a3.as_ref(), 7);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let b2 = inserter.insert_block(&a1, 3);
+    let a2 = inserter.insert_block(&b1, 4);
+    let b3 = inserter.insert_block(&b2, 5);
+    let a3 = inserter.insert_block(&a2, 6);
+    let a4 = inserter.insert_block(&a3, 7);
 
     safety_rules.update(a1.quorum_cert());
     assert_eq!(
@@ -255,32 +253,30 @@ fn test_voting() {
     // a4 (old proposal)
     // b4 (round lower then round of pb. PB: a2, parent(b4)=b2)
     let genesis = block_tree.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
-    let b2 = inserter.insert_block(a1.as_ref(), 3);
-    let a2 = inserter.insert_block(b1.as_ref(), 4);
-    let a3 = inserter.insert_block(a2.as_ref(), 5);
-    let b3 = inserter.insert_block(b2.as_ref(), 6);
-    let a4 = inserter.insert_block(a3.as_ref(), 7);
-    let b4 = inserter.insert_block(b2.as_ref(), 8);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let b2 = inserter.insert_block(&a1, 3);
+    let a2 = inserter.insert_block(&b1, 4);
+    let a3 = inserter.insert_block(&a2, 5);
+    let b3 = inserter.insert_block(&b2, 6);
+    let a4 = inserter.insert_block(&a3, 7);
+    let b4 = inserter.insert_block(&b2, 8);
 
     safety_rules.update(a1.quorum_cert());
-    let mut voting_info = safety_rules.voting_rule(&a1).unwrap();
+    let mut voting_info = safety_rules.voting_rule(a1.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b1.quorum_cert());
-    voting_info = safety_rules.voting_rule(&b1).unwrap();
+    voting_info = safety_rules.voting_rule(b1.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a2.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a2).unwrap();
+    voting_info = safety_rules.voting_rule(a2.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b2.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&b2),
+        safety_rules.voting_rule(b2.block()),
         Err(ProposalReject::OldProposal {
             last_vote_round: 4,
             proposal_round: 3,
@@ -288,20 +284,20 @@ fn test_voting() {
     );
 
     safety_rules.update(a3.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a3).unwrap();
+    voting_info = safety_rules.voting_rule(a3.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(b3.quorum_cert());
-    voting_info = safety_rules.voting_rule(&b3).unwrap();
+    voting_info = safety_rules.voting_rule(b3.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a4.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a4).unwrap();
+    voting_info = safety_rules.voting_rule(a4.block()).unwrap();
     assert_eq!(voting_info.potential_commit_id, None);
 
     safety_rules.update(a4.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a4),
+        safety_rules.voting_rule(a4.block()),
         Err(ProposalReject::OldProposal {
             last_vote_round: 7,
             proposal_round: 7,
@@ -309,7 +305,7 @@ fn test_voting() {
     );
     safety_rules.update(b4.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&b4),
+        safety_rules.voting_rule(b4.block()),
         Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
         })
@@ -333,29 +329,33 @@ fn test_voting_potential_commit_id() {
     // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
 
     let genesis = block_tree.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
-    let a2 = inserter.insert_block(a1.as_ref(), 3);
-    let a3 = inserter.insert_block(a2.as_ref(), 4);
-    let a4 = inserter.insert_block(a3.as_ref(), 5);
-    let a5 = inserter.insert_block(a4.as_ref(), 6);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let a2 = inserter.insert_block(&a1, 3);
+    let a3 = inserter.insert_block(&a2, 4);
+    let a4 = inserter.insert_block(&a3, 5);
+    let a5 = inserter.insert_block(&a4, 6);
 
     let vec_with_no_potential_commits = vec![a1.clone(), b1.clone(), a2.clone(), a3.clone()];
     for b in vec_with_no_potential_commits {
         safety_rules.update(b.quorum_cert());
-        let voting_info = safety_rules.voting_rule(&b).unwrap();
+        let voting_info = safety_rules.voting_rule(b.block()).unwrap();
         assert_eq!(voting_info.potential_commit_id, None);
     }
     safety_rules.update(a4.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a4).unwrap().potential_commit_id,
+        safety_rules
+            .voting_rule(a4.block())
+            .unwrap()
+            .potential_commit_id,
         Some(a2.id())
     );
     safety_rules.update(a5.quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a5).unwrap().potential_commit_id,
+        safety_rules
+            .voting_rule(a5.block())
+            .unwrap()
+            .potential_commit_id,
         Some(a3.id())
     );
 }
@@ -376,14 +376,12 @@ fn test_commit_rule_consecutive_rounds() {
     // a2 can be committed after a4 gathers QC
 
     let genesis = block_tree.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
-    let b2 = inserter.insert_block(b1.as_ref(), 3);
-    let a2 = inserter.insert_block(a1.as_ref(), 4);
-    let a3 = inserter.insert_block(a2.as_ref(), 5);
-    let a4 = inserter.insert_block(a3.as_ref(), 6);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let b2 = inserter.insert_block(&b1, 3);
+    let a2 = inserter.insert_block(&a1, 4);
+    let a3 = inserter.insert_block(&a2, 5);
+    let a4 = inserter.insert_block(&a3, 6);
 
     assert_eq!(
         safety_rules.commit_rule_for_certified_block(a1.quorum_cert(), a1.round()),
