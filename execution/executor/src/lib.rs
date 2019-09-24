@@ -181,7 +181,7 @@ where
                             committed_timestamp_usecs,
                             state_root_hash,
                             frozen_subtrees_in_accumulator,
-                            num_leaves_in_accumulator,
+                            num_leaves_in_accumulator as usize,
                             committed_block_id,
                             storage_read_client,
                             storage_write_client,
@@ -396,7 +396,7 @@ impl ExecutedTrees {
     }
 
     pub fn version_and_state_root(&self) -> (Option<Version>, HashValue) {
-        let num_elements = self.txn_accumulator().num_leaves();
+        let num_elements = self.txn_accumulator().num_leaves() as u64;
         let version = if num_elements > 0 {
             Some(num_elements - 1)
         } else {

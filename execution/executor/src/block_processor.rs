@@ -85,7 +85,7 @@ where
         committed_timestamp_usecs: u64,
         previous_state_root_hash: HashValue,
         previous_frozen_subtrees_in_accumulator: Vec<HashValue>,
-        previous_num_leaves_in_accumulator: u64,
+        previous_num_leaves_in_accumulator: usize,
         last_committed_block_id: HashValue,
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
@@ -373,8 +373,8 @@ where
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
         let ledger_info_to_commit = if self.committed_trees.txn_accumulator().num_leaves()
-            + txns_to_commit.len() as u64
-            == ledger_info_with_sigs.ledger_info().version() + 1
+            + txns_to_commit.len()
+            == ledger_info_with_sigs.ledger_info().version() as usize + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
             // given ledger info in the verification process above, so this check can possibly fail
@@ -424,7 +424,7 @@ where
         &self,
         txn_list_with_proof: &TransactionListWithProof,
         ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    ) -> Result<(u64, Version)> {
+    ) -> Result<(usize, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
             txn_list_with_proof.first_transaction_version,
@@ -432,20 +432,24 @@ where
 
         let num_committed_txns = self.committed_trees.txn_accumulator().num_leaves();
         if txn_list_with_proof.transaction_and_infos.is_empty() {
-            return Ok((0, num_committed_txns /* first_version */));
+            return Ok((0, num_committed_txns as Version /* first_version */));
         }
 
         let first_txn_version = txn_list_with_proof
             .first_transaction_version
-            .expect("first_transaction_version should exist.");
+            .expect("first_transaction_version should exist.")
+            as Version;
 
         ensure!(
-            first_txn_version <= num_committed_txns,
+            first_txn_version as usize <= num_committed_txns,
             "Transaction list too new. Expected version: {}. First transaction version: {}.",
             num_committed_txns,
             first_txn_version
         );
-        Ok((num_committed_txns - first_txn_version, num_committed_txns))
+        Ok((
+            num_committed_txns - first_txn_version as usize,
+            num_committed_txns as Version,
+        ))
     }
 
     /// If `save_blocks_to_storage` below fails, we retry based on this setting.
@@ -521,7 +525,7 @@ where
         let num_txns_in_accumulator = last_block.executed_trees().txn_accumulator().num_leaves();
         assert_eq!(
             version + 1,
-            num_txns_in_accumulator,
+            num_txns_in_accumulator as Version,
             "Number of transactions in ledger info ({}) does not match number of transactions \
              in accumulator ({}).",
             version + 1,
@@ -627,7 +631,8 @@ where
         ) {
             Ok(output) => {
                 let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-                let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
+                let version =
+                    (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to

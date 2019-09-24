@@ -32,6 +32,7 @@ pub struct AccumulatorProof {
 /// must not take the full width of the total space.  Thus, for a 64-bit ordering, our maximumm
 /// proof depth is limited to 63.
 pub const MAX_ACCUMULATOR_PROOF_DEPTH: usize = 63;
+pub const MAX_ACCUMULATOR_LEAVES: usize = 1 << MAX_ACCUMULATOR_PROOF_DEPTH;
 
 impl AccumulatorProof {
     /// Constructs a new `AccumulatorProof` using a list of siblings.

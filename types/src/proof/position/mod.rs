@@ -23,6 +23,7 @@
 //! Note2: The level of tree counts from leaf level, start from 0
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
+use crate::proof::definition::{MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
 use std::fmt;
 
 #[cfg(test)]
@@ -371,8 +372,9 @@ impl FrozenSubtreeSiblingIterator {
     /// the size of the bigger accumulator.
     pub fn new(current_num_leaves: u64, new_num_leaves: u64) -> Self {
         assert!(
-            new_num_leaves <= 1 << 63,
-            "An accumulator can have at most 2^63 leaves. Provided num_leaves: {}.",
+            new_num_leaves <= MAX_ACCUMULATOR_LEAVES as u64,
+            "An accumulator can have at most 2^{} leaves. Provided num_leaves: {}.",
+            MAX_ACCUMULATOR_PROOF_DEPTH,
             new_num_leaves,
         );
         assert!(

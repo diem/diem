@@ -102,7 +102,7 @@ fn test_accumulator_append() {
         itertools::zip_eq(leaves.into_iter(), expected_root_hashes.into_iter()).enumerate()
     {
         assert_eq!(accumulator.root_hash(), expected_root_hash);
-        assert_eq!(accumulator.num_leaves(), i as u64);
+        assert_eq!(accumulator.num_leaves(), i);
         accumulator = accumulator.append(vec![leaf]);
     }
 }
@@ -127,7 +127,7 @@ proptest! {
                 .filter_map(|pos| position_to_hash.get(&pos).cloned())
                 .collect();
         let new_accumulator = accumulator
-            .append_subtrees(&subtree_hashes, hashes2.len() as u64)
+            .append_subtrees(&subtree_hashes, hashes2.len())
             .unwrap();
         prop_assert_eq!(
             new_accumulator.root_hash(),
