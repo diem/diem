@@ -55,6 +55,8 @@
 pub mod proto;
 pub use runtime::MempoolRuntime;
 pub use core_mempool::CoreMempool;
+///
+pub mod core_mempool_client;
 
 mod core_mempool;
 mod mempool_service;
