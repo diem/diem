@@ -1,66 +1,115 @@
-use crate::core_mempool::CoreMempool;
-use std::sync::{Arc, Mutex};
+use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
+use proto_conv::{FromProto, IntoProto};
+use std::{
+    cmp,
+    collections::HashSet,
+    convert::TryFrom,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use config::config::NodeConfig;
 use crate::proto::mempool_client::MempoolClientTrait;
 use crate::proto::mempool::{AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
-                     GetBlockRequest, GetBlockResponse,
-                     CommitTransactionsRequest, CommitTransactionsResponse,
-                     HealthCheckRequest, HealthCheckResponse};
+                            GetBlockRequest, GetBlockResponse,
+                            CommitTransactionsRequest, CommitTransactionsResponse,
+                            HealthCheckRequest, HealthCheckResponse};
 use futures::Future;
+use types::{
+    account_address::AccountAddress, proto::transaction::SignedTransactionsBlock,
+    transaction::SignedTransaction,
+};
+use core::borrow::BorrowMut;
 
 /// Client for CoreMemPool
 #[derive(Clone)]
 pub struct CoreMemPoolClient {
-    mem_pool: Arc<Mutex<CoreMempool>>
+    core_mempool: Arc<Mutex<CoreMempool>>
 }
 
 impl CoreMemPoolClient {
     /// Create CoreMemPoolClient
     pub fn new(config: &NodeConfig) -> Self {
-        let mem_pool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-        CoreMemPoolClient { mem_pool }
+        let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
+        CoreMemPoolClient { core_mempool }
     }
 }
 
 impl MempoolClientTrait for CoreMemPoolClient {
-
     fn add_transaction_with_validation(&self, req: &AddTransactionWithValidationRequest)
                                        -> ::grpcio::Result<AddTransactionWithValidationResponse> {
-        unimplemented!();
-    }
+        let proto_transaction = req.clone().borrow_mut().take_signed_txn();
+        let transaction = SignedTransaction::from_proto(proto_transaction).expect("SignedTransaction from proto err.");
+        let insertion_result = self
+            .core_mempool
+            .lock()
+            .expect("[add txn] acquire mempool lock")
+            .add_txn(
+                transaction,
+                req.max_gas_cost,
+                req.latest_sequence_number,
+                req.account_balance,
+                TimelineState::NotReady,
+            );
 
-    fn add_transaction_with_validation_async(&self, req: &AddTransactionWithValidationRequest)
-                                             -> ::grpcio::Result<Box<Future<Item=AddTransactionWithValidationResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
+        let mut response = AddTransactionWithValidationResponse::new();
+        response.set_status(insertion_result.into_proto());
+        Ok(response)
     }
 
     fn get_block(&self, req: &GetBlockRequest)
                  -> ::grpcio::Result<GetBlockResponse> {
-        unimplemented!();
-    }
+        let block_size = cmp::max(req.get_max_block_size(), 1);
+        let exclude_transactions: HashSet<TxnPointer> = req
+            .get_transactions()
+            .iter()
+            .map(|t| (AccountAddress::try_from(t.get_sender()), t.sequence_number))
+            .filter(|(address, _)| address.is_ok())
+            .map(|(address, seq)| (address.unwrap(), seq))
+            .collect();
 
-    fn get_block_async(&self, req: &GetBlockRequest)
-                       -> ::grpcio::Result<Box<Future<Item=GetBlockResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
+        let mut txns = self
+            .core_mempool
+            .lock()
+            .expect("[get_block] acquire mempool lock")
+            .get_block(block_size, exclude_transactions);
+
+        let transactions = txns.drain(..).map(SignedTransaction::into_proto).collect();
+
+        let mut block = SignedTransactionsBlock::new();
+        block.set_transactions(::protobuf::RepeatedField::from_vec(transactions));
+        let mut response = GetBlockResponse::new();
+        response.set_block(block);
+        Ok(response)
     }
 
     fn commit_transactions(&self, req: &CommitTransactionsRequest)
                            -> ::grpcio::Result<CommitTransactionsResponse> {
-        unimplemented!();
-    }
-
-    fn commit_transactions_async(&self, req: &CommitTransactionsRequest)
-                                 -> ::grpcio::Result<Box<Future<Item=CommitTransactionsResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
+        let mut pool = self
+            .core_mempool
+            .lock()
+            .expect("[update status] acquire mempool lock");
+        for transaction in req.get_transactions() {
+            if let Ok(address) = AccountAddress::try_from(transaction.get_sender()) {
+                let sequence_number = transaction.get_sequence_number();
+                pool.remove_transaction(&address, sequence_number, transaction.get_is_rejected());
+            }
+        }
+        let block_timestamp_usecs = req.get_block_timestamp_usecs();
+        if block_timestamp_usecs > 0 {
+            pool.gc_by_expiration_time(Duration::from_micros(block_timestamp_usecs));
+        }
+        let response = CommitTransactionsResponse::new();
+        Ok(response)
     }
 
     fn health_check(&self, req: &HealthCheckRequest)
                     -> ::grpcio::Result<HealthCheckResponse> {
-        unimplemented!();
-    }
-
-    fn health_check_async(&self, req: &HealthCheckRequest)
-                          -> ::grpcio::Result<Box<Future<Item=HealthCheckResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
+        let pool = self
+            .core_mempool
+            .lock()
+            .expect("[health_check] acquire mempool lock");
+        let mut response = HealthCheckResponse::new();
+        response.set_is_healthy(pool.health_check());
+        Ok(response)
     }
 }

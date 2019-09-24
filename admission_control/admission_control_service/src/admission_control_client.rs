@@ -26,16 +26,10 @@ impl<M: 'static, V> AdmissionControlClientTrait for AdmissionControlClient<M, V>
             ::grpcio::Error::InvalidMetadata(e.to_string())
         })
     }
-    fn submit_transaction_async(&self, req: &SubmitTransactionRequest) -> ::grpcio::Result<Box<Future<Item=SubmitTransactionResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
-    }
 
     fn update_to_latest_ledger(&self, req: &UpdateToLatestLedgerRequest) -> ::grpcio::Result<UpdateToLatestLedgerResponse> {
         self.ac_service.update_to_latest_ledger_inner(req.clone()).map_err(|e| {
             ::grpcio::Error::InvalidMetadata(e.to_string())
         })
-    }
-    fn update_to_latest_ledger_async(&self, req: &UpdateToLatestLedgerRequest) -> ::grpcio::Result<Box<Future<Item=UpdateToLatestLedgerResponse, Error=::grpcio::Error> + Send>> {
-        unimplemented!();
     }
 }
