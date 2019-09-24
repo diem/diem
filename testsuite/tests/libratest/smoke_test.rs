@@ -42,7 +42,7 @@ fn setup_env(
         .join(&config.consensus.consensus_peers_file);
     let client_proxy = ClientProxy::new(
         "localhost",
-        port.to_string().as_str(),
+        port,
         validator_set_file.to_str().unwrap(),
         &faucet_key_file_path,
         false,
@@ -303,7 +303,7 @@ fn test_basic_state_synchronization() {
         .join(&config.consensus.consensus_peers_file);
     let mut client_proxy2 = ClientProxy::new(
         "localhost",
-        ac_port.to_string().as_str(),
+        ac_port,
         &validator_set_file.to_str().unwrap(),
         "",
         false,

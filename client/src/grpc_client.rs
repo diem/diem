@@ -42,7 +42,7 @@ pub struct GRPCClient {
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(host: &str, port: &str, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
+    pub fn new(host: &str, port: u16, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
         let conn_addr = format!("{}:{}", host, port);
 
         // Create a GRPC client
