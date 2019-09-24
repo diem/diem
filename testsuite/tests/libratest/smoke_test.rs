@@ -34,7 +34,7 @@ fn setup_env(
     tmp_mnemonic_file
         .create_as_file()
         .expect("could not create temporary mnemonic_file_path");
-    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();;
+    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();
     let validator_set_file = swarm
         .dir
         .as_ref()
@@ -295,7 +295,7 @@ fn test_basic_state_synchronization() {
         .create_as_file()
         .expect("could not create temporary mnemonic_file_path");
     let ac_port = swarm.get_validator(node_to_restart).unwrap().ac_port();
-    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();;
+    let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();
     let validator_set_file = swarm
         .dir
         .as_ref()

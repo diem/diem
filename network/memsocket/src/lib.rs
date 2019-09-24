@@ -32,7 +32,6 @@ struct SwitchBoard(HashMap<NonZeroU16, UnboundedSender<MemorySocket>>, u16);
 /// # Examples
 ///
 /// ```rust,no_run
-/// #![feature(async_await)]
 /// use std::io::Result;
 ///
 /// use memsocket::{MemoryListener, MemorySocket};
@@ -162,7 +161,6 @@ impl MemoryListener {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// #![feature(async_await)]
     /// use futures::prelude::*;
     /// use memsocket::MemoryListener;
     ///
@@ -224,7 +222,6 @@ impl<'a> Stream for Incoming<'a> {
 /// # Examples
 ///
 /// ```rust, no_run
-/// #![feature(async_await)]
 /// use futures::prelude::*;
 /// use memsocket::MemorySocket;
 ///

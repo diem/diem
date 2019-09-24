@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
-
 //! [Noise protocol framework][noise] support for use in Libra.
 //!
 //! The main feature of this module is [`NoiseSocket`](crate::socket::NoiseSocket) which

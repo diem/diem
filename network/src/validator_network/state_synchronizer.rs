@@ -163,5 +163,4 @@ mod tests {
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, expected_event);
     }
-
 }

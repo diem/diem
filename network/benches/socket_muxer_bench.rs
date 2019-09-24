@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
 // Allow KiB, MiB consts
 #![allow(non_upper_case_globals, non_snake_case)]
 // Allow fns to take &usize, since criterion only passes parameters by ref

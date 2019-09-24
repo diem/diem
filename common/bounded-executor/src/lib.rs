@@ -5,8 +5,6 @@
 //! concurrently when spawned through this executor, defined by the initial
 //! `capacity`.
 
-#![feature(async_await)]
-
 use futures::future::{Future, FutureExt, TryFutureExt};
 use futures_semaphore::Semaphore;
 use tokio::runtime::TaskExecutor;

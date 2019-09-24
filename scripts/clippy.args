@@ -14,6 +14,11 @@ allowed_lints=(
     "-A" "clippy::needless_lifetimes"
     # This ends up being platform dependent, e.g. the Instant type
     "-A" "clippy::trivially-copy-pass-by-ref"
+
+    # Temporarily allow the `clippy::inheret-to-string` lint to avoid having to
+    # fix all violations in our codebase during the compiler bump to 1.39.0
+    # beta where it was changed to be on-by-default.
+    "-A" "clippy::inherent-to-string"
 )
 
 echo "${allowed_lints[@]}"

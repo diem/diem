@@ -9,7 +9,6 @@
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
-#![feature(async_await)]
 #![recursion_limit = "512"]
 extern crate failure;
 
