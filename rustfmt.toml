@@ -1,10 +1,2 @@
-comment_width = 100
 edition = "2018"
-merge_imports = true
 use_field_init_shorthand = true
-wrap_comments = true
-
-# Ignore generated files.
-ignore = [
-    "language/compiler/src/parser/syntax.rs",
-]

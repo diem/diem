@@ -16,8 +16,6 @@
 //! could potentially deadlock the futures runtime if enough tasks are waiting on
 //! the semaphore.
 
-#![feature(async_await)]
-
 use futures01::{future::Future as Future01, Async as Async01, Poll as Poll01};
 use futures03::compat::Future01CompatExt;
 use std::sync::Arc;

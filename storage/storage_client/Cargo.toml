@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
+futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 protobuf = "~2.7"
