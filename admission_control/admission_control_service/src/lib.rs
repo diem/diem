@@ -14,6 +14,8 @@
 pub mod admission_control_node;
 /// AC gRPC service.
 pub mod admission_control_service;
+/// AC service client.
+pub mod admission_control_client;
 #[cfg(any(test, feature = "fuzzing"))]
 /// Useful Mocks
 pub mod mocks;

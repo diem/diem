@@ -10,3 +10,4 @@ use types::proto::*;
 pub mod admission_control;
 /// Auto generated proto src files
 pub mod admission_control_grpc;
+pub mod admission_control_client;

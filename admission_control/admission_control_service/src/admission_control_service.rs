@@ -80,7 +80,7 @@ where
     }
 
     /// Validate transaction signature, then via VM, and add it to Mempool if it passes VM check.
-    pub(crate) fn submit_transaction_inner(
+    pub(super) fn submit_transaction_inner(
         &self,
         req: SubmitTransactionRequest,
     ) -> Result<SubmitTransactionResponse> {
@@ -196,7 +196,7 @@ where
     }
 
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.
-    fn update_to_latest_ledger_inner(
+    pub(super) fn update_to_latest_ledger_inner(
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {

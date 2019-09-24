@@ -10,3 +10,4 @@ pub mod mempool;
 pub mod mempool_client;
 pub mod mempool_grpc;
 pub mod shared;
+pub mod core_mempool_client;
