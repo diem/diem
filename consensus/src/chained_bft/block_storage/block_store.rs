@@ -147,12 +147,13 @@ impl<T: Payload> BlockStore<T> {
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
     ) {
+        let max_pruned_blocks_in_mem = self.inner.read().unwrap().max_pruned_blocks_in_mem();
         let tree = Self::build_block_tree(
             root,
             blocks,
             quorum_certs,
             Arc::clone(&self.state_computer),
-            self.inner.read().unwrap().max_pruned_blocks_in_mem(),
+            max_pruned_blocks_in_mem,
         )
         .await;
         let to_remove = self.inner.read().unwrap().get_all_block_id();
