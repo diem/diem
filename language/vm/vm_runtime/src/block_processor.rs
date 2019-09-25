@@ -69,7 +69,7 @@ pub fn execute_block<'alloc>(
         .collect();
 
     for transaction in signature_verified_block {
-        record_stats! {TXN_TOTAL_TIME_TAKEN_HISTOGRAM, {
+        record_stats! {time_hist | TXN_TOTAL_TIME_TAKEN | {
                 let output = match transaction {
                     Ok(t) => transaction_flow(
                         t,
@@ -123,7 +123,7 @@ where
     let arena = Arena::new();
     let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
 
-    let validated_txn = record_stats! {TXN_VALIDATION_TIME_TAKEN_HISTOGRAM, {
+    let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
     match process_txn.validate(mode, publishing_option) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
@@ -133,7 +133,7 @@ where
     }
     };
 
-    let verified_txn = record_stats! {TXN_VERIFICATION_TIME_TAKEN_HISTOGRAM, {
+    let verified_txn = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
      match validated_txn.verify(script_cache) {
         Ok(verified_txn) => verified_txn,
         Err(vm_status) => {
@@ -143,7 +143,7 @@ where
     }
     };
 
-    let executed_txn = record_stats! {TXN_EXECUTION_TIME_TAKEN_HISTOGRAM, {
+    let executed_txn = record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
         verified_txn.execute()
         }
     };

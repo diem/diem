@@ -52,7 +52,7 @@ impl VMVerifier for MoveVM {
         state_view: &dyn StateView,
     ) -> Option<VMStatus> {
         // TODO: This should be implemented as an async function.
-        record_stats! {TXN_VALIDATION_TIME_TAKEN_HISTOGRAM, {
+        record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
             self.inner
                 .rent(move |runtime| runtime.verify_transaction(transaction, state_view))
             }
