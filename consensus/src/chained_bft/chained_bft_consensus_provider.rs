@@ -80,7 +80,7 @@ impl ChainedBftProvider {
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
         let (storage, initial_data) = StorageWriteProxy::start(node_config);
         info!(
-            "Starting up the consensus state machine with recovery data - {:?}, {:?}",
+            "Starting up the consensus state machine with recovery data - {:?}, {}",
             initial_data.state(),
             initial_data.highest_timeout_certificates()
         );
