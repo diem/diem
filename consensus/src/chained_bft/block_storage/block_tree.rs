@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockTreeError, VoteReceptionResult},
+        block_storage::VoteReceptionResult,
         common::Author,
         consensus_types::{
             block::ExecutedBlock, quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg,
@@ -228,7 +228,7 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
-    ) -> Result<Arc<ExecutedBlock<T>>, BlockTreeError> {
+    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         let block_id = block.id();
         if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
@@ -240,9 +240,7 @@ where
         } else {
             match self.get_linkable_block_mut(&block.parent_id()) {
                 Some(parent_block) => parent_block.add_child(block_id),
-                None => bail_err!(BlockTreeError::BlockNotFound {
-                    id: block.parent_id(),
-                }),
+                None => bail!("Parent block {} not found", block.parent_id()),
             };
             let linkable_block = LinkableBlock::new(block);
             let arc_block = Arc::clone(linkable_block.executed_block());
@@ -252,7 +250,7 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> Result<(), BlockTreeError> {
+    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
         let block_id = qc.certified_block_id();
         let qc = Arc::new(qc);
 
@@ -276,7 +274,7 @@ where
                     self.highest_quorum_cert = Arc::clone(&qc);
                 }
             }
-            None => return Err(BlockTreeError::BlockNotFound { id: block_id }),
+            None => bail!("Block {} not found", block_id),
         }
 
         self.id_to_quorum_cert
