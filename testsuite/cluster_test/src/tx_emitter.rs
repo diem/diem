@@ -12,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::{prometheus::Prometheus, util::unix_timestamp_now};
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -101,10 +102,53 @@ impl TxEmitter {
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
         println!("Threads started");
+        let prometheus = Prometheus::try_new_from_environment();
+        if let Some(prometheus) = prometheus {
+            run_stat_loop(prometheus);
+        }
         for join_handle in join_handles {
             join_handle.join().unwrap();
         }
     }
+}
+
+fn run_stat_loop(prometheus: Prometheus) {
+    thread::sleep(Duration::from_secs(30)); // warm up
+    loop {
+        thread::sleep(Duration::from_secs(10));
+        if let Err(err) = print_stat(&prometheus) {
+            println!("Stat error: {:?}", err);
+        }
+    }
+}
+
+fn print_stat(prometheus: &Prometheus) -> failure::Result<()> {
+    let step = 10;
+    let end = unix_timestamp_now();
+    let start = end - Duration::from_secs(30); // avg over last 30 sec
+    let tps = prometheus.query_range(
+        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
+    let latency = prometheus.query_range(
+        "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
+            .to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_latency = latency
+        .avg()
+        .ok_or_else(|| format_err!("No latency data"))?;
+    println!(
+        "Tps: {:.0}, latency: {:.0} ms",
+        avg_tps,
+        avg_latency * 1000.
+    );
+    Ok(())
 }
 
 fn get_env<F: FromStr>(name: &str, default: F) -> F {
@@ -128,17 +172,22 @@ impl SubmissionThread {
         let wait_millis = get_env("WAIT_MILLIS", 50);
         let wait = Duration::from_millis(wait_millis);
         let wait_committed = get_env("WAIT_COMMITTED", true);
+        let verbose = get_env("VERBOSE", false);
         loop {
             let gen_requests = gen_ring_requests(&mut self.accounts);
             for request in gen_requests {
                 let wait_util = Instant::now() + wait;
                 let resp = self.client.submit_transaction(&request);
                 match resp {
-                    Err(e) => println!("Failed to submit request to {}: {:?}", self.instance, e),
+                    Err(e) => {
+                        if verbose {
+                            println!("Failed to submit request to {}: {:?}", self.instance, e);
+                        }
+                    }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::from_proto(r)
                             .expect("Failed to parse SubmitTransactionResponse");
-                        if !is_accepted(&r) {
+                        if verbose && !is_accepted(&r) {
                             println!("Request declined: {:?}", r);
                         }
                     }
@@ -146,7 +195,7 @@ impl SubmissionThread {
                 let now = Instant::now();
                 if wait_util > now {
                     thread::sleep(wait_util - now);
-                } else {
+                } else if verbose {
                     println!("Thread for {} won't sleep", self.instance);
                 }
             }
