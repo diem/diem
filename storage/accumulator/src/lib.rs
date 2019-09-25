@@ -218,30 +218,59 @@ where
         let root_level = Position::root_level_from_leaf_count(last_new_leaf_count);
         let mut to_freeze = Vec::with_capacity(Self::max_to_freeze(num_new_leaves, root_level));
 
-        // create one new node for each new leaf hash
-        let mut current_level = self.gen_leaf_level(new_leaves);
-        Self::record_to_freeze(
-            &mut to_freeze,
-            &current_level,
-            false, /* has_non_frozen */
-        );
+        let mut num_leaves = self.num_leaves;
 
-        // loop starting from leaf level, upwards till root_level - 1,
-        // making new nodes of parent level and recording frozen ones.
-        let mut has_non_frozen = false;
-        for _ in 0..root_level {
-            let (parent_level, placeholder_used) = self.gen_parent_level(&current_level)?;
-
-            // If a placeholder node is used to generate the right most node of a certain level,
-            // such level and all its parent levels have a non-frozen right most node.
-            has_non_frozen |= placeholder_used;
-            Self::record_to_freeze(&mut to_freeze, &parent_level, has_non_frozen);
-
-            current_level = parent_level;
+        // Iterate over the new leaves, adding them to to_freeze and then adding any frozen parents
+        // when right children are encountered.  This has the effect of creating frozen nodes in
+        // perfect post-order, which can be used as a strictly increasing append only index for
+        // the underlying storage.
+        //
+        // We will track newly created left siblings while iterating so we can pair them with their
+        // right sibling, if and when it becomes frozen.  If the frozen left sibling is not created
+        // in this iteration, it must already exist in storage.
+        let mut left_siblings: Vec<(_, _)> = Vec::new();
+        for leaf in new_leaves.iter() {
+            let leaf_pos = Position::from_leaf_index(num_leaves as u64);
+            let mut hash = *leaf;
+            to_freeze.push((leaf_pos, hash));
+            num_leaves += 1;
+            let mut pos = leaf_pos;
+            while pos.is_right_child() {
+                let sibling = pos.sibling();
+                match left_siblings.pop() {
+                    Some((x, left_hash)) => {
+                        assert_eq!(x, sibling);
+                        hash = Self::hash_internal_node(left_hash, hash);
+                    }
+                    None => hash = Self::hash_internal_node(self.reader.get(sibling)?, hash),
+                }
+                pos = pos.parent();
+                to_freeze.push((pos, hash));
+            }
+            // The node remaining now must be a left child, possibly a complete binary tree.
+            left_siblings.push((pos, hash));
         }
 
-        assert_eq!(current_level.len(), 1, "must conclude in single root node");
-        Ok((current_level.first().expect("unexpected None").1, to_freeze))
+        // Now reconstruct the final root hash by walking up to root level and adding
+        // placeholder hash nodes as needed on the right, and left siblings that have either
+        // been newly created or read from storage.
+        let (mut pos, mut hash) = left_siblings.pop().expect("Must have at least one node");
+        for _ in pos.level()..root_level as u32 {
+            hash = if pos.is_left_child() {
+                Self::hash_internal_node(hash, *ACCUMULATOR_PLACEHOLDER_HASH)
+            } else {
+                Self::hash_internal_node(
+                    left_siblings
+                        .pop()
+                        .map_or_else(|| self.reader.get(pos.sibling()), |(_, x)| Ok(x))?,
+                    hash,
+                )
+            };
+            pos = pos.parent();
+        }
+        assert!(left_siblings.is_empty());
+
+        Ok((hash, to_freeze))
     }
 
     /// upper bound of num of frozen nodes:
@@ -259,66 +288,6 @@ where
 
     fn rightmost_leaf_index(&self) -> u64 {
         (self.num_leaves - 1) as u64
-    }
-
-    /// Given leaf level hashes, create leaf level nodes
-    fn gen_leaf_level(&self, new_leaves: &[HashValue]) -> Vec<Node> {
-        new_leaves
-            .iter()
-            .enumerate()
-            .map(|(i, hash)| {
-                (
-                    Position::from_leaf_index((self.num_leaves + i) as u64),
-                    *hash,
-                )
-            })
-            .collect()
-    }
-
-    /// Given a level of new nodes (frozen or not), return new nodes on its parent level, and
-    /// a boolean value indicating whether a placeholder node is used to construct the last node
-    fn gen_parent_level(&self, current_level: &[Node]) -> Result<((Vec<Node>, bool))> {
-        let mut parent_level: Vec<Node> = Vec::with_capacity(current_level.len() / 2 + 1);
-        let mut iter = current_level.iter().peekable();
-
-        // first node may be a right child, in that case pair it with its existing sibling
-        let (first_pos, first_hash) = iter.peek().expect("Current level is empty");
-        if !first_pos.is_left_child() {
-            parent_level.push((
-                first_pos.parent(),
-                Self::hash_internal_node(self.reader.get(first_pos.sibling())?, *first_hash),
-            ));
-            iter.next();
-        }
-
-        // walk through in pairs of siblings, use placeholder as last right sibling if necessary
-        let mut placeholder_used = false;
-        while let Some((left_pos, left_hash)) = iter.next() {
-            let right_hash = match iter.next() {
-                Some((_, h)) => h,
-                None => {
-                    placeholder_used = true;
-                    &ACCUMULATOR_PLACEHOLDER_HASH
-                }
-            };
-
-            parent_level.push((
-                left_pos.parent(),
-                Self::hash_internal_node(*left_hash, *right_hash),
-            ));
-        }
-
-        Ok((parent_level, placeholder_used))
-    }
-
-    /// append a level of new nodes into output vector, skip the last one if it's a non-frozen node
-    fn record_to_freeze(to_freeze: &mut Vec<Node>, level: &[Node], has_non_frozen: bool) {
-        to_freeze.extend(
-            level
-                .iter()
-                .take(level.len() - has_non_frozen as usize)
-                .cloned(),
-        )
     }
 
     fn get_hash(&self, position: Position) -> Result<HashValue> {
