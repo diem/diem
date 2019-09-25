@@ -5,9 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::VoteReceptionResult,
         common::Author,
-        consensus_types::{
-            block::ExecutedBlock, quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg,
-        },
+        consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg},
     },
     counters,
     util::time_service::duration_since_epoch,
@@ -24,7 +22,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use types::crypto_proxies::LedgerInfoWithSignatures;
+use types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    validator_verifier::VerifyError,
+};
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
 /// that adds `children` field to know the parent-child relationship between blocks.
@@ -345,7 +346,7 @@ where
     pub(super) fn insert_vote(
         &mut self,
         vote_msg: &VoteMsg,
-        min_votes_for_qc: usize,
+        validator_verifier: Arc<ValidatorVerifier>,
     ) -> VoteReceptionResult {
         let author = vote_msg.author();
         let block_id = vote_msg.vote_data().block_id();
@@ -371,32 +372,29 @@ where
         });
 
         vote_msg.signature().clone().add_to_li(author, li_with_sig);
+        match validator_verifier.check_voting_power(li_with_sig.signatures().keys())
+        {
+            Ok(_) => {
+                let quorum_cert =
+                    QuorumCert::new(vote_msg.vote_data().clone(), li_with_sig.clone());
+                // Note that the block might not be present locally, in which case we cannot
+                // calculate time between block creation and qc
+                if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
+                    duration_since_epoch()
+                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                }) {
+                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
+                }
 
-        let num_votes = li_with_sig.signatures().len();
-        if num_votes >= min_votes_for_qc {
-            let quorum_cert = QuorumCert::new(
-                VoteData::new(
-                    block_id,
-                    vote_msg.vote_data().executed_state_id(),
-                    vote_msg.vote_data().block_round(),
-                    vote_msg.vote_data().parent_block_id(),
-                    vote_msg.vote_data().parent_block_round(),
-                    vote_msg.vote_data().grandparent_block_id(),
-                    vote_msg.vote_data().grandparent_block_round(),
-                ),
-                li_with_sig.clone(),
-            );
-            // Note that the block might not be present locally, in which case we cannot calculate
-            // time between block creation and qc
-            if let Some(time_to_qc) = self.get_block(&block_id).and_then(|block| {
-                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
-            }) {
-                counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
+                VoteReceptionResult::NewQuorumCertificate(Arc::new(quorum_cert))
             }
-
-            return VoteReceptionResult::NewQuorumCertificate(Arc::new(quorum_cert));
+            Err(err) => match err {
+                VerifyError::TooLittleVotingPower { voting_power, .. } => {
+                    VoteReceptionResult::VoteAdded(voting_power)
+                }
+                _ => panic!("Impossible to get any other error except TooLittleVotingPower since messages with invalid authors are dropped, vote_msg = {}", vote_msg),
+            },
         }
-        VoteReceptionResult::VoteAdded(num_votes)
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not

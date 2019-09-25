@@ -20,10 +20,6 @@ impl EpochManager {
         }
     }
 
-    pub fn quorum_size(&self) -> usize {
-        self.validators.read().unwrap().quorum_size()
-    }
-
     pub fn validators(&self) -> Arc<ValidatorVerifier> {
         Arc::clone(&self.validators.read().unwrap())
     }

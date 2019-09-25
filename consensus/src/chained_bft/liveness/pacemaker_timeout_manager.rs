@@ -8,7 +8,8 @@ use crate::chained_bft::{
 };
 use logger::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, sync::Arc};
+use types::crypto_proxies::ValidatorVerifier;
 
 #[cfg(test)]
 #[path = "pacemaker_timeout_manager_test.rs"]
@@ -109,30 +110,44 @@ impl PacemakerTimeoutManager {
     /// Returns the highest round PacemakerTimeoutCertificate from a map of author to
     /// timeout messages or None if there are not enough timeout messages available.
     /// A PacemakerTimeoutCertificate is made of the N highest timeout messages received where
-    /// N=timeout_quorum_size.  The round of PacemakerTimeoutCertificate is determined as
+    /// N=timeout_quorum_voting_power.  The round of PacemakerTimeoutCertificate is determined as
     /// the smallest of round of all messages used to generate this certificate.
     ///
-    /// For example, if timeout_certificate_quorum_size=3 and we received unique author timeouts
-    /// for rounds (1,2,3,4), then rounds (2,3,4) would form PacemakerTimeoutCertificate with
-    /// round=2.
+    /// For example, if timeout_certificate quorum_voting_power=3 and we received unique author
+    /// timeouts with equal voting power for rounds (1,2,3,4), then rounds (2,3,4) would form
+    /// PacemakerTimeoutCertificate with round=2.
     fn generate_timeout_certificate(
         author_to_received_timeouts: &HashMap<Author, PacemakerTimeout>,
-        quorum_size: usize,
+        validator_verifier: Arc<ValidatorVerifier>,
     ) -> Option<PacemakerTimeoutCertificate> {
-        if author_to_received_timeouts.values().len() < quorum_size {
-            return None;
+        // Sort the timeouts by round, highest to lowest and then, in order, aggregate
+        // enough voting power to assemble a PacemakerTimeoutCertificate if possible.
+        let mut received_timeouts: Vec<&PacemakerTimeout> =
+            author_to_received_timeouts.values().collect();
+        received_timeouts.sort_by(|x, y| y.round().cmp(&x.round()));
+
+        let mut combined_voting_power = 0;
+        let mut combined_received_timeouts = vec![];
+        for received_timeout in received_timeouts.iter() {
+            match validator_verifier.get_voting_power(&received_timeout.author()) {
+                Some(voting_power) => {
+                    combined_voting_power += voting_power;
+                    combined_received_timeouts.push((*received_timeout).clone());
+                }
+                None => panic!(
+                    "Author {} is not part of validator set and this message should have been rejected before reaching here",
+                    received_timeout.author()
+                ),
+            }
+            if combined_voting_power >= validator_verifier.quorum_voting_power() {
+                return Some(PacemakerTimeoutCertificate::new(
+                    received_timeout.round(),
+                    combined_received_timeouts,
+                ));
+            }
         }
-        let mut values: Vec<&PacemakerTimeout> = author_to_received_timeouts.values().collect();
-        values.sort_by(|x, y| y.round().cmp(&x.round()));
-        let slice = &values[..quorum_size];
-        Some(PacemakerTimeoutCertificate::new(
-            // expect does not panic here because code above verifies values length
-            slice
-                .last()
-                .expect("Slice for timeout certificate is empty")
-                .round(),
-            slice.iter().map(|x| (*x).clone()).collect(),
-        ))
+
+        None
     }
 
     /// Updates internal state according to received message from remote pacemaker and returns true
@@ -140,7 +155,7 @@ impl PacemakerTimeoutManager {
     pub fn update_received_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-        quorum_size: usize,
+        validator_verifier: Arc<ValidatorVerifier>,
     ) -> bool {
         let author = pacemaker_timeout.author();
         let prev_timeout = self.author_to_received_timeouts.get(&author).cloned();
@@ -154,8 +169,10 @@ impl PacemakerTimeoutManager {
 
         self.author_to_received_timeouts
             .insert(author, pacemaker_timeout.clone());
-        let highest_timeout_certificate =
-            Self::generate_timeout_certificate(&self.author_to_received_timeouts, quorum_size);
+        let highest_timeout_certificate = Self::generate_timeout_certificate(
+            &self.author_to_received_timeouts,
+            validator_verifier,
+        );
         let highest_round = match &highest_timeout_certificate {
             Some(tc) => tc.round(),
             None => return false,

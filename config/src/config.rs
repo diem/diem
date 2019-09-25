@@ -11,18 +11,17 @@ use crate::{
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
-use crypto::{ed25519::Ed25519PublicKey, ValidKey};
+use crypto::ValidKey;
 use failure::prelude::*;
 use parity_multiaddr::Multiaddr;
 use proto_conv::FromProtoBytes;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     convert::TryFrom,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
-    str::FromStr,
     string::ToString,
 };
 use toml;
@@ -483,24 +482,6 @@ impl ConsensusConfig {
 
     pub fn pacemaker_initial_timeout_ms(&self) -> &Option<u64> {
         &self.pacemaker_initial_timeout_ms
-    }
-
-    pub fn get_consensus_peers(&self) -> HashMap<PeerId, Ed25519PublicKey> {
-        self.consensus_peers
-            .peers
-            .iter()
-            .map(|(peer_id_str, peer_info)| {
-                (
-                    PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                        panic!(
-                            "Failed to deserialize PeerId: {} from consensus peers config: ",
-                            peer_id_str
-                        )
-                    }),
-                    peer_info.consensus_pubkey.clone(),
-                )
-            })
-            .collect()
     }
 }
 

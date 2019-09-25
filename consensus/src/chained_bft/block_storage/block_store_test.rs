@@ -20,7 +20,9 @@ use futures::executor::block_on;
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
 use types::{
-    account_address::AccountAddress, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
+    account_address::AccountAddress,
+    crypto_proxies::{random_validator_verifier, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
 };
 
 fn build_simple_tree() -> (
@@ -87,7 +89,11 @@ fn test_block_store_create_block() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_store.insert_vote_and_qc(vote_msg, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg, validator_verifier);
 
     let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
@@ -329,15 +335,11 @@ fn test_path_from_root() {
 
 #[test]
 fn test_insert_vote() {
-    // Set up enough different authors to support different votes for the same block.
-    let qc_size = 10;
-    let mut signers = vec![];
-
     ::logger::try_init_for_testing();
-    for i in 0..qc_size {
-        signers.push(ValidatorSigner::random([i as u8; 32]));
-    }
-    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
+    // Set up enough different authors to support different votes for the same block.
+    let (signers, validator_verifier) = random_validator_verifier(11, Some(10), false);
+    let validator_verifier = Arc::new(validator_verifier);
+    let my_signer = signers[10].clone();
     let block_store = build_empty_tree_with_custom_signing(my_signer);
     let genesis = block_store.root();
     let mut inserter = TreeInserter::new(block_store.clone());
@@ -363,13 +365,14 @@ fn test_insert_vote() {
             placeholder_ledger_info(),
             voter,
         );
-        let vote_res = block_store.insert_vote_and_qc(vote_msg.clone(), qc_size);
+        let vote_res =
+            block_store.insert_vote_and_qc(vote_msg.clone(), Arc::clone(&validator_verifier));
 
         // first vote of an author is accepted
-        assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i));
+        assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i as u64));
         // filter out duplicates
         assert_eq!(
-            block_store.insert_vote_and_qc(vote_msg, qc_size),
+            block_store.insert_vote_and_qc(vote_msg, Arc::clone(&validator_verifier)),
             VoteReceptionResult::DuplicateVote,
         );
         // qc is still not there
@@ -396,7 +399,7 @@ fn test_insert_vote() {
         placeholder_ledger_info(),
         final_voter,
     );
-    match block_store.insert_vote_and_qc(vote_msg, qc_size) {
+    match block_store.insert_vote_and_qc(vote_msg, validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert_eq!(qc.certified_block_id(), block.id());
         }
@@ -412,15 +415,10 @@ fn test_insert_vote() {
 #[test]
 /// Verify that votes are properly aggregated based on their LedgerInfo digest
 fn test_vote_aggregation() {
-    let qc_size = 2;
-    let mut signers = vec![];
-
     ::logger::try_init_for_testing();
-
-    for i in 0..=qc_size {
-        signers.push(ValidatorSigner::random([i as u8; 32]));
-    }
-    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
+    let (signers, validator_verifier) = random_validator_verifier(3, Some(2), false);
+    let validator_verifier = Arc::new(validator_verifier);
+    let my_signer = signers[2].clone();
     let block_store = build_empty_tree_with_custom_signing(my_signer);
     let genesis = block_store.root();
     let mut inserter = TreeInserter::new(block_store.clone());
@@ -449,7 +447,7 @@ fn test_vote_aggregation() {
                 li1.clone(),
                 &signers[0]
             ),
-            qc_size
+            Arc::clone(&validator_verifier),
         ),
         VoteReceptionResult::VoteAdded(1)
     );
@@ -471,7 +469,7 @@ fn test_vote_aggregation() {
                 li2.clone(),
                 &signers[1]
             ),
-            qc_size
+            Arc::clone(&validator_verifier),
         ),
         VoteReceptionResult::VoteAdded(1)
     );
@@ -483,7 +481,7 @@ fn test_vote_aggregation() {
             li1.clone(),
             &signers[2],
         ),
-        qc_size,
+        Arc::clone(&validator_verifier),
     ) {
         VoteReceptionResult::NewQuorumCertificate(_) => (),
         _ => {
@@ -495,16 +493,12 @@ fn test_vote_aggregation() {
 #[test]
 /// Verify that we only account for latest vote from Validator and correctly cleanup last vote.
 fn test_malicious_vote_validator() {
-    let qc_size = 2;
-    let mut signers = vec![];
-
     ::logger::try_init_for_testing();
 
-    for i in 0..=qc_size {
-        signers.push(ValidatorSigner::random([i as u8; 32]));
-    }
-    let my_signer = ValidatorSigner::random([qc_size as u8; 32]);
-    let bad_signer = ValidatorSigner::random([3u8; 32]);
+    let (signers, validator_verifier) = random_validator_verifier(4, Some(2), false);
+    let validator_verifier = Arc::new(validator_verifier);
+    let my_signer = signers[2].clone();
+    let bad_signer = signers[3].clone();
 
     let block_store = build_empty_tree_with_custom_signing(my_signer);
     let genesis = block_store.root();
@@ -560,7 +554,7 @@ fn test_malicious_vote_validator() {
                 li0.clone(),
                 &bad_signer
             ),
-            qc_size
+            Arc::clone(&validator_verifier)
         ),
         VoteReceptionResult::VoteAdded(1)
     );
@@ -574,7 +568,7 @@ fn test_malicious_vote_validator() {
                 li1.clone(),
                 &bad_signer
             ),
-            qc_size
+            Arc::clone(&validator_verifier)
         ),
         VoteReceptionResult::VoteAdded(1)
     );
@@ -588,7 +582,7 @@ fn test_malicious_vote_validator() {
                 li0.clone(),
                 &signers[0]
             ),
-            qc_size
+            Arc::clone(&validator_verifier)
         ),
         VoteReceptionResult::VoteAdded(1)
     );
@@ -601,7 +595,7 @@ fn test_malicious_vote_validator() {
             li0.clone(),
             &signers[1],
         ),
-        qc_size,
+        Arc::clone(&validator_verifier),
     ) {
         VoteReceptionResult::NewQuorumCertificate(_) => (),
         _ => {
@@ -617,7 +611,7 @@ fn test_malicious_vote_validator() {
             li1.clone(),
             &signers[0],
         ),
-        qc_size,
+        Arc::clone(&validator_verifier),
     ) {
         VoteReceptionResult::NewQuorumCertificate(_) => (),
         _ => {

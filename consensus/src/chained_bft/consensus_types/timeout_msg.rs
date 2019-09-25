@@ -312,10 +312,7 @@ impl PacemakerTimeoutCertificate {
             let timeout_round = timeout.round();
             min_round = Some(min_round.map_or(timeout_round, move |x| x.min(timeout_round)))
         }
-        ensure!(
-            unique_authors.len() >= validator.quorum_size(),
-            "TimeoutCert has no quorum"
-        );
+        validator.check_voting_power(unique_authors.iter())?;
         ensure!(
             min_round == Some(self.round),
             "TimeoutCert has inconsistent round {}, expected: {:?}",

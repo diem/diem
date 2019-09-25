@@ -71,6 +71,7 @@ use std::{
 use tokio::{codec::Framed, prelude::FutureExt as _};
 use types::{
     crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
+    validator_verifier::ValidatorInfo as SignatureInfo,
     PeerId,
 };
 use unsigned_varint::codec::UviBytes;
@@ -549,13 +550,16 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_size(
+    let verifier = SignatureValidator::new_with_quorum_voting_power(
         trusted_peers
             .read()
             .unwrap()
             .iter()
             .map(|(peer_id, network_public_keys)| {
-                (*peer_id, network_public_keys.signing_public_key.clone())
+                (
+                    *peer_id,
+                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+                )
             })
             .collect(),
         1, /* quorum size */

@@ -17,6 +17,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use types::crypto_proxies::ValidatorVerifier;
 
 fn minute_from_now() -> Instant {
     Instant::now() + Duration::new(60, 0)
@@ -89,7 +90,11 @@ fn test_proposal_generation_parent() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_store.insert_vote_and_qc(vote_msg_a1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_a1, validator_verifier);
     let a1_child_res =
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
@@ -116,8 +121,11 @@ fn test_proposal_generation_parent() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-
-    block_store.insert_vote_and_qc(vote_msg_b1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_b1, validator_verifier);
     let b1_child_res =
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
@@ -157,7 +165,11 @@ fn test_old_proposal_generation() {
         placeholder_ledger_info(),
         block_store.signer(),
     );
-    block_store.insert_vote_and_qc(vote_msg_a1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_a1, validator_verifier);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
     assert!(proposal_err.is_some());
