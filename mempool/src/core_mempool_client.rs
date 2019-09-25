@@ -32,6 +32,22 @@ impl CoreMemPoolClient {
         let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
         CoreMemPoolClient { core_mempool }
     }
+
+    /// remove txn from mock chain
+    pub fn remove_txn(&self, req: &GetBlockRequest) {
+        let exclude_transactions: HashSet<TxnPointer> = req
+            .get_transactions()
+            .iter()
+            .map(|t| (AccountAddress::try_from(t.get_sender()), t.sequence_number))
+            .filter(|(address, _)| address.is_ok())
+            .map(|(address, seq)| (address.unwrap(), seq))
+            .collect();
+
+        let mut lock = self.core_mempool.lock().expect("get lock err.");
+        exclude_transactions.iter().for_each(|(addr, seq_num)| {
+            lock.remove_transaction(addr, seq_num.clone(), true)
+        });
+    }
 }
 
 impl MempoolClientTrait for CoreMemPoolClient {
