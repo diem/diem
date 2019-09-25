@@ -58,7 +58,7 @@ fn compile(path: &Path, additional_includes: &[PathBuf], generate_client_code: b
     let mut includes = additional_includes.to_owned();
     includes.push(parent.to_path_buf());
 
-    ::protoc_grpcio::compile_grpc_protos(&[path], includes.as_slice(), parent)
+    ::protoc_grpcio::compile_grpc_protos(&[path], includes.as_slice(), parent, None)
         .unwrap_or_else(|_| panic!("Failed to compile protobuf input: {:?}", path));
 
     if generate_client_code {
