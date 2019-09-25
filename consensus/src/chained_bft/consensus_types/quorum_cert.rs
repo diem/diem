@@ -34,7 +34,7 @@ impl Display for QuorumCert {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "QuorumCert: [Vote data: {}, {}]",
+            "QuorumCert: [{}, {}]",
             self.vote_data, self.signed_ledger_info
         )
     }

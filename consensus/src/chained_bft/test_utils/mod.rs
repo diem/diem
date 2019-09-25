@@ -12,7 +12,7 @@ use crate::chained_bft::{
 };
 use crypto::{hash::CryptoHash, HashValue};
 use executor::ExecutedState;
-use futures::{channel::mpsc, executor::block_on};
+use futures::executor::block_on;
 use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
@@ -40,13 +40,12 @@ pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
 pub fn build_empty_tree_with_custom_signing(
     my_signer: ValidatorSigner,
 ) -> Arc<BlockStore<Vec<usize>>> {
-    let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
         my_signer,
-        Arc::new(MockStateComputer::new(commit_cb_sender)),
+        Arc::new(EmptyStateComputer),
         true,
         10, // max pruned blocks in mem
     )))

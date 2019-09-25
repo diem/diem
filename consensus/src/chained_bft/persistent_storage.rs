@@ -13,13 +13,14 @@ use crate::{
 };
 use config::config::NodeConfig;
 use crypto::HashValue;
-use failure::Result;
+use failure::{Result, ResultExt};
 use logger::prelude::*;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
+use types::ledger_info::LedgerInfo;
 
 /// Persistent storage for liveness data
 pub trait PersistentLivenessStorage: Send + Sync {
@@ -86,13 +87,15 @@ impl<T: Payload> RecoveryData<T> {
         state: ConsensusState,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
-        root_from_storage: HashValue,
+        storage_ledger: &LedgerInfo,
         highest_timeout_certificates: HighestTimeoutCertificates,
     ) -> Result<Self> {
         let root =
-            Self::find_root(&mut blocks, &mut quorum_certs, root_from_storage).map_err(|e| {
-                format_err!(
-                    "Blocks in db: {}\nQuorum Certs in db: {}, error: {}",
+            Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
+                // for better readability
+                quorum_certs.sort_by_key(QuorumCert::certified_block_round);
+                format!(
+                    "Blocks in db: {}\nQuorum Certs in db: {}\nerror: {}",
                     blocks
                         .iter()
                         .map(|b| format!("\n\t{}", b))
@@ -106,13 +109,14 @@ impl<T: Payload> RecoveryData<T> {
                     e,
                 )
             })?;
+
         let blocks_to_prune = Some(Self::find_blocks_to_prune(
             root.0.id(),
             &mut blocks,
             &mut quorum_certs,
         ));
         // if the root is different than the LI(S).block, we need to sync before start
-        let need_sync = root_from_storage != root.0.id();
+        let need_sync = storage_ledger.consensus_block_id() != root.0.id();
         Ok(RecoveryData {
             state,
             root,
@@ -181,8 +185,14 @@ impl<T: Payload> RecoveryData<T> {
     fn find_root(
         blocks: &mut Vec<Block<T>>,
         quorum_certs: &mut Vec<QuorumCert>,
-        root_from_storage: HashValue,
+        storage_ledger: &LedgerInfo,
     ) -> Result<(Block<T>, QuorumCert, QuorumCert)> {
+        let root_from_storage = storage_ledger.consensus_block_id();
+        info!(
+            "The last committed block id as recorded in storage: {}",
+            root_from_storage
+        );
+
         // sort by round to guarantee the topological order of parent <- child
         blocks.sort_by_key(Block::round);
         let root_from_consensus = {
@@ -234,6 +244,17 @@ impl<T: Payload> RecoveryData<T> {
             .find(|qc| qc.committed_block_id() == Some(root_block.id()))
             .ok_or_else(|| format_err!("No LI found for root: {}", root_id))?
             .clone();
+
+        ensure!(
+            storage_ledger.timestamp_usecs()
+                <= root_ledger_info
+                    .ledger_info()
+                    .ledger_info()
+                    .timestamp_usecs(),
+            "Storage timestamp {} is ahead of root {}",
+            storage_ledger,
+            root_ledger_info.ledger_info().ledger_info(),
+        );
         Ok((root_block, root_quorum_cert, root_ledger_info))
     }
 
@@ -348,17 +369,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let (_, ledger_info, _) = read_client
             .update_to_latest_ledger(0, vec![])
             .expect("unable to read ledger info from storage");
-        let root_from_storage = ledger_info.ledger_info().consensus_block_id();
-        info!(
-            "The last committed block id as recorded in storage: {}",
-            root_from_storage
-        );
-
         let mut initial_data = RecoveryData::new(
             consensus_state,
             blocks,
             quorum_certs,
-            root_from_storage,
+            ledger_info.ledger_info(),
             highest_timeout_certificates,
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));

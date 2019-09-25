@@ -105,7 +105,10 @@ impl SMRNode {
         let mempool = Arc::new(mp);
         smr.start(
             mempool.clone(),
-            Arc::new(MockStateComputer::new(commit_cb_sender.clone())),
+            Arc::new(MockStateComputer::new(
+                commit_cb_sender.clone(),
+                Arc::clone(&storage),
+            )),
         )
         .expect("Failed to start SMR!");
         Self {

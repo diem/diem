@@ -32,6 +32,7 @@ use crate::{
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
         },
     },
+    state_replication::StateComputer,
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
@@ -65,15 +66,14 @@ impl NodeSetup {
     fn build_empty_store(
         signer: ValidatorSigner,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
+        state_computer: Arc<dyn StateComputer<Payload = TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-
         Arc::new(block_on(BlockStore::new(
             storage,
             initial_data,
             signer,
-            Arc::new(MockStateComputer::new(commit_cb_sender)),
+            state_computer,
             true,
             10, // max pruned blocks in mem
         )))
@@ -156,7 +156,18 @@ impl NodeSetup {
         );
         let consensus_state = initial_data.state();
 
-        let block_store = Self::build_empty_store(signer.clone(), storage.clone(), initial_data);
+        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let state_computer = Arc::new(MockStateComputer::new(
+            commit_cb_sender,
+            Arc::clone(&storage),
+        ));
+
+        let block_store = Self::build_empty_store(
+            signer.clone(),
+            storage.clone(),
+            state_computer.clone(),
+            initial_data,
+        );
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
         let proposal_generator = ProposalGenerator::new(
             block_store.clone(),
@@ -170,7 +181,6 @@ impl NodeSetup {
         let pacemaker = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut event_processor = EventProcessor::new(
             author,
             Arc::clone(&block_store),
@@ -178,7 +188,7 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules,
-            Arc::new(MockStateComputer::new(commit_cb_sender)),
+            state_computer,
             Arc::new(MockTransactionManager::new()),
             network,
             storage.clone(),
