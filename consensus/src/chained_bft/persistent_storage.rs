@@ -197,7 +197,7 @@ impl<T: Payload> RecoveryData<T> {
                     qc.committed_block_id()
                         .and_then(|bid| id_to_id_and_round.get(&bid))
                 })
-                .min_by_key(|(_id, round)| round);
+                .max_by_key(|(_id, round)| round);
 
             match root_id_and_round {
                 Some((id, _)) => *id,
