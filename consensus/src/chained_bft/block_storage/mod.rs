@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::{Author, Round},
+    common::Round,
     consensus_types::{
         block::{Block, ExecutedBlock},
         quorum_cert::QuorumCert,
@@ -16,46 +16,6 @@ mod block_tree;
 
 pub use block_store::{BlockStore, NeedFetchResult};
 use executor::StateComputeResult;
-use network::protocols::rpc::error::RpcError;
-
-#[derive(Debug, PartialEq, Fail)]
-/// The possible reasons for failing to retrieve a block by id from a given peer.
-#[derive(Clone)]
-pub enum BlockRetrievalFailure {
-    /// Could not find a given author
-    #[fail(display = "Unknown author: {:?}", author)]
-    #[allow(dead_code)]
-    UnknownAuthor { author: Author },
-
-    /// Any sort of a network failure (should probably have an enum for network failures).
-    #[fail(display = "Network failure: {:?}", msg)]
-    NetworkFailure { msg: String },
-
-    /// The remote peer did not recognize the given block id.
-    #[fail(display = "Block id {:?} not recognized by the peer", block_id)]
-    #[allow(dead_code)]
-    UnknownBlockId { block_id: HashValue },
-
-    /// Cannot retrieve a block from itself
-    #[fail(display = "Attempt of a self block retrieval.")]
-    SelfRetrieval,
-
-    /// The event is not correctly signed.
-    #[fail(display = "InvalidSignature")]
-    InvalidSignature,
-
-    /// The response is not valid: status doesn't match blocks, blocks unable to deserialize etc.
-    #[fail(display = "InvalidResponse")]
-    InvalidResponse,
-}
-
-impl From<RpcError> for BlockRetrievalFailure {
-    fn from(source: RpcError) -> Self {
-        BlockRetrievalFailure::NetworkFailure {
-            msg: source.to_string(),
-        }
-    }
-}
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.

@@ -3,7 +3,6 @@
 
 use crate::{
     chained_bft::{
-        block_storage::BlockRetrievalFailure,
         common::{Author, Payload},
         consensus_types::{
             block::Block,
@@ -46,7 +45,7 @@ pub struct BlockRetrievalResponse<T> {
 }
 
 impl<T: Payload> BlockRetrievalResponse<T> {
-    pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> Result<(), failure::Error> {
+    pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> failure::Result<()> {
         if self.status == BlockRetrievalStatus::SUCCEEDED && self.blocks.len() as u64 != num_blocks
         {
             return Err(format_err!(
@@ -99,8 +98,8 @@ pub struct ConsensusNetworkImpl {
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
-    self_sender: channel::Sender<Result<Event<ConsensusMsg>, failure::Error>>,
-    self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>, failure::Error>>>,
+    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+    self_receiver: Option<channel::Receiver<failure::Result<Event<ConsensusMsg>>>>,
     epoch_mgr: Arc<EpochManager>,
 }
 
@@ -187,10 +186,8 @@ impl ConsensusNetworkImpl {
         num_blocks: u64,
         from: Author,
         timeout: Duration,
-    ) -> Result<BlockRetrievalResponse<T>, BlockRetrievalFailure> {
-        if from == self.author {
-            return Err(BlockRetrievalFailure::SelfRetrieval);
-        }
+    ) -> failure::Result<BlockRetrievalResponse<T>> {
+        ensure!(from != self.author, "Retrieve block from self");
         let mut req_msg = RequestBlock::new();
         req_msg.set_block_id(block_id.into());
         req_msg.set_num_blocks(num_blocks);
@@ -207,15 +204,13 @@ impl ConsensusNetworkImpl {
                 Ok(block) => {
                     block
                         .validate_signatures(self.epoch_mgr.validators().as_ref())
-                        .map_err(|_| BlockRetrievalFailure::InvalidSignature)?;
+                        .map_err(|e| format_err!("Invalid block because of {:?}", e))?;
                     block
                         .verify_well_formed()
-                        .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
+                        .map_err(|e| format_err!("Invalid block because of {:?}", e))?;
                     blocks.push(block);
                 }
-                _ => {
-                    return Err(BlockRetrievalFailure::InvalidResponse);
-                }
+                Err(e) => bail!("Failed to deserialize block because of {:?}", e),
             };
         }
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
@@ -223,9 +218,7 @@ impl ConsensusNetworkImpl {
             status: res_block.get_status(),
             blocks,
         };
-        response
-            .verify(block_id, num_blocks)
-            .map_err(|_| BlockRetrievalFailure::InvalidResponse)?;
+        response.verify(block_id, num_blocks)?;
         Ok(response)
     }
 
@@ -327,7 +320,7 @@ struct NetworkTask<T, S> {
 
 impl<T, S> NetworkTask<T, S>
 where
-    S: Stream<Item = Result<Event<ConsensusMsg>, failure::Error>> + Unpin,
+    S: Stream<Item = failure::Result<Event<ConsensusMsg>>> + Unpin,
     T: Payload,
 {
     pub async fn run(mut self) {
