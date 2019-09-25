@@ -152,7 +152,7 @@ where
             std::str::from_utf8(buffer.as_slice()).unwrap().to_string()
         }
         ParseError::UnrecognizedToken {
-            token: Some((l, tok, r)),
+            token: (l, tok, r),
             expected,
         } => {
             let error = Diagnostic::new(Severity::Error, format!("Unrecognized Token: {}", tok))
