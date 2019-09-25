@@ -6,6 +6,7 @@ pub mod experiments;
 pub mod health;
 pub mod instance;
 pub mod log_prune;
+pub mod prometheus;
 pub mod slack;
 pub mod suite;
 pub mod tx_emitter;
