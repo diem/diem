@@ -23,7 +23,7 @@ git checkout -- '**/seed_peers.config.toml'
 git update-index --refresh
 
 echo "--- Compare configs ---"
-changes=$(git diff-index HEAD -- '**/genesis.blob' '**/consensus_peers.config.toml' '**/node.consensus.keys.toml' '**/network_peers.config.toml' '**/node.network.keys.toml')
+changes=$(git diff-index HEAD -- '**/consensus_peers.config.toml' '**/node.consensus.keys.toml' '**/network_peers.config.toml' '**/node.network.keys.toml')
 if [ -z "$changes" ];
 then
 	# nothing to do
