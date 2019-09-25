@@ -5,6 +5,7 @@ pub mod access_path;
 pub mod account_address;
 pub mod account_config;
 pub mod account_state_blob;
+pub mod block_metadata;
 pub mod byte_array;
 pub mod contract_event;
 pub mod crypto_proxies;
