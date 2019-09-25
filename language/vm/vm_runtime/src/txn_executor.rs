@@ -603,7 +603,7 @@ where
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
-        record_stats! {TXN_PROLOGUE_TIME_TAKEN_HISTOGRAM, {
+        record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
                 self.gas_meter.disable_metering();
                 let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
                 self.gas_meter.enable_metering();
@@ -615,7 +615,7 @@ where
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
-        record_stats! {TXN_EPILOGUE_TIME_TAKEN_HISTOGRAM, {
+        record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
                 self.gas_meter.disable_metering();
                 let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
                 self.gas_meter.enable_metering();
@@ -687,7 +687,7 @@ where
         self.gas_meter
             .charge_transaction_gas(txn_size, &self.execution_stack)?;
         let ret = self.execute_function_impl(func);
-        record_stats!(TXN_EXECUTION_GAS_USAGE_HISTOGRAM.observe(starting_gas as f64));
+        record_stats!(observe | TXN_EXECUTION_GAS_USAGE | starting_gas);
         ret
     }
 
@@ -778,7 +778,7 @@ where
     ) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas: u64 = self
+        let gas_used: u64 = self
             .txn_data
             .max_gas_amount
             .sub(self.gas_meter.remaining_gas())
@@ -786,12 +786,12 @@ where
             .get();
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
-        record_stats!(TXN_TOTAL_GAS_USAGE_HISTOGRAM.observe(gas as f64));
+        record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
 
         Ok(TransactionOutput::new(
             write_set,
             self.event_data.clone(),
-            gas,
+            gas_used,
             match result {
                 Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
                 Err(err) => TransactionStatus::from(err),

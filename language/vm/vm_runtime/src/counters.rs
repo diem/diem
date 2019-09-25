@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{DurationHistogram, OpMetrics};
-use prometheus::{Histogram, IntCounter, IntGauge};
+use metrics::OpMetrics;
+use prometheus::{IntCounter, IntGauge};
 use std::{convert::TryFrom, time::Instant};
 use types::{
     transaction::TransactionStatus,
@@ -16,42 +16,26 @@ const TXN_EXECUTION_DISCARD: &str = "txn.execution.discard";
 const TXN_VERIFICATION_SUCCESS: &str = "txn.verification.success";
 const TXN_VERIFICATION_FAIL: &str = "txn.verification.fail";
 const TXN_BLOCK_COUNT: &str = "txn.block.count";
+pub const TXN_TOTAL_TIME_TAKEN: &str = "txn_gas_total_time_taken";
+pub const TXN_VERIFICATION_TIME_TAKEN: &str = "txn_gas_verification_time_taken";
+pub const TXN_VALIDATION_TIME_TAKEN: &str = "txn_gas_validation_time_taken";
+pub const TXN_EXECUTION_TIME_TAKEN: &str = "txn_gas_execution_time_taken";
+pub const TXN_PROLOGUE_TIME_TAKEN: &str = "txn_gas_prologue_time_taken";
+pub const TXN_EPILOGUE_TIME_TAKEN: &str = "txn_gas_epilogue_time_taken";
+pub const TXN_EXECUTION_GAS_USAGE: &str = "txn_gas_execution_gas_usage";
+pub const TXN_TOTAL_GAS_USAGE: &str = "txn_gas_total_gas_usage";
 
 lazy_static::lazy_static! {
     // the main metric (move_vm)
-    static ref VM_COUNTERS: OpMetrics = OpMetrics::new_and_registered("move_vm");
+    pub static ref VM_COUNTERS: OpMetrics = OpMetrics::new_and_registered("move_vm");
 
     static ref VERIFIED_TRANSACTION: IntCounter = VM_COUNTERS.counter(TXN_VERIFICATION_SUCCESS);
     static ref BLOCK_TRANSACTION_COUNT: IntGauge = VM_COUNTERS.gauge(TXN_BLOCK_COUNT);
-
-    pub static ref TXN_TOTAL_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.total.time_taken");
-    pub static ref TXN_VERIFICATION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.verification.time_taken");
-    pub static ref TXN_VALIDATION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.validation.time_taken");
-    pub static ref TXN_EXECUTION_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.execution.time_taken");
-    pub static ref TXN_PROLOGUE_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.prologue.time_taken");
-    pub static ref TXN_EPILOGUE_TIME_TAKEN_HISTOGRAM: DurationHistogram = VM_COUNTERS.duration_histogram("txn.gas.epilogue.time_taken");
-    pub static ref TXN_TOTAL_GAS_USAGE_HISTOGRAM: Histogram = VM_COUNTERS.histogram("txn.gas.total.gas_usage");
-    pub static ref TXN_EXECUTION_GAS_USAGE_HISTOGRAM: Histogram = VM_COUNTERS.histogram("txn.gas.execution.gas_usage");
 }
 
+/// Wrapper around time::Instant.
 pub fn start_profile() -> Instant {
     Instant::now()
-}
-
-// All statistics gather operations for the time taken/gas usage should go through this macro. This
-// gives us the ability to turn these metrics on and off easily from one place.
-#[macro_export]
-macro_rules! record_stats {
-    ($e:expr) => {
-        $e
-    };
-    ($histrogram:expr, $block:block) => {{
-        let timer = start_profile();
-        let tmp = $block;
-        let duration = timer.elapsed();
-        $histrogram.observe_duration(duration);
-        tmp
-    }};
 }
 
 /// Reports the number of transactions in a block.
@@ -60,6 +44,54 @@ pub fn report_block_count(count: usize) {
         Ok(val) => BLOCK_TRANSACTION_COUNT.set(val),
         Err(_) => BLOCK_TRANSACTION_COUNT.set(std::i64::MAX),
     }
+}
+
+// All statistics gather operations for the time taken/gas usage should go through this macro. This
+// gives us the ability to turn these metrics on and off easily from one place.
+#[macro_export]
+macro_rules! record_stats {
+    // Gather some information that is only needed in relation to recording statistics
+    (info | $($stmt:stmt);+;) => {
+        $($stmt);+;
+    };
+    // Set the $ident gauge to $amount
+    (gauge set | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.set($ident, $amount as f64)
+    };
+    // Increment the $ident gauge by $amount
+    (gauge inc | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.add($ident, $amount as f64)
+    };
+    // Decrement the $ident gauge by $amount
+    (gauge dec | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.sub($ident, $amount as f64)
+    };
+    // Set the $ident gauge to $amount
+    (counter set | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.set($ident, $amount as f64)
+    };
+    // Increment the $ident gauge by $amount
+    (counter inc | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.add($ident, $amount as f64)
+    };
+    // Decrement the $ident gauge by $amount
+    (counter dec | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.sub($ident, $amount as f64)
+    };
+    // Set the gas histogram for $ident to be $amount.
+    (observe | $ident:ident | $amount:expr) => {
+        VM_COUNTERS.observe($ident, $amount as f64)
+    };
+    // Per-block info: time and record the amount of time it took to execute $block under the
+    // $ident histogram. NB that this does not provide per-transaction level information, but will
+    // only per-block information.
+    (time_hist | $ident:ident | $block:block) => {{
+        let timer = start_profile();
+        let tmp = $block;
+        let duration = timer.elapsed();
+        VM_COUNTERS.observe_duration($ident, duration);
+        tmp
+    }};
 }
 
 /// Reports the result of a transaction execution.
