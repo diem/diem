@@ -10,9 +10,5 @@ fn main() {
     let proto_root = "src";
     let dependent_root = "../types/src/proto";
 
-    build_helpers::build_helpers::compile_proto(
-        proto_root,
-        vec![dependent_root],
-        false, /* generate_client_stub */
-    );
+    build_helpers::build_helpers::compile_proto(proto_root, vec![dependent_root]);
 }

@@ -9,5 +9,3 @@ edition = "2018"
 [dependencies]
 protoc-grpcio = "1.0.2"
 walkdir = "2.2.8"
-
-grpcio-client = { path = "../grpcio-client" }

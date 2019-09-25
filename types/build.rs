@@ -9,9 +9,5 @@
 fn main() {
     let proto_root = "src/proto";
 
-    build_helpers::build_helpers::compile_proto(
-        proto_root,
-        vec![], /* dependent roots */
-        false,  /* generate_client_stub */
-    );
+    build_helpers::build_helpers::compile_proto(proto_root, vec![] /* dependent roots */);
 }

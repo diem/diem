@@ -14,6 +14,5 @@ fn main() {
     build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![dependent_root, mempool_dependent_root],
-        true,
     );
 }
