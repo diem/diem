@@ -55,7 +55,7 @@ impl ExecutorProxy {
             &config.storage.address,
             config.storage.port,
         ));
-        let validator_verifier = ValidatorVerifier::new(config.consensus.get_consensus_peers());
+        let validator_verifier = config.consensus.consensus_peers.get_validator_verifier();
         Self {
             storage_read_client,
             executor,

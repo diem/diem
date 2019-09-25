@@ -21,9 +21,9 @@ use executor::StateComputeResult;
 /// as the Error part of the result.
 #[derive(Debug, PartialEq)]
 pub enum VoteReceptionResult {
-    /// The vote has been added but QC has not been formed yet. Return the number of votes for
+    /// The vote has been added but QC has not been formed yet. Return the amount of voting power
     /// the given (proposal, execution) pair.
-    VoteAdded(usize),
+    VoteAdded(u64),
     /// The very same vote message has been processed in past.
     DuplicateVote,
     /// This block has been already certified.

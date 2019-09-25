@@ -47,9 +47,11 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use proto_conv::FromProto;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use types::crypto_proxies::{
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+};
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
@@ -105,16 +107,9 @@ impl NodeSetup {
         executor: TaskExecutor,
         num_nodes: usize,
     ) -> Vec<NodeSetup> {
-        let mut signers = vec![];
-        let mut author_to_public_keys = HashMap::new();
-        for i in 0..num_nodes {
-            let signer = ValidatorSigner::random([i as u8; 32]);
-            author_to_public_keys.insert(signer.author(), signer.public_key());
-            signers.push(signer);
-        }
+        let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
-        let validators = ValidatorVerifier::new(author_to_public_keys);
-        let epoch_mgr = Arc::new(EpochManager::new(0, validators));
+        let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
@@ -286,7 +281,12 @@ fn basic_new_rank_event_test() {
             placeholder_ledger_info(),
             node.block_store.signer(),
         );
-        node.block_store.insert_vote_and_qc(vote_msg, 0);
+        let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+            node.block_store.signer().author(),
+            node.block_store.signer().public_key(),
+        ));
+        node.block_store
+            .insert_vote_and_qc(vote_msg, validator_verifier);
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,

@@ -16,8 +16,11 @@ use std::{
     str::FromStr,
 };
 use types::{
-    account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys,
+    account_address::AccountAddress,
+    crypto_proxies::{ValidatorInfo, ValidatorVerifier},
+    validator_public_keys::ValidatorPublicKeys,
     validator_set::ValidatorSet,
+    PeerId,
 };
 
 #[cfg(test)]
@@ -102,6 +105,26 @@ impl ConsensusPeersConfig {
         // time. Sort by account address to produce a canonical ordering
         keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
         ValidatorSet::new(keys)
+    }
+
+    pub fn get_validator_verifier(&self) -> ValidatorVerifier {
+        ValidatorVerifier::new(
+            self.peers
+                .iter()
+                .map(|(peer_id_str, peer_info)| {
+                    (
+                        PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
+                            panic!(
+                                "Failed to deserialize PeerId: {} from consensus peers config: ",
+                                peer_id_str
+                            )
+                        }),
+                        // TODO: Add support for dynamic voting weights in config
+                        ValidatorInfo::new(peer_info.consensus_pubkey.clone(), 1),
+                    )
+                })
+                .collect(),
+        )
     }
 }
 

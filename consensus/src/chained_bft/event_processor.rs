@@ -275,12 +275,11 @@ impl<T: Payload> EventProcessor<T> {
             return;
         };
         if let Some(vote) = timeout_msg.pacemaker_timeout().vote_msg() {
-            self.add_vote(vote.clone(), self.epoch_mgr.quorum_size())
-                .await;
+            self.add_vote(vote.clone()).await;
         }
         if let Some(new_round_event) = self.pacemaker.process_remote_timeout(
             timeout_msg.pacemaker_timeout().clone(),
-            self.epoch_mgr.quorum_size(),
+            self.epoch_mgr.validators(),
         ) {
             self.process_new_round_event(new_round_event).await;
         }
@@ -707,7 +706,7 @@ impl<T: Payload> EventProcessor<T> {
             return;
         }
 
-        self.add_vote(vote_msg, self.epoch_mgr.quorum_size()).await;
+        self.add_vote(vote_msg).await;
     }
 
     /// Add a vote. Fetch missing dependencies if required.
@@ -718,13 +717,14 @@ impl<T: Payload> EventProcessor<T> {
     /// 2) pass the new QC to the pacemaker, which can generate a new round in return.
     /// The function returns an Option for a newly generate QuorumCert in case it's been
     /// successfully added with all its dependencies.
-    async fn add_vote(&mut self, vote: VoteMsg, quorum_size: usize) -> Option<Arc<QuorumCert>> {
+    async fn add_vote(&mut self, vote: VoteMsg) -> Option<Arc<QuorumCert>> {
         let deadline = self.pacemaker.current_round_deadline();
         let preferred_peer = vote.author();
         // TODO [Reconfiguration] Verify epoch of the vote message.
         // Add the vote and check whether it completes a new QC.
-        if let VoteReceptionResult::NewQuorumCertificate(qc) =
-            self.block_store.insert_vote(vote, quorum_size)
+        if let VoteReceptionResult::NewQuorumCertificate(qc) = self
+            .block_store
+            .insert_vote(vote, self.epoch_mgr.validators())
         {
             if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
                 if let Err(e) = self

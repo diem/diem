@@ -123,12 +123,17 @@ impl ChainedBftProvider {
         let signer = ValidatorSigner::new(author, private_key);
         // Keeping the initial set of validators in a node config is embarrassing and we should
         // all feel bad about it.
-        let peers_with_public_keys = node_config.consensus.get_consensus_peers();
-        let validator = ValidatorVerifier::new(peers_with_public_keys);
+        let validator = node_config
+            .consensus
+            .consensus_peers
+            .get_validator_verifier();
         counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_size() as i64);
-        debug!("[Consensus]: quorum_size = {:?}", validator.quorum_size());
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
+        debug!(
+            "[Consensus]: quorum_size = {:?}",
+            validator.quorum_voting_power()
+        );
         InitialSetup {
             author,
             signer,

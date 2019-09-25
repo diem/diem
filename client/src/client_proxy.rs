@@ -37,7 +37,6 @@ use types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    crypto_proxies::ValidatorVerifier,
     transaction::{
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
         TransactionPayload, Version,
@@ -114,23 +113,13 @@ impl ClientProxy {
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
-        let validators = ConsensusPeersConfig::load_config(Path::new(validator_set_file)).peers;
-        ensure!(
-            !validators.is_empty(),
-            "Not able to load validators from trusted peers config!"
+        let validator_verifier = Arc::new(
+            ConsensusPeersConfig::load_config(validator_set_file).get_validator_verifier(),
         );
-        // Total 3f + 1 validators, 2f + 1 correct signatures are required.
-        // If < 4 validators, all validators have to agree.
-        let validator_pubkeys: HashMap<AccountAddress, Ed25519PublicKey> = validators
-            .into_iter()
-            .map(|(peer_id_str, peer_info)| {
-                (
-                    AccountAddress::from_str(&peer_id_str).unwrap(),
-                    peer_info.consensus_pubkey,
-                )
-            })
-            .collect();
-        let validator_verifier = Arc::new(ValidatorVerifier::new(validator_pubkeys));
+        ensure!(
+            !validator_verifier.is_empty(),
+            "Not able to load any validators from trusted peers config!"
+        );
         let client = GRPCClient::new(host, ac_port, validator_verifier)?;
 
         let accounts = vec![];

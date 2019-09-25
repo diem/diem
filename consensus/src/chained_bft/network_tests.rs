@@ -27,7 +27,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::TaskExecutor;
-use types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 
 /// `NetworkPlayground` mocks the network implementation and provides convenience
 /// methods for testing. Test clients can use `wait_for_messages` or
@@ -303,27 +302,19 @@ impl DropConfig {
     }
 }
 
+#[cfg(test)]
+use types::crypto_proxies::random_validator_verifier;
+
 #[test]
 fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
-    let mut peers = Vec::new();
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
-    let mut author_to_public_keys = HashMap::new();
-    let mut signers = Vec::new();
-    for i in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random([i as u8; 32]);
-        author_to_public_keys.insert(
-            random_validator_signer.author(),
-            random_validator_signer.public_key(),
-        );
-        peers.push(random_validator_signer.author());
-        signers.push(random_validator_signer);
-    }
-    let validator = ValidatorVerifier::new(author_to_public_keys);
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
+    let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
+    let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
+    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
     for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -384,33 +375,22 @@ fn test_network_api() {
 fn test_rpc() {
     let runtime = consensus_runtime();
     let num_nodes = 2;
-    let mut peers = Arc::new(Vec::new());
     let mut senders = Vec::new();
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
-    let mut author_to_public_keys = HashMap::new();
-    for i in 0..num_nodes {
-        let random_validator_signer = ValidatorSigner::random([i as u8; 32]);
-        author_to_public_keys.insert(
-            random_validator_signer.author(),
-            random_validator_signer.public_key(),
-        );
-        Arc::get_mut(&mut peers)
-            .unwrap()
-            .push(random_validator_signer.author());
-    }
-    let validator = ValidatorVerifier::new(author_to_public_keys);
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
-    for i in 0..num_nodes {
+    let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
+    let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
+    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+    for peer in peers.iter() {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
-        playground.add_node(peers[i], consensus_tx, network_reqs_rx);
+        playground.add_node(*peer, consensus_tx, network_reqs_rx);
         let mut node = ConsensusNetworkImpl::new(
-            peers[i],
+            *peer,
             network_sender.clone(),
             network_events,
             Arc::clone(&epoch_mgr),

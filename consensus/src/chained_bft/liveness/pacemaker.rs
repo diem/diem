@@ -21,6 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 use termion::color::*;
+use types::crypto_proxies::ValidatorVerifier;
 
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
 #[derive(Eq, Debug, PartialEq)]
@@ -328,11 +329,11 @@ impl Pacemaker {
     pub fn process_remote_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-        quorum_size: usize,
+        validator_verifier: Arc<ValidatorVerifier>,
     ) -> Option<NewRoundEvent> {
         if self
             .pacemaker_timeout_manager
-            .update_received_timeout(pacemaker_timeout, quorum_size)
+            .update_received_timeout(pacemaker_timeout, validator_verifier)
         {
             self.update_current_round()
         } else {

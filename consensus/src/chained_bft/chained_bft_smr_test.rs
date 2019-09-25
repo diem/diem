@@ -32,9 +32,9 @@ use crate::chained_bft::{
 use config::config::ConsensusProposerType::{
     self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
 };
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
 use tokio::runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use types::crypto_proxies::{random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -146,24 +146,12 @@ impl SMRNode {
 
     fn start_num_nodes(
         num_nodes: usize,
-        quorum_size: usize,
+        quorum_voting_power: u64,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
     ) -> Vec<Self> {
-        let mut signers = vec![];
-        let mut author_to_public_keys = HashMap::new();
-        for smr_id in 0..num_nodes {
-            // 0 -> [0000], 1 -> [1000] in the logs
-            let random_validator_signer = ValidatorSigner::from_int(smr_id as u8);
-            author_to_public_keys.insert(
-                random_validator_signer.author(),
-                random_validator_signer.public_key(),
-            );
-            signers.push(random_validator_signer);
-        }
-        let validator_verifier =
-            ValidatorVerifier::new_with_quorum_size(author_to_public_keys, quorum_size)
-                .expect("Invalid quorum_size.");
+        let (mut signers, validator_verifier) =
+            random_validator_verifier(num_nodes, Some(quorum_voting_power), true);
         let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
         let peers = epoch_mgr.validators().get_ordered_account_addresses();
         let proposer = {
@@ -266,10 +254,19 @@ fn start_with_proposal_test() {
     });
 }
 
-fn basic_full_round(num_nodes: usize, quorum_size: usize, proposer_type: ConsensusProposerType) {
+fn basic_full_round(
+    num_nodes: usize,
+    quorum_voting_power: u64,
+    proposer_type: ConsensusProposerType,
+) {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
-    let _nodes = SMRNode::start_num_nodes(num_nodes, quorum_size, &mut playground, proposer_type);
+    let _nodes = SMRNode::start_num_nodes(
+        num_nodes,
+        quorum_voting_power,
+        &mut playground,
+        proposer_type,
+    );
 
     // In case we're using multi-proposer, every proposal and vote is sent to two participants.
     let num_messages_to_send = if proposer_type == MultipleOrderedProposers {

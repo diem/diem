@@ -25,7 +25,10 @@ use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
 };
-use types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
+use types::{
+    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 
 #[cfg(test)]
 #[path = "block_store_test.rs"]
@@ -278,11 +281,15 @@ impl<T: Payload> BlockStore<T> {
     /// Different execution ids are treated as different blocks (e.g., if some proposal is
     /// executed in a non-deterministic fashion due to a bug, then the votes for execution result
     /// A and the votes for execution result B are aggregated separately).
-    pub fn insert_vote(&self, vote_msg: VoteMsg, min_votes_for_qc: usize) -> VoteReceptionResult {
+    pub fn insert_vote(
+        &self,
+        vote_msg: VoteMsg,
+        validator_verifier: Arc<ValidatorVerifier>,
+    ) -> VoteReceptionResult {
         self.inner
             .write()
             .unwrap()
-            .insert_vote(&vote_msg, min_votes_for_qc)
+            .insert_vote(&vote_msg, validator_verifier)
     }
 
     /// Prune the tree up to next_root_id (keep next_root_id's block).  Any branches not part of
@@ -479,8 +486,12 @@ impl<T: Payload> BlockStore<T> {
 
     /// Helper to insert vote and qc
     /// Can't be used in production, because production insertion potentially requires state sync
-    pub fn insert_vote_and_qc(&self, vote_msg: VoteMsg, qc_size: usize) -> VoteReceptionResult {
-        let r = self.insert_vote(vote_msg, qc_size);
+    pub fn insert_vote_and_qc(
+        &self,
+        vote_msg: VoteMsg,
+        validator_verifier: Arc<ValidatorVerifier>,
+    ) -> VoteReceptionResult {
+        let r = self.insert_vote(vote_msg, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {
             self.insert_single_quorum_cert(qc.as_ref().clone()).unwrap();
         }
