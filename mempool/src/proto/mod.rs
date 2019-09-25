@@ -7,6 +7,5 @@ use crate::proto::shared::*;
 use types::proto::*;
 
 pub mod mempool;
-pub mod mempool_client;
 pub mod mempool_grpc;
 pub mod shared;
