@@ -8,7 +8,7 @@ use crate::chained_bft::{
 };
 use logger::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 #[cfg(test)]
 #[path = "pacemaker_timeout_manager_test.rs"]
@@ -21,6 +21,17 @@ pub struct HighestTimeoutCertificates {
     highest_local_timeout_certificate: Option<PacemakerTimeoutCertificate>,
     // Highest timeout certificate received from another replica
     highest_received_timeout_certificate: Option<PacemakerTimeoutCertificate>,
+}
+
+impl fmt::Display for HighestTimeoutCertificates {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "HighestTC: {}",
+            self.highest_timeout_certificate()
+                .map_or("None".to_string(), |tc| tc.to_string())
+        )
+    }
 }
 
 impl HighestTimeoutCertificates {

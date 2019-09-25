@@ -331,7 +331,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
                 .expect("unable to bootstrap the storage with genesis block");
         }
         let blocks_repr: Vec<String> = blocks.iter().map(|b| format!("\n\t{}", b)).collect();
-        debug!(
+        info!(
             "The following blocks were restored from ConsensusDB : {}",
             blocks_repr.concat()
         );
@@ -339,8 +339,8 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .iter()
             .map(|qc| format!("\n\t{}", qc))
             .collect();
-        debug!(
-            "The following blocks were restored from ConsensusDB: {}",
+        info!(
+            "The following quorum certs were restored from ConsensusDB: {}",
             qc_repr.concat()
         );
 
@@ -349,7 +349,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .update_to_latest_ledger(0, vec![])
             .expect("unable to read ledger info from storage");
         let root_from_storage = ledger_info.ledger_info().consensus_block_id();
-        debug!(
+        info!(
             "The last committed block id as recorded in storage: {}",
             root_from_storage
         );
@@ -366,7 +366,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         <dyn PersistentStorage<T>>::prune_tree(proxy.as_ref(), initial_data.take_blocks_to_prune())
             .expect("unable to prune dangling blocks during restart");
 
-        debug!("Consensus root to start with: {}", initial_data.root.0);
+        info!("Consensus root to start with: {}", initial_data.root.0);
 
         if initial_data.need_sync {
             info!("Consensus recovery done but additional state synchronization is required.");
