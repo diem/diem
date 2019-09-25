@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    block_storage::{BlockReader, BlockStore, InsertError, NeedFetchResult, VoteReceptionResult},
+    block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
     common::Author,
     consensus_types::{
         block::{block_test, Block, ExecutedBlock},
@@ -190,9 +190,10 @@ proptest! {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {
                 let known_parent = block_store.block_exists(block.parent_id());
                 let certified_parent = block.quorum_cert().certified_block_id() == block.parent_id();
+                let verify_res = block.verify_well_formed();
                 let res = block_on(block_store.execute_and_insert_block(block.clone()));
                 if !certified_parent {
-                    prop_assert_eq!(res.err(), Some(InsertError::ParentNotCertified));
+                    prop_assert!(verify_res.is_err());
                 } else if !known_parent {
                     // We cannot really bring blocks in this test because the block retrieval
                     // functionality invokes event processing, which is not setup here.
@@ -202,9 +203,9 @@ proptest! {
                     // The parent must be present if we get to this line.
                     let parent = block_store.get_block(block.parent_id()).unwrap();
                     if block.height() != parent.height() + 1 {
-                        prop_assert_eq!(res.err(), Some(InsertError::InvalidBlockHeight));
+                        prop_assert!(res.is_err());
                     } else if block.round() <= parent.round() {
-                        prop_assert_eq!(res.err(), Some(InsertError::InvalidBlockRound));
+                        prop_assert!(res.is_err());
                     } else {
                         let executed_block = res.unwrap();
                         prop_assert_eq!(executed_block.block(),
@@ -641,7 +642,6 @@ fn test_illegal_timestamp() {
     );
     let result = block_on(block_store.execute_and_insert_block(block_with_illegal_timestamp));
     assert!(result.is_err());
-    assert_eq!(result.err().unwrap(), InsertError::NonIncreasingTimestamp);
 }
 
 #[test]

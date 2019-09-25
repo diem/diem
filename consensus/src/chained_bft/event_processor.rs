@@ -5,9 +5,7 @@
 use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
-        block_storage::{
-            BlockReader, BlockStore, InsertError, NeedFetchResult, VoteReceptionResult,
-        },
+        block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
         common::{Author, Payload, Round},
         consensus_types::{
             block::Block,
@@ -36,6 +34,7 @@ use crate::{
     },
 };
 use crypto::HashValue;
+use failure::ResultExt;
 use logger::prelude::*;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
@@ -524,7 +523,8 @@ impl<T: Payload> EventProcessor<T> {
         let certified_parent_block_round = proposal.quorum_cert().parent_block_round();
 
         let vote_msg = match self.execute_and_vote(proposal).await {
-            Err(_) => {
+            Err(e) => {
+                warn!("{:?}", e);
                 return;
             }
             Ok(vote_msg) => vote_msg,
@@ -633,35 +633,27 @@ impl<T: Payload> EventProcessor<T> {
             .sync_manager
             .execute_and_insert_block(proposed_block)
             .await
-            .map_err(|e| {
-                debug!("Failed to execute_and_insert the block: {:?}", e);
-                e
-            })?;
+            .with_context(|e| format!("Failed to execute_and_insert the block: {:?}", e))?;
         let block = executed_block.block();
         // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
-        if self.pacemaker.current_round() != block.round() {
-            debug!(
-                "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposed_block: {}",
-                block,
-                self.pacemaker.current_round(),
-                block.round(),
-            );
-            return Err(InsertError::InvalidBlockRound.into());
-        }
+        ensure!(
+            block.round() == self.pacemaker.current_round(),
+            "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposed_block: {}",
+            block,
+            self.pacemaker.current_round(),
+            block.round(),
+        );
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
-        let vote_info = self.safety_rules.voting_rule(block).map_err(|e| {
-            debug!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e);
-            e
-        })?;
+        let vote_info = self
+            .safety_rules
+            .voting_rule(block)
+            .map_err(|e| format_err!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone())
-            .map_err(|e| {
-                debug!("Fail to persist consensus state: {:?}", e);
-                e
-            })?;
+            .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
 
         let proposal_id = vote_info.proposal_id();
         let executed_state_id = self

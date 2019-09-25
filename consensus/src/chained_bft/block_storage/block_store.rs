@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{block_tree::BlockTree, BlockReader, InsertError, VoteReceptionResult},
+        block_storage::{block_tree::BlockTree, BlockReader, VoteReceptionResult},
         common::{Payload, Round},
         consensus_types::{
             block::{Block, ExecutedBlock},
@@ -15,10 +15,10 @@ use crate::{
     state_replication::StateComputer,
 };
 use crypto::HashValue;
+use failure::ResultExt;
 use logger::prelude::*;
 
 use crate::chained_bft::persistent_storage::RecoveryData;
-use crypto::hash::CryptoHash;
 use executor::StateComputeResult;
 use mirai_annotations::checked_precondition;
 use std::{
@@ -178,7 +178,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<ExecutedBlock<T>>, InsertError> {
+    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
@@ -196,20 +196,13 @@ impl<T: Payload> BlockStore<T> {
             .state_computer
             .compute(parent_id, block.id(), block.get_payload())
             .await
-            .map_err(|e| {
-                error!("Execution failure for block {}: {:?}", block, e);
-                InsertError::StateComputerError
-            })?;
+            .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?;
 
         self.storage
             .save_tree(vec![block.clone()], vec![])
-            .map_err(|_| InsertError::StorageFailure)?;
+            .with_context(|e| format!("Insert block failed with {:?} when saving block", e))?;
         let new_block = ExecutedBlock::new(block, compute_res);
-        self.inner
-            .write()
-            .unwrap()
-            .insert_block(new_block)
-            .map_err(|e| e.into())
+        self.inner.write().unwrap().insert_block(new_block)
     }
 
     /// Check if we're far away from this ledger info and need to sync.
@@ -251,7 +244,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
-    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> Result<(), InsertError> {
+    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> failure::Result<()> {
         // If the parent block is not the root block (i.e not None), ensure the executed state
         // of a block is consistent with its QuorumCert, otherwise persist the QuorumCert's
         // state and on restart, a new execution will agree with it.  A new execution will match
@@ -271,12 +264,8 @@ impl<T: Payload> BlockStore<T> {
 
         self.storage
             .save_tree(vec![], vec![qc.clone()])
-            .map_err(|_| InsertError::StorageFailure)?;
-        self.inner
-            .write()
-            .unwrap()
-            .insert_quorum_cert(qc)
-            .map_err(|e| e.into())
+            .with_context(|e| format!("Insert block failed with {:?} when saving quorum", e))?;
+        self.inner.write().unwrap().insert_quorum_cert(qc)
     }
 
     /// Adds a vote for the block.
@@ -376,36 +365,26 @@ impl<T: Payload> BlockStore<T> {
         )
     }
 
-    fn verify_and_get_parent_id(&self, block: &Block<T>) -> Result<HashValue, InsertError> {
-        if block.round() <= self.inner.read().unwrap().root().round() {
-            return Err(InsertError::OldBlock);
-        }
-
-        let block_hash = block.hash();
-        if block.id() != block_hash {
-            return Err(InsertError::InvalidBlockHash);
-        }
-
-        if block.quorum_cert().certified_block_id() != block.parent_id() {
-            return Err(InsertError::ParentNotCertified);
-        }
+    fn verify_and_get_parent_id(&self, block: &Block<T>) -> failure::Result<HashValue> {
+        ensure!(
+            self.inner.read().unwrap().root().round() < block.round(),
+            "Block with old round"
+        );
 
         let parent = match self.get_block(block.parent_id()) {
-            None => {
-                return Err(InsertError::MissingParentBlock(block.parent_id()));
-            }
+            None => bail!("Block with missing parent {}", block.parent_id()),
             Some(parent) => parent,
         };
-        if parent.height() + 1 != block.height() {
-            return Err(InsertError::InvalidBlockHeight);
-        }
-        if parent.round() >= block.round() {
-            return Err(InsertError::InvalidBlockRound);
-        }
-        if self.enforce_increasing_timestamps && block.timestamp_usecs() <= parent.timestamp_usecs()
-        {
-            return Err(InsertError::NonIncreasingTimestamp);
-        }
+        ensure!(
+            parent.height() + 1 == block.height(),
+            "Block with invalid height"
+        );
+        ensure!(parent.round() < block.round(), "Block with invalid round");
+        ensure!(
+            !self.enforce_increasing_timestamps
+                || block.timestamp_usecs() > parent.timestamp_usecs(),
+            "Block with non-increasing timestamp"
+        );
 
         Ok(parent.id())
     }
@@ -511,7 +490,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_block_with_qc(
         &self,
         block: Block<T>,
-    ) -> Result<Arc<ExecutedBlock<T>>, InsertError> {
+    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }
