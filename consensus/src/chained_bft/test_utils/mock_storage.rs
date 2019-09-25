@@ -15,6 +15,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+use types::ledger_info::LedgerInfo;
 
 pub struct MockSharedStorage<T> {
     // Safety state
@@ -30,11 +31,20 @@ pub struct MockSharedStorage<T> {
 /// consistency.
 pub struct MockStorage<T> {
     pub shared_storage: Arc<MockSharedStorage<T>>,
+    storage_ledger: Mutex<LedgerInfo>,
 }
 
 impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
-        MockStorage { shared_storage }
+        MockStorage {
+            shared_storage,
+            storage_ledger: Mutex::new(
+                QuorumCert::certificate_for_genesis()
+                    .ledger_info()
+                    .ledger_info()
+                    .clone(),
+            ),
+        }
     }
 
     pub fn get_recovery_data(&self) -> Result<RecoveryData<T>> {
@@ -56,21 +66,26 @@ impl<T: Payload> MockStorage<T> {
             .into_iter()
             .map(|(_, v)| v)
             .collect();
-        // There is no root_from_storage in MockStorage(unit tests), hence we use the consensus
-        // root value;
         blocks.sort_by_key(Block::round);
-        let root_from_storage = blocks[0].id();
         RecoveryData::new(
             self.shared_storage.state.lock().unwrap().clone(),
             blocks,
             quorum_certs,
-            root_from_storage,
+            &self.storage_ledger.lock().unwrap(),
             self.shared_storage
                 .highest_timeout_certificates
                 .lock()
                 .unwrap()
                 .clone(),
         )
+    }
+
+    pub fn commit_to_storage(&self, ledger: LedgerInfo) {
+        *self.storage_ledger.lock().unwrap() = ledger;
+
+        if let Err(e) = self.verify_consistency() {
+            panic!("invalid db after commit: {}", e);
+        }
     }
 
     pub fn verify_consistency(&self) -> Result<()> {
@@ -99,9 +114,7 @@ impl<T: Payload> PersistentLivenessStorage for MockStorage<T> {
 // A impl that always start from genesis.
 impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
     fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
-        Box::new(MockStorage {
-            shared_storage: Arc::clone(&self.shared_storage),
-        })
+        Box::new(MockStorage::new(Arc::clone(&self.shared_storage)))
     }
 
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
@@ -148,9 +161,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
             state: Mutex::new(ConsensusState::default()),
             highest_timeout_certificates: Mutex::new(HighestTimeoutCertificates::new(None, None)),
         });
-        let storage = MockStorage {
-            shared_storage: Arc::clone(&shared_storage),
-        };
+        let storage = MockStorage::new(Arc::clone(&shared_storage));
 
         // The current assumption is that the genesis block version is 0.
         storage
@@ -207,8 +218,8 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
             RecoveryData::new(
                 ConsensusState::default(),
                 vec![genesis],
-                vec![genesis_qc],
-                HashValue::random(),
+                vec![genesis_qc.clone()],
+                genesis_qc.ledger_info().ledger_info(),
                 htc,
             )
             .unwrap(),
