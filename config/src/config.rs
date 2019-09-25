@@ -663,7 +663,7 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        Self::get_single_node_test_config_publish_options(random_ports, None)
+        Self::get_single_node_test_config_publish_options(random_ports, Some(VMPublishingOption::Open))
     }
 
     /// Returns a simple test config for single node. It does not have correct network_peers_file,
