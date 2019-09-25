@@ -27,7 +27,9 @@ use generate_keypair::load_key_from_file;
 use itertools::zip;
 use proto_conv::FromProto;
 use rand::{
+    prelude::ThreadRng,
     rngs::{EntropyRng, StdRng},
+    seq::SliceRandom,
     Rng, SeedableRng,
 };
 use types::{
@@ -86,13 +88,17 @@ impl TxEmitter {
         }
         println!("Mint is done");
         let mut join_handles = vec![];
+        let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
+        let all_addresses = Arc::new(all_addresses);
         let mut all_accounts = all_accounts.into_iter();
         for (index, (instance, client)) in self.clients.into_iter().enumerate() {
             let accounts = (&mut all_accounts).take(account_per_client).collect();
+            let all_addresses = all_addresses.clone();
             let thread = SubmissionThread {
                 accounts,
                 instance,
                 client,
+                all_addresses,
             };
             let join_handle = thread::Builder::new()
                 .name(format!("thread-{}", index))
@@ -165,6 +171,7 @@ struct SubmissionThread {
     accounts: Vec<AccountData>,
     instance: Instance,
     client: AdmissionControlClient,
+    all_addresses: Arc<Vec<AccountAddress>>,
 }
 
 impl SubmissionThread {
@@ -173,9 +180,10 @@ impl SubmissionThread {
         let wait = Duration::from_millis(wait_millis);
         let wait_committed = get_env("WAIT_COMMITTED", true);
         let verbose = get_env("VERBOSE", false);
+        let mut rng = ThreadRng::default();
         loop {
-            let gen_requests = gen_ring_requests(&mut self.accounts);
-            for request in gen_requests {
+            let requests = self.gen_requests(&mut rng);
+            for request in requests {
                 let wait_util = Instant::now() + wait;
                 let resp = self.client.submit_transaction(&request);
                 match resp {
@@ -203,6 +211,19 @@ impl SubmissionThread {
                 wait_for_accounts_sequence(&self.client, &self.accounts);
             }
         }
+    }
+
+    fn gen_requests(&mut self, rng: &mut ThreadRng) -> Vec<SubmitTransactionRequest> {
+        let mut requests = Vec::with_capacity(self.accounts.len());
+        let all_addresses = &self.all_addresses;
+        for sender in &mut self.accounts {
+            let receiver = all_addresses
+                .choose(rng)
+                .expect("all_addresses can't be empty");
+            let request = gen_transfer_txn_request(sender, receiver, 1);
+            requests.push(request);
+        }
+        requests
     }
 }
 
@@ -299,17 +320,6 @@ fn gen_transfer_txn_request(
 ) -> SubmitTransactionRequest {
     let script = transaction_builder::encode_transfer_script(&receiver, num_coins);
     gen_submit_transaction_request(script, sender)
-}
-
-fn gen_ring_requests(accounts: &mut [AccountData]) -> Vec<SubmitTransactionRequest> {
-    let mut receiver_addrs: Vec<AccountAddress> =
-        accounts.iter().map(|account| account.address).collect();
-    receiver_addrs.rotate_left(1);
-    accounts
-        .iter_mut()
-        .zip(receiver_addrs.iter())
-        .map(|(sender, receiver_addr)| gen_transfer_txn_request(sender, receiver_addr, 1))
-        .collect()
 }
 
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
