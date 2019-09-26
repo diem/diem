@@ -238,10 +238,14 @@ impl DB {
     pub fn get<S: Schema>(&self, schema_key: &S::Key) -> Result<Option<S::Value>> {
         let k = <S::Key as KeyCodec<S>>::encode_key(&schema_key)?;
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
+        let time = std::time::Instant::now();
 
-        self.inner
+        let result = self
+            .inner
             .get_cf(cf_handle, &k)
-            .map_err(convert_rocksdb_err)?
+            .map_err(convert_rocksdb_err)?;
+        OP_COUNTER.observe_duration(&format!("db_get_{}", S::COLUMN_FAMILY_NAME), time.elapsed());
+        result
             .map(|raw_value| <S::Value as ValueCodec<S>>::decode_value(&raw_value))
             .transpose()
     }
