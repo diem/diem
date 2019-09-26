@@ -119,7 +119,7 @@ impl LibraNode {
 
     pub fn check_connectivity(&self, expected_peers: i64) -> bool {
         if let Some(num_connected_peers) = self.get_metric("network_gauge{op=connected_peers}") {
-            if num_connected_peers != expected_peers {
+            if num_connected_peers < expected_peers {
                 debug!(
                     "Node '{}' Expected peers: {}, found peers: {}",
                     self.node_id, expected_peers, num_connected_peers
@@ -190,7 +190,7 @@ impl AsRef<Path> for LibraSwarmDir {
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
     // Output log, LibraNodes' config file, libradb etc, into this dir.
-    pub dir: Option<LibraSwarmDir>,
+    pub dir: LibraSwarmDir,
     // Maps the node id of a node to the LibraNode struct
     pub nodes: HashMap<String, LibraNode>,
     pub config: SwarmConfig,
@@ -230,20 +230,22 @@ impl LibraSwarm {
         let num_launch_attempts = 5;
         for i in 0..num_launch_attempts {
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
-            match Self::launch_swarm_attempt(
+
+            if let Ok(mut swarm) = Self::configure_swarm(
                 num_nodes,
                 role,
-                disable_logging,
                 faucet_account_keypair.clone(),
                 config_dir.clone(),
-                &template_path,
-                &upstream_config_dir,
+                template_path.clone(),
+                upstream_config_dir.clone(),
             ) {
-                Ok(swarm) => {
-                    return swarm;
-                }
-                Err(e) => {
-                    error!("Error launching swarm: {}", e);
+                match swarm.launch_attempt(disable_logging) {
+                    Ok(_) => {
+                        return swarm;
+                    }
+                    Err(e) => {
+                        error!("Error launching swarm: {}", e);
+                    }
                 }
             }
         }
@@ -276,18 +278,15 @@ impl LibraSwarm {
         dir
     }
 
-    fn launch_swarm_attempt(
+    pub fn configure_swarm(
         num_nodes: usize,
         role: RoleType,
-        disable_logging: bool,
         faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         config_dir: Option<String>,
-        template_path: &Option<String>,
-        upstream_config_dir: &Option<String>,
-    ) -> std::result::Result<LibraSwarm, SwarmLaunchFailure> {
+        template_path: Option<String>,
+        upstream_config_dir: Option<String>,
+    ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        let logs_dir_path = swarm_config_dir.as_ref().join("logs");
-        std::fs::create_dir(&logs_dir_path)?;
         let base = utils::workspace_root().join(
             template_path
                 .as_ref()
@@ -303,13 +302,21 @@ impl LibraSwarm {
             .with_role(role)
             .with_upstream_config_dir(upstream_config_dir.clone());
         let config = config_builder.build().unwrap();
-        let mut swarm = Self {
-            dir: Some(swarm_config_dir),
+        Ok(Self {
+            dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
-        };
+        })
+    }
+
+    pub fn launch_attempt(
+        &mut self,
+        disable_logging: bool,
+    ) -> std::result::Result<(), SwarmLaunchFailure> {
+        let logs_dir_path = self.dir.as_ref().join("logs");
+        std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
-        for (index, path) in swarm.config.configs.iter().enumerate() {
+        for (index, path) in self.config.configs.iter().enumerate() {
             // Use index as node id.
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
@@ -319,12 +326,12 @@ impl LibraSwarm {
                 disable_logging,
             )
             .unwrap();
-            swarm.nodes.insert(node_id, node);
+            self.nodes.insert(node_id, node);
         }
-        swarm.wait_for_startup()?;
-        swarm.wait_for_connectivity()?;
+        self.wait_for_startup()?;
+        self.wait_for_connectivity()?;
         info!("Successfully launched Swarm");
-        Ok(swarm)
+        Ok(())
     }
 
     fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
@@ -513,13 +520,7 @@ impl LibraSwarm {
             .configs
             .get(idx)
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
-        let log_file_path = self
-            .dir
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .join("logs")
-            .join(format!("{}.log", idx));
+        let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));
         let node_id = format!("{}", idx);
         let mut node =
             LibraNode::launch(node_id.clone(), path, log_file_path, disable_logging).unwrap();
@@ -538,35 +539,34 @@ impl Drop for LibraSwarm {
     fn drop(&mut self) {
         // If panicking, we don't want to gc the swarm directory.
         if std::thread::panicking() {
-            if let Some(dir) = self.dir.take() {
-                if let LibraSwarmDir::Temporary(temp_dir) = dir {
-                    let log_path = temp_dir.path();
-                    println!("logs located at {:?}", log_path);
+            // let dir = self.dir;
+            if let LibraSwarmDir::Temporary(temp_dir) = &self.dir {
+                let log_path = temp_dir.path();
+                println!("logs located at {:?}", log_path);
 
-                    // Dump logs for each validator to stdout when `LIBRA_DUMP_LOGS`
-                    // environment variable is set
-                    if env::var_os("LIBRA_DUMP_LOGS").is_some() {
-                        for (peer_id, node) in &mut self.nodes {
-                            // Skip dumping logs for healthy nodes
-                            if let HealthStatus::Healthy = node.health_check() {
-                                continue;
-                            }
-
-                            // Grab the contents of the node's logs and skip if we were unable to
-                            // grab its logs
-                            let log_contents = match node.get_log_contents() {
-                                Ok(contents) => contents,
-                                Err(_) => continue,
-                            };
-
-                            println!();
-                            println!();
-                            println!("{:=^80}", "");
-                            println!("Validator {}", peer_id);
-                            println!();
-                            println!();
-                            println!("{}", log_contents);
+                // Dump logs for each validator to stdout when `LIBRA_DUMP_LOGS`
+                // environment variable is set
+                if env::var_os("LIBRA_DUMP_LOGS").is_some() {
+                    for (peer_id, node) in &mut self.nodes {
+                        // Skip dumping logs for healthy nodes
+                        if let HealthStatus::Healthy = node.health_check() {
+                            continue;
                         }
+
+                        // Grab the contents of the node's logs and skip if we were unable to
+                        // grab its logs
+                        let log_contents = match node.get_log_contents() {
+                            Ok(contents) => contents,
+                            Err(_) => continue,
+                        };
+
+                        println!();
+                        println!();
+                        println!("{:=^80}", "");
+                        println!("Validator {}", peer_id);
+                        println!();
+                        println!();
+                        println!("{}", log_contents);
                     }
                 }
             }

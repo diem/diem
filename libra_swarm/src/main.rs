@@ -28,67 +28,68 @@ struct Args {
     /// If unspecified, a temporary dir will be used and auto deleted.
     #[structopt(short = "c", long = "config_dir")]
     pub config_dir: Option<String>,
-    /// If specified, load faucet key from this file. Otherwise generate new keypair file.
-    #[structopt(short = "f", long = "faucet_key_path")]
-    pub faucet_key_path: Option<String>,
-    /// If set, starts a full node swarm connected to the first node in the validator swarm..
-    #[structopt(short = "w", long = "with_full_node_swarm")]
-    pub with_full_nodes: bool,
+    /// If greater than 0, starts a full node swarm connected to the first node in the validator
+    /// swarm.
+    #[structopt(short = "f", long = "num_full_nodes")]
+    pub num_full_nodes: Option<usize>,
 }
 
 fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes.unwrap_or(1);
+    let num_full_nodes = args.num_full_nodes.unwrap_or(0);
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-        generate_keypair::load_faucet_key_or_create_default(args.faucet_key_path);
+        generate_keypair::load_faucet_key_or_create_default(None);
 
     println!(
         "Faucet account created in (loaded from) file {:?}",
         faucet_key_file_path
     );
 
-    let mut validator_swarm = LibraSwarm::launch_swarm(
+    let mut validator_swarm = LibraSwarm::configure_swarm(
         num_nodes,
         RoleType::Validator,
-        !args.enable_logging,
         faucet_account_keypair.clone(),
         args.config_dir.clone(),
         None, /* template_path */
         None, /* upstream_config_dir */
-    );
-    let full_node_swarm = if args.with_full_nodes {
-        let swarm = LibraSwarm::launch_swarm(
-            num_nodes,
-            RoleType::FullNode,
-            !args.enable_logging,
-            faucet_account_keypair,
-            None, /* config dir */
-            None, /* template_path */
-            Some(String::from(
-                validator_swarm
-                    .dir
-                    .as_ref()
-                    .expect("Validator swarm config directory not set")
-                    .as_ref()
-                    .join("0")
-                    .to_str()
-                    .expect("Failed to convert std::fs::Path to String"),
-            )),
-        );
-        validator_swarm.kill_node(0);
-        validator_swarm
-            .add_node(0, !args.enable_logging)
-            .expect("Failed to restart upstream validator node");
-        Some(swarm)
+    )
+    .expect("Failed to configure validator swarm");
+
+    let mut full_node_swarm = if num_full_nodes > 0 {
+        Some(
+            LibraSwarm::configure_swarm(
+                num_full_nodes,
+                RoleType::FullNode,
+                faucet_account_keypair,
+                None, /* config dir */
+                None, /* template_path */
+                Some(String::from(
+                    validator_swarm
+                        .dir
+                        .as_ref()
+                        .join("0")
+                        .to_str()
+                        .expect("Failed to convert std::fs::Path to String"),
+                )),
+            )
+            .expect("Failed to configure full node swarm"),
+        )
     } else {
         None
     };
+    validator_swarm
+        .launch_attempt(!args.enable_logging)
+        .expect("Failed to launch validator swarm");
+    if let Some(ref mut swarm) = full_node_swarm {
+        swarm
+            .launch_attempt(!args.enable_logging)
+            .expect("Failed to launch full node swarm");
+    }
 
     let validator_config = NodeConfig::load(&validator_swarm.config.configs[0]).unwrap();;
     let validator_set_file = validator_swarm
         .dir
-        .as_ref()
-        .expect("fail to access output dir")
         .as_ref()
         .join("0")
         .join(&validator_config.consensus.consensus_peers_file);

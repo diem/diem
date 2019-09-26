@@ -46,7 +46,7 @@ rusty_fork_test! {
             None,   /* template_path */
             None, /* upstream_path */
         );
-        let swarm_config_dir = String::from(swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap());
+        let swarm_config_dir = String::from(swarm.dir.as_ref().to_str().unwrap());
         let validator_addresses = parse_swarm_config_from_dir(&swarm_config_dir).unwrap();
         let clients = create_ac_clients(num_clients, &validator_addresses);
         let mut bm = Benchmarker::new(clients, stagger_ms, submit_rate);
