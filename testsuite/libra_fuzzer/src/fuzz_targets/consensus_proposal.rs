@@ -1,7 +1,5 @@
 use crate::FuzzTargetImpl;
-use consensus::chained_bft::event_processor::event_processor_fuzzing::{
-    fuzz_proposal, generate_corpus_proposal,
-};
+use consensus::event_processor_fuzzing::{fuzz_proposal, generate_corpus_proposal};
 use proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]

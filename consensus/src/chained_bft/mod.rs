@@ -24,14 +24,11 @@ mod network_tests;
 mod proto_test;
 
 #[cfg(any(test, feature = "fuzzing"))]
-pub mod test_utils;
+mod test_utils;
 
-#[cfg(not(any(test, feature = "fuzzing")))]
 mod liveness;
-#[cfg(any(test, feature = "fuzzing"))]
-pub mod liveness;
 
-#[cfg(not(feature = "fuzzing"))]
 mod event_processor;
+
 #[cfg(feature = "fuzzing")]
-pub mod event_processor;
+pub use event_processor::event_processor_fuzzing;
