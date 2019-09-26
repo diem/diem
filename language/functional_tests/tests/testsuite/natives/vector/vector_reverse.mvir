@@ -1,0 +1,52 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  let is_empty: bool;
+  vec = Vector.empty<u64>();
+  is_empty = Vector.is_empty<u64>(&vec);
+
+  // empty case
+  Vector.reverse<u64>(&mut vec);
+  assert(move(is_empty) == Vector.is_empty<u64>(&vec), 0);
+
+  // non-empty case, even case
+  Vector.push_back<u64>(&mut vec, 0);
+  Vector.push_back<u64>(&mut vec, 1);
+  Vector.push_back<u64>(&mut vec, 2);
+  Vector.push_back<u64>(&mut vec, 3);
+
+  assert(*Vector.borrow<u64>(&vec, 0) == 0, 1);
+  assert(*Vector.borrow<u64>(&vec, 1) == 1, 2);
+  assert(*Vector.borrow<u64>(&vec, 2) == 2, 3);
+  assert(*Vector.borrow<u64>(&vec, 3) == 3, 4);
+
+  Vector.reverse<u64>(&mut vec);
+
+  assert(*Vector.borrow<u64>(&vec, 3) == 0, 5);
+  assert(*Vector.borrow<u64>(&vec, 2) == 1, 6);
+  assert(*Vector.borrow<u64>(&vec, 1) == 2, 7);
+  assert(*Vector.borrow<u64>(&vec, 0) == 3, 8);
+
+  // non-empty, odd case > 1
+  _ = Vector.pop_back<u64>(&mut vec);
+  assert(Vector.length<u64>(&vec) == 3, 12);
+
+  Vector.reverse<u64>(&mut vec);
+
+  assert(*Vector.borrow<u64>(&vec, 0) == 1, 9);
+  assert(*Vector.borrow<u64>(&vec, 1) == 2, 10);
+  assert(*Vector.borrow<u64>(&vec, 2) == 3, 11);
+
+  // non-empty, length = 1 case
+  _ = Vector.pop_back<u64>(&mut vec);
+  _ = Vector.pop_back<u64>(&mut vec);
+  assert(Vector.length<u64>(&vec) == 1, 12);
+  assert(*Vector.borrow<u64>(&vec, 0) == 1, 13);
+
+  Vector.reverse<u64>(&mut vec);
+
+  assert(*Vector.borrow<u64>(&vec, 0) == 1, 14);
+
+  return;
+}
