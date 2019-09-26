@@ -5,7 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg},
-        liveness::proposal_generator::{ProposalGenerationError, ProposalGenerator},
+        liveness::proposal_generator::ProposalGenerator,
         test_utils::{
             build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },
@@ -43,10 +43,7 @@ fn test_proposal_generation_empty_tree() {
 
     // Duplicate proposals on the same round are not allowed
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
-    assert_eq!(
-        proposal_err.unwrap(),
-        ProposalGenerationError::AlreadyProposed(1)
-    );
+    assert!(proposal_err.is_some());
 }
 
 #[test]
@@ -163,8 +160,5 @@ fn test_old_proposal_generation() {
     block_store.insert_vote_and_qc(vote_msg_a1, 1);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
-    assert_eq!(
-        proposal_err.unwrap(),
-        ProposalGenerationError::GivenRoundTooLow(1)
-    );
+    assert!(proposal_err.is_some());
 }

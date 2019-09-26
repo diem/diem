@@ -3,13 +3,8 @@ use crate::chained_bft::consensus_types::{
 };
 use network;
 
-use crate::chained_bft::{
-    common::Round,
-    consensus_types::{
-        timeout_msg::PacemakerTimeoutCertificateVerificationError,
-        vote_msg::VoteMsgVerificationError,
-    },
-};
+use crate::chained_bft::common::Round;
+use failure::ResultExt;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -40,27 +35,6 @@ impl Display for SyncInfo {
             self.highest_ledger_info,
             htc_repr,
         )
-    }
-}
-
-#[derive(Debug, PartialEq, Fail)]
-/// Sync info verification error cases.
-pub enum SyncInfoVerificationError {
-    #[fail(display = "QuorumCertificateError: {}", _0)]
-    QuorumCertificateError(VoteMsgVerificationError),
-    #[fail(display = "TimeoutCertificateError: {}", _0)]
-    TimeoutCertificateError(PacemakerTimeoutCertificateVerificationError),
-}
-
-impl From<VoteMsgVerificationError> for SyncInfoVerificationError {
-    fn from(source: VoteMsgVerificationError) -> Self {
-        SyncInfoVerificationError::QuorumCertificateError(source)
-    }
-}
-
-impl From<PacemakerTimeoutCertificateVerificationError> for SyncInfoVerificationError {
-    fn from(source: PacemakerTimeoutCertificateVerificationError) -> Self {
-        SyncInfoVerificationError::TimeoutCertificateError(source)
     }
 }
 
@@ -106,12 +80,17 @@ impl SyncInfo {
         std::cmp::max(self.hqc_round(), self.htc_round())
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), SyncInfoVerificationError> {
-        self.highest_quorum_cert.verify(validator)?;
-        self.highest_ledger_info.verify(validator)?;
-        if let Some(tc) = &self.highest_timeout_cert {
-            tc.verify(validator)?;
-        }
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+        self.highest_quorum_cert
+            .verify(validator)
+            .and_then(|_| self.highest_ledger_info.verify(validator))
+            .and_then(|_| {
+                if let Some(tc) = &self.highest_timeout_cert {
+                    tc.verify(validator)?;
+                }
+                Ok(())
+            })
+            .with_context(|e| format!("Fail to verify SyncInfo: {:?}", e))?;
         Ok(())
     }
 }

@@ -1,15 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    common::Round,
-    consensus_types::{vote_data::VoteData, vote_msg::VoteMsgVerificationError},
-};
+use crate::chained_bft::{common::Round, consensus_types::vote_data::VoteData};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::Result;
+use failure::{Result, ResultExt};
 use network::proto::QuorumCert as ProtoQuorumCert;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -132,14 +129,12 @@ impl QuorumCert {
         )
     }
 
-    pub fn verify(
-        &self,
-        validator: &ValidatorVerifier,
-    ) -> ::std::result::Result<(), VoteMsgVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         let vote_hash = self.vote_data.hash();
-        if self.ledger_info().ledger_info().consensus_data_hash() != vote_hash {
-            return Err(VoteMsgVerificationError::ConsensusDataMismatch);
-        }
+        ensure!(
+            self.ledger_info().ledger_info().consensus_data_hash() == vote_hash,
+            "Quorum Cert's hash mismatch LedgerInfo"
+        );
         // Genesis is implicitly agreed upon, it doesn't have real signatures.
         if self.vote_data.block_round() == 0
             && self.vote_data.block_id() == *GENESIS_BLOCK_ID
@@ -149,7 +144,8 @@ impl QuorumCert {
         }
         self.ledger_info()
             .verify(validator)
-            .map_err(VoteMsgVerificationError::SigVerifyError)
+            .with_context(|e| format!("Fail to verify QuorumCert: {:?}", e))?;
+        Ok(())
     }
 }
 

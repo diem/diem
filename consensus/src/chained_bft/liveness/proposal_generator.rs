@@ -19,26 +19,6 @@ use std::{
 #[path = "proposal_generator_test.rs"]
 mod proposal_generator_test;
 
-#[derive(Clone, Debug, PartialEq, Fail)]
-/// ProposalGeneration logical errors (e.g., given round number is low).
-pub enum ProposalGenerationError {
-    /// The round of a certified block we'd like to extend is not lower than the provided round.
-    #[fail(display = "GivenRoundTooLow")]
-    GivenRoundTooLow(Round),
-    #[fail(display = "TxnRetrievalError")]
-    TxnRetrievalError,
-    /// Local clock waiting completed, but the timestamp is still not greater than its parent
-    #[fail(display = "CurrentTimeTooOld")]
-    CurrentTimeTooOld,
-    /// Local clock waiting would exceed round duration to allow the timestamp to be greater that
-    /// its parent
-    #[fail(display = "ExceedsMaxRoundDuration")]
-    ExceedsMaxRoundDuration,
-    /// Already proposed at this round (only a single proposal per round is allowed)
-    #[fail(display = "CurrentTimeTooOld")]
-    AlreadyProposed(Round),
-}
-
 /// ProposalGenerator is responsible for generating the proposed block on demand: it's typically
 /// used by a validator that believes it's a valid candidate for serving as a proposer at a given
 /// round.
@@ -84,16 +64,18 @@ impl<T: Payload> ProposalGenerator<T> {
     }
 
     /// Creates a NIL block proposal extending the highest certified block from the block store.
-    pub fn generate_nil_block(&self, round: Round) -> Result<Block<T>, ProposalGenerationError> {
+    pub fn generate_nil_block(&self, round: Round) -> failure::Result<Block<T>> {
         let hqc_block = self.block_store.highest_certified_block();
-        if hqc_block.round() >= round {
-            // The given round is too low.
-            return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
-        }
+        ensure!(
+            hqc_block.round() < round,
+            "Given round {} is lower than hqc round {}",
+            round,
+            hqc_block.round()
+        );
         let hqc_block_qc = self
             .block_store
             .get_quorum_cert_for_block(hqc_block.id())
-            .ok_or_else(|| ProposalGenerationError::GivenRoundTooLow(hqc_block.round()))?;
+            .ok_or_else(|| format_err!("Quorum Cert for HQC block not found"))?;
         Ok(Block::make_nil_block(
             hqc_block.block(),
             round,
@@ -116,21 +98,23 @@ impl<T: Payload> ProposalGenerator<T> {
         &self,
         round: Round,
         round_deadline: Instant,
-    ) -> Result<Block<T>, ProposalGenerationError> {
+    ) -> failure::Result<Block<T>> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {
                 *last_round_generated = round;
             } else {
-                return Err(ProposalGenerationError::AlreadyProposed(round));
+                bail!("Already proposed in the round {}", round);
             }
         }
 
         let hqc_block = self.block_store.highest_certified_block();
-        if hqc_block.round() >= round {
-            // The given round is too low.
-            return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
-        }
+        ensure!(
+            hqc_block.round() < round,
+            "Given round {} is lower than hqc round {}",
+            round,
+            hqc_block.round()
+        );
 
         // One needs to hold the blocks with the references to the payloads while get_block is
         // being executed: pending blocks vector keeps all the pending ancestors of the extended
@@ -139,9 +123,7 @@ impl<T: Payload> ProposalGenerator<T> {
             Some(res) => res,
             // In case the whole system moved forward between the check of a round and getting
             // path from root.
-            None => {
-                return Err(ProposalGenerationError::GivenRoundTooLow(hqc_block.round()));
-            }
+            None => bail!("HQC {} already pruned", hqc_block),
         };
         //let pending_blocks = self.get_pending_blocks(Arc::clone(&hqc_block));
         // Exclude all the pending transactions: these are all the ancestors of
@@ -189,27 +171,25 @@ impl<T: Payload> ProposalGenerator<T> {
                     Err(waiting_error) => {
                         match waiting_error {
                             WaitingError::MaxWaitExceeded => {
-                                error!(
-                                    "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
-                                    hqc_block.timestamp_usecs(),
-                                    round_deadline);
                                 counters::PROPOSAL_FAILURE_WAIT_S
                                     .observe_duration(Duration::new(0, 0));
                                 counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
-                                return Err(ProposalGenerationError::ExceedsMaxRoundDuration);
+                                bail!(
+                                    "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
+                                    hqc_block.timestamp_usecs(),
+                                    round_deadline);
                             }
                             WaitingError::WaitFailed {
                                 current_duration_since_epoch,
                                 wait_duration,
                             } => {
-                                error!(
+                                counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
+                                counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
+                                bail!(
                                     "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
                                     wait_duration,
                                     hqc_block.timestamp_usecs(),
                                     current_duration_since_epoch);
-                                counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
-                                counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
-                                return Err(ProposalGenerationError::CurrentTimeTooOld);
                             }
                         };
                     }
@@ -231,7 +211,7 @@ impl<T: Payload> ProposalGenerator<T> {
                 round,
                 block_timestamp.as_micros() as u64,
             )),
-            Err(_) => Err(ProposalGenerationError::TxnRetrievalError),
+            Err(e) => bail!("Fail to retrieve txn: {:?}", e),
         }
     }
 }

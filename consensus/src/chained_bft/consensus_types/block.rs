@@ -3,9 +3,7 @@
 
 use crate::chained_bft::{
     common::{Author, Height, Round},
-    consensus_types::{
-        quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsgVerificationError,
-    },
+    consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
@@ -35,22 +33,6 @@ use types::{
 #[cfg(test)]
 #[path = "block_test.rs"]
 pub mod block_test;
-
-#[derive(Debug)]
-pub enum BlockVerificationError {
-    /// Block hash is not equal to block id
-    InvalidBlockId,
-    /// Round must not be smaller than height and should be higher than parent's round.
-    InvalidBlockRound,
-    /// NIL block must not carry payload.
-    NilBlockWithPayload,
-    /// QC carried by the block does not certify its own parent.
-    QCDoesNotCertifyParent,
-    /// The verification of quorum cert of this block failed.
-    QCVerificationError(VoteMsgVerificationError),
-    /// The signature verification of this block failed.
-    SigVerifyError,
-}
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum BlockSource {
@@ -303,47 +285,40 @@ where
 
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
-    pub fn validate_signatures(
-        &self,
-        validator: &ValidatorVerifier,
-    ) -> ::std::result::Result<(), BlockVerificationError> {
+    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         // if genesis block, we don't verify anything
         if self.is_genesis_block() {
             return Ok(());
         }
         // verify signature from leader if it's a real proposal
         if let BlockSource::Proposal { author, signature } = &self.block_source {
-            signature
-                .verify(validator, *author, self.hash())
-                .map_err(|_| BlockVerificationError::SigVerifyError)?;
+            signature.verify(validator, *author, self.hash())?;
         }
         // verify signatures of quorum cert
-        self.quorum_cert
-            .verify(validator)
-            .map_err(BlockVerificationError::QCVerificationError)
+        self.quorum_cert.verify(validator)
     }
 
     /// Makes sure that the proposal makes sense, independently of the current state.
     /// If this is the genesis block, we skip these checks.
-    pub fn verify_well_formed(&self) -> ::std::result::Result<(), BlockVerificationError> {
+    pub fn verify_well_formed(&self) -> failure::Result<()> {
         if self.is_genesis_block() {
             return Ok(());
         }
-        if self.id() != self.hash() {
-            return Err(BlockVerificationError::InvalidBlockId);
-        }
-        if self.quorum_cert().certified_block_id() != self.parent_id() {
-            return Err(BlockVerificationError::QCDoesNotCertifyParent);
-        }
-        if self.quorum_cert().certified_block_round() >= self.round()
-            || self.round() < self.height()
-        {
-            return Err(BlockVerificationError::InvalidBlockRound);
-        }
+        ensure!(self.id() == self.hash(), "Block id mismatch the hash");
+        ensure!(
+            self.quorum_cert().certified_block_id() == self.parent_id(),
+            "Block's quorum cert doesn't certify parent"
+        );
+        ensure!(
+            self.quorum_cert().certified_block_round() < self.round()
+                && self.round() >= self.height(),
+            "Block has invalid round"
+        );
         // NIL block must not carry payload
-        if self.block_source == BlockSource::NilBlock && self.payload != T::default() {
-            return Err(BlockVerificationError::NilBlockWithPayload);
-        }
+        ensure!(
+            self.block_source != BlockSource::NilBlock || self.payload == T::default(),
+            "Nil block carries payload"
+        );
         Ok(())
     }
 

@@ -201,7 +201,7 @@ impl<T: Payload> RecoveryData<T> {
 
             match root_id_and_round {
                 Some((id, _)) => *id,
-                None => return Err(format_err!("No LI found in quorum certs.")),
+                None => bail!("No LI found in quorum certs."),
             }
         };
         let root_id = {
