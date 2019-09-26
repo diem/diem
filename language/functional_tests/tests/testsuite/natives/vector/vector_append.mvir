@@ -1,0 +1,70 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  let other_vec: Vector.T<u64>;
+
+  vec = Vector.empty<u64>();
+  other_vec = Vector.empty<u64>();
+
+  assert(Vector.is_empty<u64>(&vec), 0);
+  assert(Vector.is_empty<u64>(&other_vec), 2);
+
+  // Appending empty with empty is empty
+  Vector.append<u64>(&mut vec, move(other_vec));
+  assert(Vector.is_empty<u64>(&vec), 3);
+
+  other_vec = Vector.empty<u64>();
+
+  // Appending one vector onto another respects order.
+  // Empty lhs, non-empty rhs case
+  Vector.push_back<u64>(&mut other_vec, 0);
+  Vector.push_back<u64>(&mut other_vec, 1);
+  Vector.push_back<u64>(&mut other_vec, 2);
+  Vector.push_back<u64>(&mut other_vec, 3);
+  Vector.append<u64>(&mut vec, move(other_vec));
+  assert(!Vector.is_empty<u64>(&vec), 4);
+  assert(Vector.length<u64>(&vec) == 4, 5);
+  assert(*Vector.borrow<u64>(&vec, 0) == 0, 6);
+  assert(*Vector.borrow<u64>(&vec, 1) == 1, 7);
+  assert(*Vector.borrow<u64>(&vec, 2) == 2, 8);
+  assert(*Vector.borrow<u64>(&vec, 3) == 3, 9);
+
+  other_vec = Vector.empty<u64>();
+
+  // Clear out vec, and put it back into other_vec.
+  Vector.append<u64>(&mut other_vec, move(vec));
+  assert(!Vector.is_empty<u64>(&other_vec), 10);
+  assert(Vector.length<u64>(&other_vec) == 4, 11);
+  assert(*Vector.borrow<u64>(&other_vec, 0) == 0, 12);
+  assert(*Vector.borrow<u64>(&other_vec, 1) == 1, 13);
+  assert(*Vector.borrow<u64>(&other_vec, 2) == 2, 14);
+  assert(*Vector.borrow<u64>(&other_vec, 3) == 3, 15);
+
+  vec = Vector.empty<u64>();
+
+  // non-empty lhs, non-empty rhs case
+  Vector.push_back<u64>(&mut vec, 42);
+  Vector.append<u64>(&mut vec, move(other_vec));
+  assert(!Vector.is_empty<u64>(&vec), 16);
+  assert(Vector.length<u64>(&vec) == 5, 17);
+  assert(*Vector.borrow<u64>(&vec, 0) == 42, 18);
+  assert(*Vector.borrow<u64>(&vec, 1) == 0, 19);
+  assert(*Vector.borrow<u64>(&vec, 2) == 1, 20);
+  assert(*Vector.borrow<u64>(&vec, 3) == 2, 21);
+  assert(*Vector.borrow<u64>(&vec, 4) == 3, 22);
+
+  other_vec = Vector.empty<u64>();
+
+  // non-empty lhs, empty rhs case
+  Vector.append<u64>(&mut vec, move(other_vec));
+  assert(!Vector.is_empty<u64>(&vec), 23);
+  assert(Vector.length<u64>(&vec) == 5, 24);
+  assert(*Vector.borrow<u64>(&vec, 0) == 42, 25);
+  assert(*Vector.borrow<u64>(&vec, 1) == 0, 26);
+  assert(*Vector.borrow<u64>(&vec, 2) == 1, 27);
+  assert(*Vector.borrow<u64>(&vec, 3) == 2, 28);
+  assert(*Vector.borrow<u64>(&vec, 4) == 3, 29);
+
+  return;
+}

@@ -1,0 +1,19 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  vec = Vector.empty<u64>();
+
+  // Swapping with an out-of-bounds index in a non-empty vector.
+  Vector.push_back<u64>(&mut vec, 0);
+  Vector.push_back<u64>(&mut vec, 1);
+  Vector.push_back<u64>(&mut vec, 2);
+  Vector.push_back<u64>(&mut vec, 3);
+
+  Vector.swap<u64>(&mut vec, 1, 10);
+
+  return;
+}
+
+// check: NATIVE_FUNCTION_ERROR
+// check: 1

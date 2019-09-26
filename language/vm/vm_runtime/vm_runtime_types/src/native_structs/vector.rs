@@ -17,8 +17,9 @@ const LENGTH_COST: u64 = 30; // TODO: determine experimentally
 const PUSH_BACK_COST: u64 = 30; // TODO: determine experimentally
 const POP_COST: u64 = 30; // TODO: determine experimentally
 const DESTROY_EMPTY_VEC_COST: u64 = 30; // TODO: determine experimentally
+const SWAP_COST: u64 = 30; // TODO: determine experimentally
 
-pub const INDEX_OUT_OF_BOUND: u64 = NFE_VECTOR_ERROR_BASE + 1;
+pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
 pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
 pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
 
@@ -103,7 +104,7 @@ impl NativeVector {
             },
             None => NativeReturnStatus::Aborted {
                 cost: BORROW_COST,
-                error_code: INDEX_OUT_OF_BOUND,
+                error_code: INDEX_OUT_OF_BOUNDS,
             },
         }
     }
@@ -150,6 +151,46 @@ impl NativeVector {
             }
         }
         NativeReturnStatus::InvalidArguments
+    }
+
+    pub fn native_swap(mut args: VecDeque<Value>) -> NativeReturnStatus {
+        if args.len() != 3 {
+            return NativeReturnStatus::InvalidArguments;
+        }
+
+        let reference = get_vector_ref!(args);
+        let index1 = pop_arg!(args, u64);
+        let index2 = pop_arg!(args, u64);
+
+        // We need to check the indices before performing the swap in order to make sure the
+        // indices are within bounds.
+        match reference
+            .read_native_struct(|native_vec| Some(get_vector(native_vec)?.0.len() as u64))
+        {
+            None => (),
+            Some(len) => {
+                if index1 >= len || index2 >= len {
+                    return NativeReturnStatus::Aborted {
+                        cost: SWAP_COST,
+                        error_code: INDEX_OUT_OF_BOUNDS,
+                    };
+                }
+            }
+        };
+
+        reference
+            .mutate_native_struct(|native_vec| {
+                Some(
+                    get_mut_vector(native_vec)?
+                        .0
+                        .swap(index1 as usize, index2 as usize),
+                )
+            })
+            .map(|_| NativeReturnStatus::Success {
+                cost: SWAP_COST,
+                return_values: vec![],
+            })
+            .unwrap_or(NativeReturnStatus::InvalidArguments)
     }
 
     pub(crate) fn get(&self, idx: u64) -> Option<MutVal> {
