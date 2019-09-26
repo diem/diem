@@ -31,10 +31,7 @@
         "ulimits": [
             {"name": "nofile", "softLimit": 131072, "hardLimit": 131072}
         ],
-        "secrets": [
-            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"},
-            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"}
-        ],
+%{ if log_group != "" }
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
@@ -42,6 +39,11 @@
                 "awslogs-region": "${log_region}",
                 "awslogs-stream-prefix": "${log_prefix}"
             }
-        }
+        },
+%{ endif }
+        "secrets": [
+            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"},
+            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"}
+        ]
     }
 ]

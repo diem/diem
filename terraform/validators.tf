@@ -74,6 +74,7 @@ resource "aws_cloudwatch_log_group" "testnet" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "log_metric_filter" {
+  count          = var.cloudwatch_logs ? 1 : 0
   name           = "critical_log"
   pattern        = "[code=C*, time, x, file, ...]"
   log_group_name = "${aws_cloudwatch_log_group.testnet.name}"
@@ -243,7 +244,7 @@ data "template_file" "ecs_task_definition" {
     network_secret   = element(aws_secretsmanager_secret.validator_network.*.arn, count.index)
     consensus_secret = element(aws_secretsmanager_secret.validator_consensus.*.arn, count.index)
     log_level        = var.validator_log_level
-    log_group        = aws_cloudwatch_log_group.testnet.name
+    log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region       = var.region
     log_prefix       = "validator-${substr(var.peer_ids[count.index], 0, 8)}"
     capabilities     = jsonencode(var.validator_linux_capabilities)
