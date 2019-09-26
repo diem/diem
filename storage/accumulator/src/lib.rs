@@ -105,7 +105,7 @@ use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_
 use failure::prelude::*;
 use std::marker::PhantomData;
 use types::proof::{
-    position::{FrozenSubtreeSiblingIterator, Position},
+    position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
     AccumulatorConsistencyProof, AccumulatorProof, MerkleTreeInternalNode,
 };
 
@@ -159,6 +159,24 @@ where
     ) -> Result<AccumulatorConsistencyProof> {
         MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
             .get_consistency_proof(sub_acc_leaves)
+    }
+
+    /// From left to right, gets frozen subtree root hashes of the accumulator. For example, if the
+    /// accumulator has 5 leaves, `x` and `e` are returned.
+    /// ```text
+    ///                 root
+    ///                /    \
+    ///              /        \
+    ///            /            \
+    ///           x              o
+    ///         /   \           / \
+    ///        /     \         /   \
+    ///       o       o       o     placeholder
+    ///      / \     / \     / \
+    ///     a   b   c   d   e   placeholder
+    /// ```
+    pub fn get_frozen_subtree_hashes(reader: &R, num_leaves: u64) -> Result<Vec<HashValue>> {
+        MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_frozen_subtree_hashes()
     }
 }
 
@@ -347,6 +365,13 @@ where
             .collect::<Result<Vec<_>>>()?;
 
         Ok(AccumulatorConsistencyProof::new(subtrees))
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_frozen_subtree_hashes`.
+    fn get_frozen_subtree_hashes(&self) -> Result<Vec<HashValue>> {
+        FrozenSubTreeIterator::new(self.num_leaves)
+            .map(|p| self.reader.get(p))
+            .collect::<Result<Vec<_>>>()
     }
 }
 

@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::hash::TestOnlyHasher;
 use proptest::{collection::vec, prelude::*};
 use types::proof::verify_test_accumulator_element;
-
-type InMemoryAccumulator = types::proof::accumulator::Accumulator<TestOnlyHasher>;
 
 #[test]
 fn test_error_on_bad_parameters() {
