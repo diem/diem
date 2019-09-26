@@ -1,10 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod proof_test;
+mod write_test;
+
 use super::*;
 use crypto::hash::TestOnlyHasher;
+use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
 
+type InMemoryAccumulator = types::proof::accumulator::Accumulator<TestOnlyHasher>;
 type TestAccumulator = MerkleAccumulator<MockHashStore, TestOnlyHasher>;
 
 struct MockHashStore {
@@ -150,5 +155,17 @@ impl MockHashStore {
     }
 }
 
-mod proof_test;
-mod write_test;
+proptest! {
+    #[test]
+    fn test_get_frozen_subtree_hashes(leaves in vec(any::<HashValue>(), 0..1000)) {
+        let mut store = MockHashStore::new();
+        let (root_hash, writes) = TestAccumulator::append(&store, 0, &leaves).unwrap();
+        store.put_many(&writes);
+
+        let frozen_subtree_hashes =
+            TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len() as u64).unwrap();
+        let in_mem_acc =
+            InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len() as u64).unwrap();
+        prop_assert_eq!(root_hash, in_mem_acc.root_hash());
+    }
+}

@@ -24,10 +24,7 @@ use schemadb::{ReadOptions, DB};
 use std::{ops::Deref, sync::Arc};
 use types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{
-        position::{FrozenSubTreeIterator, Position},
-        AccumulatorProof,
-    },
+    proof::{position::Position, AccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
 
@@ -174,19 +171,7 @@ impl LedgerStore {
 
     /// From left to right, get frozen subtree root hashes of the transaction accumulator.
     pub fn get_ledger_frozen_subtree_hashes(&self, version: Version) -> Result<Vec<HashValue>> {
-        FrozenSubTreeIterator::new(version + 1)
-            .map(|pos| {
-                self.db
-                    .get::<TransactionAccumulatorSchema>(&pos)?
-                    .ok_or_else(|| {
-                        LibraDbError::NotFound(format!(
-                            "Txn Accumulator node at pos {}",
-                            pos.to_inorder_index()
-                        ))
-                        .into()
-                    })
-            })
-            .collect::<Result<Vec<_>>>()
+        Accumulator::get_frozen_subtree_hashes(self, version + 1)
     }
 }
 
