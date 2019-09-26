@@ -14,9 +14,9 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-#[cfg(any(test, feature = "testing"))]
 use std::mem;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
