@@ -662,7 +662,6 @@ fn backoff_on_failure() {
             let elapsed = Instant::now().duration_since(start);
             info!("Duration elapsed: {:?}", elapsed);
             assert!(elapsed.as_millis() >= 100);
-            assert!(elapsed.as_millis() <= 150);
         }
     };
     rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
