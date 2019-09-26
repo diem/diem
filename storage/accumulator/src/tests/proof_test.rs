@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crypto::hash::TestOnlyHasher;
 use proptest::{collection::vec, prelude::*};
 use types::proof::verify_test_accumulator_element;
+
+type InMemoryAccumulator = types::proof::accumulator::Accumulator<TestOnlyHasher>;
 
 #[test]
 fn test_error_on_bad_parameters() {
@@ -46,6 +49,38 @@ proptest! {
 
         // verify proofs for all leaves of a subtree towards subtree root
         verify(&store, batch1.len(), root_hash1, &batch1, 0);
+    }
+
+    #[test]
+    fn test_consistency_proof(
+        batch1 in vec(any::<HashValue>(), 0..100),
+        batch2 in vec(any::<HashValue>(), 0..100),
+    ) {
+        let mut store = MockHashStore::new();
+        let empty_in_mem_acc = InMemoryAccumulator::default();
+
+        let (root_hash1, writes1) = TestAccumulator::append(&store, 0, &batch1).unwrap();
+        store.put_many(&writes1);
+        let proof1 =
+            TestAccumulator::get_consistency_proof(&store, batch1.len() as u64, 0).unwrap();
+        let in_mem_acc1 = empty_in_mem_acc
+            .append_subtrees(proof1.subtrees(), batch1.len() as u64)
+            .unwrap();
+        prop_assert_eq!(root_hash1, in_mem_acc1.root_hash());
+
+        let (root_hash2, writes2) =
+            TestAccumulator::append(&store, batch1.len() as u64, &batch2).unwrap();
+        store.put_many(&writes2);
+        let proof2 = TestAccumulator::get_consistency_proof(
+            &store,
+            (batch1.len() + batch2.len()) as u64,
+            batch1.len() as u64,
+        )
+        .unwrap();
+        let in_mem_acc2 = in_mem_acc1
+            .append_subtrees(proof2.subtrees(), batch2.len() as u64)
+            .unwrap();
+        prop_assert_eq!(root_hash2, in_mem_acc2.root_hash());
     }
 }
 
