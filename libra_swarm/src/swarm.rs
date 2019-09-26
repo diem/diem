@@ -472,13 +472,8 @@ impl LibraSwarm {
 
     /// A specific public AC port of a validator or a full node.
     pub fn get_ac_port(&self, index: usize) -> u16 {
-        *self
-            .nodes
-            .values()
-            .map(|node| node.ac_port())
-            .collect::<Vec<u16>>()
-            .get(index)
-            .unwrap()
+        let node_id = format!("{}", index);
+        self.nodes.get(&node_id).map(|node| node.ac_port()).unwrap()
     }
 
     /// Vector with the peer ids of the validators in the swarm.
