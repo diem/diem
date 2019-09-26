@@ -106,3 +106,8 @@ variable "monitoring_snapshot" {
   default     = ""
   description = "EBS snapshot ID to initialise monitoring data with"
 }
+
+variable "cloudwatch_logs" {
+  description = "Send container logs to CloudWatch"
+  default     = false
+}

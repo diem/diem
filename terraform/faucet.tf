@@ -40,7 +40,7 @@ data "template_file" "ecs_faucet_definition" {
     ac_hosts             = join(",", aws_instance.validator.*.private_ip)
     secret               = aws_secretsmanager_secret.faucet.arn
     log_level            = var.faucet_log_level
-    log_group            = aws_cloudwatch_log_group.testnet.name
+    log_group            = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region           = var.region
     log_prefix           = "faucet"
   }
