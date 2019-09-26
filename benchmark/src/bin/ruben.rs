@@ -88,9 +88,7 @@ mod tests {
         );
         let mut args = BenchOpt {
             validator_addresses: Vec::new(),
-            swarm_config_dir: Some(String::from(
-                swarm.dir.as_ref().unwrap().as_ref().to_str().unwrap(),
-            )),
+            swarm_config_dir: Some(String::from(swarm.dir.as_ref().to_str().unwrap())),
             // Don't start metrics server as we are not testing with prometheus.
             metrics_server_address: None,
             faucet_key_file_path,

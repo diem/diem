@@ -38,8 +38,6 @@ fn setup_env(
     let validator_set_file = swarm
         .dir
         .as_ref()
-        .expect("fail to access output dir")
-        .as_ref()
         .join("0")
         .join(&config.consensus.consensus_peers_file);
     let client_proxy = ClientProxy::new(
@@ -300,8 +298,6 @@ fn test_basic_state_synchronization() {
     let config = NodeConfig::load(&swarm.config.configs[0]).unwrap();;
     let validator_set_file = swarm
         .dir
-        .as_ref()
-        .expect("fail to access output dir")
         .as_ref()
         .join("0")
         .join(&config.consensus.consensus_peers_file);
