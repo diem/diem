@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
 use crypto::hash::CryptoHash;
-use failure::Result as ProtoResult;
+use failure::{Result as ProtoResult, ResultExt};
 use network::proto::Vote as ProtoVote;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
@@ -14,19 +14,7 @@ use std::{
 use types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
-    validator_verifier::VerifyError,
 };
-
-/// VoteMsg verification errors.
-#[derive(Debug, Fail, PartialEq)]
-pub enum VoteMsgVerificationError {
-    /// The internal consensus data of LedgerInfo doesn't match the vote info.
-    #[fail(display = "ConsensusDataMismatch")]
-    ConsensusDataMismatch,
-    /// The signature doesn't pass verification
-    #[fail(display = "SigVerifyError: {}", _0)]
-    SigVerifyError(VerifyError),
-}
 
 /// VoteMsg is the struct that is ultimately sent by the voter in response for
 /// receiving a proposal.
@@ -96,13 +84,15 @@ impl VoteMsg {
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
     /// and then verifies the signature.
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), VoteMsgVerificationError> {
-        if self.ledger_info.consensus_data_hash() != self.vote_data.hash() {
-            return Err(VoteMsgVerificationError::ConsensusDataMismatch);
-        }
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+        ensure!(
+            self.ledger_info.consensus_data_hash() == self.vote_data.hash(),
+            "Vote's hash mismatch with LedgerInfo"
+        );
         self.signature()
             .verify(validator, self.author(), self.ledger_info.hash())
-            .map_err(VoteMsgVerificationError::SigVerifyError)
+            .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
+        Ok(())
     }
 }
 

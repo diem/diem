@@ -77,12 +77,14 @@ impl<T: Payload> ProposalMsg<T> {
 
     /// Verifies that the ProposalMsg is well-formed.
     pub fn verify_well_formed(self) -> Result<Self> {
-        if self.proposal.is_nil_block() {
-            return Err(format_err!("Proposal {} for a NIL block", self.proposal));
-        }
+        ensure!(
+            !self.proposal.is_nil_block(),
+            "Proposal {} for a NIL block",
+            self.proposal
+        );
         self.proposal
             .verify_well_formed()
-            .map_err(|e| format_err!("{:?}", e))?;
+            .with_context(|e| format!("Fail to verify ProposalMsg's block: {:}", e))?;
         ensure!(
             self.proposal.round() > 0,
             "Proposal for {} has an incorrect round of 0",
@@ -116,12 +118,11 @@ impl<T: Payload> ProposalMsg<T> {
                 self.proposal.quorum_cert().certified_block_round(),
             );
         }
-        if self.proposal.author().is_none() {
-            return Err(format_err!(
-                "Proposal {} does not define an author",
-                self.proposal
-            ));
-        }
+        ensure!(
+            self.proposal.author().is_some(),
+            "Proposal {} does not define an author",
+            self.proposal
+        );
         Ok(self)
     }
 

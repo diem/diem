@@ -3,17 +3,14 @@
 
 use crate::chained_bft::{
     common::{Author, Round},
-    consensus_types::{
-        sync_info::SyncInfo,
-        timeout_msg::PacemakerTimeoutCertificateVerificationError::*,
-        vote_msg::{VoteMsg, VoteMsgVerificationError},
-    },
+    consensus_types::{sync_info::SyncInfo, vote_msg::VoteMsg},
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue,
 };
+use failure::prelude::*;
 use mirai_annotations::assumed_postcondition;
 use network;
 use proto_conv::{FromProto, IntoProto};
@@ -23,7 +20,6 @@ use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
-    validator_verifier::VerifyError,
 };
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the
@@ -49,17 +45,6 @@ impl CryptoHash for PacemakerTimeoutSerializer {
         state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).expect("Should serialize."));
         state.finish()
     }
-}
-
-/// TimeoutMsg verification errors.
-#[derive(Debug, Fail, PartialEq)]
-pub enum TimeoutVerificationError {
-    /// The vote message carried by the timeout doesn't pass verification.
-    #[fail(display = "VoteMsgError: {}", _0)]
-    VoteMsgError(VoteMsgVerificationError),
-    /// The signature doesn't pass verification
-    #[fail(display = "SigVerifyError: {}", _0)]
-    SigVerifyError(VerifyError),
 }
 
 /// This message will be broadcast by a pacemaker as part of TimeoutMsg when its local
@@ -108,14 +93,17 @@ impl PacemakerTimeout {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), TimeoutVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         self.signature
             .verify(validator, self.author, self.digest())
-            .map_err(TimeoutVerificationError::SigVerifyError)?;
-        if let Some(vote) = self.vote.as_ref() {
-            vote.verify(validator)
-                .map_err(TimeoutVerificationError::VoteMsgError)?;
-        }
+            .map_err(Error::from)
+            .and_then(|_| {
+                if let Some(vote) = self.vote.as_ref() {
+                    vote.verify(validator)?;
+                }
+                Ok(())
+            })
+            .with_context(|e| format!("Fail to verify TimeoutMsg: {:?}", e))?;
         Ok(())
     }
 
@@ -242,7 +230,7 @@ impl TimeoutMsg {
     }
 
     /// Verifies that this message has valid signature
-    pub fn verify(&self, validator: &ValidatorVerifier) -> Result<(), TimeoutVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         self.pacemaker_timeout.verify(validator)
     }
 
@@ -292,20 +280,6 @@ pub struct PacemakerTimeoutCertificate {
     timeouts: Vec<PacemakerTimeout>,
 }
 
-/// PacemakerTimeoutCertificate verification errors.
-#[derive(Debug, PartialEq, Fail)]
-pub enum PacemakerTimeoutCertificateVerificationError {
-    /// Number of signed timeouts is less then required quorum size
-    #[fail(display = "NoQuorum")]
-    NoQuorum,
-    /// Round in message does not match calculated rounds based on signed timeouts
-    #[fail(display = "RoundMismatch {}", expected)]
-    RoundMismatch { expected: Round },
-    /// The signature on one of timeouts doesn't pass verification
-    #[fail(display = "SigVerifyError for {}: {}", _0, _1)]
-    SigVerifyError(Author, VerifyError),
-}
-
 impl fmt::Display for PacemakerTimeoutCertificate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TimeoutCertificate[round: {}, timeouts:[", self.round)?;
@@ -326,34 +300,29 @@ impl PacemakerTimeoutCertificate {
     }
 
     /// Verifies that timeouts in message actually certify the round
-    pub fn verify(
-        &self,
-        validator: &ValidatorVerifier,
-    ) -> Result<(), PacemakerTimeoutCertificateVerificationError> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         let mut min_round: Option<Round> = None;
         let mut unique_authors = HashSet::new();
         for timeout in &self.timeouts {
-            if let Err(e) =
-                timeout
-                    .signature()
-                    .verify(validator, timeout.author(), timeout.digest())
-            {
-                return Err(SigVerifyError(timeout.author(), e));
-            }
+            timeout
+                .signature()
+                .verify(validator, timeout.author(), timeout.digest())
+                .with_context(|e| format!("Fail to verify TimeoutCert: {:?}", e))?;
             unique_authors.insert(timeout.author());
             let timeout_round = timeout.round();
             min_round = Some(min_round.map_or(timeout_round, move |x| x.min(timeout_round)))
         }
-        if unique_authors.len() < validator.quorum_size() {
-            return Err(NoQuorum);
-        }
-        if min_round == Some(self.round) {
-            Ok(())
-        } else {
-            Err(RoundMismatch {
-                expected: min_round.unwrap_or(0),
-            })
-        }
+        ensure!(
+            unique_authors.len() >= validator.quorum_size(),
+            "TimeoutCert has no quorum"
+        );
+        ensure!(
+            min_round == Some(self.round),
+            "TimeoutCert has inconsistent round {}, expected: {:?}",
+            self.round,
+            min_round
+        );
+        Ok(())
     }
 
     /// Returns the round of the timeout

@@ -18,7 +18,7 @@ use crate::{
 use bytes::Bytes;
 use channel;
 use crypto::HashValue;
-use failure;
+use failure::{self, ResultExt};
 use futures::{
     channel::oneshot, stream::select, FutureExt, SinkExt, Stream, StreamExt, TryFutureExt,
     TryStreamExt,
@@ -46,26 +46,23 @@ pub struct BlockRetrievalResponse<T> {
 
 impl<T: Payload> BlockRetrievalResponse<T> {
     pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> failure::Result<()> {
-        if self.status == BlockRetrievalStatus::SUCCEEDED && self.blocks.len() as u64 != num_blocks
-        {
-            return Err(format_err!(
-                "not enough blocks returned, expect {}, get {}",
-                num_blocks,
-                self.blocks.len(),
-            ));
-        }
+        ensure!(
+            self.status != BlockRetrievalStatus::SUCCEEDED
+                || self.blocks.len() as u64 == num_blocks,
+            "not enough blocks returned, expect {}, get {}",
+            num_blocks,
+            self.blocks.len(),
+        );
         self.blocks
             .iter()
             .try_fold(block_id, |expected_id, block| {
-                if block.id() != expected_id {
-                    Err(format_err!(
-                        "blocks doesn't form a chain: expect {}, get {}",
-                        expected_id,
-                        block.id()
-                    ))
-                } else {
-                    Ok(block.parent_id())
-                }
+                ensure!(
+                    block.id() == expected_id,
+                    "blocks doesn't form a chain: expect {}, get {}",
+                    expected_id,
+                    block.id()
+                );
+                Ok(block.parent_id())
             })
             .map(|_| ())
     }
@@ -204,10 +201,8 @@ impl ConsensusNetworkImpl {
                 Ok(block) => {
                     block
                         .validate_signatures(self.epoch_mgr.validators().as_ref())
-                        .map_err(|e| format_err!("Invalid block because of {:?}", e))?;
-                    block
-                        .verify_well_formed()
-                        .map_err(|e| format_err!("Invalid block because of {:?}", e))?;
+                        .and_then(|_| block.verify_well_formed())
+                        .with_context(|e| format_err!("Invalid block because of {:?}", e))?;
                     blocks.push(block);
                 }
                 Err(e) => bail!("Failed to deserialize block because of {:?}", e),

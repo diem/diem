@@ -19,7 +19,7 @@ use crate::{
         epoch_manager::EpochManager,
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
-            proposal_generator::{ProposalGenerationError, ProposalGenerator},
+            proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
@@ -164,7 +164,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn generate_proposal(
         &self,
         new_round_event: NewRoundEvent,
-    ) -> Result<ProposalMsg<T>, ProposalGenerationError> {
+    ) -> failure::Result<ProposalMsg<T>> {
         // Proposal generator will ensure that at most one proposal is generated per round
         let proposal = self
             .proposal_generator
@@ -650,7 +650,7 @@ impl<T: Payload> EventProcessor<T> {
         let vote_info = self
             .safety_rules
             .voting_rule(block)
-            .map_err(|e| format_err!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
+            .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone())
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
