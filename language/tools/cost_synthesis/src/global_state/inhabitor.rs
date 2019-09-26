@@ -115,33 +115,26 @@ where
             .get_loaded_module(&module_id)
             .expect("[Module Lookup] Runtime error while looking up module")
             .expect("[Module Lookup] Unable to find module");
-        let struct_def_idx = if self.struct_handle_table.contains_key(&module_id) {
-            self.struct_handle_table
-                .get(&module_id)
-                .expect("[Struct Definition Lookup] Unable to get struct handles for module")
-                .get(struct_name)
-        } else {
-            let entry = self
-                .struct_handle_table
-                .entry(module_id)
-                .or_insert_with(|| {
-                    module
-                        .struct_defs()
-                        .iter()
-                        .enumerate()
-                        .map(|(struct_def_index, struct_def)| {
-                            let handle = module.struct_handle_at(struct_def.struct_handle);
-                            let name = module.identifier_at(handle.name).to_owned();
-                            (
-                                name,
-                                StructDefinitionIndex::new(struct_def_index as TableIndex),
-                            )
-                        })
-                        .collect()
-                });
-            entry.get(struct_name)
-        }
-        .expect("[Struct Definition Lookup] Unable to get struct definition for struct handle");
+        let struct_def_idx = self
+            .struct_handle_table
+            .entry(module_id)
+            .or_insert_with(|| {
+                module
+                    .struct_defs()
+                    .iter()
+                    .enumerate()
+                    .map(|(struct_def_index, struct_def)| {
+                        let handle = module.struct_handle_at(struct_def.struct_handle);
+                        let name = module.identifier_at(handle.name).to_owned();
+                        (
+                            name,
+                            StructDefinitionIndex::new(struct_def_index as TableIndex),
+                        )
+                    })
+                    .collect()
+            })
+            .get(struct_name)
+            .expect("[Struct Definition Lookup] Unable to get struct definition for struct handle");
         let struct_def = module.struct_def_at(*struct_def_idx);
         (module, struct_def, *struct_def_idx)
     }
