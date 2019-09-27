@@ -224,6 +224,7 @@ impl ClusterTestRunner {
         }
         self.deployment_manager.redeploy(hash)?;
         thread::sleep(Duration::from_secs(60));
+        self.logs.recv_all();
         self.health_check_runner.clear();
         self.start();
         info!("Waiting until all validators healthy after deployment");
