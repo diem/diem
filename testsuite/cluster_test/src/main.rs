@@ -223,7 +223,7 @@ impl ClusterTestRunner {
             info!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
         self.deployment_manager.redeploy(hash)?;
-        thread::sleep(Duration::from_secs(10));
+        thread::sleep(Duration::from_secs(60));
         self.health_check_runner.clear();
         self.start();
         info!("Waiting until all validators healthy after deployment");
