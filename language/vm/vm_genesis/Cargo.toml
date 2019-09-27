@@ -10,7 +10,6 @@ publish = false
 config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 transaction_builder = { path = "../../transaction_builder"}
-ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 proto_conv = { path = "../../../common/proto_conv", features = ["derive"] }

@@ -20,7 +20,6 @@ walkdir = "2.2.9"
 admission_control_proto = { path = "../admission_control/admission_control_proto" }
 client = { path = "../client" }
 config = { path = "../config" }
-config_builder = { path = "../config/config_builder" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }

@@ -15,7 +15,6 @@ vm = { path = "../vm" }
 bytecode_verifier = { path = "../bytecode_verifier" }
 language_e2e_tests = { path = "../e2e_tests" }
 config = { path = "../../config" }
-transaction_builder = { path = "../transaction_builder" }
 filecheck = "0.4.0"
 lazy_static = "1.3.0"
 regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
