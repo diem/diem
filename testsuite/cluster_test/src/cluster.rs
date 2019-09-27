@@ -1,12 +1,15 @@
 use crate::{aws::Aws, instance::Instance};
 use failure::{self, prelude::*};
 use rand::prelude::*;
-use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter};
+use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
+use std::collections::HashMap;
 use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Cluster {
-    instances: Vec<Instance>, // guaranteed non-empty
+    // guaranteed non-empty
+    instances: Vec<Instance>,
+    prometheus_ip: String,
 }
 
 impl Cluster {
@@ -14,15 +17,12 @@ impl Cluster {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;
+        let mut prometheus_ip: Option<String> = None;
         loop {
             let filters = vec![
                 Filter {
                     name: Some("tag:Workspace".into()),
                     values: Some(vec![aws.workplace().clone()]),
-                },
-                Filter {
-                    name: Some("tag:Role".into()),
-                    values: Some(vec!["validator".into()]),
                 },
                 Filter {
                     name: Some("instance-state-name".into()),
@@ -60,14 +60,17 @@ impl Cluster {
                         .private_ip_address
                         .expect("Instance does not have private IP address");
                     let tags = aws_instance.tags.expect("Instance does not have tags");
-                    let peer_id = tags
-                        .into_iter()
-                        .find(|tag| tag.key == Some("PeerId".into()))
-                        .expect("No peer id")
-                        .value
-                        .expect("PeerId tag has no value");
-                    let short_hash = peer_id[..8].into();
-                    instances.push(Instance::new(short_hash, ip));
+                    let role = parse_tags(tags);
+                    match role {
+                        InstanceRole::Prometheus => {
+                            prometheus_ip = Some(ip);
+                        }
+                        InstanceRole::Peer(peer_id) => {
+                            let short_hash = peer_id[..8].into();
+                            instances.push(Instance::new(short_hash, ip));
+                        }
+                        _ => {}
+                    }
                 }
             }
             next_token = result.next_token;
@@ -77,9 +80,16 @@ impl Cluster {
         }
         ensure!(
             !instances.is_empty(),
-            "Non instances were discovered for cluster"
+            "No instances were discovered for cluster"
         );
-        Ok(Self { instances })
+        let prometheus_ip = match prometheus_ip {
+            Some(ip) => ip,
+            None => bail!("Prometheus was not found in workplace"),
+        };
+        Ok(Self {
+            instances,
+            prometheus_ip,
+        })
     }
 
     pub fn random_instance(&self) -> Instance {
@@ -89,6 +99,10 @@ impl Cluster {
 
     pub fn instances(&self) -> &Vec<Instance> {
         &self.instances
+    }
+
+    pub fn prometheus_ip(&self) -> &str {
+        &self.prometheus_ip
     }
 
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
@@ -110,6 +124,29 @@ impl Cluster {
             }
         }
         assert!(!instances.is_empty(), "No instances for subcluster");
-        Cluster { instances }
+        Cluster {
+            instances,
+            prometheus_ip: self.prometheus_ip.clone(),
+        }
     }
+}
+
+fn parse_tags(tags: Vec<Tag>) -> InstanceRole {
+    let mut map: HashMap<_, _> = tags.into_iter().map(|tag| (tag.key, tag.value)).collect();
+    let role = map.remove(&Some("Role".to_string()));
+    if role == Some(Some("validator".to_string())) {
+        let peer_id = map.remove(&Some("PeerId".to_string()));
+        let peer_id = peer_id.expect("Validator instance without PeerId");
+        let peer_id = peer_id.expect("PeerId tag without value");
+        return InstanceRole::Peer(peer_id);
+    } else if role == Some(Some("monitoring".to_string())) {
+        return InstanceRole::Prometheus;
+    }
+    InstanceRole::Unknown
+}
+
+enum InstanceRole {
+    Peer(String),
+    Prometheus,
+    Unknown,
 }

@@ -4,7 +4,7 @@ use failure::{
 };
 use reqwest::Url;
 use serde::Deserialize;
-use std::{collections::HashMap, env, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 pub struct Prometheus {
     url: Url,
@@ -20,17 +20,12 @@ pub struct TimeSeries {
 }
 
 impl Prometheus {
-    pub fn try_new_from_environment() -> Option<Self> {
-        match env::var("PROMETHEUS") {
-            Err(..) => None,
-            Ok(url) => {
-                let url = format!("http://{}:9091", url)
-                    .parse()
-                    .expect("Failed to parse PROMETHEUS");
-                let client = reqwest::Client::new();
-                Some(Self { url, client })
-            }
-        }
+    pub fn new(ip: &str) -> Self {
+        let url = format!("http://{}:9091", ip)
+            .parse()
+            .expect("Failed to parse prometheus url");
+        let client = reqwest::Client::new();
+        Self { url, client }
     }
 
     pub fn query_range(
