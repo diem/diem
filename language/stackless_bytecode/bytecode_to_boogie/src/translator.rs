@@ -283,12 +283,14 @@ impl<'a> ModuleTranslator<'a> {
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
             Call(dests, callee_index, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
+                let callee_function_handle = self.module.function_handle_at(*callee_index);
+                let callee_function_signature = self.module.function_signature_at(callee_function_handle.signature);
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
-                for arg in args.iter() {
+                for (i, arg) in args.iter().enumerate() {
                     args_str.push_str(&format!(", t{}", arg));
-                    if self.is_local_mutable_ref(*arg, func_idx) {
+                    if callee_function_signature.arg_types[i].is_mutable_reference() {
                         dest_str.push_str(&format!(", t{}", arg));
                         dest_type_assumptions.push(self.format_type_checking(
                             format!("t{}", arg),

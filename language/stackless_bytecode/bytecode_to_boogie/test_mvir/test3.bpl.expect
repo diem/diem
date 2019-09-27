@@ -1289,9 +1289,7 @@ procedure LibraCoin_mint_with_default_capability (c: CreationTime, addr_exists: 
     assume is#Global(rt#Reference(t3));
     assume is#Map(v#Reference(t3));
 
-    call addr_exists', t3, t4 := LibraCoin_mint(c', addr_exists', t1, t3);
-    assume is#Map(v#Reference(t3));
-
+    call addr_exists', t4 := LibraCoin_mint(c', addr_exists', t1, t3);
     assume is#Map(t4);
 
 
@@ -3845,9 +3843,7 @@ procedure LibraAccount_balance (c: CreationTime, addr_exists: [Address]bool, arg
     assume is#Global(rt#Reference(t2));
     assume is#Map(v#Reference(t2));
 
-    call addr_exists', t2, t3 := LibraAccount_balance_for_account(c', addr_exists', t2);
-    assume is#Map(v#Reference(t2));
-
+    call addr_exists', t3 := LibraAccount_balance_for_account(c', addr_exists', t2);
     assume is#Integer(t3);
 
 
@@ -3931,9 +3927,7 @@ procedure LibraAccount_sequence_number (c: CreationTime, addr_exists: [Address]b
     assume is#Global(rt#Reference(t2));
     assume is#Map(v#Reference(t2));
 
-    call addr_exists', t2, t3 := LibraAccount_sequence_number_for_account(c', addr_exists', t2);
-    assume is#Map(v#Reference(t2));
-
+    call addr_exists', t3 := LibraAccount_sequence_number_for_account(c', addr_exists', t2);
     assume is#Integer(t3);
 
 
