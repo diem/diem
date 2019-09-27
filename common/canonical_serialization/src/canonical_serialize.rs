@@ -64,7 +64,16 @@ pub trait CanonicalSerializer {
     fn encode_btreemap<K: CanonicalSerialize, V: CanonicalSerialize>(
         &mut self,
         v: &BTreeMap<K, V>,
-    ) -> Result<&mut Self>;
+    ) -> Result<&mut Self> {
+        self.encode_tuple_iterator(v.iter())
+    }
+
+    fn encode_tuple_iterator<K: CanonicalSerialize, V: CanonicalSerialize, I>(
+        &mut self,
+        iter: I,
+    ) -> Result<&mut Self>
+    where
+        I: Iterator<Item = (K, V)>;
 
     fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self>;
 
@@ -128,6 +137,16 @@ impl_canonical_serialize_for_primitive!(encode_u8, u8);
 impl_canonical_serialize_for_primitive!(encode_u16, u16);
 impl_canonical_serialize_for_primitive!(encode_u32, u32);
 impl_canonical_serialize_for_primitive!(encode_u64, u64);
+
+impl<T> CanonicalSerialize for &T
+where
+    T: CanonicalSerialize,
+{
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_struct(*self)?;
+        Ok(())
+    }
+}
 
 impl<T> CanonicalSerialize for Option<T>
 where
