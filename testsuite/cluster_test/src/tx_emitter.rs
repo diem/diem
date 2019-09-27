@@ -50,14 +50,19 @@ const THREADS_PER_CLIENT_DEFAULT: usize = 1;
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
 pub struct TxEmitter {
+    prometheus: Prometheus,
     clients: Vec<(Instance, AdmissionControlClient)>,
 }
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
         let clients = Self::create_ac_clients(cluster);
+        let prometheus = Prometheus::new(cluster.prometheus_ip());
 
-        Self { clients }
+        Self {
+            prometheus,
+            clients,
+        }
     }
 
     fn create_ac_clients(cluster: &Cluster) -> Vec<(Instance, AdmissionControlClient)> {
@@ -109,21 +114,18 @@ impl TxEmitter {
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
         info!("Threads started");
-        let prometheus = Prometheus::try_new_from_environment();
-        if let Some(prometheus) = prometheus {
-            run_stat_loop(prometheus);
-        }
+        run_stat_loop(&self.prometheus);
         for join_handle in join_handles {
             join_handle.join().unwrap();
         }
     }
 }
 
-fn run_stat_loop(prometheus: Prometheus) {
+fn run_stat_loop(prometheus: &Prometheus) {
     thread::sleep(Duration::from_secs(30)); // warm up
     loop {
         thread::sleep(Duration::from_secs(10));
-        if let Err(err) = print_stat(&prometheus) {
+        if let Err(err) = print_stat(prometheus) {
             info!("Stat error: {:?}", err);
         }
     }
