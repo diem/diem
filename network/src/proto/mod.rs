@@ -16,7 +16,8 @@ pub use self::{
     admission_control::{AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse},
     consensus::{
         Block, BlockRetrievalStatus, ConsensusMsg, PacemakerTimeout, PacemakerTimeoutCertificate,
-        Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote, VoteData,
+        Proposal, QuorumCert, RequestBlock, RespondBlock, RoundData, SyncInfo, TimeoutMsg, Vote,
+        VoteData,
     },
     mempool::MempoolSyncMsg,
     network::{

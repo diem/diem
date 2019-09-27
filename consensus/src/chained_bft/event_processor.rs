@@ -239,14 +239,7 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         // pacemaker may catch up with the SyncInfo, check again
-        let current_round = self.pacemaker.current_round();
-        if proposal_msg.round() != current_round {
-            warn!(
-                "Proposal {} is ignored because its round {} != current round {}",
-                proposal_msg,
-                proposal_msg.round(),
-                current_round
-            );
+        if proposal_msg.round() != self.pacemaker.current_round() {
             return None;
         }
 

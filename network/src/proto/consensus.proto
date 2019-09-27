@@ -95,6 +95,15 @@ message QuorumCert {
   types.LedgerInfoWithSignatures signed_ledger_info = 2;
 }
 
+message RoundData {
+  // The round of the vote
+  uint64 round = 1;
+  // The author of the message
+  bytes author = 2;
+  // The signature over the round
+  bytes signature = 3;
+}
+
 message VoteData {
   // The id of the block being vote for.
   bytes block_id = 1;
@@ -122,6 +131,8 @@ message Vote {
   types.LedgerInfo ledger_info = 3;
   // Signature of the ledger info.
   bytes signature = 4;
+  // Information about the round that can be used in a standalone round certificate.
+  RoundData round_data = 5;
 }
 
 message RequestBlock {

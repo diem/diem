@@ -560,6 +560,11 @@ define_hasher! {
 }
 
 define_hasher! {
+    /// The hasher used to compute the hash of a RoundData object.
+    (RoundDataHasher, ROUND_DATA_HASHER, b"RoundData")
+}
+
+define_hasher! {
     /// The hasher used to compute the hash of a ContractEvent object.
     (ContractEventHasher, CONTRACT_EVENT_HASHER, b"ContractEvent")
 }

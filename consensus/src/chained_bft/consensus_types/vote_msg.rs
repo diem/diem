@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::consensus_types::round_data::RoundData;
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
 use crypto::hash::CryptoHash;
 use failure::{Result as ProtoResult, ResultExt};
@@ -30,6 +31,8 @@ pub struct VoteMsg {
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
     signature: Signature,
+    /// Information about the round that can be used in a standalone round certificate.
+    round_data: RoundData,
 }
 
 impl Display for VoteMsg {
@@ -52,6 +55,7 @@ impl VoteMsg {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+        let round_data = RoundData::new(vote_data.block_round(), author, validator_signer);
         let li_sig = validator_signer
             .sign_message(ledger_info_placeholder.hash())
             .expect("Failed to sign LedgerInfo");
@@ -60,6 +64,7 @@ impl VoteMsg {
             author,
             ledger_info: ledger_info_placeholder,
             signature: li_sig.into(),
+            round_data,
         }
     }
 
@@ -89,8 +94,25 @@ impl VoteMsg {
             self.ledger_info.consensus_data_hash() == self.vote_data.hash(),
             "Vote's hash mismatch with LedgerInfo"
         );
+        if self.vote_data().block_round() != self.round_data.round() {
+            bail!(
+                "Vote data round = {}, round_data round = {}",
+                self.vote_data().block_round(),
+                self.round_data.round()
+            );
+        }
+        if self.author() != self.round_data.author() {
+            bail!(
+                "Vote author = {}, round_data author = {}",
+                self.author(),
+                self.round_data.author()
+            );
+        }
         self.signature()
             .verify(validator, self.author(), self.ledger_info.hash())
+            .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
+        self.round_data
+            .verify(validator)
             .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
         Ok(())
     }
@@ -105,6 +127,7 @@ impl IntoProto for VoteMsg {
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
         proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
+        proto.set_round_data(self.round_data.into_proto());
         proto
     }
 }
@@ -117,11 +140,13 @@ impl FromProto for VoteMsg {
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
         let signature = Signature::try_from(object.get_signature())?;
+        let round_data = RoundData::from_proto(object.take_round_data())?;
         Ok(VoteMsg {
             vote_data,
             author,
             ledger_info,
             signature,
+            round_data,
         })
     }
 }
