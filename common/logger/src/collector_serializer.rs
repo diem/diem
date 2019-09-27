@@ -3,10 +3,7 @@
 
 //! Provides CollectorSerializer. See it's documentation for more help
 
-use std::{
-    collections::HashMap,
-    fmt::{format, Arguments},
-};
+use std::fmt::Arguments;
 
 use slog::{Key, Result, Serializer};
 
@@ -78,27 +75,6 @@ impl<'a, C: KVCategorizer> Serializer for CollectorSerializer<'a, C> {
     impl_emit!(emit_f64, f64);
     impl_emit!(emit_str, &str);
     impl_emit!(emit_arguments, &Arguments<'_>);
-}
-
-/// This serializer collects all KV pairs into a map, converting the values to `String`.
-#[derive(Default)]
-pub struct PlainKVSerializer(HashMap<&'static str, String>);
-
-impl PlainKVSerializer {
-    pub fn new() -> Self {
-        Default::default()
-    }
-    /// Once done collecting KV pairs call this to retrieve collected values
-    pub fn into_inner(self) -> HashMap<&'static str, String> {
-        self.0
-    }
-}
-
-impl Serializer for PlainKVSerializer {
-    fn emit_arguments(&mut self, key: &'static str, value: &Arguments) -> slog::Result {
-        self.0.insert(key, format(*value));
-        Ok(())
-    }
 }
 
 #[cfg(test)]

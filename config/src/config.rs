@@ -13,7 +13,6 @@ use crate::{
 };
 use crypto::{ed25519::Ed25519PublicKey, ValidKey};
 use failure::prelude::*;
-use logger::LoggerType;
 use parity_multiaddr::Multiaddr;
 use proto_conv::FromProtoBytes;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -210,37 +209,16 @@ impl ExecutionConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LoggerConfig {
-    pub http_endpoint: Option<String>,
     pub is_async: bool,
     pub chan_size: Option<usize>,
-    pub use_std_output: bool,
 }
 
 impl Default for LoggerConfig {
     fn default() -> LoggerConfig {
         LoggerConfig {
-            http_endpoint: None,
             is_async: true,
             chan_size: None,
-            use_std_output: true,
         }
-    }
-}
-
-impl LoggerConfig {
-    pub fn get_log_collector_type(&self) -> Option<LoggerType> {
-        // There is priority between different logger. If multiple ones are specified, only
-        // the higher one will be returned.
-        if self.http_endpoint.is_some() {
-            return Some(LoggerType::Http(
-                self.http_endpoint
-                    .clone()
-                    .expect("Http endpoint not available for logger"),
-            ));
-        } else if self.use_std_output {
-            return Some(LoggerType::StdOutput);
-        }
-        None
     }
 }
 

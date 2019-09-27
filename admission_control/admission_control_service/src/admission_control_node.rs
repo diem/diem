@@ -35,11 +35,7 @@ impl AdmissionControlNode {
 
     /// Setup environment and start a new Admission Control service.
     pub fn run(&self) -> Result<()> {
-        logger::set_global_log_collector(
-            self.node_config
-                .log_collector
-                .get_log_collector_type()
-                .unwrap(),
+        let _logger_guard = logger::set_default_global_logger(
             self.node_config.log_collector.is_async,
             self.node_config.log_collector.chan_size,
         );
