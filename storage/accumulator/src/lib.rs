@@ -361,7 +361,7 @@ where
         );
 
         let subtrees = FrozenSubtreeSiblingIterator::new(sub_acc_leaves, self.num_leaves)
-            .map(|p| self.get_hash(p))
+            .map(|p| self.reader.get(p))
             .collect::<Result<Vec<_>>>()?;
 
         Ok(AccumulatorConsistencyProof::new(subtrees))
