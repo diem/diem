@@ -229,10 +229,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
             Ok(Some(module)) => {
-                let struct_def_idx = module
-                    .struct_defs_table
-                    .get(struct_name)
-                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+                let struct_def_idx = module.get_struct_def_index(struct_name)?;
                 self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
             }
             Ok(None) => Ok(None),

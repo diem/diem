@@ -35,6 +35,7 @@ lazy_static! {
     static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleDefinition =
         make_module_definition!("../modules/transaction_fee_distribution.mvir");
     static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
+    static ref GAS_SCHEDULE: ModuleDefinition = make_module_definition!("../modules/gas_schedule.mvir");
     static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
         // Note: a module can depend on earlier modules in the list, but not vice versa. Don't try
         // to rearrange without considering this!
@@ -47,6 +48,7 @@ lazy_static! {
             &*U64_UTIL_MODULE,
             &*VECTOR_MODULE,
             &*VALIDATOR_CONFIG_MODULE,
+            &*GAS_SCHEDULE, // depends on Vector
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
             &*LIBRA_SYSTEM_MODULE, // depends on LibraAccount, ValidatorConfig

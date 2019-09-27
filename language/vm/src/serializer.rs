@@ -554,14 +554,6 @@ fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
     serialize_code(binary, &code.code)
 }
 
-/// Serializes a single `Bytecode` instruction into a vector
-pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) -> Result<()> {
-    let mut binary_data = BinaryData::from(binary.clone());
-    serialize_instruction_inner(&mut binary_data, opcode)?;
-    *binary = binary_data.into_inner();
-    Ok(())
-}
-
 /// Serializes a single `Bytecode` instruction.
 fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Result<()> {
     let res = match opcode {

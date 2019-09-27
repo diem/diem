@@ -30,7 +30,7 @@ use vm::{
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
         NO_TYPE_ACTUALS,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;

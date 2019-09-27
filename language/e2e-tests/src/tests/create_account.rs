@@ -7,7 +7,7 @@ use crate::{
     executor::test_all_genesis,
 };
 use libra_types::{
-    transaction::{SignedTransaction, TransactionStatus},
+    transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
 
@@ -23,18 +23,16 @@ fn create_account() {
         let txn = create_account_txn(sender.account(), &new_account, 10, initial_amount);
 
         // execute transaction
-        let txns: Vec<SignedTransaction> = vec![txn];
-        let output = executor.execute_block(txns);
-        let txn_output = output.get(0).expect("must have a transaction output");
+        let output = executor.execute_transaction(txn);
         assert_eq!(
-            output[0].status(),
+            output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         );
-        println!("write set {:?}", txn_output.write_set());
-        executor.apply_write_set(txn_output.write_set());
+        println!("write set {:?}", output.write_set());
+        executor.apply_write_set(output.write_set());
 
         // check that numbers in stored DB are correct
-        let gas = txn_output.gas_used();
+        let gas = output.gas_used();
         let sender_balance = 1_000_000 - initial_amount - gas;
         let updated_sender = executor
             .read_account_resource(sender.account())
@@ -62,18 +60,16 @@ fn create_account_zero_balance() {
         let txn = create_account_txn(sender.account(), &new_account, 10, initial_amount);
 
         // execute transaction
-        let txns: Vec<SignedTransaction> = vec![txn];
-        let output = executor.execute_block(txns);
-        let txn_output = output.get(0).expect("must have a transaction output");
+        let output = executor.execute_transaction(txn);
         assert_eq!(
-            output[0].status(),
+            output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         );
-        println!("write set {:?}", txn_output.write_set());
-        executor.apply_write_set(txn_output.write_set());
+        println!("write set {:?}", output.write_set());
+        executor.apply_write_set(output.write_set());
 
         // check that numbers in stored DB are correct
-        let gas = txn_output.gas_used();
+        let gas = output.gas_used();
         let sender_balance = 1_000_000 - initial_amount - gas;
         let updated_sender = executor
             .read_account_resource(sender.account())

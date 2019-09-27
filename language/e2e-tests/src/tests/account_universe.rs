@@ -109,7 +109,7 @@ pub(crate) fn run_and_assert_gas_cost_stability(
                 .iter()
                 .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
                 .unzip();
-            let outputs = executor.execute_block(transactions);
+            let outputs = executor.execute_block(transactions).unwrap();
 
             for (idx, (output, expected_value)) in outputs.iter().zip(&expected_values).enumerate()
             {
@@ -142,7 +142,7 @@ pub(crate) fn run_and_assert_universe(
                 .iter()
                 .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
                 .unzip();
-            let outputs = executor.execute_block(transactions);
+            let outputs = executor.execute_block(transactions).unwrap();
 
             prop_assert_eq!(outputs.len(), expected_values.len());
 

@@ -1,0 +1,277 @@
+// The gas schedule keeps two separate schedules for the gas:
+// * The instruction_schedule: This holds the gas for each bytecode instruction.
+// * The native_schedule: This holds the gas for used (per-byte operated over) for each native
+//   function.
+// A couple notes:
+// 1. In the case that an instruction is deleted from the bytecode, that part of the cost schedule
+//    still needs to remain the same; once a slot in the table is taken by an instruction, that is its
+//    slot for the rest of time (since that instruction could already exist in a module on-chain).
+// 2. The initialization of the module will publish the instruction table to the association
+//    address, and will preload the vector with the gas schedule for instructions. The VM will then
+//    load this into memory at the startup of each block.
+module GasSchedule {
+    import 0x0.Vector;
+
+    // The gas cost for each instruction is represented using two amounts;
+    // one for the cpu, and the other for storage.
+    struct Cost {
+      cpu: u64,
+      storage: u64,
+    }
+
+    resource T {
+        instruction_schedule: Vector.T<Self.Cost>,
+        native_schedule: Vector.T<Self.Cost>,
+    }
+
+    // Initialize the table under the association account
+    initialize() {
+        let instruction_table: Vector.T<Self.Cost>;
+        assert(get_txn_sender() == 0xA550C18, 0);
+        instruction_table = Vector.empty<Self.Cost>();
+
+        // NB: DO NOT change the order of these pushes to the vector.
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 27, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 28, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 31, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 29, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 10, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 29, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 36, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 52, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 29, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 41, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 41, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 28, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 45, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 45, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 58, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 58, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 56, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 197, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 73, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 94, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 51, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 65, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 45, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 44, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 41, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 42, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 41, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 45, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 44, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 46, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 43, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 49, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 35, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 48, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 51, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 49, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 46, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 47, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 46, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 39, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 29, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 34, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 32, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 856, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 929, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 929, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 917, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 774, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 29, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 41, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut instruction_table,
+          Cost { cpu: 10, storage: 1 }
+        );
+
+        move_to_sender<T>(T {
+            instruction_schedule: move(instruction_table),
+            native_schedule: Vector.empty<Self.Cost>(),
+        });
+        return;
+    }
+
+    public new_cost(cpu: u64, storage: u64): Self.Cost {
+      return Cost {cpu: move(cpu), storage: move(storage) };
+    }
+
+    public has_gas_schedule_resource(): bool {
+        return exists<T>(0xA550C18);
+    }
+
+    public instruction_table_size(): u64 acquires T {
+        let table: &Self.T;
+        let instruction_table_len: u64;
+        table = borrow_global<T>(0xA550C18);
+        instruction_table_len = Vector.length<Self.Cost>(&move(table).instruction_schedule);
+        return move(instruction_table_len);
+    }
+
+    public native_table_size(): u64 acquires T {
+        let table: &Self.T;
+        let native_table_len: u64;
+        table = borrow_global<T>(0xA550C18);
+        native_table_len = Vector.length<Self.Cost>(&move(table).native_schedule);
+        return move(native_table_len);
+    }
+}

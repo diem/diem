@@ -5,7 +5,7 @@
 use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
 use libra_types::{
-    identifier::Identifier,
+    identifier::{IdentStr, Identifier},
     vm_error::{StatusCode, VMStatus},
 };
 use std::{collections::HashMap, sync::RwLock};
@@ -25,7 +25,6 @@ use vm_runtime_types::loaded_data::struct_def::StructDef;
 #[derive(Debug, Eq, PartialEq)]
 pub struct LoadedModule {
     module: VerifiedModule,
-    #[allow(dead_code)]
     pub struct_defs_table: HashMap<Identifier, StructDefinitionIndex>,
     #[allow(dead_code)]
     pub field_defs_table: HashMap<Identifier, FieldDefinitionIndex>,
@@ -149,6 +148,12 @@ impl LoadedModule {
         self.field_offsets
             .get(idx.into_index())
             .cloned()
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
+    }
+
+    pub fn get_struct_def_index(&self, struct_name: &IdentStr) -> VMResult<&StructDefinitionIndex> {
+        self.struct_defs_table
+            .get(struct_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
     }
 }

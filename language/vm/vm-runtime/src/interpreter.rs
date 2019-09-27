@@ -36,7 +36,7 @@ use vm::{
         Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, SignatureToken,
         StructDefinitionIndex,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
     IndexKind,
 };
@@ -86,7 +86,7 @@ where
     /// The stack of active functions.
     call_stack: CallStack<'txn>,
     /// Gas metering to track cost of execution.
-    gas_meter: GasMeter,
+    gas_meter: GasMeter<'txn>,
     /// Transaction data to resolve special bytecodes (e.g. GetTxnSequenceNumber, GetTxnPublicKey,
     /// GetTxnSenderAddress, ...)
     txn_data: TransactionMetadata,
@@ -161,11 +161,12 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
+        gas_schedule: &'txn CostTable,
     ) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            gas_meter: GasMeter::new(txn_data.max_gas_amount()),
+            gas_meter: GasMeter::new(txn_data.max_gas_amount(), gas_schedule),
             txn_data,
             event_data: vec![],
             data_view,
@@ -1198,8 +1199,9 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
+        gas_schedule: &'txn CostTable,
     ) -> Self {
-        let interpreter = Interpreter::new(module_cache, txn_data, data_view);
+        let interpreter = Interpreter::new(module_cache, txn_data, data_view, gas_schedule);
         InterpreterForCostSynthesis(interpreter)
     }
 

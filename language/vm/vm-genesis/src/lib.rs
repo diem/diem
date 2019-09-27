@@ -17,7 +17,9 @@ use libra_types::{
 use rand::{rngs::StdRng, SeedableRng};
 use std::time::Duration;
 use stdlib::stdlib_modules;
-use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
+use vm::{
+    access::ModuleAccess, gas_schedule::CostTable, transaction_metadata::TransactionMetadata,
+};
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::{
@@ -26,7 +28,7 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, LIBRA_SYSTEM_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
         TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE,
     },
 };
@@ -206,6 +208,7 @@ pub fn encode_genesis_transaction_with_validator(
     let vm_cache = VMModuleCache::new(&arena);
     let genesis_addr = account_config::association_address();
     let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(&public_key).to_vec());
+    let gas_schedule = CostTable::zero();
 
     let genesis_write_set = {
         let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
@@ -215,7 +218,8 @@ pub fn encode_genesis_transaction_with_validator(
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
 
-            let mut txn_executor = TransactionExecutor::new(&block_cache, &data_cache, txn_data);
+            let mut txn_executor =
+                TransactionExecutor::new(&block_cache, &gas_schedule, &data_cache, txn_data);
             txn_executor.create_account(genesis_addr).unwrap();
             txn_executor
                 .create_account(account_config::transaction_fee_address())
@@ -228,6 +232,14 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap();
             txn_executor
                 .execute_function(&LIBRA_SYSTEM_MODULE, &INITIALIZE_BLOCK, vec![])
+                .unwrap();
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::association_address(),
+                    &GAS_SCHEDULE_MODULE,
+                    &INITIALIZE,
+                    vec![],
+                )
                 .unwrap();
 
             txn_executor

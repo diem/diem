@@ -400,6 +400,7 @@ pub enum StatusCode {
     INTERNAL_TYPE_ERROR = 2009,
     EVENT_KEY_MISMATCH = 2010,
     UNREACHABLE = 2011,
+    VM_STARTUP_FAILURE = 2012,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
@@ -448,6 +449,7 @@ pub enum StatusCode {
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
     NATIVE_FUNCTION_ERROR = 4022,
+    GAS_SCHEDULE_ERROR = 4023,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
@@ -495,6 +497,8 @@ pub mod sub_status {
     pub const AEO_OVERFLOW: u64 = 2;
     pub const AED_DIVISION_BY_ZERO: u64 = 3;
 
+    pub const VSF_GAS_SCHEDULE_NOT_FOUND: u64 = 0;
+
     // Dynamic Reference status sub-codes
     pub const DRE_UNKNOWN_DYNAMIC_REFERENCE_ERROR: u64 = 0;
     pub const DRE_MOVE_OF_BORROWED_RESOURCE: u64 = 1;
@@ -504,4 +508,8 @@ pub mod sub_status {
 
     // Native Function Error sub-codes
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
+
+    pub const GSE_UNABLE_TO_LOAD_MODULE: u64 = 0;
+    pub const GSE_UNABLE_TO_LOAD_RESOURCE: u64 = 1;
+    pub const GSE_UNABLE_TO_DESERIALIZE: u64 = 2;
 }

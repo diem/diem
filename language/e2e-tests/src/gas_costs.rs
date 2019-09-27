@@ -45,7 +45,7 @@ lazy_static! {
             create_account_txn(sender.account(), &Account::new(), 10, 20_000),
             create_account_txn(sender.account(), &Account::new(), 11, 20_000),
         ];
-        let output = &executor.execute_block(txns);
+        let output = &executor.execute_block(txns).expect("The VM should not fail to startup");
         output[1].gas_used()
     };
 
@@ -83,7 +83,7 @@ lazy_static! {
             create_account_txn(sender.account(), &Account::new(), 10, 10),
             create_account_txn(sender.account(), &Account::new(), 11, balance),
         ];
-        let output = &executor.execute_block(txns);
+        let output = &executor.execute_block(txns).expect("The VM should not fail to startup");
         output[1].gas_used()
     };
 
@@ -118,7 +118,7 @@ lazy_static! {
             create_account_txn(sender.account(), &Account::new(), 10, 20_000),
             create_account_txn(sender.account(), receiver.account(), 11, 20_000),
         ];
-        let output = &executor.execute_block(txns);
+        let output = &executor.execute_block(txns).expect("The VM should not fail to startup");
         output[1].gas_used()
     };
 
@@ -184,7 +184,7 @@ lazy_static! {
             peer_to_peer_txn(sender.account(), &Account::new(), 10, 20_000),
             peer_to_peer_txn(sender.account(), &Account::new(), 11, 20_000),
         ];
-        let output = &executor.execute_block(txns);
+        let output = &executor.execute_block(txns).expect("The VM should not fail to startup");
         output[1].gas_used()
     };
 
@@ -224,7 +224,7 @@ lazy_static! {
             peer_to_peer_txn(sender.account(), &Account::new(), 10, 10_000),
             peer_to_peer_txn(sender.account(), &Account::new(), 11, balance),
         ];
-        let output = &executor.execute_block(txns);
+        let output = &executor.execute_block(txns).expect("The VM should not fail to startup");
         output[1].gas_used()
     };
 
@@ -244,6 +244,6 @@ lazy_static! {
 }
 
 fn compute_gas_used(txn: SignedTransaction, executor: &mut FakeExecutor) -> u64 {
-    let output = &executor.execute_block(vec![txn])[0];
+    let output = &executor.execute_transaction(txn);
     output.gas_used()
 }

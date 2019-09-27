@@ -25,7 +25,7 @@ fn rotate_key() {
         let txn = rotate_key_txn(sender.account(), new_key_hash, 10);
 
         // execute transaction
-        let output = &executor.execute_block(vec![txn])[0];
+        let output = &executor.execute_transaction(txn);
         assert_eq!(
             output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
@@ -48,7 +48,7 @@ fn rotate_key() {
         // Check that transactions cannot be sent with the old key any more.
         let new_account = Account::new();
         let old_key_txn = create_account_txn(sender.account(), &new_account, 11, 100_000);
-        let old_key_output = &executor.execute_block(vec![old_key_txn])[0];
+        let old_key_output = &executor.execute_transaction(old_key_txn);
         assert_eq!(
             old_key_output.status(),
             &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY)),
@@ -57,7 +57,7 @@ fn rotate_key() {
         // Check that transactions can be sent with the new key.
         sender.rotate_key(privkey, pubkey);
         let new_key_txn = create_account_txn(sender.account(), &new_account, 11, 100_000);
-        let new_key_output = &executor.execute_block(vec![new_key_txn])[0];
+        let new_key_output = &executor.execute_transaction(new_key_txn);
         assert_eq!(
             new_key_output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),

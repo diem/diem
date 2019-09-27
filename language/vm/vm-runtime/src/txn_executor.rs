@@ -3,9 +3,13 @@
 //! Processor for a single transaction.
 
 use crate::{
-    code_cache::module_cache::{ModuleCache, VMModuleCache},
+    code_cache::{
+        module_adapter::ModuleFetcherImpl,
+        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
+    },
     counters::*,
-    data_cache::{RemoteCache, TransactionDataCache},
+    data_cache::{BlockDataCache, RemoteCache, TransactionDataCache},
+    gas_meter::load_gas_schedule,
     interpreter::Interpreter,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
@@ -13,6 +17,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -23,11 +28,13 @@ use libra_types::{
     write_set::WriteSet,
 };
 use vm::{
-    errors::*, file_format::CompiledScript, transaction_metadata::TransactionMetadata,
-    vm_string::VMString,
+    errors::*, file_format::CompiledScript, gas_schedule::CostTable,
+    transaction_metadata::TransactionMetadata, vm_string::VMString,
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
+
+pub use crate::gas_meter::GAS_SCHEDULE_MODULE;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -84,6 +91,7 @@ where
     /// transactions within the same block.
     pub fn new(
         module_cache: P,
+        gas_schedule: &'txn CostTable,
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
@@ -92,6 +100,7 @@ where
                 module_cache,
                 txn_data,
                 TransactionDataCache::new(data_cache),
+                gas_schedule,
             ),
         }
     }
@@ -275,21 +284,25 @@ pub fn execute_function(
     caller_script: VerifiedScript,
     modules: Vec<VerifiedModule>,
     args: Vec<TransactionArgument>,
-    data_cache: &dyn RemoteCache,
+    data_view: &dyn StateView,
 ) -> VMResult<()> {
+    let txn_metadata = TransactionMetadata::default();
     let allocator = Arena::new();
-    let module_cache = VMModuleCache::new(&allocator);
+    let code_cache = VMModuleCache::new(&allocator);
+    for m in modules {
+        code_cache.cache_module(m);
+    }
     let main_module = caller_script.into_module();
     let loaded_main = LoadedModule::new(main_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
-    let txn_metadata = TransactionMetadata::default();
-    for m in modules {
-        module_cache.cache_module(m);
-    }
+    let module_cache = BlockModuleCache::new(&code_cache, ModuleFetcherImpl::new(data_view));
+    let data_cache = BlockDataCache::new(data_view);
+    let gas_schedule = load_gas_schedule(&module_cache, &data_cache)?;
     let mut interpreter = Interpreter::new(
         module_cache,
         txn_metadata,
-        TransactionDataCache::new(data_cache),
+        TransactionDataCache::new(&data_cache),
+        &gas_schedule,
     );
     interpreter.interpeter_entrypoint(entry_func, convert_txn_args(args))
 }
