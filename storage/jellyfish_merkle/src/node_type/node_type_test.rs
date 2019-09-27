@@ -82,6 +82,15 @@ fn test_encode_decode() {
     }
 }
 
+proptest! {
+    #[test]
+    fn test_u64_varint_roundtrip(input in any::<u64>()) {
+        let mut vec = vec![];
+        serialize_u64_varint(input, &mut vec);
+        assert_eq!(deserialize_u64_varint(&mut Cursor::new(vec)).unwrap(), input);
+    }
+}
+
 #[test]
 fn test_internal_validity() {
     let result = panic::catch_unwind(|| {

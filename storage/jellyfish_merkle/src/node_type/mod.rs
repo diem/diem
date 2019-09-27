@@ -15,7 +15,7 @@ mod node_type_test;
 
 use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{
     hash::{
         CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
@@ -32,7 +32,8 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::hash_map::HashMap,
-    io::{Cursor, Read, Write},
+    io::{prelude::*, Cursor, Read, SeekFrom, Write},
+    mem::size_of,
 };
 use types::{
     account_state_blob::AccountStateBlob,
@@ -41,7 +42,7 @@ use types::{
 };
 
 /// The unique key of each node.
-#[derive(Arbitrary, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct NodeKey {
     // The version at which the node is created.
     version: Version,
@@ -127,7 +128,7 @@ impl NodeKey {
 }
 
 /// Each child of [`InternalNode`] encapsulates a nibble forking at this node.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct Child {
     // The hash value of this child node.
     pub hash: HashValue,
@@ -158,7 +159,7 @@ pub(crate) type Children = HashMap<Nibble, Child>;
 /// Though we choose the same internal node structure as that of Patricia Merkle tree, the root hash
 /// computation logic is similar to a 4-level sparse Merkle tree except for some customizations. See
 /// the `CryptoHash` trait implementation below for details.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InternalNode {
     // Up to 16 children.
     children: Children,
@@ -245,7 +246,7 @@ impl CryptoHash for LeafNode {
 }
 
 /// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Node {
     /// Represents `null`.
     Null,
@@ -314,6 +315,68 @@ impl InternalNode {
             )
         }
         Self { children }
+    }
+
+    pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        let (mut existence_bitmap, leaf_bitmap) = self.generate_bitmaps();
+        binary.write_u16::<LittleEndian>(existence_bitmap)?;
+        binary.write_u16::<LittleEndian>(leaf_bitmap)?;
+        for _ in 0..existence_bitmap.count_ones() {
+            let next_child = existence_bitmap.trailing_zeros() as u8;
+            let child = &self.children[&Nibble::from(next_child)];
+            serialize_u64_varint(child.version, binary);
+            binary.extend(child.hash.to_vec());
+            existence_bitmap &= !(1 << next_child);
+        }
+        Ok(())
+    }
+
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
+        let mut reader = Cursor::new(data);
+        let len = data.len();
+
+        // Read and validate existence and leaf bitmaps
+        let mut existence_bitmap = reader.read_u16::<LittleEndian>()?;
+        let leaf_bitmap = reader.read_u16::<LittleEndian>()?;
+        match existence_bitmap {
+            0 => return Err(NodeDecodeError::NoChildren.into()),
+            _ if (existence_bitmap & leaf_bitmap) != leaf_bitmap => {
+                return Err(NodeDecodeError::ExtraLeaves {
+                    existing: existence_bitmap,
+                    leaves: leaf_bitmap,
+                }
+                .into())
+            }
+            _ => (),
+        }
+
+        // Reconstruct children
+        let mut children = HashMap::new();
+        for _ in 0..existence_bitmap.count_ones() {
+            let next_child = existence_bitmap.trailing_zeros() as u8;
+            let version = deserialize_u64_varint(&mut reader)?;
+            let pos = reader.position() as usize;
+            let remaining = len - pos;
+            ensure!(
+                remaining >= size_of::<HashValue>(),
+                "not enough bytes left, children: {}, bytes: {}",
+                existence_bitmap.count_ones(),
+                remaining
+            );
+            let child_bit = 1 << next_child;
+            children.insert(
+                Nibble::from(next_child),
+                Child::new(
+                    HashValue::from_slice(&reader.get_ref()[pos..pos + size_of::<HashValue>()])?,
+                    version,
+                    (leaf_bitmap & child_bit) != 0,
+                ),
+            );
+            reader.seek(SeekFrom::Current(size_of::<HashValue>() as i64))?;
+            existence_bitmap &= !child_bit;
+        }
+        assert_eq!(existence_bitmap, 0);
+        Ok(Self { children })
     }
 
     /// Gets the `n`-th child.
@@ -537,7 +600,7 @@ impl Node {
             }
             Node::Internal(internal_node) => {
                 out.push(NodeTag::Internal as u8);
-                out.extend(serialize(&internal_node)?);
+                internal_node.serialize(&mut out)?
             }
             Node::Leaf(leaf_node) => {
                 out.push(NodeTag::Leaf as u8);
@@ -565,7 +628,7 @@ impl Node {
         let node_tag = NodeTag::from_u8(tag);
         match node_tag {
             Some(NodeTag::Null) => Ok(Node::Null),
-            Some(NodeTag::Internal) => Ok(Node::Internal(deserialize(&val[1..])?)),
+            Some(NodeTag::Internal) => Ok(Node::Internal(InternalNode::deserialize(&val[1..])?)),
             Some(NodeTag::Leaf) => Ok(Node::Leaf(deserialize(&val[1..])?)),
             None => Err(NodeDecodeError::UnknownTag { unknown_tag: tag }.into()),
         }
@@ -583,4 +646,53 @@ pub enum NodeDecodeError {
     /// The first byte of the input is not a known tag representing one of the variants.
     #[fail(display = "lead tag byte is unknown: {}", unknown_tag)]
     UnknownTag { unknown_tag: u8 },
+
+    /// No children found in internal node
+    #[fail(display = "No children found in internal node")]
+    NoChildren,
+
+    /// Extra leaf bits set
+    #[fail(
+        display = "Non-existent leaf bits set, existing: {}, leaves: {}",
+        existing, leaves
+    )]
+    ExtraLeaves { existing: u16, leaves: u16 },
+}
+
+/// Helper function to serialize version in a more efficient encoding.
+/// We use a super simple encoding - the high bit is set if more bytes follow.
+fn serialize_u64_varint(mut num: u64, binary: &mut Vec<u8>) {
+    for _ in 0..8 {
+        let low_bits = num as u8 & 0x7f;
+        num >>= 7;
+        let more = (num > 0) as u8;
+        binary.push(low_bits | more << 7);
+        if more == 0 {
+            return;
+        }
+    }
+    // Last byte is encoded raw; this means there are no bad encodings.
+    assert_ne!(num, 0);
+    assert!(num <= 0xff);
+    binary.push(num as u8);
+}
+
+/// Helper function to deserialize versions from above encoding.
+fn deserialize_u64_varint<T>(reader: &mut T) -> Result<u64>
+where
+    T: Read,
+{
+    let mut num = 0u64;
+    for i in 0..8 {
+        let byte = reader.read_u8()?;
+        let more = (byte & 0x80) != 0;
+        num |= u64::from(byte & 0x7f) << (i * 7);
+        if !more {
+            return Ok(num);
+        }
+    }
+    // Last byte is encoded as is.
+    let byte = reader.read_u8()?;
+    num |= u64::from(byte) << 56;
+    Ok(num)
 }
