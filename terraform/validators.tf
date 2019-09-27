@@ -57,8 +57,8 @@ locals {
     "c5d.large"    = 3704
     "c5.xlarge"    = 7624
     "c5d.xlarge"   = 7624
-    "c5.2xlarge"   = 15464
-    "c5d.2xlarge"  = 15464
+    "c5.2xlarge"   = 15463
+    "c5d.2xlarge"  = 15463
     "c5.4xlarge"   = 31142
     "c5d.4xlarge"  = 31142
     "c5.9xlarge"   = 70341
