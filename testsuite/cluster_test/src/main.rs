@@ -15,6 +15,8 @@ use failure::{
     self,
     prelude::{bail, format_err},
 };
+use slog::{o, Drain};
+use slog_scope::info;
 use std::{
     collections::HashSet,
     env, mem,
@@ -28,6 +30,7 @@ use threadpool;
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 pub fn main() {
+    setup_log();
     let matches = arg_matches();
 
     if matches.is_present(ARG_PRUNE) {
@@ -66,6 +69,19 @@ pub fn main() {
     }
 }
 
+fn setup_log() {
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    let decorator = slog_term::PlainDecorator::new(std::io::stdout());
+    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let drain = slog_envlogger::new(drain);
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let logger = slog::Logger::root(drain, o!());
+    let logger_guard = slog_scope::set_global_logger(logger);
+    std::mem::forget(logger_guard);
+}
+
 struct ClusterUtil {
     cluster: Cluster,
     aws: Aws,
@@ -93,7 +109,7 @@ impl ClusterUtil {
             None => cluster,
             Some(peers) => cluster.sub_cluster(peers),
         };
-        println!("Discovered {} peers", cluster.instances().len());
+        info!("Discovered {} peers", cluster.instances().len());
         Self { cluster, aws }
     }
 
@@ -103,7 +119,6 @@ impl ClusterUtil {
     }
 
     pub fn emit_tx(self) {
-        let _g = logger::set_default_global_logger(false, Some(256));
         let emitter = TxEmitter::new(&self.cluster);
         emitter.run();
     }
@@ -118,7 +133,7 @@ impl ClusterTestRunner {
         let log_tail_started = Instant::now();
         let logs = DebugPortLogThread::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
-        println!(
+        info!(
             "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
@@ -149,7 +164,7 @@ impl ClusterTestRunner {
         let mut hash_to_tag = None;
         loop {
             if let Some(hash) = self.deployment_manager.latest_hash_changed() {
-                println!(
+                info!(
                     "New version of `{}` tag is available: `{}`",
                     SOURCE_TAG, hash
                 );
@@ -174,7 +189,7 @@ impl ClusterTestRunner {
                 return;
             }
             if let Some(hash_to_tag) = hash_to_tag.take() {
-                println!("Test suite succeed first time for `{}`", hash_to_tag);
+                info!("Test suite succeed first time for `{}`", hash_to_tag);
                 if let Err(e) = self
                     .deployment_manager
                     .tag_tested_image(hash_to_tag.clone())
@@ -197,27 +212,27 @@ impl ClusterTestRunner {
 
     fn redeploy(&mut self, hash: String) -> failure::Result<bool> {
         if env::var("ALLOW_DEPLOY") != Ok("yes".to_string()) {
-            println!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
+            info!("Deploying is disabled. Run with ALLOW_DEPLOY=yes to enable deploy");
             return Ok(false);
         }
         self.stop();
         if env::var("WIPE_ON_DEPLOY") != Ok("no".to_string()) {
-            println!("Wiping validators");
+            info!("Wiping validators");
             self.wipe_all_db(false);
         } else {
-            println!("WIPE_ON_DEPLOY is set to no, keeping database");
+            info!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
         self.deployment_manager.redeploy(hash)?;
         thread::sleep(Duration::from_secs(10));
         self.health_check_runner.clear();
         self.start();
-        println!("Waiting until all validators healthy after deployment");
+        info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
         Ok(true)
     }
 
     fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {
-        println!("Starting suite");
+        info!("Starting suite");
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
@@ -226,7 +241,7 @@ impl ClusterTestRunner {
             })?;
             thread::sleep(self.experiment_interval);
         }
-        println!(
+        info!(
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
@@ -242,7 +257,7 @@ impl ClusterTestRunner {
             bail!("Some validators are unhealthy before experiment started");
         }
 
-        println!(
+        info!(
             "{}Starting experiment {}{}{}{}",
             style::Bold,
             color::Fg(color::Blue),
@@ -294,7 +309,7 @@ impl ClusterTestRunner {
             }
         }
 
-        println!(
+        info!(
             "{}Experiment finished, waiting until all affected validators recover{}",
             style::Bold,
             style::Reset
@@ -329,7 +344,7 @@ impl ClusterTestRunner {
             }
         }
 
-        println!("Experiment completed");
+        info!("Experiment completed");
         Ok(())
     }
 
@@ -365,25 +380,25 @@ impl ClusterTestRunner {
 
     fn tail_logs(self) {
         for log in self.logs.event_receiver {
-            println!("{:?}", log);
+            info!("{:?}", log);
         }
     }
 
     fn slack_message(&self, msg: String) {
-        println!("{}", msg);
+        info!("{}", msg);
         if let Some(ref slack) = self.slack {
             if let Err(e) = slack.send_message(&msg) {
-                println!("Failed to send slack message: {}", e);
+                info!("Failed to send slack message: {}", e);
             }
         }
     }
 
     fn wipe_all_db(&self, safety_wait: bool) {
-        println!("Going to wipe db on all validators in cluster!");
+        info!("Going to wipe db on all validators in cluster!");
         if safety_wait {
-            println!("Waiting 10 seconds before proceed");
+            info!("Waiting 10 seconds before proceed");
             thread::sleep(Duration::from_secs(10));
-            println!("Starting...");
+            info!("Starting...");
         }
         let jobs = self
             .cluster
@@ -395,37 +410,37 @@ impl ClusterTestRunner {
                     if let Err(e) =
                         instance.run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/"])
                     {
-                        println!("Failed to wipe {}: {:?}", instance, e);
+                        info!("Failed to wipe {}: {:?}", instance, e);
                     }
                 }
             })
             .collect();
         self.execute_jobs(jobs);
-        println!("Done");
+        info!("Done");
     }
 
     fn reboot(self) {
         let mut reboots = vec![];
         for instance in self.cluster.instances() {
-            println!("Rebooting {}", instance);
+            info!("Rebooting {}", instance);
             let reboot = Reboot::new(instance.clone());
             if let Err(err) = reboot.apply() {
-                println!("Failed to reboot {}: {:?}", instance, err);
+                info!("Failed to reboot {}: {:?}", instance, err);
             } else {
                 reboots.push(reboot);
             }
         }
-        println!("Waiting to complete");
+        info!("Waiting to complete");
         while reboots.iter().any(|r| !r.is_complete()) {
             thread::sleep(Duration::from_secs(5));
         }
-        println!("Completed");
+        info!("Completed");
     }
 
     fn restart(&self) {
         self.stop();
         self.start();
-        println!("Completed");
+        info!("Completed");
     }
 
     pub fn stop(&self) {
@@ -451,7 +466,7 @@ impl ClusterTestRunner {
             .map(|effect| {
                 move || {
                     if let Err(e) = effect.activate() {
-                        println!("Failed to activate {}: {:?}", effect, e);
+                        info!("Failed to activate {}: {:?}", effect, e);
                     }
                 }
             })
@@ -465,7 +480,7 @@ impl ClusterTestRunner {
             .map(|effect| {
                 move || {
                     if let Err(e) = effect.deactivate() {
-                        println!("Failed to deactivate {}: {:?}", effect, e);
+                        info!("Failed to deactivate {}: {:?}", effect, e);
                     }
                 }
             })
