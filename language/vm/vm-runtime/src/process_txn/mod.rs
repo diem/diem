@@ -8,7 +8,7 @@ use crate::{
 use libra_config::config::VMPublishingOption;
 use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;
-use vm::errors::VMResult;
+use vm::{errors::VMResult, gas_schedule::CostTable};
 use vm_cache_map::Arena;
 
 pub mod execute;
@@ -25,6 +25,7 @@ where
     P: ModuleCache<'alloc>,
 {
     txn: SignatureCheckedTransaction,
+    gas_schedule: &'txn CostTable,
     module_cache: P,
     data_cache: &'txn dyn RemoteCache,
     allocator: &'txn Arena<LoadedModule>,
@@ -39,12 +40,14 @@ where
     /// Creates a new instance of `ProcessTransaction`.
     pub fn new(
         txn: SignatureCheckedTransaction,
+        gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
     ) -> Self {
         Self {
             txn,
+            gas_schedule,
             module_cache,
             data_cache,
             allocator,

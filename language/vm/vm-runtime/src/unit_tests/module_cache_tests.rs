@@ -24,7 +24,7 @@ use libra_types::{
 use vm::{
     access::ModuleAccess,
     file_format::*,
-    gas_schedule::{GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
@@ -527,7 +527,8 @@ fn test_same_module_struct_resolution() {
     {
         let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
         let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
-        let gas = GasMeter::new(GasUnits::new(100_000_000));
+        let gas_schedule = CostTable::zero();
+        let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()
@@ -570,6 +571,7 @@ fn test_multi_module_struct_resolution() {
     let module = parse_and_compile_modules(&code);
     let fetcher = FakeFetcher::new(module);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
+    let gas_schedule = CostTable::zero();
     {
         let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
         let module2_ref = block_cache
@@ -577,7 +579,7 @@ fn test_multi_module_struct_resolution() {
             .unwrap()
             .unwrap();
 
-        let gas = GasMeter::new(GasUnits::new(100_000_000));
+        let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
             .unwrap()

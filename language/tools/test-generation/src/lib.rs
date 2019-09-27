@@ -43,7 +43,6 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 }
 
 /// This function runs a verified module in the VM runtime
-/// This code is based on `cost-synthesis/src/vm_runner.rs`
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
     let modules = ::stdlib::stdlib_modules().to_vec();
     // The standard library modules are bounded

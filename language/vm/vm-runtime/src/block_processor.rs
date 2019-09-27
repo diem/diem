@@ -9,6 +9,7 @@ use crate::{
     },
     counters::*,
     data_cache::BlockDataCache,
+    gas_meter::load_gas_schedule,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
 use libra_config::config::VMPublishingOption;
@@ -18,10 +19,10 @@ use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_error::{StatusCode, VMStatus},
-    write_set::WriteSet,
+    vm_error::{sub_status, StatusCode, VMStatus},
 };
 use rayon::prelude::*;
+use vm::gas_schedule::CostTable;
 use vm_cache_map::Arena;
 
 pub fn execute_user_transaction_block<'alloc>(
@@ -30,25 +31,14 @@ pub fn execute_user_transaction_block<'alloc>(
     script_cache: &ScriptCache<'alloc>,
     data_view: &dyn StateView,
     publishing_option: &VMPublishingOption,
-) -> Vec<TransactionOutput> {
+) -> Result<Vec<TransactionOutput>, VMStatus> {
     trace!("[VM] Execute block, transaction count: {}", txn_block.len());
     report_block_count(txn_block.len());
 
     let mode = if data_view.is_genesis() {
         // The genesis transaction must be in a block of its own.
         if txn_block.len() != 1 {
-            // XXX Need a way to return that an entire block failed.
-            return txn_block
-                .iter()
-                .map(|_| {
-                    TransactionOutput::new(
-                        WriteSet::default(),
-                        vec![],
-                        0,
-                        TransactionStatus::from(VMStatus::new(StatusCode::REJECTED_WRITE_SET)),
-                    )
-                })
-                .collect();
+            return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
         } else {
             ValidationMode::Genesis
         }
@@ -59,6 +49,18 @@ pub fn execute_user_transaction_block<'alloc>(
     let module_cache = BlockModuleCache::new(code_cache, ModuleFetcherImpl::new(data_view));
     let mut data_cache = BlockDataCache::new(data_view);
     let mut result = vec![];
+
+    // If we fail to load the gas schedule, then we fail to process the block.
+    let gas_schedule = match load_gas_schedule(&module_cache, &data_cache) {
+        // TODO/XXX: This is a hack to get around not having proper writesets yet. Once that gets
+        // in remove this line.
+        Err(_) if data_view.is_genesis() => CostTable::zero(),
+        Err(_) => {
+            return Err(VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
+                .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND))
+        }
+        Ok(cost_table) => cost_table,
+    };
 
     let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>> = txn_block
         .into_par_iter()
@@ -78,6 +80,7 @@ pub fn execute_user_transaction_block<'alloc>(
                         &data_cache,
                         mode,
                         publishing_option,
+                        &gas_schedule,
                     ),
                     Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
                 };
@@ -93,7 +96,7 @@ pub fn execute_user_transaction_block<'alloc>(
         }
     }
     trace!("[VM] Execute block finished");
-    result
+    Ok(result)
 }
 
 /// Process a transaction and emit a TransactionOutput.
@@ -116,12 +119,13 @@ fn transaction_flow<'alloc, P>(
     data_cache: &BlockDataCache<'_>,
     mode: ValidationMode,
     publishing_option: &VMPublishingOption,
+    gas_schedule: &CostTable,
 ) -> TransactionOutput
 where
     P: ModuleCache<'alloc>,
 {
     let arena = Arena::new();
-    let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
+    let process_txn = ProcessTransaction::new(txn, gas_schedule, &module_cache, data_cache, &arena);
 
     let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
     match process_txn.validate(mode, publishing_option) {

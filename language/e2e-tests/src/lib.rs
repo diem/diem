@@ -7,7 +7,7 @@
 
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
-use data_store::FakeDataStore;
+use data_store::{FakeDataStore, GENESIS_WRITE_SET};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -55,6 +55,7 @@ pub fn execute(
 ) -> VMResult<()> {
     // set up the DB
     let mut data_view = FakeDataStore::default();
+    data_view.add_write_set(&GENESIS_WRITE_SET);
     data_view.set(
         AccessPath::new(AccountAddress::random(), vec![]),
         vec![0, 0],
