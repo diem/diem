@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
+    block::Block,
     common::{Author, Payload, Round},
-    consensus_types::{block::Block, sync_info::SyncInfo},
+    sync_info::SyncInfo,
 };
 use failure::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;

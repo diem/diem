@@ -1,8 +1,8 @@
-use crate::chained_bft::common::Round;
-use crate::chained_bft::consensus_types::{
-    quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
-};
-use failure::ResultExt;
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{common::Round, quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate};
+use failure::{format_err, ResultExt};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
 use serde::{Deserialize, Serialize};

@@ -33,6 +33,7 @@ prometheus = { version = "0.7.0", default-features = false }
 canonical_serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
+consensus-types = { path = "consensus-types", default-features = false }
 crypto = { path = "../crypto/crypto" }
 debug_interface = { path = "../common/debug_interface" }
 executor = { path = "../execution/executor" }
@@ -52,14 +53,14 @@ vm_runtime = { path = "../language/vm/vm_runtime" }
 [dev-dependencies]
 cached = "0.9.0"
 parity-multiaddr = "0.5.0"
+proptest = "0.9.4"
 rusty-fork = "0.2.2"
 
-storage-service = { path = "../storage/storage-service" }
+consensus-types = { path = "consensus-types", features = ["fuzzing", "testing"]}
 crypto = { path = "../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
-proptest = "0.9.4"
 
 [features]
 default = []

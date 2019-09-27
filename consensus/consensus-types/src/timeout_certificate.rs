@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::common::{self, Author, Round};
+use crate::common::{self, Author, Round};
 use failure::prelude::*;
 use libra_types::{
     account_address::AccountAddress,

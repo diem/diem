@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
     common::{Author, Round},
-    consensus_types::{sync_info::SyncInfo, vote_msg::VoteMsg},
+    sync_info::SyncInfo,
+    vote_msg::VoteMsg,
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{

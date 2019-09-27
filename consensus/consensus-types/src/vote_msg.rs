@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::common;
-use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
+use crate::common;
+use crate::{common::Author, vote_data::VoteData};
 use crypto::hash::CryptoHash;
-use failure::ResultExt;
+use failure::{bail, ensure, format_err, ResultExt};
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

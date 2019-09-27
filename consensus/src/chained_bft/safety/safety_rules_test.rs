@@ -5,7 +5,7 @@ use crate::chained_bft::{
     block_storage::BlockReader,
     common::Round,
     consensus_types::{
-        block::{block_test, ExecutedBlock},
+        block::{block_test_utils, ExecutedBlock},
         quorum_cert::QuorumCert,
     },
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
@@ -59,7 +59,7 @@ cached_key! {
 proptest! {
     #[test]
     fn test_blocks_commits_safety_rules(
-        (mut keypairs, blocks) in block_test::block_forest_and_its_keys(
+        (mut keypairs, blocks) in block_test_utils::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
