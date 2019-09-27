@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{common::Round, consensus_types::vote_data::VoteData};
+use crate::{common::Round, vote_data::VoteData};
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},

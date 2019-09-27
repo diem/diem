@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
     common::{Author, Round},
-    consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
+    quorum_cert::QuorumCert,
+    vote_data::VoteData,
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
@@ -27,6 +28,10 @@ use std::{
     fmt::{Display, Formatter},
     sync::Arc,
 };
+
+#[path = "block_test_utils.rs"]
+#[cfg(any(test, feature = "testing"))]
+pub mod block_test_utils;
 
 #[cfg(test)]
 #[path = "block_test.rs"]

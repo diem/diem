@@ -9,7 +9,7 @@ use crate::chained_bft::{
     common::Payload,
     consensus_types::{block::Block, quorum_cert::QuorumCert},
     consensusdb::schema::{
-        block::BlockSchema,
+        block::{BlockSchema, SchemaBlock},
         quorum_certificate::QCSchema,
         single_entry::{SingleEntryKey, SingleEntrySchema},
     },
@@ -123,7 +123,12 @@ impl ConsensusDB {
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
-            .map(|block| batch.put::<BlockSchema<T>>(&block.id(), block))
+            .map(|block| {
+                batch.put::<BlockSchema<T>>(
+                    &block.id(),
+                    &SchemaBlock::<T>::from_block(block.clone()),
+                )
+            })
             .collect::<Result<()>>()?;
         qc_data
             .iter()
@@ -176,7 +181,11 @@ impl ConsensusDB {
     fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
         let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, Block<T>>>>()
+        iter.map(|value| match value {
+            Ok((k, v)) => Ok((k, v.borrow_into_block().clone())),
+            Err(err) => Err(err),
+        })
+        .collect::<Result<HashMap<HashValue, Block<T>>>>()
     }
 
     /// Get all consensus QCs.

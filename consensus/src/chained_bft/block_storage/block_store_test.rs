@@ -5,7 +5,7 @@ use crate::chained_bft::{
     block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
     common::Author,
     consensus_types::{
-        block::{block_test, Block, ExecutedBlock},
+        block::{block_test_utils, Block, ExecutedBlock},
         quorum_cert::QuorumCert,
         vote_data::VoteData,
         vote_msg::VoteMsg,
@@ -175,7 +175,7 @@ proptest! {
 
     #[test]
     fn test_block_store_insert(
-        (mut private_keys, blocks) in block_test::block_forest_and_its_keys(
+        (mut private_keys, blocks) in block_test_utils::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
