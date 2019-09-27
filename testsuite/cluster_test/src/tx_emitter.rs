@@ -32,6 +32,7 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
+use slog_scope::{debug, info};
 use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -78,7 +79,7 @@ impl TxEmitter {
         let mut faucet_account = load_faucet_account(mint_client, "mint.key");
         let account_per_client = get_env("ACCOUNT_PER_CLIENT", ACCOUNT_PER_CLIENT_DEFAULT);
         let num_accounts = account_per_client * self.clients.len();
-        println!("Minting accounts");
+        info!("Minting accounts");
         let mut all_accounts: Vec<AccountData> = vec![];
         for _ in 0..(num_accounts + MAX_TXN_BATCH_SIZE - 1) / MAX_TXN_BATCH_SIZE {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
@@ -86,7 +87,7 @@ impl TxEmitter {
             execute_and_wait_transactions(&mint_client, &faucet_account, mint_requests);
             all_accounts.append(&mut accounts);
         }
-        println!("Mint is done");
+        info!("Mint is done");
         let mut join_handles = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
         let all_addresses = Arc::new(all_addresses);
@@ -107,7 +108,7 @@ impl TxEmitter {
             join_handles.push(join_handle);
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
-        println!("Threads started");
+        info!("Threads started");
         let prometheus = Prometheus::try_new_from_environment();
         if let Some(prometheus) = prometheus {
             run_stat_loop(prometheus);
@@ -123,7 +124,7 @@ fn run_stat_loop(prometheus: Prometheus) {
     loop {
         thread::sleep(Duration::from_secs(10));
         if let Err(err) = print_stat(&prometheus) {
-            println!("Stat error: {:?}", err);
+            info!("Stat error: {:?}", err);
         }
     }
 }
@@ -149,7 +150,7 @@ fn print_stat(prometheus: &Prometheus) -> failure::Result<()> {
     let avg_latency = latency
         .avg()
         .ok_or_else(|| format_err!("No latency data"))?;
-    println!(
+    info!(
         "Tps: {:.0}, latency: {:.0} ms",
         avg_tps,
         avg_latency * 1000.
@@ -179,7 +180,6 @@ impl SubmissionThread {
         let wait_millis = get_env("WAIT_MILLIS", 50);
         let wait = Duration::from_millis(wait_millis);
         let wait_committed = get_env("WAIT_COMMITTED", true);
-        let verbose = get_env("VERBOSE", false);
         let mut rng = ThreadRng::default();
         loop {
             let requests = self.gen_requests(&mut rng);
@@ -188,23 +188,19 @@ impl SubmissionThread {
                 let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => {
-                        if verbose {
-                            println!("Failed to submit request to {}: {:?}", self.instance, e);
-                        }
+                        debug!("Failed to submit request to {}: {:?}", self.instance, e);
                     }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::from_proto(r)
                             .expect("Failed to parse SubmitTransactionResponse");
-                        if verbose && !is_accepted(&r) {
-                            println!("Request declined: {:?}", r);
-                        }
+                        debug!("Request declined: {:?}", r);
                     }
                 }
                 let now = Instant::now();
                 if wait_util > now {
                     thread::sleep(wait_util - now);
-                } else if verbose {
-                    println!("Thread for {} won't sleep", self.instance);
+                } else {
+                    debug!("Thread for {} won't sleep", self.instance);
                 }
             }
             if wait_committed {
@@ -231,7 +227,7 @@ fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[Accou
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
         match query_sequence_numbers(client, &addresses) {
-            Err(e) => println!("Failed to query ledger info: {:?}", e),
+            Err(e) => info!("Failed to query ledger info: {:?}", e),
             Ok(sequence_numbers) => {
                 if is_sequence_equal(accounts, &sequence_numbers) {
                     break;
@@ -365,12 +361,12 @@ fn execute_and_wait_transactions(
     for request in txn {
         let resp = client.submit_transaction(&request);
         match resp {
-            Err(e) => println!("Failed to submit request: {:?}", e),
+            Err(e) => info!("Failed to submit request: {:?}", e),
             Ok(r) => {
                 let r = SubmitTransactionResponse::from_proto(r)
                     .expect("Failed to parse SubmitTransactionResponse");
                 if !is_accepted(&r) {
-                    println!("Request declined: {:?}", r);
+                    info!("Request declined: {:?}", r);
                 }
             }
         }

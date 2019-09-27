@@ -6,6 +6,7 @@ use rusoto_ecr::{
     PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
+use slog_scope::info;
 use std::{fs, io::ErrorKind, thread, time::Duration};
 
 #[derive(Clone)]
@@ -26,7 +27,7 @@ impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
         let last_deployed_digest = match fs::read_to_string(LAST_DEPLOYED_FILE) {
             Ok(v) => {
-                println!("Read last deployed digest: {}", v);
+                info!("Read last deployed digest: {}", v);
                 Some(v)
             }
             Err(e) => {
@@ -49,19 +50,17 @@ impl DeploymentManager {
         let hash = self.latest_nightly_image_digest();
         if let Some(last) = &self.last_deployed_digest {
             if last == &hash {
-                println!(
-                    "Last deployed digest matches latest digest we expect, not doing redeploy"
-                );
+                info!("Last deployed digest matches latest digest we expect, not doing redeploy");
                 return None;
             }
         } else {
-            println!("Last deployed digest unknown, re-deploying anyway");
+            info!("Last deployed digest unknown, re-deploying anyway");
         }
         Some(hash)
     }
 
     pub fn redeploy(&mut self, hash: String) -> failure::Result<()> {
-        println!("Will deploy with digest {}", hash);
+        info!("Will deploy with digest {}", hash);
         self.tag_image(RUNNING_TAG.to_string(), hash)?;
         let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         self.update_all_services()?;
@@ -153,7 +152,7 @@ impl DeploymentManager {
         let result = self.aws.ecr().put_image(put_request).sync();
         if let Err(e) = result {
             if let RusotoError::Service(PutImageError::ImageAlreadyExists(_)) = e {
-                println!("Tagging {} with {}: Image already exist", hash, tag);
+                info!("Tagging {} with {}: Image already exist", hash, tag);
                 Ok(())
             } else {
                 Err(format_err!("Failed to tag image: {:?}", e))
