@@ -16,11 +16,9 @@ tokio = { version = "0.1.22", default-features = false }
 config = { path = "../config" }
 executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
-crypto = { path = "../crypto/crypto" }
 proto_conv = { path = "../common/proto_conv" }
 storage_client = { path = "../storage/storage_client" }
 types = { path = "../types" }
