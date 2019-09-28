@@ -92,12 +92,9 @@ impl Cluster {
     }
 
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
-        for instance in &self.instances {
-            if instance.short_hash() == name {
-                return Some(instance);
-            }
-        }
-        None
+        self.instances
+            .iter()
+            .find(|instance| instance.short_hash() == name)
     }
 
     pub fn sub_cluster(&self, ids: Vec<String>) -> Cluster {

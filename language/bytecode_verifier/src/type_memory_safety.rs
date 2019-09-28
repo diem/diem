@@ -57,7 +57,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         let errors: Vec<VMStatus> = function_signature_view
             .arg_tokens()
             .enumerate()
-            .map(|(arg_idx, arg_type_view)| {
+            .flat_map(|(arg_idx, arg_type_view)| {
                 let arg_token = arg_type_view.as_inner();
                 let local_token = locals_signature_view
                     .token_at(arg_idx as LocalIndex)
@@ -73,7 +73,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     ]
                 }
             })
-            .flatten()
             .collect();
         if !errors.is_empty() {
             return errors;

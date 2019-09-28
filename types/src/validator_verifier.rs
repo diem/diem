@@ -192,12 +192,14 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     where
         T: Into<PublicKey::SignatureMaterial> + Clone,
     {
-        for author in aggregated_signature.keys() {
-            if self.author_to_public_keys.get(&author) == None {
-                return Err(VerifyError::UnknownAuthor);
-            }
+        if aggregated_signature
+            .keys()
+            .all(|author| self.author_to_public_keys.get(&author).is_some())
+        {
+            Ok(())
+        } else {
+            Err(VerifyError::UnknownAuthor)
         }
-        Ok(())
     }
 
     /// Return the public key for this address.

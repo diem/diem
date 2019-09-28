@@ -56,29 +56,20 @@ impl<'a> SignatureChecker<'a> {
             .function_signatures()
             .iter()
             .enumerate()
-            .map(move |(idx, sig)| {
+            .flat_map(move |(idx, sig)| {
                 let context = (self.module.struct_handles(), sig.type_formals.as_slice());
-                let errors_return_types = sig
-                    .return_types
-                    .iter()
-                    .map(move |ty| {
-                        check_signature(context, ty)
-                            .into_iter()
-                            .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
-                    })
-                    .flatten();
-                let errors_arg_types = sig
-                    .arg_types
-                    .iter()
-                    .map(move |ty| {
-                        check_signature(context, ty)
-                            .into_iter()
-                            .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
-                    })
-                    .flatten();
+                let errors_return_types = sig.return_types.iter().flat_map(move |ty| {
+                    check_signature(context, ty)
+                        .into_iter()
+                        .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
+                });
+                let errors_arg_types = sig.arg_types.iter().flat_map(move |ty| {
+                    check_signature(context, ty)
+                        .into_iter()
+                        .map(move |err| append_err_info(err, IndexKind::FunctionSignature, idx))
+                });
                 errors_return_types.chain(errors_arg_types)
             })
-            .flatten()
     }
 
     fn verify_fields(&self) -> impl Iterator<Item = VMStatus> + '_ {
@@ -104,7 +95,7 @@ impl<'a> SignatureChecker<'a> {
                         let errors = self.module.field_defs()[start..end]
                             .iter()
                             .enumerate()
-                            .map(move |(field_def_idx, field_def)| {
+                            .flat_map(move |(field_def_idx, field_def)| {
                                 let ty = self.module.type_signature_at(field_def.signature);
 
                                 check_signature_no_refs(context, &ty.0).into_iter().map(
@@ -125,8 +116,7 @@ impl<'a> SignatureChecker<'a> {
                                         )
                                     },
                                 )
-                            })
-                            .flatten();
+                            });
                         Some(errors)
                     }
                 },
@@ -156,75 +146,68 @@ impl<'a> SignatureChecker<'a> {
                 );
                 let locals_idx = func_def.code.locals;
                 let locals = &self.module.locals_signature_at(locals_idx).0;
-                let errors_locals = locals
-                    .iter()
-                    .map(move |ty| {
-                        check_signature(context, ty).into_iter().map(move |err| {
-                            append_err_info(
-                                append_err_info(
-                                    err,
-                                    IndexKind::LocalsSignature,
-                                    locals_idx.0 as usize,
-                                ),
-                                IndexKind::FunctionDefinition,
-                                func_def_idx,
-                            )
-                        })
+                let errors_locals = locals.iter().flat_map(move |ty| {
+                    check_signature(context, ty).into_iter().map(move |err| {
+                        append_err_info(
+                            append_err_info(err, IndexKind::LocalsSignature, locals_idx.0 as usize),
+                            IndexKind::FunctionDefinition,
+                            func_def_idx,
+                        )
                     })
-                    .flatten();
+                });
 
                 // Check if the type actuals in certain bytecode instructions are well defined.
-                let errors_bytecodes = func_def
-                    .code
-                    .code
-                    .iter()
-                    .enumerate()
-                    .map(move |(offset, instr)| {
-                        let errors = match instr {
-                            Call(idx, type_actuals_idx) => {
-                                let func_handle = self.module.function_handle_at(*idx);
-                                let func_sig =
-                                    self.module.function_signature_at(func_handle.signature);
-                                let type_actuals =
-                                    &self.module.locals_signature_at(*type_actuals_idx).0;
-                                check_generic_instance(
-                                    context,
-                                    &func_sig.type_formals,
-                                    type_actuals,
+                let errors_bytecodes =
+                    func_def
+                        .code
+                        .code
+                        .iter()
+                        .enumerate()
+                        .flat_map(move |(offset, instr)| {
+                            let errors = match instr {
+                                Call(idx, type_actuals_idx) => {
+                                    let func_handle = self.module.function_handle_at(*idx);
+                                    let func_sig =
+                                        self.module.function_signature_at(func_handle.signature);
+                                    let type_actuals =
+                                        &self.module.locals_signature_at(*type_actuals_idx).0;
+                                    check_generic_instance(
+                                        context,
+                                        &func_sig.type_formals,
+                                        type_actuals,
+                                    )
+                                }
+                                Pack(idx, type_actuals_idx)
+                                | Unpack(idx, type_actuals_idx)
+                                | Exists(idx, type_actuals_idx)
+                                | MoveFrom(idx, type_actuals_idx)
+                                | MoveToSender(idx, type_actuals_idx)
+                                | ImmBorrowGlobal(idx, type_actuals_idx)
+                                | MutBorrowGlobal(idx, type_actuals_idx) => {
+                                    let struct_def = self.module.struct_def_at(*idx);
+                                    let struct_handle =
+                                        self.module.struct_handle_at(struct_def.struct_handle);
+                                    let type_actuals =
+                                        &self.module.locals_signature_at(*type_actuals_idx).0;
+                                    check_generic_instance(
+                                        context,
+                                        &struct_handle.type_formals,
+                                        type_actuals,
+                                    )
+                                }
+                                _ => vec![],
+                            };
+                            errors.into_iter().map(move |err| {
+                                append_err_info(
+                                    err.append_message_with_separator(
+                                        ' ',
+                                        format!("at offset {} ", offset),
+                                    ),
+                                    IndexKind::FunctionDefinition,
+                                    func_def_idx,
                                 )
-                            }
-                            Pack(idx, type_actuals_idx)
-                            | Unpack(idx, type_actuals_idx)
-                            | Exists(idx, type_actuals_idx)
-                            | MoveFrom(idx, type_actuals_idx)
-                            | MoveToSender(idx, type_actuals_idx)
-                            | ImmBorrowGlobal(idx, type_actuals_idx)
-                            | MutBorrowGlobal(idx, type_actuals_idx) => {
-                                let struct_def = self.module.struct_def_at(*idx);
-                                let struct_handle =
-                                    self.module.struct_handle_at(struct_def.struct_handle);
-                                let type_actuals =
-                                    &self.module.locals_signature_at(*type_actuals_idx).0;
-                                check_generic_instance(
-                                    context,
-                                    &struct_handle.type_formals,
-                                    type_actuals,
-                                )
-                            }
-                            _ => vec![],
-                        };
-                        errors.into_iter().map(move |err| {
-                            append_err_info(
-                                err.append_message_with_separator(
-                                    ' ',
-                                    format!("at offset {} ", offset),
-                                ),
-                                IndexKind::FunctionDefinition,
-                                func_def_idx,
-                            )
-                        })
-                    })
-                    .flatten();
+                            })
+                        });
 
                 Some(errors_locals.chain(errors_bytecodes))
             })
@@ -241,8 +224,7 @@ fn check_generic_instance(
 ) -> Vec<VMStatus> {
     let mut errors: Vec<_> = type_actuals
         .iter()
-        .map(|ty| check_signature_no_refs(context, ty))
-        .flatten()
+        .flat_map(|ty| check_signature_no_refs(context, ty))
         .collect();
 
     if constraints.len() != type_actuals.len() {
