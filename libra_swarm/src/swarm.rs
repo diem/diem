@@ -301,7 +301,7 @@ impl LibraSwarm {
             .with_faucet_keypair(faucet_account_keypair)
             .with_role(role)
             .with_upstream_config_dir(upstream_config_dir.clone());
-        let config = config_builder.build().unwrap();
+        let config = config_builder.build()?;
         Ok(Self {
             dir: swarm_config_dir,
             nodes: HashMap::new(),
