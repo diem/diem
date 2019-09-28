@@ -1,7 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use canonical_serialization::{CanonicalDeserialize, CanonicalSerialize};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
+};
+use crypto::{
+    hash::{CryptoHasher, RoundHasher},
+    HashValue,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use types::account_address::AccountAddress;
@@ -48,4 +54,13 @@ impl<T> Payload for T where
         + Eq
         + 'static
 {
+}
+
+pub fn round_hash(round: Round) -> HashValue {
+    let mut state = RoundHasher::default();
+    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
+    serializer.encode_u64(round).expect("Should serialize.");
+    let digest = serializer.get_output();
+    state.write(digest.as_ref());
+    state.finish()
 }

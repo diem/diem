@@ -62,6 +62,13 @@ message PacemakerTimeoutCertificate {
   repeated PacemakerTimeout timeouts = 2;
 }
 
+message TimeoutCertificate {
+  // Round certified by this timeout certificate.
+  uint64 round = 1;
+  // List of signatures certifying the timeout.
+  repeated types.ValidatorSignature signatures = 2;
+}
+
 message Block {
   // This block's id as a hash value
   bytes id = 1;
@@ -122,6 +129,8 @@ message Vote {
   types.LedgerInfo ledger_info = 3;
   // Signature of the ledger info.
   bytes signature = 4;
+  // The round signatures can be aggregated into the timeout certificate.
+  bytes round_signature = 5;
 }
 
 message RequestBlock {
