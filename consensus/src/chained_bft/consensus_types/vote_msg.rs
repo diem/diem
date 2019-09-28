@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::common;
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
 use crypto::hash::CryptoHash;
 use failure::{Result as ProtoResult, ResultExt};
@@ -30,6 +31,8 @@ pub struct VoteMsg {
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
     signature: Signature,
+    /// The round signatures can be aggregated into the timeout certificate if present.
+    round_signature: Option<Signature>,
 }
 
 impl Display for VoteMsg {
@@ -45,6 +48,8 @@ impl Display for VoteMsg {
 }
 
 impl VoteMsg {
+    /// Generates a new VoteMsg corresponding to the "fast-vote" path without the round signatures
+    /// that can be aggregated into a timeout certificate
     pub fn new(
         vote_data: VoteData,
         author: Author,
@@ -60,7 +65,22 @@ impl VoteMsg {
             author,
             ledger_info: ledger_info_placeholder,
             signature: li_sig.into(),
+            round_signature: None,
         }
+    }
+
+    /// Generates a round signature, which can then be used for aggregating a timeout certificate.
+    /// Typically called for generating vote messages that are sent upon timeouts.
+    pub fn add_round_signature(&mut self, validator_signer: &ValidatorSigner) {
+        if self.round_signature.is_some() {
+            return; // round signature is already set
+        }
+        self.round_signature.replace(
+            validator_signer
+                .sign_message(common::round_hash(self.vote_data().block_round()))
+                .expect("Failed to sign round")
+                .into(),
+        );
     }
 
     pub fn vote_data(&self) -> &VoteData {
@@ -92,6 +112,15 @@ impl VoteMsg {
         self.signature()
             .verify(validator, self.author(), self.ledger_info.hash())
             .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
+        if let Some(round_signature) = &self.round_signature {
+            round_signature
+                .verify(
+                    validator,
+                    self.author(),
+                    common::round_hash(self.vote_data().block_round()),
+                )
+                .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
+        }
         Ok(())
     }
 }
@@ -105,6 +134,9 @@ impl IntoProto for VoteMsg {
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
         proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
+        if let Some(round_signature) = self.round_signature {
+            proto.set_round_signature(bytes::Bytes::from(round_signature.to_bytes()));
+        }
         proto
     }
 }
@@ -117,11 +149,18 @@ impl FromProto for VoteMsg {
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
         let signature = Signature::try_from(object.get_signature())?;
+        let round_signature = if object.get_round_signature().is_empty() {
+            None
+        } else {
+            Some(Signature::try_from(object.get_round_signature())?)
+        };
+
         Ok(VoteMsg {
             vote_data,
             author,
             ledger_info,
             signature,
+            round_signature,
         })
     }
 }

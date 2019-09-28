@@ -555,6 +555,11 @@ define_hasher! {
 }
 
 define_hasher! {
+    /// The hasher used to compute the hash of a Round
+    (RoundHasher, ROUND_HASHER, b"Round")
+}
+
+define_hasher! {
     /// The hasher used to compute the hash of a VoteData object.
     (VoteDataHasher, VOTE_DATA_HASHER, b"VoteData")
 }
