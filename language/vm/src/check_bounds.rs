@@ -77,13 +77,12 @@ impl<'a> BoundsChecker<'a> {
                 .locals_signatures
                 .iter()
                 .enumerate()
-                .map(|(idx, locals)| {
+                .flat_map(|(idx, locals)| {
                     locals
                         .check_struct_handles(&self.module.struct_handles)
                         .into_iter()
                         .map(move |err| append_err_info(err, IndexKind::LocalsSignature, idx))
                 })
-                .flatten()
                 .collect(),
         );
 
@@ -93,12 +92,11 @@ impl<'a> BoundsChecker<'a> {
                 .type_signatures
                 .iter()
                 .enumerate()
-                .map(|(idx, ty)| {
+                .flat_map(|(idx, ty)| {
                     ty.check_struct_handles(&self.module.struct_handles)
                         .into_iter()
                         .map(move |err| append_err_info(err, IndexKind::TypeSignature, idx))
                 })
-                .flatten()
                 .collect(),
         );
 
@@ -324,16 +322,14 @@ impl LocalsSignature {
     fn check_type_parameters(&self, type_formals_len: usize) -> Vec<VMStatus> {
         self.0
             .iter()
-            .map(|ty| ty.check_type_parameters(type_formals_len))
-            .flatten()
+            .flat_map(|ty| ty.check_type_parameters(type_formals_len))
             .collect()
     }
 
     fn check_struct_handles(&self, struct_handles: &[StructHandle]) -> Vec<VMStatus> {
         self.0
             .iter()
-            .map(|ty| ty.check_struct_handles(struct_handles))
-            .flatten()
+            .flat_map(|ty| ty.check_struct_handles(struct_handles))
             .collect()
     }
 }
@@ -352,8 +348,7 @@ impl SignatureToken {
         match self {
             SignatureToken::Struct(_, type_actuals) => type_actuals
                 .iter()
-                .map(|ty| ty.check_type_parameters(type_formals_len))
-                .flatten()
+                .flat_map(|ty| ty.check_type_parameters(type_formals_len))
                 .collect(),
             SignatureToken::Reference(ty) | SignatureToken::MutableReference(ty) => {
                 ty.check_type_parameters(type_formals_len)
@@ -380,8 +375,7 @@ impl SignatureToken {
             SignatureToken::Struct(idx, type_actuals) => {
                 let mut errors: Vec<_> = type_actuals
                     .iter()
-                    .map(|ty| ty.check_struct_handles(struct_handles))
-                    .flatten()
+                    .flat_map(|ty| ty.check_struct_handles(struct_handles))
                     .collect();
                 if let Some(err) = check_bounds_impl(struct_handles, *idx) {
                     errors.push(err);
@@ -445,7 +439,7 @@ impl BoundsCheck<(&CompiledModuleMut, &FunctionSignature)> for CodeUnit {
 
         code.iter()
             .enumerate()
-            .map(|(bytecode_offset, bytecode)| {
+            .flat_map(|(bytecode_offset, bytecode)| {
                 use self::Bytecode::*;
 
                 match bytecode {
@@ -531,7 +525,6 @@ impl BoundsCheck<(&CompiledModuleMut, &FunctionSignature)> for CodeUnit {
                     | GetTxnSequenceNumber | GetTxnPublicKey => vec![],
                 }
             })
-            .flatten()
             .collect()
     }
 }

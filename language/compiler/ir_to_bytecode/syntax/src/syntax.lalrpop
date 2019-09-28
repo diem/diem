@@ -365,10 +365,7 @@ TypeFormal: (TypeVar, Kind) = {
 
 TypeActuals: Vec<Type> = {
     <tys: ("<" <Comma<Type>> ">")?> => {
-        match tys {
-            Some(tys) => tys,
-            None => vec![],
-        }
+        tys.unwrap_or(vec![])
     }
 }
 
@@ -474,10 +471,7 @@ Modules: Vec<ModuleDefinition> = {
 
 pub Program : Program = {
     <m: Modules?> <s: Script> => {
-        let modules = match m {
-            Some(modules) => modules,
-            None => vec![],
-        };
+        let modules = m.unwrap_or(vec![]);
         Program::new(modules, s)
     },
     <m: Module> => {
