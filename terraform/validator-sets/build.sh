@@ -20,7 +20,7 @@ cd $OUTDIR
 # Remove all generated node.config.toml files.
 find . -mindepth 2 -iname node.config.toml | xargs rm
 # Move all keys files to single top-level directory.
-find . -mindepth 2 -iname '*.keys.toml' -exec mv -f -t . {} +
+find . -mindepth 2 -iname '*.keys.toml' | xargs -I '{}' mv '{}' ./
 # Move all seed peers files to top-level directory.
 find . -mindepth 2 -iname '*.seed_peers.config.toml' | xargs rm
 # Move all network peers files to top-level directory.
