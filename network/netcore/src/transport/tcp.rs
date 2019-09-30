@@ -37,31 +37,6 @@ pub struct TcpTransport {
 }
 
 impl TcpTransport {
-    pub fn set_recv_buffer_size(mut self, size: usize) -> Self {
-        self.recv_buffer_size = Some(size);
-        self
-    }
-
-    pub fn set_send_buffer_size(mut self, size: usize) -> Self {
-        self.send_buffer_size = Some(size);
-        self
-    }
-
-    pub fn set_ttl(mut self, ttl: u32) -> Self {
-        self.ttl = Some(ttl);
-        self
-    }
-
-    pub fn set_keepalive(mut self, keepalive: Option<Duration>) -> Self {
-        self.keepalive = Some(keepalive);
-        self
-    }
-
-    pub fn set_nodelay(mut self, nodelay: bool) -> Self {
-        self.nodelay = Some(nodelay);
-        self
-    }
-
     fn apply_config(&self, stream: &TcpStream) -> ::std::io::Result<()> {
         if let Some(size) = self.recv_buffer_size {
             stream.set_recv_buffer_size(size)?;
