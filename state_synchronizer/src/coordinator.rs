@@ -56,8 +56,6 @@ pub(crate) struct SyncCoordinator<T> {
     peer_manager: PeerManager,
     // option callback. Called when state sync reaches target version
     callback: Option<oneshot::Sender<bool>>,
-    // timestamp of last commit
-    last_commit: Option<SystemTime>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
     // value format is (expiration_time, known_version, limit)
@@ -92,7 +90,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             peer_manager: PeerManager::new(upstream_peers),
             subscriptions: HashMap::new(),
             callback: None,
-            last_commit: None,
             executor_proxy,
         }
     }
@@ -227,12 +224,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let is_update = version > self.known_version;
         self.known_version = std::cmp::max(version, self.known_version);
         if is_update {
-            if let Ok(duration_since_last_commit) =
-                SystemTime::now().duration_since(self.last_commit.unwrap_or(UNIX_EPOCH))
+            if let Some(last_request_tst) =
+                self.peer_manager.get_request_time(self.known_version + 1)
             {
-                counters::SYNC_PROGRESS_DURATION.observe_duration(duration_since_last_commit);
+                if let Ok(duration) = SystemTime::now().duration_since(last_request_tst) {
+                    counters::SYNC_PROGRESS_DURATION.observe_duration(duration);
+                }
             }
-            self.last_commit = Some(SystemTime::now());
             if let Err(err) = self.check_subscriptions().await {
                 error!("[state sync] failed to check subscriptions: {:?}", err);
             }
@@ -408,18 +406,20 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// if peer is not responding, issues new sync request
     async fn check_progress(&mut self) {
         if !self.peer_manager.is_empty() && (self.autosync || self.target.is_some()) {
-            let last_commit = self.last_commit.unwrap_or(UNIX_EPOCH);
+            let last_request_tst = self
+                .peer_manager
+                .get_request_time(self.known_version + 1)
+                .unwrap_or(UNIX_EPOCH);
             let timeout = match self.target {
                 Some(_) => 2 * self.config.tick_interval_ms,
                 None => self.config.tick_interval_ms + self.config.long_poll_timeout_ms,
             };
-            let expected_next_sync = last_commit.checked_add(Duration::from_millis(timeout));
 
             // if coordinator didn't make progress by expected time, issue new request
-            if let Some(tst) = expected_next_sync {
+            if let Some(tst) = last_request_tst.checked_add(Duration::from_millis(timeout)) {
                 if SystemTime::now().duration_since(tst).is_ok() {
                     self.peer_manager
-                        .process_timeout(self.known_version + 1, timeout);
+                        .process_timeout(self.known_version + 1, self.target.is_some());
                     self.request_next_chunk(0).await;
                     counters::TIMEOUT.inc();
                 }
