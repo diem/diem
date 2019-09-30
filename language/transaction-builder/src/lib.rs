@@ -13,8 +13,8 @@ use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
     stdlib_modules,
     transaction_scripts::{
-        CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
-        ROTATE_AUTHENTICATION_KEY_TXN_BODY,
+        BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
+        PEER_TO_PEER_TRANSFER_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
 };
 #[cfg(any(test, feature = "testing"))]
@@ -26,6 +26,7 @@ lazy_static! {
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
         { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
     static ref MINT_TXN: Vec<u8> = { compile_script(&MINT_TXN_BODY) };
+    static ref BLOCK_PROLOGUE_TXN: Vec<u8> = { compile_script(&BLOCK_PROLOGUE_TXN_BODY) };
 }
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
@@ -126,6 +127,15 @@ pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
             TransactionArgument::Address(*sender),
             TransactionArgument::U64(amount),
         ],
+    )
+}
+
+// TODO: this should go away once we are no longer using it in tests
+/// Encode a program creating `amount` coins for sender
+pub fn encode_block_prologue_script(block_height: u64) -> Script {
+    Script::new(
+        BLOCK_PROLOGUE_TXN.clone(),
+        vec![TransactionArgument::U64(block_height)],
     )
 }
 

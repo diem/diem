@@ -1,0 +1,10 @@
+// Script for running block prologue.
+// Will disappear once we run the block prologue from a BlockMetadataTransaction/make the block
+// prologue  public
+
+import 0x0.Block;
+main(height: u64) {
+  Block.prologue(move(height));
+
+  return;
+}

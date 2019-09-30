@@ -42,18 +42,18 @@ lazy_static! {
         // to rearrange without considering this!
         vec![
             &*ADDRESS_UTIL_MODULE,
-            &*BLOCK_MODULE,
             &*BYTEARRAY_UTIL_MODULE,
             &*COIN_MODULE,
             &*NATIVE_HASH_MODULE,
             &*SIGNATURE_MODULE,
             &*U64_UTIL_MODULE,
             &*VECTOR_MODULE,
+            &*VALIDATOR_CONFIG_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
-            &*VALIDATOR_CONFIG_MODULE,
             &*VALIDATOR_SET_MODULE, // depends on LibraAccount, ValidatorConfig
             &*TRANSACTION_FEE_DISTRIBUTION_MODULE, // depends on Block, ValidatorSet, LibraCoin, LibraAccount,
+            &*BLOCK_MODULE, // depends on ValidatorSet
         ]
     };
 }
