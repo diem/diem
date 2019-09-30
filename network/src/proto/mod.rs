@@ -4,11 +4,11 @@
 #![allow(bare_trait_objects)]
 
 //! Protobuf definitions for data structures sent over the network
+mod admission_control;
 mod consensus;
 mod mempool;
 mod network;
 mod state_synchronizer;
-mod admission_control;
 
 mod network_prost {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
@@ -24,10 +24,9 @@ pub use self::{
     },
     mempool::MempoolSyncMsg,
     network::{
-        DiscoveryMsg, FullNodePayload, IdentityMsg, IdentityMsg_Role, Note, PeerInfo,
-        SignedFullNodePayload, SignedPeerInfo,
+        DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo,
     },
-    network_prost::{Ping, Pong},
+    network_prost::{identity_msg::Role as IdentityMsg_Role, IdentityMsg, Ping, Pong},
     state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
 pub use transaction::SignedTransaction;
