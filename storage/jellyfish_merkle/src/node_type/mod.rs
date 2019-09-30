@@ -324,7 +324,7 @@ impl InternalNode {
         for _ in 0..existence_bitmap.count_ones() {
             let next_child = existence_bitmap.trailing_zeros() as u8;
             let child = &self.children[&Nibble::from(next_child)];
-            serialize_u64_varint(child.version, binary)?;
+            serialize_u64_varint(child.version, binary);
             binary.extend(child.hash.to_vec());
             existence_bitmap &= !(1 << next_child);
         }
@@ -661,17 +661,20 @@ pub enum NodeDecodeError {
 
 /// Helper function to serialize version in a more efficient encoding.
 /// We use a super simple encoding - the high bit is set if more bytes follow.
-fn serialize_u64_varint(mut num: u64, binary: &mut Vec<u8>) -> Result<()> {
-    loop {
+fn serialize_u64_varint(mut num: u64, binary: &mut Vec<u8>) {
+    for _ in 0..8 {
         let low_bits = num as u8 & 0x7f;
         num >>= 7;
         let more = (num > 0) as u8;
         binary.push(low_bits | more << 7);
         if more == 0 {
-            break;
+            return;
         }
     }
-    Ok(())
+    // Last byte is encoded raw; this means there are no bad encodings.
+    assert_ne!(num, 0);
+    assert!(num <= 0xff);
+    binary.push(num as u8);
 }
 
 /// Helper function to deserialize versions from above encoding.
@@ -680,14 +683,16 @@ where
     T: Read,
 {
     let mut num = 0u64;
-    for i in 0..=8 {
+    for i in 0..8 {
         let byte = reader.read_u8()?;
         let more = (byte & 0x80) != 0;
-        num = num << 7 | u64::from(byte & 0x7f);
-        ensure!(i < 8 || !more, "Invalid varint encoding");
+        num = num | (u64::from(byte & 0x7f) << i * 7);
         if !more {
-            break;
+            return Ok(num);
         }
     }
+    // Last byte is encoded as is.
+    let byte = reader.read_u8()?;
+    num = num | u64::from(byte) << 56;
     Ok(num)
 }
