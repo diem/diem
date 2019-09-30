@@ -7,7 +7,7 @@ use failure::prelude::*;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
 use libra_types::{
     access_path::AccessPath,
@@ -24,7 +24,9 @@ use rand::SeedableRng;
 use std::{collections::BTreeMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
-use transaction_builder::{encode_create_account_script, encode_transfer_script};
+use transaction_builder::{
+    encode_block_prologue_script, encode_create_account_script, encode_transfer_script,
+};
 use vm_runtime::MoveVM;
 
 fn gen_block_id(index: u8) -> HashValue {
@@ -87,6 +89,46 @@ fn get_test_signed_transaction(
         public_key,
         program,
     ))
+}
+
+#[test]
+fn test_reconfiguration() {
+    // When executing a transaction emits a validator set change, storage should propagate the new
+    // validator set
+
+    let (mut config, genesis_keypair) = get_test_config();
+    config.vm_config = VMConfig {
+        publishing_options: VMPublishingOption::CustomScripts,
+    };
+    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+
+    let genesis_account = association_address();
+    // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
+    let txn = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 1,
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
+        Some(encode_block_prologue_script(/* block_height */ 1)),
+    );
+
+    let txn_block = vec![txn];
+    let txn_block_id = gen_block_id(1);
+
+    let (_vm_output, state_compute_result) = block_on(executor.execute_block(
+        txn_block,
+        executor.committed_trees().clone(),
+        *GENESIS_BLOCK_ID,
+        txn_block_id,
+    ))
+    .unwrap()
+    .unwrap();
+
+    // Make sure the execution result sees the reconfiguration
+    assert!(
+        state_compute_result.has_reconfiguration(),
+        "StateComputeResult is missing the new validator set"
+    );
 }
 
 #[test]

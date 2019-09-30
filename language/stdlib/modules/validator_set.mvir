@@ -105,7 +105,8 @@ module ValidatorSet {
     // Trigger a reconfiguation the Libra system by:
     // (1) Computing a new validator set and storing it on chain
     // (2) Emitting an event containing new validator set, which will be passed to the executor
-    reconfigure() acquires T {
+    // TODO: make  this private + only callable from block prologue
+    public reconfigure() acquires T {
         let validator_set_ref: &mut Self.T;
         let vector_ref: &Vector.T<Self.ValidatorInfo>;
 

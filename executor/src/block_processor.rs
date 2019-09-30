@@ -21,6 +21,7 @@ use libra_types::{
         Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
         TransactionToCommit, Version,
     },
+    validator_set::ValidatorSet,
     write_set::{WriteOp, WriteSet},
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
@@ -275,12 +276,13 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
+
         // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
         let transactions = transactions
             .into_iter()
             .map(Transaction::UserTransaction)
             .collect::<Vec<_>>();
-        let output = Self::process_vm_outputs(
+        let (output, _next_validator_set) = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
             &transactions,
@@ -533,7 +535,7 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
-        let output = Self::process_vm_outputs(
+        let (output, next_validator_set) = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
             &executable_block.transactions,
@@ -553,7 +555,7 @@ where
             executed_state: ExecutedState {
                 state_id: accu_root_hash,
                 version,
-                validators: None,
+                validators: next_validator_set,
             },
             compute_status: status,
         };
@@ -567,7 +569,7 @@ where
         transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
+    ) -> Result<(ProcessedVMOutput, Option<ValidatorSet>)> {
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -577,6 +579,7 @@ where
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
         let mut txn_info_hashes = vec![];
+        let mut next_validator_set = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
@@ -633,17 +636,29 @@ where
                 num_accounts_created,
             ));
             current_state_tree = state_tree;
+
+            // check for change in validator set
+            let validator_set_change_event_key = ValidatorSet::change_event_key();
+            for event in vm_output.events() {
+                if *event.key() == validator_set_change_event_key {
+                    next_validator_set = Some(ValidatorSet::from_bytes(event.event_data())?);
+                    break;
+                }
+            }
         }
 
         let current_transaction_accumulator = parent_trees
             .transaction_accumulator
             .append(&txn_info_hashes);
-        Ok(ProcessedVMOutput::new(
-            txn_data,
-            ExecutedTrees {
-                state_tree: current_state_tree,
-                transaction_accumulator: Arc::new(current_transaction_accumulator),
-            },
+        Ok((
+            ProcessedVMOutput::new(
+                txn_data,
+                ExecutedTrees {
+                    state_tree: current_state_tree,
+                    transaction_accumulator: Arc::new(current_transaction_accumulator),
+                },
+            ),
+            next_validator_set,
         ))
     }
 

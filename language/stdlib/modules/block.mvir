@@ -1,4 +1,5 @@
 module Block {
+  import 0x0.ValidatorSet;
 
   resource T {
     // Height of the current block
@@ -27,6 +28,9 @@ module Block {
     // ensure that height increases by 1
     if (move(height) == copy(old_height) + 1) {
         *move(height_ref) = move(old_height) + 1;
+        // triggers a reconfiguration if the validator keys or validator set has changed
+        ValidatorSet.reconfigure();
+
         return;
     } else {
         // TODO: standardize this error code
