@@ -323,7 +323,7 @@ impl InternalNode {
         binary.write_u16::<LittleEndian>(leaf_bitmap)?;
         for _ in 0..existence_bitmap.count_ones() {
             let next_child = existence_bitmap.trailing_zeros() as u8;
-            let ref child = self.children[&Nibble::from(next_child)];
+            let child = &self.children[&Nibble::from(next_child)];
             serialize_u64_varint(child.version, binary)?;
             binary.extend(child.hash.to_vec());
             existence_bitmap &= !(1 << next_child);
@@ -358,7 +358,7 @@ impl InternalNode {
             let pos = reader.position() as usize;
             let remaining = len - pos;
             ensure!(
-                len >= size_of::<HashValue>(),
+                remaining >= size_of::<HashValue>(),
                 "not enough bytes left, children: {}, bytes: {}",
                 existence_bitmap.count_ones(),
                 remaining
@@ -664,7 +664,7 @@ pub enum NodeDecodeError {
 fn serialize_u64_varint(mut num: u64, binary: &mut Vec<u8>) -> Result<()> {
     loop {
         let low_bits = num as u8 & 0x7f;
-        num = num >> 7;
+        num >>= 7;
         let more = (num > 0) as u8;
         binary.push(low_bits | more << 7);
         if more == 0 {
@@ -680,10 +680,11 @@ where
     T: Read,
 {
     let mut num = 0u64;
-    for _ in 0..=8 {
+    for i in 0..=8 {
         let byte = reader.read_u8()?;
         let more = (byte & 0x80) != 0;
-        num = num << 7 | (byte & 0x7f) as u64;
+        num = num << 7 | u64::from(byte & 0x7f);
+        ensure!(i < 8 || !more, "Invalid varint encoding");
         if !more {
             break;
         }
