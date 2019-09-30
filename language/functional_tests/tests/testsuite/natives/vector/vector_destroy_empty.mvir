@@ -1,0 +1,27 @@
+module M {
+    resource R {}
+}
+
+
+//! new-transaction
+import 0x0.Vector;
+import {{default}}.M;
+
+main() {
+    Vector.destroy_empty<u64>(Vector.empty<u64>());
+    Vector.destroy_empty<M.R>(Vector.empty<M.R>());
+    return;
+}
+
+
+//! new-transaction
+import 0x0.Vector;
+
+main() {
+    let v: Vector.T<u64>;
+    v = Vector.empty<u64>();
+    Vector.push_back<u64>(&mut v, 42);
+    _ = Vector.pop_back<u64>(&mut v);
+    Vector.destroy_empty<u64>(move(v));
+    return;
+}

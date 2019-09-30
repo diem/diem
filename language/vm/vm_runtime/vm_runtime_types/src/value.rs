@@ -389,6 +389,15 @@ impl From<Value> for Option<Struct> {
     }
 }
 
+impl From<Value> for Option<NativeStructValue> {
+    fn from(value: Value) -> Option<NativeStructValue> {
+        match value.0 {
+            ValueImpl::NativeStruct(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
 impl From<Value> for Option<ReferenceValue> {
     fn from(value: Value) -> Option<ReferenceValue> {
         match value.0 {
