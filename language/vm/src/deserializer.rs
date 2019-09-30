@@ -1067,43 +1067,67 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::EXIST_SENDER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::ExistSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::ExistSenderChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::EXIST_RECEIVER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::ExistReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::ExistReceiverChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::BORROW_SENDER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::BorrowSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::BorrowSenderChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::BORROW_RECEIVER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::BorrowReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::BorrowReceiverChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::MOVE_FROM_SENDER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::MoveFromSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::MoveFromSenderChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::MOVE_FROM_RECEIVER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::MoveFromReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::MoveFromReceiverChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::MOVE_TO_SENDER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::MoveToSenderChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::MoveToSenderChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::MOVE_TO_RECEIVER_CHANNEL => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 let types_idx = read_uleb_u16_internal(cursor)?;
-                Bytecode::MoveToReceiverChannel(StructDefinitionIndex(idx), LocalsSignatureIndex(types_idx))
-            },
+                Bytecode::MoveToReceiverChannel(
+                    StructDefinitionIndex(idx),
+                    LocalsSignatureIndex(types_idx),
+                )
+            }
             Opcodes::IS_CHANNEL_TXN => Bytecode::IsChannelTxn,
             Opcodes::GET_TXN_RECEIVER_PUBLIC_KEY => Bytecode::GetTxnReceiverPublicKey,
             Opcodes::GET_TXN_CHANNEL_SEQUENCE_NUMBER => Bytecode::GetTxnChannelSequenceNumber,

@@ -10,6 +10,7 @@ use failure::Result;
 use futures01::future::Future;
 use futures03::{
     channel::oneshot,
+    executor::block_on,
     future::{FutureExt, TryFutureExt},
 };
 use grpc_helpers::default_reply_error_logger;
@@ -18,7 +19,6 @@ use proto_conv::{FromProto, IntoProto};
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use vm_runtime::MoveVM;
-use futures03::executor::block_on;
 
 #[derive(Clone)]
 pub struct ExecutionService {
@@ -42,16 +42,18 @@ impl ExecutionService {
         ExecutionService { executor }
     }
 
-    pub fn execute_block_inner(&self, request: execution_proto::proto::execution::ExecuteBlockRequest)
-                               -> execution_proto::proto::execution::ExecuteBlockResponse {
+    pub fn execute_block_inner(
+        &self,
+        request: execution_proto::proto::execution::ExecuteBlockRequest,
+    ) -> execution_proto::proto::execution::ExecuteBlockResponse {
         let req = ExecuteBlockRequest::from_proto(request).unwrap();
 
-        let resp = self.executor.execute_block(
-            req.transactions,
-            req.parent_block_id,
-            req.block_id,
-        );
-        let response = block_on(resp).expect("Response sender was unexpectedly dropped.").expect("Failed to execute genesis block.");
+        let resp = self
+            .executor
+            .execute_block(req.transactions, req.parent_block_id, req.block_id);
+        let response = block_on(resp)
+            .expect("Response sender was unexpectedly dropped.")
+            .expect("Failed to execute genesis block.");
         response.into_proto()
     }
 
@@ -61,13 +63,19 @@ impl ExecutionService {
     ) -> execution_proto::proto::execution::CommitBlockResponse {
         let req = CommitBlockRequest::from_proto(request).expect("err.");
         let resp = self.executor.commit_block(req.ledger_info_with_sigs);
-        let response = block_on(resp).expect("Response sender was unexpectedly dropped.").expect("Failed to execute genesis block.");
+        let response = block_on(resp)
+            .expect("Response sender was unexpectedly dropped.")
+            .expect("Failed to execute genesis block.");
         response.into_proto()
     }
 
-    pub fn execute_chunk_inner(&self, request: execution_proto::proto::execution::ExecuteChunkRequest) {
+    pub fn execute_chunk_inner(
+        &self,
+        request: execution_proto::proto::execution::ExecuteChunkRequest,
+    ) {
         let req = ExecuteChunkRequest::from_proto(request).expect("from proto err.");
-        self.executor.execute_chunk(req.txn_list_with_proof, req.ledger_info_with_sigs);
+        self.executor
+            .execute_chunk(req.txn_list_with_proof, req.ledger_info_with_sigs);
     }
 }
 
@@ -88,9 +96,9 @@ impl execution_proto::proto::execution_grpc::Execution for ExecutionService {
                     ),
                     sink,
                 )
-                    .boxed()
-                    .unit_error()
-                    .compat();
+                .boxed()
+                .unit_error()
+                .compat();
                 ctx.spawn(fut);
             }
             Err(err) => {
@@ -135,9 +143,9 @@ impl execution_proto::proto::execution_grpc::Execution for ExecutionService {
                         .execute_chunk(req.txn_list_with_proof, req.ledger_info_with_sigs),
                     sink,
                 )
-                    .boxed()
-                    .unit_error()
-                    .compat();
+                .boxed()
+                .unit_error()
+                .compat();
                 ctx.spawn(fut);
             }
             Err(err) => {
@@ -178,13 +186,13 @@ async fn process_response<T>(
 fn process_conversion_error<T>(
     err: failure::Error,
     sink: grpcio::UnarySink<T>,
-) -> impl Future<Item=(), Error=()> {
+) -> impl Future<Item = (), Error = ()> {
     set_failure_message(
         RpcStatusCode::InvalidArgument,
         format!("Failed to convert request from Protobuf: {}", err),
         sink,
     )
-        .map_err(default_reply_error_logger)
+    .map_err(default_reply_error_logger)
 }
 
 fn set_failure_message<T>(

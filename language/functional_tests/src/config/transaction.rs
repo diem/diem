@@ -148,7 +148,7 @@ impl Config {
                                 "account '{}' does not exist",
                                 name
                             ))
-                                .into());
+                            .into());
                         }
                     }
                     _ => return Err(ErrorKind::Other("receiver already set".to_string()).into()),
@@ -199,7 +199,7 @@ impl Config {
             disabled_stages,
             sender: sender.unwrap_or_else(|| "default".to_string()),
             args: args.unwrap_or_else(|| vec![]),
-            receiver
+            receiver,
         })
     }
 

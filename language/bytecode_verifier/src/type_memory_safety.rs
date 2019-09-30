@@ -298,14 +298,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         idx: StructDefinitionIndex,
         type_actuals_idx: LocalsSignatureIndex,
     ) -> VMResult<()> {
-        self.check_borrow_global(
-            state,
-            offset,
-            true,
-            idx,
-            type_actuals_idx,
-            true
-        )
+        self.check_borrow_global(state, offset, true, idx, type_actuals_idx, true)
     }
 
     fn borrow_global(
@@ -316,14 +309,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         idx: StructDefinitionIndex,
         type_actuals_idx: LocalsSignatureIndex,
     ) -> VMResult<()> {
-        self.check_borrow_global(
-            state,
-            offset,
-            mut_,
-            idx,
-            type_actuals_idx,
-            false
-        )
+        self.check_borrow_global(state, offset, mut_, idx, type_actuals_idx, false)
     }
 
     fn check_borrow_global(
@@ -1115,7 +1101,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 Ok(())
             }
 
-            Bytecode::ExistSenderChannel(idx, type_actuals_idx)|Bytecode::ExistReceiverChannel(idx, type_actuals_idx)  => {
+            Bytecode::ExistSenderChannel(idx, type_actuals_idx)
+            | Bytecode::ExistReceiverChannel(idx, type_actuals_idx) => {
                 let struct_definition = self.module().struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()
@@ -1138,11 +1125,13 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 Ok(())
             }
 
-            Bytecode::BorrowSenderChannel(idx, type_actuals_idx)|Bytecode::BorrowReceiverChannel(idx, type_actuals_idx) => {
+            Bytecode::BorrowSenderChannel(idx, type_actuals_idx)
+            | Bytecode::BorrowReceiverChannel(idx, type_actuals_idx) => {
                 self.borrow_channel(state, offset, *idx, *type_actuals_idx)
             }
 
-            Bytecode::MoveFromSenderChannel(idx, type_actuals_idx)| Bytecode::MoveFromReceiverChannel(idx, type_actuals_idx) => {
+            Bytecode::MoveFromSenderChannel(idx, type_actuals_idx)
+            | Bytecode::MoveFromReceiverChannel(idx, type_actuals_idx) => {
                 let struct_definition = self.module().struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()
@@ -1167,7 +1156,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 Ok(())
             }
 
-            Bytecode::MoveToSenderChannel(idx, type_actuals_idx)|Bytecode::MoveToReceiverChannel(idx, type_actuals_idx) => {
+            Bytecode::MoveToSenderChannel(idx, type_actuals_idx)
+            | Bytecode::MoveToReceiverChannel(idx, type_actuals_idx) => {
                 let struct_definition = self.module().struct_def_at(*idx);
                 if !StructDefinitionView::new(self.module(), struct_definition)
                     .is_nominal_resource()

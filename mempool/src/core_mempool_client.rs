@@ -1,4 +1,17 @@
-use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
+use crate::{
+    core_mempool::{CoreMempool, TimelineState, TxnPointer},
+    proto::{
+        mempool::{
+            AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
+            CommitTransactionsRequest, CommitTransactionsResponse, GetBlockRequest,
+            GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
+        },
+        mempool_client::MempoolClientTrait,
+    },
+};
+use config::config::NodeConfig;
+use core::borrow::BorrowMut;
+use futures::Future;
 use proto_conv::{FromProto, IntoProto};
 use std::{
     cmp,
@@ -7,23 +20,15 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use config::config::NodeConfig;
-use crate::proto::mempool_client::MempoolClientTrait;
-use crate::proto::mempool::{AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
-                            GetBlockRequest, GetBlockResponse,
-                            CommitTransactionsRequest, CommitTransactionsResponse,
-                            HealthCheckRequest, HealthCheckResponse};
-use futures::Future;
 use types::{
     account_address::AccountAddress, proto::transaction::SignedTransactionsBlock,
     transaction::SignedTransaction,
 };
-use core::borrow::BorrowMut;
 
 /// Client for CoreMemPool
 #[derive(Clone)]
 pub struct CoreMemPoolClient {
-    core_mempool: Arc<Mutex<CoreMempool>>
+    core_mempool: Arc<Mutex<CoreMempool>>,
 }
 
 impl CoreMemPoolClient {
@@ -44,17 +49,20 @@ impl CoreMemPoolClient {
             .collect();
 
         let mut lock = self.core_mempool.lock().expect("get lock err.");
-        exclude_transactions.iter().for_each(|(addr, seq_num)| {
-            lock.remove_transaction(addr, seq_num.clone(), true)
-        });
+        exclude_transactions
+            .iter()
+            .for_each(|(addr, seq_num)| lock.remove_transaction(addr, seq_num.clone(), true));
     }
 }
 
 impl MempoolClientTrait for CoreMemPoolClient {
-    fn add_transaction_with_validation(&self, req: &AddTransactionWithValidationRequest)
-                                       -> ::grpcio::Result<AddTransactionWithValidationResponse> {
+    fn add_transaction_with_validation(
+        &self,
+        req: &AddTransactionWithValidationRequest,
+    ) -> ::grpcio::Result<AddTransactionWithValidationResponse> {
         let proto_transaction = req.clone().borrow_mut().take_signed_txn();
-        let transaction = SignedTransaction::from_proto(proto_transaction).expect("SignedTransaction from proto err.");
+        let transaction = SignedTransaction::from_proto(proto_transaction)
+            .expect("SignedTransaction from proto err.");
         let insertion_result = self
             .core_mempool
             .lock()
@@ -72,8 +80,7 @@ impl MempoolClientTrait for CoreMemPoolClient {
         Ok(response)
     }
 
-    fn get_block(&self, req: &GetBlockRequest)
-                 -> ::grpcio::Result<GetBlockResponse> {
+    fn get_block(&self, req: &GetBlockRequest) -> ::grpcio::Result<GetBlockResponse> {
         let block_size = cmp::max(req.get_max_block_size(), 1);
         let exclude_transactions: HashSet<TxnPointer> = req
             .get_transactions()
@@ -98,8 +105,10 @@ impl MempoolClientTrait for CoreMemPoolClient {
         Ok(response)
     }
 
-    fn commit_transactions(&self, req: &CommitTransactionsRequest)
-                           -> ::grpcio::Result<CommitTransactionsResponse> {
+    fn commit_transactions(
+        &self,
+        req: &CommitTransactionsRequest,
+    ) -> ::grpcio::Result<CommitTransactionsResponse> {
         let mut pool = self
             .core_mempool
             .lock()
@@ -118,8 +127,7 @@ impl MempoolClientTrait for CoreMemPoolClient {
         Ok(response)
     }
 
-    fn health_check(&self, req: &HealthCheckRequest)
-                    -> ::grpcio::Result<HealthCheckResponse> {
+    fn health_check(&self, req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {
         let pool = self
             .core_mempool
             .lock()

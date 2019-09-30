@@ -4,20 +4,21 @@
 use crate::{
     account_address::AccountAddress,
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
-    transaction::{RawTransaction, SignedTransaction, TransactionPayload},
+    transaction::{
+        ChannelScriptPayload, ChannelWriteSetPayload, RawTransaction, SignedTransaction,
+        TransactionPayload,
+    },
 };
 use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use chrono::Utc;
 use crypto::{
     ed25519::*,
-    hash::{CryptoHash, TestOnlyHash},
+    hash::{CryptoHash, CryptoHasher, TestOnlyHash, TestOnlyHasher},
     test_utils::KeyPair,
     traits::SigningKey,
     HashValue,
 };
 use failure::prelude::*;
-use crate::transaction::{ChannelScriptPayload, ChannelWriteSetPayload};
-use crypto::hash::{TestOnlyHasher, CryptoHasher};
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
 /// to sign a block and to verify the signatures of other validators on a block
@@ -73,12 +74,17 @@ pub trait TransactionSigner {
 }
 
 pub trait ChannelPayloadSigner {
-
-    fn sign_script_payload(&self, channel_payload:&ChannelScriptPayload) -> Result<Ed25519Signature>{
+    fn sign_script_payload(
+        &self,
+        channel_payload: &ChannelScriptPayload,
+    ) -> Result<Ed25519Signature> {
         self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
     }
 
-    fn sign_write_set_payload(&self, channel_payload:&ChannelWriteSetPayload) -> Result<Ed25519Signature>{
+    fn sign_write_set_payload(
+        &self,
+        channel_payload: &ChannelWriteSetPayload,
+    ) -> Result<Ed25519Signature> {
         self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
     }
 
@@ -126,7 +132,6 @@ pub fn create_signed_payload_txn<T: TransactionSigner + ?Sized>(
     );
     signer.sign_txn(raw_txn)
 }
-
 
 impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {

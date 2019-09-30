@@ -3,9 +3,14 @@
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
 use crypto::ed25519::{compat, Ed25519PublicKey};
-use types::{account_address::AccountAddress, transaction::{SignedTransaction, TransactionPayload, ChannelScriptPayload, ChannelWriteSetPayload}};
+use types::{
+    account_address::AccountAddress,
+    transaction::{
+        ChannelScriptPayload, ChannelWriteSetPayload, SignedTransaction, TransactionPayload,
+    },
+};
 
-pub struct ChannelMetadata{
+pub struct ChannelMetadata {
     pub receiver: AccountAddress,
     pub channel_sequence_number: u64,
     pub receiver_public_key: Ed25519PublicKey,
@@ -23,16 +28,25 @@ pub struct TransactionMetadata {
 
 impl TransactionMetadata {
     pub fn new(txn: &SignedTransaction) -> Self {
-        let channel_metadata = match txn.payload(){
-            TransactionPayload::ChannelScript(ChannelScriptPayload{channel_sequence_number,write_set:_, receiver, ..})
-            |TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload{channel_sequence_number,write_set:_, receiver}) => {
-                Some(ChannelMetadata{
-                    receiver:*receiver,
-                    channel_sequence_number: *channel_sequence_number,
-                    receiver_public_key: txn.receiver_public_key().expect("channel txn must contains receiver_public_key")
-                })
-            }
-            _ => None
+        let channel_metadata = match txn.payload() {
+            TransactionPayload::ChannelScript(ChannelScriptPayload {
+                channel_sequence_number,
+                write_set: _,
+                receiver,
+                ..
+            })
+            | TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload {
+                channel_sequence_number,
+                write_set: _,
+                receiver,
+            }) => Some(ChannelMetadata {
+                receiver: *receiver,
+                channel_sequence_number: *channel_sequence_number,
+                receiver_public_key: txn
+                    .receiver_public_key()
+                    .expect("channel txn must contains receiver_public_key"),
+            }),
+            _ => None,
         };
 
         Self {
@@ -71,10 +85,12 @@ impl TransactionMetadata {
     }
 
     pub fn receiver(&self) -> Option<AccountAddress> {
-        self.channel_metadata.as_ref().map(|metadata|metadata.receiver)
+        self.channel_metadata
+            .as_ref()
+            .map(|metadata| metadata.receiver)
     }
 
-    pub fn channel_metadata(&self) -> Option<&ChannelMetadata>{
+    pub fn channel_metadata(&self) -> Option<&ChannelMetadata> {
         self.channel_metadata.as_ref()
     }
 

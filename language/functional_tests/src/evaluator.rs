@@ -18,17 +18,17 @@ use language_e2e_tests::{account::AccountData, executor::FakeExecutor};
 use std::{env, fmt, str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use types::{
+    access_path::AccessPath,
+    channel_account::{channel_account_struct_tag, ChannelAccountResource},
     transaction::{
-        Module as TransactionModule, RawTransaction, Script as TransactionScript,
-        SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
+        ChannelScriptPayload, Module as TransactionModule, RawTransaction,
+        Script as TransactionScript, SignedTransaction, TransactionArgument, TransactionOutput,
+        TransactionStatus,
     },
     vm_error::StatusCode,
+    write_set::WriteSet,
 };
 use vm::file_format::{CompiledModule, CompiledScript};
-use types::transaction::ChannelScriptPayload;
-use types::write_set::WriteSet;
-use types::access_path::AccessPath;
-use types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -190,7 +190,7 @@ fn make_script_transaction(
     data: &AccountData,
     script: CompiledScript,
     args: Vec<TransactionArgument>,
-    receiver: Option<(&AccountData,u64)>,
+    receiver: Option<(&AccountData, u64)>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
@@ -201,7 +201,12 @@ fn make_script_transaction(
     let txn = match receiver {
         //TODO support channel sequence number
         Some((receiver, channel_sequence_number)) => {
-            let payload = ChannelScriptPayload::new(channel_sequence_number, WriteSet::default(), *receiver.address(), script);
+            let payload = ChannelScriptPayload::new(
+                channel_sequence_number,
+                WriteSet::default(),
+                *receiver.address(),
+                script,
+            );
             let mut txn = RawTransaction::new_channel_script(
                 *data.address(),
                 account_resource.sequence_number(),
@@ -209,11 +214,15 @@ fn make_script_transaction(
                 account_resource.balance(),
                 1,
                 Duration::from_secs(u64::max_value()),
-            ).sign(&account.privkey, account.pubkey.clone())?
-                .into_inner();
-            txn.sign_by_receiver(&receiver.account().privkey, receiver.account().pubkey.clone())?;
+            )
+            .sign(&account.privkey, account.pubkey.clone())?
+            .into_inner();
+            txn.sign_by_receiver(
+                &receiver.account().privkey,
+                receiver.account().pubkey.clone(),
+            )?;
             txn
-        },
+        }
         None => RawTransaction::new_script(
             *data.address(),
             account_resource.sequence_number(),
@@ -221,8 +230,9 @@ fn make_script_transaction(
             account_resource.balance(),
             1,
             Duration::from_secs(u64::max_value()),
-        ).sign(&account.privkey, account.pubkey.clone())?
-            .into_inner()
+        )
+        .sign(&account.privkey, account.pubkey.clone())?
+        .into_inner(),
     };
     Ok(txn)
 }
@@ -344,11 +354,27 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
     for transaction in transactions {
         // get the account data of the sender
         let data = config.accounts.get(&transaction.config.sender).unwrap();
-        let receiver = transaction.config.receiver.as_ref().and_then(|receiver|config.accounts.get(receiver)).and_then(|receiver_account|{
-            let access_path = AccessPath::channel_resource_access_path(*data.address(), *receiver_account.address(), channel_account_struct_tag());
-            let channel_sequence_number = exec.read_from_access_path(&access_path).map(|bytes|ChannelAccountResource::make_from(bytes).unwrap().channel_sequence_number()).unwrap_or(0);
-            Some((receiver_account, channel_sequence_number))
-        });
+        let receiver = transaction
+            .config
+            .receiver
+            .as_ref()
+            .and_then(|receiver| config.accounts.get(receiver))
+            .and_then(|receiver_account| {
+                let access_path = AccessPath::channel_resource_access_path(
+                    *data.address(),
+                    *receiver_account.address(),
+                    channel_account_struct_tag(),
+                );
+                let channel_sequence_number = exec
+                    .read_from_access_path(&access_path)
+                    .map(|bytes| {
+                        ChannelAccountResource::make_from(bytes)
+                            .unwrap()
+                            .channel_sequence_number()
+                    })
+                    .unwrap_or(0);
+                Some((receiver_account, channel_sequence_number))
+            });
         //.map(|account_data|account_data.address().clone());
         let addr = data.address();
 

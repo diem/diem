@@ -6,6 +6,7 @@ pub mod account_address;
 pub mod account_config;
 pub mod account_state_blob;
 pub mod byte_array;
+pub mod channel_account;
 pub mod contract_event;
 pub mod crypto_proxies;
 pub mod event;
@@ -28,7 +29,6 @@ pub mod validator_signer;
 pub mod validator_verifier;
 pub mod vm_error;
 pub mod write_set;
-pub mod channel_account;
 
 pub use account_address::AccountAddress as PeerId;
 

@@ -267,7 +267,7 @@ fn new_raw_transaction(
             // It's a bit unfortunate that max_gas_amount etc is generated but
             // not used, but it isn't a huge deal.
             RawTransaction::new_write_set(sender, sequence_number, write_set)
-        },
+        }
         TransactionPayload::ChannelWriteSet(channel_payload) => {
             RawTransaction::new_channel_write_set(
                 sender,
@@ -278,16 +278,14 @@ fn new_raw_transaction(
                 Duration::from_secs(expiration_time_secs),
             )
         }
-        TransactionPayload::ChannelScript(channel_payload) => {
-            RawTransaction::new_channel_script(
-                sender,
-                sequence_number,
-                channel_payload,
-                max_gas_amount,
-                gas_unit_price,
-                Duration::from_secs(expiration_time_secs),
-            )
-        }
+        TransactionPayload::ChannelScript(channel_payload) => RawTransaction::new_channel_script(
+            sender,
+            sequence_number,
+            channel_payload,
+            max_gas_amount,
+            gas_unit_price,
+            Duration::from_secs(expiration_time_secs),
+        ),
     }
 }
 

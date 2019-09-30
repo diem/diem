@@ -13,9 +13,9 @@ pub mod mock_genesis;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_helper;
 
+pub mod data_storage;
 pub mod errors;
 pub mod schema;
-pub mod data_storage;
 
 mod change_set;
 mod event_store;

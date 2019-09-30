@@ -663,7 +663,10 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        Self::get_single_node_test_config_publish_options(random_ports, Some(VMPublishingOption::Open))
+        Self::get_single_node_test_config_publish_options(
+            random_ports,
+            Some(VMPublishingOption::Open),
+        )
     }
 
     /// Returns a simple test config for single node. It does not have correct network_peers_file,
@@ -766,22 +769,21 @@ impl NodeConfigHelpers {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy, Eq, PartialEq)]
 #[serde(tag = "type")]
-pub enum VMMode{
+pub enum VMMode {
     Onchain,
     Offchain,
 }
 
-impl VMMode{
-
-    pub fn is_offchain(&self) -> bool{
-        match self{
+impl VMMode {
+    pub fn is_offchain(&self) -> bool {
+        match self {
             VMMode::Offchain => true,
             _ => false,
         }
     }
 
-    pub fn is_onchain(&self) -> bool{
-        match self{
+    pub fn is_onchain(&self) -> bool {
+        match self {
             VMMode::Onchain => true,
             _ => false,
         }
@@ -798,7 +800,6 @@ pub struct VMConfig {
 }
 
 impl VMConfig {
-
     pub fn onchain() -> VMConfig {
         Self {
             publishing_options: VMPublishingOption::Open,
@@ -814,7 +815,7 @@ impl VMConfig {
     }
 
     pub fn is_offchain(&self) -> bool {
-       self.mode.is_offchain()
+        self.mode.is_offchain()
     }
 
     pub fn is_onchain(&self) -> bool {
@@ -826,7 +827,7 @@ impl Default for VMConfig {
     fn default() -> VMConfig {
         VMConfig {
             publishing_options: VMPublishingOption::Open,
-            mode: VMMode::Onchain
+            mode: VMMode::Onchain,
         }
     }
 }

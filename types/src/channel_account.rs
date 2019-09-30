@@ -1,11 +1,16 @@
-use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
+use crate::{
+    access_path::{AccessPath, DataPath},
+    account_address::AccountAddress,
+    account_config::core_code_address,
+    identifier::{IdentStr, Identifier},
+    language_storage::StructTag,
+};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+    SimpleDeserializer, SimpleSerializer,
+};
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use crate::account_address::AccountAddress;
-use crate::language_storage::StructTag;
-use crate::account_config::core_code_address;
-use crate::identifier::{IdentStr,Identifier};
-use crate::access_path::{AccessPath, DataPath};
 
 lazy_static! {
     // ChannelAccount
@@ -35,9 +40,10 @@ pub fn channel_account_resource_path(participant: AccountAddress) -> Vec<u8> {
 }
 
 /// A Rust representation of an ChannelAccount resource.
-/// This is not how the ChannelAccount is represented in the VM but it's a convenient representation.
+/// This is not how the ChannelAccount is represented in the VM but it's a convenient
+/// representation.
 #[derive(Debug, Default)]
-pub struct ChannelAccountResource{
+pub struct ChannelAccountResource {
     balance: u64,
     channel_sequence_number: u64,
     closed: bool,
@@ -45,17 +51,21 @@ pub struct ChannelAccountResource{
 }
 
 impl ChannelAccountResource {
-
-    pub fn new(balance: u64, channel_sequence_number: u64, closed: bool, participant: AccountAddress) -> Self{
-        Self{
+    pub fn new(
+        balance: u64,
+        channel_sequence_number: u64,
+        closed: bool,
+        participant: AccountAddress,
+    ) -> Self {
+        Self {
             balance,
             channel_sequence_number,
             closed,
-            participant
+            participant,
         }
     }
 
-    pub fn make_from(bytes: Vec<u8>) -> Result<Self>{
+    pub fn make_from(bytes: Vec<u8>) -> Result<Self> {
         SimpleDeserializer::deserialize(bytes.as_slice())
     }
 
@@ -67,7 +77,7 @@ impl ChannelAccountResource {
         self.channel_sequence_number
     }
 
-    pub fn closed(&self) -> bool{
+    pub fn closed(&self) -> bool {
         self.closed
     }
 

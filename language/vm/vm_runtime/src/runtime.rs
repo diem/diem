@@ -13,7 +13,7 @@ use crate::{
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMConfig, VMPublishingOption, VMMode};
+use config::config::{VMConfig, VMMode, VMPublishingOption};
 use logger::prelude::*;
 use state_view::StateView;
 use types::{
@@ -88,14 +88,15 @@ impl<'alloc> VMRuntime<'alloc> {
             ValidationMode::Validating
         };
 
-        let validated_txn = match process_txn.validate(mode, &self.publishing_option, self.vm_mode.clone()) {
-            Ok(validated_txn) => validated_txn,
-            Err(vm_status) => {
-                let res = Some(vm_status);
-                report_verification_status(&res);
-                return res;
-            }
-        };
+        let validated_txn =
+            match process_txn.validate(mode, &self.publishing_option, self.vm_mode.clone()) {
+                Ok(validated_txn) => validated_txn,
+                Err(vm_status) => {
+                    let res = Some(vm_status);
+                    report_verification_status(&res);
+                    return res;
+                }
+            };
         let res = match validated_txn.verify(&self.script_cache) {
             Ok(_) => None,
             Err(vm_status) => Some(vm_status),

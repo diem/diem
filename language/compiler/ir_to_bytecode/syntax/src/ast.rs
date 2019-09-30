@@ -325,7 +325,8 @@ pub enum Builtin {
 
     /// Check current vm is offchain
     IsOffchain,
-    /// Returns the address of the current channel transaction's receiver, if current txn is not channel transaction, txn will fail.
+    /// Returns the address of the current channel transaction's receiver, if current txn is not
+    /// channel transaction, txn will fail.
     GetTxnReceiver,
     /// Check if there is a struct object (`StructName` resolved by current module) associated with
     /// the sender address at channel
@@ -335,8 +336,8 @@ pub enum Builtin {
     /// Get the struct object (`StructName` resolved by current module) associated with the sender
     /// address at channel
     BorrowSenderChannel(StructName, Vec<Type>),
-    /// Get the struct object (`StructName` resolved by current module) associated with the receiver
-    /// address at channel
+    /// Get the struct object (`StructName` resolved by current module) associated with the
+    /// receiver address at channel
     BorrowReceiverChannel(StructName, Vec<Type>),
     /// Remove a resource of the given type from the channel account with the sender address
     MoveFromSenderChannel(StructName, Vec<Type>),
@@ -349,7 +350,7 @@ pub enum Builtin {
     /// Check current transaction is channel transaction.
     IsChannelTxn,
     GetTxnReceiverPublicKey,
-    GetTxnChannelSequenceNumber
+    GetTxnChannelSequenceNumber,
 }
 
 /// Enum for different function calls
@@ -1384,14 +1385,51 @@ impl fmt::Display for Builtin {
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::IsOffchain => write!(f, "is_offchain"),
             Builtin::GetTxnReceiver => write!(f, "get_txn_receiver"),
-            Builtin::ExistSenderChannel(t, tys) => write!(f, "exist_sender_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::ExistReceiverChannel(t, tys) => write!(f, "exist_receiver_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::BorrowSenderChannel(t, tys) => write!(f, "borrow_sender_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::BorrowReceiverChannel(t, tys) => write!(f, "borrow_receiver_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveFromSenderChannel(t, tys) => write!(f, "move_from_sender_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveFromReceiverChannel(t, tys) => write!(f, "move_from_receiver_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveToSenderChannel(t, tys) => write!(f, "move_to_sender_channel<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveToReceiverChannel(t, tys) => write!(f, "move_to_receiver_channel<{}{}>", t, format_type_actuals(tys)),
+            Builtin::ExistSenderChannel(t, tys) => {
+                write!(f, "exist_sender_channel<{}{}>", t, format_type_actuals(tys))
+            }
+            Builtin::ExistReceiverChannel(t, tys) => write!(
+                f,
+                "exist_receiver_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::BorrowSenderChannel(t, tys) => write!(
+                f,
+                "borrow_sender_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::BorrowReceiverChannel(t, tys) => write!(
+                f,
+                "borrow_receiver_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::MoveFromSenderChannel(t, tys) => write!(
+                f,
+                "move_from_sender_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::MoveFromReceiverChannel(t, tys) => write!(
+                f,
+                "move_from_receiver_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::MoveToSenderChannel(t, tys) => write!(
+                f,
+                "move_to_sender_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
+            Builtin::MoveToReceiverChannel(t, tys) => write!(
+                f,
+                "move_to_receiver_channel<{}{}>",
+                t,
+                format_type_actuals(tys)
+            ),
             Builtin::IsChannelTxn => write!(f, "is_channel_txn"),
             Builtin::GetTxnReceiverPublicKey => write!(f, "get_txn_receiver_public_key"),
             Builtin::GetTxnChannelSequenceNumber => write!(f, "get_txn_channel_sequence_number"),

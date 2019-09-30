@@ -1,7 +1,4 @@
-use failure::prelude::*;
-use std::{sync::Arc, pin::Pin};
 use crate::{
-    LibraDB,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -11,25 +8,37 @@ use crate::{
     state_store::StateStore,
     system_store::SystemStore,
     transaction_store::TransactionStore,
+    LibraDB,
 };
-use types::{account_state_blob::{AccountStateBlob, AccountStateWithProof},
-            transaction::{TransactionToCommit, TransactionListWithProof, Version, SignedTransactionWithProof,
-                          TransactionInfo}, get_with_proof::{ResponseItem, RequestItem},
-            proof::{SparseMerkleProof, AccountStateProof, EventProof, SignedTransactionProof},
-            account_address::AccountAddress, access_path::AccessPath,
-            contract_event::EventWithProof, account_config::AccountResource,
-            ledger_info::LedgerInfoWithSignatures};
-use itertools::{zip_eq, izip};
-use schemadb::{DB, ColumnFamilyOptionsMap, DEFAULT_CF_NAME, ColumnFamilyOptions};
-use std::time::Instant;
-use logger::prelude::*;
 use crypto::{ed25519::*, hash::CryptoHash, HashValue};
+use failure::prelude::*;
+use itertools::{izip, zip_eq};
 use jellyfish_merkle::{
     node_type::{Node, NodeKey},
     JellyfishMerkleTree, TreeReader,
 };
-use std::ops::Deref;
-use std::sync::{Mutex, mpsc};
+use logger::prelude::*;
+use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
+use std::{
+    ops::Deref,
+    pin::Pin,
+    sync::{mpsc, Arc, Mutex},
+    time::Instant,
+};
+use types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    account_config::AccountResource,
+    account_state_blob::{AccountStateBlob, AccountStateWithProof},
+    contract_event::EventWithProof,
+    get_with_proof::{RequestItem, ResponseItem},
+    ledger_info::LedgerInfoWithSignatures,
+    proof::{AccountStateProof, EventProof, SignedTransactionProof, SparseMerkleProof},
+    transaction::{
+        SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
+        Version,
+    },
+};
 
 pub struct StartupInfo {
     pub latest_version: u64,
@@ -87,14 +96,17 @@ pub struct DataStorage {
     libra_db: Arc<Option<LibraDB>>,
     read_db: ReadDataStorage,
     shutdown_w_sender: Mutex<mpsc::Sender<()>>,
-//    shutdown_r_receiver_vec: Arc<Vec<mpsc::Receiver<()>>>,
+    //    shutdown_r_receiver_vec: Arc<Vec<mpsc::Receiver<()>>>,
 }
 
 impl Deref for DataStorage {
     type Target = LibraDB;
 
     fn deref(&self) -> &Self::Target {
-        self.libra_db.as_ref().as_ref().expect("LibraDB is dropped unexptectedly")
+        self.libra_db
+            .as_ref()
+            .as_ref()
+            .expect("LibraDB is dropped unexptectedly")
     }
 }
 
@@ -114,7 +126,11 @@ impl Deref for ReadDataStorage {
     type Target = LibraDB;
 
     fn deref(&self) -> &Self::Target {
-        &self.libra_db.as_ref().as_ref().expect("LibraDB is dropped unexptectedly")
+        &self
+            .libra_db
+            .as_ref()
+            .as_ref()
+            .expect("LibraDB is dropped unexptectedly")
     }
 }
 
@@ -130,12 +146,18 @@ impl DataStorage {
         let (shutdown_w_sender, shutdown_w_receiver) = mpsc::channel();
         let (shutdown_r_sender, shutdown_r_receiver) = mpsc::channel();
         let receivers = Arc::new(vec![shutdown_r_receiver]);
-        (DataStorage {
-            libra_db: Arc::clone(&write_db),
-            read_db: ReadDataStorage { libra_db: Arc::clone(&write_db), shutdown_r_sender: Arc::new(Mutex::new(shutdown_r_sender)) },
-            shutdown_w_sender: Mutex::new(shutdown_w_sender),
-            //shutdown_r_receiver_vec: receivers,
-        }, shutdown_w_receiver)
+        (
+            DataStorage {
+                libra_db: Arc::clone(&write_db),
+                read_db: ReadDataStorage {
+                    libra_db: Arc::clone(&write_db),
+                    shutdown_r_sender: Arc::new(Mutex::new(shutdown_r_sender)),
+                },
+                shutdown_w_sender: Mutex::new(shutdown_w_sender),
+                //shutdown_r_receiver_vec: receivers,
+            },
+            shutdown_w_receiver,
+        )
     }
 
     pub fn genesis_state(&self) -> Result<Option<bool>> {
@@ -150,7 +172,7 @@ impl DataStorage {
 fn already_init(libra_db: &LibraDB) -> Result<Option<bool>> {
     match libra_db.get_startup_info()? {
         Some(info) => Ok(Some(true)),
-        None => Ok(Some(false))
+        None => Ok(Some(false)),
     }
 }
 
@@ -164,11 +186,10 @@ impl WriteData for DataStorage {
         match init_flag {
             Some(flag) => {
                 ensure!(flag, "Storage has not been initialized yet.");
-                self.deref().save_transactions(txns_to_commit.as_slice(), first_version, &None)
+                self.deref()
+                    .save_transactions(txns_to_commit.as_slice(), first_version, &None)
             }
-            None => {
-                Err(format_err!("save tx err."))
-            }
+            None => Err(format_err!("save tx err.")),
         }
     }
 
@@ -181,11 +202,10 @@ impl WriteData for DataStorage {
         match init_flag {
             Some(flag) => {
                 ensure!(!flag, "Storage has been initialized.");
-                self.deref().save_transactions(txns_to_commit.as_slice(), 0, ledger_info_with_sigs)
+                self.deref()
+                    .save_transactions(txns_to_commit.as_slice(), 0, ledger_info_with_sigs)
             }
-            None => {
-                Err(format_err!("save genesis tx err."))
-            }
+            None => Err(format_err!("save genesis tx err.")),
         }
     }
 }
@@ -193,7 +213,7 @@ impl WriteData for DataStorage {
 impl ReadDataStorage {
     pub fn get_latest_version_state(&self) -> Result<Option<(HashValue, Version)>> {
         match self.get_startup_info()? {
-            Some(info) => { Ok(Some((info.account_state_root_hash, info.latest_version))) }
+            Some(info) => Ok(Some((info.account_state_root_hash, info.latest_version))),
             None => Ok(None),
         }
     }
@@ -205,7 +225,9 @@ impl ReadData for ReadDataStorage {
         client_known_version: Version,
         request_items: Vec<RequestItem>,
     ) -> Result<Vec<ResponseItem>> {
-        let resp = self.deref().update_to_latest_ledger(client_known_version, request_items)?;
+        let resp = self
+            .deref()
+            .update_to_latest_ledger(client_known_version, request_items)?;
         Ok(resp.0)
     }
 
@@ -216,7 +238,8 @@ impl ReadData for ReadDataStorage {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
-        self.deref().get_transactions(start_version, batch_size, ledger_version, fetch_events)
+        self.deref()
+            .get_transactions(start_version, batch_size, ledger_version, fetch_events)
     }
 
     fn get_account_state_with_proof_by_version(
@@ -224,7 +247,8 @@ impl ReadData for ReadDataStorage {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        self.deref().get_account_state_with_proof_by_version(address, version)
+        self.deref()
+            .get_account_state_with_proof_by_version(address, version)
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
@@ -234,9 +258,13 @@ impl ReadData for ReadDataStorage {
                 let latest_version = info.latest_version;
                 let account_state_root_hash = info.account_state_root_hash;
                 let transaction_accumulator_hash = info.ledger_info.transaction_accumulator_hash();
-                Ok(Some(StartupInfo { latest_version, account_state_root_hash, transaction_accumulator_hash }))
+                Ok(Some(StartupInfo {
+                    latest_version,
+                    account_state_root_hash,
+                    transaction_accumulator_hash,
+                }))
             }
-            None => { Ok(None) }
+            None => Ok(None),
         }
     }
 
@@ -249,17 +277,22 @@ impl ReadData for ReadDataStorage {
     }
 
     fn latest_version(&self) -> Option<Version> {
-        match self.get_latest_version_state().expect("get latest version err.") {
+        match self
+            .get_latest_version_state()
+            .expect("get latest version err.")
+        {
             Some(v_s) => Some(v_s.1),
             None => None,
         }
     }
 
     fn latest_state_root(&self) -> Option<HashValue> {
-        match self.get_latest_version_state().expect("get latest state root err.") {
+        match self
+            .get_latest_version_state()
+            .expect("get latest state root err.")
+        {
             Some(v_s) => Some(v_s.0),
             None => None,
         }
     }
 }
-

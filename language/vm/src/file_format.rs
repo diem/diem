@@ -1208,13 +1208,23 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::IsOffchain => write!(f, "IsOffchain"),
             Bytecode::GetTxnReceiverAddress => write!(f, "GetTxnReceiverAddress"),
             Bytecode::ExistSenderChannel(a, b) => write!(f, "ExistSenderChannel({},{:?})", a, b),
-            Bytecode::ExistReceiverChannel(a, b)=> write!(f, "ExistReceiverChannel({},{:?})", a, b),
-            Bytecode::BorrowSenderChannel(a, b)=> write!(f, "BorrowSenderChannel({},{:?})", a, b),
-            Bytecode::BorrowReceiverChannel(a, b)=> write!(f, "BorrowReceiverChannel({},{:?})", a, b),
-            Bytecode::MoveFromSenderChannel(a, b)=> write!(f, "MoveFromSenderChannel({},{:?})", a, b),
-            Bytecode::MoveFromReceiverChannel(a, b)=> write!(f, "MoveFromReceiverChannel({},{:?})", a, b),
-            Bytecode::MoveToSenderChannel(a, b)=> write!(f, "MoveToSenderChannel({},{:?})", a, b),
-            Bytecode::MoveToReceiverChannel(a, b)=> write!(f, "MoveToReceiverChannel({},{:?})", a, b),
+            Bytecode::ExistReceiverChannel(a, b) => {
+                write!(f, "ExistReceiverChannel({},{:?})", a, b)
+            }
+            Bytecode::BorrowSenderChannel(a, b) => write!(f, "BorrowSenderChannel({},{:?})", a, b),
+            Bytecode::BorrowReceiverChannel(a, b) => {
+                write!(f, "BorrowReceiverChannel({},{:?})", a, b)
+            }
+            Bytecode::MoveFromSenderChannel(a, b) => {
+                write!(f, "MoveFromSenderChannel({},{:?})", a, b)
+            }
+            Bytecode::MoveFromReceiverChannel(a, b) => {
+                write!(f, "MoveFromReceiverChannel({},{:?})", a, b)
+            }
+            Bytecode::MoveToSenderChannel(a, b) => write!(f, "MoveToSenderChannel({},{:?})", a, b),
+            Bytecode::MoveToReceiverChannel(a, b) => {
+                write!(f, "MoveToReceiverChannel({},{:?})", a, b)
+            }
             Bytecode::IsChannelTxn => write!(f, "IsChannelTxn"),
             Bytecode::GetTxnReceiverPublicKey => write!(f, "GetTxnReceiverPublicKey"),
             Bytecode::GetTxnChannelSequenceNumber => write!(f, "GetTxnChannelSequenceNumber"),

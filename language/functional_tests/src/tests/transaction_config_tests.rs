@@ -112,7 +112,6 @@ fn build_transaction_config_3() {
     ").unwrap_err();
 }
 
-
 #[rustfmt::skip]
 #[test]
 fn build_transaction_config_4() {

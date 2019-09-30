@@ -2,16 +2,16 @@ use crate::{
     code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
 };
-use config::config::{VMPublishingOption, VMMode};
+use config::config::{VMMode, VMPublishingOption};
 use std::marker::PhantomData;
 use types::transaction::SignatureCheckedTransaction;
 use vm::errors::VMResult;
 use vm_cache_map::Arena;
 
+pub mod balance_checker;
 pub mod execute;
 pub mod validate;
 pub mod verify;
-pub mod balance_checker;
 
 use validate::{ValidatedTransaction, ValidationMode};
 

@@ -203,14 +203,12 @@ where
                 },
             }
         }
-        TransactionPayload::ChannelWriteSet(channel_payload) => {
-            TransactionOutput::new(
-                channel_payload.write_set,
-                vec![],
-                0,
-                VMStatus::new(StatusCode::EXECUTED).into(),
-            )
-        }
+        TransactionPayload::ChannelWriteSet(channel_payload) => TransactionOutput::new(
+            channel_payload.write_set,
+            vec![],
+            0,
+            VMStatus::new(StatusCode::EXECUTED).into(),
+        ),
         TransactionPayload::ChannelScript(channel_payload) => {
             let VerifiedTransactionState {
                 mut txn_executor,
@@ -236,9 +234,15 @@ where
                     }
                 },
             };
-            let merged_write_set = WriteSet::merge(&channel_payload.write_set, script_output.write_set());
+            let merged_write_set =
+                WriteSet::merge(&channel_payload.write_set, script_output.write_set());
             //TODO(jole) eliminate clone
-            TransactionOutput::new(merged_write_set, script_output.events().to_vec(), script_output.gas_used(), script_output.status().clone())
+            TransactionOutput::new(
+                merged_write_set,
+                script_output.events().to_vec(),
+                script_output.gas_used(),
+                script_output.status().clone(),
+            )
         }
     }
 }

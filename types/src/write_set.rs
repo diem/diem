@@ -35,7 +35,7 @@ impl WriteOp {
         }
     }
 
-    pub fn merge_with(&mut self, other:WriteOp){
+    pub fn merge_with(&mut self, other: WriteOp) {
         mem::replace(self, other);
     }
 }
@@ -120,23 +120,25 @@ impl WriteSet {
         self.0
     }
 
-    pub fn contains_onchain_resource(&self) -> bool{
-        for (access_path ,_) in self.iter(){
-            if access_path.is_onchain_resource(){
+    pub fn contains_onchain_resource(&self) -> bool {
+        for (access_path, _) in self.iter() {
+            if access_path.is_onchain_resource() {
                 return true;
             }
         }
-        return false
+        return false;
     }
 
-    pub fn merge(first:&WriteSet, second:&WriteSet) -> Self{
-        WriteSetMut::merge(&first.0,&second.0).freeze().expect("freeze should success.")
+    pub fn merge(first: &WriteSet, second: &WriteSet) -> Self {
+        WriteSetMut::merge(&first.0, &second.0)
+            .freeze()
+            .expect("freeze should success.")
     }
 
-    pub fn get(&self, access_path: &AccessPath) -> Option<&WriteOp>{
-        for (ap,op) in self{
+    pub fn get(&self, access_path: &AccessPath) -> Option<&WriteOp> {
+        for (ap, op) in self {
             if ap == access_path {
-                return Some(op)
+                return Some(op);
             }
         }
         None
@@ -175,25 +177,26 @@ impl WriteSetMut {
         Ok(WriteSet(self))
     }
 
-    pub fn merge_with(&mut self, other: &WriteSetMut){
+    pub fn merge_with(&mut self, other: &WriteSetMut) {
         let new_set = Self::merge(self, other);
         mem::replace(self, new_set);
     }
 
-    pub(crate) fn find_write_op_mut(&mut self, access_path: &AccessPath) -> Option<&mut WriteOp>{
-        self.write_set.iter_mut().find(|(ap, _)|ap == access_path).map(|(_,op)|op)
+    pub(crate) fn find_write_op_mut(&mut self, access_path: &AccessPath) -> Option<&mut WriteOp> {
+        self.write_set
+            .iter_mut()
+            .find(|(ap, _)| ap == access_path)
+            .map(|(_, op)| op)
     }
 
-    pub fn merge(first: &WriteSetMut, second: &WriteSetMut) -> WriteSetMut{
+    pub fn merge(first: &WriteSetMut, second: &WriteSetMut) -> WriteSetMut {
         let mut write_set = first.clone();
         for (ap, second_op) in &second.write_set {
             match write_set.find_write_op_mut(ap) {
                 Some(first_op) => {
                     first_op.merge_with(second_op.clone());
                 }
-                None => {
-                    write_set.push((ap.clone(), second_op.clone()))
-                }
+                None => write_set.push((ap.clone(), second_op.clone())),
             }
         }
         write_set

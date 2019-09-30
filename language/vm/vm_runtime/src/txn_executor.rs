@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use config::config::VMMode;
 use std::{collections::VecDeque, convert::TryFrom};
 use types::{
     access_path::AccessPath,
@@ -43,7 +44,6 @@ use vm_runtime_types::{
     native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
     value::{ReferenceValue, Struct, Value},
 };
-use config::config::VMMode;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -92,7 +92,7 @@ fn make_channel_access_path(
     idx: StructDefinitionIndex,
     address: AccountAddress,
     participant: AccountAddress,
-) -> AccessPath{
+) -> AccessPath {
     let struct_tag = resource_storage_key(module, idx);
     AccessPath::channel_resource_access_path(address, participant, struct_tag)
 }
@@ -573,10 +573,8 @@ where
                 }
                 Bytecode::GetTxnReceiverAddress => {
                     if let Some(receiver) = self.txn_data.receiver() {
-                        self
-                        .execution_stack
-                        .push(Value::address(receiver))?;
-                    }else{
+                        self.execution_stack.push(Value::address(receiver))?;
+                    } else {
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
@@ -610,19 +608,18 @@ where
                 }
                 Bytecode::GetTxnReceiverPublicKey => {
                     if let Some(channel_metadata) = self.txn_data.channel_metadata() {
-                        self
-                            .execution_stack
-                            .push(Value::byte_array(ByteArray::new(channel_metadata.receiver_public_key.to_bytes().to_vec())))?;
-                    }else{
+                        self.execution_stack.push(Value::byte_array(ByteArray::new(
+                            channel_metadata.receiver_public_key.to_bytes().to_vec(),
+                        )))?;
+                    } else {
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
                 Bytecode::GetTxnChannelSequenceNumber => {
                     if let Some(channel_metadata) = self.txn_data.channel_metadata() {
-                        self
-                            .execution_stack
+                        self.execution_stack
                             .push(Value::u64(channel_metadata.channel_sequence_number))?;
-                    }else{
+                    } else {
                         return Err(VMStatus::new(StatusCode::LINKER_ERROR));
                     }
                 }
@@ -639,41 +636,46 @@ where
         }
     }
 
-    fn get_channel_address_pair(txn_data:&TransactionMetadata, is_sender: bool) -> VMResult<(AccountAddress, AccountAddress)> {
+    fn get_channel_address_pair(
+        txn_data: &TransactionMetadata,
+        is_sender: bool,
+    ) -> VMResult<(AccountAddress, AccountAddress)> {
         let address: AccountAddress;
         let participant: AccountAddress;
         if is_sender {
             address = txn_data.sender;
             participant = match txn_data.channel_metadata() {
                 Some(p) => p.receiver,
-                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             };
-        }else{
+        } else {
             participant = txn_data.sender;
             address = match txn_data.channel_metadata() {
                 Some(p) => p.receiver,
-                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR))
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             };
         }
-        Ok((address,participant))
+        Ok((address, participant))
     }
 
-    fn exist_in_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
+    fn exist_in_channel(
+        &mut self,
+        is_sender: bool,
+        instruction: &Bytecode,
+        idx: &StructDefinitionIndex,
+    ) -> VMResult<()> {
+        let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, *idx, address, participant);
-        if let Some(struct_def) = self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, *idx, &self.gas_meter)?
-        {
+        if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+            curr_module,
+            *idx,
+            &self.gas_meter,
+        )? {
             let (exists, mem_size) = self.data_view.resource_exists(&ap, struct_def)?;
-            self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            &self.execution_stack,
-                            mem_size
-                        )?;
+            self.gas_meter
+                .calculate_and_consume(&instruction, &self.execution_stack, mem_size)?;
             self.execution_stack.push(Value::bool(exists))?;
         } else {
             return Err(VMStatus::new(StatusCode::LINKER_ERROR));
@@ -681,8 +683,13 @@ where
         Ok(())
     }
 
-    fn borrow_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
+    fn borrow_from_channel(
+        &mut self,
+        is_sender: bool,
+        instruction: &Bytecode,
+        idx: &StructDefinitionIndex,
+    ) -> VMResult<()> {
+        let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, *idx, address, participant);
@@ -705,23 +712,27 @@ where
         Ok(())
     }
 
-    fn move_from_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
+    fn move_from_channel(
+        &mut self,
+        is_sender: bool,
+        instruction: &Bytecode,
+        idx: &StructDefinitionIndex,
+    ) -> VMResult<()> {
+        let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, *idx, address, participant);
-        if let Some(struct_def) = self
-                        .execution_stack
-                        .module_cache
-                        .resolve_struct_def(curr_module, *idx, &self.gas_meter)?
-        {
-            let resource =
-                self.data_view.move_resource_from(&ap, struct_def)?;
+        if let Some(struct_def) = self.execution_stack.module_cache.resolve_struct_def(
+            curr_module,
+            *idx,
+            &self.gas_meter,
+        )? {
+            let resource = self.data_view.move_resource_from(&ap, struct_def)?;
             self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            &self.execution_stack,
-                            resource.size()
-                        )?;
+                &instruction,
+                &self.execution_stack,
+                resource.size(),
+            )?;
             self.execution_stack.push(resource)?;
         } else {
             return Err(VMStatus::new(StatusCode::LINKER_ERROR));
@@ -729,8 +740,13 @@ where
         Ok(())
     }
 
-    fn move_to_channel(&mut self, is_sender: bool, instruction: &Bytecode, idx: &StructDefinitionIndex) -> VMResult<()>{
-        let (address,participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
+    fn move_to_channel(
+        &mut self,
+        is_sender: bool,
+        instruction: &Bytecode,
+        idx: &StructDefinitionIndex,
+    ) -> VMResult<()> {
+        let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
 
         let curr_module = self.execution_stack.top_frame()?.module();
         let ap = make_channel_access_path(curr_module, *idx, address, participant);
@@ -809,13 +825,15 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]).and_then(|_|{
-            if self.txn_data.is_channel_txn() {
-                self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
-            }else{
-                Ok(())
-            }
-        });
+        let result = self
+            .execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+            .and_then(|_| {
+                if self.txn_data.is_channel_txn() {
+                    self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+                } else {
+                    Ok(())
+                }
+            });
         self.gas_meter.enable_metering();
         result
     }
@@ -824,13 +842,15 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
         self.gas_meter.disable_metering();
-        let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]).and_then(|_|{
-            if self.txn_data.is_channel_txn() {
-                self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
-            }else{
-                Ok(())
-            }
-        });
+        let result = self
+            .execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+            .and_then(|_| {
+                if self.txn_data.is_channel_txn() {
+                    self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+                } else {
+                    Ok(())
+                }
+            });
         self.gas_meter.enable_metering();
         result
     }
@@ -979,14 +999,13 @@ where
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
         let gas: u64 = match self.vm_mode {
-            VMMode::Onchain => {
-                self.txn_data
-                    .max_gas_amount
-                    .sub(self.gas_meter.remaining_gas())
-                    .mul(self.txn_data.gas_unit_price)
-                    .get()
-            }
-            VMMode::Offchain => 0
+            VMMode::Onchain => self
+                .txn_data
+                .max_gas_amount
+                .sub(self.gas_meter.remaining_gas())
+                .mul(self.txn_data.gas_unit_price)
+                .get(),
+            VMMode::Offchain => 0,
         };
 
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;

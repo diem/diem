@@ -349,12 +349,44 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     ),
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
-                    FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
-                    | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
-                    | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
-                    | GetGasRemaining | GetTxnSenderAddress | CreateAccount
-                    | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn
-                    | GetTxnReceiverPublicKey| GetTxnChannelSequenceNumber => {
+                    FreezeRef
+                    | Pop
+                    | Ret
+                    | LdConst(_)
+                    | LdTrue
+                    | LdFalse
+                    | ReadRef
+                    | WriteRef
+                    | Add
+                    | Sub
+                    | Mul
+                    | Mod
+                    | Div
+                    | BitOr
+                    | BitAnd
+                    | Xor
+                    | Or
+                    | And
+                    | Not
+                    | Eq
+                    | Neq
+                    | Lt
+                    | Gt
+                    | Le
+                    | Ge
+                    | Abort
+                    | GetTxnGasUnitPrice
+                    | GetTxnMaxGasUnits
+                    | GetGasRemaining
+                    | GetTxnSenderAddress
+                    | CreateAccount
+                    | GetTxnSequenceNumber
+                    | GetTxnPublicKey
+                    | IsOffchain
+                    | GetTxnReceiverAddress
+                    | IsChannelTxn
+                    | GetTxnReceiverPublicKey
+                    | GetTxnChannelSequenceNumber => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
                     }
                 };
@@ -404,10 +436,43 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
 
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.
-        FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub
-        | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt | Gt | Le
-        | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-        | GetTxnSenderAddress | CreateAccount | GetTxnSequenceNumber | GetTxnPublicKey | IsOffchain | GetTxnReceiverAddress | IsChannelTxn
-        | GetTxnReceiverPublicKey | GetTxnChannelSequenceNumber => false,
+        FreezeRef
+        | Pop
+        | Ret
+        | LdConst(_)
+        | LdTrue
+        | LdFalse
+        | ReadRef
+        | WriteRef
+        | Add
+        | Sub
+        | Mul
+        | Mod
+        | Div
+        | BitOr
+        | BitAnd
+        | Xor
+        | Or
+        | And
+        | Not
+        | Eq
+        | Neq
+        | Lt
+        | Gt
+        | Le
+        | Ge
+        | Abort
+        | GetTxnGasUnitPrice
+        | GetTxnMaxGasUnits
+        | GetGasRemaining
+        | GetTxnSenderAddress
+        | CreateAccount
+        | GetTxnSequenceNumber
+        | GetTxnPublicKey
+        | IsOffchain
+        | GetTxnReceiverAddress
+        | IsChannelTxn
+        | GetTxnReceiverPublicKey
+        | GetTxnChannelSequenceNumber => false,
     }
 }

@@ -8,6 +8,7 @@ use std::{collections::btree_map::BTreeMap, mem::replace};
 use types::{
     access_path::AccessPath,
     language_storage::ModuleId,
+    transaction::TransactionPayload,
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -19,7 +20,6 @@ use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     value::{GlobalRef, Struct, Value},
 };
-use types::transaction::TransactionPayload;
 
 /// The wrapper around the StateVersionView for the block.
 /// It keeps track of the value that have been changed during execution of a block.
@@ -78,43 +78,43 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         BlockDataCache::get(self, access_path)
     }
-
 }
 
 //TODO(jole) refactor this for channel transaction.
-pub struct WriteSetDataCache<'txn>{
+pub struct WriteSetDataCache<'txn> {
     write_set: WriteSet,
     data_cache: &'txn dyn RemoteCache,
 }
 
-impl<'txn> WriteSetDataCache<'txn>{
-
-    pub fn new(write_set: WriteSet, data_cache: &'txn dyn RemoteCache) -> Self{
-        Self{
+impl<'txn> WriteSetDataCache<'txn> {
+    pub fn new(write_set: WriteSet, data_cache: &'txn dyn RemoteCache) -> Self {
+        Self {
             write_set,
             data_cache,
         }
     }
     //TODO optimize
-    pub fn new_with_txn_payload(payload: TransactionPayload, data_cache: &'txn dyn RemoteCache) -> Self{
-        let write_set = match payload{
+    pub fn new_with_txn_payload(
+        payload: TransactionPayload,
+        data_cache: &'txn dyn RemoteCache,
+    ) -> Self {
+        let write_set = match payload {
             TransactionPayload::ChannelScript(channel_payload) => channel_payload.write_set,
-            _ => WriteSet::default()
+            _ => WriteSet::default(),
         };
-        Self{
+        Self {
             write_set,
-            data_cache
+            data_cache,
         }
     }
 }
 
-impl<'txn> RemoteCache for WriteSetDataCache<'txn>{
-
+impl<'txn> RemoteCache for WriteSetDataCache<'txn> {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         match self.write_set.get(access_path) {
-            Some(op) => match op{
+            Some(op) => match op {
                 WriteOp::Value(value) => Ok(Some(value.clone())),
-                WriteOp::Deletion => Ok(None)
+                WriteOp::Deletion => Ok(None),
             },
             None => self.data_cache.get(access_path),
         }
@@ -316,5 +316,4 @@ impl<'txn> TransactionDataCache<'txn> {
     pub fn clear(&mut self) {
         self.data_map.clear()
     }
-
 }

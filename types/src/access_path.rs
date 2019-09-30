@@ -36,16 +36,20 @@
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
 use crate::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
-        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
+        account_resource_path, account_struct_tag, association_address,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
+    channel_account::channel_account_struct_tag,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleDeserializer, SimpleSerializer};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+    SimpleDeserializer, SimpleSerializer,
+};
 use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
@@ -56,14 +60,11 @@ use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
 use std::{
+    convert::TryFrom,
     fmt::{self, Formatter},
+    ops::Index,
     slice::Iter,
 };
-use crate::account_config::account_struct_tag;
-use std::convert::TryFrom;
-use std::ops::Index;
-use crate::account_address::ADDRESS_LENGTH;
-use crate::channel_account::{channel_account_struct_tag};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(Identifier);
@@ -100,9 +101,9 @@ impl Access {
     }
 
     pub fn index(&self) -> Option<u64> {
-        match self{
+        match self {
             Access::Index(val) => Some(*val),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -133,19 +134,24 @@ impl Accesses {
         Accesses(vec![Access::Field(field)])
     }
 
-    pub fn new_with_access(access:Vec<Access>) -> Self{
+    pub fn new_with_access(access: Vec<Access>) -> Self {
         Accesses(access)
     }
 
-    pub fn new_with_index(idx: u64) -> Self{
+    pub fn new_with_index(idx: u64) -> Self {
         Accesses(vec![Access::Index(idx)])
     }
 
-    pub fn from_separated_string(value: &str) -> Result<Self>{
-        let result:Result<Vec<Access>> = value.split(SEPARATOR).into_iter().filter(|s|!s.is_empty()).map(|access|match access.parse::<u64>(){
-            Ok(idx) => Ok(Access::Index(idx)),
-            Err(_) => Ok(Access::Field(Field::new(Identifier::new(access)?)))
-        }).collect();
+    pub fn from_separated_string(value: &str) -> Result<Self> {
+        let result: Result<Vec<Access>> = value
+            .split(SEPARATOR)
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .map(|access| match access.parse::<u64>() {
+                Ok(idx) => Ok(Access::Index(idx)),
+                Err(_) => Ok(Access::Field(Field::new(Identifier::new(access)?))),
+            })
+            .collect();
         Ok(Accesses(result?))
     }
 
@@ -210,7 +216,7 @@ impl Accesses {
         Accesses(self.0.clone().into_iter().take(new_len).collect())
     }
 
-    pub fn range(&self, from:usize, to:usize) -> Accesses {
+    pub fn range(&self, from: usize, to: usize) -> Accesses {
         Accesses(self.0[from..to].to_vec())
     }
 
@@ -240,7 +246,6 @@ impl TrieKey for Accesses {
 }
 
 impl Index<usize> for Accesses {
-
     type Output = Access;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -254,39 +259,48 @@ lazy_static! {
         AccessPath::new(association_address(), validator_set_path());
 }
 
-
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd, Debug)]
 pub enum DataPath {
-    Code { module_id: ModuleId },
-    Resource { tag: StructTag },
-    ChannelResource { participant: AccountAddress, tag: StructTag },
+    Code {
+        module_id: ModuleId,
+    },
+    Resource {
+        tag: StructTag,
+    },
+    ChannelResource {
+        participant: AccountAddress,
+        tag: StructTag,
+    },
 }
 
 impl DataPath {
     //TODO get index by enum
     pub const CODE_TAG: u8 = 0;
     pub const RESOURCE_TAG: u8 = 1;
-    pub const CHANNEL_RESOURCE_TAG: u8 =2;
+    pub const CHANNEL_RESOURCE_TAG: u8 = 2;
 
     pub fn from(path: &[u8]) -> Result<Self> {
-        match path[0]{
-            DataPath::CODE_TAG => {
-                Ok(DataPath::Code {module_id: SimpleDeserializer::deserialize(&path[1..])?})
-            },
-            DataPath::RESOURCE_TAG => {
-                Ok(DataPath::Resource {tag: SimpleDeserializer::deserialize(&path[1..])?})
-            },
+        match path[0] {
+            DataPath::CODE_TAG => Ok(DataPath::Code {
+                module_id: SimpleDeserializer::deserialize(&path[1..])?,
+            }),
+            DataPath::RESOURCE_TAG => Ok(DataPath::Resource {
+                tag: SimpleDeserializer::deserialize(&path[1..])?,
+            }),
             DataPath::CHANNEL_RESOURCE_TAG => {
                 ensure!(
-                    path.len() > ADDRESS_LENGTH +1,
+                    path.len() > ADDRESS_LENGTH + 1,
                     "The path {:?} is of invalid length",
                     path
                 );
-                let address_bytes = &path[1..(1+ADDRESS_LENGTH)];
-                let tag_bytes = &path[(1+ADDRESS_LENGTH)..];
-                Ok(DataPath::ChannelResource { participant: AccountAddress::try_from(address_bytes)?, tag: SimpleDeserializer::deserialize(tag_bytes)?})
+                let address_bytes = &path[1..(1 + ADDRESS_LENGTH)];
+                let tag_bytes = &path[(1 + ADDRESS_LENGTH)..];
+                Ok(DataPath::ChannelResource {
+                    participant: AccountAddress::try_from(address_bytes)?,
+                    tag: SimpleDeserializer::deserialize(tag_bytes)?,
+                })
             }
-            _ => bail!("invalid access path.")
+            _ => bail!("invalid access path."),
         }
     }
 
@@ -298,20 +312,15 @@ impl DataPath {
         DataPath::Code { module_id }
     }
 
-    pub fn onchain_resource_path(tag: StructTag) -> Self{
-        DataPath::Resource {
-            tag,
-        }
+    pub fn onchain_resource_path(tag: StructTag) -> Self {
+        DataPath::Resource { tag }
     }
 
-    pub fn channel_resource_path(participant: AccountAddress, tag: StructTag) -> Self{
-        DataPath::ChannelResource {
-            participant,
-            tag,
-        }
+    pub fn channel_resource_path(participant: AccountAddress, tag: StructTag) -> Self {
+        DataPath::ChannelResource { participant, tag }
     }
 
-    pub fn channel_account_path(participant: AccountAddress) -> Self{
+    pub fn channel_account_path(participant: AccountAddress) -> Self {
         Self::channel_resource_path(participant, channel_account_struct_tag())
     }
 
@@ -321,37 +330,43 @@ impl DataPath {
 
     pub fn is_code(&self) -> bool {
         match self {
-            DataPath::Code {..} => true,
+            DataPath::Code { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_onchain_resource(&self) -> bool {
         match self {
-            DataPath::Resource {..} => true,
+            DataPath::Resource { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_channel_resource(&self) -> bool {
         match self {
-            DataPath::ChannelResource {..} => true,
+            DataPath::ChannelResource { .. } => true,
             _ => false,
         }
     }
 
     pub fn resource_tag(&self) -> Option<&StructTag> {
-        match self{
-            DataPath::Resource {tag} => Some(tag),
-            DataPath::ChannelResource {participant:_,tag} => Some(tag),
+        match self {
+            DataPath::Resource { tag } => Some(tag),
+            DataPath::ChannelResource {
+                participant: _,
+                tag,
+            } => Some(tag),
             _ => None,
         }
     }
 
     pub fn participant(&self) -> Option<AccountAddress> {
-        match self{
-            DataPath::ChannelResource {participant,tag:_} => Some(*participant),
-            _ => None
+        match self {
+            DataPath::ChannelResource {
+                participant,
+                tag: _,
+            } => Some(*participant),
+            _ => None,
         }
     }
 }
@@ -364,14 +379,14 @@ impl From<&DataPath> for Vec<u8> {
                 key.push(DataPath::CODE_TAG);
                 key.append(&mut SimpleSerializer::serialize(module_id).unwrap());
                 key
-            },
+            }
             DataPath::Resource { tag } => {
                 let mut key = vec![];
                 key.push(DataPath::RESOURCE_TAG);
                 key.append(&mut SimpleSerializer::serialize(tag).unwrap());
                 key
-            },
-            DataPath::ChannelResource {participant, tag} => {
+            }
+            DataPath::ChannelResource { participant, tag } => {
                 let mut key = vec![];
                 key.push(DataPath::CHANNEL_RESOURCE_TAG);
                 key.append(&mut participant.to_vec());
@@ -451,8 +466,7 @@ impl AccessPath {
     }
 
     pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {
-
-        let mut key:Vec<u8> = DataPath::onchain_resource_path(tag.clone()).into();
+        let mut key: Vec<u8> = DataPath::onchain_resource_path(tag.clone()).into();
 
         // We don't need accesses in production right now. Accesses are appended here just for
         // passing the old tests.
@@ -471,11 +485,14 @@ impl AccessPath {
     }
 
     pub fn new_for_data_path(address: AccountAddress, path: DataPath) -> Self {
-        AccessPath { address, path: path.to_vec() }
+        AccessPath {
+            address,
+            path: path.to_vec(),
+        }
     }
 
     pub fn new_for_account_resource(address: AccountAddress) -> Self {
-        Self::new_for_data_path(address, DataPath::account_resource_data_path() )
+        Self::new_for_data_path(address, DataPath::account_resource_data_path())
     }
 
     pub fn code_access_path(key: &ModuleId) -> AccessPath {
@@ -483,10 +500,17 @@ impl AccessPath {
     }
 
     pub fn onchain_resource_access_path(key: &ResourceKey) -> AccessPath {
-        Self::new_for_data_path(key.address(), DataPath::onchain_resource_path(key.type_().clone()))
+        Self::new_for_data_path(
+            key.address(),
+            DataPath::onchain_resource_path(key.type_().clone()),
+        )
     }
 
-    pub fn channel_resource_access_path(account: AccountAddress, participant: AccountAddress, tag: StructTag) -> AccessPath {
+    pub fn channel_resource_access_path(
+        account: AccountAddress,
+        participant: AccountAddress,
+        tag: StructTag,
+    ) -> AccessPath {
         Self::new_for_data_path(account, DataPath::channel_resource_path(participant, tag))
     }
 
@@ -509,13 +533,13 @@ impl AccessPath {
         DataPath::from(self.path.as_slice()).ok()
     }
 
-    pub fn resource_tag(&self) -> Option<StructTag>{
+    pub fn resource_tag(&self) -> Option<StructTag> {
         if self.path.is_empty() {
             return None;
         }
-        match DataPath::from(self.path.as_slice()).ok(){
+        match DataPath::from(self.path.as_slice()).ok() {
             None => None,
-            Some(data_path) => data_path.resource_tag().cloned()
+            Some(data_path) => data_path.resource_tag().cloned(),
         }
     }
 }
@@ -549,11 +573,7 @@ impl fmt::Display for AccessPath {
                 "hash: {:?}, ",
                 hex::encode(&self.path[1..=HashValue::LENGTH])
             )?;
-            write!(
-                f,
-                "data_path: {:?}",
-                self.data_path()
-            )?;
+            write!(f, "data_path: {:?}", self.data_path())?;
             write!(
                 f,
                 "suffix: {:?} }} ",

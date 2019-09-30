@@ -10,12 +10,12 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
+/// AC service client.
+pub mod admission_control_client;
 /// Wrapper to run AC in a separate process.
 pub mod admission_control_node;
 /// AC gRPC service.
 pub mod admission_control_service;
-/// AC service client.
-pub mod admission_control_client;
 #[cfg(any(test, feature = "fuzzing"))]
 /// Useful Mocks
 pub mod mocks;

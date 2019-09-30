@@ -34,11 +34,11 @@ use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
+mod channel_transaction_payload;
 mod module;
 mod program;
 mod script;
 mod transaction_argument;
-mod channel_transaction_payload;
 
 #[cfg(test)]
 mod unit_tests;
@@ -48,9 +48,9 @@ pub use program::Program;
 use protobuf::well_known_types::UInt64Value;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
 
+pub use channel_transaction_payload::{ChannelScriptPayload, ChannelWriteSetPayload};
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
-pub use channel_transaction_payload::{ChannelWriteSetPayload, ChannelScriptPayload};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 
@@ -187,8 +187,8 @@ impl RawTransaction {
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: Duration,
-        ) -> Self {
-            RawTransaction {
+    ) -> Self {
+        RawTransaction {
             sender,
             sequence_number,
             payload: TransactionPayload::ChannelScript(channel_payload),
@@ -205,7 +205,7 @@ impl RawTransaction {
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: Duration,
-    ) -> Self{
+    ) -> Self {
         RawTransaction {
             sender,
             sequence_number,
@@ -250,10 +250,13 @@ impl RawTransaction {
                 (get_transaction_name(script.code()), script.args())
             }
             TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
-            TransactionPayload::ChannelWriteSet(_) => ("channel_write_set".to_string(), &empty_vec[..]),
-            TransactionPayload::ChannelScript(channel_script) =>  {
-                (get_transaction_name(channel_script.script.code()), channel_script.script.args())
+            TransactionPayload::ChannelWriteSet(_) => {
+                ("channel_write_set".to_string(), &empty_vec[..])
             }
+            TransactionPayload::ChannelScript(channel_script) => (
+                get_transaction_name(channel_script.script.code()),
+                channel_script.script.args(),
+            ),
         };
         let mut f_args: String = "".to_string();
         for arg in args {
@@ -348,16 +351,15 @@ pub enum TransactionPayload {
 }
 
 impl TransactionPayload {
-
-    pub fn is_channel_write_set(&self) -> bool{
-        match self{
+    pub fn is_channel_write_set(&self) -> bool {
+        match self {
             TransactionPayload::ChannelWriteSet(_) => true,
             _ => false,
         }
     }
 
-    pub fn is_channel_script(&self) -> bool{
-        match self{
+    pub fn is_channel_script(&self) -> bool {
+        match self {
             TransactionPayload::ChannelScript(_) => true,
             _ => false,
         }
@@ -413,12 +415,12 @@ impl CanonicalDeserialize for TransactionPayload {
             Some(TransactionPayloadType::Module) => {
                 Ok(TransactionPayload::Module(deserializer.decode_struct()?))
             }
-            Some(TransactionPayloadType::ChannelWriteSet) => {
-                Ok(TransactionPayload::ChannelWriteSet(deserializer.decode_struct()?))
-            }
-            Some(TransactionPayloadType::ChannelScript) => {
-                Ok(TransactionPayload::ChannelScript(deserializer.decode_struct()?))
-            }
+            Some(TransactionPayloadType::ChannelWriteSet) => Ok(
+                TransactionPayload::ChannelWriteSet(deserializer.decode_struct()?),
+            ),
+            Some(TransactionPayloadType::ChannelScript) => Ok(TransactionPayload::ChannelScript(
+                deserializer.decode_struct()?,
+            )),
             None => Err(format_err!(
                 "ParseError: Unable to decode TransactionPayloadType, found {}",
                 decoded_payload_type
@@ -610,12 +612,12 @@ impl SignedTransaction {
     pub fn receiver(&self) -> Option<AccountAddress> {
         match &self.raw_txn.payload {
             TransactionPayload::ChannelScript(channel_payload) => Some(channel_payload.receiver),
-            TransactionPayload::ChannelWriteSet(channel_payload)=> Some(channel_payload.receiver),
-            _ => None
+            TransactionPayload::ChannelWriteSet(channel_payload) => Some(channel_payload.receiver),
+            _ => None,
         }
     }
 
-    pub fn receiver_public_key(&self) -> Option<Ed25519PublicKey>{
+    pub fn receiver_public_key(&self) -> Option<Ed25519PublicKey> {
         self.receiver_public_key.clone()
     }
 
@@ -623,17 +625,25 @@ impl SignedTransaction {
         self.receiver_signature.clone()
     }
 
-    pub fn set_receiver_public_key_and_signature(&mut self, public_key: Ed25519PublicKey, signature: Ed25519Signature){
+    pub fn set_receiver_public_key_and_signature(
+        &mut self,
+        public_key: Ed25519PublicKey,
+        signature: Ed25519Signature,
+    ) {
         self.receiver_public_key = Some(public_key);
         self.receiver_signature = Some(signature);
     }
 
     //TODO refactor
-    pub fn sign_by_receiver(&mut self,  private_key: &Ed25519PrivateKey, public_key: Ed25519PublicKey) -> Result<()>{
-        let hash = match self.payload(){
+    pub fn sign_by_receiver(
+        &mut self,
+        private_key: &Ed25519PrivateKey,
+        public_key: Ed25519PublicKey,
+    ) -> Result<()> {
+        let hash = match self.payload() {
             TransactionPayload::ChannelWriteSet(payload) => payload.hash(),
             TransactionPayload::ChannelScript(payload) => payload.hash(),
-            _ => bail!("the txn is not a channel txn.")
+            _ => bail!("the txn is not a channel txn."),
         };
         let signature = private_key.sign_message(&hash);
         self.receiver_public_key = Some(public_key);
@@ -814,8 +824,18 @@ impl CanonicalSerialize for SignedTransaction {
             .encode_struct(&self.raw_txn)?
             .encode_bytes(&self.public_key.to_bytes())?
             .encode_bytes(&self.signature.to_bytes())?
-            .encode_optional(&self.receiver_public_key.as_ref().and_then(|public_key|Some(public_key.to_bytes().to_vec())))?
-            .encode_optional(&self.receiver_signature.as_ref().and_then(|signature|Some(signature.to_bytes().to_vec())))?;
+            .encode_optional(
+                &self
+                    .receiver_public_key
+                    .as_ref()
+                    .and_then(|public_key| Some(public_key.to_bytes().to_vec())),
+            )?
+            .encode_optional(
+                &self
+                    .receiver_signature
+                    .as_ref()
+                    .and_then(|signature| Some(signature.to_bytes().to_vec())),
+            )?;
         Ok(())
     }
 }
@@ -829,18 +849,24 @@ impl CanonicalDeserialize for SignedTransaction {
         let public_key_bytes = deserializer.decode_bytes()?;
         let signature_bytes = deserializer.decode_bytes()?;
 
-        let receiver_public_key = deserializer.decode_optional::<Vec<u8>>().and_then(|opt_bytes|{
-            match opt_bytes{
-                Some(public_key_bytes) => Ok(Some(Ed25519PublicKey::try_from(&public_key_bytes[..])?)),
-                None => Ok(None),
-            }
-        })?;
-        let receiver_signature = deserializer.decode_optional::<Vec<u8>>().and_then(|opt_bytes|{
-            match opt_bytes{
-                Some(signature_bytes) => Ok(Some(Ed25519Signature::try_from(&signature_bytes[..])?)),
-                None => Ok(None),
-            }
-        })?;
+        let receiver_public_key =
+            deserializer
+                .decode_optional::<Vec<u8>>()
+                .and_then(|opt_bytes| match opt_bytes {
+                    Some(public_key_bytes) => {
+                        Ok(Some(Ed25519PublicKey::try_from(&public_key_bytes[..])?))
+                    }
+                    None => Ok(None),
+                })?;
+        let receiver_signature =
+            deserializer
+                .decode_optional::<Vec<u8>>()
+                .and_then(|opt_bytes| match opt_bytes {
+                    Some(signature_bytes) => {
+                        Ok(Some(Ed25519Signature::try_from(&signature_bytes[..])?))
+                    }
+                    None => Ok(None),
+                })?;
 
         Ok(SignedTransaction::new_with_receiver(
             raw_txn,
@@ -935,8 +961,13 @@ impl TransactionOutput {
         }
     }
 
-    pub fn new_with_write_set(write_set: WriteSet) -> Self{
-        Self::new(write_set, vec![], 0, VMStatus::new(StatusCode::EXECUTED).into())
+    pub fn new_with_write_set(write_set: WriteSet) -> Self {
+        Self::new(
+            write_set,
+            vec![],
+            0,
+            VMStatus::new(StatusCode::EXECUTED).into(),
+        )
     }
 
     pub fn write_set(&self) -> &WriteSet {
@@ -961,7 +992,6 @@ impl TransactionOutput {
 }
 
 impl fmt::Display for TransactionOutput {
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TransactionOutput\t")?;
         write!(f, "write_set: {}\t", self.write_set.len())?;
