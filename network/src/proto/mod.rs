@@ -7,10 +7,9 @@
 mod admission_control;
 mod consensus;
 mod mempool;
-mod network;
 mod state_synchronizer;
 
-mod network_prost {
+mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
 
@@ -23,7 +22,7 @@ pub use self::{
         Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutMsg, Vote, VoteData,
     },
     mempool::MempoolSyncMsg,
-    network_prost::{
+    network::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
         PeerInfo, Ping, Pong, SignedFullNodePayload, SignedPeerInfo,
     },
