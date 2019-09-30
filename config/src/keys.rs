@@ -1,5 +1,5 @@
 use crate::trusted_peers::{deserialize_key, serialize_key};
-use crypto::{
+use libra_crypto::{
     ed25519::*,
     test_utils::TEST_SEED,
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},

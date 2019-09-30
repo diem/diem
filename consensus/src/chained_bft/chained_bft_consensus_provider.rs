@@ -15,21 +15,21 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
-use executor::Executor;
 use failure::prelude::*;
-use logger::prelude::*;
-use mempool::proto::mempool_grpc::MempoolClient;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use state_synchronizer::StateSyncClient;
-use std::{convert::TryFrom, sync::Arc};
-use tokio::runtime;
-use types::{
+use libra_config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
+use libra_executor::Executor;
+use libra_logger::prelude::*;
+use libra_mempool::proto::mempool_grpc::MempoolClient;
+use libra_network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use libra_state_synchronizer::StateSyncClient;
+use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     transaction::SignedTransaction,
 };
-use vm_runtime::MoveVM;
+use libra_vm_runtime::MoveVM;
+use std::{convert::TryFrom, sync::Arc};
+use tokio::runtime;
 
 struct InitialSetup {
     author: Author,

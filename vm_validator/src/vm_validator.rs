@@ -1,20 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
 use failure::prelude::*;
 use futures::future::{err, ok, Future};
-use scratchpad::SparseMerkleTree;
-use std::sync::Arc;
-use storage_client::{StorageRead, VerifiedStateView};
-use types::{
+use libra_config::config::NodeConfig;
+use libra_scratchpad::SparseMerkleTree;
+use libra_storage_client::{StorageRead, VerifiedStateView};
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::get_account_resource_or_default,
     get_with_proof::{RequestItem, ResponseItem},
     transaction::SignedTransaction,
     vm_error::VMStatus,
 };
-use vm_runtime::{MoveVM, VMVerifier};
+use libra_vm_runtime::{MoveVM, VMVerifier};
+use std::sync::Arc;
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]

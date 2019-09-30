@@ -6,12 +6,12 @@ use crate::proof::{
     AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
     SignedTransactionProof, SparseMerkleProof,
 };
-use crypto::{
+use libra_crypto::{
     hash::{TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
 use proptest::{collection::vec, prelude::*};
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
 
 fn accumulator_bitmap_iterator_test(bitmap_value: u64, expected_bits: Vec<bool>) {
     let bitmap = AccumulatorBitmap::new(bitmap_value);

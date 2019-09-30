@@ -5,18 +5,22 @@ use crate::chained_bft::{
     common::{Author, Height, Round},
     consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
 };
-use canonical_serialization::{
+use failure::Result;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
 };
-use crypto::{
+use libra_crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
     HashValue,
 };
-use executor::{ExecutedState, StateComputeResult};
-use failure::Result;
+use libra_executor::{ExecutedState, StateComputeResult};
+use libra_network::proto::Block as ProtoBlock;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
-use network::proto::Block as ProtoBlock;
-use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -24,10 +28,6 @@ use std::{
     convert::TryFrom,
     fmt::{Display, Formatter},
     sync::Arc,
-};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 #[cfg(test)]
@@ -444,7 +444,7 @@ where
 
 impl<T> CryptoHash for Block<T>
 where
-    T: canonical_serialization::CanonicalSerialize,
+    T: libra_canonical_serialization::CanonicalSerialize,
 {
     type Hasher = BlockHasher;
 

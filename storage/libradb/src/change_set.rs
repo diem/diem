@@ -1,5 +1,5 @@
 use crate::ledger_counters::LedgerCounterBumps;
-use schemadb::SchemaBatch;
+use libra_schemadb::SchemaBatch;
 
 /// Structure that collects changes to be made to the DB in one transaction.
 ///

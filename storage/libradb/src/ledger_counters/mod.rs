@@ -1,8 +1,8 @@
 use crate::OP_COUNTER;
-use canonical_serialization::{
+use failure::prelude::*;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use failure::prelude::*;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 #[cfg(any(test, feature = "testing"))]

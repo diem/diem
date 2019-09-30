@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use mempool::proto::{
+use libra_mempool::proto::{
     mempool::{
         AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
         HealthCheckRequest, HealthCheckResponse,
@@ -9,9 +9,9 @@ use mempool::proto::{
     mempool_client::MempoolClientTrait,
     shared::mempool_status::{MempoolAddTransactionStatus, MempoolAddTransactionStatusCode},
 };
-use proto_conv::FromProto;
+use libra_proto_conv::FromProto;
+use libra_types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 use std::time::SystemTime;
-use types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 
 /// Define a local mempool to use for unit tests and fuzzing,
 /// ignore methods not used

@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use benchmark::{
+use libra_benchmark::{
     bin_utils::{create_ac_clients, measure_throughput},
     cli_opt::parse_swarm_config_from_dir,
     load_generator::PairwiseTransferTxnGenerator,
     Benchmarker,
 };
-use config::config::RoleType;
+use libra_config::config::RoleType;
 use libra_swarm::swarm::LibraSwarm;
 use num::traits::Float;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
@@ -36,7 +36,7 @@ rusty_fork_test! {
         let submit_rate = 50;
 
         let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-            generate_keypair::load_faucet_key_or_create_default(None);
+            libra_generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
             num_nodes,
             RoleType::Validator,

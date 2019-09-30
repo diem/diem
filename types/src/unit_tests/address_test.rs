@@ -3,10 +3,10 @@
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
 use bech32::Bech32;
-use crypto::{hash::CryptoHash, HashValue};
 use hex::FromHex;
+use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_proto_conv::{FromProto, IntoProto};
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::{AsRef, TryFrom};
 
 #[test]

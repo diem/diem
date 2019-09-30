@@ -5,12 +5,12 @@ use crate::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, SignedTransaction, TransactionPayload},
 };
-use canonical_serialization::{
+use libra_canonical_serialization::{
     CanonicalDeserializer, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
 };
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
+use libra_proto_conv::{FromProto, IntoProto};
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::TryFrom;
 
 #[test]

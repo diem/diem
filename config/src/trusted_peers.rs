@@ -1,10 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{
+use libra_crypto::{
     ed25519::{compat, *},
     traits::{ValidKey, ValidKeyStringExt},
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
+};
+use libra_types::{
+    account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys,
+    validator_set::ValidatorSet,
 };
 use mirai_annotations::postcondition;
 use rand::{rngs::StdRng, SeedableRng};
@@ -14,10 +18,6 @@ use std::{
     convert::TryFrom,
     hash::BuildHasher,
     str::FromStr,
-};
-use types::{
-    account_address::AccountAddress, validator_public_keys::ValidatorPublicKeys,
-    validator_set::ValidatorSet,
 };
 
 #[cfg(test)]

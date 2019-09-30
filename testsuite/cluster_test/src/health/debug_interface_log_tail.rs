@@ -4,14 +4,14 @@ use crate::{
     instance::Instance,
     util::unix_timestamp_now,
 };
-use debug_interface::{
+use grpcio::{self, ChannelBuilder, EnvBuilder};
+use libra_debug_interface::{
     self,
     proto::{
         node_debug_interface::{Event as DebugInterfaceEvent, GetEventsRequest},
         node_debug_interface_grpc::NodeDebugInterfaceClient,
     },
 };
-use grpcio::{self, ChannelBuilder, EnvBuilder};
 use serde_json::{self, value as json};
 use std::{
     env,

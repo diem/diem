@@ -1,18 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_verifier::{SignatureChecker, VerifiedModule};
-use invalid_mutations::signature::{
+use libra_bytecode_verifier::{SignatureChecker, VerifiedModule};
+use libra_invalid_mutations::signature::{
     ApplySignatureDoubleRefContext, ApplySignatureFieldRefContext, DoubleRefMutation,
     FieldRefMutation,
 };
-use proptest::{collection::vec, prelude::*};
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     identifier::Identifier,
     vm_error::StatusCode,
 };
-use vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
+use libra_vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
+use proptest::{collection::vec, prelude::*};
 
 #[test]
 fn test_reference_of_reference() {

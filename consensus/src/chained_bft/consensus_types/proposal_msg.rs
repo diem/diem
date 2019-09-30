@@ -6,10 +6,10 @@ use crate::chained_bft::{
     consensus_types::{block::Block, sync_info::SyncInfo},
 };
 use failure::prelude::*;
-use network::proto::Proposal as ProtoProposal;
-use proto_conv::{FromProto, IntoProto};
+use libra_network::proto::Proposal as ProtoProposal;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::crypto_proxies::ValidatorVerifier;
 use std::fmt;
-use types::crypto_proxies::ValidatorVerifier;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).

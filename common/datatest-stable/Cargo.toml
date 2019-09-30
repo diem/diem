@@ -1,5 +1,5 @@
 [package]
-name = "datatest-stable"
+name = "libra_datatest-stable"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"

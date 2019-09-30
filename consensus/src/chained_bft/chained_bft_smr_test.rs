@@ -16,11 +16,11 @@ use crate::{
     },
     state_replication::StateMachineReplication,
 };
-use channel;
-use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use proto_conv::FromProto;
+use libra_channel;
+use libra_crypto::hash::CryptoHash;
+use libra_network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use libra_proto_conv::FromProto;
 use std::sync::Arc;
 
 use crate::chained_bft::{
@@ -29,12 +29,12 @@ use crate::chained_bft::{
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
-use config::config::ConsensusProposerType::{
+use libra_config::config::ConsensusProposerType::{
     self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
 };
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -64,8 +64,8 @@ impl SMRNode {
     ) -> Self {
         let author = signer.author();
 
-        let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (network_reqs_tx, network_reqs_rx) = libra_channel::new_test(8);
+        let (consensus_tx, consensus_rx) = libra_channel::new_test(8);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 

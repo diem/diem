@@ -4,9 +4,9 @@
 use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{FutureExt, SinkExt, TryFutureExt};
-use memsocket::MemorySocket;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
+use libra_memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;
 use tokio::runtime::Runtime;
@@ -16,18 +16,18 @@ fn setup_conn_mgr(
     rt: &mut Runtime,
     seed_peer_id: PeerId,
 ) -> (
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
-    channel::Sender<ConnectivityRequest>,
-    channel::Sender<()>,
+    libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Sender<ConnectivityRequest>,
+    libra_channel::Sender<()>,
 ) {
     let (peer_mgr_reqs_tx, peer_mgr_reqs_rx): (
-        channel::Sender<PeerManagerRequest<MemorySocket>>,
+        libra_channel::Sender<PeerManagerRequest<MemorySocket>>,
         _,
-    ) = channel::new_test(0);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
-    let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
-    let (ticker_tx, ticker_rx) = channel::new_test(0);
+    ) = libra_channel::new_test(0);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = libra_channel::new_test(0);
+    let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = libra_channel::new_test(0);
+    let (ticker_tx, ticker_rx) = libra_channel::new_test(0);
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (_, signing_public_key) = compat::generate_keypair(&mut rng);
     let (_, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
@@ -75,7 +75,9 @@ fn gen_peer() -> (PeerId, NetworkPublicKeys) {
     )
 }
 
-async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
+async fn get_dial_queue_size(
+    conn_mgr_reqs_tx: &mut libra_channel::Sender<ConnectivityRequest>,
+) -> usize {
     let (queue_size_tx, queue_size_rx) = oneshot::channel();
     conn_mgr_reqs_tx
         .send(ConnectivityRequest::GetDialQueueSize(queue_size_tx))
@@ -85,8 +87,8 @@ async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<Connectivity
 }
 
 async fn expect_disconnect_request<'a, TSubstream>(
-    peer_mgr_reqs_rx: &'a mut channel::Receiver<PeerManagerRequest<TSubstream>>,
-    peer_mgr_notifs_tx: &'a mut channel::Sender<PeerManagerNotification<TSubstream>>,
+    peer_mgr_reqs_rx: &'a mut libra_channel::Receiver<PeerManagerRequest<TSubstream>>,
+    peer_mgr_notifs_tx: &'a mut libra_channel::Sender<PeerManagerNotification<TSubstream>>,
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
@@ -112,9 +114,9 @@ async fn expect_disconnect_request<'a, TSubstream>(
 }
 
 async fn expect_dial_request<'a, TSubstream>(
-    peer_mgr_reqs_rx: &'a mut channel::Receiver<PeerManagerRequest<TSubstream>>,
-    peer_mgr_notifs_tx: &'a mut channel::Sender<PeerManagerNotification<TSubstream>>,
-    conn_mgr_reqs_tx: &'a mut channel::Sender<ConnectivityRequest>,
+    peer_mgr_reqs_rx: &'a mut libra_channel::Receiver<PeerManagerRequest<TSubstream>>,
+    peer_mgr_notifs_tx: &'a mut libra_channel::Sender<PeerManagerNotification<TSubstream>>,
+    conn_mgr_reqs_tx: &'a mut libra_channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
@@ -157,7 +159,7 @@ async fn expect_dial_request<'a, TSubstream>(
 
 #[test]
 fn addr_change() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -258,7 +260,7 @@ fn addr_change() {
 
 #[test]
 fn lost_connection() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -328,7 +330,7 @@ fn lost_connection() {
 
 #[test]
 fn disconnect() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -392,7 +394,7 @@ fn disconnect() {
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -493,7 +495,7 @@ fn retry_on_failure() {
 // Tests that if we dial an already connected peer or disconnect from an already disconnected
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 fn no_op_requests() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -585,7 +587,7 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -671,7 +673,7 @@ fn backoff_on_failure() {
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -739,7 +741,7 @@ fn multiple_addrs_basic() {
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());
@@ -821,7 +823,7 @@ fn multiple_addrs_wrapping() {
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     info!("Seed peer_id is {}", seed_peer_id.short_str());

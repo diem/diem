@@ -8,14 +8,14 @@ use crate::{
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use libra_canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

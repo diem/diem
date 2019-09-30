@@ -15,21 +15,21 @@ use crate::{
         event_by_key::EventByKeySchema,
     },
 };
-use accumulator::{HashReader, MerkleAccumulator};
-use crypto::{
+use failure::prelude::*;
+use libra_accumulator::{HashReader, MerkleAccumulator};
+use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
-use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::{convert::TryFrom, sync::Arc};
-use types::{
+use libra_schemadb::{schema::ValueCodec, ReadOptions, DB};
+use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
     proof::{position::Position, AccumulatorProof, EventProof},
     transaction::Version,
 };
+use std::{convert::TryFrom, sync::Arc};
 
 pub(crate) struct EventStore {
     db: Arc<DB>,

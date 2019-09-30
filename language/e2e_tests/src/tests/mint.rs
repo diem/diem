@@ -8,7 +8,7 @@ use crate::{
     gas_costs::TXN_RESERVED,
     transaction_status_eq,
 };
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };

@@ -4,8 +4,8 @@
 use crate::hash::*;
 use bitvec::BitVec;
 use byteorder::{LittleEndian, WriteBytesExt};
+use libra_proto_conv::{FromProto, IntoProto};
 use proptest::{collection::vec, prelude::*};
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
 
 #[derive(Serialize)]

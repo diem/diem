@@ -79,11 +79,11 @@ jobs:
       - run:
           name: Run All Unit Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 --all --exclude testsuite
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 --all --exclude libra_testsuite
       - run:
           name: Run All End to End Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package testsuite -- --test-threads 1
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package libra_testsuite -- --test-threads 1
       - build_teardown
   validate-config:
     description: Validate that committed docker configs are up to date

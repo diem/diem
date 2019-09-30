@@ -1,16 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::{
+use libra_config::{
     config::{NodeConfig, NodeConfigHelpers},
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
-use crypto::{ed25519::*, test_utils::KeyPair};
-use proto_conv::IntoProtoBytes;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_proto_conv::IntoProtoBytes;
+use libra_types::transaction::SignatureCheckedTransaction;
+use libra_vm_genesis::encode_genesis_transaction_with_validator;
 use rand::{Rng, SeedableRng};
 use std::{fs::File, io::prelude::*};
-use types::transaction::SignatureCheckedTransaction;
-use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction(
     faucet_account_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,

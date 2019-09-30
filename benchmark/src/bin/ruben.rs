@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use benchmark::{
+use libra_benchmark::{
     bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
     cli_opt::{RubenOpt, TransactionPattern},
     load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
@@ -29,11 +29,11 @@ use benchmark::{
 ///
 /// By conforming to the LoadGenerator APIs,
 /// this flow is basically the same for different LoadGenerators/experiments.
-use logger::{self, prelude::*};
+use libra_logger::{self, prelude::*};
 use std::ops::DerefMut;
 
 fn main() {
-    let _g = logger::set_default_global_logger(false, Some(256));
+    let _g = libra_logger::set_default_global_logger(false, Some(256));
     info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     let args = RubenOpt::new_from_args();
     info!("Parsed arguments: {:#?}", args);
@@ -57,7 +57,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
-    use benchmark::{
+    use libra_benchmark::{
         cli_opt::BenchOpt,
         load_generator::{
             gen_get_txn_by_sequnece_number_request, LoadGenerator, Request,
@@ -65,18 +65,18 @@ mod tests {
         },
         OP_COUNTER,
     };
-    use client::AccountData;
-    use config::config::RoleType;
+    use libra_client::AccountData;
+    use libra_config::config::RoleType;
     use libra_swarm::swarm::LibraSwarm;
+    use libra_tools::tempdir::TempPath;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;
-    use tools::tempdir::TempPath;
 
     /// Start libra_swarm and create a BenchOpt struct for testing.
     /// Must return the TempPath otherwise it will be freed somehow.
     fn start_swarm_and_setup_arguments() -> (LibraSwarm, BenchOpt, Option<TempPath>) {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =
-            generate_keypair::load_faucet_key_or_create_default(None);
+            libra_generate_keypair::load_faucet_key_or_create_default(None);
         let swarm = LibraSwarm::launch_swarm(
             4, /* num_nodes */
             RoleType::Validator,

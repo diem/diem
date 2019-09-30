@@ -6,10 +6,10 @@
 use crate::peer_manager::PeerManagerError;
 use failure::{self, err_msg, Fail};
 use futures::channel::{mpsc, oneshot};
+use libra_types::PeerId;
 use protobuf::error::ProtobufError;
 use std::io;
 use tokio::timer;
-use types::PeerId;
 
 #[derive(Debug, Fail)]
 pub enum RpcError {

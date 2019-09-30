@@ -6,7 +6,7 @@ use crate::chained_bft::{
     consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     persistent_storage::PersistentLivenessStorage,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 

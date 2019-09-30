@@ -10,13 +10,12 @@ use crate::{
         loaded_module::LoadedModule,
     },
 };
-use bytecode_verifier::VerifiedModule;
-use std::marker::PhantomData;
-use types::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     access::ModuleAccess,
     errors::*,
     file_format::{
@@ -25,12 +24,13 @@ use vm::{
     },
     views::{FunctionHandleView, StructHandleView},
 };
-use vm_cache_map::{Arena, CacheRefMap};
-use vm_runtime_types::{
+use libra_vm_cache_map::{Arena, CacheRefMap};
+use libra_vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::dispatch::dispatch_native_struct,
     type_context::TypeContext,
 };
+use std::marker::PhantomData;
 
 #[cfg(test)]
 use crate::code_cache::module_adapter::FakeFetcher;

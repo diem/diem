@@ -7,9 +7,9 @@ use crate::{
     },
     proto,
 };
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
+use libra_proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto};
 use proptest::prelude::*;
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto};
 
 proptest! {
     #[test]

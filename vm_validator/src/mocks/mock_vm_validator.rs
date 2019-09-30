@@ -3,14 +3,14 @@
 
 use crate::vm_validator::TransactionValidation;
 use futures::future::{ok, Future};
-use state_view::StateView;
-use std::convert::TryFrom;
-use types::{
+use libra_state_view::StateView;
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},
 };
-use vm_runtime::VMVerifier;
+use libra_vm_runtime::VMVerifier;
+use std::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct MockVMValidator;

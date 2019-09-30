@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::Fail;
-use types::{transaction::TransactionOutput, vm_error::VMStatus};
+use libra_types::{transaction::TransactionOutput, vm_error::VMStatus};
 
 pub use failure::Error;
 

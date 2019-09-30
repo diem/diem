@@ -16,15 +16,20 @@ mod node_type_test;
 use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use crypto::{
+use failure::{Fail, Result, *};
+use libra_crypto::{
     hash::{
         CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::{Fail, Result, *};
-use nibble::Nibble;
+use libra_nibble::Nibble;
+use libra_types::{
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
+    transaction::Version,
+};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest::{collection::hash_map, prelude::*};
@@ -34,11 +39,6 @@ use std::{
     collections::hash_map::HashMap,
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
-};
-use types::{
-    account_state_blob::AccountStateBlob,
-    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
-    transaction::Version,
 };
 
 /// The unique key of each node.

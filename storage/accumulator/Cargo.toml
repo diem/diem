@@ -1,5 +1,5 @@
 [package]
-name = "accumulator"
+name = "libra_accumulator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -9,10 +9,10 @@ edition = "2018"
 [dependencies]
 proptest = "0.9.1"
 
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-types = { path = "../../types" }
+libra_crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
 rand = "0.6.5"
-types = { path = "../../types", features = ["testing"] }
+libra_types = { path = "../../types", features = ["testing"] }

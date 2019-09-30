@@ -10,8 +10,8 @@
 //! We encode each instruction with the number of arguments (and the valid types
 //! that these arguments can take), and the number of (type) outputs from that instruction.
 use lazy_static::lazy_static;
+use libra_vm::file_format::{Bytecode, SignatureToken, StructHandleIndex, TypeSignature};
 use std::{boxed::Box, u8::MAX};
-use vm::file_format::{Bytecode, SignatureToken, StructHandleIndex, TypeSignature};
 
 const MAX_INSTRUCTION_LEN: u8 = MAX;
 

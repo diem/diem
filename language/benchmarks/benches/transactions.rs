@@ -3,7 +3,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use language_benchmarks::transactions::TransactionBencher;
-use language_e2e_tests::account_universe::P2PTransferGen;
+use libra_language_e2e_tests::account_universe::P2PTransferGen;
 use proptest::prelude::*;
 
 fn peer_to_peer(c: &mut Criterion) {

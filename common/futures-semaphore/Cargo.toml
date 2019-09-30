@@ -1,5 +1,5 @@
 [package]
-name = "futures-semaphore"
+name = "libra_futures-semaphore"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"

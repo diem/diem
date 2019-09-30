@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::abstract_state::{AbstractValue, BorrowState};
+use libra_vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
 use rand::{rngs::StdRng, Rng};
 use std::collections::{HashMap, VecDeque};
-use vm::file_format::{Bytecode, FunctionSignature, SignatureToken};
 
 /// This type holds basic block identifiers
 type BlockIDSize = u16;

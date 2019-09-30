@@ -9,10 +9,8 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
 };
-use mirai_annotations::checked_verify;
-use std::collections::{BTreeMap, BTreeSet};
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     access::ModuleAccess,
     errors::{err_at_offset, VMResult},
     file_format::{
@@ -24,6 +22,8 @@ use vm::{
         SignatureTokenView, StructDefinitionView, ViewInternals,
     },
 };
+use mirai_annotations::checked_verify;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct StackAbstractValue {

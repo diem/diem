@@ -4,10 +4,10 @@ use crate::{
     },
     value::{deserialize_value, MutVal},
 };
-use canonical_serialization::*;
 use failure::prelude::*;
-use types::vm_error::StatusCode;
-use vm::errors::*;
+use libra_canonical_serialization::*;
+use libra_types::vm_error::StatusCode;
+use libra_vm::errors::*;
 
 impl CanonicalSerialize for NativeVector {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {

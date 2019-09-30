@@ -14,9 +14,9 @@ static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 /// The memory limit for each deserializer, in bytes.
 const MEMORY_LIMIT: usize = 256 * 1024 * 1024;
 
-datatest_stable::harness!(test_artifact, "artifacts", r"^.*/.*");
+libra_datatest_stable::harness!(test_artifact, "artifacts", r"^.*/.*");
 
-fn test_artifact(artifact_path: &Path) -> datatest_stable::Result<()> {
+fn test_artifact(artifact_path: &Path) -> libra_datatest_stable::Result<()> {
     let test_name = test_name(artifact_path);
 
     if no_fork() {

@@ -13,14 +13,14 @@ use crate::{
     },
     vm_string::VMString,
 };
+use libra_proptest_helpers::GrowingSubset;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use proptest::{
     collection::{vec, SizeRange},
     option,
     prelude::*,
     sample::Index as PropIndex,
 };
-use proptest_helpers::GrowingSubset;
-use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 
 mod functions;
 mod signature;

@@ -1,14 +1,14 @@
 use crate::chained_bft::consensus_types::{
     quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
 };
-use network;
+use libra_network;
 
 use crate::chained_bft::common::Round;
 use failure::ResultExt;
-use proto_conv::{FromProto, IntoProto};
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use types::crypto_proxies::ValidatorVerifier;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 /// This struct describes basic synchronization metadata.
@@ -96,9 +96,9 @@ impl SyncInfo {
 }
 
 impl FromProto for SyncInfo {
-    type ProtoType = network::proto::SyncInfo;
+    type ProtoType = libra_network::proto::SyncInfo;
 
-    fn from_proto(mut object: network::proto::SyncInfo) -> failure::Result<Self> {
+    fn from_proto(mut object: libra_network::proto::SyncInfo) -> failure::Result<Self> {
         let highest_quorum_cert = QuorumCert::from_proto(object.take_highest_quorum_cert())?;
         let highest_ledger_info = QuorumCert::from_proto(object.take_highest_ledger_info())?;
         let highest_timeout_cert = if let Some(tc) = object.highest_timeout_cert.into_option() {
@@ -114,7 +114,7 @@ impl FromProto for SyncInfo {
     }
 }
 impl IntoProto for SyncInfo {
-    type ProtoType = network::proto::SyncInfo;
+    type ProtoType = libra_network::proto::SyncInfo;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();

@@ -20,23 +20,23 @@ rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
 
-accumulator = { path = "../accumulator" }
-canonical_serialization = { path = "../../common/canonical_serialization" }
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-jellyfish_merkle = { path = "../jellyfish_merkle" }
-logger = { path = "../../common/logger" }
-metrics = { path = "../../common/metrics" }
-proto_conv = { path = "../../common/proto_conv" }
-schemadb = { path = "../schemadb" }
-storage_proto = { path = "../storage_proto" }
-tools = { path = "../../common/tools" }
-types = { path = "../../types" }
+libra_accumulator = { path = "../accumulator" }
+libra_canonical_serialization = { path = "../../common/canonical_serialization" }
+libra_crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_jellyfish_merkle = { path = "../jellyfish_merkle" }
+libra_logger = { path = "../../common/logger" }
+libra_metrics = { path = "../../common/metrics" }
+libra_proto_conv = { path = "../../common/proto_conv" }
+libra_schemadb = { path = "../schemadb" }
+libra_storage_proto = { path = "../storage_proto" }
+libra_tools = { path = "../../common/tools" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
-proptest_helpers = { path = "../../common/proptest_helpers" }
-types = { path = "../../types", features = ["testing"]}
+libra_proptest_helpers = { path = "../../common/proptest_helpers" }
+libra_types = { path = "../../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing"]
+testing = ["libra_types/testing"]

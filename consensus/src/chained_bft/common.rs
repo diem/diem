@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use canonical_serialization::{CanonicalDeserialize, CanonicalSerialize};
+use libra_canonical_serialization::{CanonicalDeserialize, CanonicalSerialize};
+use libra_types::account_address::AccountAddress;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
-use types::account_address::AccountAddress;
 
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
 /// monotonically. It is used for the protocol safety and liveness (please see the detailed

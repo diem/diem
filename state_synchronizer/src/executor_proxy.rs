@@ -1,19 +1,19 @@
 use crate::LedgerInfo;
-use config::config::NodeConfig;
-use executor::Executor;
 use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
-use logger::prelude::*;
-use network::proto::GetChunkResponse;
-use proto_conv::IntoProto;
-use std::{pin::Pin, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient};
-use types::{
+use libra_config::config::NodeConfig;
+use libra_executor::Executor;
+use libra_logger::prelude::*;
+use libra_network::proto::GetChunkResponse;
+use libra_proto_conv::IntoProto;
+use libra_storage_client::{StorageRead, StorageReadServiceClient};
+use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     transaction::TransactionListWithProof,
 };
-use vm_runtime::MoveVM;
+use libra_vm_runtime::MoveVM;
+use std::{pin::Pin, sync::Arc};
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {

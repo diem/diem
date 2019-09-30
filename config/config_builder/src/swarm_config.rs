@@ -3,7 +3,8 @@
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction;
-use config::{
+use failure::prelude::*;
+use libra_config::{
     config::{
         BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
         PersistableConfig, RoleType, VMPublishingOption,
@@ -16,11 +17,11 @@ use config::{
     },
     utils::get_available_port,
 };
-use crypto::{ed25519::*, test_utils::KeyPair};
-use failure::prelude::*;
-use logger::prelude::*;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_logger::prelude::*;
+use libra_proto_conv::IntoProtoBytes;
+use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
-use proto_conv::IntoProtoBytes;
 use std::{
     collections::BTreeMap,
     fs::{self, File},
@@ -28,7 +29,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-use types::PeerId;
 
 pub struct SwarmConfig {
     pub configs: Vec<PathBuf>,
@@ -465,7 +465,7 @@ impl SwarmConfigBuilder {
         // verify required fields
         let faucet_key_path = self.faucet_account_keypair_filepath.clone();
         let faucet_key = self.faucet_account_keypair.take().unwrap_or_else(|| {
-            generate_keypair::load_key_from_file(
+            libra_generate_keypair::load_key_from_file(
                 faucet_key_path.expect("Must provide faucet key file"),
             )
             .expect("Faucet account key is required to generate config")

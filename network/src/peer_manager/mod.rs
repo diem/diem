@@ -13,23 +13,23 @@
 //!  * An actor per Peer which owns the underlying connection and is responsible for listening for
 //!  and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{common::NegotiatedSubstream, counters, protocols::identity::Identity, ProtocolId};
-use channel;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt, TryFutureExt},
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
-use logger::prelude::*;
-use netcore::{
+use libra_channel;
+use libra_logger::prelude::*;
+use libra_netcore::{
     multiplexing::StreamMultiplexer,
     negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
     transport::{ConnectionOrigin, Transport},
 };
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, marker::PhantomData};
 use tokio::runtime::TaskExecutor;
-use types::PeerId;
 
 mod error;
 #[cfg(test)]
@@ -64,7 +64,7 @@ pub enum PeerManagerRequest<TSubstream> {
 /// Convenience wrapper around a `channel::Sender<PeerManagerRequest>` which makes it easy to issue
 /// requests and await the responses from PeerManager
 pub struct PeerManagerRequestSender<TSubstream> {
-    inner: channel::Sender<PeerManagerRequest<TSubstream>>,
+    inner: libra_channel::Sender<PeerManagerRequest<TSubstream>>,
 }
 
 impl<TSubstream> Clone for PeerManagerRequestSender<TSubstream> {
@@ -74,8 +74,8 @@ impl<TSubstream> Clone for PeerManagerRequestSender<TSubstream> {
 }
 
 impl<TSubstream> PeerManagerRequestSender<TSubstream> {
-    /// Construct a new PeerManagerRequestSender with a raw channel::Sender
-    pub fn new(sender: channel::Sender<PeerManagerRequest<TSubstream>>) -> Self {
+    /// Construct a new PeerManagerRequestSender with a raw libra_channel::Sender
+    pub fn new(sender: libra_channel::Sender<PeerManagerRequest<TSubstream>>) -> Self {
         Self { inner: sender }
     }
 
@@ -152,19 +152,19 @@ where
     /// Map from PeerId to corresponding Peer object.
     active_peers: HashMap<PeerId, PeerHandle<TMuxer::Substream>>,
     /// Channel to receive requests from other actors.
-    requests_rx: channel::Receiver<PeerManagerRequest<TMuxer::Substream>>,
+    requests_rx: libra_channel::Receiver<PeerManagerRequest<TMuxer::Substream>>,
     /// Map from protocol to handler for substreams which want to "speak" that protocol.
     protocol_handlers:
-        HashMap<ProtocolId, channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
+        HashMap<ProtocolId, libra_channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
     /// Channel to send NewPeer/LostPeer notifications to other actors.
     /// Note: NewInboundSubstream notifications are not sent via these channels.
-    peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
+    peer_event_handlers: Vec<libra_channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
     /// Channel used to send Dial requests to the ConnectionHandler actor
-    dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
+    dial_request_tx: libra_channel::Sender<ConnectionHandlerRequest>,
     /// Internal event Receiver
-    internal_event_rx: channel::Receiver<InternalEvent<TMuxer>>,
+    internal_event_rx: libra_channel::Receiver<InternalEvent<TMuxer>>,
     /// Internal event Sender
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+    internal_event_tx: libra_channel::Sender<InternalEvent<TMuxer>>,
     /// A map of outstanding disconnect requests
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
@@ -182,17 +182,17 @@ where
         executor: TaskExecutor,
         own_peer_id: PeerId,
         listen_addr: Multiaddr,
-        requests_rx: channel::Receiver<PeerManagerRequest<TMuxer::Substream>>,
+        requests_rx: libra_channel::Receiver<PeerManagerRequest<TMuxer::Substream>>,
         protocol_handlers: HashMap<
             ProtocolId,
-            channel::Sender<PeerManagerNotification<TMuxer::Substream>>,
+            libra_channel::Sender<PeerManagerNotification<TMuxer::Substream>>,
         >,
-        peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
+        peer_event_handlers: Vec<libra_channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
     ) -> Self {
         let (internal_event_tx, internal_event_rx) =
-            channel::new(1024, &counters::PENDING_PEER_MANAGER_INTERNAL_EVENTS);
+            libra_channel::new(1024, &counters::PENDING_PEER_MANAGER_INTERNAL_EVENTS);
         let (dial_request_tx, dial_request_rx) =
-            channel::new(1024, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
+            libra_channel::new(1024, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
         let (connection_handler, listen_addr) = ConnectionHandler::new(
             transport,
             listen_addr,
@@ -426,7 +426,7 @@ where
             }
         }
 
-        let (peer_req_tx, peer_req_rx) = channel::new(
+        let (peer_req_tx, peer_req_rx) = libra_channel::new(
             1024,
             &counters::OP_COUNTERS
                 .peer_gauge(&counters::PENDING_PEER_REQUESTS, &peer_id.short_str()),
@@ -508,8 +508,8 @@ where
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
-    dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+    dial_request_rx: libra_channel::Receiver<ConnectionHandlerRequest>,
+    internal_event_tx: libra_channel::Sender<InternalEvent<TMuxer>>,
 }
 
 impl<TTransport, TMuxer> ConnectionHandler<TTransport, TMuxer>
@@ -523,8 +523,8 @@ where
     fn new(
         transport: TTransport,
         listen_addr: Multiaddr,
-        dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-        internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+        dial_request_rx: libra_channel::Receiver<ConnectionHandlerRequest>,
+        internal_event_tx: libra_channel::Sender<InternalEvent<TMuxer>>,
     ) -> (Self, Multiaddr) {
         let (listener, listen_addr) = transport
             .listen_on(listen_addr)
@@ -703,7 +703,7 @@ where
 
 struct PeerHandle<TSubstream> {
     peer_id: PeerId,
-    sender: channel::Sender<PeerRequest<TSubstream>>,
+    sender: libra_channel::Sender<PeerRequest<TSubstream>>,
     origin: ConnectionOrigin,
     address: Multiaddr,
     is_shutting_down: bool,
@@ -714,7 +714,7 @@ impl<TSubstream> PeerHandle<TSubstream> {
         peer_id: PeerId,
         address: Multiaddr,
         origin: ConnectionOrigin,
-        sender: channel::Sender<PeerRequest<TSubstream>>,
+        sender: libra_channel::Sender<PeerRequest<TSubstream>>,
     ) -> Self {
         Self {
             peer_id,
@@ -796,8 +796,8 @@ where
     identity: Identity,
     connection: TMuxer,
     own_supported_protocols: Vec<ProtocolId>,
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
-    requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+    internal_event_tx: libra_channel::Sender<InternalEvent<TMuxer>>,
+    requests_rx: libra_channel::Receiver<PeerRequest<TMuxer::Substream>>,
     origin: ConnectionOrigin,
     shutdown: bool,
 }
@@ -813,8 +813,8 @@ where
         connection: TMuxer,
         origin: ConnectionOrigin,
         own_supported_protocols: Vec<ProtocolId>,
-        internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
-        requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+        internal_event_tx: libra_channel::Sender<InternalEvent<TMuxer>>,
+        requests_rx: libra_channel::Receiver<PeerRequest<TMuxer::Substream>>,
     ) -> Self {
         Self {
             identity,

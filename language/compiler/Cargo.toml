@@ -1,5 +1,5 @@
 [package]
-name = "compiler"
+name = "libra_compiler"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,14 +7,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytecode_verifier = { path = "../bytecode_verifier" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-ir_to_bytecode = { path = "ir_to_bytecode" }
-stdlib = { path = "../stdlib" }
-types = { path = "../../types" }
-vm = { path = "../vm" }
+libra_bytecode_verifier = { path = "../bytecode_verifier" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_ir_to_bytecode = { path = "ir_to_bytecode" }
+libra_stdlib = { path = "../stdlib" }
+libra_types = { path = "../../types" }
+libra_vm = { path = "../vm" }
 structopt = "0.2.15"
 serde_json = "1.0.40"
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"] }
+libra_types = { path = "../../types", features = ["testing"] }

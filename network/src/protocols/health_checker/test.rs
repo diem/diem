@@ -4,7 +4,7 @@
 use super::*;
 use crate::{common::NegotiatedSubstream, peer_manager::PeerManagerRequest};
 use futures::future::{FutureExt, TryFutureExt};
-use memsocket::MemorySocket;
+use libra_memsocket::MemorySocket;
 use parity_multiaddr::Multiaddr;
 use std::str::FromStr;
 use tokio::runtime::Runtime;
@@ -15,13 +15,13 @@ fn setup_permissive_health_checker(
     rt: &mut Runtime,
     ping_failures_tolerated: u64,
 ) -> (
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
-    channel::Sender<()>,
+    libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Sender<()>,
 ) {
-    let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = channel::new_test(0);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
+    let (ticker_tx, ticker_rx) = libra_channel::new_test(0);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = libra_channel::new_test(0);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = libra_channel::new_test(0);
     let health_checker = HealthChecker::new(
         ticker_rx,
         PeerManagerRequestSender::new(peer_mgr_reqs_tx),
@@ -36,13 +36,13 @@ fn setup_permissive_health_checker(
 fn setup_default_health_checker(
     rt: &mut Runtime,
 ) -> (
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
-    channel::Sender<()>,
+    libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Sender<()>,
 ) {
-    let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = channel::new_test(0);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
+    let (ticker_tx, ticker_rx) = libra_channel::new_test(0);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = libra_channel::new_test(0);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = libra_channel::new_test(0);
     let health_checker = HealthChecker::new(
         ticker_rx,
         PeerManagerRequestSender::new(peer_mgr_reqs_tx),
@@ -97,7 +97,7 @@ async fn expect_ping_timeout(substream: MemorySocket) {
 
 async fn open_substream_and_notify(
     peer_id: PeerId,
-    peer_mgr_notifs_tx: &mut channel::Sender<PeerManagerNotification<MemorySocket>>,
+    peer_mgr_notifs_tx: &mut libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
 ) -> MemorySocket {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
@@ -116,7 +116,7 @@ async fn open_substream_and_notify(
 
 async fn expect_disconnect(
     peer_id: PeerId,
-    peer_mgr_reqs_rx: &mut channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    peer_mgr_reqs_rx: &mut libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
 ) {
     match peer_mgr_reqs_rx.next().await.unwrap() {
         PeerManagerRequest::DisconnectPeer(peer, ch) => {
@@ -131,7 +131,7 @@ async fn expect_disconnect(
 
 async fn expect_open_substream(
     peer_id: PeerId,
-    peer_mgr_reqs_rx: &mut channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    peer_mgr_reqs_rx: &mut libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
 ) -> MemorySocket {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
     match peer_mgr_reqs_rx.next().await.unwrap() {
@@ -149,7 +149,7 @@ async fn expect_open_substream(
 
 #[test]
 fn outbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);
@@ -184,7 +184,7 @@ fn outbound() {
 
 #[test]
 fn inbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (_, mut peer_mgr_notifs_tx, _) = setup_default_health_checker(&mut rt);
 
@@ -202,7 +202,7 @@ fn inbound() {
 
 #[test]
 fn outbound_failure_permissive() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
@@ -241,7 +241,7 @@ fn outbound_failure_permissive() {
 
 #[test]
 fn ping_success_resets_fail_counter() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
@@ -301,7 +301,7 @@ fn ping_success_resets_fail_counter() {
 
 #[test]
 fn outbound_failure_strict() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);
@@ -339,7 +339,7 @@ fn outbound_failure_strict() {
 
 #[test]
 fn ping_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);

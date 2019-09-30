@@ -82,7 +82,7 @@ mod test {
     use super::{read_u16frame, read_u16frame_len, write_u16frame, write_u16frame_len};
     use bytes::BytesMut;
     use futures::{executor::block_on, io::AsyncWriteExt};
-    use memsocket::MemorySocket;
+    use libra_memsocket::MemorySocket;
     use std::io::Result;
 
     #[test]

@@ -1,14 +1,12 @@
 //! This module translates the bytecode of a module to Boogie code.
 
-use bytecode_verifier::VerifiedModule;
-use num::{BigInt, Num};
-use stackless_bytecode_generator::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
-use std::collections::{BTreeMap, BTreeSet};
-use types::identifier::Identifier;
-use vm::{
+use libra_types::identifier::Identifier;
+use libra_vm::{
     access::ModuleAccess,
     file_format::{
         FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex, SignatureToken,
@@ -20,6 +18,8 @@ use vm::{
         StructHandleView, ViewInternals,
     },
 };
+use num::{BigInt, Num};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct BoogieTranslator {
     pub modules: Vec<VerifiedModule>,

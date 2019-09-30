@@ -10,12 +10,12 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use canonical_serialization::{
+use failure::prelude::*;
+use lazy_static::lazy_static;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleDeserializer,
 };
-use failure::prelude::*;
-use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::{collections::BTreeMap, convert::TryInto};

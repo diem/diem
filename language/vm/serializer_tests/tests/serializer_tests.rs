@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_vm::file_format::{CompiledModule, CompiledModuleMut};
 use proptest::prelude::*;
-use vm::file_format::{CompiledModule, CompiledModuleMut};
 
 proptest! {
     #[test]

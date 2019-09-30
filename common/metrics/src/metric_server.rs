@@ -8,7 +8,7 @@ use hyper::{
     service::service_fn,
     Body, Method, Request, Response, Server, StatusCode,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use prometheus::{Encoder, TextEncoder};
 use std::net::{SocketAddr, ToSocketAddrs};
 

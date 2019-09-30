@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static::lazy_static;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{env, path::PathBuf, process::Command};
 
 const WORKSPACE_BUILD_ERROR_MSG: &str = r#"

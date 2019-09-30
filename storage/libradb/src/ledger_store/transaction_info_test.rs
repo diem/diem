@@ -3,9 +3,9 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_tools::tempdir::TempPath;
+use libra_types::proof::verify_transaction_accumulator_element;
 use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
-use types::proof::verify_transaction_accumulator_element;
 
 fn verify(
     store: &LedgerStore,

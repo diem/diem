@@ -45,16 +45,16 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
+use libra_canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
+use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
 use std::{fmt, slice::Iter};

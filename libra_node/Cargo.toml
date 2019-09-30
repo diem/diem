@@ -15,28 +15,28 @@ rayon = "1.2.0"
 signal-hook = "0.1.10"
 tokio = "0.1.22"
 
-admission_control_proto = { path = "../admission_control/admission_control_proto" }
-admission_control_service = { path = "../admission_control/admission_control_service" }
-config = { path = "../config" }
-consensus = { path = "../consensus" }
-crash_handler = { path = "../common/crash_handler" }
-debug_interface = { path = "../common/debug_interface" }
-executable_helpers = { path = "../common/executable_helpers" }
-executor = { path = "../execution/executor" }
+libra_admission_control_proto = { path = "../admission_control/admission_control_proto" }
+libra_admission_control_service = { path = "../admission_control/admission_control_service" }
+libra_config = { path = "../config" }
+libra_consensus = { path = "../consensus" }
+libra_crash_handler = { path = "../common/crash_handler" }
+libra_debug_interface = { path = "../common/debug_interface" }
+libra_executable_helpers = { path = "../common/executable_helpers" }
+libra_executor = { path = "../execution/executor" }
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
-grpc_helpers = { path = "../common/grpc_helpers" }
-logger = { path = "../common/logger" }
-mempool = { path = "../mempool" }
-metrics = { path = "../common/metrics" }
-crypto = { path = "../crypto/crypto" }
-network = { path = "../network" }
-state_synchronizer = { path = "../state_synchronizer" }
-storage_client = { path = "../storage/storage_client" }
-storage_service = { path = "../storage/storage_service" }
-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
-vm_validator = { path = "../vm_validator" }
+libra_grpc_helpers = { path = "../common/grpc_helpers" }
+libra_logger = { path = "../common/logger" }
+libra_mempool = { path = "../mempool" }
+libra_metrics = { path = "../common/metrics" }
+libra_crypto = { path = "../crypto/crypto" }
+libra_network = { path = "../network" }
+libra_state_synchronizer = { path = "../state_synchronizer" }
+libra_storage_client = { path = "../storage/storage_client" }
+libra_storage_service = { path = "../storage/storage_service" }
+libra_types = { path = "../types" }
+libra_vm_runtime = { path = "../language/vm/vm_runtime" }
+libra_vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
-config_builder = { path = "../config/config_builder" }
-types = { path = "../types", features = ["testing"]}
+libra_config_builder = { path = "../config/config_builder" }
+libra_types = { path = "../types", features = ["testing"]}

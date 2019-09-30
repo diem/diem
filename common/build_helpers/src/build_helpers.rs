@@ -73,7 +73,7 @@ fn compile(path: &Path, additional_includes: &[PathBuf], generate_client_code: b
             .collect::<Vec<&str>>();
 
         // generate client code
-        grpcio_client::client_stub_gen(
+        libra_grpcio_client::client_stub_gen(
             &[file_string],
             includes_strings.as_slice(),
             &parent.to_str().unwrap(),

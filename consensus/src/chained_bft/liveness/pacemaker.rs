@@ -13,8 +13,8 @@ use crate::{
     counters,
     util::time_service::{SendTask, TimeService},
 };
-use channel;
-use logger::prelude::*;
+use libra_channel;
+use libra_logger::prelude::*;
 use std::{
     fmt,
     sync::Arc,
@@ -158,7 +158,7 @@ pub struct Pacemaker {
     // Service for timer
     time_service: Arc<dyn TimeService>,
     // To send timeout events to other pacemakers
-    timeout_sender: channel::Sender<Round>,
+    timeout_sender: libra_channel::Sender<Round>,
     // Manages the PacemakerTimeout and PacemakerTimeoutCertificate structs
     pacemaker_timeout_manager: PacemakerTimeoutManager,
 }
@@ -168,7 +168,7 @@ impl Pacemaker {
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         time_interval: Box<dyn PacemakerTimeInterval>,
         time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
+        timeout_sender: libra_channel::Sender<Round>,
         highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Self {
         // Our counters are initialized via lazy_static, so they're not going to appear in

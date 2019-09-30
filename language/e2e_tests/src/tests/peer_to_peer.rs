@@ -7,17 +7,17 @@ use crate::{
     executor::{test_all_genesis, FakeExecutor},
     gas_costs, transaction_status_eq,
 };
-use config::config::VMPublishingOption;
-use std::time::Instant;
-use types::{
+use libra_config::config::VMPublishingOption;
+use libra_types::{
     account_config::AccountEvent,
     transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use std::time::Instant;
 
 #[test]
 fn single_peer_to_peer_with_event() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // create a FakeExecutor with a genesis from file
     test_all_genesis(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
@@ -71,7 +71,7 @@ fn single_peer_to_peer_with_event() {
 
 #[test]
 fn single_peer_to_peer_with_padding() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
@@ -84,11 +84,13 @@ fn single_peer_to_peer_with_padding() {
     let transfer_amount = 1_000;
     let txn = sender.account().create_signed_txn_impl(
         *sender.address(),
-        TransactionPayload::Script(transaction_builder::encode_transfer_script_with_padding(
-            receiver.address(),
-            transfer_amount,
-            1000,
-        )),
+        TransactionPayload::Script(
+            libra_transaction_builder::encode_transfer_script_with_padding(
+                receiver.address(),
+                transfer_amount,
+                1000,
+            ),
+        ),
         10,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,

@@ -14,18 +14,18 @@ use crate::{
     },
     state_replication::StateComputer,
 };
-use crypto::HashValue;
 use failure::ResultExt;
-use logger::prelude::*;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 
 use crate::chained_bft::persistent_storage::RecoveryData;
-use executor::StateComputeResult;
+use libra_executor::StateComputeResult;
+use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
 };
-use types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 
 #[cfg(test)]
 #[path = "block_store_test.rs"]

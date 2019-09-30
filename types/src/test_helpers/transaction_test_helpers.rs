@@ -7,8 +7,8 @@ use crate::{
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
-use crypto::{ed25519::*, hash::CryptoHash, traits::*};
-use proto_conv::IntoProto;
+use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
+use libra_proto_conv::IntoProto;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");

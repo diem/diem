@@ -34,9 +34,9 @@ macro_rules! proto_fuzz_target {
             fn generate(
                 &self,
                 _idx: usize,
-                gen: &mut ::proptest_helpers::ValueGenerator,
+                gen: &mut ::libra_proptest_helpers::ValueGenerator,
             ) -> Option<Vec<u8>> {
-                use proto_conv::IntoProtoBytes;
+                use libra_proto_conv::IntoProtoBytes;
 
                 let value = gen.generate(::proptest::arbitrary::any::<$ty>());
                 Some(
@@ -47,7 +47,7 @@ macro_rules! proto_fuzz_target {
             }
 
             fn fuzz(&self, data: &[u8]) {
-                use proto_conv::FromProtoBytes;
+                use libra_proto_conv::FromProtoBytes;
 
                 // Errors are OK -- the fuzzer cares about panics and OOMs.
                 let _ = <$ty>::from_proto_bytes(data);

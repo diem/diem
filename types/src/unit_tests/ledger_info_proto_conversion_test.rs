@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{crypto_proxies::LedgerInfoWithSignatures, ledger_info::LedgerInfo};
+use libra_proto_conv::test_helper::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
     #[test]

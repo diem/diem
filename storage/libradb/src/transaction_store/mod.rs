@@ -9,12 +9,12 @@ use crate::{
     schema::transaction_by_account::TransactionByAccountSchema,
 };
 use failure::prelude::*;
-use schemadb::DB;
-use std::sync::Arc;
-use types::{
+use libra_schemadb::DB;
+use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Version},
 };
+use std::sync::Arc;
 
 pub(crate) struct TransactionStore {
     db: Arc<DB>,

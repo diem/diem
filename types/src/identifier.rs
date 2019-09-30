@@ -9,13 +9,13 @@
 
 // TODO: restrict identifiers to a subset of ASCII
 
-use canonical_serialization::{
+use failure::prelude::*;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref};
 

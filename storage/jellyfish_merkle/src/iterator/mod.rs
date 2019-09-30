@@ -14,10 +14,10 @@ use crate::{
     node_type::{InternalNode, Node, NodeKey},
     TreeReader,
 };
-use crypto::HashValue;
 use failure::prelude::*;
-use nibble::Nibble;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_crypto::HashValue;
+use libra_nibble::Nibble;
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It
 /// indicates which ones of its children have been visited.

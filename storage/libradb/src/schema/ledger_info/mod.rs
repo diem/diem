@@ -15,14 +15,14 @@
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::{
+use libra_proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
     DEFAULT_CF_NAME,
 };
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::mem::size_of;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 define_schema!(
     LedgerInfoSchema,

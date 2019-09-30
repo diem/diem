@@ -4,14 +4,14 @@
 use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
-use config::config::{NodeConfig, RoleType};
-use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_config::config::{NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_logger::prelude::*;
 use libra_swarm::{swarm::LibraSwarm, utils};
-use logger::prelude::*;
+use libra_tools::tempdir::TempPath;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use tools::tempdir::TempPath;
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -26,8 +26,8 @@ struct TestEnvironment {
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
-        ::logger::init_for_e2e_testing();
-        let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
+        ::libra_logger::init_for_e2e_testing();
+        let faucet_key = libra_generate_keypair::load_faucet_key_or_create_default(None);
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
             RoleType::Validator,
@@ -38,7 +38,7 @@ impl TestEnvironment {
         )
         .unwrap();
 
-        let mnemonic_file = tools::tempdir::TempPath::new();
+        let mnemonic_file = libra_tools::tempdir::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");

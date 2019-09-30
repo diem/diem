@@ -14,9 +14,8 @@ use crate::{
         loaded_module::LoadedModule,
     },
 };
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use std::{collections::VecDeque, convert::TryFrom};
-use types::{
+use libra_bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -31,7 +30,7 @@ use types::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use vm::{
+use libra_vm::{
     access::ModuleAccess,
     errors::*,
     file_format::{Bytecode, CodeOffset, CompiledScript, StructDefinitionIndex},
@@ -39,11 +38,12 @@ use vm::{
     transaction_metadata::TransactionMetadata,
     vm_string::VMString,
 };
-use vm_cache_map::Arena;
-use vm_runtime_types::{
+use libra_vm_cache_map::Arena;
+use libra_vm_runtime_types::{
     native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
     value::{ReferenceValue, Struct, Value},
 };
+use std::{collections::VecDeque, convert::TryFrom};
 
 // Metadata needed for resolving the account module.
 lazy_static! {

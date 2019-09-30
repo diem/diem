@@ -11,8 +11,8 @@ fn main() {
     let proto_shared_root = "src/proto/shared";
     let dependent_root = "../types/src/proto";
     // Build shared directory without further dependencies.
-    build_helpers::build_helpers::compile_proto(proto_shared_root, vec![], false);
-    build_helpers::build_helpers::compile_proto(
+    libra_build_helpers::build_helpers::compile_proto(proto_shared_root, vec![], false);
+    libra_build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![dependent_root, proto_shared_root],
         true,

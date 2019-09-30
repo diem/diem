@@ -8,11 +8,13 @@
 //! responses that it gives back. For an example on how to run the secret service see main.rs.
 
 use crate::{proto::secret_service_grpc, secret_service_server::SecretServiceServer};
-use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use failure::prelude::*;
-use grpc_helpers::spawn_service_thread;
-use logger::prelude::*;
+use libra_config::config::NodeConfig;
+use libra_debug_interface::{
+    node_debug_service::NodeDebugService, proto::node_debug_interface_grpc,
+};
+use libra_grpc_helpers::spawn_service_thread;
+use libra_logger::prelude::*;
 use std::thread;
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     access::ModuleAccess,
     errors::verification_error,
     file_format::{Bytecode, CompiledModule, StructFieldInformation},

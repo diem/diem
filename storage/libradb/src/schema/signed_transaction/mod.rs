@@ -15,13 +15,13 @@
 use crate::schema::{ensure_slice_len_eq, SIGNED_TRANSACTION_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::{
+use libra_proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use libra_types::transaction::{SignedTransaction, Version};
 use std::mem::size_of;
-use types::transaction::{SignedTransaction, Version};
 
 define_schema!(
     SignedTransactionSchema,

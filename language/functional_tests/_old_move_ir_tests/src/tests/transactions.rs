@@ -4,7 +4,7 @@
 use crate::*;
 use move_ir::{assert_error_type, assert_no_error};
 use proptest::prelude::*;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{TransactionArgument, TransactionPayload},
 };

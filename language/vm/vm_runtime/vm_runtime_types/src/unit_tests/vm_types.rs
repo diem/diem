@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::value::{Struct, Value};
-use canonical_serialization::SimpleDeserializer;
-use types::{
+use libra_canonical_serialization::SimpleDeserializer;
+use libra_types::{
     account_address::AccountAddress, account_config::AccountResource, byte_array::ByteArray,
 };
 

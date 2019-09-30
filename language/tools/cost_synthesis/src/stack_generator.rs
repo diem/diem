@@ -9,15 +9,13 @@ use crate::{
     bytecode_specifications::{frame_transition_info::frame_transitions, stack_transition_info::*},
     common::*,
 };
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
     identifier::Identifier,
     language_storage::ModuleId,
 };
-use vm::{
+use libra_vm::{
     access::*,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
@@ -29,11 +27,13 @@ use vm::{
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
     vm_string::VMString,
 };
-use vm_runtime::{
+use libra_vm_runtime::{
     code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
     loaded_data::loaded_module::LoadedModule,
 };
-use vm_runtime_types::value::*;
+use libra_vm_runtime_types::value::*;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
 ///

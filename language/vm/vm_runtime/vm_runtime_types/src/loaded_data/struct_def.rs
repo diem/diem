@@ -3,8 +3,8 @@
 //! Loaded representation for Move struct definition.
 
 use crate::{loaded_data::types::Type, native_structs::NativeStructType};
-use canonical_serialization::*;
 use failure::prelude::*;
+use libra_canonical_serialization::*;
 use std::sync::Arc;
 
 // Note that this data structure can represent recursive types but will end up creating reference

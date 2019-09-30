@@ -3,7 +3,7 @@
 
 use crate::transport::Transport;
 use futures::{future, stream::Stream};
-use memsocket::{MemoryListener, MemorySocket};
+use libra_memsocket::{MemoryListener, MemorySocket};
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     io,

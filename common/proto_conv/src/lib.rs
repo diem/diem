@@ -64,7 +64,7 @@ where
 }
 
 #[cfg(feature = "derive")]
-pub use proto_conv_derive::{FromProto, IntoProto};
+pub use libra_proto_conv_derive::{FromProto, IntoProto};
 
 // For a few types like integers, the Rust type and Protobuf type are identical.
 macro_rules! impl_direct_conversion {

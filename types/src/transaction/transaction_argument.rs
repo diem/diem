@@ -6,10 +6,10 @@ use crate::{
     account_address::AccountAddress, byte_array::ByteArray,
     proto::transaction::TransactionArgument_ArgType,
 };
-use canonical_serialization::{
+use failure::prelude::*;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use failure::prelude::*;
 use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};

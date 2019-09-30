@@ -13,13 +13,13 @@
 use crate::schema::{ensure_slice_len_eq, EVENT_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::{
+use libra_proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
+use libra_types::{contract_event::ContractEvent, transaction::Version};
 use std::mem::size_of;
-use types::{contract_event::ContractEvent, transaction::Version};
 
 define_schema!(EventSchema, Key, ContractEvent, EVENT_CF_NAME);
 

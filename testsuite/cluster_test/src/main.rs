@@ -1,5 +1,9 @@
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use cluster_test::{
+use failure::{
+    self,
+    prelude::{bail, format_err},
+};
+use libra_cluster_test::{
     aws::Aws,
     cluster::Cluster,
     deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
@@ -10,10 +14,6 @@ use cluster_test::{
     slack::SlackClient,
     suite::ExperimentSuite,
     tx_emitter::TxEmitter,
-};
-use failure::{
-    self,
-    prelude::{bail, format_err},
 };
 use slog::{o, Drain};
 use slog_scope::info;

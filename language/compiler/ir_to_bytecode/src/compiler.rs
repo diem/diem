@@ -15,21 +15,21 @@ use crate::{
 };
 
 use failure::*;
-use std::{
-    clone::Clone,
-    collections::{
-        hash_map::Entry::{Occupied, Vacant},
-        HashMap, VecDeque,
-    },
-};
-use types::{account_address::AccountAddress, identifier::Identifier};
-use vm::{
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
+use libra_vm::{
     access::ModuleAccess,
     file_format::{
         self, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
         CompiledScript, CompiledScriptMut, FieldDefinition, FieldDefinitionIndex,
         FunctionDefinition, FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken,
         StructDefinition, StructFieldInformation, StructHandleIndex, TableIndex,
+    },
+};
+use std::{
+    clone::Clone,
+    collections::{
+        hash_map::Entry::{Occupied, Vacant},
+        HashMap, VecDeque,
     },
 };
 

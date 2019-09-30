@@ -5,16 +5,16 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
 };
-use config::config::NodeConfigHelpers;
-use crypto::ed25519::*;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashSet, iter::FromIterator};
-use types::{
+use libra_config::config::NodeConfigHelpers;
+use libra_crypto::ed25519::*;
+use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
+use rand::{rngs::StdRng, SeedableRng};
+use std::{collections::HashSet, iter::FromIterator};
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (

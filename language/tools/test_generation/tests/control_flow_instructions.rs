@@ -1,15 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-extern crate test_generation;
-use std::collections::HashMap;
-use test_generation::abstract_state::{AbstractState, AbstractValue};
-use types::identifier::Identifier;
-use vm::file_format::{
+extern crate libra_test_generation;
+use libra_test_generation::abstract_state::{AbstractState, AbstractValue};
+use libra_types::identifier::Identifier;
+use libra_vm::file_format::{
     empty_module, Bytecode, CompiledModuleMut, FunctionHandle, FunctionHandleIndex,
     FunctionSignature, FunctionSignatureIndex, IdentifierIndex, LocalsSignature,
     LocalsSignatureIndex, ModuleHandleIndex, SignatureToken,
 };
+use std::collections::HashMap;
 
 mod common;
 

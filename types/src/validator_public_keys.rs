@@ -5,14 +5,14 @@ use crate::{
     account_address::AccountAddress,
     proto::validator_public_keys::ValidatorPublicKeys as ProtoValidatorPublicKeys,
 };
-use canonical_serialization::{
+use failure::Result;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
-use failure::Result;
+use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 

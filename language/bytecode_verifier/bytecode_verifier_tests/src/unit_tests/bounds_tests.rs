@@ -1,16 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use invalid_mutations::bounds::{
+use libra_invalid_mutations::bounds::{
     ApplyCodeUnitBoundsContext, ApplyOutOfBoundsContext, CodeUnitBoundsMutation,
     OutOfBoundsMutation,
 };
-use proptest::{collection::vec, prelude::*};
-use types::{
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     vm_error::StatusCode,
 };
-use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};
+use libra_vm::{
+    check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen,
+};
+use proptest::{collection::vec, prelude::*};
 
 #[test]
 fn empty_module_no_errors() {

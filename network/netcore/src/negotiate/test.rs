@@ -8,7 +8,7 @@ use crate::negotiate::{
     outbound::{negotiate_outbound_interactive, negotiate_outbound_select},
 };
 use futures::{executor::block_on, future::join};
-use memsocket::MemorySocket;
+use libra_memsocket::MemorySocket;
 use std::io::Result;
 
 #[test]

@@ -5,13 +5,13 @@ use crate::{
     loaded_data::types::Type,
     native_structs::def::{NativeStructTag, NativeStructType},
 };
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
-use vm::file_format::{Kind, StructHandleIndex};
+use libra_vm::file_format::{Kind, StructHandleIndex};
+use std::collections::HashMap;
 
 /// Struct representing the expected definition for a native struct
 pub struct NativeStruct {

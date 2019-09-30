@@ -6,7 +6,7 @@ use crate::chained_bft::{
     consensus_types::block::Block,
     liveness::proposer_election::ProposerElection,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use siphasher::sip::SipHasher24;
 use std::hash::{Hash, Hasher};
 

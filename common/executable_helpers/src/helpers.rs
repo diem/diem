@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{value_t, App, Arg, ArgMatches};
-use config::config::{NodeConfig, NodeConfigHelpers};
-use logger::prelude::*;
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 
 // General args
@@ -34,7 +34,7 @@ pub fn load_configs_from_args(args: &ArgMatches<'_>) -> NodeConfig {
 
 pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
     if !node_config.metrics.dir.as_os_str().is_empty() {
-        metrics::dump_all_metrics_to_file_periodically(
+        libra_metrics::dump_all_metrics_to_file_periodically(
             &node_config.metrics.dir,
             &format!("{}.metrics", peer_id),
             node_config.metrics.collection_interval_ms,
@@ -48,7 +48,7 @@ pub fn setup_executable(
     app_name: String,
     arg_names: Vec<&str>,
 ) -> (NodeConfig, Option<GlobalLoggerGuard>, ArgMatches<'_>) {
-    crash_handler::setup_panic_handler();
+    libra_crash_handler::setup_panic_handler();
 
     let args = get_arg_matches(app_name, arg_names);
     let is_logging_disabled = args.is_present(ARG_DISABLE_LOGGING);
@@ -77,7 +77,7 @@ fn set_default_global_logger(
         return None;
     }
 
-    Some(logger::set_default_global_logger(
+    Some(libra_logger::set_default_global_logger(
         true,      /* async */
         chan_size, /* chan_size */
     ))

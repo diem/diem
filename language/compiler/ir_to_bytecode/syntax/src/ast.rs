@@ -4,16 +4,16 @@
 use codespan::{ByteIndex, Span};
 use lalrpop_util::ParseError;
 use lazy_static::lazy_static;
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt,
-    ops::Deref,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt,
+    ops::Deref,
 };
 
 /// Generic wrapper that keeps file locations for any ast-node
@@ -140,8 +140,8 @@ pub struct TypeVar(Identifier);
 // Kinds
 //**************************************************************************************************
 
-// TODO: This enum is completely equivalent to vm::file_format::Kind.
-//       Should we just use vm::file_format::Kind or replace both with a common one?
+// TODO: This enum is completely equivalent to libra_vm::file_format::Kind.
+//       Should we just use libra_vm::file_format::Kind or replace both with a common one?
 /// The kind of a type. Analogous to `vm::file_format::Kind`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Kind {
@@ -194,7 +194,7 @@ pub struct QualifiedStructIdent {
 }
 
 /// The file newtype
-pub type Field = types::access_path::Field;
+pub type Field = libra_types::access_path::Field;
 /// A field map
 pub type Fields<T> = Vec<(Field, T)>;
 

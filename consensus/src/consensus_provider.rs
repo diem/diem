@@ -1,18 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
 use failure::prelude::*;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use libra_config::config::NodeConfig;
+use libra_network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
-use executor::Executor;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use mempool::proto::mempool_grpc::MempoolClient;
-use state_synchronizer::StateSyncClient;
+use libra_executor::Executor;
+use libra_mempool::proto::mempool_grpc::MempoolClient;
+use libra_state_synchronizer::StateSyncClient;
+use libra_storage_client::{StorageRead, StorageReadServiceClient};
+use libra_vm_runtime::MoveVM;
 use std::sync::Arc;
-use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::MoveVM;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {

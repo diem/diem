@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //! A bunch of helper functions to fetch the storage key for move resources and values.
 
-use types::{
+use libra_types::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     language_storage::{ResourceKey, StructTag},
 };
-use vm::{access::ModuleAccess, file_format::StructDefinitionIndex};
+use libra_vm::{access::ModuleAccess, file_format::StructDefinitionIndex};
 
 /// Get the StructTag for a StructDefinition defined in a published module.
 pub fn resource_storage_key(module: &impl ModuleAccess, idx: StructDefinitionIndex) -> StructTag {

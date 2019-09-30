@@ -25,7 +25,7 @@ fn sample_service_method(ctx: RpcContext, params: Params) {
 */
 
 use grpcio::RpcContext;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use prometheus::{
     core::{Collector, Desc},
     exponential_buckets,

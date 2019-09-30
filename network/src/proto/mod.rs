@@ -13,7 +13,7 @@ mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
 
-use types::proto::{ledger_info, transaction};
+use libra_types::proto::{ledger_info, transaction};
 
 pub use self::{
     admission_control::{AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse},

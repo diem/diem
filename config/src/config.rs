@@ -11,10 +11,15 @@ use crate::{
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
-use crypto::{ed25519::Ed25519PublicKey, ValidKey};
 use failure::prelude::*;
+use libra_crypto::{ed25519::Ed25519PublicKey, ValidKey};
+use libra_proto_conv::FromProtoBytes;
+use libra_tools::tempdir::TempPath;
+use libra_types::{
+    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
+    PeerId,
+};
 use parity_multiaddr::Multiaddr;
-use proto_conv::FromProtoBytes;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -26,11 +31,6 @@ use std::{
     string::ToString,
 };
 use toml;
-use tools::tempdir::TempPath;
-use types::{
-    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
-    PeerId,
-};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::transaction::{program::Program, transaction_argument::TransactionArgument};
-use canonical_serialization::{
+use libra_canonical_serialization::{
     CanonicalDeserializer, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
 };
 use proptest::prelude::*;

@@ -17,8 +17,8 @@
 #[cfg(test)]
 mod block_tree_test;
 
-use crypto::HashValue;
 use failure::bail_err;
+use libra_crypto::HashValue;
 use std::collections::{hash_map, HashMap, HashSet};
 
 /// Each block has a unique identifier that is a `HashValue` computed by consensus. It has exactly

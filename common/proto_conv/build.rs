@@ -4,7 +4,7 @@
 fn main() {
     let proto_root = "tests/proto";
 
-    build_helpers::build_helpers::compile_proto(
+    libra_build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![],
         false, /* generate_client_stub */

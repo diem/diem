@@ -9,19 +9,15 @@
 
 pub mod mocks;
 
-use config::config::NodeConfig;
 use failure::prelude::*;
-use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
-use libradb::LibraDB;
-use logger::prelude::*;
-use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
-use std::{
-    ops::Deref,
-    path::Path,
-    sync::{mpsc, Arc, Mutex},
+use libra_config::config::NodeConfig;
+use libra_grpc_helpers::{
+    provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle,
 };
-use storage_proto::proto::{
+use libra_logger::prelude::*;
+use libra_metrics::counters::SVC_COUNTERS;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_storage_proto::proto::{
     storage::{
         GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
         GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
@@ -30,7 +26,15 @@ use storage_proto::proto::{
     },
     storage_grpc::{create_storage, Storage},
 };
-use types::proto::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::get_with_proof::{
+    UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+};
+use libradb::LibraDB;
+use std::{
+    ops::Deref,
+    path::Path,
+    sync::{mpsc, Arc, Mutex},
+};
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -117,7 +121,7 @@ impl StorageService {
     ///
     /// example:
     /// ```no_run,
-    ///    # use storage_service::*;
+    ///    # use libra_storage_service::*;
     ///    # use std::path::Path;
     ///    let (service, shutdown_receiver) = StorageService::new(&Path::new("path/to/db"));
     ///
@@ -142,13 +146,13 @@ impl StorageService {
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
+        let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
 
         let (response_items, ledger_info_with_sigs, validator_change_events) = self
             .db
             .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
 
-        let rust_resp = types::get_with_proof::UpdateToLatestLedgerResponse {
+        let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
             validator_change_events,
@@ -161,7 +165,7 @@ impl StorageService {
         &self,
         req: GetTransactionsRequest,
     ) -> Result<GetTransactionsResponse> {
-        let rust_req = storage_proto::GetTransactionsRequest::from_proto(req)?;
+        let rust_req = libra_storage_proto::GetTransactionsRequest::from_proto(req)?;
 
         let txn_list_with_proof = self.db.get_transactions(
             rust_req.start_version,
@@ -170,7 +174,7 @@ impl StorageService {
             rust_req.fetch_events,
         )?;
 
-        let rust_resp = storage_proto::GetTransactionsResponse::new(txn_list_with_proof);
+        let rust_resp = libra_storage_proto::GetTransactionsResponse::new(txn_list_with_proof);
 
         Ok(rust_resp.into_proto())
     }
@@ -179,13 +183,14 @@ impl StorageService {
         &self,
         req: GetAccountStateWithProofByVersionRequest,
     ) -> Result<GetAccountStateWithProofByVersionResponse> {
-        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::from_proto(req)?;
+        let rust_req =
+            libra_storage_proto::GetAccountStateWithProofByVersionRequest::from_proto(req)?;
 
         let (account_state_blob, sparse_merkle_proof) = self
             .db
             .get_account_state_with_proof_by_version(rust_req.address, rust_req.version)?;
 
-        let rust_resp = storage_proto::GetAccountStateWithProofByVersionResponse {
+        let rust_resp = libra_storage_proto::GetAccountStateWithProofByVersionResponse {
             account_state_blob,
             sparse_merkle_proof,
         };
@@ -197,7 +202,7 @@ impl StorageService {
         &self,
         req: SaveTransactionsRequest,
     ) -> Result<SaveTransactionsResponse> {
-        let rust_req = storage_proto::SaveTransactionsRequest::from_proto(req)?;
+        let rust_req = libra_storage_proto::SaveTransactionsRequest::from_proto(req)?;
         self.db.save_transactions(
             &rust_req.txns_to_commit,
             rust_req.first_version,
@@ -208,7 +213,7 @@ impl StorageService {
 
     fn get_startup_info_inner(&self) -> Result<GetStartupInfoResponse> {
         let info = self.db.get_startup_info()?;
-        let rust_resp = storage_proto::GetStartupInfoResponse { info };
+        let rust_resp = libra_storage_proto::GetStartupInfoResponse { info };
         Ok(rust_resp.into_proto())
     }
 
@@ -216,11 +221,12 @@ impl StorageService {
         &self,
         req: GetLatestLedgerInfosPerEpochRequest,
     ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
-        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::from_proto(req)?;
+        let rust_req = libra_storage_proto::GetLatestLedgerInfosPerEpochRequest::from_proto(req)?;
         let ledger_infos = self
             .db
             .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
-        let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
+        let rust_resp =
+            libra_storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
         Ok(rust_resp.into_proto())
     }
 }

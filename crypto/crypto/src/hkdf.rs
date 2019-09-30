@@ -58,7 +58,7 @@
 //! Run HKDF extract-then-expand so as to return 64 bytes, using 'salt', 'seed' and 'info' as
 //! inputs.
 //! ```
-//! use crypto::hkdf::Hkdf;
+//! use libra_crypto::hkdf::Hkdf;
 //! use sha2::Sha256;
 //!
 //! // some bytes required for this example.

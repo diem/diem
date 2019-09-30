@@ -8,9 +8,8 @@
 //! - struct and field definitions are consistent
 //! - the handles in struct and function definitions point to IMPLEMENTED_MODULE_INDEX
 //! - all struct and function handles pointing to IMPLEMENTED_MODULE_INDEX have a definition
-use std::{collections::HashSet, hash::Hash};
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     access::ModuleAccess,
     errors::verification_error,
     file_format::{
@@ -19,6 +18,7 @@ use vm::{
     },
     IndexKind,
 };
+use std::{collections::HashSet, hash::Hash};
 
 pub struct DuplicationChecker<'a> {
     module: &'a CompiledModule,

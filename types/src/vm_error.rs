@@ -4,12 +4,12 @@
 #![allow(clippy::unit_arg)]
 
 use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 

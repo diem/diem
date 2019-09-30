@@ -2,17 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::admission_control_service::AdmissionControlService;
-use admission_control_proto::proto::admission_control_grpc;
-use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use failure::prelude::*;
-use grpc_helpers::spawn_service_thread;
 use grpcio::{ChannelBuilder, EnvBuilder, Environment};
-use logger::prelude::*;
-use mempool::proto::{mempool_client::MempoolClientTrait, mempool_grpc::MempoolClient};
+use libra_admission_control_proto::proto::admission_control_grpc;
+use libra_config::config::NodeConfig;
+use libra_debug_interface::{
+    node_debug_service::NodeDebugService, proto::node_debug_interface_grpc,
+};
+use libra_grpc_helpers::spawn_service_thread;
+use libra_logger::prelude::*;
+use libra_mempool::proto::{mempool_client::MempoolClientTrait, mempool_grpc::MempoolClient};
+use libra_storage_client::{StorageRead, StorageReadServiceClient};
+use libra_vm_validator::vm_validator::VMValidator;
 use std::{sync::Arc, thread};
-use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_validator::vm_validator::VMValidator;
 
 /// Struct to run Admission Control service in a dedicated process. It will be used to spin up
 /// extra AC instances to talk to the same validator.
@@ -35,7 +37,7 @@ impl AdmissionControlNode {
 
     /// Setup environment and start a new Admission Control service.
     pub fn run(&self) -> Result<()> {
-        let _logger_guard = logger::set_default_global_logger(
+        let _logger_guard = libra_logger::set_default_global_logger(
             self.node_config.log_collector.is_async,
             self.node_config.log_collector.chan_size,
         );

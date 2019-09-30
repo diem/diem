@@ -5,22 +5,15 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::{serializer::deserialize_native, NativeStructValue},
 };
-use canonical_serialization::*;
 use failure::prelude::*;
-use std::{
-    cell::{Ref, RefCell},
-    convert::TryFrom,
-    mem::replace,
-    ops::Add,
-    rc::Rc,
-};
-use types::{
+use libra_canonical_serialization::*;
+use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     errors::*,
     gas_schedule::{
         words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE,
@@ -28,6 +21,13 @@ use vm::{
     },
     vm_string::VMString,
     IndexKind,
+};
+use std::{
+    cell::{Ref, RefCell},
+    convert::TryFrom,
+    mem::replace,
+    ops::Add,
+    rc::Rc,
 };
 
 #[cfg(test)]

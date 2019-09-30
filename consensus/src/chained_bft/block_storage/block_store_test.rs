@@ -15,13 +15,13 @@ use crate::chained_bft::{
         placeholder_ledger_info, TreeInserter,
     },
 };
-use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
-use proptest::prelude::*;
-use std::{cmp::min, collections::HashSet, sync::Arc};
-use types::{
+use libra_crypto::{HashValue, PrivateKey};
+use libra_types::{
     account_address::AccountAddress, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
 };
+use proptest::prelude::*;
+use std::{cmp::min, collections::HashSet, sync::Arc};
 
 fn build_simple_tree() -> (
     Vec<Arc<ExecutedBlock<Vec<usize>>>>,
@@ -333,7 +333,7 @@ fn test_insert_vote() {
     let qc_size = 10;
     let mut signers = vec![];
 
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     for i in 0..qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));
     }
@@ -415,7 +415,7 @@ fn test_vote_aggregation() {
     let qc_size = 2;
     let mut signers = vec![];
 
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     for i in 0..=qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));
@@ -498,7 +498,7 @@ fn test_malicious_vote_validator() {
     let qc_size = 2;
     let mut signers = vec![];
 
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     for i in 0..=qc_size {
         signers.push(ValidatorSigner::random([i as u8; 32]));

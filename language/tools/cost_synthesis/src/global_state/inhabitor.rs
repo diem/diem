@@ -3,13 +3,11 @@
 
 //! Random valid type inhabitant generation.
 use crate::common::*;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     language_storage::ModuleId,
 };
-use vm::{
+use libra_vm::{
     access::*,
     file_format::{
         MemberCount, ModuleHandle, SignatureToken, StructDefinition, StructDefinitionIndex,
@@ -17,8 +15,12 @@ use vm::{
     },
     vm_string::VMString,
 };
-use vm_runtime::{code_cache::module_cache::ModuleCache, loaded_data::loaded_module::LoadedModule};
-use vm_runtime_types::value::*;
+use libra_vm_runtime::{
+    code_cache::module_cache::ModuleCache, loaded_data::loaded_module::LoadedModule,
+};
+use libra_vm_runtime_types::value::*;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
 pub struct RandomInhabitor<'alloc, 'txn>

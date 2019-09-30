@@ -22,7 +22,6 @@ use crate::{
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     util::time_service::{ClockTimeService, TimeService},
 };
-use channel;
 use failure::prelude::*;
 use futures::{
     compat::Future01CompatExt,
@@ -31,13 +30,14 @@ use futures::{
     select,
     stream::StreamExt,
 };
+use libra_channel;
 
 use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
-use config::config::{ConsensusConfig, ConsensusProposerType};
-use logger::prelude::*;
+use libra_config::config::{ConsensusConfig, ConsensusProposerType};
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorSigner;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
-use types::crypto_proxies::ValidatorSigner;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -117,7 +117,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         &self,
         persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
+        timeout_sender: libra_channel::Sender<Round>,
         highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Pacemaker {
         // 1.5^6 ~= 11
@@ -155,7 +155,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         &mut self,
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
-        mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        mut pacemaker_timeout_sender_rx: libra_channel::Receiver<Round>,
         mut network_receivers: NetworkReceivers<T>,
     ) {
         let fut = async move {
@@ -247,7 +247,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let safety_rules = SafetyRules::new(consensus_state);
 
         let (timeout_sender, timeout_receiver) =
-            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+            libra_channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let pacemaker = self.create_pacemaker(
             self.storage.persistent_liveness_storage(),
             time_service.clone(),

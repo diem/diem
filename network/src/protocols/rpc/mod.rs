@@ -64,9 +64,7 @@ use crate::{
     sink::NetworkSinkExt,
     ProtocolId,
 };
-use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
-use channel;
 use error::RpcError;
 use futures::{
     channel::oneshot,
@@ -77,10 +75,12 @@ use futures::{
     stream::StreamExt,
     task::Context,
 };
-use logger::prelude::*;
+use libra_bounded_executor::BoundedExecutor;
+use libra_channel;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
 use std::{fmt::Debug, io, time::Duration};
 use tokio::{codec::Framed, prelude::FutureExt as Future01Ext, runtime::TaskExecutor};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 pub mod error;
@@ -155,13 +155,13 @@ pub struct Rpc<TSubstream> {
     /// Executor to spawn inbound and outbound handler tasks.
     executor: TaskExecutor,
     /// Channel to receive requests from other upstream actors.
-    requests_rx: channel::Receiver<RpcRequest>,
+    requests_rx: libra_channel::Receiver<RpcRequest>,
     /// Channel to receive notifications from [`PeerManager`](crate::peer_manager::PeerManager).
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel to send requests to [`PeerManager`](crate::peer_manager::PeerManager).
     peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
     /// Channels to send notifictions to upstream actors.
-    rpc_handler_tx: channel::Sender<RpcNotification>,
+    rpc_handler_tx: libra_channel::Sender<RpcNotification>,
     /// The timeout duration for inbound rpc calls.
     inbound_rpc_timeout: Duration,
     /// The maximum number of concurrent outbound rpc requests that we will
@@ -181,10 +181,10 @@ where
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
         executor: TaskExecutor,
-        requests_rx: channel::Receiver<RpcRequest>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+        requests_rx: libra_channel::Receiver<RpcRequest>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-        rpc_handler_tx: channel::Sender<RpcNotification>,
+        rpc_handler_tx: libra_channel::Sender<RpcNotification>,
         inbound_rpc_timeout: Duration,
         max_concurrent_outbound_rpcs: u32,
         max_concurrent_inbound_rpcs: u32,
@@ -240,7 +240,7 @@ where
 /// Handle all outbound rpcs.
 async fn handle_outbounds<TSubstream>(
     executor: BoundedExecutor,
-    mut requests_rx: channel::Receiver<RpcRequest>,
+    mut requests_rx: libra_channel::Receiver<RpcRequest>,
     peer_mgr_tx: PeerManagerRequestSender<TSubstream>,
 ) where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + 'static,
@@ -255,8 +255,8 @@ async fn handle_outbounds<TSubstream>(
 /// Handle all inbound rpcs.
 async fn handle_inbounds<TSubstream>(
     executor: BoundedExecutor,
-    mut peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-    rpc_handler_tx: channel::Sender<RpcNotification>,
+    mut peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
+    rpc_handler_tx: libra_channel::Sender<RpcNotification>,
     inbound_rpc_timeout: Duration,
 ) where
     TSubstream: AsyncRead + AsyncWrite + Debug + Send + Unpin + 'static,
@@ -377,7 +377,7 @@ where
 /// Handle an new inbound substream. Run the inbound rpc protocol over the
 /// substream.
 async fn handle_inbound_substream<TSubstream>(
-    notification_tx: channel::Sender<RpcNotification>,
+    notification_tx: libra_channel::Sender<RpcNotification>,
     notif: PeerManagerNotification<TSubstream>,
     timeout: Duration,
 ) where
@@ -420,7 +420,7 @@ async fn handle_inbound_substream<TSubstream>(
 }
 
 async fn handle_inbound_substream_inner<TSubstream>(
-    mut notification_tx: channel::Sender<RpcNotification>,
+    mut notification_tx: libra_channel::Sender<RpcNotification>,
     peer_id: PeerId,
     protocol: ProtocolId,
     substream: TSubstream,

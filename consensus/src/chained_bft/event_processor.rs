@@ -33,17 +33,17 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
-use crypto::HashValue;
 use failure::ResultExt;
-use logger::prelude::*;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
+use libra_network::proto::BlockRetrievalStatus;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,
 };
-use network::proto::BlockRetrievalStatus;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 #[cfg(test)]
 #[path = "event_processor_test.rs"]

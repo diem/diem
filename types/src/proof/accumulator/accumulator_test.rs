@@ -6,7 +6,7 @@ use crate::proof::{
     position::{FrozenSubtreeSiblingIterator, Position},
     TestAccumulatorInternalNode,
 };
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,
 };

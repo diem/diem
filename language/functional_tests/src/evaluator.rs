@@ -5,26 +5,26 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::verifier::{
+use libra_bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
-use config::config::VMPublishingOption;
-use ir_to_bytecode::{
+use libra_config::config::VMPublishingOption;
+use libra_ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::parse_script_or_module,
 };
-use ir_to_bytecode_syntax::ast::ScriptOrModule;
-use language_e2e_tests::{account::AccountData, executor::FakeExecutor};
-use std::{env, fmt, str::FromStr, time::Duration};
-use stdlib::stdlib_modules;
-use types::{
+use libra_ir_to_bytecode_syntax::ast::ScriptOrModule;
+use libra_language_e2e_tests::{account::AccountData, executor::FakeExecutor};
+use libra_stdlib::stdlib_modules;
+use libra_types::{
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
     },
     vm_error::StatusCode,
 };
-use vm::file_format::{CompiledModule, CompiledScript};
+use libra_vm::file_format::{CompiledModule, CompiledScript};
+use std::{env, fmt, str::FromStr, time::Duration};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.

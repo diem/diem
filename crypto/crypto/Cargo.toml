@@ -1,5 +1,5 @@
 [package]
-name = "crypto"
+name = "libra_crypto"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -27,10 +27,10 @@ threshold_crypto = "0.3"
 tiny-keccak = "1.5.0"
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat", default-features = false }
 
-crypto_derive = { path = "../crypto_derive" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-nibble = { path = "../../common/nibble" }
-proto_conv = { path = "../../common/proto_conv" }
+libra_crypto_derive = { path = "../crypto_derive" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_nibble = { path = "../../common/nibble" }
+libra_proto_conv = { path = "../../common/proto_conv" }
 
 [dev-dependencies]
 bitvec = "0.10.1"

@@ -42,7 +42,7 @@ use crate::{
     transaction::{RawTransaction, Script, TransactionArgument, TransactionPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use canonical_serialization::SimpleSerializer;
+use libra_canonical_serialization::SimpleSerializer;
 use std::time::Duration;
 
 #[test]

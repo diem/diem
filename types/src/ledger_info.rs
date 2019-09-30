@@ -7,15 +7,15 @@ use crate::{
     validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
-use crypto::{
+use failure::prelude::*;
+use libra_canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, LedgerInfoHasher},
     HashValue, *,
 };
-use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,

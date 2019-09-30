@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::common::Round;
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
-use crypto::{
+use failure::Result as ProtoResult;
+use libra_canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, VoteDataHasher},
     HashValue,
 };
-use failure::Result as ProtoResult;
-use network::proto::VoteData as ProtoVoteData;
-use proto_conv::{FromProto, IntoProto};
+use libra_network::proto::VoteData as ProtoVoteData;
+use libra_proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

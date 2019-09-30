@@ -1,24 +1,24 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use config::config::{VMConfig, VMPublishingOption};
-use crypto::HashValue;
-use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
-use std::{collections::HashSet, iter::FromIterator};
-use stdlib::{
+use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_crypto::HashValue;
+use libra_ir_to_bytecode::{compiler::compile_program, parser::ast};
+use libra_stdlib::{
     stdlib_modules,
     transaction_scripts::{
         CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
 };
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 #[cfg(any(test, feature = "testing"))]
-use vm::file_format::Bytecode;
+use libra_vm::file_format::Bytecode;
+use std::{collections::HashSet, iter::FromIterator};
 
 lazy_static! {
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };

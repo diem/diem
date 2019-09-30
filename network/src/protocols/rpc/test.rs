@@ -7,7 +7,7 @@ use crate::{
     peer_manager::{PeerManagerNotification, PeerManagerRequest},
 };
 use futures::future::{join, join3, join4};
-use memsocket::MemorySocket;
+use libra_memsocket::MemorySocket;
 use tokio::runtime::Runtime;
 
 async fn do_outbound_rpc_req<TSubstream>(
@@ -34,7 +34,7 @@ where
 
 // On the next OpenSubstream event, return the given substream.
 async fn mock_peer_manager<TSubstream: Debug>(
-    mut peer_mgr_rx: channel::Receiver<PeerManagerRequest<TSubstream>>,
+    mut peer_mgr_rx: libra_channel::Receiver<PeerManagerRequest<TSubstream>>,
     substream: TSubstream,
 ) {
     // Return a mocked substream on the next OpenSubstream request
@@ -52,7 +52,7 @@ async fn mock_peer_manager<TSubstream: Debug>(
 // Test the rpc substream upgrades.
 #[test]
 fn upgrades() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
@@ -63,12 +63,12 @@ fn upgrades() {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Fake the dialer NetworkProvider
-    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let f_dialer_peer_mgr = mock_peer_manager(dialer_peer_mgr_reqs_rx, dialer_substream);
 
     // Fake the listener NetworkProvider
-    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
+    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = libra_channel::new_test(8);
     let f_listener_network = async move {
         // Handle the inbound rpc request
         match listener_rpc_notifs_rx.next().await.unwrap() {
@@ -126,7 +126,7 @@ fn upgrades() {
 // receiving the request.
 #[test]
 fn listener_close_before_response() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -135,7 +135,7 @@ fn listener_close_before_response() {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Fake the dialer NetworkProvider
-    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let f_dialer_peer_mgr = mock_peer_manager(dialer_peer_mgr_reqs_rx, dialer_substream);
 
@@ -185,7 +185,7 @@ fn listener_close_before_response() {
 // negotiation but before the dialer sends their request.
 #[test]
 fn listener_close_before_dialer_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -197,7 +197,7 @@ fn listener_close_before_dialer_send() {
     drop(listener_substream);
 
     // Fake the dialer NetworkProvider
-    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let f_dialer_peer_mgr = mock_peer_manager(dialer_peer_mgr_reqs_rx, dialer_substream);
 
@@ -231,7 +231,7 @@ fn listener_close_before_dialer_send() {
 // negotiation but before sending their request.
 #[test]
 fn dialer_close_before_listener_recv() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -243,7 +243,7 @@ fn dialer_close_before_listener_recv() {
 
     // Listener handles the inbound substream, but should get an EOF error
     let f_listener_upgrade = async move {
-        let (notification_tx, _notification_rx) = channel::new_test(8);
+        let (notification_tx, _notification_rx) = libra_channel::new_test(8);
         // use inner to get Result
         let res = handle_inbound_substream_inner(
             notification_tx,
@@ -271,7 +271,7 @@ fn dialer_close_before_listener_recv() {
 // reading out the response.
 #[test]
 fn dialer_close_before_listener_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -281,7 +281,7 @@ fn dialer_close_before_listener_send() {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Fake the listener NetworkProvider
-    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
+    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = libra_channel::new_test(8);
     let f_listener_network = async move {
         // Handle the inbound rpc request
         match listener_rpc_notifs_rx.next().await.unwrap() {
@@ -336,7 +336,7 @@ fn dialer_close_before_listener_send() {
 // Sending two requests should fail
 #[test]
 fn dialer_sends_two_requests_err() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -346,7 +346,7 @@ fn dialer_sends_two_requests_err() {
 
     // Listener handles the inbound substream, but should get an EOF error
     let f_listener_upgrade = async move {
-        let (notification_tx, _notification_rx) = channel::new_test(8);
+        let (notification_tx, _notification_rx) = libra_channel::new_test(8);
         // use inner to get Result
         let res = handle_inbound_substream_inner(
             notification_tx,
@@ -397,7 +397,7 @@ fn dialer_sends_two_requests_err() {
 // Test that outbound rpc calls will timeout.
 #[test]
 fn outbound_rpc_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -407,7 +407,7 @@ fn outbound_rpc_timeout() {
     let (dialer_substream, _listener_substream) = MemorySocket::new_pair();
 
     // Fake the dialer NetworkProvider
-    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let f_dialer_peer_mgr = mock_peer_manager(dialer_peer_mgr_reqs_rx, dialer_substream);
 
@@ -440,14 +440,14 @@ fn outbound_rpc_timeout() {
 // Test that inbound rpc calls will timeout.
 #[test]
 fn inbound_rpc_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let dialer_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
 
     // Dialer hangs after negotiation
     let (_dialer_substream, listener_substream) = MemorySocket::new_pair();
-    let (listener_rpc_notifs_tx, _listener_rpc_notifs_rx) = channel::new_test(8);
+    let (listener_rpc_notifs_tx, _listener_rpc_notifs_rx) = libra_channel::new_test(8);
 
     // Handle the inbound substream
     let substream = NegotiatedSubstream {
@@ -472,14 +472,14 @@ fn inbound_rpc_timeout() {
 // Test that outbound rpcs can be canceled before sending
 #[test]
 fn outbound_cancellation_before_send() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
     let req_data = b"hello";
 
     // Fake the dialer NetworkProvider channels
-    let (dialer_peer_mgr_reqs_tx, _dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, _dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx =
         PeerManagerRequestSender::<MemorySocket>::new(dialer_peer_mgr_reqs_tx);
 
@@ -508,7 +508,7 @@ fn outbound_cancellation_before_send() {
 // Test that outbound rpcs can be canceled while receiving response data.
 #[test]
 fn outbound_cancellation_recv() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let executor = rt.executor();
@@ -521,7 +521,7 @@ fn outbound_cancellation_recv() {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Fake the dialer NetworkProvider
-    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let f_dialer_peer_mgr = mock_peer_manager(dialer_peer_mgr_reqs_rx, dialer_substream);
 
@@ -599,7 +599,7 @@ fn outbound_cancellation_recv() {
 // Test the full rpc protocol actor.
 #[test]
 fn rpc_protocol() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
@@ -612,11 +612,11 @@ fn rpc_protocol() {
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Set up the dialer Rpc protocol actor
-    let (mut dialer_rpc_tx, dialer_rpc_rx) = channel::new_test(8);
-    let (_, dialer_peer_mgr_notifs_rx) = channel::new_test(8);
-    let (dialer_peer_mgr_reqs_tx, mut dialer_peer_mgr_reqs_rx) = channel::new_test(8);
+    let (mut dialer_rpc_tx, dialer_rpc_rx) = libra_channel::new_test(8);
+    let (_, dialer_peer_mgr_notifs_rx) = libra_channel::new_test(8);
+    let (dialer_peer_mgr_reqs_tx, mut dialer_peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
-    let (rpc_handler_tx, _) = channel::new_test(8);
+    let (rpc_handler_tx, _) = libra_channel::new_test(8);
     let dialer_rpc = Rpc::new(
         rt.executor(),
         dialer_rpc_rx,
@@ -663,11 +663,11 @@ fn rpc_protocol() {
     };
 
     // Set up the listener Rpc protocol actor
-    let (_, listener_rpc_reqs_rx) = channel::new_test(8);
-    let (mut listener_peer_mgr_notifs_tx, listener_peer_mgr_notifs_rx) = channel::new_test(8);
-    let (listener_peer_mgr_reqs_tx, _) = channel::new_test(8);
+    let (_, listener_rpc_reqs_rx) = libra_channel::new_test(8);
+    let (mut listener_peer_mgr_notifs_tx, listener_peer_mgr_notifs_rx) = libra_channel::new_test(8);
+    let (listener_peer_mgr_reqs_tx, _) = libra_channel::new_test(8);
     let listener_peer_mgr_reqs_tx = PeerManagerRequestSender::new(listener_peer_mgr_reqs_tx);
-    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
+    let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = libra_channel::new_test(8);
     let listener_rpc = Rpc::new(
         rt.executor(),
         listener_rpc_reqs_rx,

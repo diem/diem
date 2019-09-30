@@ -7,7 +7,6 @@ use crate::{
     peer_manager::{PeerManager, PeerScoreUpdateType},
     LedgerInfo, PeerId,
 };
-use config::config::StateSyncConfig;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
@@ -15,19 +14,22 @@ use futures::{
     stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
-use logger::prelude::*;
-use network::{
+use libra_config::config::StateSyncConfig;
+use libra_logger::prelude::*;
+use libra_network::{
     proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
 };
-use proto_conv::{FromProto, IntoProto};
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
+};
 use std::{
     collections::HashMap,
     str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::timer::Interval;
-use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
 /// message used by StateSyncClient for communication with Coordinator
 pub enum CoordinatorMessage {

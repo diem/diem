@@ -20,7 +20,7 @@ pub(crate) mod transaction_info;
 pub(crate) mod validator;
 
 use failure::prelude::*;
-use schemadb::ColumnFamilyName;
+use libra_schemadb::ColumnFamilyName;
 
 pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
 pub(super) const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";

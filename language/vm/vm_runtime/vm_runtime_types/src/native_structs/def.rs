@@ -2,9 +2,9 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::vector::NativeVector,
 };
-use canonical_serialization::*;
 use failure::prelude::*;
-use vm::gas_schedule::{AbstractMemorySize, GasCarrier};
+use libra_canonical_serialization::*;
+use libra_vm::gas_schedule::{AbstractMemorySize, GasCarrier};
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum NativeStructTag {

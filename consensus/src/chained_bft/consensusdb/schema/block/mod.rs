@@ -11,10 +11,10 @@
 
 use super::BLOCK_CF_NAME;
 use crate::chained_bft::{common::Payload, consensus_types::block::Block};
-use crypto::HashValue;
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::schema::{KeyCodec, Schema, ValueCodec};
+use libra_crypto::HashValue;
+use libra_proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_schemadb::schema::{KeyCodec, Schema, ValueCodec};
 use std::marker::PhantomData;
 
 pub struct BlockSchema<T: Payload> {
@@ -22,7 +22,7 @@ pub struct BlockSchema<T: Payload> {
 }
 
 impl<T: Payload> Schema for BlockSchema<T> {
-    const COLUMN_FAMILY_NAME: schemadb::ColumnFamilyName = BLOCK_CF_NAME;
+    const COLUMN_FAMILY_NAME: libra_schemadb::ColumnFamilyName = BLOCK_CF_NAME;
     type Key = HashValue;
     type Value = Block<T>;
 }

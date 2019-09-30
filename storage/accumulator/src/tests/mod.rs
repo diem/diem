@@ -5,11 +5,11 @@ mod proof_test;
 mod write_test;
 
 use super::*;
-use crypto::hash::TestOnlyHasher;
+use libra_crypto::hash::TestOnlyHasher;
 use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
 
-type InMemoryAccumulator = types::proof::accumulator::Accumulator<TestOnlyHasher>;
+type InMemoryAccumulator = libra_types::proof::accumulator::Accumulator<TestOnlyHasher>;
 type TestAccumulator = MerkleAccumulator<MockHashStore, TestOnlyHasher>;
 
 struct MockHashStore {

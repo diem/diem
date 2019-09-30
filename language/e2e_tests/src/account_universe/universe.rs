@@ -8,12 +8,12 @@ use crate::{
     account_universe::{default_num_accounts, default_num_transactions, AccountCurrent},
     executor::FakeExecutor,
 };
+use libra_proptest_helpers::{pick_slice_idxs, Index};
 use proptest::{
     collection::{vec, SizeRange},
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use proptest_helpers::{pick_slice_idxs, Index};
 
 /// A set of accounts which can be used to construct an initial state.
 ///

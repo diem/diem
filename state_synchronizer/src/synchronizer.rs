@@ -5,19 +5,19 @@ use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
-use config::config::{NodeConfig, StateSyncConfig};
-use executor::Executor;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
     future::{Future, FutureExt, TryFutureExt},
     SinkExt,
 };
-use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
+use libra_config::config::{NodeConfig, StateSyncConfig};
+use libra_executor::Executor;
+use libra_network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_vm_runtime::MoveVM;
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use types::crypto_proxies::LedgerInfoWithSignatures;
-use vm_runtime::MoveVM;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,

@@ -3,14 +3,14 @@
 
 use crate::FuzzTargetImpl;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use canonical_serialization::*;
 use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
-use std::io::Cursor;
-use vm_runtime_types::{
+use libra_canonical_serialization::*;
+use libra_proptest_helpers::ValueGenerator;
+use libra_vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     value::Value,
 };
+use std::io::Cursor;
 
 #[derive(Clone, Debug, Default)]
 pub struct ValueTarget;

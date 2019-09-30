@@ -8,9 +8,9 @@
 //!
 //! [noise]: http://noiseprotocol.org/
 
-use crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use futures::io::{AsyncRead, AsyncWrite};
-use netcore::{
+use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
+use libra_netcore::{
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::ConnectionOrigin,
 };
@@ -20,7 +20,7 @@ use std::io;
 mod socket;
 
 pub use self::socket::NoiseSocket;
-use crypto::ValidKey;
+use libra_crypto::ValidKey;
 
 const NOISE_IX_25519_AESGCM_SHA256_PROTOCOL_NAME: &[u8] = b"/noise_ix_25519_aesgcm_sha256/1.0.0";
 const NOISE_IX_PARAMETER: &str = "Noise_IX_25519_AESGCM_SHA256";

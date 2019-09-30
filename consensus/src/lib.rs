@@ -14,7 +14,7 @@ extern crate failure;
 
 #[allow(unused_imports)]
 #[macro_use]
-extern crate debug_interface;
+extern crate libra_debug_interface;
 
 mod chained_bft;
 

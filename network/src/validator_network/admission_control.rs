@@ -11,15 +11,15 @@ use crate::{
     validator_network::Event,
     ProtocolId,
 };
-use channel;
 use futures::{
     stream::Map,
     task::{Context, Poll},
     Stream, StreamExt,
 };
+use libra_channel;
+use libra_types::PeerId;
 use pin_utils::unsafe_pinned;
 use std::{pin::Pin, time::Duration};
-use types::PeerId;
 
 /// Protocol id for admission control RPC calls
 pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc/0.1.0";
@@ -32,7 +32,7 @@ pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc
 /// an `channel::Receiver<NetworkNotification>`.
 pub struct AdmissionControlNetworkEvents {
     inner: Map<
-        channel::Receiver<NetworkNotification>,
+        libra_channel::Receiver<NetworkNotification>,
         fn(NetworkNotification) -> Result<Event<AdmissionControlMsg>, NetworkError>,
     >,
 }
@@ -45,12 +45,12 @@ impl AdmissionControlNetworkEvents {
     unsafe_pinned!(
         inner:
             Map<
-                channel::Receiver<NetworkNotification>,
+                libra_channel::Receiver<NetworkNotification>,
                 fn(NetworkNotification) -> Result<Event<AdmissionControlMsg>, NetworkError>,
             >
     );
 
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
+    pub fn new(receiver: libra_channel::Receiver<NetworkNotification>) -> Self {
         let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
             NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
             NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
@@ -86,11 +86,11 @@ impl Stream for AdmissionControlNetworkEvents {
 /// requires the `AdmissionControlNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct AdmissionControlNetworkSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: libra_channel::Sender<NetworkRequest>,
 }
 
 impl AdmissionControlNetworkSender {
-    pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
+    pub fn new(inner: libra_channel::Sender<NetworkRequest>) -> Self {
         Self { inner }
     }
 
@@ -136,7 +136,7 @@ mod tests {
     // `AdmissionControlNetworkEvents` should deserialize inbound RPC requests
     #[test]
     fn test_admission_control_inbound_rpc() {
-        let (mut admission_control_tx, admission_control_rx) = channel::new_test(8);
+        let (mut admission_control_tx, admission_control_rx) = libra_channel::new_test(8);
         let mut stream = AdmissionControlNetworkEvents::new(admission_control_rx);
 
         // build rpc request
@@ -168,7 +168,7 @@ mod tests {
     // with the serialized request.
     #[test]
     fn test_admission_control_outbound_rpc() {
-        let (network_reqs_tx, mut network_reqs_rx) = channel::new_test(8);
+        let (network_reqs_tx, mut network_reqs_rx) = libra_channel::new_test(8);
         let mut sender = AdmissionControlNetworkSender::new(network_reqs_tx);
 
         // make submit_transaction_request rpc request

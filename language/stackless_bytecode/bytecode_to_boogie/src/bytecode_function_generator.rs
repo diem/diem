@@ -1,8 +1,8 @@
 //! This module generates the Boogie version of bytecode instructions in the format of Boogie
 //! procedures.
 use crate::translator::*;
-use bytecode_verifier::VerifiedModule;
-use vm::access::ModuleAccess;
+use libra_bytecode_verifier::VerifiedModule;
+use libra_vm::access::ModuleAccess;
 impl BoogieTranslator {
     pub fn emit_stratified_functions(&self) -> String {
         let mut res = String::new();

@@ -1,5 +1,5 @@
 [package]
-name = "consensus"
+name = "libra_consensus"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -26,24 +26,24 @@ siphasher = { version = "0.3.0", default-features = false }
 termion = { version = "1.5.3", default-features = false }
 tokio = { version = "0.1.22", default-features = false }
 
-canonical_serialization = { path = "../common/canonical_serialization" }
-channel = { path = "../common/channel" }
-config = { path = "../config" }
-crypto = { path = "../crypto/crypto" }
-debug_interface = { path = "../common/debug_interface" }
-executor = { path = "../execution/executor" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-logger = { path = "../common/logger" }
-mempool = { path = "../mempool" }
-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-proto_conv = { path = "../common/proto_conv" }
-state_synchronizer = { path = "../state_synchronizer" }
-schemadb = { path = "../storage/schemadb" }
-storage_client = { path = "../storage/storage_client" }
-tools = { path = "../common/tools" }
-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+libra_canonical_serialization = { path = "../common/canonical_serialization" }
+libra_channel = { path = "../common/channel" }
+libra_config = { path = "../config" }
+libra_crypto = { path = "../crypto/crypto" }
+libra_debug_interface = { path = "../common/debug_interface" }
+libra_executor = { path = "../execution/executor" }
+failure = { path = "../common/failure_ext", package = "libra_failure_ext" }
+libra_logger = { path = "../common/logger" }
+libra_mempool = { path = "../mempool" }
+libra_metrics = { path = "../common/metrics" }
+libra_network = { path = "../network" }
+libra_proto_conv = { path = "../common/proto_conv" }
+libra_state_synchronizer = { path = "../state_synchronizer" }
+libra_schemadb = { path = "../storage/schemadb" }
+libra_storage_client = { path = "../storage/storage_client" }
+libra_tools = { path = "../common/tools" }
+libra_types = { path = "../types" }
+libra_vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dependencies.prometheus]
 version  = "0.7.0"
@@ -51,19 +51,19 @@ default-features = false
 features = ["protobuf"]
 
 [build-dependencies]
-build_helpers = { path = "../common/build_helpers" }
+libra_build_helpers = { path = "../common/build_helpers" }
 
 [dev-dependencies]
 cached = "0.9.0"
 parity-multiaddr = "0.5.0"
 rusty-fork = "0.2.2"
 
-config_builder = { path = "../config/config_builder" }
-storage_service = { path = "../storage/storage_service" }
-crypto = { path = "../crypto/crypto", features = ["testing"]}
-types = { path = "../types", features = ["testing"]}
-vm_genesis = { path = "../language/vm/vm_genesis" }
-vm_validator = { path = "../vm_validator" }
+libra_config_builder = { path = "../config/config_builder" }
+libra_storage_service = { path = "../storage/storage_service" }
+libra_crypto = { path = "../crypto/crypto", features = ["testing"]}
+libra_types = { path = "../types", features = ["testing"]}
+libra_vm_genesis = { path = "../language/vm/vm_genesis" }
+libra_vm_validator = { path = "../vm_validator" }
 proptest = "0.9.4"
 
 [features]

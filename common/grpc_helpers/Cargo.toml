@@ -1,5 +1,5 @@
 [package]
-name = "grpc_helpers"
+name = "libra_grpc_helpers"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -11,6 +11,6 @@ grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-co
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 
-failure = { package = "failure_ext", path = "../failure_ext" }
-logger = { path = "../logger" }
-metrics = { path = "../metrics" }
+failure = { package = "libra_failure_ext", path = "../failure_ext" }
+libra_logger = { path = "../logger" }
+libra_metrics = { path = "../metrics" }

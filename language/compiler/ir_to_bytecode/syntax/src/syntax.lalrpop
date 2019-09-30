@@ -10,7 +10,7 @@ use crate::ast::{
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
     LValue, LValue_, parse_field,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
 
 grammar();

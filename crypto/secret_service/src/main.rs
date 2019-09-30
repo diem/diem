@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
-use secret_service::secret_service_node;
+use libra_executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
+use libra_secret_service::secret_service_node;
 
 /// Run a SecretService in its own process.
 fn main() {

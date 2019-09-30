@@ -2,20 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use config::config::NodeConfig;
-use config_builder::util::get_test_config;
-use crypto::ed25519::*;
-use executor::Executor;
 use futures::future::Future;
-use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::FromProto;
-use rand::SeedableRng;
-use std::{sync::Arc, u64};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
-use transaction_builder::encode_transfer_script;
-use types::{
+use libra_config::config::NodeConfig;
+use libra_config_builder::util::get_test_config;
+use libra_crypto::ed25519::*;
+use libra_executor::Executor;
+use libra_grpc_helpers::ServerHandle;
+use libra_proto_conv::FromProto;
+use libra_storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use libra_storage_service::start_storage_service;
+use libra_transaction_builder::encode_transfer_script;
+use libra_types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
     transaction::{
@@ -23,7 +21,9 @@ use types::{
     },
     vm_error::StatusCode,
 };
-use vm_runtime::MoveVM;
+use libra_vm_runtime::MoveVM;
+use rand::SeedableRng;
+use std::{sync::Arc, u64};
 
 struct TestValidator {
     _storage: ServerHandle,

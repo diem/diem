@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{chained_bft::QuorumCert, counters, state_replication::StateComputer};
-use crypto::HashValue;
-use executor::{Executor, StateComputeResult};
 use failure::Result;
 use futures::{Future, FutureExt};
-use logger::prelude::*;
-use state_synchronizer::StateSyncClient;
+use libra_crypto::HashValue;
+use libra_executor::{Executor, StateComputeResult};
+use libra_logger::prelude::*;
+use libra_state_synchronizer::StateSyncClient;
+use libra_types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
+use libra_vm_runtime::MoveVM;
 use std::{
     convert::TryFrom,
     pin::Pin,
     sync::Arc,
     time::{Duration, Instant},
 };
-use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
-use vm_runtime::MoveVM;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.

@@ -1,14 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
+use libra_executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
 use std::thread;
 
-use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
 use failure::prelude::*;
-use grpc_helpers::spawn_service_thread;
-use logger::prelude::*;
+use libra_config::config::NodeConfig;
+use libra_debug_interface::{
+    node_debug_service::NodeDebugService, proto::node_debug_interface_grpc,
+};
+use libra_grpc_helpers::spawn_service_thread;
+use libra_logger::prelude::*;
 
 pub struct StorageNode {
     node_config: NodeConfig,
@@ -28,7 +30,7 @@ impl StorageNode {
     pub fn run(&self) -> Result<()> {
         info!("Starting storage node");
 
-        let _handle = storage_service::start_storage_service(&self.node_config);
+        let _handle = libra_storage_service::start_storage_service(&self.node_config);
 
         // Start Debug interface
         let debug_service =

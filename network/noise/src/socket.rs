@@ -8,7 +8,7 @@ use futures::{
     io::{AsyncRead, AsyncWrite},
     ready,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     convert::TryInto,
     io,
@@ -580,7 +580,7 @@ mod test {
         future::join,
         io::{AsyncReadExt, AsyncWriteExt},
     };
-    use memsocket::MemorySocket;
+    use libra_memsocket::MemorySocket;
     use snow::{params::NoiseParams, Builder, Keypair, SnowError};
     use std::io;
 

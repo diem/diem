@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::HashValue;
-use schemadb::schema::assert_encode_decode;
-use types::{transaction::TransactionInfo, vm_error::StatusCode};
+use libra_crypto::HashValue;
+use libra_schemadb::schema::assert_encode_decode;
+use libra_types::{transaction::TransactionInfo, vm_error::StatusCode};
 
 #[test]
 fn test_encode_decode() {

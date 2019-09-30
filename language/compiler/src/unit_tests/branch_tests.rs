@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::unit_tests::testutils::compile_script_string;
-use vm::file_format::Bytecode::*;
+use libra_vm::file_format::Bytecode::*;
 
 #[test]
 fn compile_if() {

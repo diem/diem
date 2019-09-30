@@ -1,16 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
 use std::{fs::File, io::prelude::*};
 
-use transaction_builder::default_config;
-use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
+use libra_transaction_builder::default_config;
+use libra_vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
-use proto_conv::IntoProtoBytes;
+use libra_proto_conv::IntoProtoBytes;
 
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob() -> Vec<u8> {

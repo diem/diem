@@ -10,12 +10,12 @@ use crate::{
         SignatureToken, StructHandle, StructHandleIndex,
     },
 };
-use std::collections::BTreeMap;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
+use std::collections::BTreeMap;
 
 /// Resolution context for importing types
 pub struct Resolver {

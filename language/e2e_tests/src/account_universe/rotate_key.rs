@@ -6,15 +6,15 @@ use crate::{
     common_transactions::rotate_key_txn,
     gas_costs,
 };
-use crypto::ed25519::{compat::keypair_strategy, *};
-use proptest::prelude::*;
-use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
-use types::{
+use libra_crypto::ed25519::{compat::keypair_strategy, *};
+use libra_proptest_helpers::Index;
+use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use proptest::prelude::*;
+use proptest_derive::Arbitrary;
 
 /// Represents a rotate-key transaction performed in the account universe.
 #[derive(Arbitrary, Clone, Debug)]

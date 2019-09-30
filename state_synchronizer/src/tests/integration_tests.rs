@@ -4,16 +4,18 @@
 use crate::{
     executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId, StateSyncClient, StateSynchronizer,
 };
-use config::config::RoleType;
-use config_builder::util::get_test_config;
-use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
 use failure::{prelude::*, Result};
 use futures::{
     executor::block_on,
     future::{FutureExt, TryFutureExt},
     Future,
 };
-use network::{
+use libra_config::config::RoleType;
+use libra_config_builder::util::get_test_config;
+use libra_crypto::{
+    ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
+};
+use libra_network::{
     proto::GetChunkResponse,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -21,8 +23,19 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_transaction_builder::encode_transfer_script;
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo as TypesLedgerInfo,
+    proof::AccumulatorProof,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
+    vm_error::StatusCode,
+};
+use libra_vm_genesis::GENESIS_KEYPAIR;
 use parity_multiaddr::Multiaddr;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -33,17 +46,6 @@ use std::{
     },
 };
 use tokio::runtime::{Builder, Runtime};
-use transaction_builder::encode_transfer_script;
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo as TypesLedgerInfo,
-    proof::AccumulatorProof,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
-    vm_error::StatusCode,
-};
-use vm_genesis::GENESIS_KEYPAIR;
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;

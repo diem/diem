@@ -4,16 +4,16 @@ use crate::{
     ProtocolId,
 };
 use futures::{channel::oneshot, SinkExt};
+use libra_types::PeerId;
 use protobuf::Message;
 use std::time::Duration;
-use types::PeerId;
 
 /// Send a unary rpc request to remote peer `recipient`. Handles serialization and deserialization
 /// of the message types, assuming that the request and response both have the same message type.
 ///
 /// TODO: specify error cases
 pub async fn unary_rpc<T: Message>(
-    mut inner: channel::Sender<NetworkRequest>,
+    mut inner: libra_channel::Sender<NetworkRequest>,
     recipient: PeerId,
     protocol: ProtocolId,
     req_msg: T,

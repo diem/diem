@@ -1,5 +1,5 @@
 [package]
-name = "secret_service"
+name = "libra_secret_service"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -14,17 +14,17 @@ rand = "0.6.5"
 rand_chacha = "0.1.1"
 serde = { version = "1.0.96", features = ["derive"] }
 
-config = { path = "../../config" }
-crypto = { path = "../crypto" }
-crypto_derive = { path = "../crypto_derive" }
-debug_interface = { path = "../../common/debug_interface" }
-executable_helpers = { path = "../../common/executable_helpers" }
-failure = { package = "failure_ext", path = "../../common/failure_ext" }
-grpc_helpers = { path = "../../common/grpc_helpers" }
-logger = { path = "../../common/logger" }
+libra_config = { path = "../../config" }
+libra_crypto = { path = "../crypto" }
+libra_crypto_derive = { path = "../crypto_derive" }
+libra_debug_interface = { path = "../../common/debug_interface" }
+libra_executable_helpers = { path = "../../common/executable_helpers" }
+failure = { package = "libra_failure_ext", path = "../../common/failure_ext" }
+libra_grpc_helpers = { path = "../../common/grpc_helpers" }
+libra_logger = { path = "../../common/logger" }
 
 [dev-dependencies]
-config = { path = "../../config", features = ["testing"]}
+libra_config = { path = "../../config", features = ["testing"]}
 
 [build-dependencies]
-build_helpers = { path = "../../common/build_helpers" }
+libra_build_helpers = { path = "../../common/build_helpers" }

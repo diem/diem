@@ -17,14 +17,15 @@ use crate::{
     common::NetworkPublicKeys,
     peer_manager::{PeerManagerError, PeerManagerNotification, PeerManagerRequestSender},
 };
-use channel;
 use futures::{
     channel::oneshot,
     compat::Future01CompatExt,
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use logger::prelude::*;
+use libra_channel;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use std::{
     cmp::min,
@@ -34,7 +35,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::timer;
-use types::PeerId;
 
 #[cfg(test)]
 mod test;
@@ -52,9 +52,9 @@ pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
     /// Channel to send requests to PeerManager.
     peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
     /// Channel to receive notifications from PeerManager.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel over which we receive requests from other actors.
-    requests_rx: channel::Receiver<ConnectivityRequest>,
+    requests_rx: libra_channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
     /// sending over (or dropping) the associated oneshot sender.
     dial_queue: HashMap<PeerId, oneshot::Sender<()>>,
@@ -110,8 +110,8 @@ where
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-        requests_rx: channel::Receiver<ConnectivityRequest>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
+        requests_rx: libra_channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
     ) -> Self {

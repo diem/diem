@@ -12,7 +12,7 @@ use crate::{
     errors::*,
     evaluator::Transaction,
 };
-use language_e2e_tests::account::AccountData;
+use libra_language_e2e_tests::account::AccountData;
 use regex::{Captures, Regex};
 use std::collections::BTreeMap;
 

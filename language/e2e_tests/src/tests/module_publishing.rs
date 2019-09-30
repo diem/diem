@@ -5,8 +5,8 @@ use crate::{
     account::AccountData, assert_prologue_parity, assert_status_eq,
     compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
-use config::config::VMPublishingOption;
-use types::{
+use libra_config::config::VMPublishingOption;
+use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };

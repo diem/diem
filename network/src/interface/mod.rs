@@ -26,11 +26,11 @@ use crate::{
     },
     ProtocolId,
 };
-use channel;
 use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
-use logger::prelude::*;
+use libra_channel;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
-use types::PeerId;
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
@@ -81,23 +81,23 @@ pub trait LibraNetworkProvider {
 
 pub struct NetworkProvider<TSubstream> {
     /// Map from protocol to upstream handlers for events of that protocol type.
-    upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+    upstream_handlers: HashMap<ProtocolId, libra_channel::Sender<NetworkNotification>>,
     /// Channel over which we receive notifications from PeerManager.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel over which we send requets to RPC actor.
-    rpc_reqs_tx: channel::Sender<RpcRequest>,
+    rpc_reqs_tx: libra_channel::Sender<RpcRequest>,
     /// Channel over which we receive notifications from RPC actor.
-    rpc_notifs_rx: channel::Receiver<RpcNotification>,
+    rpc_notifs_rx: libra_channel::Receiver<RpcNotification>,
     /// Channel over which we send requests to DirectSend actor.
-    ds_reqs_tx: channel::Sender<DirectSendRequest>,
+    ds_reqs_tx: libra_channel::Sender<DirectSendRequest>,
     /// Channel over which we receive notifications from DirectSend actor.
-    ds_notifs_rx: channel::Receiver<DirectSendNotification>,
+    ds_notifs_rx: libra_channel::Receiver<DirectSendNotification>,
     /// Channel over which we send requests to the ConnectivityManager actor.
-    conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
+    conn_mgr_reqs_tx: Option<libra_channel::Sender<ConnectivityRequest>>,
     /// Channel to receive requests from other actors.
-    requests_rx: channel::Receiver<NetworkRequest>,
+    requests_rx: libra_channel::Receiver<NetworkRequest>,
     /// Channel over which other actors send requests to network.
-    requests_tx: channel::Sender<NetworkRequest>,
+    requests_tx: libra_channel::Sender<NetworkRequest>,
     /// The maximum number of concurrent NetworkRequests that can be handled.
     /// Back-pressure takes effect via bounded mpsc channel beyond the limit.
     max_concurrent_reqs: u32,
@@ -118,7 +118,7 @@ where
         mempool_protocols: Vec<ProtocolId>,
     ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
         // Construct Mempool network interfaces
-        let (mempool_tx, mempool_rx) = channel::new_with_timeout(
+        let (mempool_tx, mempool_rx) = libra_channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_MEMPOOL_NETWORK_EVENTS,
             Duration::from_millis(MEMPOOL_INBOUND_MSG_TIMEOUT_MS),
@@ -137,7 +137,7 @@ where
         consensus_protocols: Vec<ProtocolId>,
     ) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
         // Construct Consensus network interfaces
-        let (consensus_tx, consensus_rx) = channel::new_with_timeout(
+        let (consensus_tx, consensus_rx) = libra_channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_CONSENSUS_NETWORK_EVENTS,
             Duration::from_millis(CONSENSUS_INBOUND_MSG_TIMEOUT_MS),
@@ -156,7 +156,7 @@ where
         state_sync_protocols: Vec<ProtocolId>,
     ) -> (StateSynchronizerSender, StateSynchronizerEvents) {
         // Construct StateSynchronizer network interfaces
-        let (state_sync_tx, state_sync_rx) = channel::new_with_timeout(
+        let (state_sync_tx, state_sync_rx) = libra_channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS,
             Duration::from_millis(STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS),
@@ -232,14 +232,14 @@ where
     TSubstream: Debug + Send,
 {
     pub fn new(
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
-        rpc_reqs_tx: channel::Sender<RpcRequest>,
-        rpc_notifs_rx: channel::Receiver<RpcNotification>,
-        ds_reqs_tx: channel::Sender<DirectSendRequest>,
-        ds_notifs_rx: channel::Receiver<DirectSendNotification>,
-        conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
-        requests_rx: channel::Receiver<NetworkRequest>,
-        requests_tx: channel::Sender<NetworkRequest>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
+        rpc_reqs_tx: libra_channel::Sender<RpcRequest>,
+        rpc_notifs_rx: libra_channel::Receiver<RpcNotification>,
+        ds_reqs_tx: libra_channel::Sender<DirectSendRequest>,
+        ds_notifs_rx: libra_channel::Receiver<DirectSendNotification>,
+        conn_mgr_reqs_tx: Option<libra_channel::Sender<ConnectivityRequest>>,
+        requests_rx: libra_channel::Receiver<NetworkRequest>,
+        requests_tx: libra_channel::Sender<NetworkRequest>,
         max_concurrent_reqs: u32,
         max_concurrent_notifs: u32,
         channel_size: usize,
@@ -262,9 +262,9 @@ where
 
     async fn handle_network_request(
         req: NetworkRequest,
-        mut rpc_reqs_tx: channel::Sender<RpcRequest>,
-        mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
-        conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
+        mut rpc_reqs_tx: libra_channel::Sender<RpcRequest>,
+        mut ds_reqs_tx: libra_channel::Sender<DirectSendRequest>,
+        conn_mgr_reqs_tx: Option<libra_channel::Sender<ConnectivityRequest>>,
     ) {
         trace!("NetworkRequest::{:?}", req);
         match req {
@@ -296,7 +296,7 @@ where
 
     async fn handle_peer_mgr_notification(
         notif: PeerManagerNotification<TSubstream>,
-        mut upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+        mut upstream_handlers: HashMap<ProtocolId, libra_channel::Sender<NetworkNotification>>,
     ) {
         trace!("PeerManagerNotification::{:?}", notif);
         match notif {
@@ -324,7 +324,7 @@ where
 
     async fn handle_rpc_notification(
         notif: RpcNotification,
-        mut upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+        mut upstream_handlers: HashMap<ProtocolId, libra_channel::Sender<NetworkNotification>>,
     ) {
         trace!("RpcNotification::{:?}", notif);
         match notif {
@@ -341,7 +341,7 @@ where
     }
 
     async fn handle_ds_notification(
-        mut upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+        mut upstream_handlers: HashMap<ProtocolId, libra_channel::Sender<NetworkNotification>>,
         notif: DirectSendNotification,
     ) {
         trace!("DirectSendNotification::{:?}", notif);

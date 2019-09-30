@@ -53,7 +53,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{
     compat::Sink01CompatExt,
     future::{FutureExt, TryFutureExt},
@@ -61,13 +60,14 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use logger::prelude::*;
+use libra_channel;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
 use tokio::{codec::Framed, runtime::TaskExecutor};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]
@@ -113,15 +113,15 @@ pub struct DirectSend<TSubstream> {
     /// A handle to a tokio executor.
     executor: TaskExecutor,
     /// Channel to receive requests from other upstream actors.
-    ds_requests_rx: channel::Receiver<DirectSendRequest>,
+    ds_requests_rx: libra_channel::Receiver<DirectSendRequest>,
     /// Channels to send notifictions to upstream actors.
-    ds_notifs_tx: channel::Sender<DirectSendNotification>,
+    ds_notifs_tx: libra_channel::Sender<DirectSendNotification>,
     /// Channel to receive notifications from PeerManager.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel to send requests to PeerManager.
     peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
     /// Outbound message queues for each (PeerId, ProtocolId) pair.
-    message_queues: HashMap<(PeerId, ProtocolId), channel::Sender<Bytes>>,
+    message_queues: HashMap<(PeerId, ProtocolId), libra_channel::Sender<Bytes>>,
 }
 
 impl<TSubstream> DirectSend<TSubstream>
@@ -130,9 +130,9 @@ where
 {
     pub fn new(
         executor: TaskExecutor,
-        ds_requests_rx: channel::Receiver<DirectSendRequest>,
-        ds_notifs_tx: channel::Sender<DirectSendNotification>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+        ds_requests_rx: libra_channel::Receiver<DirectSendRequest>,
+        ds_notifs_tx: libra_channel::Sender<DirectSendNotification>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
     ) -> Self {
         Self {
@@ -188,7 +188,7 @@ where
         peer_id: PeerId,
         protocol: ProtocolId,
         substream: TSubstream,
-        mut ds_notifs_tx: channel::Sender<DirectSendNotification>,
+        mut ds_notifs_tx: libra_channel::Sender<DirectSendNotification>,
     ) {
         let mut substream =
             Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
@@ -230,9 +230,9 @@ where
         mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         peer_id: PeerId,
         protocol: ProtocolId,
-    ) -> Result<channel::Sender<Bytes>, NetworkError> {
+    ) -> Result<libra_channel::Sender<Bytes>, NetworkError> {
         // Create a channel for the (PeerId, ProtocolId) pair.
-        let (msg_tx, msg_rx) = channel::new::<Bytes>(
+        let (msg_tx, msg_rx) = libra_channel::new::<Bytes>(
             1024,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,

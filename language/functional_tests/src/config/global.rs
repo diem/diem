@@ -5,7 +5,7 @@
 // A config entry starts with "//!", differentiating it from a directive.
 
 use crate::errors::*;
-use language_e2e_tests::account::AccountData;
+use libra_language_e2e_tests::account::AccountData;
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,

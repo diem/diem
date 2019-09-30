@@ -4,10 +4,8 @@
 //! This module provides a checker for verifing that struct definitions in a module are not
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
-use petgraph::{algo::toposort, Directed, Graph};
-use std::collections::BTreeMap;
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     access::ModuleAccess,
     errors::verification_error,
     file_format::{CompiledModule, StructDefinitionIndex, StructHandleIndex, TableIndex},
@@ -15,6 +13,8 @@ use vm::{
     views::StructDefinitionView,
     IndexKind,
 };
+use petgraph::{algo::toposort, Directed, Graph};
+use std::collections::BTreeMap;
 
 pub struct RecursiveStructDefChecker<'a> {
     module: &'a CompiledModule,

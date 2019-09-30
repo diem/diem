@@ -1,5 +1,5 @@
 [package]
-name = "vm"
+name = "libra_vm"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -14,17 +14,17 @@ mirai-annotations = "1.4.0"
 proptest = "0.9"
 proptest-derive = "0.1.1"
 serde = { version = "1", features = ["derive"] }
-canonical_serialization = { path = "../../common/canonical_serialization" }
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-proptest_helpers = { path = "../../common/proptest_helpers" }
-types = { path = "../../types" }
+libra_canonical_serialization = { path = "../../common/canonical_serialization" }
+libra_crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_proptest_helpers = { path = "../../common/proptest_helpers" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
 serde_json = "1"
-types = { path = "../../types", features = ["testing"]}
+libra_types = { path = "../../types", features = ["testing"]}
 
 [features]
 default = []
 mirai-contracts = []
-testing = ["types/testing"]
+testing = ["libra_types/testing"]

@@ -3,11 +3,9 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
-use crypto::ed25519::*;
 use lazy_static::lazy_static;
-use rand::{Rng, SeedableRng};
-use std::time::Duration;
-use types::{
+use libra_crypto::ed25519::*;
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -17,9 +15,11 @@ use types::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
-use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::identifier::create_access_path;
-use vm_runtime_types::value::{Struct, Value};
+use libra_vm_genesis::GENESIS_KEYPAIR;
+use libra_vm_runtime::identifier::create_access_path;
+use libra_vm_runtime_types::value::{Struct, Value};
+use rand::{Rng, SeedableRng};
+use std::time::Duration;
 
 // StdLib account, it is where the code is and needed to make access path to Account resources
 lazy_static! {

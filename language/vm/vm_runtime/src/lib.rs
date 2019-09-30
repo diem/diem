@@ -99,7 +99,7 @@
 //! ```
 
 //#[macro_use]
-extern crate vm;
+extern crate libra_vm;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -136,13 +136,13 @@ pub use move_vm::MoveVM;
 pub use process_txn::verify::static_verify_program;
 pub use txn_executor::execute_function;
 
-use config::config::VMConfig;
-use state_view::StateView;
-use types::{
+use libra_config::config::VMConfig;
+use libra_state_view::StateView;
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
-use vm::IndexKind;
+use libra_vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.
 pub trait VMVerifier {

@@ -9,7 +9,7 @@ use crate::{
     counters,
 };
 
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

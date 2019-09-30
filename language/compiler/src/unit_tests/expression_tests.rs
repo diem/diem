@@ -5,7 +5,7 @@ use crate::unit_tests::testutils::{
     compile_module_string, compile_script_string, compile_script_string_and_assert_error,
     count_locals,
 };
-use vm::{
+use libra_vm::{
     access::{ModuleAccess, ScriptAccess},
     file_format::Bytecode::*,
 };

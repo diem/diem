@@ -12,14 +12,14 @@ use crate::{
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
-use config::config::MempoolConfig;
 use failure::prelude::*;
+use libra_config::config::MempoolConfig;
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use std::{
     collections::HashMap,
     ops::Bound,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// TransactionStore is in-memory storage for all transactions in mempool
 pub struct TransactionStore {

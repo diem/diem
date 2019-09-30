@@ -197,7 +197,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
-    use memsocket::MemorySocket;
+    use libra_memsocket::MemorySocket;
     use std::io;
 
     #[test]

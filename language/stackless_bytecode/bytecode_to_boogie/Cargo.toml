@@ -1,19 +1,19 @@
 [package]
-name = "bytecode_to_boogie"
+name = "libra_bytecode_to_boogie"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 publish = false
 edition = "2018"
 
 [dependencies]
-bytecode_verifier = { path = "../../bytecode_verifier" }
-vm = { path = "../../vm" }
-types = { path = "../../../types" }
-ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
-stackless_bytecode_generator = { path = "../generator"}
-stdlib = { path = "../../stdlib" }
+libra_bytecode_verifier = { path = "../../bytecode_verifier" }
+libra_vm = { path = "../../vm" }
+libra_types = { path = "../../../types" }
+libra_ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+libra_stackless_bytecode_generator = { path = "../generator"}
+libra_stdlib = { path = "../../stdlib" }
 num = "0.2.0"
 
 [dev-dependencies]
 proptest = "0.9"
-types = { path = "../../../types", features = ["testing"]}
+libra_types = { path = "../../../types", features = ["testing"]}

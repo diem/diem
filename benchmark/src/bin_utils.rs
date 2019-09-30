@@ -6,11 +6,11 @@ use crate::{
     load_generator::{gen_repeated_requests, LoadGenerator},
     BenchSummary, Benchmarker,
 };
-use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
-use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use logger::{self, prelude::*};
-use metrics::metric_server::start_server;
+use libra_admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
+use libra_client::AccountData;
+use libra_logger::{self, prelude::*};
+use libra_metrics::metric_server::start_server;
 use std::{sync::Arc, time};
 
 const COMMIT_RATIO_THRESHOLD: f64 = 0.7;

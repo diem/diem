@@ -6,19 +6,19 @@ pub mod util;
 #[cfg(test)]
 mod unit_tests;
 
-use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
-use ir_to_bytecode::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::parse_program,
 };
-use std::mem;
-use stdlib::stdlib_modules;
-use types::{
+use libra_stdlib::stdlib_modules;
+use libra_types::{
     account_address::AccountAddress,
     transaction::{Script, TransactionArgument},
 };
-use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
+use libra_vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
+use std::mem;
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug, Default)]

@@ -5,19 +5,19 @@ use crate::proto::{
     secret_service::{ErrorCode, GenerateKeyRequest, PublicKeyRequest},
     secret_service_grpc::SecretServiceClient,
 };
-use config::config::{NodeConfig, NodeConfigHelpers};
-use debug_interface::node_debug_helpers::{check_node_up, create_debug_client};
 use grpcio::{ChannelBuilder, EnvBuilder};
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_debug_interface::node_debug_helpers::{check_node_up, create_debug_client};
 use std::{sync::Arc, thread};
 
 use crate::{
     proto::secret_service::KeyType, secret_service_client::ConsensusKeyManager,
     secret_service_node::SecretServiceNode,
 };
-use crypto::hash::HashValue;
-use logger::prelude::*;
+use libra_crypto::hash::HashValue;
+use libra_logger::prelude::*;
 // use crate::crypto_wrappers::GenericSignature;
-use crypto::traits::Signature;
+use libra_crypto::traits::Signature;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // These tests check interoperability of key_generation,                           //

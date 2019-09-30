@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{value_t, App, Arg};
-use generate_keypair::create_faucet_key_file;
+use libra_generate_keypair::create_faucet_key_file;
 
 const OUTPUT_ARG: &str = "output";
 

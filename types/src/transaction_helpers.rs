@@ -6,16 +6,16 @@ use crate::{
     proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
-use canonical_serialization::SimpleDeserializer;
 use chrono::Utc;
-use crypto::{
+use failure::prelude::*;
+use libra_canonical_serialization::SimpleDeserializer;
+use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, TestOnlyHash},
     test_utils::KeyPair,
     traits::SigningKey,
     HashValue,
 };
-use failure::prelude::*;
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
 /// to sign a block and to verify the signatures of other validators on a block

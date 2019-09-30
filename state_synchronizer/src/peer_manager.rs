@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, PeerId};
-use logger::prelude::*;
-use network::validator_network::StateSynchronizerSender;
+use libra_logger::prelude::*;
+use libra_network::validator_network::StateSynchronizerSender;
 use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,

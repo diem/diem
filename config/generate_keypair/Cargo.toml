@@ -1,5 +1,5 @@
 [package]
-name = "generate_keypair"
+name = "libra_generate_keypair"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -10,6 +10,6 @@ edition = "2018"
 bincode = { version = "1.1.4", default-features = false }
 clap = { version = "2.33.0", default-features = false }
 
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-crypto = { path = "../../crypto/crypto/"}
-tools = { path = "../../common/tools" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_crypto = { path = "../../crypto/crypto/"}
+libra_tools = { path = "../../common/tools" }

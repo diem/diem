@@ -16,25 +16,25 @@ serde = "1.0.96"
 protobuf = "~2.7"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
-types = { path = "../../types" }
+libra_types = { path = "../../types" }
 
 [dependencies.ed25519-dalek]
 version = "1.0.0-pre.1"
 
 [dependencies.libra_crypto]
 path = "../../crypto/crypto"
-package = "crypto"
+package = "libra_crypto"
 
-[dependencies.canonical_serialization]
+[dependencies.libra_canonical_serialization]
 path = "../../common/canonical_serialization"
 
-[dependencies.proto_conv]
+[dependencies.libra_proto_conv]
 path = "../../common/proto_conv"
 
 [dependencies.failure]
 path = "../../common/failure_ext"
-package = "failure_ext"
+package = "libra_failure_ext"
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
-tools = { path = "../../common/tools"}
+libra_types = { path = "../../types", features = ["testing"]}
+libra_tools = { path = "../../common/tools"}

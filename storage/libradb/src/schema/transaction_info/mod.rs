@@ -15,13 +15,13 @@
 use crate::schema::TRANSACTION_INFO_CF_NAME;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
-use schemadb::{
+use libra_proto_conv::{FromProtoBytes, IntoProtoBytes};
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use libra_types::transaction::{TransactionInfo, Version};
 use std::mem::size_of;
-use types::transaction::{TransactionInfo, Version};
 
 define_schema!(
     TransactionInfoSchema,

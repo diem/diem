@@ -1,5 +1,5 @@
 [package]
-name = "crash_handler"
+name = "libra_crash_handler"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -10,5 +10,5 @@ edition = "2018"
 backtrace = "0.3.37"
 toml = "0.5.3"
 
-logger = { path = "../logger" }
+libra_logger = { path = "../logger" }
 serde = { version = "1.0.96", features = ["derive"] }

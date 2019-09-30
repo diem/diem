@@ -19,15 +19,15 @@ use crate::{
 };
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
-use network::{
+use libra_network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use proto_conv::{FromProto, IntoProto};
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use protobuf::Message as Message_imported_for_functions;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {
@@ -74,7 +74,7 @@ fn build_empty_store(
 fn create_pacemaker() -> Pacemaker {
     let base_timeout = std::time::Duration::new(60, 0);
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-    let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+    let (pacemaker_timeout_sender, _) = libra_channel::new_test(1_024);
     let time_service = Arc::new(SimulatedTimeService::new());
     Pacemaker::new(
         MockStorage::<TestPayload>::start_for_testing()
@@ -106,8 +106,8 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let safety_rules = SafetyRules::new(consensus_state);
 
     // TODO: mock channels
-    let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
-    let (_consensus_tx, consensus_rx) = channel::new_test(8);
+    let (network_reqs_tx, _network_reqs_rx) = libra_channel::new_test(8);
+    let (_consensus_tx, consensus_rx) = libra_channel::new_test(8);
     let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
     let network_events = ConsensusNetworkEvents::new(consensus_rx);
     let network = ConsensusNetworkImpl::new(

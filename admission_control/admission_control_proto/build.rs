@@ -11,7 +11,7 @@ fn main() {
     let dependent_root = "../../types/src/proto";
     let mempool_dependent_root = "../../mempool/src/proto/shared";
 
-    build_helpers::build_helpers::compile_proto(
+    libra_build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![dependent_root, mempool_dependent_root],
         true,

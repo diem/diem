@@ -1,4 +1,4 @@
-use vm::file_format::{
+use libra_vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
     LocalIndex, StructDefinitionIndex, UserStringIndex,
 };

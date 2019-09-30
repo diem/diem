@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_tools::tempdir::TempPath;
 use protobuf::{compiler_plugin, descriptor::FileDescriptorSet, error::ProtobufError};
 use protoc::{DescriptorSetOutArgs, Protoc};
 use protoc_grpcio::CompileResult;
@@ -10,7 +11,6 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
-use tools::tempdir::TempPath;
 
 /// copied from protoc-grpcio
 /// it's not public there

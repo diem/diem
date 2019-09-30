@@ -3,16 +3,16 @@
 
 use crate::{errors::*, file_format::*, file_format_common::*, vm_string::VMString};
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::{
-    collections::HashSet,
-    convert::TryInto,
-    io::{Cursor, Read},
-};
-use types::{
+use libra_types::{
     account_address::ADDRESS_LENGTH,
     byte_array::ByteArray,
     identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
+};
+use std::{
+    collections::HashSet,
+    convert::TryInto,
+    io::{Cursor, Read},
 };
 
 impl CompiledScript {

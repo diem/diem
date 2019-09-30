@@ -26,15 +26,16 @@ use crate::{
     transport::*,
     ProtocolId,
 };
-use channel;
-use config::config::RoleType;
-use crypto::{
+use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use libra_channel;
+use libra_config::config::RoleType;
+use libra_crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
-use logger::prelude::*;
-use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
+use libra_logger::prelude::*;
+use libra_netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
+use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
@@ -44,7 +45,6 @@ use std::{
 use tokio::runtime::TaskExecutor;
 use tokio_retry::strategy::ExponentialBackoff;
 use tokio_timer::Interval;
-use types::{validator_signer::ValidatorSigner, PeerId};
 
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
@@ -353,10 +353,10 @@ impl NetworkBuilder {
         let mut protocol_handlers = HashMap::new();
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_PEER_MANAGER_REQUESTS);
+            libra_channel::new(self.channel_size, &counters::PENDING_PEER_MANAGER_REQUESTS);
 
         // Initialize and start DirectSend actor.
-        let (pm_ds_notifs_tx, pm_ds_notifs_rx) = channel::new(
+        let (pm_ds_notifs_tx, pm_ds_notifs_rx) = libra_channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_DIRECT_SEND_NOTIFICATIONS,
         );
@@ -366,8 +366,8 @@ impl NetworkBuilder {
             .map(|p| (p.clone(), pm_ds_notifs_tx.clone()));
         protocol_handlers.extend(direct_send_handlers);
         let (ds_reqs_tx, ds_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_DIRECT_SEND_REQUESTS);
-        let (ds_net_notifs_tx, ds_net_notifs_rx) = channel::new(
+            libra_channel::new(self.channel_size, &counters::PENDING_DIRECT_SEND_REQUESTS);
+        let (ds_net_notifs_tx, ds_net_notifs_rx) = libra_channel::new(
             self.channel_size,
             &counters::PENDING_DIRECT_SEND_NOTIFICATIONS,
         );
@@ -383,7 +383,7 @@ impl NetworkBuilder {
         debug!("Started direct send actor");
 
         // Initialize and start RPC actor.
-        let (pm_rpc_notifs_tx, pm_rpc_notifs_rx) = channel::new(
+        let (pm_rpc_notifs_tx, pm_rpc_notifs_rx) = libra_channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_RPC_NOTIFICATIONS,
         );
@@ -393,9 +393,9 @@ impl NetworkBuilder {
             .map(|p| (p.clone(), pm_rpc_notifs_tx.clone()));
         protocol_handlers.extend(rpc_handlers);
         let (rpc_net_notifs_tx, rpc_net_notifs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
+            libra_channel::new(self.channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
         let (rpc_reqs_tx, rpc_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_RPC_REQUESTS);
+            libra_channel::new(self.channel_size, &counters::PENDING_RPC_REQUESTS);
         let rpc = Rpc::new(
             self.executor.clone(),
             rpc_reqs_rx,
@@ -411,7 +411,7 @@ impl NetworkBuilder {
         debug!("Started RPC actor");
 
         // Initialize and start HealthChecker.
-        let (pm_ping_notifs_tx, pm_ping_notifs_rx) = channel::new(
+        let (pm_ping_notifs_tx, pm_ping_notifs_rx) = libra_channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_PING_NOTIFICATIONS,
         );
@@ -440,12 +440,12 @@ impl NetworkBuilder {
         // permissioned.
         if self.is_permissioned {
             // Initialize and start connectivity manager.
-            let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
+            let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = libra_channel::new(
                 self.channel_size,
                 &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
             );
             net_conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx.clone());
-            let (pm_conn_mgr_notifs_tx, pm_conn_mgr_notifs_rx) = channel::new(
+            let (pm_conn_mgr_notifs_tx, pm_conn_mgr_notifs_rx) = libra_channel::new(
                 self.channel_size,
                 &counters::PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS,
             );
@@ -467,7 +467,7 @@ impl NetworkBuilder {
             debug!("Started connection manager");
 
             // Initialize and start Discovery actor.
-            let (pm_discovery_notifs_tx, pm_discovery_notifs_rx) = channel::new(
+            let (pm_discovery_notifs_tx, pm_discovery_notifs_rx) = libra_channel::new(
                 self.channel_size,
                 &counters::PENDING_PEER_MANAGER_DISCOVERY_NOTIFICATIONS,
             );
@@ -503,7 +503,7 @@ impl NetworkBuilder {
             debug!("Started discovery protocol actor");
         }
 
-        let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
+        let (pm_net_notifs_tx, pm_net_notifs_rx) = libra_channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
         );
@@ -524,7 +524,7 @@ impl NetworkBuilder {
 
         // Setup communication channels.
         let (network_reqs_tx, network_reqs_rx) =
-            channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
+            libra_channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
         let validator_network = NetworkProvider::new(
             pm_net_notifs_rx,
             rpc_reqs_tx,

@@ -1,9 +1,9 @@
 use crate::control_flow_graph::{BlockId, ControlFlowGraph};
-use std::collections::HashMap;
-use vm::{
+use libra_vm::{
     file_format::{Bytecode, CompiledModule},
     views::FunctionDefinitionView,
 };
+use std::collections::HashMap;
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
 /// trait with widening and a partial order.

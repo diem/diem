@@ -5,7 +5,7 @@ use futures::{
     executor::block_on,
     io::{AsyncReadExt, AsyncWriteExt},
 };
-use memsocket::MemorySocket;
+use libra_memsocket::MemorySocket;
 use std::io::Result;
 
 #[test]

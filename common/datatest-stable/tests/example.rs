@@ -1,4 +1,4 @@
-use datatest_stable::Result;
+use libra_datatest_stable::Result;
 use std::{fs::File, io::Read, path::Path};
 
 fn test_artifact(path: &Path) -> Result<()> {
@@ -9,4 +9,4 @@ fn test_artifact(path: &Path) -> Result<()> {
     Ok(())
 }
 
-datatest_stable::harness!(test_artifact, "tests/files", r"^.*/*");
+libra_datatest_stable::harness!(test_artifact, "tests/files", r"^.*/*");

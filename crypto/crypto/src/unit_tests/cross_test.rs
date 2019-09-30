@@ -3,7 +3,7 @@
 
 // This is necessary for the derive macros which rely on being used in a
 // context where the crypto crate is external
-use crate as crypto;
+use crate as libra_crypto;
 use crate::{
     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
@@ -13,7 +13,7 @@ use crate::{
 
 use crate::hash::HashValue;
 
-use crypto_derive::{
+use libra_crypto_derive::{
     PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
 };
 use proptest::prelude::*;

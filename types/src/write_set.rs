@@ -5,10 +5,10 @@
 //! path it updates. For each access path, the VM can either give its new value or delete it.
 
 use crate::access_path::AccessPath;
-use canonical_serialization::{
+use failure::prelude::*;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use failure::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]

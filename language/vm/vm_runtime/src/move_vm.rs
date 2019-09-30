@@ -5,13 +5,13 @@ use crate::{
     counters::*, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime, VMExecutor,
     VMVerifier,
 };
-use state_view::StateView;
-use std::sync::Arc;
-use types::{
+use libra_state_view::StateView;
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
-use vm_cache_map::Arena;
+use libra_vm_cache_map::Arena;
+use std::sync::Arc;
 
 rental! {
     mod move_vm_definition {
@@ -25,7 +25,7 @@ rental! {
     }
 }
 
-use config::config::VMConfig;
+use libra_config::config::VMConfig;
 pub use move_vm_definition::MoveVMImpl;
 
 /// A wrapper to make VMRuntime standalone and thread safe.

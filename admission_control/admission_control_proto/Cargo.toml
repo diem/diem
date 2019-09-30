@@ -1,5 +1,5 @@
 [package]
-name = "admission_control_proto"
+name = "libra_admission_control_proto"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -11,14 +11,14 @@ futures = "0.1.28"
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 protobuf = "~2.7"
 
-failure = { package = "failure_ext", path = "../../common/failure_ext" }
-logger = { path = "../../common/logger" }
-mempool = { path = "../../mempool" }
-proto_conv = { path = "../../common/proto_conv" }
-types = { path = "../../types" }
+failure = { package = "libra_failure_ext", path = "../../common/failure_ext" }
+libra_logger = { path = "../../common/logger" }
+libra_mempool = { path = "../../mempool" }
+libra_proto_conv = { path = "../../common/proto_conv" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra_types = { path = "../../types", features = ["testing"]}
 
 [build-dependencies]
-build_helpers = { path = "../../common/build_helpers" }
+libra_build_helpers = { path = "../../common/build_helpers" }

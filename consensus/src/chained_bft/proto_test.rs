@@ -12,13 +12,13 @@ use crate::chained_bft::{
     },
     test_utils::placeholder_ledger_info,
 };
-use crypto::HashValue;
-use executor::ExecutedState;
-use proto_conv::{
+use libra_crypto::HashValue;
+use libra_executor::ExecutedState;
+use libra_proto_conv::{
     test_helper::assert_protobuf_encode_decode, FromProto, FromProtoBytes, IntoProto,
     IntoProtoBytes,
 };
-use types::validator_signer::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_proto_convert_block() {

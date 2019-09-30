@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::utils;
-use config::config::{NodeConfig, RoleType};
-use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
-use crypto::{ed25519::*, test_utils::KeyPair};
-use debug_interface::NodeDebugClient;
 use failure::prelude::*;
-use logger::prelude::*;
+use libra_config::config::{NodeConfig, RoleType};
+use libra_config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_debug_interface::NodeDebugClient;
+use libra_logger::prelude::*;
+use libra_tools::tempdir::TempPath;
 use std::{
     collections::HashMap,
     env,
@@ -17,7 +18,6 @@ use std::{
     process::{Child, Command},
     str::FromStr,
 };
-use tools::tempdir::TempPath;
 
 const LIBRA_NODE_BIN: &str = "libra_node";
 

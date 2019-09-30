@@ -9,13 +9,11 @@
 #![allow(clippy::identity_op)]
 
 use bytes::Bytes;
-use config::config::RoleType;
 use core::str::FromStr;
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
     compat::Future01CompatExt,
@@ -24,7 +22,9 @@ use futures::{
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
-use network::{
+use libra_config::config::RoleType;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
+use libra_network::{
     proto::{Block, ConsensusMsg, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
@@ -33,12 +33,12 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use protobuf::Message;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
-use types::PeerId;
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
@@ -358,7 +358,7 @@ fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
 }
 
 fn network_crate_benchmark(c: &mut Criterion) {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     // Parameterize benchmarks over the message length.
     let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];

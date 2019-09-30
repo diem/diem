@@ -6,7 +6,7 @@ use futures::{
     io::{AsyncReadExt, AsyncWriteExt},
     stream::StreamExt,
 };
-use memsocket::{MemoryListener, MemorySocket};
+use libra_memsocket::{MemoryListener, MemorySocket};
 use std::io::Result;
 
 #[test]

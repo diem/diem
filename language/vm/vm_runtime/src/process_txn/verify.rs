@@ -7,9 +7,9 @@ use crate::{
     process_txn::{execute::ExecutedTransaction, validate::ValidatedTransaction},
     txn_executor::TransactionExecutor,
 };
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use logger::prelude::*;
-use types::{
+use libra_bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_logger::prelude::*;
+use libra_types::{
     account_address::AccountAddress,
     transaction::{
         Module, Program, Script, SignatureCheckedTransaction, TransactionArgument,
@@ -17,7 +17,7 @@ use types::{
     },
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     access::ModuleAccess,
     errors::{verification_error, VMResult},
     file_format::{CompiledModule, CompiledScript, FunctionSignature, SignatureToken},

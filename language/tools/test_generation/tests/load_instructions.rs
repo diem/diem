@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-extern crate test_generation;
-use test_generation::abstract_state::{AbstractState, AbstractValue};
-use vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken, UserStringIndex};
+extern crate libra_test_generation;
+use libra_test_generation::abstract_state::{AbstractState, AbstractValue};
+use libra_vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken, UserStringIndex};
 
 mod common;
 

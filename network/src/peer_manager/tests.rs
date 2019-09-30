@@ -9,8 +9,6 @@ use crate::{
     protocols::identity::{exchange_identity, Identity},
     ProtocolId,
 };
-use channel;
-use config::config::RoleType;
 use futures::{
     channel::oneshot,
     compat::Compat01As03,
@@ -19,8 +17,10 @@ use futures::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     stream::StreamExt,
 };
-use memsocket::MemorySocket;
-use netcore::{
+use libra_channel;
+use libra_config::config::RoleType;
+use libra_memsocket::MemorySocket;
+use libra_netcore::{
     multiplexing::{
         yamux::{Mode, StreamHandle, Yamux},
         StreamMultiplexer,
@@ -28,10 +28,10 @@ use netcore::{
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{runtime::TaskExecutor, timer::Timeout};
-use types::PeerId;
 
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 
@@ -78,13 +78,13 @@ fn build_test_peer(
     Peer<Yamux<MemorySocket>>,
     PeerHandle<StreamHandle<MemorySocket>>,
     Yamux<MemorySocket>,
-    channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
+    libra_channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
 ) {
     let (a, b) = build_test_connection();
     let identity = build_test_identity(PeerId::random());
     let peer_id = identity.peer_id();
-    let (internal_event_tx, internal_event_rx) = channel::new_test(1);
-    let (peer_req_tx, peer_req_rx) = channel::new_test(0);
+    let (internal_event_tx, internal_event_rx) = libra_channel::new_test(1);
+    let (peer_req_tx, peer_req_rx) = libra_channel::new_test(0);
 
     let peer = Peer::new(
         identity,
@@ -103,12 +103,12 @@ fn build_test_connected_peers() -> (
     (
         Peer<Yamux<MemorySocket>>,
         PeerHandle<StreamHandle<MemorySocket>>,
-        channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
+        libra_channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
     ),
     (
         Peer<Yamux<MemorySocket>>,
         PeerHandle<StreamHandle<MemorySocket>>,
-        channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
+        libra_channel::Receiver<InternalEvent<Yamux<MemorySocket>>>,
     ),
 ) {
     let (peer_a, peer_handle_a, connection_a, internal_event_rx_a) =
@@ -293,12 +293,12 @@ fn build_test_peer_manager(
         BoxedTransport<(Identity, Yamux<MemorySocket>), impl std::error::Error>,
         Yamux<MemorySocket>,
     >,
-    channel::Sender<PeerManagerRequest<impl AsyncRead + AsyncWrite>>,
-    channel::Receiver<PeerManagerNotification<impl AsyncRead + AsyncWrite>>,
+    libra_channel::Sender<PeerManagerRequest<impl AsyncRead + AsyncWrite>>,
+    libra_channel::Receiver<PeerManagerNotification<impl AsyncRead + AsyncWrite>>,
 ) {
     let protocol = ProtocolId::from_static(HELLO_PROTOCOL);
-    let (peer_manager_request_tx, peer_manager_request_rx) = channel::new_test(0);
-    let (hello_tx, hello_rx) = channel::new_test(0);
+    let (peer_manager_request_tx, peer_manager_request_rx) = libra_channel::new_test(0);
+    let (hello_tx, hello_rx) = libra_channel::new_test(0);
     let mut protocol_handlers = HashMap::new();
     protocol_handlers.insert(protocol.clone(), hello_tx);
 
@@ -323,7 +323,7 @@ async fn open_hello_substream<T: StreamMultiplexer>(connection: &T) -> io::Resul
 
 async fn assert_new_substream_event<TMuxer: StreamMultiplexer>(
     peer_id: PeerId,
-    internal_event_rx: &mut channel::Receiver<InternalEvent<TMuxer>>,
+    internal_event_rx: &mut libra_channel::Receiver<InternalEvent<TMuxer>>,
 ) {
     match internal_event_rx.next().await {
         Some(InternalEvent::NewSubstream(actual_peer_id, _)) => {
@@ -338,7 +338,7 @@ async fn assert_new_substream_event<TMuxer: StreamMultiplexer>(
 async fn assert_peer_disconnected_event<TMuxer: StreamMultiplexer>(
     peer_id: PeerId,
     reason: DisconnectReason,
-    internal_event_rx: &mut channel::Receiver<InternalEvent<TMuxer>>,
+    internal_event_rx: &mut libra_channel::Receiver<InternalEvent<TMuxer>>,
 ) {
     match internal_event_rx.next().await {
         Some(InternalEvent::PeerDisconnected(actual_peer_id, _origin, actual_reason)) => {
@@ -362,7 +362,7 @@ async fn check_correct_connection_is_live<TMuxer: StreamMultiplexer>(
     dropped_connection: TMuxer,
     expected_peer_id: PeerId,
     requested_shutdown: bool,
-    mut internal_event_rx: &mut channel::Receiver<InternalEvent<TMuxer>>,
+    mut internal_event_rx: &mut libra_channel::Receiver<InternalEvent<TMuxer>>,
 ) {
     // If PeerManager needed to kill the existing connection we'll see a Requested shutdown
     // event

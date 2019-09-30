@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use proptest::prelude::*;
 use std::{panic, rc::Rc};
-use types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
     SparseMerkleInternalNode::new(left, right).hash()

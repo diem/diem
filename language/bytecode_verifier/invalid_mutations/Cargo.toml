@@ -1,5 +1,5 @@
 [package]
-name = "invalid_mutations"
+name = "libra_invalid_mutations"
 version = "0.1.0"
 edition = "2018"
 authors = ["Libra Association <opensource@libra.org>"]
@@ -8,9 +8,9 @@ publish = false
 
 [dependencies]
 proptest = "0.9"
-proptest_helpers = { path = "../../../common/proptest_helpers" }
-vm = { path = "../../vm" }
-types = { path = "../../../types" }
+libra_proptest_helpers = { path = "../../../common/proptest_helpers" }
+libra_vm = { path = "../../vm" }
+libra_types = { path = "../../../types" }
 
 [dev-dependencies]
-vm = { path = "../../vm", features = ["testing"] }
+libra_vm = { path = "../../vm", features = ["testing"] }

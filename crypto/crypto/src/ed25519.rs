@@ -9,8 +9,8 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use crypto::{
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::{
 //!     ed25519::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -31,9 +31,9 @@
 
 use crate::{traits::*, HashValue};
 use core::convert::TryFrom;
-use crypto_derive::{SilentDebug, SilentDisplay};
 use ed25519_dalek;
 use failure::prelude::*;
+use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, export, ser};
 use std::fmt;
 
@@ -403,7 +403,7 @@ pub mod compat {
     ///
     /// Warning: if you pass in None, this will not return distinct
     /// results every time! Should you want to write non-deterministic
-    /// tests, look at config::config_builder::util::get_test_config
+    /// tests, look at libra_config::config_builder::util::get_test_config
     pub fn generate_keypair<'a, T>(opt_rng: T) -> (Ed25519PrivateKey, Ed25519PublicKey)
     where
         T: Into<Option<&'a mut StdRng>> + Sized,

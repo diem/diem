@@ -1,5 +1,5 @@
 [package]
-name = "config_builder"
+name = "libra_config_builder"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -12,14 +12,14 @@ hex = { version = "0.3.2", default-features = false }
 parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
 
-config = { path = ".." }
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-generate_keypair = { path = "../generate_keypair" }
-logger = { path = "../../common/logger" }
-proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
-types = { path = "../../types" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+libra_config = { path = ".." }
+libra_crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_generate_keypair = { path = "../generate_keypair" }
+libra_logger = { path = "../../common/logger" }
+libra_proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
+libra_types = { path = "../../types" }
+libra_vm_genesis = { path = "../../language/vm/vm_genesis" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra_types = { path = "../../types", features = ["testing"]}

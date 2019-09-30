@@ -57,7 +57,7 @@ pub fn derive_fromproto_impl(tokens: TokenStream) -> TokenStream {
     let proto_type = proto_attr.path;
     let body = gen_from_proto_body(&input.data);
     let expanded = quote! {
-        impl ::proto_conv::FromProto for #name {
+        impl ::libra_proto_conv::FromProto for #name {
             type ProtoType = #proto_type;
 
             fn from_proto(mut object: #proto_type) -> ::failure::Result<Self> {
@@ -81,7 +81,7 @@ pub fn derive_intoproto_impl(tokens: TokenStream) -> TokenStream {
     let proto_type = proto_attr.path;
     let body = gen_into_proto_body(&input.data);
     let expanded = quote! {
-        impl ::proto_conv::IntoProto for #name {
+        impl ::libra_proto_conv::IntoProto for #name {
             type ProtoType = #proto_type;
 
             fn into_proto(self) -> Self::ProtoType {
@@ -150,7 +150,7 @@ fn gen_from_proto_body(data: &syn::Data) -> proc_macro2::TokenStream {
                         proc_macro2::Span::call_site(),
                     );
                     quote! {
-                        #name: <#ty as ::proto_conv::FromProto>::from_proto(object.#retrieve_value())?,
+                        #name: <#ty as ::libra_proto_conv::FromProto>::from_proto(object.#retrieve_value())?,
                     }
                 });
                 quote! {
@@ -209,7 +209,7 @@ fn gen_into_proto_body(data: &syn::Data) -> proc_macro2::TokenStream {
                         proc_macro2::Span::call_site(),
                     );
                     quote! {
-                        out.#set_value(<#ty as ::proto_conv::IntoProto>::into_proto(self.#name));
+                        out.#set_value(<#ty as ::libra_proto_conv::IntoProto>::into_proto(self.#name));
                     }
                 });
                 quote! {

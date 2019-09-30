@@ -1,5 +1,5 @@
 [package]
-name = "config"
+name = "libra_config"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -15,17 +15,17 @@ rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
 toml = { version = "0.5.3", default-features = false }
 
-crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
-logger = { path = "../common/logger" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-tools = { path = "../common/tools" }
-types = { path = "../types" }
+libra_crypto = { path = "../crypto/crypto" }
+libra_proto_conv = { path = "../common/proto_conv" }
+libra_logger = { path = "../common/logger" }
+failure = { path = "../common/failure_ext", package = "libra_failure_ext" }
+libra_tools = { path = "../common/tools" }
+libra_types = { path = "../types" }
 
 [dev-dependencies]
-types = { path = "../types", features = ["testing"] }
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_types = { path = "../types", features = ["testing"] }
+libra_crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "types/testing"]
+testing = ["libra_crypto/testing", "libra_types/testing"]

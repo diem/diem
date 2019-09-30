@@ -1,5 +1,5 @@
 [package]
-name = "socket_bench_server"
+name = "libra_socket_bench_server"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ parity-multiaddr = "0.5.0"
 tokio = { version = "0.1.22", default-features = false }
 unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
-logger = { path = "../../common/logger" }
-memsocket = { path = "../memsocket" }
-netcore = { path = "../netcore" }
-noise = { path = "../noise" }
+libra_logger = { path = "../../common/logger" }
+libra_memsocket = { path = "../memsocket" }
+libra_netcore = { path = "../netcore" }
+libra_noise = { path = "../noise" }

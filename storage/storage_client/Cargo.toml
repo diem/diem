@@ -1,5 +1,5 @@
 [package]
-name = "storage_client"
+name = "libra_storage_client"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -12,14 +12,14 @@ futures_01 = { version = "0.1.28", package = "futures" }
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 protobuf = "~2.7"
 rand = "0.6.5"
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-metrics = { path = "../../common/metrics" }
-proto_conv = { path = "../../common/proto_conv" }
-scratchpad = { path = "../scratchpad" }
-state_view = { path = "../state_view" }
-storage_proto = { path = "../storage_proto" }
-types = { path = "../../types" }
+libra_crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
+libra_metrics = { path = "../../common/metrics" }
+libra_proto_conv = { path = "../../common/proto_conv" }
+libra_scratchpad = { path = "../scratchpad" }
+libra_state_view = { path = "../state_view" }
+libra_storage_proto = { path = "../storage_proto" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"] }
+libra_types = { path = "../../types", features = ["testing"] }

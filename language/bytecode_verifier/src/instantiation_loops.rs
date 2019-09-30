@@ -12,6 +12,14 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
+    access::ModuleAccess,
+    file_format::{
+        Bytecode, CompiledModule, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
+        LocalsSignatureIndex, SignatureToken, TypeParameterIndex,
+    },
+};
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},
@@ -19,14 +27,6 @@ use petgraph::{
     Graph,
 };
 use std::collections::{hash_map, HashMap, HashSet};
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
-    access::ModuleAccess,
-    file_format::{
-        Bytecode, CompiledModule, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
-        LocalsSignatureIndex, SignatureToken, TypeParameterIndex,
-    },
-};
 
 /// Data attached to each node.
 /// Each node corresponds to a type formal of a generic function in the module.

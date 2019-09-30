@@ -8,10 +8,10 @@
 //! mixing with other sorts of strings. For example, it is not possible to use one as an
 //! identifier for name resolution.
 
-use canonical_serialization::{
+use failure::prelude::*;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

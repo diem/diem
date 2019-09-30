@@ -11,18 +11,18 @@ use crate::{
     data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use config::config::VMPublishingOption;
-use logger::prelude::*;
-use rayon::prelude::*;
-use state_view::StateView;
-use types::{
+use libra_config::config::VMPublishingOption;
+use libra_logger::prelude::*;
+use libra_state_view::StateView;
+use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use vm_cache_map::Arena;
+use libra_vm_cache_map::Arena;
+use rayon::prelude::*;
 
 pub fn execute_block<'alloc>(
     txn_block: Vec<SignedTransaction>,

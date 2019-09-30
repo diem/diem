@@ -12,14 +12,14 @@
 
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_ACCUMULATOR_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
-use crypto::HashValue;
 use failure::prelude::*;
-use schemadb::{
+use libra_crypto::HashValue;
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use libra_types::proof::position::Position;
 use std::mem::size_of;
-use types::proof::position::Position;
 
 define_schema!(
     TransactionAccumulatorSchema,

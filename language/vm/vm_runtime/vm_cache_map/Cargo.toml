@@ -1,5 +1,5 @@
 [package]
-name = "vm_cache_map"
+name = "libra_vm_cache_map"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"

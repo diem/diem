@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{common::Round, consensus_types::vote_data::VoteData};
-use crypto::{
+use failure::{Result, ResultExt};
+use libra_crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::{Result, ResultExt};
-use network::proto::QuorumCert as ProtoQuorumCert;
-use proto_conv::{FromProto, IntoProto};
+use libra_network::proto::QuorumCert as ProtoQuorumCert;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
-};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]

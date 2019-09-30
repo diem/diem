@@ -1,9 +1,9 @@
 use crate::{cluster::Cluster, instance::Instance};
-use admission_control_proto::proto::{
+use grpcio::{ChannelBuilder, EnvBuilder};
+use libra_admission_control_proto::proto::{
     admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
 };
-use grpcio::{ChannelBuilder, EnvBuilder};
-use proto_conv::IntoProto;
+use libra_proto_conv::IntoProto;
 use std::{
     env, slice,
     str::FromStr,
@@ -13,27 +13,20 @@ use std::{
 };
 
 use crate::{prometheus::Prometheus, util::unix_timestamp_now};
-use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-use crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    traits::Uniform,
-};
 use failure::{
     self,
     prelude::{bail, format_err},
 };
-use generate_keypair::load_key_from_file;
 use itertools::zip;
-use proto_conv::FromProto;
-use rand::{
-    prelude::ThreadRng,
-    rngs::{EntropyRng, StdRng},
-    seq::SliceRandom,
-    Rng, SeedableRng,
+use libra_admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    traits::Uniform,
 };
-use slog_scope::{debug, info};
-use types::{
+use libra_generate_keypair::load_key_from_file;
+use libra_proto_conv::FromProto;
+use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     get_with_proof::ResponseItem,
@@ -44,6 +37,13 @@ use types::{
     transaction::{Script, TransactionPayload},
     transaction_helpers::create_signed_txn,
 };
+use rand::{
+    prelude::ThreadRng,
+    rngs::{EntropyRng, StdRng},
+    seq::SliceRandom,
+    Rng, SeedableRng,
+};
+use slog_scope::{debug, info};
 
 const ACCOUNT_PER_CLIENT_DEFAULT: usize = 10;
 const THREADS_PER_CLIENT_DEFAULT: usize = 1;
@@ -316,7 +316,7 @@ fn gen_transfer_txn_request(
     receiver: &AccountAddress,
     num_coins: u64,
 ) -> SubmitTransactionRequest {
-    let script = transaction_builder::encode_transfer_script(&receiver, num_coins);
+    let script = libra_transaction_builder::encode_transfer_script(&receiver, num_coins);
     gen_submit_transaction_request(script, sender)
 }
 
@@ -341,7 +341,7 @@ fn gen_mint_txn_request(
     faucet_account: &mut AccountData,
     receiver: &AccountAddress,
 ) -> SubmitTransactionRequest {
-    let program = transaction_builder::encode_mint_script(receiver, 1_000_000);
+    let program = libra_transaction_builder::encode_mint_script(receiver, 1_000_000);
     gen_submit_transaction_request(program, faucet_account)
 }
 

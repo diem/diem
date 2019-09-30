@@ -10,21 +10,21 @@ use crate::{
     utils::MessageExt,
     ProtocolId,
 };
-use config::config::RoleType;
 use futures::{
     compat::{Compat, Sink01CompatExt},
     sink::SinkExt,
     stream::StreamExt,
 };
-use netcore::{
+use libra_config::config::RoleType;
+use libra_netcore::{
     multiplexing::StreamMultiplexer,
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::ConnectionOrigin,
 };
+use libra_types::PeerId;
 use prost::Message;
 use std::{convert::TryInto, io};
 use tokio::codec::Framed;
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
@@ -155,14 +155,14 @@ mod tests {
         protocols::identity::{exchange_identity, Identity},
         ProtocolId,
     };
-    use config::config::RoleType;
     use futures::{executor::block_on, future::join};
-    use memsocket::MemorySocket;
-    use netcore::{
+    use libra_config::config::RoleType;
+    use libra_memsocket::MemorySocket;
+    use libra_netcore::{
         multiplexing::yamux::{Mode, Yamux},
         transport::ConnectionOrigin,
     };
-    use types::PeerId;
+    use libra_types::PeerId;
 
     fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
         let (dialer, listener) = MemorySocket::new_pair();

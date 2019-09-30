@@ -5,16 +5,17 @@ use crate::{
     common::NetworkPublicKeys,
     protocols::identity::{exchange_identity, Identity},
 };
-use crypto::{
+use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };
-use logger::prelude::*;
-use netcore::{
+use libra_logger::prelude::*;
+use libra_netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},
     transport::{boxed, memory, tcp, TransportExt},
 };
-use noise::NoiseConfig;
+use libra_noise::NoiseConfig;
+use libra_types::PeerId;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -22,7 +23,6 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use types::PeerId;
 
 /// A timeout for the connection to open and complete all of the upgrade steps.
 const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);

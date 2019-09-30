@@ -6,7 +6,7 @@
 //! `capacity`.
 
 use futures::future::{Future, FutureExt, TryFutureExt};
-use futures_semaphore::Semaphore;
+use libra_futures_semaphore::Semaphore;
 use tokio::runtime::TaskExecutor;
 
 #[derive(Clone, Debug)]

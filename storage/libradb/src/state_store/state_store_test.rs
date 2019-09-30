@@ -3,9 +3,9 @@
 
 use super::*;
 use crate::{pruner, LibraDB};
-use crypto::hash::CryptoHash;
-use tools::tempdir::TempPath;
-use types::{
+use libra_crypto::hash::CryptoHash;
+use libra_tools::tempdir::TempPath;
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
     proof::verify_sparse_merkle_element,

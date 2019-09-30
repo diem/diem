@@ -12,10 +12,11 @@ use crate::{
     counters,
     util::time_service::duration_since_epoch,
 };
-use canonical_serialization::CanonicalSerialize;
-use crypto::{hash::CryptoHash, HashValue};
-use executor::StateComputeResult;
-use logger::prelude::*;
+use libra_canonical_serialization::CanonicalSerialize;
+use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_executor::StateComputeResult;
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
@@ -24,7 +25,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
 /// that adds `children` field to know the parent-child relationship between blocks.

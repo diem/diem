@@ -9,7 +9,7 @@ use crate::{
     state_replication::TxnManager,
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},

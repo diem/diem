@@ -1,5 +1,5 @@
 [package]
-name = "scratchpad"
+name = "libra_scratchpad"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -9,10 +9,10 @@ edition = "2018"
 [dependencies]
 itertools = "0.8.0"
 
-crypto = { path = "../../crypto/crypto" }
-types = { path = "../../types" }
+libra_crypto = { path = "../../crypto/crypto" }
+libra_types = { path = "../../types" }
 
 [dev-dependencies]
 proptest = "0.9.4"
 
-types = { path = "../../types", features = ["testing"] }
+libra_types = { path = "../../types", features = ["testing"] }

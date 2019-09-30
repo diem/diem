@@ -8,7 +8,7 @@ use crate::proof::{
     definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccumulatorConsistencyProof, AccumulatorProof,
     SparseMerkleProof,
 };
-use crypto::{
+use libra_crypto::{
     hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };

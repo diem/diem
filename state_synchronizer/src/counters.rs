@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{DurationHistogram, OpMetrics};
+use libra_metrics::{DurationHistogram, OpMetrics};
 use prometheus::{IntCounter, IntGauge};
 
 lazy_static::lazy_static! {

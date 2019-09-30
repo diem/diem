@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use crypto::*;
 use failure::prelude::*;
-use logger::prelude::*;
+use libra_crypto::*;
+use libra_logger::prelude::*;
 use std::collections::HashMap;
 
 /// Errors possible during signature verification.
@@ -238,7 +238,7 @@ mod tests {
         validator_signer::ValidatorSigner,
         validator_verifier::{ValidatorVerifier, VerifyError},
     };
-    use crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
+    use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
     use std::collections::HashMap;
 
     #[test]

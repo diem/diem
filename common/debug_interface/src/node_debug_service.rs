@@ -14,8 +14,8 @@ use crate::{
     },
 };
 use futures::Future;
-use logger::prelude::*;
-use metrics::counters::COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY;
+use libra_logger::prelude::*;
+use libra_metrics::counters::COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY;
 
 #[derive(Clone, Default)]
 pub struct NodeDebugService {}
@@ -35,7 +35,7 @@ impl NodeDebugInterface for NodeDebugService {
     ) {
         info!("[GRPC] get_node_details");
         let mut response = GetNodeDetailsResponse::new();
-        response.stats = metrics::get_all_metrics();
+        response.stats = libra_metrics::get_all_metrics();
         ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
     }
 

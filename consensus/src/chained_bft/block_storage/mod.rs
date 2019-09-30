@@ -8,14 +8,14 @@ use crate::chained_bft::{
         quorum_cert::QuorumCert,
     },
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use std::sync::Arc;
 
 mod block_store;
 mod block_tree;
 
 pub use block_store::{BlockStore, NeedFetchResult};
-use executor::StateComputeResult;
+use libra_executor::StateComputeResult;
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.

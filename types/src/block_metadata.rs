@@ -1,5 +1,5 @@
 use crate::account_address::AccountAddress;
-use crypto::{ed25519::Ed25519Signature, HashValue};
+use libra_crypto::{ed25519::Ed25519Signature, HashValue};
 use std::collections::BTreeMap;
 
 /// Struct that will be persisted on chain to store the information of the current block.

@@ -6,7 +6,7 @@ pub(crate) mod quorum_certificate;
 pub(crate) mod single_entry;
 
 use failure::prelude::*;
-use schemadb::ColumnFamilyName;
+use libra_schemadb::ColumnFamilyName;
 
 pub(super) const BLOCK_CF_NAME: ColumnFamilyName = "block";
 pub(super) const QC_CF_NAME: ColumnFamilyName = "quorum_certificate";

@@ -1,11 +1,11 @@
-use benchmark::{
+use libra_benchmark::{
     bin_utils::{
         create_benchmarker_from_opt, linear_search_max_throughput, try_start_metrics_server,
     },
     cli_opt::SearchOpt,
     load_generator::PairwiseTransferTxnGenerator,
 };
-use logger::{self, prelude::*};
+use libra_logger::{self, prelude::*};
 
 /// During linear search, both submission rate and number of TXNs are increased.
 /// With 32 new accounts and 2 rounds, we add extra 2K TXNs as rate increases.
@@ -13,7 +13,7 @@ const NUM_NEW_ACCOUNTS: u64 = 32;
 const NUM_REPEATED_ROUNDS: u64 = 2;
 
 fn main() {
-    let _g = logger::set_default_global_logger(false, Some(256));
+    let _g = libra_logger::set_default_global_logger(false, Some(256));
     let args = SearchOpt::new_from_args();
     info!("Parsed and adjusted arguments: {:#?}", args);
     try_start_metrics_server(&args.bench_opt);

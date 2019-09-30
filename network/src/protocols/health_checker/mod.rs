@@ -25,7 +25,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{
     compat::{Future01CompatExt, Sink01CompatExt},
     future::{FutureExt, TryFutureExt},
@@ -33,11 +32,11 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
+use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::{codec::Framed, prelude::FutureExt as _};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]
@@ -54,7 +53,7 @@ pub struct HealthChecker<TTicker, TSubstream> {
     /// Channel to send requests to PeerManager.
     peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
     /// Channel to receive notifications from PeerManager about new/lost connections.
-    peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+    peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Map from connected peer to last round of successful ping, and number of failures since
     /// then.
     connected: HashMap<PeerId, (u64, u64)>,
@@ -79,7 +78,7 @@ where
     pub fn new(
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
-        peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
+        peer_mgr_notifs_rx: libra_channel::Receiver<PeerManagerNotification<TSubstream>>,
         ping_timeout: Duration,
         ping_failures_tolerated: u64,
     ) -> Self {

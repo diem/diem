@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use proptest::{collection::vec, prelude::*};
 
 #[test]

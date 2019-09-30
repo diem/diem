@@ -1,10 +1,10 @@
-use bytecode_verifier::UnusedEntryChecker;
-use proptest::prelude::*;
-use types::{identifier::Identifier, vm_error::StatusCode};
-use vm::file_format::{
+use libra_bytecode_verifier::UnusedEntryChecker;
+use libra_types::{identifier::Identifier, vm_error::StatusCode};
+use libra_vm::file_format::{
     CompiledModule, FieldDefinition, IdentifierIndex, LocalsSignature, ModuleHandleIndex,
     SignatureToken, StructHandle, StructHandleIndex, TypeSignature, TypeSignatureIndex,
 };
+use proptest::prelude::*;
 
 proptest! {
     #[test]

@@ -11,9 +11,9 @@ use crate::{
     },
     proto::shared::mempool_status::MempoolAddTransactionStatusCode,
 };
-use config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfigHelpers;
+use libra_types::transaction::SignedTransaction;
 use std::{collections::HashSet, time::Duration};
-use types::transaction::SignedTransaction;
 
 #[test]
 fn test_transaction_ordering() {

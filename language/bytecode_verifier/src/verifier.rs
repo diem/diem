@@ -8,12 +8,11 @@ use crate::{
     signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
 use failure::Error;
-use std::{collections::BTreeMap, fmt};
-use types::{
+use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error},
     file_format::{CompiledModule, CompiledProgram, CompiledScript},
@@ -21,10 +20,11 @@ use vm::{
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
-use vm_runtime_types::{
+use libra_vm_runtime_types::{
     native_functions::dispatch::dispatch_native_function,
     native_structs::dispatch::dispatch_native_struct,
 };
+use std::{collections::BTreeMap, fmt};
 
 /// A program that has been verified for internal consistency.
 ///

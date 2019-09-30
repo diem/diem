@@ -12,21 +12,21 @@ use crate::{
         transaction_info::TransactionInfoSchema,
     },
 };
-use accumulator::{HashReader, MerkleAccumulator};
 use arc_swap::ArcSwap;
-use crypto::{
+use failure::prelude::*;
+use itertools::Itertools;
+use libra_accumulator::{HashReader, MerkleAccumulator};
+use libra_crypto::{
     hash::{CryptoHash, TransactionAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
-use itertools::Itertools;
-use schemadb::{ReadOptions, DB};
-use std::{ops::Deref, sync::Arc};
-use types::{
+use libra_schemadb::{ReadOptions, DB};
+use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     proof::{position::Position, AccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
+use std::{ops::Deref, sync::Arc};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,

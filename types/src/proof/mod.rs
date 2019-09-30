@@ -18,7 +18,8 @@ use crate::{
     proof::definition::MAX_ACCUMULATOR_PROOF_DEPTH,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
         SparseMerkleLeafHasher, TestOnlyHasher, TransactionAccumulatorHasher,
@@ -26,7 +27,6 @@ use crypto::{
     },
     HashValue,
 };
-use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
 pub use crate::proof::definition::{

@@ -4,9 +4,9 @@
 use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
-use crypto::{test_utils::TEST_SEED, *};
 use futures::future::{FutureExt, TryFutureExt};
-use memsocket::MemorySocket;
+use libra_crypto::{test_utils::TEST_SEED, *};
+use libra_memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
 
@@ -56,15 +56,15 @@ fn setup_discovery(
     signer: Signer,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
-    channel::Receiver<ConnectivityRequest>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
-    channel::Sender<()>,
+    libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    libra_channel::Receiver<ConnectivityRequest>,
+    libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Sender<()>,
 ) {
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = channel::new_test(0);
-    let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(0);
-    let (ticker_tx, ticker_rx) = channel::new_test(0);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = libra_channel::new_test(0);
+    let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = libra_channel::new_test(1);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = libra_channel::new_test(0);
+    let (ticker_tx, ticker_rx) = libra_channel::new_test(0);
     let discovery = {
         Discovery::new(
             peer_id,
@@ -89,7 +89,7 @@ fn setup_discovery(
 }
 
 async fn expect_address_update(
-    conn_mgr_reqs_rx: &mut channel::Receiver<ConnectivityRequest>,
+    conn_mgr_reqs_rx: &mut libra_channel::Receiver<ConnectivityRequest>,
     expected_peer_id: PeerId,
     expected_addrs: &[Multiaddr],
 ) {
@@ -120,7 +120,7 @@ fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, 
 #[test]
 // Test behavior on receipt of an inbound DiscoveryMsg.
 fn inbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -277,7 +277,7 @@ fn inbound() {
 #[test]
 // Test that discovery actor sends a DiscoveryMsg to a neighbor on receiving a clock tick.
 fn outbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -349,7 +349,7 @@ fn outbound() {
 
 #[test]
 fn addr_update_includes_seed_addrs() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.

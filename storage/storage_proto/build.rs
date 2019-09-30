@@ -10,7 +10,7 @@ fn main() {
     let proto_root = "src/proto";
     let dependent_root = "../../types/src/proto";
 
-    build_helpers::build_helpers::compile_proto(
+    libra_build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![dependent_root],
         false, /* generate_client_code */

@@ -7,8 +7,8 @@
 //! # Example
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use crypto::{
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::{
 //!     bls12381::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -33,8 +33,8 @@
 use crate::{traits::*, HashValue};
 use bincode::{deserialize, serialize};
 use core::convert::TryFrom;
-use crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use failure::prelude::*;
+use libra_crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use pairing::{
     bls12_381::{Fr, FrRepr},
     PrimeField,

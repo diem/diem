@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use schemadb::schema::assert_encode_decode;
+use libra_schemadb::schema::assert_encode_decode;
 
 #[test]
 fn test_single_entry_schema() {

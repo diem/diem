@@ -5,8 +5,8 @@
 
 use failure::Fail;
 use futures::channel::oneshot;
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
-use types::PeerId;
 
 #[derive(Debug, Fail)]
 pub enum PeerManagerError {

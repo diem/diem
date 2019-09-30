@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use failure::prelude::Result;
+use libra_canonical_serialization::{SimpleDeserializer, SimpleSerializer};
+use libra_proptest_helpers::ValueGenerator;
+use libra_types::transaction::SignedTransaction;
 use proptest::prelude::*;
-use proptest_helpers::ValueGenerator;
-use types::transaction::SignedTransaction;
 
 #[derive(Clone, Debug, Default)]
 pub struct SignedTransactionTarget;

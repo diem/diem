@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
+use libra_tools::tempdir::TempPath;
 use std::path::Path;
 use structopt::StructOpt;
-use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -39,7 +39,7 @@ fn main() {
     let num_nodes = args.num_nodes.unwrap_or(1);
     let num_full_nodes = args.num_full_nodes.unwrap_or(0);
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-        generate_keypair::load_faucet_key_or_create_default(None);
+        libra_generate_keypair::load_faucet_key_or_create_default(None);
 
     println!(
         "Faucet account created in (loaded from) file {:?}",

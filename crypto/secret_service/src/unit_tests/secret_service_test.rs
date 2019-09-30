@@ -5,7 +5,7 @@ use crate::{
     proto::secret_service::KeyType,
     secret_service_server::{KeyID, SecretServiceServer},
 };
-use crypto::{
+use libra_crypto::{
     hash::HashValue,
     traits::{Signature, ValidKey},
 };

@@ -13,12 +13,12 @@
 use super::{ensure_slice_len_eq, SINGLE_ENTRY_CF_NAME};
 use byteorder::ReadBytesExt;
 use failure::prelude::*;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
-use schemadb::{
+use libra_schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
 use std::mem::size_of;
 
 define_schema!(

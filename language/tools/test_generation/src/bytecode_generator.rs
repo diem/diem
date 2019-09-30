@@ -7,12 +7,12 @@ use crate::{
     control_flow_graph::CFG,
     summaries,
 };
-use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
-use vm::file_format::{
+use libra_vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
     FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex, LocalsSignatureIndex,
     SignatureToken, StructDefinitionIndex, TableIndex, UserStringIndex,
 };
+use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
 
 /// This type represents bytecode instructions that take a `LocalIndex`
 type LocalIndexToBytecode = fn(LocalIndex) -> Bytecode;

@@ -1,7 +1,7 @@
 use crate::language_storage::ModuleId;
-use canonical_serialization::test_helper::assert_canonical_encode_decode;
+use libra_canonical_serialization::test_helper::assert_canonical_encode_decode;
+use libra_proto_conv::test_helper::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
     #[test]

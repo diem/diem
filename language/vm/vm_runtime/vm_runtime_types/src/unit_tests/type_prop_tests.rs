@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::loaded_data::types::Type;
-use canonical_serialization::*;
+use libra_canonical_serialization::*;
 use proptest::prelude::*;
 
 proptest! {

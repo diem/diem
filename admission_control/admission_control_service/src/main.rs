@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_service::admission_control_node;
-use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
+use libra_admission_control_service::admission_control_node;
+use libra_executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
 
 /// Run a Admission Control service in its own process.
 /// It will also setup global logger and initialize config.

@@ -5,7 +5,7 @@ use crate::{
     checker::{check, run_filecheck, Directive},
     evaluator::{EvaluationOutput, EvaluationResult, OutputType, Stage, Status},
 };
-use vm::{
+use libra_vm::{
     file_format::{empty_module, CompiledModuleMut},
     vm_string::VMString,
 };

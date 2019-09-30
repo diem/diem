@@ -100,7 +100,7 @@ mod test {
     };
     use bytes::BytesMut;
     use futures::{executor::block_on, future::join, io::AsyncWriteExt};
-    use memsocket::MemorySocket;
+    use libra_memsocket::MemorySocket;
     use std::io::Result;
 
     #[test]

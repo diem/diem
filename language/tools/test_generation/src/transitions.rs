@@ -6,7 +6,7 @@ use crate::{
     config::ALLOW_MEMORY_UNSAFE,
     error::VMError,
 };
-use vm::{
+use libra_vm::{
     access::*,
     file_format::{
         FieldDefinitionIndex, FunctionHandleIndex, Kind, SignatureToken, StructDefinitionIndex,

@@ -17,10 +17,10 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use channel;
 use futures::{executor::block_on, StreamExt};
+use libra_channel;
+use libra_types::crypto_proxies::ValidatorSigner;
 use std::{sync::Arc, time::Duration, u64};
-use types::crypto_proxies::ValidatorSigner;
 
 #[test]
 fn test_pacemaker_time_interval() {
@@ -87,10 +87,10 @@ fn test_basic_qc() {
     expect_qc(4, pm.process_certificates(3, None, None));
 }
 
-fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
+fn make_pacemaker() -> (Pacemaker, libra_channel::Receiver<Round>) {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let simulated_time = SimulatedTimeService::auto_advance_until(Duration::from_millis(4));
-    let (timeout_tx, timeout_rx) = channel::new_test(1_024);
+    let (timeout_tx, timeout_rx) = libra_channel::new_test(1_024);
     (
         Pacemaker::new(
             MockStorage::<TestPayload>::start_for_testing()

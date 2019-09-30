@@ -6,18 +6,18 @@
 use crate::account::AccountData;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use proto_conv::FromProto;
-use protobuf::parse_from_bytes;
-use state_view::StateView;
-use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
-use types::{
+use libra_proto_conv::FromProto;
+use libra_state_view::StateView;
+use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
     transaction::{SignedTransaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
-use vm::{errors::*, CompiledModule};
-use vm_runtime::data_cache::RemoteCache;
+use libra_vm::{errors::*, CompiledModule};
+use libra_vm_runtime::data_cache::RemoteCache;
+use protobuf::parse_from_bytes;
+use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 
 lazy_static! {
     /// The write set encoded in the genesis transaction.

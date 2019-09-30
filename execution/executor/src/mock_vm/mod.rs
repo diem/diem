@@ -4,12 +4,11 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use config::config::VMConfig;
-use crypto::ed25519::compat;
 use lazy_static::lazy_static;
-use state_view::StateView;
-use std::collections::HashMap;
-use types::{
+use libra_config::config::VMConfig;
+use libra_crypto::ed25519::compat;
+use libra_state_view::StateView;
+use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
@@ -21,7 +20,8 @@ use types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use vm_runtime::VMExecutor;
+use libra_vm_runtime::VMExecutor;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 enum Transaction {

@@ -1,5 +1,5 @@
 [package]
-name = "netcore"
+name = "libra_netcore"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -15,4 +15,4 @@ pin-utils = "=0.1.0-alpha.4"
 tokio = "0.1.22"
 yamux = { version = "0.2.1", default-features = false }
 
-memsocket = { path = "../memsocket" }
+libra_memsocket = { path = "../memsocket" }

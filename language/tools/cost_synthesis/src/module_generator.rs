@@ -8,14 +8,12 @@
 //! generated -- any function bodies that are generated are simply non-semantic sequences of
 //! instructions to check BrTrue, BrFalse, and Branch instructions.
 use crate::common::*;
-use bytecode_verifier::VerifiedModule;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{cmp::min, collections::HashMap};
-use types::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     language_storage::ModuleId,
 };
-use vm::{
+use libra_vm::{
     access::*,
     file_format::{
         AddressPoolIndex, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, FieldDefinition,
@@ -27,6 +25,8 @@ use vm::{
     },
     internals::ModuleIndex,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::{cmp::min, collections::HashMap};
 
 type BytecodeGenerator = dyn Fn(
     &[SignatureToken],

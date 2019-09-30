@@ -3,9 +3,11 @@
 
 mod proto;
 
+use libra_proto_conv::{
+    test_helper::assert_protobuf_encode_decode_non_message, FromProto, IntoProto,
+};
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
-use proto_conv::{test_helper::assert_protobuf_encode_decode_non_message, FromProto, IntoProto};
 
 macro_rules! test_conversion {
     ($struct_name: ident, $test_name: ident, $field_type: ty) => {

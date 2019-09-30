@@ -5,8 +5,6 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState},
     OP_COUNTERS,
 };
-use bounded_executor::BoundedExecutor;
-use config::config::{MempoolConfig, NodeConfig};
 use failure::prelude::*;
 use futures::sync::mpsc::UnboundedSender;
 use futures_preview::{
@@ -14,12 +12,17 @@ use futures_preview::{
     future::join_all,
     FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use logger::prelude::*;
-use network::{
+use libra_bounded_executor::BoundedExecutor;
+use libra_config::config::{MempoolConfig, NodeConfig};
+use libra_logger::prelude::*;
+use libra_network::{
     proto::MempoolSyncMsg,
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender},
 };
-use proto_conv::{FromProto, IntoProto};
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_storage_client::StorageRead;
+use libra_types::{transaction::SignedTransaction, PeerId};
+use libra_vm_validator::vm_validator::{get_account_state, TransactionValidation};
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -27,13 +30,10 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use storage_client::StorageRead;
 use tokio::{
     runtime::{Builder, Runtime, TaskExecutor},
     timer::Interval,
 };
-use types::{transaction::SignedTransaction, PeerId};
-use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 /// state of last sync with peer
 /// `timeline_id` is position in log of ready transactions

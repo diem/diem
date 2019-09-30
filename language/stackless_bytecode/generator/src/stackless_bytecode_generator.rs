@@ -1,5 +1,5 @@
 use crate::stackless_bytecode::StacklessBytecode;
-use vm::{
+use libra_vm::{
     access::ModuleAccess,
     file_format::{
         Bytecode, CompiledModule, CompiledProgram, FieldDefinitionIndex, FunctionDefinition,

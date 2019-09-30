@@ -1,5 +1,5 @@
 [package]
-name = "vm_runtime"
+name = "libra_vm_runtime"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -14,17 +14,17 @@ rayon = "1.1"
 rental = "0.5.4"
 mirai-annotations = "1.4.0"
 
-bytecode_verifier = { path = "../../bytecode_verifier" }
-canonical_serialization = { path = "../../../common/canonical_serialization" }
-config = { path = "../../../config" }
-crypto = { path = "../../../crypto/crypto" }
-logger = { path = "../../../common/logger" }
-metrics = { path = "../../../common/metrics" }
-state_view = { path = "../../../storage/state_view" }
-types = { path = "../../../types" }
-vm = { path = "../" }
-vm_cache_map = { path = "vm_cache_map" }
-vm_runtime_types = { path = "vm_runtime_types" }
+libra_bytecode_verifier = { path = "../../bytecode_verifier" }
+libra_canonical_serialization = { path = "../../../common/canonical_serialization" }
+libra_config = { path = "../../../config" }
+libra_crypto = { path = "../../../crypto/crypto" }
+libra_logger = { path = "../../../common/logger" }
+libra_metrics = { path = "../../../common/metrics" }
+libra_state_view = { path = "../../../storage/state_view" }
+libra_types = { path = "../../../types" }
+libra_vm = { path = "../" }
+libra_vm_cache_map = { path = "vm_cache_map" }
+libra_vm_runtime_types = { path = "vm_runtime_types" }
 
 [dependencies.prometheus]
 version  = "0.7.0"
@@ -32,13 +32,13 @@ default-features = false
 features = ["protobuf"]
 
 [dev-dependencies]
-compiler = { path = "../../compiler" }
+libra_compiler = { path = "../../compiler" }
 
-types = { path = "../../../types", features = ["testing"] }
-vm = { path = "../", features = ["testing"]}
+libra_types = { path = "../../../types", features = ["testing"] }
+libra_vm = { path = "../", features = ["testing"]}
 
 [features]
 default = []
 instruction_synthesis = []
-testing = ["types/testing"]
+testing = ["libra_types/testing"]
 mirai-contracts = []

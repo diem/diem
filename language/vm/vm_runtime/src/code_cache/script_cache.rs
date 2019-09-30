@@ -6,18 +6,18 @@ use crate::loaded_data::{
     function::{FunctionRef, FunctionReference},
     loaded_module::LoadedModule,
 };
-use bytecode_verifier::VerifiedScript;
-use crypto::HashValue;
-use logger::prelude::*;
-use types::{
+use libra_bytecode_verifier::VerifiedScript;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
+use libra_types::{
     transaction::SCRIPT_HASH_LENGTH,
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     errors::{vm_error, Location, VMResult},
     file_format::CompiledScript,
 };
-use vm_cache_map::{Arena, CacheMap};
+use libra_vm_cache_map::{Arena, CacheMap};
 
 /// The cache for commonly executed scripts. Currently there's no eviction policy, and it maps
 /// hash of script bytes into `FunctionRef`.

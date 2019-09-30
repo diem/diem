@@ -2,23 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
-use logger::prelude::*;
-use state_view::StateView;
-use std::{collections::btree_map::BTreeMap, mem::replace};
-use types::{
+use libra_logger::prelude::*;
+use libra_state_view::StateView;
+use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use vm::{
+use libra_vm::{
     errors::*,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
-use vm_runtime_types::{
+use libra_vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     value::{GlobalRef, Struct, Value},
 };
+use std::{collections::btree_map::BTreeMap, mem::replace};
 
 /// The wrapper around the StateVersionView for the block.
 /// It keeps track of the value that have been changed during execution of a block.

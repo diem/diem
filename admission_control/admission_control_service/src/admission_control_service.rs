@@ -6,19 +6,19 @@
 //! next step.
 
 use crate::OP_COUNTERS;
-use admission_control_proto::{
+use failure::prelude::*;
+use futures::future::Future;
+use futures03::executor::block_on;
+use libra_admission_control_proto::{
     proto::{
         admission_control::{SubmitTransactionRequest, SubmitTransactionResponse},
         admission_control_grpc::AdmissionControl,
     },
     AdmissionControlStatus,
 };
-use failure::prelude::*;
-use futures::future::Future;
-use futures03::executor::block_on;
-use grpc_helpers::provide_grpc_response;
-use logger::prelude::*;
-use mempool::proto::{
+use libra_grpc_helpers::provide_grpc_response;
+use libra_logger::prelude::*;
+use libra_mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
     shared::mempool_status::{
@@ -26,15 +26,15 @@ use mempool::proto::{
         MempoolAddTransactionStatusCode::{self, MempoolIsFull},
     },
 };
-use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
-use std::sync::Arc;
-use storage_client::StorageRead;
-use types::{
+use libra_metrics::counters::SVC_COUNTERS;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_storage_client::StorageRead;
+use libra_types::{
     proto::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::SignedTransaction,
 };
-use vm_validator::vm_validator::{get_account_state, TransactionValidation};
+use libra_vm_validator::vm_validator::{get_account_state, TransactionValidation};
+use std::sync::Arc;
 
 #[cfg(test)]
 #[path = "unit_tests/admission_control_service_test.rs"]
@@ -200,11 +200,11 @@ where
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
+        let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
         let (response_items, ledger_info_with_sigs, validator_change_events) = self
             .storage_read_client
             .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
-        let rust_resp = types::get_with_proof::UpdateToLatestLedgerResponse::new(
+        let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
             validator_change_events,
@@ -245,8 +245,8 @@ where
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
-        req: types::proto::get_with_proof::UpdateToLatestLedgerRequest,
-        sink: grpcio::UnarySink<types::proto::get_with_proof::UpdateToLatestLedgerResponse>,
+        req: libra_types::proto::get_with_proof::UpdateToLatestLedgerRequest,
+        sink: grpcio::UnarySink<libra_types::proto::get_with_proof::UpdateToLatestLedgerResponse>,
     ) {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
         let _timer = SVC_COUNTERS.req(&ctx);

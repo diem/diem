@@ -1,5 +1,5 @@
 [package]
-name = "benchmark"
+name = "libra_benchmark"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 publish = false
@@ -17,25 +17,25 @@ structopt = "0.2.15"
 num_cpus = "1.10.1"
 walkdir = "2.2.9"
 
-admission_control_proto = { path = "../admission_control/admission_control_proto" }
-client = { path = "../client" }
-config = { path = "../config" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
-generate_keypair = { path = "../config/generate_keypair" }
+libra_admission_control_proto = { path = "../admission_control/admission_control_proto" }
+libra_client = { path = "../client" }
+libra_config = { path = "../config" }
+failure = { package = "libra_failure_ext", path = "../common/failure_ext" }
+libra_generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
 libra_swarm = { path = "../libra_swarm" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
+libra_logger = { path = "../common/logger" }
+libra_metrics = { path = "../common/metrics" }
+libra_crypto = { path = "../crypto/crypto" }
+libra_proto_conv = { path = "../common/proto_conv" }
 rusty-fork = "0.2.1"
-tools = { path = "../common/tools" }
-types = { path = "../types" }
-transaction_builder = { path = "../language/transaction_builder" }
+libra_tools = { path = "../common/tools" }
+libra_types = { path = "../types" }
+libra_transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "libra_swarm/testing"]
+testing = ["libra_crypto/testing", "libra_swarm/testing"]

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::QuorumCert;
-use crypto::HashValue;
-use executor::StateComputeResult;
 use failure::Result;
 use futures::Future;
+use libra_crypto::HashValue;
+use libra_executor::StateComputeResult;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 pub trait TxnManager: Send + Sync {
@@ -45,8 +45,9 @@ pub trait StateComputer: Send + Sync {
     fn compute(
         &self,
         // The id of a parent block, on top of which the given transactions should be executed.
-        // We're going to use a special GENESIS_BLOCK_ID constant defined in crypto::hash module to
-        // refer to the block id of the Genesis block, which is executed in a special way.
+        // We're going to use a special GENESIS_BLOCK_ID constant defined in libra_crypto::hash
+        // module to refer to the block id of the Genesis block, which is executed in a
+        // special way.
         parent_block_id: HashValue,
         // The id of a current block.
         block_id: HashValue,

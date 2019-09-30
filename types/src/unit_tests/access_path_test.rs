@@ -5,8 +5,8 @@ use crate::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
 };
+use libra_proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
 use proptest::prelude::*;
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
 
 #[test]
 fn access_path_ord() {

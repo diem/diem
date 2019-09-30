@@ -8,14 +8,14 @@ use crate::{
     },
     state_replication::StateComputer,
 };
-use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
-use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
-use logger::prelude::*;
+use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use libra_executor::{ExecutedState, StateComputeResult};
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 pub struct MockStateComputer {
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,

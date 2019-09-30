@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bincode::serialize;
-use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_tools::tempdir::TempPath;
 use std::{
     fs::{self, File},
     io::Write,
     path::Path,
 };
-use tools::tempdir::TempPath;
 
 pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
     let output_file_path = Path::new(&output_file);

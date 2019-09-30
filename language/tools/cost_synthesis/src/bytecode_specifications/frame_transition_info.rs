@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Frame transition rules for the execution stack.
-use vm::file_format::{Bytecode, FunctionDefinitionIndex};
-use vm_runtime::{
+use libra_vm::file_format::{Bytecode, FunctionDefinitionIndex};
+use libra_vm_runtime::{
     code_cache::module_cache::ModuleCache,
     execution_stack::ExecutionStack,
     loaded_data::{

@@ -1,14 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use proptest::{
-    prelude::*,
-    sample::{self, Index as PropIndex},
-};
-use proptest_helpers::pick_slice_idxs;
-use std::collections::BTreeMap;
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_proptest_helpers::pick_slice_idxs;
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     errors::{append_err_info, bounds_error},
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinitionIndex,
@@ -20,6 +15,11 @@ use vm::{
     views::{ModuleView, SignatureTokenView},
     IndexKind,
 };
+use proptest::{
+    prelude::*,
+    sample::{self, Index as PropIndex},
+};
+use std::collections::BTreeMap;
 
 mod code_unit;
 pub use code_unit::{ApplyCodeUnitBoundsContext, CodeUnitBoundsMutation};

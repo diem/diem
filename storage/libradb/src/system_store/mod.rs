@@ -6,10 +6,10 @@ use crate::{
     schema::ledger_counters::LedgerCountersSchema,
 };
 use failure::prelude::*;
-use logger::prelude::*;
-use schemadb::{SchemaBatch, DB};
+use libra_logger::prelude::*;
+use libra_schemadb::{SchemaBatch, DB};
+use libra_types::transaction::Version;
 use std::sync::Arc;
-use types::transaction::Version;
 
 pub(crate) struct SystemStore {
     db: Arc<DB>,

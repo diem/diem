@@ -10,14 +10,14 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
-use std::collections::BTreeSet;
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     access::ModuleAccess,
     errors::err_at_offset,
     file_format::{Bytecode, CompiledModule, FunctionDefinition, StructDefinitionIndex},
     views::{FunctionDefinitionView, ModuleView, StructDefinitionView, ViewInternals},
 };
+use std::collections::BTreeSet;
 
 pub struct AcquiresVerifier<'a> {
     module_view: ModuleView<'a, CompiledModule>,

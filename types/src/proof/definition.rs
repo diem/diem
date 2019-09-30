@@ -9,14 +9,14 @@ mod proof_proto_conversion_test;
 
 use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
 use crate::transaction::TransactionInfo;
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use std::mem;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For

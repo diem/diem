@@ -3,24 +3,24 @@
 
 use super::*;
 use crate::LibraDB;
-use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use itertools::Itertools;
-use proptest::{
-    collection::{hash_set, vec},
-    prelude::*,
-    strategy::Union,
-};
-use proptest_helpers::Index;
-use rand::Rng;
-use std::collections::HashMap;
-use tools::tempdir::TempPath;
-use types::{
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_proptest_helpers::Index;
+use libra_tools::tempdir::TempPath;
+use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
     proof::verify_event_accumulator_element,
     proptest_types::{AccountInfoUniverse, ContractEventGen},
 };
+use proptest::{
+    collection::{hash_set, vec},
+    prelude::*,
+    strategy::Union,
+};
+use rand::Rng;
+use std::collections::HashMap;
 
 fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashValue {
     let mut cs = ChangeSet::new();

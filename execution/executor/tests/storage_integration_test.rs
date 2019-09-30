@@ -1,21 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
-use config_builder::util::get_test_config;
-use crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
-use executor::Executor;
 use failure::prelude::*;
 use futures::executor::block_on;
-use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::FromProto;
-use rand::SeedableRng;
-use std::{collections::HashMap, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
-use transaction_builder::{encode_create_account_script, encode_transfer_script};
-use types::{
+use libra_config::config::NodeConfig;
+use libra_config_builder::util::get_test_config;
+use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use libra_executor::Executor;
+use libra_grpc_helpers::ServerHandle;
+use libra_proto_conv::FromProto;
+use libra_storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use libra_storage_service::start_storage_service;
+use libra_transaction_builder::{encode_create_account_script, encode_transfer_script};
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -28,7 +26,9 @@ use types::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
 };
-use vm_runtime::MoveVM;
+use libra_vm_runtime::MoveVM;
+use rand::SeedableRng;
+use std::{collections::HashMap, sync::Arc};
 
 fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])

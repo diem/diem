@@ -15,11 +15,11 @@ use crate::{
         secret_service_grpc,
     },
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     bls12381::BLS12381PrivateKey, ed25519::Ed25519PrivateKey, hash::HashValue, traits::*,
 };
-use failure::prelude::*;
-use grpc_helpers::provide_grpc_response;
+use libra_grpc_helpers::provide_grpc_response;
 use rand::{rngs::EntropyRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use std::{

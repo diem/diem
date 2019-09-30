@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::validator_change::ValidatorChangeEventWithProof;
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
+use libra_proto_conv::test_helper::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]

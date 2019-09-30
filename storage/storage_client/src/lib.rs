@@ -13,19 +13,16 @@ use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
-use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
-use rand::Rng;
-use std::{pin::Pin, sync::Arc};
-use storage_proto::{
+use libra_metrics::counters::SVC_COUNTERS;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_storage_proto::{
     proto::{storage::GetStartupInfoRequest, storage_grpc},
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
     GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
     SaveTransactionsRequest, StartupInfo,
 };
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
@@ -35,6 +32,9 @@ use types::{
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
+use protobuf::Message;
+use rand::Rng;
+use std::{pin::Pin, sync::Arc};
 
 pub use crate::state_view::VerifiedStateView;
 

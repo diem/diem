@@ -4,11 +4,11 @@
 use crate::{
     iterator::JellyfishMerkleIterator, mock_tree_store::MockTreeStore, JellyfishMerkleTree,
 };
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use rand::{rngs::StdRng, SeedableRng};
 use std::collections::BTreeMap;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 #[test]
 fn test_iterator_same_version() {

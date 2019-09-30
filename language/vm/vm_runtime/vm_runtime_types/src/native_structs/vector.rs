@@ -4,9 +4,9 @@ use crate::{
     pop_arg,
     value::{MutVal, ReferenceValue, Value},
 };
+use libra_types::vm_error::sub_status::NFE_VECTOR_ERROR_BASE;
+use libra_vm::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, STRUCT_SIZE};
 use std::{collections::VecDeque, ops::Add};
-use types::vm_error::sub_status::NFE_VECTOR_ERROR_BASE;
-use vm::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, STRUCT_SIZE};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct NativeVector(pub(crate) Vec<MutVal>);

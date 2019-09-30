@@ -1,5 +1,5 @@
 [package]
-name = "debug_interface"
+name = "libra_debug_interface"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -13,9 +13,9 @@ protobuf = "~2.7"
 serde_json = "1.0"
 lazy_static = "1.3.0"
 
-failure = { package = "failure_ext", path = "../failure_ext" }
-logger = { path = "../logger" }
-metrics = { path = "../metrics" }
+failure = { package = "libra_failure_ext", path = "../failure_ext" }
+libra_logger = { path = "../logger" }
+libra_metrics = { path = "../metrics" }
 
 [build-dependencies]
-build_helpers = { path = "../build_helpers" }
+libra_build_helpers = { path = "../build_helpers" }

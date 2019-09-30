@@ -1,5 +1,5 @@
 [package]
-name = "stackless_bytecode_generator"
+name = "libra_stackless_bytecode_generator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,11 +7,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-vm = { path = "../../vm" }
-ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
-stdlib = { path = "../../stdlib" }
+libra_vm = { path = "../../vm" }
+libra_ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+libra_stdlib = { path = "../../stdlib" }
 #
 [dev-dependencies]
 # invalid_mutations = { path = "invalid_mutations" }
 proptest = "0.9"
-types = { path = "../../../types", features = ["testing"]}
+libra_types = { path = "../../../types", features = ["testing"]}

@@ -5,22 +5,22 @@ use crate::chained_bft::{
     common::{Author, Round},
     consensus_types::{sync_info::SyncInfo, vote_msg::VoteMsg},
 };
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
-use crypto::{
+use failure::prelude::*;
+use libra_canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, PacemakerTimeoutHasher, TimeoutMsgHasher},
     HashValue,
 };
-use failure::prelude::*;
-use mirai_annotations::assumed_postcondition;
-use network;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::RepeatedField;
-use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
-use types::{
+use libra_network;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
 };
+use mirai_annotations::assumed_postcondition;
+use protobuf::RepeatedField;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the
 // computation of its hash.
@@ -119,7 +119,7 @@ impl PacemakerTimeout {
 }
 
 impl IntoProto for PacemakerTimeout {
-    type ProtoType = network::proto::PacemakerTimeout;
+    type ProtoType = libra_network::proto::PacemakerTimeout;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -134,7 +134,7 @@ impl IntoProto for PacemakerTimeout {
 }
 
 impl FromProto for PacemakerTimeout {
-    type ProtoType = network::proto::PacemakerTimeout;
+    type ProtoType = libra_network::proto::PacemakerTimeout;
 
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let round = object.get_round();
@@ -247,9 +247,9 @@ impl TimeoutMsg {
 }
 
 impl FromProto for TimeoutMsg {
-    type ProtoType = network::proto::TimeoutMsg;
+    type ProtoType = libra_network::proto::TimeoutMsg;
 
-    fn from_proto(mut object: network::proto::TimeoutMsg) -> failure::Result<Self> {
+    fn from_proto(mut object: libra_network::proto::TimeoutMsg) -> failure::Result<Self> {
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
         let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
         let signature = Signature::try_from(object.get_signature())?;
@@ -262,7 +262,7 @@ impl FromProto for TimeoutMsg {
 }
 
 impl IntoProto for TimeoutMsg {
-    type ProtoType = network::proto::TimeoutMsg;
+    type ProtoType = libra_network::proto::TimeoutMsg;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -342,7 +342,7 @@ impl PacemakerTimeoutCertificate {
 }
 
 impl IntoProto for PacemakerTimeoutCertificate {
-    type ProtoType = network::proto::PacemakerTimeoutCertificate;
+    type ProtoType = libra_network::proto::PacemakerTimeoutCertificate;
 
     fn into_proto(self) -> Self::ProtoType {
         let mut proto = Self::ProtoType::new();
@@ -355,7 +355,7 @@ impl IntoProto for PacemakerTimeoutCertificate {
 }
 
 impl FromProto for PacemakerTimeoutCertificate {
-    type ProtoType = network::proto::PacemakerTimeoutCertificate;
+    type ProtoType = libra_network::proto::PacemakerTimeoutCertificate;
 
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let timeouts = object

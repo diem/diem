@@ -3,9 +3,9 @@
 //! Loaded representation for function definitions and handles.
 
 use crate::loaded_data::loaded_module::LoadedModule;
-use bytecode_verifier::VerifiedModule;
-use types::identifier::IdentStr;
-use vm::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_types::identifier::IdentStr;
+use libra_vm::{
     access::ModuleAccess,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, FunctionSignature},
     internals::ModuleIndex,

@@ -3,8 +3,8 @@
 //! Loaded representation for runtime types.
 
 use crate::loaded_data::struct_def::StructDef;
-use canonical_serialization::*;
 use failure::prelude::*;
+use libra_canonical_serialization::*;
 
 #[cfg(test)]
 #[path = "../unit_tests/type_prop_tests.rs"]

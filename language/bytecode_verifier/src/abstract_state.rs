@@ -7,9 +7,9 @@ use crate::{
     nonce::Nonce,
     partition::Partition,
 };
+use libra_vm::file_format::{FieldDefinitionIndex, Kind, LocalIndex, StructDefinitionIndex};
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{FieldDefinitionIndex, Kind, LocalIndex, StructDefinitionIndex};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AbstractValue {

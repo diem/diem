@@ -7,10 +7,10 @@ use crate::{
     loaded_data::function::{FunctionRef, FunctionReference},
     IndexKind,
 };
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::errors::*;
+use libra_vm_runtime_types::value::{Locals, Value};
 use std::{fmt, marker::PhantomData};
-use types::vm_error::{StatusCode, VMStatus};
-use vm::errors::*;
-use vm_runtime_types::value::{Locals, Value};
 
 // TODO Determine stack size limits based on gas limit
 const EXECUTION_STACK_SIZE_LIMIT: u64 = 1024;

@@ -12,7 +12,7 @@ use std::fmt::Debug;
 /// `define_schema!` allows a schema to be defined in the following syntax:
 /// ```
 /// use failure::Result;
-/// use schemadb::{
+/// use libra_schemadb::{
 ///     define_schema,
 ///     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 /// };

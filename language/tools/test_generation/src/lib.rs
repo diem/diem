@@ -18,12 +18,11 @@ extern crate log;
 extern crate env_logger;
 use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, GAS_METERING, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
-use bytecode_verifier::VerifiedModule;
-use cost_synthesis::module_generator::ModuleBuilder;
-use language_e2e_tests::data_store::FakeDataStore;
-use std::{fs, io::Write, panic};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
-use vm::{
+use libra_bytecode_verifier::VerifiedModule;
+use libra_cost_synthesis::module_generator::ModuleBuilder;
+use libra_language_e2e_tests::data_store::FakeDataStore;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_vm::{
     file_format::{
         Bytecode, CompiledModuleMut, FunctionDefinitionIndex, FunctionSignature, SignatureToken,
         StructDefinitionIndex,
@@ -31,13 +30,14 @@ use vm::{
     transaction_metadata::TransactionMetadata,
     CompiledModule,
 };
-use vm_cache_map::Arena;
-use vm_runtime::{
+use libra_vm_cache_map::Arena;
+use libra_vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     loaded_data::function::{FunctionRef, FunctionReference},
     txn_executor::TransactionExecutor,
 };
-use vm_runtime_types::value::Value;
+use libra_vm_runtime_types::value::Value;
+use std::{fs, io::Write, panic};
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
@@ -51,8 +51,8 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 /// This function runs a verified module in the VM runtime
 /// This code is based on `cost_synthesis/src/vm_runner.rs`
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
-    use vm::access::ModuleAccess;
-    let mut modules = ::stdlib::stdlib_modules().to_vec();
+    use libra_vm::access::ModuleAccess;
+    let mut modules = ::libra_stdlib::stdlib_modules().to_vec();
     // The standard library modules are bounded
     assume!(modules.len() < usize::max_value());
     modules.push(module);

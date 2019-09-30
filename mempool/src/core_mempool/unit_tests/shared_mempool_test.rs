@@ -5,8 +5,6 @@ use crate::{
     core_mempool::{unit_tests::common::TestTransaction, CoreMempool, TimelineState},
     shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
 };
-use channel;
-use config::config::{NodeConfig, NodeConfigHelpers};
 use failure::prelude::*;
 use futures::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
@@ -15,26 +13,28 @@ use futures::{
 use futures_preview::{
     compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt, TryStreamExt,
 };
-use network::{
+use libra_channel;
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
-use proto_conv::FromProto;
+use libra_proto_conv::FromProto;
+use libra_storage_service::mocks::mock_storage_client::MockStorageReadClient;
+use libra_types::{transaction::SignedTransaction, PeerId};
+use libra_vm_validator::mocks::mock_vm_validator::MockVMValidator;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
-use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tokio::runtime::Runtime;
-use types::{transaction::SignedTransaction, PeerId};
-use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[derive(Default)]
 struct SharedMempoolNetwork {
     mempools: HashMap<PeerId, Arc<Mutex<CoreMempool>>>,
-    network_reqs_rxs: HashMap<PeerId, channel::Receiver<NetworkRequest>>,
-    network_notifs_txs: HashMap<PeerId, channel::Sender<NetworkNotification>>,
+    network_reqs_rxs: HashMap<PeerId, libra_channel::Receiver<NetworkRequest>>,
+    network_notifs_txs: HashMap<PeerId, libra_channel::Sender<NetworkNotification>>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
@@ -47,8 +47,8 @@ impl SharedMempoolNetwork {
 
         for peer in peers {
             let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-            let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-            let (network_notifs_tx, network_notifs_rx) = channel::new_test(8);
+            let (network_reqs_tx, network_reqs_rx) = libra_channel::new_test(8);
+            let (network_notifs_tx, network_notifs_rx) = libra_channel::new_test(8);
             let network_sender = MempoolNetworkSender::new(network_reqs_tx);
             let network_events = MempoolNetworkEvents::new(network_notifs_rx);
             let (sender, subscriber) = unbounded();

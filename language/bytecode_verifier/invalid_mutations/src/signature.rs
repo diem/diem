@@ -1,19 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use proptest::{
-    prelude::*,
-    sample::{select, Index as PropIndex},
-};
-use proptest_helpers::{pick_slice_idxs, RepeatVec};
-use std::{collections::BTreeMap, iter};
-use types::vm_error::{StatusCode, VMStatus};
-use vm::{
+use libra_proptest_helpers::{pick_slice_idxs, RepeatVec};
+use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::{
     errors::append_err_info,
     file_format::{CompiledModuleMut, SignatureToken},
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
+use proptest::{
+    prelude::*,
+    sample::{select, Index as PropIndex},
+};
+use std::{collections::BTreeMap, iter};
 
 /// Represents a mutation that wraps a signature token up in a double reference (or an array of
 /// references.

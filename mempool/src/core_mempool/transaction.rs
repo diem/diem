@@ -3,9 +3,9 @@
 
 use crate::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use failure::prelude::*;
-use proto_conv::{FromProto, IntoProto};
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use std::time::Duration;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 #[derive(Clone)]
 pub struct MempoolTransaction {

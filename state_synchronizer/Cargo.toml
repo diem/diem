@@ -1,5 +1,5 @@
 [package]
-name = "state_synchronizer"
+name = "libra_state_synchronizer"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -13,16 +13,16 @@ lazy_static = { version = "1.3.0", default-features = false }
 rand = "0.6.5"
 tokio = { version = "0.1.22", default-features = false }
 
-config = { path = "../config" }
-executor = { path = "../execution/executor" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-proto_conv = { path = "../common/proto_conv" }
-storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+libra_config = { path = "../config" }
+libra_executor = { path = "../execution/executor" }
+failure = { path = "../common/failure_ext", package = "libra_failure_ext" }
+libra_logger = { path = "../common/logger" }
+libra_metrics = { path = "../common/metrics" }
+libra_network = { path = "../network" }
+libra_proto_conv = { path = "../common/proto_conv" }
+libra_storage_client = { path = "../storage/storage_client" }
+libra_types = { path = "../types" }
+libra_vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dependencies.prometheus]
 version  = "0.7.0"
@@ -31,10 +31,10 @@ default-features = false
 [dev-dependencies]
 bytes = "0.4.12"
 
-config_builder = { path = "../config/config_builder" }
-crypto = { path = "../crypto/crypto", features = ["testing"]}
+libra_config_builder = { path = "../config/config_builder" }
+libra_crypto = { path = "../crypto/crypto", features = ["testing"]}
 parity-multiaddr = "0.5.0"
-types = { path = "../types", features = ["testing"] }
-vm_genesis = { path = "../language/vm/vm_genesis" }
-transaction_builder = { path = "../language/transaction_builder" }
-channel = { path = "../common/channel" }
+libra_types = { path = "../types", features = ["testing"] }
+libra_vm_genesis = { path = "../language/vm/vm_genesis" }
+libra_transaction_builder = { path = "../language/transaction_builder" }
+libra_channel = { path = "../common/channel" }

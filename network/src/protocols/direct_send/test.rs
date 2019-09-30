@@ -10,7 +10,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{
     compat::Sink01CompatExt,
     future::{FutureExt, TryFutureExt},
@@ -18,12 +17,13 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use memsocket::MemorySocket;
+use libra_channel;
+use libra_memsocket::MemorySocket;
+use libra_types::PeerId;
 use tokio::{
     codec::Framed,
     runtime::{Runtime, TaskExecutor},
 };
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 const PROTOCOL_1: &[u8] = b"/direct_send/1.0.0";
@@ -35,15 +35,15 @@ const MESSAGE_3: &[u8] = b"Direct Send 3";
 fn start_direct_send_actor(
     executor: TaskExecutor,
 ) -> (
-    channel::Sender<DirectSendRequest>,
-    channel::Receiver<DirectSendNotification>,
-    channel::Sender<PeerManagerNotification<MemorySocket>>,
-    channel::Receiver<PeerManagerRequest<MemorySocket>>,
+    libra_channel::Sender<DirectSendRequest>,
+    libra_channel::Receiver<DirectSendNotification>,
+    libra_channel::Sender<PeerManagerNotification<MemorySocket>>,
+    libra_channel::Receiver<PeerManagerRequest<MemorySocket>>,
 ) {
-    let (ds_requests_tx, ds_requests_rx) = channel::new_test(8);
-    let (ds_notifs_tx, ds_notifs_rx) = channel::new_test(8);
-    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = channel::new_test(8);
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = channel::new_test(8);
+    let (ds_requests_tx, ds_requests_rx) = libra_channel::new_test(8);
+    let (ds_notifs_tx, ds_notifs_rx) = libra_channel::new_test(8);
+    let (peer_mgr_notifs_tx, peer_mgr_notifs_rx) = libra_channel::new_test(8);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = libra_channel::new_test(8);
     let direct_send = DirectSend::new(
         executor.clone(),
         ds_requests_rx,
@@ -62,7 +62,7 @@ fn start_direct_send_actor(
 }
 
 async fn expect_network_provider_recv_message(
-    ds_notifs_rx: &mut channel::Receiver<DirectSendNotification>,
+    ds_notifs_rx: &mut libra_channel::Receiver<DirectSendNotification>,
     expected_peer_id: PeerId,
     expected_protocol: &'static [u8],
     expected_message: &'static [u8],
@@ -77,7 +77,7 @@ async fn expect_network_provider_recv_message(
 }
 
 async fn expect_open_substream_request<TSubstream>(
-    peer_mgr_reqs_rx: &mut channel::Receiver<PeerManagerRequest<TSubstream>>,
+    peer_mgr_reqs_rx: &mut libra_channel::Receiver<PeerManagerRequest<TSubstream>>,
     expected_peer_id: PeerId,
     expected_protocol: &'static [u8],
     response: Result<TSubstream, PeerManagerError>,
@@ -317,7 +317,7 @@ fn test_outbound_multiple_protocols() {
 
 #[test]
 fn test_outbound_not_connected() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
@@ -388,7 +388,7 @@ fn test_outbound_not_connected() {
 
 #[test]
 fn test_outbound_connection_closed() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =

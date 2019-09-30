@@ -1,6 +1,6 @@
-use bytecode_verifier::CodeUnitVerifier;
-use types::vm_error::StatusCode;
-use vm::file_format::{self, Bytecode};
+use libra_bytecode_verifier::CodeUnitVerifier;
+use libra_types::vm_error::StatusCode;
+use libra_vm::file_format::{self, Bytecode};
 
 #[test]
 fn one_pop_no_push() {

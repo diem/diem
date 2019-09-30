@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
-use crypto::hash::CryptoHash;
 use failure::{Result as ProtoResult, ResultExt};
-use network::proto::Vote as ProtoVote;
-use proto_conv::{FromProto, IntoProto};
+use libra_crypto::hash::CryptoHash;
+use libra_network::proto::Vote as ProtoVote;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
+    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
     fmt::{Display, Formatter},
-};
-use types::{
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 /// VoteMsg is the struct that is ultimately sent by the voter in response for

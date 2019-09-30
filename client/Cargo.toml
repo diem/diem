@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "libra_client"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -21,23 +21,23 @@ serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
 structopt = "0.2.15"
 
-admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
-config = { path = "../config" }
-crash_handler = { path = "../common/crash_handler" }
-crypto = { path = "../crypto/crypto" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
+libra_admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
+libra_config = { path = "../config" }
+libra_crash_handler = { path = "../common/crash_handler" }
+libra_crypto = { path = "../crypto/crypto" }
+failure = { package = "libra_failure_ext", path = "../common/failure_ext" }
 libra_wallet = { path = "./libra_wallet" }
-logger =  { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-proto_conv = { path = "../common/proto_conv" }
-types = { path = "../types" }
-tools = { path = "../common/tools/" }
-transaction_builder = { path = "../language/transaction_builder" }
+libra_logger =  { path = "../common/logger" }
+libra_metrics = { path = "../common/metrics" }
+libra_proto_conv = { path = "../common/proto_conv" }
+libra_types = { path = "../types" }
+libra_tools = { path = "../common/tools/" }
+libra_transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"] }
-types = { path = "../types", features = ["testing"]}
+libra_crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_types = { path = "../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing", "crypto/testing"]
+testing = ["libra_types/testing", "libra_crypto/testing"]

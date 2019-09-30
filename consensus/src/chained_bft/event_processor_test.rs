@@ -35,21 +35,21 @@ use crate::{
     state_replication::StateComputer,
     util::time_service::{ClockTimeService, TimeService},
 };
-use channel;
-use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},
     compat::Future01CompatExt,
     executor::block_on,
 };
-use network::{
+use libra_channel;
+use libra_crypto::HashValue;
+use libra_network::{
     proto::BlockRetrievalStatus,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use proto_conv::FromProto;
+use libra_proto_conv::FromProto;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
@@ -82,7 +82,7 @@ impl NodeSetup {
     fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Pacemaker {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-        let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+        let (pacemaker_timeout_sender, _) = libra_channel::new_test(1_024);
         Pacemaker::new(
             MockStorage::<TestPayload>::start_for_testing()
                 .0
@@ -140,8 +140,8 @@ impl NodeSetup {
         initial_data: RecoveryData<TestPayload>,
         epoch_mgr: Arc<EpochManager>,
     ) -> Self {
-        let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (network_reqs_tx, network_reqs_rx) = libra_channel::new_test(8);
+        let (consensus_tx, consensus_rx) = libra_channel::new_test(8);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
         let author = signer.author();

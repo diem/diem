@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{value_t, App, Arg};
-use config::config::RoleType;
-use config_builder::swarm_config::SwarmConfigBuilder;
+use libra_config::config::RoleType;
+use libra_config_builder::swarm_config::SwarmConfigBuilder;
 use std::convert::TryInto;
 
 const BASE_ARG: &str = "base";
@@ -90,7 +90,7 @@ fn main() {
     let faucet_account_file_path = value_t!(args, FAUCET_ACCOUNT_FILE_ARG, String)
         .expect("Must provide faucet account file path");
     let (faucet_account_keypair, _faucet_key_file_path, _temp_dir) =
-        generate_keypair::load_faucet_key_or_create_default(Some(faucet_account_file_path));
+        libra_generate_keypair::load_faucet_key_or_create_default(Some(faucet_account_file_path));
     let role: RoleType = value_t!(args, ROLE_ARG, String)
         .expect("Missing role type")
         .into();

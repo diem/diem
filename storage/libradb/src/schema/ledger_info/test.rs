@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use libra_schemadb::schema::assert_encode_decode;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use proptest::prelude::*;
-use schemadb::schema::assert_encode_decode;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 proptest! {
     #[test]

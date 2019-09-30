@@ -1,5 +1,5 @@
 [package]
-name = "network"
+name = "libra_network"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -21,23 +21,23 @@ tokio-timer = "0.2.10"
 tokio-retry = "0.2.0"
 unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
-bounded-executor = { path = "../common/bounded-executor" }
-channel = { path = "../common/channel" }
-config = { path = "../config" }
-crypto = { path = "../crypto/crypto" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
-logger = { path = "../common/logger" }
-memsocket = { path = "memsocket" }
-metrics = { path = "../common/metrics" }
-netcore = { path = "netcore" }
-noise = { path = "noise" }
-socket_bench_server = { path = "socket_bench_server" }
-types = { path = "../types" }
+libra_bounded-executor = { path = "../common/bounded-executor" }
+libra_channel = { path = "../common/channel" }
+libra_config = { path = "../config" }
+libra_crypto = { path = "../crypto/crypto" }
+failure = { package = "libra_failure_ext", path = "../common/failure_ext" }
+libra_logger = { path = "../common/logger" }
+libra_memsocket = { path = "memsocket" }
+libra_metrics = { path = "../common/metrics" }
+libra_netcore = { path = "netcore" }
+libra_noise = { path = "noise" }
+libra_socket_bench_server = { path = "socket_bench_server" }
+libra_types = { path = "../types" }
 
 [dev-dependencies]
 criterion = "0.2.11"
-crypto = { path = "../crypto/crypto", features = ["testing"] }
-types = { path = "../types", features = ["testing"]}
+libra_crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_types = { path = "../types", features = ["testing"]}
 
 [build-dependencies]
 prost-build = "0.5.0"

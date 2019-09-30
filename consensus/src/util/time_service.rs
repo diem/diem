@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use channel;
 use futures::{compat::Future01CompatExt, Future, FutureExt, SinkExt, TryFutureExt};
-use logger::prelude::*;
+use libra_channel;
+use libra_logger::prelude::*;
 use std::{
     pin::Pin,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
@@ -46,7 +46,7 @@ pub struct SendTask<T>
 where
     T: Send + 'static,
 {
-    sender: Option<channel::Sender<T>>,
+    sender: Option<libra_channel::Sender<T>>,
     message: Option<T>,
 }
 
@@ -55,7 +55,7 @@ where
     T: Send + 'static,
 {
     /// Makes new SendTask for given sender and message and wraps it to Box
-    pub fn make(sender: channel::Sender<T>, message: T) -> Box<dyn ScheduledTask> {
+    pub fn make(sender: libra_channel::Sender<T>, message: T) -> Box<dyn ScheduledTask> {
         Box::new(SendTask {
             sender: Some(sender),
             message: Some(message),

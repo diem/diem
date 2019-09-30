@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::identifier::{IdentStr, Identifier};
-use canonical_serialization::test_helper::assert_canonical_encode_decode;
+use libra_canonical_serialization::test_helper::assert_canonical_encode_decode;
+use libra_proto_conv::test_helper::assert_protobuf_encode_decode_non_message;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode_non_message;
 use serde_json;
 use std::borrow::Borrow;
 

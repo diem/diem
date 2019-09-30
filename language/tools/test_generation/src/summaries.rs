@@ -16,7 +16,7 @@ use crate::{
     state_stack_unpack_struct, state_struct_is_resource,
     transitions::*,
 };
-use vm::file_format::{Bytecode, Kind, SignatureToken};
+use libra_vm::file_format::{Bytecode, Kind, SignatureToken};
 
 /// A `Precondition` is a boolean predicate on an `AbstractState`.
 type Precondition = dyn Fn(&AbstractState) -> bool;

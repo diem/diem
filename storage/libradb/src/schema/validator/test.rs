@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::ed25519::compat;
 use itertools::Itertools;
+use libra_crypto::ed25519::compat;
+use libra_schemadb::schema::assert_encode_decode;
+use libra_types::transaction::Version;
 use rand::{
     rngs::{OsRng, StdRng},
     seq::SliceRandom,
     thread_rng, Rng, SeedableRng,
 };
-use schemadb::schema::assert_encode_decode;
-use types::transaction::Version;
 
 fn row_with_arbitrary_validator(version: Version) -> (Key, ()) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");

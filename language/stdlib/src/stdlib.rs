@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ir_to_bytecode::parser::{ast::ModuleDefinition, parse_module};
 use lazy_static::lazy_static;
+use libra_ir_to_bytecode::parser::{ast::ModuleDefinition, parse_module};
 
 macro_rules! make_module_definition {
     ($source_path: literal) => {{

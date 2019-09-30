@@ -1,29 +1,29 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::{
-    admission_control::{
-        AdmissionControlStatusCode, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
-    },
-    admission_control_grpc::AdmissionControlClient,
-};
-use client::AccountStatus;
 use failure::prelude::*;
 use futures::{
     stream::{self, Stream},
     Future,
 };
 use grpcio::{self, CallOption, Error};
-use logger::prelude::*;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
-use std::{collections::HashMap, marker::Send, slice::Chunks, thread, time};
-use types::{
+use libra_admission_control_proto::proto::{
+    admission_control::{
+        AdmissionControlStatusCode, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
+    },
+    admission_control_grpc::AdmissionControlClient,
+};
+use libra_client::AccountStatus;
+use libra_logger::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
+use libra_types::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
     get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
     proto::get_with_proof::UpdateToLatestLedgerResponse,
 };
+use protobuf::Message;
+use std::{collections::HashMap, marker::Send, slice::Chunks, thread, time};
 
 use crate::{
     load_generator::{Request, TXN_EXPIRATION},

@@ -11,20 +11,29 @@ mod executor_test;
 mod mock_vm;
 
 use crate::block_processor::BlockProcessor;
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
-use config::config::NodeConfig;
-use crypto::{
+use failure::{format_err, Result};
+use futures::{channel::oneshot, executor::block_on};
+use lazy_static::lazy_static;
+use libra_canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
+use libra_config::config::NodeConfig;
+use libra_crypto::{
     hash::{
         TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
         PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::{format_err, Result};
-use futures::{channel::oneshot, executor::block_on};
-use lazy_static::lazy_static;
-use logger::prelude::*;
-use scratchpad::SparseMerkleTree;
+use libra_logger::prelude::*;
+use libra_scratchpad::SparseMerkleTree;
+use libra_storage_client::{StorageRead, StorageWrite};
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
+    proof::accumulator::Accumulator,
+    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
+    validator_set::ValidatorSet,
+};
+use libra_vm_runtime::VMExecutor;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -32,18 +41,10 @@ use std::{
     rc::Rc,
     sync::{mpsc, Arc, Mutex},
 };
-use storage_client::{StorageRead, StorageWrite};
-use types::{
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
-    proof::accumulator::Accumulator,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
-    validator_set::ValidatorSet,
-};
-use vm_runtime::VMExecutor;
 
 lazy_static! {
-    static ref OP_COUNTERS: metrics::OpMetrics = metrics::OpMetrics::new_and_registered("executor");
+    static ref OP_COUNTERS: libra_metrics::OpMetrics =
+        libra_metrics::OpMetrics::new_and_registered("executor");
 }
 
 /// A structure that specifies the result of the execution.

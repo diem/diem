@@ -9,7 +9,7 @@
 fn main() {
     let proto_root = "src/proto";
 
-    build_helpers::build_helpers::compile_proto(
+    libra_build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![],
         true, /* generate_client_stub */

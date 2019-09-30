@@ -18,11 +18,11 @@ use crate::{
     validator_change::ValidatorChangeEventWithProof,
     validator_verifier::ValidatorVerifier,
 };
-use crypto::{hash::CryptoHash, *};
 use failure::prelude::*;
+use libra_crypto::{hash::CryptoHash, *};
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use std::{cmp, mem, sync::Arc};
 
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]

@@ -14,11 +14,11 @@ use crate::{
         secret_service_grpc::SecretServiceClient,
     },
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::HashValue,
 };
-use failure::prelude::*;
 use std::{convert::TryFrom, sync::Arc};
 
 /// A consensus key manager - interface between consensus and the secret service.

@@ -1,5 +1,5 @@
 [package]
-name = "vm_validator"
+name = "libra_vm_validator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,25 +7,25 @@ publish = false
 edition = "2018"
 
 [dependencies]
-config = { path = "../config" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
+libra_config = { path = "../config" }
+failure = { path = "../common/failure_ext", package = "libra_failure_ext" }
 futures = "0.1.28"
-proto_conv = { path = "../common/proto_conv" }
-scratchpad = { path = "../storage/scratchpad" }
-state_view = { path = "../storage/state_view" }
-storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+libra_proto_conv = { path = "../common/proto_conv" }
+libra_scratchpad = { path = "../storage/scratchpad" }
+libra_state_view = { path = "../storage/state_view" }
+libra_storage_client = { path = "../storage/storage_client" }
+libra_types = { path = "../types" }
+libra_vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dev-dependencies]
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 rand = "0.6.5"
 
-config_builder = { path = "../config/config_builder" }
-crypto = { path = "../crypto/crypto", features = ["testing"] }
-executor = { path = "../execution/executor" }
-grpc_helpers = { path = "../common/grpc_helpers" }
-storage_service = { path = "../storage/storage_service" }
-types = { path = "../types", features = ["testing"] }
-vm_runtime = { path = "../language/vm/vm_runtime" }
-transaction_builder = { path = "../language/transaction_builder" }
+libra_config_builder = { path = "../config/config_builder" }
+libra_crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra_executor = { path = "../execution/executor" }
+libra_grpc_helpers = { path = "../common/grpc_helpers" }
+libra_storage_service = { path = "../storage/storage_service" }
+libra_types = { path = "../types", features = ["testing"] }
+libra_vm_runtime = { path = "../language/vm/vm_runtime" }
+libra_transaction_builder = { path = "../language/transaction_builder" }

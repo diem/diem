@@ -7,15 +7,15 @@ use crate::{
     identifier::{IdentStr, Identifier},
     proto::language_storage::ModuleId as ProtoModuleId,
 };
-use canonical_serialization::{
+use failure::Result;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleSerializer,
 };
-use crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
-use failure::Result;
+use libra_crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]

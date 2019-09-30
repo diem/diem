@@ -3,18 +3,18 @@
 
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
-use canonical_serialization::{
+use failure::prelude::*;
+use hex;
+use libra_canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-use crypto::{
+use libra_crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,
 };
-use failure::prelude::*;
-use hex;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};

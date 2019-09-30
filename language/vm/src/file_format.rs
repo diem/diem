@@ -31,17 +31,17 @@ use crate::{
     IndexKind, SignatureTokenKind,
 };
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
-use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
-#[cfg(any(test, feature = "testing"))]
-use proptest_derive::Arbitrary;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+#[cfg(any(test, feature = "testing"))]
+use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;

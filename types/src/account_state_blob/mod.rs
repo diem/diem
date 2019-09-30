@@ -11,17 +11,17 @@ use crate::{
     transaction::Version,
 };
 
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
-use crypto::{
+use failure::prelude::*;
+use libra_canonical_serialization::{SimpleDeserializer, SimpleSerializer};
+use libra_crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryFrom, fmt};
 

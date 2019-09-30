@@ -8,19 +8,19 @@ use crate::{
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
-use config::config::VMPublishingOption;
-use crypto::HashValue;
-use logger::prelude::*;
-use types::{
+use libra_config::config::VMPublishingOption;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
+use libra_types::{
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{StatusCode, VMStatus},
 };
-use vm::{
+use libra_vm::{
     errors::convert_prologue_runtime_error,
     gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
+use libra_vm_cache_map::Arena;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {

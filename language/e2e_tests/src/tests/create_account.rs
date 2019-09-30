@@ -6,7 +6,7 @@ use crate::{
     common_transactions::create_account_txn,
     executor::test_all_genesis,
 };
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };

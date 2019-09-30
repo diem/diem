@@ -1,5 +1,5 @@
 [package]
-name = "crypto_derive"
+name = "libra_crypto_derive"
 version = "0.1.0"
 description = "Custom derives for `crypto`"
 edition = "2018"
@@ -13,5 +13,5 @@ quote = "1.0.0"
 proc-macro2 = "1.0.1"
 
 [dev-dependencies]
-crypto = { path = "../crypto"}
-failure = { path = "../../common/failure_ext", package = "failure_ext"}
+libra_crypto = { path = "../crypto"}
+failure = { path = "../../common/failure_ext", package = "libra_failure_ext"}

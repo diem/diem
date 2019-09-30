@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{AddBlockError, Block, CommitBlockError};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

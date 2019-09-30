@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use failure::Result;
 use hex;
+use libra_canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Serialize, Deserialize)]

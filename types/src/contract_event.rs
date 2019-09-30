@@ -8,15 +8,15 @@ use crate::{
     proof::{verify_event, EventProof},
     transaction::Version,
 };
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
-use crypto::{
+use failure::prelude::*;
+use libra_canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use libra_crypto::{
     hash::{ContractEventHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use failure::prelude::*;
+use libra_proto_conv::{FromProto, IntoProto};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 
 /// Entry produced via a call to the `emit_event` builtin.
 #[derive(Clone, Default, Eq, PartialEq, FromProto, IntoProto)]

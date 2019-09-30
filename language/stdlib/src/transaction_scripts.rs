@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ir_to_bytecode::parser::{ast::Program, parse_program};
 use lazy_static::lazy_static;
+use libra_ir_to_bytecode::parser::{ast::Program, parse_program};
 
 /// Returns the source code for peer-to-peer transaction script.
 pub fn peer_to_peer() -> &'static str {

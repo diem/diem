@@ -8,20 +8,20 @@ use crate::{
     },
     mocks::local_mock_mempool::LocalMockMempool,
 };
-use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
+use libra_admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
-use crypto::{ed25519::*, test_utils::TEST_SEED};
-use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
-use proto_conv::FromProto;
-use rand::SeedableRng;
-use std::sync::Arc;
-use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use types::{
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
+use libra_mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
+use libra_proto_conv::FromProto;
+use libra_storage_service::mocks::mock_storage_client::MockStorageReadClient;
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     vm_error::{StatusCode, VMStatus},
 };
-use vm_validator::mocks::mock_vm_validator::MockVMValidator;
+use libra_vm_validator::mocks::mock_vm_validator::MockVMValidator;
+use rand::SeedableRng;
+use std::sync::Arc;
 
 pub fn create_ac_service_for_ut() -> AdmissionControlService<LocalMockMempool, MockVMValidator> {
     AdmissionControlService::new(
