@@ -218,8 +218,6 @@ where
         let root_level = Position::root_level_from_leaf_count(last_new_leaf_count);
         let mut to_freeze = Vec::with_capacity(Self::max_to_freeze(num_new_leaves, root_level));
 
-        let mut num_leaves = self.num_leaves;
-
         // Iterate over the new leaves, adding them to to_freeze and then adding any frozen parents
         // when right children are encountered.  This has the effect of creating frozen nodes in
         // perfect post-order, which can be used as a strictly increasing append only index for
@@ -229,25 +227,24 @@ where
         // right sibling, if and when it becomes frozen.  If the frozen left sibling is not created
         // in this iteration, it must already exist in storage.
         let mut left_siblings: Vec<(_, _)> = Vec::new();
-        for leaf in new_leaves.iter() {
-            let leaf_pos = Position::from_leaf_index(num_leaves as u64);
+        for (leaf_offset, leaf) in new_leaves.iter().enumerate() {
+            let leaf_pos = Position::from_leaf_index((self.num_leaves + leaf_offset) as u64);
             let mut hash = *leaf;
             to_freeze.push((leaf_pos, hash));
-            num_leaves += 1;
             let mut pos = leaf_pos;
             while pos.is_right_child() {
                 let sibling = pos.sibling();
-                match left_siblings.pop() {
+                hash = match left_siblings.pop() {
                     Some((x, left_hash)) => {
                         assert_eq!(x, sibling);
-                        hash = Self::hash_internal_node(left_hash, hash);
+                        Self::hash_internal_node(left_hash, hash)
                     }
-                    None => hash = Self::hash_internal_node(self.reader.get(sibling)?, hash),
-                }
+                    None => Self::hash_internal_node(self.reader.get(sibling)?, hash),
+                };
                 pos = pos.parent();
                 to_freeze.push((pos, hash));
             }
-            // The node remaining now must be a left child, possibly a complete binary tree.
+            // The node remaining must be a left child, possibly the root of a complete binary tree.
             left_siblings.push((pos, hash));
         }
 
@@ -259,12 +256,14 @@ where
             hash = if pos.is_left_child() {
                 Self::hash_internal_node(hash, *ACCUMULATOR_PLACEHOLDER_HASH)
             } else {
-                Self::hash_internal_node(
-                    left_siblings
-                        .pop()
-                        .map_or_else(|| self.reader.get(pos.sibling()), |(_, x)| Ok(x))?,
-                    hash,
-                )
+                let sibling = pos.sibling();
+                match left_siblings.pop() {
+                    Some((x, left_hash)) => {
+                        assert_eq!(x, sibling);
+                        Self::hash_internal_node(left_hash, hash)
+                    }
+                    None => Self::hash_internal_node(self.reader.get(sibling)?, hash),
+                }
             };
             pos = pos.parent();
         }
