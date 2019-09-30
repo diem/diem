@@ -14,6 +14,15 @@ data "aws_ami" "ecs" {
   owners = ["amazon"]
 }
 
+variable "aws_ecs_ami_override" {
+   default = ""
+   description = "Machine image to use for ec2 instances"
+}
+
+locals {
+    aws_ecs_ami = var.aws_ecs_ami_override == "" ? data.aws_ami.ecs.id : var.aws_ecs_ami_override
+}
+
 locals {
   ebs_types = ["t2", "t3", "m5", "c5"]
 
@@ -146,7 +155,7 @@ locals {
 
 resource "aws_instance" "validator" {
   count         = length(var.peer_ids)
-  ami           = data.aws_ami.ecs.id
+  ami           = local.aws_ecs_ami
   instance_type = var.validator_type
   subnet_id = element(
     aws_subnet.testnet.*.id,

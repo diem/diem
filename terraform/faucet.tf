@@ -14,7 +14,7 @@ resource "aws_secretsmanager_secret_version" "faucet" {
 }
 
 resource "aws_instance" "faucet" {
-  ami                         = data.aws_ami.ecs.id
+  ami                         = local.aws_ecs_ami
   instance_type               = "t3.medium"
   subnet_id                   = element(aws_subnet.testnet.*.id, 0)
   depends_on                  = [aws_main_route_table_association.testnet]
