@@ -197,6 +197,12 @@ lazy_static! {
             vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
             vec![TypeParameter(0)]
         );
+        add!(m, addr, "Vector", "destroy_empty",
+            NativeVector::native_destroy_empty,
+            vec![Kind::All],
+            vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
+            vec![]
+        );
         // Event
         add!(m, addr, "Event", "write_to_event_store",
             |_| { NativeReturnStatus::InvalidArguments },
