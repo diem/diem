@@ -11,6 +11,7 @@ use vm_cache_map::Arena;
 pub mod execute;
 pub mod validate;
 pub mod verify;
+pub mod balance_checker;
 
 use validate::{ValidatedTransaction, ValidationMode};
 

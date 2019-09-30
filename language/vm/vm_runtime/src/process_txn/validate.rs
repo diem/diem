@@ -1,3 +1,19 @@
+use config::config::{VMMode, VMPublishingOption};
+use crypto::HashValue;
+use logger::prelude::*;
+use types::{
+    transaction::{MAX_TRANSACTION_SIZE_IN_BYTES, SignatureCheckedTransaction, TransactionPayload},
+    vm_error::{StatusCode, VMStatus},
+};
+use types::account_address::AccountAddress;
+use types::write_set::WriteSet;
+use vm::{
+    errors::convert_prologue_runtime_error,
+    gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
+    transaction_metadata::TransactionMetadata,
+};
+use vm_cache_map::Arena;
+
 use crate::{
     code_cache::{
         module_cache::{ModuleCache, TransactionModuleCache},
@@ -5,22 +21,10 @@ use crate::{
     },
     data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
-    process_txn::{verify::VerifiedTransaction, ProcessTransaction},
+    process_txn::{ProcessTransaction, verify::VerifiedTransaction},
     txn_executor::TransactionExecutor,
 };
-use config::config::{VMPublishingOption, VMMode};
-use crypto::HashValue;
-use logger::prelude::*;
-use types::{
-    transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
-    vm_error::{StatusCode, VMStatus},
-};
-use vm::{
-    errors::convert_prologue_runtime_error,
-    gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
-    transaction_metadata::TransactionMetadata,
-};
-use vm_cache_map::Arena;
+use crate::process_txn::balance_checker::BalanceChecker;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -35,9 +39,9 @@ pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8])
 /// Represents a [`SignedTransaction`] that has been *validated*. This includes all the steps
 /// required to ensure that a transaction is valid, other than verifying the submitted program.
 pub struct ValidatedTransaction<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
+    where
+        'alloc: 'txn,
+        P: ModuleCache<'alloc>,
 {
     txn: SignatureCheckedTransaction,
     txn_state: Option<ValidatedTransactionState<'alloc, 'txn, P>>,
@@ -58,9 +62,9 @@ pub enum ValidationMode {
 }
 
 impl<'alloc, 'txn, P> ValidatedTransaction<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
+    where
+        'alloc: 'txn,
+        P: ModuleCache<'alloc>,
 {
     /// Creates a new instance by validating a `SignedTransaction`.
     ///
@@ -163,17 +167,17 @@ where
 
                 None
             }
-            TransactionPayload::ChannelWriteSet(_channel_write_set) => {
+            TransactionPayload::ChannelWriteSet(channel_payload) => {
                 //channel write_set transaction only accept in onchain vm.
                 if vm_mode != VMMode::Onchain {
                     warn!("[VM] Attempt to process channel write set in Offchain VM");
                     return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
                 }
+                Self::check_channel_write_set(channel_payload.write_set(), txn.sender(), channel_payload.receiver)?;
                 //TODO(jole) do more validate
                 None
             }
-            TransactionPayload::ChannelScript(channel_script) => {
-                //TODO(jole) do more validate
+            TransactionPayload::ChannelScript(channel_payload) => {
                 Some(ValidatedTransaction::validate(
                     &txn,
                     module_cache,
@@ -183,10 +187,11 @@ where
                     vm_mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
-                        if !is_allowed_script(&publishing_option, &channel_script.script.code()) {
-                            warn!("[VM] Custom scripts not allowed: {:?}", &channel_script.script.code());
-                            return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
+                        if !is_allowed_script(&publishing_option, channel_payload.script().code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", channel_payload.script().code());
+                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
                         }
+                        Self::check_channel_write_set(channel_payload.write_set(), txn.sender(), channel_payload.receiver)?;
                         Ok(())
                     },
                 )?)
@@ -194,6 +199,17 @@ where
         };
 
         Ok(Self { txn, txn_state })
+    }
+
+    fn check_channel_write_set(write_set: &WriteSet, sender: AccountAddress, receiver: AccountAddress) -> Result<(), VMStatus> {
+        // check write_set resource ownership
+        for (ap, _op) in write_set {
+            if &ap.address != &sender && &ap.address != &receiver {
+                warn!("[VM] Attempt to access other address's resource.");
+                return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
+            }
+        }
+        Ok(())
     }
 
     /// Verifies the bytecode in this transaction.
@@ -296,7 +312,7 @@ where
         // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
         // we turn off the clippy warning.
         #[allow(clippy::absurd_extreme_comparisons)]
-        let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
+            let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
         if below_min_bound {
             let error_str = format!(
                 "gas unit min price: {}, submitted price: {}",
@@ -332,6 +348,17 @@ where
 
         payload_check()?;
 
+        // Check channel write_set asset balance, offchain channel transaction should keep asset balance
+        let channel_write_set = match txn.payload(){
+            TransactionPayload::ChannelWriteSet(channel_payload) => Some(channel_payload.write_set()),
+            TransactionPayload::ChannelScript(channel_payload) => Some(channel_payload.write_set()),
+            _ => None,
+        };
+        if let Some(write_set) = channel_write_set {
+            let balance_checker = BalanceChecker::new(data_cache, &module_cache);
+            balance_checker.check_balance(write_set)?;
+        }
+
         let metadata = TransactionMetadata::new(&txn);
         let mut txn_state =
             ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, vm_mode);
@@ -364,20 +391,20 @@ where
 
 /// State for program-based [`ValidatedTransaction`] instances.
 pub(super) struct ValidatedTransactionState<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
+    where
+        'alloc: 'txn,
+        P: ModuleCache<'alloc>,
 {
     // <'txn, 'txn> looks weird, but it just means that the module cache passed in (the
     // TransactionModuleCache) allocates for that long.
     pub(super) txn_executor:
-        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+    TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
 }
 
 impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
+    where
+        'alloc: 'txn,
+        P: ModuleCache<'alloc>,
 {
     fn new(
         metadata: TransactionMetadata,

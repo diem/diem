@@ -1,11 +1,13 @@
+use serde::{Deserialize, Serialize};
+
+use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use crypto::hash::{CryptoHash, CryptoHasher, TestOnlyHasher};
+use crypto::HashValue;
 use failure::prelude::*;
-use crate::write_set::WriteSet;
+
 use crate::account_address::AccountAddress;
 use crate::transaction::Script;
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, CanonicalDeserializer, CanonicalDeserialize, SimpleSerializer};
-use serde::{Deserialize, Serialize};
-use crypto::hash::{CryptoHash, TestOnlyHasher, CryptoHasher};
-use crypto::HashValue;
+use crate::write_set::WriteSet;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChannelWriteSetPayload {
@@ -15,19 +17,21 @@ pub struct ChannelWriteSetPayload {
 }
 
 impl ChannelWriteSetPayload {
-
-    pub fn new(channel_sequence_number:u64, write_set: WriteSet, receiver: AccountAddress) -> Self{
-        Self{
+    pub fn new(channel_sequence_number: u64, write_set: WriteSet, receiver: AccountAddress) -> Self {
+        Self {
             channel_sequence_number,
             write_set,
             receiver,
         }
     }
+
+    pub fn write_set(&self) -> &WriteSet {
+        &self.write_set
+    }
 }
 
 
 impl CanonicalSerialize for ChannelWriteSetPayload {
-
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer.encode_u64(self.channel_sequence_number)?;
         serializer.encode_struct(&self.write_set)?;
@@ -37,13 +41,12 @@ impl CanonicalSerialize for ChannelWriteSetPayload {
 }
 
 impl CanonicalDeserialize for ChannelWriteSetPayload {
-
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> where
         Self: Sized {
         let channel_sequence_number = deserializer.decode_u64()?;
         let write_set = deserializer.decode_struct()?;
         let receiver = deserializer.decode_struct()?;
-        Ok(Self{
+        Ok(Self {
             channel_sequence_number,
             write_set,
             receiver,
@@ -75,19 +78,25 @@ pub struct ChannelScriptPayload {
 }
 
 impl ChannelScriptPayload {
-
-    pub fn new(channel_sequence_number:u64, write_set: WriteSet, receiver: AccountAddress, script: Script) -> Self{
-        Self{
+    pub fn new(channel_sequence_number: u64, write_set: WriteSet, receiver: AccountAddress, script: Script) -> Self {
+        Self {
             channel_sequence_number,
             write_set,
             receiver,
-            script
+            script,
         }
+    }
+
+    pub fn write_set(&self) -> &WriteSet {
+        &self.write_set
+    }
+
+    pub fn script(&self) -> &Script {
+        &self.script
     }
 }
 
 impl CanonicalSerialize for ChannelScriptPayload {
-
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer.encode_u64(self.channel_sequence_number)?;
         serializer.encode_struct(&self.write_set)?;
@@ -98,14 +107,13 @@ impl CanonicalSerialize for ChannelScriptPayload {
 }
 
 impl CanonicalDeserialize for ChannelScriptPayload {
-
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> where
         Self: Sized {
         let channel_sequence_number = deserializer.decode_u64()?;
         let write_set = deserializer.decode_struct()?;
         let receiver = deserializer.decode_struct()?;
         let script = deserializer.decode_struct()?;
-        Ok(Self{
+        Ok(Self {
             channel_sequence_number,
             write_set,
             receiver,
