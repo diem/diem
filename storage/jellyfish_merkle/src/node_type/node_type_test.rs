@@ -89,6 +89,13 @@ proptest! {
         serialize_u64_varint(input, &mut vec);
         assert_eq!(deserialize_u64_varint(&mut Cursor::new(vec)).unwrap(), input);
     }
+
+    #[test]
+    fn test_internal_node_roundtrip(input in any::<InternalNode>()) {
+        let mut vec = vec![];
+        input.serialize(&mut vec).unwrap();
+        assert_eq!(InternalNode::deserialize(&vec).unwrap(), input);
+    }
 }
 
 #[test]
