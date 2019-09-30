@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 mod block_store;
 mod block_tree;
+mod pending_votes;
 
 pub use block_store::{BlockStore, NeedFetchResult};
 use executor::StateComputeResult;
