@@ -686,13 +686,13 @@ where
     for i in 0..8 {
         let byte = reader.read_u8()?;
         let more = (byte & 0x80) != 0;
-        num = num | (u64::from(byte & 0x7f) << i * 7);
+        num |= u64::from(byte & 0x7f) << (i * 7);
         if !more {
             return Ok(num);
         }
     }
     // Last byte is encoded as is.
     let byte = reader.read_u8()?;
-    num = num | u64::from(byte) << 56;
+    num |= u64::from(byte) << 56;
     Ok(num)
 }
