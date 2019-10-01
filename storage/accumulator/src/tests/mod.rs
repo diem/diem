@@ -8,6 +8,7 @@ use super::*;
 use crypto::hash::TestOnlyHasher;
 use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
+use types::proof::definition::LeafCount;
 
 type InMemoryAccumulator = types::proof::accumulator::Accumulator<TestOnlyHasher>;
 type TestAccumulator = MerkleAccumulator<MockHashStore, TestOnlyHasher>;
@@ -30,7 +31,7 @@ struct Subtree {
     max_position: u64,
     hash: HashValue,
     frozen: bool,
-    num_frozen_nodes: usize,
+    num_frozen_nodes: LeafCount,
 }
 
 impl MockHashStore {
@@ -85,7 +86,7 @@ impl MockHashStore {
             let max_position = min_position;
             let hash = leaves[0];
             let frozen = hash != *ACCUMULATOR_PLACEHOLDER_HASH;
-            let num_frozen_nodes = frozen as usize;
+            let num_frozen_nodes = frozen as LeafCount;
 
             Subtree {
                 root_position,
@@ -104,7 +105,7 @@ impl MockHashStore {
             let max_position = right.max_position;
             let hash = Self::hash_internal(left.hash, right.hash);
             let frozen = left.frozen && right.frozen;
-            let num_frozen_nodes = left.num_frozen_nodes + right.num_frozen_nodes + frozen as usize;
+            let num_frozen_nodes = left.num_frozen_nodes + right.num_frozen_nodes + frozen as LeafCount;
 
             Subtree {
                 root_position,
@@ -145,7 +146,7 @@ impl MockHashStore {
             let tree = self.verify_subtree(&full_tree_leaves, 0)?;
 
             ensure!(
-                self.store.len() == tree.num_frozen_nodes,
+                self.store.len() as LeafCount == tree.num_frozen_nodes,
                 "mismatch: items in store - {} vs expect num of frozen nodes - {}",
                 self.store.len(),
                 tree.num_frozen_nodes,
@@ -163,9 +164,9 @@ proptest! {
         store.put_many(&writes);
 
         let frozen_subtree_hashes =
-            TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len()).unwrap();
+            TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len() as LeafCount).unwrap();
         let in_mem_acc =
-            InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len()).unwrap();
+            InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len() as LeafCount).unwrap();
         prop_assert_eq!(root_hash, in_mem_acc.root_hash());
     }
 }

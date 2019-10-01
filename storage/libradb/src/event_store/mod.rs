@@ -75,7 +75,7 @@ impl EventStore {
         let mut iter = self.db.iter::<EventSchema>(ReadOptions::default())?;
         iter.seek_for_prev(&(version + 1))?;
         let num_events = match iter.next().transpose()? {
-            Some(((ver, index), _)) if ver == version => (index + 1) as usize,
+            Some(((ver, index), _)) if ver == version => (index + 1),
             _ => unreachable!(), // since we've already got at least one event above
         };
 

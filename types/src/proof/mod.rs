@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod accumulator;
+pub mod definition;
 pub mod position;
 #[cfg(any(test, feature = "testing"))]
 pub mod proptest_proof;
 
-mod definition;
 #[cfg(test)]
 #[path = "unit_tests/proof_test.rs"]
 mod proof_test;
