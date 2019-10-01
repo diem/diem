@@ -1,23 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proto::{
-    secret_service::{ErrorCode, GenerateKeyRequest, PublicKeyRequest},
-    secret_service_grpc::SecretServiceClient,
-};
-use config::config::{NodeConfig, NodeConfigHelpers};
-use debug_interface::node_debug_helpers::{check_node_up, create_debug_client};
-use grpcio::{ChannelBuilder, EnvBuilder};
-use std::{sync::Arc, thread};
-
 use crate::{
-    proto::secret_service::KeyType, secret_service_client::ConsensusKeyManager,
+    proto::{ErrorCode, GenerateKeyRequest, KeyType, PublicKeyRequest, SecretServiceClient},
+    secret_service_client::ConsensusKeyManager,
     secret_service_node::SecretServiceNode,
 };
+use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::hash::HashValue;
-use logger::prelude::*;
-// use crate::crypto_wrappers::GenericSignature;
 use crypto::traits::Signature;
+use debug_interface::node_debug_helpers::{check_node_up, create_debug_client};
+use grpcio::{ChannelBuilder, EnvBuilder};
+use logger::prelude::*;
+use std::{sync::Arc, thread};
 
 /////////////////////////////////////////////////////////////////////////////////////
 // These tests check interoperability of key_generation,                           //
@@ -77,12 +72,12 @@ fn test_generate_key() {
     let client = create_secret_service_node_and_client(node_config.clone());
 
     // create request to generate new key
-    let mut gen_req: GenerateKeyRequest = GenerateKeyRequest::new();
+    let mut gen_req: GenerateKeyRequest = GenerateKeyRequest::default();
     gen_req.set_spec(KeyType::Ed25519);
 
     let result = client.generate_key(&gen_req);
     if let Ok(response) = result {
-        let is_successful = response.get_code() == ErrorCode::Success;
+        let is_successful = response.code() == ErrorCode::Success;
         assert!(is_successful);
     } else {
         panic!("key generation failed: {}", result.err().unwrap());
@@ -95,7 +90,7 @@ fn test_generate_and_retrieve_key() {
     let client = create_secret_service_node_and_client(node_config.clone());
 
     // create request to generate new key
-    let mut gen_req: GenerateKeyRequest = GenerateKeyRequest::new();
+    let mut gen_req: GenerateKeyRequest = GenerateKeyRequest::default();
     gen_req.set_spec(KeyType::Ed25519);
 
     let result = client.generate_key(&gen_req);
@@ -104,47 +99,47 @@ fn test_generate_and_retrieve_key() {
     }
 
     let response = result.ok().unwrap();
-    let is_successful = response.get_code() == ErrorCode::Success;
+    let is_successful = response.code() == ErrorCode::Success;
     assert!(is_successful);
-    let keyid = response.get_key_id();
+    let keyid = response.key_id;
 
     // assert_eq!(keyid, [230, 70, 121, 164, 224, 224, 49, 236, 222, 129, 71, 209, 108, 208, 39,
     // 161, 6, 166, 100, 236, 85, 0, 83, 224, 28, 229, 132, 230, 86, 31, 198, 235]);
 
     // existing key can be obtained
-    let mut pk_req: PublicKeyRequest = PublicKeyRequest::new();
-    pk_req.set_key_id(keyid.to_vec());
+    let mut pk_req: PublicKeyRequest = PublicKeyRequest::default();
+    pk_req.key_id = keyid.to_vec();
 
     let result = client.get_public_key(&pk_req);
     if result.is_err() {
         panic!("public key retrieval failed: {}", result.err().unwrap());
     }
     let response = result.ok().unwrap();
-    let is_successful = response.get_code() == ErrorCode::Success;
+    let is_successful = response.code() == ErrorCode::Success;
     assert!(is_successful);
-    let _result = response.get_public_key();
+    let _result = response.public_key;
 
     // invalid length keyid argument returns an error
-    let mut pk_req: PublicKeyRequest = PublicKeyRequest::new();
-    pk_req.set_key_id([0, 1, 2, 4].to_vec());
+    let mut pk_req: PublicKeyRequest = PublicKeyRequest::default();
+    pk_req.key_id = [0, 1, 2, 4].to_vec();
 
     let result = client.get_public_key(&pk_req);
     if result.is_err() {
         panic!("public key retrieval failed: {}", result.err().unwrap());
     }
     let response = result.ok().unwrap();
-    let is_successful = response.get_code() == ErrorCode::WrongLength;
+    let is_successful = response.code() == ErrorCode::WrongLength;
     assert!(is_successful);
 
     // obtaining non-existing key returns an error
-    let mut pk_req: PublicKeyRequest = PublicKeyRequest::new();
-    pk_req.set_key_id([255; HashValue::LENGTH].to_vec());
+    let mut pk_req: PublicKeyRequest = PublicKeyRequest::default();
+    pk_req.key_id = [255; HashValue::LENGTH].to_vec();
 
     let result = client.get_public_key(&pk_req);
     if result.is_err() {
         panic!("public key retrieval failed: {}", result.err().unwrap());
     }
     let response = result.ok().unwrap();
-    let is_successful = response.get_code() == ErrorCode::KeyIdNotFound;
+    let is_successful = response.code() == ErrorCode::KeyIdNotFound;
     assert!(is_successful);
 }

@@ -3852,7 +3852,7 @@ dependencies = [
 name = "secret-service"
 version = "0.1.0"
 dependencies = [
- "build_helpers 0.1.0",
+ "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "config 0.1.0",
  "crypto 0.1.0",
  "crypto_derive 0.1.0",
@@ -3862,8 +3862,9 @@ dependencies = [
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "logger 0.1.0",
- "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_chacha 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",

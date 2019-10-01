@@ -7,9 +7,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
+bytes = "0.4.12"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 futures = "0.1.28"
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
-protobuf = "~2.7"
+prost = "0.5.0"
 rand = "0.6.5"
 rand_chacha = "0.1.1"
 serde = { version = "1.0.96", features = ["derive"] }
@@ -28,4 +29,4 @@ logger = { path = "../../common/logger" }
 config = { path = "../../config", features = ["testing"]}
 
 [build-dependencies]
-build_helpers = { path = "../../common/build_helpers" }
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

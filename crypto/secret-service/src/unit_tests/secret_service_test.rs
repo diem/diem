@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    proto::secret_service::KeyType,
+    proto::KeyType,
     secret_service_server::{KeyID, SecretServiceServer},
 };
 use crypto::{
@@ -18,7 +18,7 @@ use crypto::{
 #[test]
 fn test_generate_and_retrieve_keys() {
     let mut ss_service = SecretServiceServer::new();
-    let keys = [KeyType::Ed25519, KeyType::BLS12381];
+    let keys = [KeyType::Ed25519, KeyType::Bls12381];
 
     for key_type in keys.iter() {
         /* no placeholder key id exists */
@@ -98,7 +98,7 @@ fn test_generate_and_retrieve_keys() {
 fn test_ed25519_sign() {
     let mut ss_service = SecretServiceServer::new();
 
-    let keys = [KeyType::Ed25519, KeyType::BLS12381];
+    let keys = [KeyType::Ed25519, KeyType::Bls12381];
 
     for key_type in keys.iter() {
         let keyid1 = ss_service.generate_key_inner(*key_type).unwrap();

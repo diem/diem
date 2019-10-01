@@ -7,11 +7,12 @@
 //! `src/a/b/c_grpc.rs`.
 
 fn main() {
-    let proto_root = "src/proto";
+    let protos = ["src/proto/secret_service.proto"];
 
-    build_helpers::build_helpers::compile_proto(
-        proto_root,
-        vec![],
-        true, /* generate_client_stub */
-    );
+    grpcio_compiler::prost_codegen::compile_protos(
+        &protos,
+        &["src/proto"],
+        &std::env::var("OUT_DIR").unwrap(),
+    )
+    .unwrap();
 }

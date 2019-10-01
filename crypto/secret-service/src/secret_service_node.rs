@@ -7,7 +7,7 @@
 //! The proto/secret_service.proto file shows the requests that the service accepts and the
 //! responses that it gives back. For an example on how to run the secret service see main.rs.
 
-use crate::{proto::secret_service_grpc, secret_service_server::SecretServiceServer};
+use crate::{proto::create_secret_service, secret_service_server::SecretServiceServer};
 use config::config::NodeConfig;
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use failure::prelude::*;
@@ -35,7 +35,7 @@ impl SecretServiceNode {
         info!("Starting secret service node");
 
         let handle = SecretServiceServer::new();
-        let service = secret_service_grpc::create_secret_service(handle);
+        let service = create_secret_service(handle);
         let _ss_service_handle = spawn_service_thread(
             service,
             self.node_config.secret_service.address.clone(),

@@ -8,11 +8,8 @@
 use crate::{
     crypto_wrappers::{GenericPrivateKey, GenericPublicKey, GenericSignature, KeyID},
     proto::{
-        secret_service::{
-            ErrorCode, GenerateKeyRequest, GenerateKeyResponse, KeyType, PublicKeyRequest,
-            PublicKeyResponse, SignRequest, SignResponse,
-        },
-        secret_service_grpc,
+        ErrorCode, GenerateKeyRequest, GenerateKeyResponse, KeyType, PublicKeyRequest,
+        PublicKeyResponse, SecretService, SignRequest, SignResponse,
     },
 };
 use crypto::{
@@ -64,7 +61,7 @@ impl SecretServiceServer {
                 KeyType::Ed25519 => {
                     GenericPrivateKey::Ed(Ed25519PrivateKey::generate_for_testing(&mut rng))
                 }
-                KeyType::BLS12381 => {
+                KeyType::Bls12381 => {
                     GenericPrivateKey::BLS(BLS12381PrivateKey::generate_for_testing(&mut rng))
                 }
             }
@@ -110,10 +107,10 @@ impl SecretServiceServer {
     }
 }
 
-/// SecretServiceServer implements the proto trait secret_service_grpc::SecretService.
+/// SecretServiceServer implements the proto trait SecretService.
 /// The methods below wrap around inner methods of SecretServiceServer and operate on grpc's
 /// requests/responses.
-impl secret_service_grpc::SecretService for SecretServiceServer {
+impl SecretService for SecretServiceServer {
     /// Generates a new key answering a GenerateKeyRequest with a GenerateKeyResponse.
     fn generate_key(
         &mut self,
@@ -121,12 +118,12 @@ impl secret_service_grpc::SecretService for SecretServiceServer {
         req: GenerateKeyRequest,
         sink: ::grpcio::UnarySink<GenerateKeyResponse>,
     ) {
-        let mut response = GenerateKeyResponse::new();
-        let spec = req.get_spec();
+        let mut response = GenerateKeyResponse::default();
+        let spec = req.spec();
         let keyid = self.generate_key_inner(spec);
         if let Ok(key_identity) = keyid {
             response.set_code(ErrorCode::Success);
-            response.set_key_id(key_identity.to_vec());
+            response.key_id = key_identity.to_vec();
         } else {
             response.set_code(ErrorCode::Unspecified);
         }
@@ -140,16 +137,16 @@ impl secret_service_grpc::SecretService for SecretServiceServer {
         req: PublicKeyRequest,
         sink: ::grpcio::UnarySink<PublicKeyResponse>,
     ) {
-        let mut response = PublicKeyResponse::new();
-        let keyid_raw_bytes = req.get_key_id();
+        let mut response = PublicKeyResponse::default();
+        let keyid_raw_bytes = req.key_id;
         if keyid_raw_bytes.len() != HashValue::LENGTH {
             response.set_code(ErrorCode::WrongLength);
-        } else if let Ok(keyid) = HashValue::from_slice(keyid_raw_bytes) {
+        } else if let Ok(keyid) = HashValue::from_slice(&keyid_raw_bytes) {
             let keyid = KeyID(keyid);
             let public_key = self.get_public_key_inner(&keyid);
             if let Some(pkey) = public_key {
                 response.set_code(ErrorCode::Success);
-                response.set_public_key(pkey.to_bytes().to_vec());
+                response.public_key = pkey.to_bytes().to_vec();
             } else {
                 response.set_code(ErrorCode::KeyIdNotFound);
             }
@@ -167,20 +164,20 @@ impl secret_service_grpc::SecretService for SecretServiceServer {
         req: SignRequest,
         sink: ::grpcio::UnarySink<SignResponse>,
     ) {
-        let mut response = SignResponse::new();
-        let keyid_raw_bytes = req.get_key_id();
-        let message_raw_bytes = req.get_message_hash();
+        let mut response = SignResponse::default();
+        let keyid_raw_bytes = req.key_id;
+        let message_raw_bytes = req.message_hash;
         if keyid_raw_bytes.len() != HashValue::LENGTH
             || message_raw_bytes.len() != HashValue::LENGTH
         {
             response.set_code(ErrorCode::WrongLength);
-        } else if let Ok(keyid) = HashValue::from_slice(keyid_raw_bytes) {
+        } else if let Ok(keyid) = HashValue::from_slice(&keyid_raw_bytes) {
             let keyid = KeyID(keyid);
-            if let Ok(message) = HashValue::from_slice(message_raw_bytes) {
+            if let Ok(message) = HashValue::from_slice(&message_raw_bytes) {
                 let signature = self.sign_inner(&keyid, &message);
                 if let Some(sig) = signature {
                     response.set_code(ErrorCode::Success);
-                    response.set_signature(sig.to_bytes().to_vec());
+                    response.signature = sig.to_bytes().to_vec();
                 } else {
                     response.set_code(ErrorCode::KeyIdNotFound);
                 }
