@@ -23,7 +23,7 @@
 //! Note2: The level of tree counts from leaf level, start from 0
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
-use crate::proof::definition::{MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
+use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
 use std::fmt;
 
 #[cfg(test)]
@@ -149,15 +149,15 @@ impl Position {
         Self(smear_ones_for_u64(leaf.0) >> 1)
     }
 
-    pub fn root_from_leaf_count(leaf_count: usize) -> Self {
+    pub fn root_from_leaf_count(leaf_count: LeafCount) -> Self {
         assert!(leaf_count > 0);
         Self::root_from_leaf_index((leaf_count - 1) as u64)
     }
 
-    pub fn root_level_from_leaf_count(leaf_count: usize) -> usize {
+    pub fn root_level_from_leaf_count(leaf_count: LeafCount) -> u32 {
         assert!(leaf_count > 0);
         let index = (leaf_count - 1) as u64;
-        MAX_ACCUMULATOR_PROOF_DEPTH + 1 - index.leading_zeros() as usize
+        MAX_ACCUMULATOR_PROOF_DEPTH as u32 + 1 - index.leading_zeros()
     }
 
     /// Given a node, find its right most child in its subtree.
@@ -327,9 +327,9 @@ pub struct FrozenSubTreeIterator {
 }
 
 impl FrozenSubTreeIterator {
-    pub fn new(num_leaves: usize) -> Self {
+    pub fn new(num_leaves: LeafCount) -> Self {
         Self {
-            bitmap: num_leaves as u64,
+            bitmap: num_leaves,
             seen_leaves: 0,
         }
     }
@@ -369,14 +369,14 @@ impl Iterator for FrozenSubTreeIterator {
 ///
 /// See [`crate::proof::accumulator::Accumulator::append_subtrees`] for more details.
 pub struct FrozenSubtreeSiblingIterator {
-    current_num_leaves: usize,
-    remaining_new_leaves: usize,
+    current_num_leaves: LeafCount,
+    remaining_new_leaves: LeafCount,
 }
 
 impl FrozenSubtreeSiblingIterator {
     /// Constructs a new `FrozenSubtreeSiblingIterator` given the size of current accumulator and
     /// the size of the bigger accumulator.
-    pub fn new(current_num_leaves: usize, new_num_leaves: usize) -> Self {
+    pub fn new(current_num_leaves: LeafCount, new_num_leaves: LeafCount) -> Self {
         assert!(
             new_num_leaves <= MAX_ACCUMULATOR_LEAVES,
             "An accumulator can have at most 2^{} leaves. Provided num_leaves: {}.",
@@ -399,7 +399,7 @@ impl FrozenSubtreeSiblingIterator {
     /// Helper function to return the next set of leaves that form a complete subtree.  For
     /// example, if there are 5 leaves (..0101), 2 ^ (63 - 61 leading zeros) = 4 leaves should be
     /// taken next.
-    fn next_new_leaf_batch(&self) -> usize {
+    fn next_new_leaf_batch(&self) -> LeafCount {
         let zeros = self.remaining_new_leaves.leading_zeros();
         1 << (MAX_ACCUMULATOR_PROOF_DEPTH - zeros as usize)
     }

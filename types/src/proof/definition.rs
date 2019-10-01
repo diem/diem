@@ -17,7 +17,6 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::mem;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
@@ -31,11 +30,10 @@ pub struct AccumulatorProof {
 
 /// Because leaves can only take half the space in the tree, any numbering of the tree leaves must
 /// not take the full width of the total space.  Thus, for a 64-bit ordering, our maximumm proof
-/// depth is limited to 63.  We rely on usize to provide full 64-bit width, and assert for this.
-#[allow(dead_code)]
-const USIZE_STATIC_ASSERT: usize = mem::size_of::<usize>() - mem::size_of::<u64>();
+/// depth is limited to 63.
+pub type LeafCount = u64;
 pub const MAX_ACCUMULATOR_PROOF_DEPTH: usize = 63;
-pub const MAX_ACCUMULATOR_LEAVES: usize = 1 << MAX_ACCUMULATOR_PROOF_DEPTH;
+pub const MAX_ACCUMULATOR_LEAVES: LeafCount = 1 << MAX_ACCUMULATOR_PROOF_DEPTH;
 
 impl AccumulatorProof {
     /// Constructs a new `AccumulatorProof` using a list of siblings.

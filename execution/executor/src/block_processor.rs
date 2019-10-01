@@ -28,7 +28,7 @@ use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{accumulator::Accumulator, SparseMerkleProof},
+    proof::{accumulator::Accumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
@@ -85,7 +85,7 @@ where
         committed_timestamp_usecs: u64,
         previous_state_root_hash: HashValue,
         previous_frozen_subtrees_in_accumulator: Vec<HashValue>,
-        previous_num_leaves_in_accumulator: usize,
+        previous_num_leaves_in_accumulator: LeafCount,
         last_committed_block_id: HashValue,
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
@@ -373,8 +373,8 @@ where
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
         let ledger_info_to_commit = if self.committed_trees.txn_accumulator().num_leaves()
-            + txns_to_commit.len()
-            == ledger_info_with_sigs.ledger_info().version() as usize + 1
+            + txns_to_commit.len() as LeafCount
+            == ledger_info_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
             // given ledger info in the verification process above, so this check can possibly fail
@@ -424,7 +424,7 @@ where
         &self,
         txn_list_with_proof: &TransactionListWithProof,
         ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    ) -> Result<(usize, Version)> {
+    ) -> Result<(LeafCount, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
             txn_list_with_proof.first_transaction_version,
@@ -441,13 +441,13 @@ where
             as Version;
 
         ensure!(
-            first_txn_version as usize <= num_committed_txns,
+            first_txn_version <= num_committed_txns,
             "Transaction list too new. Expected version: {}. First transaction version: {}.",
             num_committed_txns,
             first_txn_version
         );
         Ok((
-            num_committed_txns - first_txn_version as usize,
+            num_committed_txns - first_txn_version,
             num_committed_txns as Version,
         ))
     }

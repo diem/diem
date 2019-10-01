@@ -126,11 +126,7 @@ impl LedgerStore {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccumulatorProof> {
-        Accumulator::get_proof(
-            self,
-            (ledger_version + 1) as usize, /* num_leaves */
-            version,
-        )
+        Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
     }
 
     /// Write `txn_infos` to `batch`. Assigned `first_version` to the the version number of the
@@ -151,7 +147,7 @@ impl LedgerStore {
         let txn_hashes: Vec<HashValue> = txn_infos.iter().map(TransactionInfo::hash).collect();
         let (root_hash, writes) = Accumulator::append(
             self,
-            first_version as usize, /* num_existing_leaves */
+            first_version, /* num_existing_leaves */
             &txn_hashes,
         )?;
         writes
@@ -175,7 +171,7 @@ impl LedgerStore {
 
     /// From left to right, get frozen subtree root hashes of the transaction accumulator.
     pub fn get_ledger_frozen_subtree_hashes(&self, version: Version) -> Result<Vec<HashValue>> {
-        Accumulator::get_frozen_subtree_hashes(self, version as usize + 1)
+        Accumulator::get_frozen_subtree_hashes(self, version + 1)
     }
 }
 
