@@ -13,7 +13,6 @@ use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
-use grpcio_sys;
 use logger::prelude::*;
 use mempool::{proto::mempool_grpc::MempoolClient, MempoolRuntime};
 use metrics::metric_server;
@@ -63,7 +62,7 @@ fn setup_ac(config: &NodeConfig) -> (::grpcio::Server, AdmissionControlClient) {
     let env = Arc::new(
         EnvBuilder::new()
             .name_prefix("grpc-ac-")
-            .cq_count(unsafe { min(grpcio_sys::gpr_cpu_num_cores() as usize * 2, 32) })
+            .cq_count(min(num_cpus::get() * 2, 32))
             .build(),
     );
     let port = config.admission_control.admission_control_service_port;

@@ -163,7 +163,7 @@ impl GRPCClient {
                     if let grpcio::Error::RpcFailure(grpc_rpc_failure) = grpc_error {
                         // Only retry when the connection is down to make sure we won't
                         // send one txn twice.
-                        return grpc_rpc_failure.status == grpcio::RpcStatusCode::Unavailable;
+                        return grpc_rpc_failure.status == grpcio::RpcStatusCode::UNAVAILABLE;
                     }
                 }
             }
