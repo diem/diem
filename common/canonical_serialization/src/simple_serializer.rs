@@ -66,6 +66,9 @@ where
         I: Iterator<Item = (K, V)>,
     {
         let mut map = BTreeMap::new();
+        
+        // Regardless of the order defined for K of the map, write in the order of the lexicographic
+        // order of the canonical serialized bytes of K
         for (key, value) in iter {
             map.insert(
                 SimpleSerializer::<Vec<u8>>::serialize(&key)?,
@@ -82,9 +85,6 @@ where
 
         // add the number of pairs in the map
         self.encode_u32(map.len() as u32)?;
-
-        // Regardless of the order defined for K of the map, write in the order of the lexicographic
-        // order of the canonical serialized bytes of K
 
         for (key, value) in map {
             self.output.write_all(key.as_ref())?;
