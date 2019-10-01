@@ -66,7 +66,7 @@ where
         I: Iterator<Item = (K, V)>,
     {
         let mut map = BTreeMap::new();
-        
+
         // Regardless of the order defined for K of the map, write in the order of the lexicographic
         // order of the canonical serialized bytes of K
         for (key, value) in iter {
