@@ -375,7 +375,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -383,7 +383,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -391,7 +391,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(TransactionListWithProof::new_empty(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -399,7 +399,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -407,7 +407,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[2].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li, ledger_info);
 
     drop(storage_server);
@@ -443,7 +443,7 @@ fn test_executor_execute_chunk_restart() {
         block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
-        let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li.ledger_info().version(), 0);
         assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
     }
@@ -460,7 +460,7 @@ fn test_executor_execute_chunk_restart() {
         block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
-        let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li, ledger_info);
     }
 

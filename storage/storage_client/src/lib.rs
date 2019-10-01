@@ -32,6 +32,7 @@ use types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
+    proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
@@ -106,6 +107,7 @@ impl StorageRead for StorageReadServiceClient {
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
     }
@@ -121,6 +123,7 @@ impl StorageRead for StorageReadServiceClient {
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
                         Vec<ValidatorChangeEventWithProof>,
+                        AccumulatorConsistencyProof,
                     )>,
                 > + Send,
         >,
@@ -139,6 +142,7 @@ impl StorageRead for StorageReadServiceClient {
                 rust_resp.response_items,
                 rust_resp.ledger_info_with_sigs,
                 rust_resp.validator_change_events,
+                rust_resp.ledger_consistency_proof,
             ))
         })
         .boxed()
@@ -307,6 +311,7 @@ pub trait StorageRead: Send + Sync {
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )>;
 
     /// See [`LibraDB::update_to_latest_ledger`].
@@ -324,6 +329,7 @@ pub trait StorageRead: Send + Sync {
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
                         Vec<ValidatorChangeEventWithProof>,
+                        AccumulatorConsistencyProof,
                     )>,
                 > + Send,
         >,

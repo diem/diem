@@ -144,7 +144,12 @@ impl StorageService {
     ) -> Result<UpdateToLatestLedgerResponse> {
         let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
 
-        let (response_items, ledger_info_with_sigs, validator_change_events) = self
+        let (
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_events,
+            ledger_consistency_proof,
+        ) = self
             .db
             .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
 
@@ -152,6 +157,7 @@ impl StorageService {
             response_items,
             ledger_info_with_sigs,
             validator_change_events,
+            ledger_consistency_proof,
         };
 
         Ok(rust_resp.into_proto())

@@ -21,6 +21,7 @@ use types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
+    proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     proto::{
         account_state_blob::AccountStateWithProof,
@@ -55,6 +56,7 @@ impl StorageRead for MockStorageReadClient {
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )> {
         let request = types::get_with_proof::UpdateToLatestLedgerRequest::new(
             client_known_version,
@@ -68,6 +70,7 @@ impl StorageRead for MockStorageReadClient {
             response.response_items,
             response.ledger_info_with_sigs,
             response.validator_change_events,
+            response.ledger_consistency_proof,
         ))
     }
 
@@ -82,6 +85,7 @@ impl StorageRead for MockStorageReadClient {
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
                         Vec<ValidatorChangeEventWithProof>,
+                        AccumulatorConsistencyProof,
                     )>,
                 > + Send,
         >,
