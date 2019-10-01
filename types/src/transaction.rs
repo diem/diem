@@ -32,7 +32,7 @@ use failure::prelude::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
+use std::{collections::HashMap, fmt, time::Duration};
 
 mod module;
 mod program;
@@ -643,8 +643,8 @@ impl CanonicalSerialize for SignedTransaction {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.raw_txn)?
-            .encode_bytes(&self.public_key.to_bytes())?
-            .encode_bytes(&self.signature.to_bytes())?;
+            .encode_struct(&self.public_key)?
+            .encode_struct(&self.signature)?;
         Ok(())
     }
 }
@@ -655,14 +655,10 @@ impl CanonicalDeserialize for SignedTransaction {
         Self: Sized,
     {
         let raw_txn: RawTransaction = deserializer.decode_struct()?;
-        let public_key_bytes = deserializer.decode_bytes()?;
-        let signature_bytes = deserializer.decode_bytes()?;
+        let public_key: Ed25519PublicKey = deserializer.decode_struct()?;
+        let signature: Ed25519Signature = deserializer.decode_struct()?;
 
-        Ok(SignedTransaction::new(
-            raw_txn,
-            Ed25519PublicKey::try_from(&public_key_bytes[..])?,
-            Ed25519Signature::try_from(&signature_bytes[..])?,
-        ))
+        Ok(SignedTransaction::new(raw_txn, public_key, signature))
     }
 }
 

@@ -59,26 +59,6 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
         Ok(b != 0)
     }
 
-    fn decode_btreemap<K: CanonicalDeserialize + std::cmp::Ord, V: CanonicalDeserialize>(
-        &mut self,
-    ) -> Result<BTreeMap<K, V>> {
-        let len = self.decode_u32()?;
-        ensure!(
-            len as usize <= ARRAY_MAX_LENGTH,
-            "array length longer than max allowed. size: {}, max: {}",
-            len,
-            ARRAY_MAX_LENGTH
-        );
-
-        let mut map = BTreeMap::new();
-        for _i in 0..len {
-            let key = K::deserialize(self)?;
-            let value = V::deserialize(self)?;
-            map.insert(key, value);
-        }
-        Ok(map)
-    }
-
     fn decode_bytes(&mut self) -> Result<Vec<u8>> {
         let len = self.decode_u32()?;
         ensure!(
@@ -118,12 +98,8 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
         Ok(self.raw_bytes.read_i64::<Endianness>()?)
     }
 
-    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>> {
-        if self.decode_bool()? {
-            Ok(Some(T::deserialize(self)?))
-        } else {
-            Ok(None)
-        }
+    fn decode_string(&mut self) -> Result<String> {
+        Ok(String::from_utf8(self.decode_bytes()?)?)
     }
 
     fn decode_u8(&mut self) -> Result<u8> {
@@ -142,8 +118,32 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
         Ok(self.raw_bytes.read_u64::<Endianness>()?)
     }
 
-    fn decode_string(&mut self) -> Result<String> {
-        Ok(String::from_utf8(self.decode_bytes()?)?)
+    fn decode_btreemap<K: CanonicalDeserialize + std::cmp::Ord, V: CanonicalDeserialize>(
+        &mut self,
+    ) -> Result<BTreeMap<K, V>> {
+        let len = self.decode_u32()?;
+        ensure!(
+            len as usize <= ARRAY_MAX_LENGTH,
+            "array length longer than max allowed. size: {}, max: {}",
+            len,
+            ARRAY_MAX_LENGTH
+        );
+
+        let mut map = BTreeMap::new();
+        for _i in 0..len {
+            let key = K::deserialize(self)?;
+            let value = V::deserialize(self)?;
+            map.insert(key, value);
+        }
+        Ok(map)
+    }
+
+    fn decode_optional<T: CanonicalDeserialize>(&mut self) -> Result<Option<T>> {
+        if self.decode_bool()? {
+            Ok(Some(T::deserialize(self)?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>> {

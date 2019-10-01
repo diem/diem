@@ -58,41 +58,6 @@ where
         Ok(self)
     }
 
-    fn encode_tuple_iterator<K: CanonicalSerialize, V: CanonicalSerialize, I>(
-        &mut self,
-        iter: I,
-    ) -> Result<&mut Self>
-    where
-        I: Iterator<Item = (K, V)>,
-    {
-        let mut map = BTreeMap::new();
-
-        // Regardless of the order defined for K of the map, write in the order of the lexicographic
-        // order of the canonical serialized bytes of K
-        for (key, value) in iter {
-            map.insert(
-                SimpleSerializer::<Vec<u8>>::serialize(&key)?,
-                SimpleSerializer::<Vec<u8>>::serialize(&value)?,
-            );
-        }
-
-        ensure!(
-            map.len() <= ARRAY_MAX_LENGTH,
-            "array length exceeded the maximum limit. length: {}, max length limit: {}",
-            map.len(),
-            ARRAY_MAX_LENGTH,
-        );
-
-        // add the number of pairs in the map
-        self.encode_u32(map.len() as u32)?;
-
-        for (key, value) in map {
-            self.output.write_all(key.as_ref())?;
-            self.output.write_all(value.as_ref())?;
-        }
-        Ok(self)
-    }
-
     fn encode_bytes(&mut self, v: &[u8]) -> Result<&mut Self> {
         ensure!(
             v.len() <= ARRAY_MAX_LENGTH,
@@ -128,19 +93,6 @@ where
         Ok(self)
     }
 
-    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self> {
-        match v.as_ref() {
-            Some(val) => {
-                self.encode_bool(true)?;
-                self.encode_struct(val)?;
-            }
-            None => {
-                self.encode_bool(false)?;
-            }
-        }
-        Ok(self)
-    }
-
     fn encode_string(&mut self, s: &str) -> Result<&mut Self> {
         // String::as_bytes returns the UTF-8 encoded byte array
         self.encode_bytes(s.as_bytes())
@@ -163,6 +115,54 @@ where
 
     fn encode_u64(&mut self, v: u64) -> Result<&mut Self> {
         self.output.write_u64::<Endianness>(v)?;
+        Ok(self)
+    }
+
+    fn encode_tuple_iterator<K: CanonicalSerialize, V: CanonicalSerialize, I>(
+        &mut self,
+        iter: I,
+    ) -> Result<&mut Self>
+    where
+        I: Iterator<Item = (K, V)>,
+    {
+        let mut map = BTreeMap::new();
+
+        // Regardless of the order defined for K of the map, write in the order of the lexicographic
+        // order of the canonical serialized bytes of K
+        for (key, value) in iter {
+            map.insert(
+                SimpleSerializer::<Vec<u8>>::serialize(&key)?,
+                SimpleSerializer::<Vec<u8>>::serialize(&value)?,
+            );
+        }
+
+        ensure!(
+            map.len() <= ARRAY_MAX_LENGTH,
+            "array length exceeded the maximum limit. length: {}, max length limit: {}",
+            map.len(),
+            ARRAY_MAX_LENGTH,
+        );
+
+        // add the number of pairs in the map
+        self.encode_u32(map.len() as u32)?;
+
+        for (key, value) in map {
+            self.output.write_all(key.as_ref())?;
+            self.output.write_all(value.as_ref())?;
+        }
+        Ok(self)
+    }
+
+    fn encode_optional<T: CanonicalSerialize>(&mut self, v: &Option<T>) -> Result<&mut Self> {
+        match v.as_ref() {
+            Some(val) => {
+                self.encode_bool(true)?;
+                self.encode_struct(val)?;
+            }
+            None => {
+                self.encode_bool(false)?;
+            }
+        }
         Ok(self)
     }
 
