@@ -319,7 +319,7 @@ where
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
-            V::execute_block(transactions.clone(), &self.vm_config, &state_view)
+            V::execute_block(transactions.clone(), &self.vm_config, &state_view, None)
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -609,6 +609,7 @@ where
                 block_to_execute.transactions().to_vec(),
                 &self.vm_config,
                 &state_view,
+                None,
             )
         };
 

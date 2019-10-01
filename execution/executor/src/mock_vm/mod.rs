@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    block_metadata::BlockMetaData,
     contract_event::ContractEvent,
     event::EventKey,
     transaction::{
@@ -52,6 +53,7 @@ impl VMExecutor for MockVM {
         transactions: Vec<SignedTransaction>,
         _config: &VMConfig,
         state_view: &dyn StateView,
+        _block_data: Option<BlockMetaData>,
     ) -> Vec<TransactionOutput> {
         if state_view.is_genesis() {
             assert_eq!(

@@ -44,6 +44,7 @@ fn test_mock_vm_different_senders() {
         txns.clone(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
+        None,
     );
 
     for (output, txn) in itertools::zip_eq(outputs.iter(), txns.iter()) {
@@ -77,6 +78,7 @@ fn test_mock_vm_same_sender() {
         txns,
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
+        None,
     );
 
     for (i, output) in outputs.iter().enumerate() {
@@ -111,6 +113,7 @@ fn test_mock_vm_payment() {
         txns,
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
+        None,
     );
 
     let mut output_iter = output.iter();

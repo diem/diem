@@ -139,6 +139,7 @@ pub use txn_executor::execute_function;
 use config::config::VMConfig;
 use state_view::StateView;
 use types::{
+    block_metadata::BlockMetaData,
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
@@ -168,5 +169,6 @@ pub trait VMExecutor {
         transactions: Vec<SignedTransaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
+        block_data: Option<BlockMetaData>,
     ) -> Vec<TransactionOutput>;
 }

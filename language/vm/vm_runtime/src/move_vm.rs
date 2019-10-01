@@ -8,6 +8,7 @@ use crate::{
 use state_view::StateView;
 use std::sync::Arc;
 use types::{
+    block_metadata::BlockMetaData,
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
@@ -65,6 +66,7 @@ impl VMExecutor for MoveVM {
         transactions: Vec<SignedTransaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
+        _block_data: Option<BlockMetaData>,
     ) -> Vec<TransactionOutput> {
         let vm = MoveVMImpl::new(Box::new(Arena::new()), |arena| {
             // XXX This means that scripts and modules are NOT tested against the whitelist! This
