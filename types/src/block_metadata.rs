@@ -1,6 +1,9 @@
 use crate::account_address::AccountAddress;
 use crypto::{ed25519::Ed25519Signature, HashValue};
 use std::collections::BTreeMap;
+use canonical_serialization::{CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
+use crate::byte_array::ByteArray;
+use failure::prelude::*;
 
 /// Struct that will be persisted on chain to store the information of the current block.
 ///
@@ -13,6 +16,7 @@ use std::collections::BTreeMap;
 /// 3. Once that special resource is modified, the other user transactions can read the consensus
 ///    info by calling into the read method of that resource, which would thus give users the
 ///    information such as the current leader.
+#[derive(Debug, PartialEq, Eq)]
 pub struct BlockMetaData {
     id: HashValue,
     timestamp_usec: u64,
@@ -40,17 +44,49 @@ impl BlockMetaData {
 
     pub fn into_inner(
         self,
-    ) -> (
-        HashValue,
+    ) -> Result<(
+        ByteArray,
         u64,
-        BTreeMap<AccountAddress, Ed25519Signature>,
+        ByteArray,
         AccountAddress,
-    ) {
-        (
-            self.id,
+    )> {
+        let id = ByteArray::new(self.id.to_vec());
+        let vote_maps = {
+            let mut serializer = SimpleSerializer::new();
+            serializer.encode_btreemap(&self.previous_block_votes)?;
+            ByteArray::new(serializer.get_output())
+        };
+        Ok((
+            id,
             self.timestamp_usec,
-            self.previous_block_votes,
+            vote_maps,
             self.proposer,
-        )
+        ))
+    }
+}
+
+impl CanonicalSerialize for BlockMetaData {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer
+            .encode_bytes(self.id.as_ref())?
+            .encode_u64(self.timestamp_usec)?
+            .encode_btreemap(&self.previous_block_votes)?
+            .encode_struct(&self.proposer)?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for BlockMetaData {
+    fn deserialize(deserializer: & mut impl CanonicalDeserializer) -> Result<Self> {
+        let id = HashValue::from_slice(deserializer.decode_bytes()?.as_slice())?;
+        let timestamp_usec = deserializer.decode_u64()?;
+        let previous_block_votes = deserializer.decode_btreemap()?;
+        let proposer = deserializer.decode_struct()?;
+        Ok(Self {
+            id,
+            timestamp_usec,
+            previous_block_votes,
+            proposer,
+        })
     }
 }

@@ -15,3 +15,4 @@ mod validator_change_proto_conversion_test;
 mod validator_set_test;
 mod vm_error_proto_conversion_test;
 mod write_set_test;
+mod block_metadata_test;
