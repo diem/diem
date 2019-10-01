@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod consensusdb;
-mod safety;
 
 mod block_storage;
 pub mod chained_bft_consensus_provider;

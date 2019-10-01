@@ -4,7 +4,6 @@
 use crate::chained_bft::{
     liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
     persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
-    safety::safety_rules::ConsensusState,
 };
 
 use config::config::{NodeConfig, NodeConfigHelpers};
@@ -12,6 +11,7 @@ use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vo
 use crypto::HashValue;
 use failure::Result;
 use libra_types::ledger_info::LedgerInfo;
+use safety_rules::ConsensusState;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters;
-
 use consensus_types::{
     block::Block,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
 };
-
 use crypto::HashValue;
+use failure::Fail;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -117,7 +115,6 @@ impl Display for ConsensusState {
 }
 
 impl ConsensusState {
-    #[cfg(test)]
     pub fn new(last_vote_round: Round, preferred_block_round: Round) -> Self {
         Self {
             last_vote_round,
@@ -142,7 +139,6 @@ impl ConsensusState {
             None
         } else {
             self.last_vote_round = last_vote_round;
-            counters::LAST_VOTE_ROUND.set(last_vote_round as i64);
             Some(self.clone())
         }
     }
@@ -150,7 +146,6 @@ impl ConsensusState {
     /// Set the preferred block round
     fn set_preferred_block_round(&mut self, preferred_block_round: Round) {
         self.preferred_block_round = preferred_block_round;
-        counters::PREFERRED_BLOCK_ROUND.set(preferred_block_round as i64);
     }
 }
 

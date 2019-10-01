@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         consensusdb::ConsensusDB, liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
-        safety::safety_rules::ConsensusState,
     },
     consensus_provider::create_storage_read_client,
 };
@@ -15,6 +14,7 @@ use failure::{Result, ResultExt};
 use libra_types::ledger_info::LedgerInfo;
 use logger::prelude::*;
 use rmp_serde::{from_slice, to_vec_named};
+use safety_rules::ConsensusState;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,

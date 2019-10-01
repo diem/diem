@@ -1,0 +1,17 @@
+[package]
+name = "safety-rules"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+consensus-types = { path = "../consensus-types" }
+crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+serde = { version = "1.0.99", default-features = false }
+
+[dev-dependencies]
+crypto = { path = "../../crypto/crypto", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}

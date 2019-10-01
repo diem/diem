@@ -43,6 +43,7 @@ libra-mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 prost-ext = { path = "../common/prost-ext" }
+safety-rules = { path = "safety-rules" }
 state-synchronizer = { path = "../state-synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage-client = { path = "../storage/storage-client" }
