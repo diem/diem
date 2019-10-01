@@ -57,7 +57,7 @@ members = [
     "mempool",
     "state_synchronizer",
     "storage/accumulator",
-    "storage/libradb",
+    "storage/libra_db",
     "storage/jellyfish_merkle",
     "storage/schemadb",
     "storage/scratchpad",

@@ -26,7 +26,7 @@ mod system_store;
 mod transaction_store;
 
 #[cfg(test)]
-mod libradb_test;
+mod libra_db_test;
 
 use crate::{
     change_set::{ChangeSet, SealedChangeSet},
@@ -127,7 +127,7 @@ impl LibraDB {
         .cloned()
         .collect();
 
-        let path = db_root_path.as_ref().join("libradb");
+        let path = db_root_path.as_ref().join("libra_db");
         let instant = Instant::now();
         let db = Arc::new(
             DB::open(path.clone(), cf_opts_map)

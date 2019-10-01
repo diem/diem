@@ -60,7 +60,7 @@ impl Pruner {
         let worker_progress_clone = Arc::clone(&worker_progress);
 
         let worker_thread = std::thread::Builder::new()
-            .name("libradb_pruner".into())
+            .name("libra_db_pruner".into())
             .spawn(move || Worker::new(db, command_receiver, worker_progress_clone).work_loop())
             .expect("Creating pruner thread should succeed.");
 

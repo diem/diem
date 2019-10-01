@@ -189,7 +189,7 @@ impl AsRef<Path> for LibraSwarmDir {
 
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
-    // Output log, LibraNodes' config file, libradb etc, into this dir.
+    // Output log, LibraNodes' config file, libra_db etc, into this dir.
     pub dir: LibraSwarmDir,
     // Maps the node id of a node to the LibraNode struct
     pub nodes: HashMap<String, LibraNode>,

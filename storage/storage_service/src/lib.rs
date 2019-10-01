@@ -29,7 +29,7 @@ use libra_storage_proto::proto::{
 use libra_types::proto::get_with_proof::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
 };
-use libradb::LibraDB;
+use libra_db::LibraDB;
 use std::{
     ops::Deref,
     path::Path,

@@ -23,7 +23,7 @@ struct Args {
     /// Start client
     #[structopt(short = "s", long = "start_client")]
     pub start_client: bool,
-    /// Directory used by launch_swarm to output LibraNodes' config files, logs, libradb, etc,
+    /// Directory used by launch_swarm to output LibraNodes' config files, logs, libra_db, etc,
     /// such that user can still inspect them after exit.
     /// If unspecified, a temporary dir will be used and auto deleted.
     #[structopt(short = "c", long = "config_dir")]

@@ -18,7 +18,7 @@ libra_debug_interface = { path = "../../common/debug_interface" }
 libra_executable_helpers = { path = "../../common/executable_helpers" }
 failure = { path = "../../common/failure_ext", package = "libra_failure_ext" }
 libra_grpc_helpers = { path = "../../common/grpc_helpers" }
-libradb = { path = "../libradb" }
+libra_db = { path = "../libra_db" }
 libra_logger = { path = "../../common/logger" }
 libra_metrics = { path = "../../common/metrics" }
 libra_proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
@@ -31,9 +31,9 @@ rand = "0.6.5"
 itertools = "0.8.0"
 proptest = "0.9.2"
 libra_tools = { path = "../../common/tools" }
-libradb = { path = "../libradb", features = ["testing"] }
+libra_db = { path = "../libra_db", features = ["testing"] }
 libra_types = { path = "../../types", features = ["testing"] }
 
 [features]
 default = []
-testing = ["libradb/testing", "libra_types/testing"]
+testing = ["libra_db/testing", "libra_types/testing"]

@@ -298,7 +298,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::update_to_latest_ledger`].
     ///
     /// [`LibraDB::update_to_latest_ledger`]:
-    /// ../libradb/struct.LibraDB.html#method.update_to_latest_ledger
+    /// ../libra_db/struct.LibraDB.html#method.update_to_latest_ledger
     fn update_to_latest_ledger(
         &self,
         client_known_version: Version,
@@ -311,7 +311,7 @@ pub trait StorageRead: Send + Sync {
 
     /// See [`LibraDB::update_to_latest_ledger`].
     ///
-    /// [`LibraDB::update_to_latest_ledger`]:../libradb/struct.LibraDB.html#method.
+    /// [`LibraDB::update_to_latest_ledger`]:../libra_db/struct.LibraDB.html#method.
     /// update_to_latest_ledger
     fn update_to_latest_ledger_async(
         &self,
@@ -331,7 +331,7 @@ pub trait StorageRead: Send + Sync {
 
     /// See [`LibraDB::get_transactions`].
     ///
-    /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
+    /// [`LibraDB::get_transactions`]: ../libra_db/struct.LibraDB.html#method.get_transactions
     fn get_transactions(
         &self,
         start_version: Version,
@@ -342,7 +342,7 @@ pub trait StorageRead: Send + Sync {
 
     /// See [`LibraDB::get_transactions`].
     ///
-    /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
+    /// [`LibraDB::get_transactions`]: ../libra_db/struct.LibraDB.html#method.get_transactions
     fn get_transactions_async(
         &self,
         start_version: Version,
@@ -354,7 +354,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
     /// [`LibraDB::get_account_state_with_proof_by_version`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    /// ../libra_db/struct.LibraDB.html#method.get_account_state_with_proof_by_version
     fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
@@ -364,7 +364,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
     /// [`LibraDB::get_account_state_with_proof_by_version`]:
-    /// ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    /// ../libra_db/struct.LibraDB.html#method.get_account_state_with_proof_by_version
     fn get_account_state_with_proof_by_version_async(
         &self,
         address: AccountAddress,
@@ -374,13 +374,13 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_startup_info`].
     ///
     /// [`LibraDB::get_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_startup_info
+    /// ../libra_db/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
     /// See [`LibraDB::get_startup_info`].
     ///
     /// [`LibraDB::get_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_startup_info
+    /// ../libra_db/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>>;
@@ -388,7 +388,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
     ///
     /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    /// ../libra_db/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
     fn get_latest_ledger_infos_per_epoch(
         &self,
         start_epoch: u64,
@@ -397,7 +397,7 @@ pub trait StorageRead: Send + Sync {
     /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
     ///
     /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
+    /// ../libra_db/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
     fn get_latest_ledger_infos_per_epoch_async(
         &self,
         start_epoch: u64,
@@ -412,7 +412,7 @@ pub trait StorageRead: Send + Sync {
 pub trait StorageWrite: Send + Sync {
     /// See [`LibraDB::save_transactions`].
     ///
-    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
+    /// [`LibraDB::save_transactions`]: ../libra_db/struct.LibraDB.html#method.save_transactions
     fn save_transactions(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
@@ -422,7 +422,7 @@ pub trait StorageWrite: Send + Sync {
 
     /// See [`LibraDB::save_transactions`].
     ///
-    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
+    /// [`LibraDB::save_transactions`]: ../libra_db/struct.LibraDB.html#method.save_transactions
     fn save_transactions_async(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,

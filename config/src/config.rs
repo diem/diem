@@ -299,7 +299,7 @@ impl Default for StorageConfig {
         StorageConfig {
             address: "localhost".to_string(),
             port: 6184,
-            dir: PathBuf::from("libradb"),
+            dir: PathBuf::from("libra_db"),
             grpc_max_receive_len: Some(100_000_000),
         }
     }
