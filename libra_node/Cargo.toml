@@ -32,7 +32,7 @@ crypto = { path = "../crypto/crypto" }
 network = { path = "../network" }
 state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
-storage_service = { path = "../storage/storage_service" }
+storage-service = { path = "../storage/storage-service" }
 types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 vm_validator = { path = "../vm_validator" }

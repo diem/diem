@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
-use std::thread;
-
 use config::config::NodeConfig;
 use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
+use executable_helpers::helpers::setup_executable_new;
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
 use logger::prelude::*;
+use std::{path::PathBuf, thread};
+use structopt::StructOpt;
 
 pub struct StorageNode {
     node_config: NodeConfig,
@@ -47,11 +47,22 @@ impl StorageNode {
     }
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Libra Storage Service")]
+struct Args {
+    #[structopt(short = "f", long, parse(from_os_str))]
+    /// Path to NodeConfig
+    config: Option<PathBuf>,
+    #[structopt(short = "d", long)]
+    /// Disable logging
+    no_logging: bool,
+}
+
 fn main() {
-    let (config, _logger, _args) = setup_executable(
-        "Libra Storage node".to_string(),
-        vec![ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
-    );
+    let args = Args::from_args();
+
+    let (config, _logger) =
+        setup_executable_new(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
 
     let storage_node = StorageNode::new(config);
 

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Libra Secret Seervice")]
+#[structopt(about = "Libra Secret Service")]
 struct Args {
     #[structopt(short = "f", long, parse(from_os_str))]
     /// Path to NodeConfig

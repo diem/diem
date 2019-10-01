@@ -59,7 +59,7 @@ parity-multiaddr = "0.5.0"
 rusty-fork = "0.2.2"
 
 config_builder = { path = "../config/config_builder" }
-storage_service = { path = "../storage/storage_service" }
+storage-service = { path = "../storage/storage-service" }
 crypto = { path = "../crypto/crypto", features = ["testing"]}
 types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
