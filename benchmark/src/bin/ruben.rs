@@ -72,7 +72,7 @@ mod tests {
     use std::ops::Range;
     use tools::tempdir::TempPath;
 
-    /// Start libra_swarm and create a BenchOpt struct for testing.
+    /// Start libra-swarm and create a BenchOpt struct for testing.
     /// Must return the TempPath otherwise it will be freed somehow.
     fn start_swarm_and_setup_arguments() -> (LibraSwarm, BenchOpt, Option<TempPath>) {
         let (faucet_account_keypair, faucet_key_file_path, temp_dir) =

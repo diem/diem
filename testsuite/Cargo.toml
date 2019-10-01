@@ -21,7 +21,7 @@ benchmark = { path = "../benchmark" }
 cli = { path = "../client", package="client" }
 canonical_serialization = { path = "../common/canonical_serialization", package="canonical_serialization" }
 generate_keypair = { path = "../config/generate_keypair" }
-libra_swarm = { path = "../libra_swarm", features = ["testing"]}
+libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config = { path = "../config" }
 config_builder = { path = "../config/config_builder" }

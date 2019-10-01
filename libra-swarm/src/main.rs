@@ -8,36 +8,32 @@ use structopt::StructOpt;
 use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
-#[structopt(
-    name = "libra_swarm",
-    author = "Libra",
-    about = "Libra swarm to start local nodes"
-)]
+#[structopt(about = "Libra swarm to start local nodes")]
 struct Args {
     /// Number of nodes to start (1 by default)
-    #[structopt(short = "n", long = "num_nodes")]
-    pub num_nodes: Option<usize>,
-    /// Enable logging
-    #[structopt(short = "l", long = "enable_logging")]
+    #[structopt(short = "n", long, default_value = "1")]
+    pub num_nodes: usize,
+    /// Enable logging, by default spawned nodes will not perform logging
+    #[structopt(short = "l", long)]
     pub enable_logging: bool,
     /// Start client
-    #[structopt(short = "s", long = "start_client")]
+    #[structopt(short = "s", long)]
     pub start_client: bool,
     /// Directory used by launch_swarm to output LibraNodes' config files, logs, libradb, etc,
     /// such that user can still inspect them after exit.
     /// If unspecified, a temporary dir will be used and auto deleted.
-    #[structopt(short = "c", long = "config_dir")]
+    #[structopt(short = "c", long)]
     pub config_dir: Option<String>,
     /// If greater than 0, starts a full node swarm connected to the first node in the validator
     /// swarm.
-    #[structopt(short = "f", long = "num_full_nodes")]
-    pub num_full_nodes: Option<usize>,
+    #[structopt(short = "f", long, default_value = "0")]
+    pub num_full_nodes: usize,
 }
 
 fn main() {
     let args = Args::from_args();
-    let num_nodes = args.num_nodes.unwrap_or(1);
-    let num_full_nodes = args.num_full_nodes.unwrap_or(0);
+    let num_nodes = args.num_nodes;
+    let num_full_nodes = args.num_full_nodes;
     let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(None);
 
@@ -142,5 +138,5 @@ fn main() {
     if let Some(dir) = &args.config_dir {
         println!("Please manually cleanup {:?} after inspection", dir);
     }
-    println!("Exit libra_swarm.");
+    println!("Exit libra-swarm.");
 }
