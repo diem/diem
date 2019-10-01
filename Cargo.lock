@@ -960,6 +960,7 @@ dependencies = [
  "bitvec 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "canonical_serialization 0.1.0",
  "crypto_derive 0.1.0",
  "curve25519-dalek 1.2.3 (git+https://github.com/calibra/curve25519-dalek.git?branch=fiat)",
  "digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
