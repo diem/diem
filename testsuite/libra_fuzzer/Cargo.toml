@@ -24,7 +24,7 @@ types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 consensus = { path = "../../consensus" }
-admission_control_service = { path = "../../admission_control/admission_control_service" }
+admission-control-service = { path = "../../admission_control/admission-control-service" }
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable" }
@@ -38,7 +38,7 @@ vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", fea
 [features]
 default = ["testing", "fuzzing"]
 testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
-fuzzing = ["consensus/fuzzing", "admission_control_service/fuzzing"]
+fuzzing = ["consensus/fuzzing", "admission-control-service/fuzzing"]
 
 [[test]]
 name = "artifacts"
