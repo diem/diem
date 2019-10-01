@@ -1,5 +1,5 @@
 [package]
-name = "secret_service"
+name = "secret-service"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -13,6 +13,7 @@ protobuf = "~2.7"
 rand = "0.6.5"
 rand_chacha = "0.1.1"
 serde = { version = "1.0.96", features = ["derive"] }
+structopt = "0.3.2"
 
 config = { path = "../../config" }
 crypto = { path = "../crypto" }
