@@ -56,8 +56,8 @@ dependencies = [
  "proto_conv 0.1.0",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
- "storage_service 0.1.0",
  "types 0.1.0",
  "vm_validator 0.1.0",
 ]
@@ -729,8 +729,8 @@ dependencies = [
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "siphasher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_synchronizer 0.1.0",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
- "storage_service 0.1.0",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
@@ -1268,9 +1268,9 @@ dependencies = [
  "scratchpad 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
  "storage_proto 0.1.0",
- "storage_service 0.1.0",
  "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm_genesis 0.1.0",
@@ -2040,8 +2040,8 @@ dependencies = [
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_synchronizer 0.1.0",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
- "storage_service 0.1.0",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm_runtime 0.1.0",
@@ -2275,8 +2275,8 @@ dependencies = [
  "proto_conv 0.1.0",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
- "storage_service 0.1.0",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "ttl_cache 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
@@ -4152,6 +4152,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "storage-service"
+version = "0.1.0"
+dependencies = [
+ "canonical_serialization 0.1.0",
+ "config 0.1.0",
+ "crypto 0.1.0",
+ "debug_interface 0.1.0",
+ "executable_helpers 0.1.0",
+ "failure_ext 0.1.0",
+ "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc_helpers 0.1.0",
+ "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libradb 0.1.0",
+ "logger 0.1.0",
+ "metrics 0.1.0",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proto_conv 0.1.0",
+ "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage_client 0.1.0",
+ "storage_proto 0.1.0",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tools 0.1.0",
+ "types 0.1.0",
+]
+
+[[package]]
 name = "storage_client"
 version = "0.1.0"
 dependencies = [
@@ -4183,33 +4211,6 @@ dependencies = [
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proto_conv 0.1.0",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "types 0.1.0",
-]
-
-[[package]]
-name = "storage_service"
-version = "0.1.0"
-dependencies = [
- "canonical_serialization 0.1.0",
- "config 0.1.0",
- "crypto 0.1.0",
- "debug_interface 0.1.0",
- "executable_helpers 0.1.0",
- "failure_ext 0.1.0",
- "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
- "grpcio 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libradb 0.1.0",
- "logger 0.1.0",
- "metrics 0.1.0",
- "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proto_conv 0.1.0",
- "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage_client 0.1.0",
- "storage_proto 0.1.0",
- "tools 0.1.0",
  "types 0.1.0",
 ]
 
@@ -5068,8 +5069,8 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "state_view 0.1.0",
+ "storage-service 0.1.0",
  "storage_client 0.1.0",
- "storage_service 0.1.0",
  "transaction_builder 0.1.0",
  "types 0.1.0",
  "vm_runtime 0.1.0",

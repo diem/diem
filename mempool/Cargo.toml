@@ -34,7 +34,7 @@ vm_validator = { path = "../vm_validator" }
 [dev-dependencies]
 rand = "0.6.5"
 channel = { path = "../common/channel" }
-storage_service = { path = "../storage/storage_service" }
+storage-service = { path = "../storage/storage-service" }
 types = { path = "../types", features = ["testing"] }
 
 [build-dependencies]

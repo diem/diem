@@ -25,7 +25,7 @@ config_builder = { path = "../config/config_builder" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 executor = { path = "../execution/executor" }
 grpc_helpers = { path = "../common/grpc_helpers" }
-storage_service = { path = "../storage/storage_service" }
+storage-service = { path = "../storage/storage-service" }
 types = { path = "../types", features = ["testing"] }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 transaction_builder = { path = "../language/transaction_builder" }
