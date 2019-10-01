@@ -3,5 +3,4 @@
 
 #![allow(bare_trait_objects)]
 
-pub mod node_debug_interface;
-pub mod node_debug_interface_grpc;
+include!(concat!(env!("OUT_DIR"), "/debug.rs"));

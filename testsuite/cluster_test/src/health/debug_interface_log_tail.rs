@@ -6,10 +6,7 @@ use crate::{
 };
 use debug_interface::{
     self,
-    proto::{
-        node_debug_interface::{Event as DebugInterfaceEvent, GetEventsRequest},
-        node_debug_interface_grpc::NodeDebugInterfaceClient,
-    },
+    proto::{Event as DebugInterfaceEvent, GetEventsRequest, NodeDebugInterfaceClient},
 };
 use grpcio::{self, ChannelBuilder, EnvBuilder};
 use serde_json::{self, value as json};
@@ -66,7 +63,10 @@ impl DebugPortLogThread {
         let print_failures = env::var("VERBOSE").is_ok();
         loop {
             let opts = grpcio::CallOption::default().timeout(Duration::from_secs(5));
-            match self.client.get_events_opt(&GetEventsRequest::new(), opts) {
+            match self
+                .client
+                .get_events_opt(&GetEventsRequest::default(), opts)
+            {
                 Err(e) => {
                     if print_failures {
                         println!("Failed to get events from {}: {:?}", self.instance, e);
@@ -102,7 +102,7 @@ impl DebugPortLogThread {
         };
         Some(ValidatorEvent {
             validator: self.instance.short_hash().clone(),
-            timestamp: Duration::from_millis(event.get_timestamp() as u64),
+            timestamp: Duration::from_millis(event.timestamp as u64),
             received_timestamp: unix_timestamp_now(),
             event: e,
         })

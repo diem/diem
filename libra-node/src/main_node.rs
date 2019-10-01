@@ -8,7 +8,7 @@ use admission_control_service::admission_control_service::AdmissionControlServic
 use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
+use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
@@ -131,8 +131,7 @@ fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
 fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
     let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
     // Start Debug interface
-    let debug_service =
-        node_debug_interface_grpc::create_node_debug_interface(NodeDebugService::new());
+    let debug_service = create_node_debug_interface(NodeDebugService::new());
     ::grpcio::ServerBuilder::new(env)
         .register_service(debug_service)
         .bind(

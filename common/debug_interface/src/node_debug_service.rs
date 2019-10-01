@@ -6,11 +6,8 @@
 use crate::{
     json_log,
     proto::{
-        node_debug_interface::{
-            Event, GetEventsRequest, GetEventsResponse, GetNodeDetailsRequest,
-            GetNodeDetailsResponse,
-        },
-        node_debug_interface_grpc::NodeDebugInterface,
+        Event, GetEventsRequest, GetEventsResponse, GetNodeDetailsRequest, GetNodeDetailsResponse,
+        NodeDebugInterface,
     },
 };
 use futures::Future;
@@ -34,7 +31,7 @@ impl NodeDebugInterface for NodeDebugService {
         sink: ::grpcio::UnarySink<GetNodeDetailsResponse>,
     ) {
         info!("[GRPC] get_node_details");
-        let mut response = GetNodeDetailsResponse::new();
+        let mut response = GetNodeDetailsResponse::default();
         response.stats = metrics::get_all_metrics();
         ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
     }
@@ -45,14 +42,14 @@ impl NodeDebugInterface for NodeDebugService {
         _req: GetEventsRequest,
         sink: ::grpcio::UnarySink<GetEventsResponse>,
     ) {
-        let mut response = GetEventsResponse::new();
+        let mut response = GetEventsResponse::default();
         for event in json_log::pop_last_entries() {
-            let mut response_event = Event::new();
-            response_event.set_name(event.name.to_string());
-            response_event.set_timestamp(event.timestamp as i64);
+            let mut response_event = Event::default();
+            response_event.name = event.name.to_string();
+            response_event.timestamp = event.timestamp as i64;
             let serialized_event =
                 serde_json::to_string(&event.json).expect("Failed to serialize event to json");
-            response_event.set_json(serialized_event);
+            response_event.json = serialized_event;
             response.events.push(response_event);
         }
         ctx.spawn(sink.success(response).map_err(default_reply_error_logger))

@@ -3,7 +3,7 @@
 
 //! Helper functions for debug interface.
 
-use crate::proto::node_debug_interface_grpc::NodeDebugInterfaceClient;
+use crate::proto::{GetNodeDetailsRequest, NodeDebugInterfaceClient};
 use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::prelude::*;
 use std::{sync::Arc, thread, time};
@@ -17,7 +17,7 @@ pub fn create_debug_client(debug_port: u16) -> NodeDebugInterfaceClient {
 
 pub fn check_node_up(client: &NodeDebugInterfaceClient) {
     let mut attempt = 200;
-    let get_details_req = crate::proto::node_debug_interface::GetNodeDetailsRequest::new();
+    let get_details_req = GetNodeDetailsRequest::default();
 
     loop {
         match client.get_node_details(&get_details_req) {
