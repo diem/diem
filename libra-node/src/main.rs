@@ -1,12 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::{setup_executable, ARG_CONFIG_PATH, ARG_DISABLE_LOGGING};
+use executable_helpers::helpers::setup_executable_new;
 use signal_hook;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Libra Node")]
+struct Args {
+    #[structopt(short = "f", long, parse(from_os_str))]
+    /// Path to NodeConfig
+    config: Option<PathBuf>,
+    #[structopt(short = "d", long)]
+    /// Disable logging
+    no_logging: bool,
+}
 
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
@@ -30,10 +45,11 @@ fn register_signals(term: Arc<AtomicBool>) {
 }
 
 fn main() {
-    let (mut config, _logger, _args) = setup_executable(
-        "Libra single node".to_string(),
-        vec![ARG_CONFIG_PATH, ARG_DISABLE_LOGGING],
-    );
+    let args = Args::from_args();
+
+    let (mut config, _logger) =
+        setup_executable_new(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
+
     let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&mut config);
 
     let term = Arc::new(AtomicBool::new(false));
