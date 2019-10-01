@@ -29,7 +29,7 @@ pub struct BenchOpt {
         required_unless = "swarm_config_dir"
     )]
     pub validator_addresses: Vec<String>,
-    /// libra_swarm's config file directory, which holds libra_node's config .toml file(s).
+    /// libra_swarm's config file directory, which holds libra-node's config .toml file(s).
     /// It is requried unless (and hence conflicts with) validator_addresses .
     #[structopt(
         short = "s",

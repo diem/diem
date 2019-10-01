@@ -19,7 +19,7 @@ use std::{
 };
 use tools::tempdir::TempPath;
 
-const LIBRA_NODE_BIN: &str = "libra_node";
+const LIBRA_NODE_BIN: &str = "libra-node";
 
 pub struct LibraNode {
     node: Child,
