@@ -8,7 +8,7 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-codespan = "0.1.3"
+codespan = "0.2.1"
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 hex = "0.3.2"
 lazy_static = "1.4.0"
