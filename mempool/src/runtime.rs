@@ -8,7 +8,6 @@ use crate::{
 use config::config::NodeConfig;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use grpcio_sys;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
     cmp::max,
@@ -39,7 +38,7 @@ impl MempoolRuntime {
         let env = Arc::new(
             EnvBuilder::new()
                 .name_prefix("grpc-mempool-")
-                .cq_count(unsafe { max(grpcio_sys::gpr_cpu_num_cores() as usize / 2, 2) })
+                .cq_count(max(num_cpus::get() / 2, 2))
                 .build(),
         );
         let handle = MempoolService {

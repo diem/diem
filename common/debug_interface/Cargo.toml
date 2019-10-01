@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
 futures = "0.1.28"
 protobuf = "~2.7"
 serde_json = "1.0"
