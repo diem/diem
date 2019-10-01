@@ -8,6 +8,7 @@ use crate::{
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    proof::AccumulatorConsistencyProof,
     proto::get_with_proof::{
         GetAccountStateRequest, GetAccountStateResponse,
         GetAccountTransactionBySequenceNumberRequest,
@@ -47,6 +48,7 @@ pub struct UpdateToLatestLedgerResponse<Sig> {
     pub response_items: Vec<ResponseItem>,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
     pub validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
+    pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
 impl<Sig: Signature> IntoProto for UpdateToLatestLedgerResponse<Sig> {
@@ -57,6 +59,7 @@ impl<Sig: Signature> IntoProto for UpdateToLatestLedgerResponse<Sig> {
         out.set_response_items(self.response_items.into_proto());
         out.set_ledger_info_with_sigs(self.ledger_info_with_sigs.into_proto());
         out.set_validator_change_events(self.validator_change_events.into_proto());
+        out.set_ledger_consistency_proof(self.ledger_consistency_proof.into_proto());
         out
     }
 }
@@ -76,6 +79,9 @@ impl<Sig: Signature> FromProto for UpdateToLatestLedgerResponse<Sig> {
                 <Vec<ValidatorChangeEventWithProof<Sig>> as FromProto>::from_proto(
                     object.take_validator_change_events(),
                 )?,
+            ledger_consistency_proof: AccumulatorConsistencyProof::from_proto(
+                object.take_ledger_consistency_proof(),
+            )?,
         })
     }
 }
@@ -86,11 +92,13 @@ impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
         response_items: Vec<ResponseItem>,
         ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
         validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
+        ledger_consistency_proof: AccumulatorConsistencyProof,
     ) -> Self {
         UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
             validator_change_events,
+            ledger_consistency_proof,
         }
     }
 

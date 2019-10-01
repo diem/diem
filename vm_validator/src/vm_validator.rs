@@ -71,7 +71,7 @@ impl TransactionValidation for VMValidator {
             .storage_read_client
             .update_to_latest_ledger(/* client_known_version = */ 0, vec![item])
         {
-            Ok((mut items, ledger_info_with_sigs, _)) => {
+            Ok((mut items, ledger_info_with_sigs, _, _)) => {
                 if items.len() != 1 {
                     return Box::new(err(format_err!(
                         "Unexpected number of items ({}).",
@@ -111,7 +111,7 @@ pub async fn get_account_state(
     address: AccountAddress,
 ) -> Result<(u64, u64)> {
     let req_item = RequestItem::GetAccountState { address };
-    let (response_items, _, _) = storage_read_client
+    let (response_items, _, _, _) = storage_read_client
         .update_to_latest_ledger_async(0 /* client_known_version */, vec![req_item])
         .await?;
     let account_state = match &response_items[0] {

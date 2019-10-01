@@ -57,7 +57,10 @@ use types::{
     contract_event::EventWithProof,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{RequestItem, ResponseItem},
-    proof::{AccountStateProof, EventProof, SignedTransactionProof, SparseMerkleProof},
+    proof::{
+        AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
+        SparseMerkleProof,
+    },
     transaction::{
         SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
         Version,
@@ -441,12 +444,13 @@ impl LibraDB {
     /// ledger info.
     pub fn update_to_latest_ledger(
         &self,
-        _client_known_version: u64,
+        client_known_version: Version,
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
 
@@ -526,10 +530,15 @@ impl LibraDB {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let ledger_consistency_proof = self
+            .ledger_store
+            .get_consistency_proof(client_known_version, ledger_version)?;
+
         Ok((
             response_items,
             ledger_info_with_sigs,
             vec![], /* TODO: validator_change_events */
+            ledger_consistency_proof,
         ))
     }
 

@@ -284,7 +284,12 @@ fn test_execution_with_storage() {
         },
     ];
 
-    let (mut response_items, ledger_info_with_sigs, _validator_change_events) = storage_read_client
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        _validator_change_events,
+        _ledger_consistency_proof,
+    ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
@@ -477,7 +482,12 @@ fn test_execution_with_storage() {
             limit: 10,
         },
     ];
-    let (mut response_items, ledger_info_with_sigs, _validator_change_events) = storage_read_client
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        _validator_change_events,
+        _ledger_consistency_proof,
+    ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(

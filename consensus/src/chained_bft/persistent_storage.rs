@@ -366,7 +366,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         );
 
         // find the block corresponding to storage latest ledger info
-        let (_, ledger_info, _) = read_client
+        let (_, ledger_info, _, _) = read_client
             .update_to_latest_ledger(0, vec![])
             .expect("unable to read ledger info from storage");
         let mut initial_data = RecoveryData::new(

@@ -24,7 +24,7 @@ use schemadb::{ReadOptions, DB};
 use std::{ops::Deref, sync::Arc};
 use types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{position::Position, AccumulatorProof},
+    proof::{position::Position, AccumulatorConsistencyProof, AccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
 
@@ -127,6 +127,16 @@ impl LedgerStore {
         ledger_version: Version,
     ) -> Result<AccumulatorProof> {
         Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
+    }
+
+    /// Gets proof that shows the ledger at `ledger_version` is consistent with the ledger at
+    /// `client_known_version`.
+    pub fn get_consistency_proof(
+        &self,
+        client_known_version: Version,
+        ledger_version: Version,
+    ) -> Result<AccumulatorConsistencyProof> {
+        Accumulator::get_consistency_proof(self, ledger_version + 1, client_known_version + 1)
     }
 
     /// Write `txn_infos` to `batch`. Assigned `first_version` to the the version number of the

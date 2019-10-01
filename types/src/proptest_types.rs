@@ -12,7 +12,7 @@ use crate::{
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::AccumulatorProof,
+    proof::{AccumulatorConsistencyProof, AccumulatorProof},
     transaction::{
         Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
@@ -557,9 +557,14 @@ prop_compose! {
         response_items in vec(any::<ResponseItem>(), 0..10),
         ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
         validator_change_events in vec(any::<ValidatorChangeEventWithProof<Ed25519Signature>>(), 0..10),
+        ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
     ) -> UpdateToLatestLedgerResponse<Ed25519Signature> {
         UpdateToLatestLedgerResponse::new(
-            response_items, ledger_info_with_sigs, validator_change_events)
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_events,
+            ledger_consistency_proof,
+        )
     }
 }
 
