@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(test)]
-use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
@@ -13,7 +11,6 @@ use crate::{
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         persistent_storage::PersistentStorage,
-        safety::safety_rules::SafetyRules,
         sync_manager::{SyncManager, SyncMgrContext},
     },
     counters,
@@ -41,6 +38,9 @@ use mirai_annotations::{
     debug_checked_verify_eq,
 };
 use network::proto::BlockRetrievalStatus;
+#[cfg(test)]
+use safety_rules::ConsensusState;
+use safety_rules::SafetyRules;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
@@ -453,6 +453,8 @@ impl<T: Payload> EventProcessor<T> {
         tc: Option<&PacemakerTimeoutCertificate>,
     ) {
         self.safety_rules.update(qc);
+        let consensus_state = self.safety_rules.consensus_state();
+        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_block_round() as i64);
 
         let mut highest_committed_proposal_round = None;
         if let Some(block) = qc
@@ -651,6 +653,8 @@ impl<T: Payload> EventProcessor<T> {
             .safety_rules
             .voting_rule(block)
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
+        let consensus_state = self.safety_rules.consensus_state();
+        counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
 
         let proposal_id = vote_info.proposal_id();
         let executed_state_id = self

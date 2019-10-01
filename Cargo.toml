@@ -23,6 +23,7 @@ members = [
     "config/generate-keypair",
     "consensus",
     "consensus/consensus-types",
+    "consensus/safety-rules",
     "crypto/crypto",
     "crypto/crypto_derive",
     "crypto/secret-service",

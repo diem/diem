@@ -17,7 +17,6 @@ use crate::{
         },
         network::ConsensusNetworkImpl,
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
-        safety::safety_rules::SafetyRules,
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
@@ -31,6 +30,7 @@ use futures::{executor::block_on, select, stream::StreamExt};
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use logger::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use safety_rules::SafetyRules;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
 

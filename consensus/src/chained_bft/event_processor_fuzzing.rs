@@ -11,7 +11,6 @@ use crate::{
         },
         network::ConsensusNetworkImpl,
         persistent_storage::{PersistentStorage, RecoveryData},
-        safety::safety_rules::SafetyRules,
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
     util::mock_time_service::SimulatedTimeService,
@@ -26,6 +25,7 @@ use network::{
 };
 use prost::Message as _;
 use prost_ext::MessageExt;
+use safety_rules::SafetyRules;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;

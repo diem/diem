@@ -100,42 +100,6 @@ impl TreeInserter {
         )))
         .unwrap()
     }
-
-    pub fn insert_pre_made_block(
-        &mut self,
-        block: Block<Vec<usize>>,
-        block_signer: &ValidatorSigner,
-        qc_signers: Vec<&ValidatorSigner>,
-    ) -> Arc<ExecutedBlock<Vec<usize>>> {
-        self.payload_val += 1;
-        let new_round = if block.round() > 0 {
-            block.round() - 1
-        } else {
-            0
-        };
-
-        let parent_qc = if new_round == 0 {
-            QuorumCert::certificate_for_genesis()
-        } else {
-            placeholder_certificate_for_block(
-                qc_signers,
-                block.parent_id(),
-                new_round,
-                block.quorum_cert().parent_block_id(),
-                block.quorum_cert().parent_block_round(),
-            )
-        };
-
-        let new_block = Block::new_internal(
-            block.payload().unwrap().clone(),
-            block.epoch(),
-            block.round(),
-            block.timestamp_usecs(),
-            parent_qc,
-            block_signer,
-        );
-        block_on(self.block_store.insert_block_with_qc(new_block)).unwrap()
-    }
 }
 
 pub fn placeholder_ledger_info() -> LedgerInfo {

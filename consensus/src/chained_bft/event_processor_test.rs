@@ -16,7 +16,6 @@ use crate::{
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
-        safety::safety_rules::{ConsensusState, SafetyRules},
         test_utils::{
             self, consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
@@ -48,6 +47,7 @@ use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use safety_rules::{ConsensusState, SafetyRules};
 use std::convert::TryFrom;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
