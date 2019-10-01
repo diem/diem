@@ -146,7 +146,11 @@ where
     /// if they are non-frozen).
     ///
     /// See [`types::proof::AccumulatorProof`] for proof format.
-    pub fn get_proof(reader: &R, num_leaves: LeafCount, leaf_index: u64) -> Result<AccumulatorProof> {
+    pub fn get_proof(
+        reader: &R,
+        num_leaves: LeafCount,
+        leaf_index: u64,
+    ) -> Result<AccumulatorProof> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
     }
 
@@ -330,7 +334,10 @@ where
     }
 
     /// Implementation for public interface `MerkleAccumulator::get_consistency_proof`.
-    fn get_consistency_proof(&self, sub_acc_leaves: LeafCount) -> Result<AccumulatorConsistencyProof> {
+    fn get_consistency_proof(
+        &self,
+        sub_acc_leaves: LeafCount,
+    ) -> Result<AccumulatorConsistencyProof> {
         ensure!(
             sub_acc_leaves <= self.num_leaves,
             "The other accumulator is bigger than this one. self.num_leaves: {}. \

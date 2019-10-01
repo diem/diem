@@ -105,7 +105,8 @@ impl MockHashStore {
             let max_position = right.max_position;
             let hash = Self::hash_internal(left.hash, right.hash);
             let frozen = left.frozen && right.frozen;
-            let num_frozen_nodes = left.num_frozen_nodes + right.num_frozen_nodes + frozen as LeafCount;
+            let num_frozen_nodes =
+                left.num_frozen_nodes + right.num_frozen_nodes + frozen as LeafCount;
 
             Subtree {
                 root_position,

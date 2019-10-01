@@ -126,11 +126,7 @@ impl LedgerStore {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccumulatorProof> {
-        Accumulator::get_proof(
-            self,
-            ledger_version + 1, /* num_leaves */
-            version,
-        )
+        Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
     }
 
     /// Write `txn_infos` to `batch`. Assigned `first_version` to the the version number of the

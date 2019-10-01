@@ -167,7 +167,11 @@ where
     ///               / \ / \ / \ / \                         / \           / \   / \ / \      / \ / \                / \
     ///               o o o o o o o o                         o o           A B   C D E F      G H I J  K (subtrees[3]) placeholder
     /// ```
-    pub fn append_subtrees(&self, subtrees: &[HashValue], num_new_leaves: LeafCount) -> Result<Self> {
+    pub fn append_subtrees(
+        &self,
+        subtrees: &[HashValue],
+        num_new_leaves: LeafCount,
+    ) -> Result<Self> {
         ensure!(
             num_new_leaves <= MAX_ACCUMULATOR_LEAVES - self.num_leaves,
             "Too many new leaves. self.num_leaves: {}. num_new_leaves: {}.",

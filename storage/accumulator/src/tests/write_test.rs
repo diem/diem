@@ -23,7 +23,8 @@ fn test_append_one() {
     let mut leaves = Vec::new();
     for _ in 0..100 {
         let hash = HashValue::random();
-        let (root_hash, writes) = TestAccumulator::append(&store, leaves.len() as LeafCount, &[hash]).unwrap();
+        let (root_hash, writes) =
+            TestAccumulator::append(&store, leaves.len() as LeafCount, &[hash]).unwrap();
         store.put_many(&writes);
 
         leaves.push(hash);
