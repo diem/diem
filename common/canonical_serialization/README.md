@@ -465,9 +465,9 @@ String representation:
 
 ```
 {
-    sender: 3a24a61e05d129cace9e0efc8bc9e33831fec9a9be66f50fd352a2638a49b9ee,
-    sequence_number: 32,
-    payload: Program {
+  sender: 3a24a61e05d129cace9e0efc8bc9e33831fec9a9be66f50fd352a2638a49b9ee,
+  sequence_number: 32,
+  payload: Program {
     code: "move",
     args: [{STRING: CAFE D00D}, {STRING: cafe d00d}],
     modules: [[CA][FED0][0D]],
