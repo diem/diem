@@ -11,7 +11,7 @@ members = [
     "common/crash_handler",
     "common/datatest-stable",
     "common/debug_interface",
-    "common/executable_helpers",
+    "common/executable-helpers",
     "common/failure_ext",
     "common/futures-semaphore",
     "common/grpcio-client",

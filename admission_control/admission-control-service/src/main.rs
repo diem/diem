@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::admission_control_node;
-use executable_helpers::helpers::setup_executable_new;
+use executable_helpers::helpers::setup_executable;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -23,7 +23,7 @@ fn main() {
     let args = Args::from_args();
 
     let (config, _logger) =
-        setup_executable_new(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
+        setup_executable(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
 
     let admission_control_node = admission_control_node::AdmissionControlNode::new(config);
 

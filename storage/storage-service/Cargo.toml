@@ -16,7 +16,7 @@ canonical_serialization = { path = "../../common/canonical_serialization" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 debug_interface = { path = "../../common/debug_interface" }
-executable_helpers = { path = "../../common/executable_helpers" }
+executable-helpers = { path = "../../common/executable-helpers" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
