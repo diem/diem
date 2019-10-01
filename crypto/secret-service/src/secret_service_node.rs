@@ -9,7 +9,7 @@
 
 use crate::{proto::secret_service_grpc, secret_service_server::SecretServiceServer};
 use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
+use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
 use logger::prelude::*;
@@ -44,8 +44,7 @@ impl SecretServiceNode {
         );
 
         // Start Debug interface
-        let debug_service =
-            node_debug_interface_grpc::create_node_debug_interface(NodeDebugService::new());
+        let debug_service = create_node_debug_interface(NodeDebugService::new());
         let _debug_handle = spawn_service_thread(
             debug_service,
             self.node_config.secret_service.address.clone(),

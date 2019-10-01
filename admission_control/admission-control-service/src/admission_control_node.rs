@@ -4,7 +4,7 @@
 use crate::admission_control_service::AdmissionControlService;
 use admission_control_proto::proto::admission_control_grpc;
 use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
+use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
 use grpcio::{ChannelBuilder, EnvBuilder, Environment};
@@ -103,8 +103,7 @@ impl AdmissionControlNode {
         );
 
         // Start Debug interface
-        let debug_service =
-            node_debug_interface_grpc::create_node_debug_interface(NodeDebugService::new());
+        let debug_service = create_node_debug_interface(NodeDebugService::new());
         let _debug_handle = spawn_service_thread(
             debug_service,
             self.node_config.admission_control.address.clone(),

@@ -1100,14 +1100,15 @@ dependencies = [
 name = "debug_interface"
 version = "0.1.0"
 dependencies = [
- "build_helpers 0.1.0",
+ "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_ext 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "logger 0.1.0",
  "metrics 0.1.0",
- "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1620,10 +1621,12 @@ name = "grpcio"
 version = "0.5.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio-sys 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1645,6 +1648,9 @@ version = "0.5.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "derive-new 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-types 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf-codegen 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

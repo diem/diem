@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::NodeConfig;
-use debug_interface::{node_debug_service::NodeDebugService, proto::node_debug_interface_grpc};
+use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executable_helpers::helpers::setup_executable;
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
@@ -31,8 +31,7 @@ impl StorageNode {
         let _handle = storage_service::start_storage_service(&self.node_config);
 
         // Start Debug interface
-        let debug_service =
-            node_debug_interface_grpc::create_node_debug_interface(NodeDebugService::new());
+        let debug_service = create_node_debug_interface(NodeDebugService::new());
         let _debug_handle = spawn_service_thread(
             debug_service,
             self.node_config.storage.address.clone(),
