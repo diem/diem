@@ -217,7 +217,7 @@ data "template_file" "node_config" {
 
   vars = {
     self_ip = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
-
+    self_peer_id = var.peer_ids[count.index]
   }
 }
 
