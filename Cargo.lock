@@ -26,7 +26,7 @@ dependencies = [
  "config 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
- "executable_helpers 0.1.0",
+ "executable-helpers 0.1.0",
  "failure_ext 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1234,10 +1234,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "executable_helpers"
+name = "executable-helpers"
 version = "0.1.0"
 dependencies = [
- "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "config 0.1.0",
  "crash_handler 0.1.0",
  "logger 0.1.0",
@@ -2002,7 +2001,7 @@ dependencies = [
  "crash_handler 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
- "executable_helpers 0.1.0",
+ "executable-helpers 0.1.0",
  "executor 0.1.0",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
@@ -3783,7 +3782,7 @@ dependencies = [
  "crypto 0.1.0",
  "crypto_derive 0.1.0",
  "debug_interface 0.1.0",
- "executable_helpers 0.1.0",
+ "executable-helpers 0.1.0",
  "failure_ext 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",
@@ -4161,7 +4160,7 @@ dependencies = [
  "config 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
- "executable_helpers 0.1.0",
+ "executable-helpers 0.1.0",
  "failure_ext 0.1.0",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc_helpers 0.1.0",

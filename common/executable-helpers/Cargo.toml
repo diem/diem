@@ -1,5 +1,5 @@
 [package]
-name = "executable_helpers"
+name = "executable-helpers"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,7 +7,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-clap = "2.32.0"
 slog-scope = "4.0"
 
 config = { path = "../../config"}

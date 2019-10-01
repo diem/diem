@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::setup_executable_new;
+use executable_helpers::helpers::setup_executable;
 use signal_hook;
 use std::{
     path::PathBuf,
@@ -48,7 +48,7 @@ fn main() {
     let args = Args::from_args();
 
     let (mut config, _logger) =
-        setup_executable_new(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
+        setup_executable(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
 
     let (_ac_handle, _node_handle) = libra_node::main_node::setup_environment(&mut config);
 

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executable_helpers::helpers::setup_executable_new;
+use executable_helpers::helpers::setup_executable;
 use secret_service::secret_service_node;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -22,7 +22,7 @@ fn main() {
     let args = Args::from_args();
 
     let (config, _logger) =
-        setup_executable_new(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
+        setup_executable(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
 
     let secret_service_node = secret_service_node::SecretServiceNode::new(config);
 
