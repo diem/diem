@@ -3773,7 +3773,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "secret_service"
+name = "secret-service"
 version = "0.1.0"
 dependencies = [
  "build_helpers 0.1.0",
@@ -3791,6 +3791,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_chacha 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
