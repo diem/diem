@@ -57,10 +57,10 @@ impl<T> Payload for T where
 }
 
 pub fn round_hash(round: Round) -> HashValue {
-    let mut state = RoundHasher::default();
     let mut serializer = SimpleSerializer::<Vec<u8>>::new();
     serializer.encode_u64(round).expect("Should serialize.");
     let digest = serializer.get_output();
+    let mut state = RoundHasher::default();
     state.write(digest.as_ref());
     state.finish()
 }

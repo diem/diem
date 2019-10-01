@@ -54,6 +54,14 @@ impl TimeoutCertificate {
     pub fn signatures(&self) -> &HashMap<Author, Signature> {
         &self.signatures
     }
+
+    pub fn add_signature(&mut self, author: Author, signature: Signature) {
+        self.signatures.entry(author).or_insert(signature);
+    }
+
+    pub fn remove_signature(&mut self, author: Author) {
+        self.signatures.remove(&author);
+    }
 }
 
 impl IntoProto for TimeoutCertificate {

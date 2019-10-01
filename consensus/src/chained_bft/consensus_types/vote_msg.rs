@@ -31,7 +31,7 @@ pub struct VoteMsg {
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
     signature: Signature,
-    /// The round signatures can be aggregated into the timeout certificate if present.
+    /// The round signatures can be aggregated into a timeout certificate if present.
     round_signature: Option<Signature>,
 }
 
@@ -100,6 +100,12 @@ impl VoteMsg {
     /// Return the signature of the vote
     pub fn signature(&self) -> &Signature {
         &self.signature
+    }
+
+    /// Returns the signature for the vote_data.block_round() that can be aggregated for
+    /// TimeoutCertificate.
+    pub fn round_signature(&self) -> Option<&Signature> {
+        self.round_signature.as_ref()
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,

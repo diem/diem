@@ -15,6 +15,7 @@ mod block_store;
 mod block_tree;
 mod pending_votes;
 
+use crate::chained_bft::consensus_types::timeout_certificate::TimeoutCertificate;
 pub use block_store::{BlockStore, NeedFetchResult};
 use executor::StateComputeResult;
 
@@ -27,10 +28,14 @@ pub enum VoteReceptionResult {
     VoteAdded(u64),
     /// The very same vote message has been processed in past.
     DuplicateVote,
+    /// The very same author has already voted for another proposal in this round (equivocation).
+    EquivocateVote,
     /// This block has been already certified.
     OldQuorumCertificate(Arc<QuorumCert>),
     /// This block has just been certified after adding the vote.
     NewQuorumCertificate(Arc<QuorumCert>),
+    /// The vote completes a new TimeoutCertificate
+    NewTimeoutCertificate(Arc<TimeoutCertificate>),
 }
 
 pub trait BlockReader: Send + Sync {
