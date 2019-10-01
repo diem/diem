@@ -14,6 +14,7 @@ use crate::{
 };
 use config::config::MempoolConfig;
 use failure::prelude::*;
+use logger::prelude::*;
 use std::{
     collections::HashMap,
     ops::Bound,
@@ -129,10 +130,16 @@ impl TransactionStore {
             self.system_ttl_index.insert(&txn);
             self.expiration_time_index.insert(&txn);
             txns.insert(sequence_number, txn);
-            OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+            self.track_indices();
         }
         self.process_ready_transactions(&address, current_sequence_number);
         MempoolAddTransactionStatus::new(MempoolAddTransactionStatusCode::Valid, "".to_string())
+    }
+
+    fn track_indices(&self) {
+        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        OP_COUNTERS.set("txn.parking_lot_index", self.parking_lot_index.size());
+        OP_COUNTERS.set("txn.priority_index", self.priority_index.size());
     }
 
     /// Check if mempool can handle new insertion requests
@@ -202,14 +209,20 @@ impl TransactionStore {
                 }
                 sequence_number += 1;
             }
+
+            let mut parking_lot_txns = 0;
             for (_, txn) in txns.range_mut((Bound::Excluded(sequence_number), Bound::Unbounded)) {
                 match txn.timeline_state {
                     TimelineState::Ready(_) => {}
                     _ => {
                         self.parking_lot_index.insert(&txn);
+                        parking_lot_txns += 1;
                     }
                 }
             }
+            debug!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
+                address, current_sequence_number, txns.len(), parking_lot_txns,
+            );
         }
     }
 
@@ -234,6 +247,14 @@ impl TransactionStore {
         self.process_ready_transactions(account, sequence_number + 1);
     }
 
+    pub(crate) fn reject_transaction(&mut self, account: &AccountAddress, _sequence_number: u64) {
+        if let Some(txns) = self.transactions.remove(&account) {
+            for transaction in txns.values() {
+                self.index_remove(&transaction);
+            }
+        }
+    }
+
     /// removes transaction from all indexes
     fn index_remove(&mut self, txn: &MempoolTransaction) {
         self.system_ttl_index.remove(&txn);
@@ -241,7 +262,7 @@ impl TransactionStore {
         self.priority_index.remove(&txn);
         self.timeline_index.remove(&txn);
         self.parking_lot_index.remove(&txn);
-        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        self.track_indices();
     }
 
     /// returns gas amount required to process all transactions for given account
@@ -315,7 +336,7 @@ impl TransactionStore {
                 }
             }
         }
-        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        self.track_indices();
     }
 
     pub(crate) fn iter_queue(&self) -> PriorityQueueIter {

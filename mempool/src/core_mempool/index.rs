@@ -60,6 +60,10 @@ impl PriorityIndex {
     pub(crate) fn iter(&self) -> PriorityQueueIter {
         self.data.iter().rev()
     }
+
+    pub(crate) fn size(&self) -> usize {
+        self.data.len()
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Hash)]

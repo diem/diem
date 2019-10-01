@@ -18,11 +18,7 @@ use chrono::Utc;
 use config::config::NodeConfig;
 use logger::prelude::*;
 use lru_cache::LruCache;
-use std::{
-    cmp::{max, min},
-    collections::HashSet,
-    convert::TryFrom,
-};
+use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
@@ -59,28 +55,31 @@ impl Mempool {
         is_rejected: bool,
     ) {
         debug!(
-            "[Mempool] Removing transaction from mempool: {}:{}",
-            sender, sequence_number
+            "[Mempool] Removing transaction from mempool: {}:{}:{}",
+            sender, sequence_number, is_rejected
         );
         self.log_latency(sender.clone(), sequence_number, "e2e.latency");
         self.metrics_cache.remove(&(*sender, sequence_number));
+        OP_COUNTERS.inc(&format!("remove_transaction.{}", is_rejected));
 
-        // update current cached sequence number for account
-        let cached_value = self
-            .sequence_number_cache
-            .remove(sender)
-            .unwrap_or_default();
-
-        let new_sequence_number = if is_rejected {
-            min(sequence_number, cached_value)
+        if is_rejected {
+            debug!(
+                "[Mempool] transaction is rejected: {}:{}",
+                sender, sequence_number
+            );
+            self.transactions
+                .reject_transaction(&sender, sequence_number);
         } else {
-            max(cached_value, sequence_number + 1)
-        };
-        self.sequence_number_cache
-            .insert(sender.clone(), new_sequence_number);
-
-        self.transactions
-            .commit_transaction(&sender, sequence_number);
+            // update current cached sequence number for account
+            let last_commited_seq = match self.sequence_number_cache.remove(sender) {
+                Some(seq) => max(seq, sequence_number),
+                None => sequence_number,
+            };
+            self.sequence_number_cache
+                .insert(sender.clone(), last_commited_seq + 1);
+            self.transactions
+                .commit_transaction(&sender, last_commited_seq);
+        }
     }
 
     fn log_latency(&mut self, account: AccountAddress, sequence_number: u64, metric: &str) {
@@ -107,9 +106,10 @@ impl Mempool {
         timeline_state: TimelineState,
     ) -> MempoolAddTransactionStatus {
         debug!(
-            "[Mempool] Adding transaction to mempool: {}:{}",
+            "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
-            db_sequence_number
+            txn.sequence_number(),
+            db_sequence_number,
         );
 
         let required_balance = self.get_required_balance(&txn, gas_amount);
