@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "admission_control/admission_control_service",
+    "admission_control/admission-control-service",
     "admission_control/admission_control_proto",
     "benchmark",
     "client",
