@@ -48,7 +48,7 @@ members = [
     "language/vm/vm_runtime/vm_runtime_types",
     "language/vm/vm_genesis",
     "libra-node",
-    "libra_swarm",
+    "libra-swarm",
     "network",
     "network/memsocket",
     "network/netcore",

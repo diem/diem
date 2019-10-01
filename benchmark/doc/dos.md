@@ -13,7 +13,7 @@ The core difference is that submitting a transaction (when there is no batch API
 
 ### DoS Local Libra Swarm
 
-First we tested this attack locally. AC is responding our requests in a rate of around 125 responses per second, and the size of responses is in the magnitude of tens of megabytes. But more interesting is that local Libra swarm's CPU usage has reached nearly 100%, and it stays at such a high utilization. As Benchmarker is maliciously sending `GetTransaction` requests to `libra_swarm`, I tried to start a normal client but it fails to connect to `libra_swarm`. At surface the reason is that the client cannot load faucet account's state from validator, as gRPC request timed out. The root reason, however, is that particular validator is not able to handle any incoming request because it is overwhelmed by the `GetTransaction` requests.
+First we tested this attack locally. AC is responding our requests in a rate of around 125 responses per second, and the size of responses is in the magnitude of tens of megabytes. But more interesting is that local Libra swarm's CPU usage has reached nearly 100%, and it stays at such a high utilization. As Benchmarker is maliciously sending `GetTransaction` requests to `libra-swarm`, I tried to start a normal client but it fails to connect to `libra-swarm`. At surface the reason is that the client cannot load faucet account's state from validator, as gRPC request timed out. The root reason, however, is that particular validator is not able to handle any incoming request because it is overwhelmed by the `GetTransaction` requests.
 
 ### DoS Libra Running as AWS Clusters
 

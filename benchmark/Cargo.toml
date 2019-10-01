@@ -23,7 +23,7 @@ config = { path = "../config" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate_keypair = { path = "../config/generate_keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
-libra_swarm = { path = "../libra_swarm" }
+libra-swarm = { path = "../libra-swarm" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
@@ -38,4 +38,4 @@ crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "libra_swarm/testing"]
+testing = ["crypto/testing", "libra-swarm/testing"]

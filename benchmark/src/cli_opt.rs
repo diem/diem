@@ -29,7 +29,7 @@ pub struct BenchOpt {
         required_unless = "swarm_config_dir"
     )]
     pub validator_addresses: Vec<String>,
-    /// libra_swarm's config file directory, which holds libra-node's config .toml file(s).
+    /// libra-swarm's config file directory, which holds libra-node's config .toml file(s).
     /// It is requried unless (and hence conflicts with) validator_addresses .
     #[structopt(
         short = "s",
@@ -134,7 +134,7 @@ fn parse_socket_address(address: &str, port: u16) -> String {
 }
 
 /// Scan *.node.config.toml files under config_dir_name, parse them as node config
-/// and return libra_swarm's node addresses info as a vector.
+/// and return libra-swarm's node addresses info as a vector.
 pub fn parse_swarm_config_from_dir(config_dir_name: &str) -> Result<Vec<String>> {
     let mut validator_addresses: Vec<String> = Vec::new();
     let config_dir = PathBuf::from(config_dir_name);
