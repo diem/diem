@@ -6,6 +6,7 @@ use crate::{
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::AccountStateBlob,
+    block_metadata::BlockMetaData,
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::{EventHandle, EventKey},
@@ -861,6 +862,29 @@ impl Arbitrary for TransactionListWithProof {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_list_with_proof().boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
+}
+
+impl Arbitrary for BlockMetaData {
+    type Parameters = SizeRange;
+    fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
+        let signature_strategy = (any::<HashValue>(), Just(num_validators_range)).prop_flat_map(
+            |(hash, num_validators_range)| {
+                prop::collection::vec(arb_validator_signature_for_hash(hash), num_validators_range)
+            },
+        );
+        (
+            any::<HashValue>(),
+            any::<u64>(),
+            signature_strategy,
+            any::<AccountAddress>(),
+        )
+            .prop_map(|(id, timestamp, signatures, proposer)| {
+                BlockMetaData::new(id, timestamp, signatures.into_iter().collect(), proposer)
+            })
+            .boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;
