@@ -21,7 +21,7 @@ members = [
     "common/proto_conv",
     "config",
     "config/config_builder",
-    "config/generate_keypair",
+    "config/generate-keypair",
     "consensus",
     "crypto/crypto",
     "crypto/crypto_derive",
