@@ -6,14 +6,17 @@
 //! Protobuf definitions for data structures sent over the network
 mod admission_control;
 mod consensus;
-mod mempool;
 mod state_synchronizer;
 
 mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
 
-use types::proto::{ledger_info, transaction};
+mod mempool {
+    include!(concat!(env!("OUT_DIR"), "/mempool.rs"));
+}
+
+use ::types::proto::{ledger_info, transaction, types};
 
 pub use self::{
     admission_control::{AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse},
@@ -28,4 +31,3 @@ pub use self::{
     },
     state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
 };
-pub use transaction::SignedTransaction;

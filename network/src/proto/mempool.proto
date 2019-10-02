@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package network;
+package mempool;
 
 import "transaction.proto";
 
