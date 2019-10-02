@@ -38,7 +38,7 @@ members = [
     "language/compiler/ir_to_bytecode/syntax",
     "language/e2e_tests",
     "language/tools/cost-synthesis",
-    "language/tools/test_generation",
+    "language/tools/test-generation",
     "language/stackless_bytecode/bytecode_to_boogie",
     "language/stackless_bytecode/generator",
     "language/vm",
