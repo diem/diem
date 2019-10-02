@@ -20,7 +20,7 @@ rusty-fork = "0.2.1"
 benchmark = { path = "../benchmark" }
 cli = { path = "../client", package="client" }
 canonical_serialization = { path = "../common/canonical_serialization", package="canonical_serialization" }
-generate_keypair = { path = "../config/generate_keypair" }
+generate-keypair = { path = "../config/generate-keypair" }
 libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config = { path = "../config" }
