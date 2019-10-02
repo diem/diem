@@ -1,5 +1,5 @@
-use canonical_serialization::test_helper::assert_canonical_encode_decode;
 use crate::block_metadata::BlockMetaData;
+use canonical_serialization::test_helper::assert_canonical_encode_decode;
 use proptest::prelude::*;
 
 proptest! {
