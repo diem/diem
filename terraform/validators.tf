@@ -15,12 +15,12 @@ data "aws_ami" "ecs" {
 }
 
 variable "aws_ecs_ami_override" {
-   default = ""
-   description = "Machine image to use for ec2 instances"
+  default     = ""
+  description = "Machine image to use for ec2 instances"
 }
 
 locals {
-    aws_ecs_ami = var.aws_ecs_ami_override == "" ? data.aws_ami.ecs.id : var.aws_ecs_ami_override
+  aws_ecs_ami = var.aws_ecs_ami_override == "" ? data.aws_ami.ecs.id : var.aws_ecs_ami_override
 }
 
 locals {
@@ -226,7 +226,7 @@ data "template_file" "node_config" {
 
   vars = {
     self_ip = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
-    self_peer_id = var.peer_ids[count.index]
+    peer_id = var.peer_ids[count.index]
   }
 }
 
