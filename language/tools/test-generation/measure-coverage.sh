@@ -19,11 +19,11 @@ fi
 # Set the directory to which the report will be saved
 COVERAGE_DIR=$1
 
-# This needs to run in test_generation
+# This needs to run in test-generation
 TOOL_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 if [ $(pwd) != $TOOL_DIR  ]
 then
-	echo "Error: This needs to run from test_generation/, not in $(pwd)" >&2
+	echo "Error: This needs to run from test-generation/, not in $(pwd)" >&2
 	exit 1
 fi
 

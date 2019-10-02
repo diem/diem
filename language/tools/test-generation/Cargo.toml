@@ -1,5 +1,5 @@
 [package]
-name = "test_generation"
+name = "test-generation"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -11,7 +11,7 @@ rand = "0.6.5"
 log = "0.4"
 env_logger = "0.6"
 mirai-annotations = "1.4.0"
-structopt = "0.2.15"
+structopt = "0.3.2"
 bytecode_verifier = { path = "../../bytecode_verifier" }
 cost-synthesis = { path = "../cost-synthesis" }
 vm = { path = "../../vm" }
