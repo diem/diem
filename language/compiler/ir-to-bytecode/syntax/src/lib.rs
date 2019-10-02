@@ -204,6 +204,7 @@
 //! ```
 
 pub mod ast;
+pub mod lexer;
 
 #[rustfmt::skip]
 #[allow(clippy::all)]

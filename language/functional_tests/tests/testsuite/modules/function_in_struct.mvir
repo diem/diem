@@ -1,4 +1,4 @@
-// check: Unrecognized token
+// check: Invalid token
 
 module M {
     struct T{
