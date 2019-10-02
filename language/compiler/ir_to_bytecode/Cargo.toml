@@ -14,6 +14,7 @@ failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 ir_to_bytecode_syntax = { path = "syntax" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
+bytecode_source_map = { path = "../bytecode_source_map" }
 lalrpop-util = "0.17.2"
 log = "0.4.7"
 codespan = "0.2.1"

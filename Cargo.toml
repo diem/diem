@@ -39,6 +39,7 @@ members = [
     "language/e2e_tests",
     "language/tools/cost-synthesis",
     "language/tools/test-generation",
+    "language/compiler/bytecode_source_map",
     "language/stackless_bytecode/bytecode-to-boogie",
     "language/stackless_bytecode/generator",
     "language/vm",

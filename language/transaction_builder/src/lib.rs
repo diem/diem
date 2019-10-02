@@ -30,7 +30,9 @@ lazy_static! {
 
 fn compile_script(body: &ast::Program) -> Vec<u8> {
     let compiled_program =
-        compile_program(AccountAddress::default(), body.clone(), stdlib_modules()).unwrap();
+        compile_program(AccountAddress::default(), body.clone(), stdlib_modules())
+            .unwrap()
+            .0;
     let mut script_bytes = vec![];
     compiled_program
         .script
@@ -65,6 +67,7 @@ pub fn encode_transfer_script_with_padding(
         stdlib_modules(),
     )
     .unwrap()
+    .0
     .script
     .into_inner();
     script_mut
