@@ -1,5 +1,5 @@
 [package]
-name = "bytecode_to_boogie"
+name = "bytecode-to-boogie"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 publish = false
