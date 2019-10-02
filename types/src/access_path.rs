@@ -57,7 +57,11 @@ use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
-use std::{fmt, slice::Iter};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+    slice::Iter,
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
 pub struct Field(Identifier);
@@ -352,5 +356,22 @@ impl CanonicalDeserialize for AccessPath {
         let path = deserializer.decode_bytes()?;
 
         Ok(Self { address, path })
+    }
+}
+
+impl TryFrom<crate::proto::types::AccessPath> for AccessPath {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::AccessPath) -> Result<Self> {
+        Ok(AccessPath::new(proto.address.try_into()?, proto.path))
+    }
+}
+
+impl From<AccessPath> for crate::proto::types::AccessPath {
+    fn from(path: AccessPath) -> Self {
+        Self {
+            address: path.address.to_vec(),
+            path: path.path,
+        }
     }
 }
