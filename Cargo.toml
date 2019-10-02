@@ -20,7 +20,7 @@ members = [
     "common/proptest_helpers",
     "common/proto_conv",
     "config",
-    "config/config_builder",
+    "config/config-builder",
     "config/generate-keypair",
     "consensus",
     "crypto/crypto",
