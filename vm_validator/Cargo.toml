@@ -21,7 +21,7 @@ vm_runtime = { path = "../language/vm/vm_runtime" }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
 rand = "0.6.5"
 
-config_builder = { path = "../config/config_builder" }
+config-builder = { path = "../config/config-builder" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 executor = { path = "../execution/executor" }
 grpc_helpers = { path = "../common/grpc_helpers" }
